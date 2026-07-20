@@ -5358,19 +5358,198 @@ def restore_backup():
         
     if not file.filename.endswith('.db'):
         return jsonify({'error': 'El archivo de respaldo debe tener extensión .db'}), 400
-        
+
+    import tempfile, sqlite3 as _sqlite3
+
+    # Guardar el archivo subido en temporal
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+    file.save(tmp.name)
+    tmp.close()
+
+    stats = {'pacientes': 0, 'agenda': 0, 'sesiones': 0, 'omitidos': 0, 'errores': []}
+
     try:
-        # Cerrar conexión activa
-        db = getattr(g, '_database', None)
-        if db is not None:
-            db.close()
-            g._database = None
-            
-        # Reemplazar archivo de base de datos
-        file.save(DATABASE)
-        return jsonify({'success': 'Base de datos restaurada con éxito. La aplicación se recargará.'})
+        conn_b = _sqlite3.connect(tmp.name)
+        conn_b.row_factory = _sqlite3.Row
+        cur_b = conn_b.cursor()
+
+        # Obtener tablas disponibles en el respaldo
+        cur_b.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        backup_tables = {r[0] for r in cur_b.fetchall()}
+
+        # Obtener psicólogo actual (el que hace la restauración)
+        db_target = get_db()
+        cur_t = db_target.cursor()
+        cur_t.execute("SELECT id FROM usuarios WHERE id = ?", (session.get('user_id', 1),))
+        psic_row = cur_t.fetchone()
+        psic_id = psic_row['id'] if psic_row else 1
+
+        # Helper: obtener columnas de una tabla en el respaldo
+        def backup_cols(table_name):
+            try:
+                cur_b.execute(f"PRAGMA table_info(`{table_name}`)")
+                return {r['name'] for r in cur_b.fetchall()}
+            except:
+                return set()
+
+        # ─── MIGRAR PACIENTES ────────────────────────────────────────────
+        if 'pacientes' in backup_tables:
+            cols_b = backup_cols('pacientes')
+            cur_b.execute("SELECT * FROM pacientes")
+            for p in cur_b.fetchall():
+                p = dict(p)
+                # Verificar duplicado por id o cédula
+                cedula = p.get('cedula') or ''
+                cur_t.execute(
+                    "SELECT id FROM pacientes WHERE id=? OR (cedula!='' AND cedula=?)",
+                    (p['id'], cedula)
+                )
+                if cur_t.fetchone():
+                    stats['omitidos'] += 1
+                    continue
+                try:
+                    cur_t.execute("""
+                        INSERT INTO pacientes (
+                            id, nombres, apellidos, cedula, pronombre, genero, edad,
+                            lugar_nacimiento, fecha_nacimiento, residencia_actual,
+                            con_quien_reside, nivel_academico, ocupacion, estado_civil,
+                            antecedentes_medicos_familiares, antecedentes_medicos_personales,
+                            antecedentes_psicologicos_familiares, antecedentes_psicologicos_personales,
+                            asistencia_previa_psicologo, motivo_consulta, expectativas,
+                            farmacologia, contacto_emergencia_nombre, contacto_emergencia_parentesco,
+                            diagnostico, fecha_registro, telefono, email, psicologo_id
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, (
+                        p['id'],
+                        p.get('nombres', ''),
+                        p.get('apellidos', ''),
+                        p.get('cedula', ''),
+                        p.get('pronombre', ''),
+                        p.get('genero', ''),
+                        p.get('edad', ''),
+                        p.get('lugar_nacimiento', ''),
+                        p.get('fecha_nacimiento', ''),
+                        p.get('residencia_actual', ''),
+                        p.get('con_quien_reside', ''),
+                        p.get('nivel_academico', ''),
+                        p.get('ocupacion', ''),
+                        p.get('estado_civil', ''),
+                        p.get('antecedentes_medicos_familiares', ''),
+                        p.get('antecedentes_medicos_personales', ''),
+                        p.get('antecedentes_psicologicos_familiares', ''),
+                        p.get('antecedentes_psicologicos_personales', ''),
+                        p.get('asistencia_previa_psicologo', ''),
+                        p.get('motivo_consulta', ''),
+                        p.get('expectativas', ''),
+                        p.get('farmacologia', ''),
+                        p.get('contacto_emergencia_nombre', ''),
+                        p.get('contacto_emergencia_parentesco', ''),
+                        p.get('diagnostico', ''),
+                        p.get('fecha_registro', ''),
+                        p.get('telefono', ''),
+                        p.get('email', ''),
+                        p.get('psicologo_id', psic_id)
+                    ))
+                    stats['pacientes'] += 1
+                except Exception as e:
+                    stats['errores'].append(f"Paciente {p.get('nombres','?')}: {str(e)[:60]}")
+
+        # ─── MIGRAR AGENDA/FINANZAS ──────────────────────────────────────
+        if 'agenda_finanzas' in backup_tables:
+            cur_b.execute("SELECT * FROM agenda_finanzas")
+            for a in cur_b.fetchall():
+                a = dict(a)
+                cur_t.execute("SELECT id FROM agenda_finanzas WHERE id=?", (a['id'],))
+                if cur_t.fetchone():
+                    stats['omitidos'] += 1
+                    continue
+                try:
+                    cur_t.execute("""
+                        INSERT INTO agenda_finanzas (
+                            id, paciente_id, fecha, hora, google_event_id, tipo_consulta,
+                            monto, moneda, estado_pago, control_uso, fecha_liquidacion,
+                            cantidad_sesiones, referencia, metodo_pago, fecha_pago, confirmada
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, (
+                        a['id'], a.get('paciente_id'), a.get('fecha',''),
+                        a.get('hora',''), a.get('google_event_id',''),
+                        a.get('tipo_consulta','Individual'),
+                        a.get('monto', 0), a.get('moneda','USD'),
+                        a.get('estado_pago','Pendiente'),
+                        a.get('control_uso', 0), a.get('fecha_liquidacion',''),
+                        a.get('cantidad_sesiones', 1), a.get('referencia',''),
+                        a.get('metodo_pago',''), a.get('fecha_pago',''),
+                        a.get('confirmada', 1)
+                    ))
+                    stats['agenda'] += 1
+                except Exception as e:
+                    stats['errores'].append(f"Agenda id={a.get('id')}: {str(e)[:60]}")
+
+        # ─── MIGRAR SESIONES (respetando cifrado existente) ──────────────
+        if 'sesiones' in backup_tables:
+            cur_b.execute("SELECT * FROM sesiones")
+            for s in cur_b.fetchall():
+                s = dict(s)
+                cur_t.execute("SELECT id FROM sesiones WHERE id=?", (s['id'],))
+                if cur_t.fetchone():
+                    stats['omitidos'] += 1
+                    continue
+
+                def _safe_enc(val):
+                    """Cifra solo si no está ya cifrado."""
+                    if not val:
+                        return ''
+                    v = str(val)
+                    if v.startswith('enc:'):
+                        return v  # ya cifrado, no tocar
+                    return encrypt_clinical_text(v)
+
+                try:
+                    cur_t.execute("""
+                        INSERT INTO sesiones (
+                            id, paciente_id, agenda_id, fecha, modalidad, estado,
+                            resumen, tareas_asignadas, recursos_entregados,
+                            anotaciones_proxima, compromisos_psicologo,
+                            diagnostico, test_aplicados, archivo_adjunto
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, (
+                        s['id'], s.get('paciente_id'), s.get('agenda_id'),
+                        s.get('fecha',''), s.get('modalidad','Online'),
+                        s.get('estado','Realizada'),
+                        _safe_enc(s.get('resumen')),
+                        s.get('tareas_asignadas',''),
+                        s.get('recursos_entregados',''),
+                        _safe_enc(s.get('anotaciones_proxima')),
+                        _safe_enc(s.get('compromisos_psicologo')),
+                        _safe_enc(s.get('diagnostico')),
+                        _safe_enc(s.get('test_aplicados')),
+                        s.get('archivo_adjunto','')
+                    ))
+                    stats['sesiones'] += 1
+                except Exception as e:
+                    stats['errores'].append(f"Sesión id={s.get('id')}: {str(e)[:60]}")
+
+        db_target.commit()
+        conn_b.close()
+        os.unlink(tmp.name)
+
+        msg = (f"Restauración completada: "
+               f"{stats['pacientes']} pacientes, "
+               f"{stats['agenda']} registros financieros, "
+               f"{stats['sesiones']} sesiones importadas. "
+               f"{stats['omitidos']} registros ya existían (omitidos).")
+        if stats['errores']:
+            msg += f" Advertencias: {'; '.join(stats['errores'][:3])}"
+
+        return jsonify({'success': msg, 'stats': stats})
+
     except Exception as e:
+        try:
+            os.unlink(tmp.name)
+        except:
+            pass
         return jsonify({'error': f'Error al restaurar: {str(e)}'}), 500
+
 
 
 # ==========================================
