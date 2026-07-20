@@ -1210,6 +1210,39 @@ def superadmin_delete_ticket(ticket_id):
     db.commit()
     return jsonify({'success': 'Ticket eliminado.'})
 
+@app.route('/api/register-admin', methods=['POST'])
+def register_admin():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'error': 'Usuario y contraseña son requeridos.'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT id FROM usuarios WHERE LOWER(username) = ?", (username.lower(),))
+    if cursor.fetchone():
+        return jsonify({'error': 'El nombre de usuario ya está registrado.'}), 400
+        
+    password_hash = generate_password_hash(password)
+    
+    cursor.execute("SELECT COUNT(id) FROM usuarios")
+    user_count = cursor.fetchone()[0] or 0
+    user_role = 'superadmin' if user_count == 0 else 'psicologo'
+    
+    try:
+        cursor.execute("""
+            INSERT INTO usuarios (username, password_hash, nombres, apellidos, role, activo)
+            VALUES (?, ?, 'Administrador', 'General', ?, 1)
+        """, (username, password_hash, user_role))
+        db.commit()
+        return jsonify({'success': f'Usuario {user_role} creado con éxito.'})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al registrar administrador: {str(e)}'}), 500
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -1221,7 +1254,7 @@ def login():
         
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM usuarios WHERE username = ?", (username,))
+    cursor.execute("SELECT * FROM usuarios WHERE LOWER(username) = ?", (username.lower(),))
     user = cursor.fetchone()
     
     if user and check_password_hash(user['password_hash'], password):
