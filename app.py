@@ -1070,6 +1070,45 @@ def superadmin_get_therapists():
     rows = cursor.fetchall()
     return jsonify([dict(r) for r in rows])
 
+@app.route('/api/superadmin/create-psychologist', methods=['POST'])
+@login_required
+def superadmin_create_psychologist():
+    if session.get('role') != 'superadmin':
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+        
+    data = request.json
+    nombres = data.get('nombres')
+    apellidos = data.get('apellidos')
+    username = data.get('username')
+    password = data.get('password')
+    estudios = data.get('estudios')
+    federacion = data.get('federacion')
+    foto_titulo = data.get('foto_titulo', '')
+    foto_documento = data.get('foto_documento', '')
+    
+    if not username or not password or not nombres or not apellidos:
+        return jsonify({'error': 'Todos los campos requeridos deben ser completados.'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT id FROM usuarios WHERE LOWER(username) = ?", (username.lower(),))
+    if cursor.fetchone():
+        return jsonify({'error': 'El nombre de usuario ya existe.'}), 400
+        
+    password_hash = generate_password_hash(password)
+    
+    try:
+        cursor.execute("""
+            INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, rol, activo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 'psicologo', 1)
+        """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento))
+        db.commit()
+        return jsonify({'success': 'Psicólogo registrado con éxito.'})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al registrar psicólogo: {str(e)}'}), 500
+
 @app.route('/api/superadmin/therapists/<int:user_id>/toggle-active', methods=['POST'])
 @login_required
 def superadmin_toggle_active(user_id):
