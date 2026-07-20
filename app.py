@@ -1100,8 +1100,8 @@ def superadmin_create_psychologist():
     
     try:
         cursor.execute("""
-            INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, rol, activo)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 'psicologo', 1)
+            INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1)
         """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento))
         db.commit()
         return jsonify({'success': 'Psicólogo registrado con éxito.'})
