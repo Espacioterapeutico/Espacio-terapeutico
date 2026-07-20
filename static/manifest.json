@@ -1,0 +1,26 @@
+{
+  "name": "Espacio Terapéutico — Gestión Clínica",
+  "short_name": "Espacio Terapéutico",
+  "description": "Espacio terapéutico y gestión clínica para profesionales de la psicología y sus consultantes.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#7e22ce",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/static/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["medical", "health", "productivity"]
+}
