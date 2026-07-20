@@ -277,6 +277,8 @@ h1, h2, h3, h4, h5, h6 {
     display: grid;
     grid-template-columns: 260px 1fr;
     min-height: 100vh;
+    max-width: 100vw;
+    overflow-x: hidden;
 }
 
 /* Sidebar */
@@ -408,15 +410,18 @@ h1, h2, h3, h4, h5, h6 {
 .main-header {
     background-color: var(--bg-color);
     border-bottom: 1px solid var(--border-color);
-    padding: 1rem 2rem;
+    padding: 0.75rem 1.25rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.5rem;
     position: sticky;
     top: 0;
     z-index: 90;
     backdrop-filter: blur(8px);
     background-color: rgba(209, 211, 208, 0.85);
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .menu-toggle {
@@ -438,7 +443,9 @@ h1, h2, h3, h4, h5, h6 {
     position: relative;
     width: 100%;
     max-width: 520px;
-    margin: 0 1rem;
+    margin: 0 0.5rem;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .search-icon {
@@ -517,7 +524,8 @@ h1, h2, h3, h4, h5, h6 {
 .user-badge {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    flex-shrink: 0;
 }
 
 .user-avatar {
@@ -555,6 +563,8 @@ h1, h2, h3, h4, h5, h6 {
 .view-panel {
     flex-grow: 1;
     padding: 2rem;
+    min-width: 0;
+    overflow-x: hidden;
 }
 
 .view-header-row {
@@ -562,6 +572,8 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
 }
 
 .view-header-row h2 {
@@ -1174,17 +1186,24 @@ h1, h2, h3, h4, h5, h6 {
    DISEÑO RESPONSIVO (MÓVILES & PANTALLAS CHICAS)
    ========================================== */
 
+/* ============================================
+   RESPONSIVE: TABLET (max 1024px)
+   ============================================ */
 @media (max-width: 1024px) {
+    /* El sidebar pasa a ser overlay flotante */
     .app-layout {
         grid-template-columns: 1fr;
     }
     
     .sidebar {
         position: fixed;
-        left: -260px;
+        left: -280px;
         top: 0;
         bottom: 0;
+        width: 260px;
+        z-index: 200;
         transition: left var(--transition-normal);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.25);
     }
     
     .sidebar.open {
@@ -1197,6 +1216,7 @@ h1, h2, h3, h4, h5, h6 {
     
     .menu-toggle {
         display: block;
+        flex-shrink: 0;
     }
     
     .sidebar-overlay {
@@ -1205,8 +1225,14 @@ h1, h2, h3, h4, h5, h6 {
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.4);
-        z-index: 95;
+        background-color: rgba(0, 0, 0, 0.45);
+        z-index: 150;
+    }
+    
+    /* main-content ocupa todo el ancho */
+    .main-content {
+        width: 100%;
+        min-width: 0;
     }
     
     .dashboard-split-grid {
@@ -1225,8 +1251,15 @@ h1, h2, h3, h4, h5, h6 {
     .settings-grid {
         grid-template-columns: 1fr;
     }
+    
+    .view-header-row h2 {
+        font-size: 1.4rem;
+    }
 }
 
+/* ============================================
+   RESPONSIVE: MOBILE (max 640px)
+   ============================================ */
 @media (max-width: 640px) {
     .form-group.col-4,
     .form-group.col-6,
@@ -1235,11 +1268,85 @@ h1, h2, h3, h4, h5, h6 {
     }
     
     .view-panel {
-        padding: 1rem;
+        padding: 0.875rem;
+    }
+    
+    .view-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .view-header-row h2 {
+        font-size: 1.25rem;
+    }
+    
+    .view-header-row .btn {
+        width: 100%;
+        justify-content: center;
     }
     
     .summary-grid-2 {
         grid-template-columns: 1fr;
+    }
+    
+    /* Header compacto en mobile */
+    .main-header {
+        padding: 0.6rem 0.875rem;
+        gap: 0.4rem;
+    }
+    
+    /* Ocultar nombre de usuario en mobile, solo mostrar avatar */
+    .user-info {
+        display: none;
+    }
+    
+    /* Barra de búsqueda más compacta */
+    #global-search {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem 0.5rem 2.2rem;
+    }
+    
+    /* Finanzas: tabs horizontales con scroll */
+    .finance-tabs,
+    .agenda-tabs,
+    .form-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+    }
+    .finance-tabs::-webkit-scrollbar,
+    .agenda-tabs::-webkit-scrollbar,
+    .form-tabs::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Tarjetas de resumen en grilla 2x2 en mobile */
+    .summary-grid-4 {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem;
+    }
+    
+    /* Cards de estadísticas más compactas */
+    .stat-card {
+        padding: 0.875rem;
+    }
+
+    /* Botones de acción en fila con scroll horizontal */
+    .action-buttons-row {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+    }
+
+    /* Instalar App badge más pequeño */
+    .pwa-install-btn {
+        font-size: 0.72rem;
+        padding: 0.3rem 0.6rem;
     }
 }
 
