@@ -1376,6 +1376,167 @@ h1, h2, h3, h4, h5, h6 {
         font-size: 0.72rem;
         padding: 0.3rem 0.6rem;
     }
+
+    /* ── Sub-Nav Tabs: scroll horizontal universal ── */
+    .sub-nav-tabs {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap !important;
+        padding-bottom: 6px;
+        scrollbar-width: none;
+        gap: 0.4rem !important;
+    }
+    .sub-nav-tabs::-webkit-scrollbar { display: none; }
+    .sub-nav-tabs .btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.78rem !important;
+    }
+
+    /* ── View Header: botones en fila scrollable, no ancho completo ── */
+    .view-header-row {
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .view-header-row h2 {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .view-header-row .btn,
+    .view-header-row button {
+        width: auto !important;
+        flex-shrink: 0;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.7rem;
+    }
+    /* Múltiples botones en header: fila compacta */
+    .view-header-row > div {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        align-items: center;
+    }
+
+    /* ── Finance: balance cards en columna única ── */
+    .finance-balances-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+    .finance-card {
+        padding: 1rem 1.25rem;
+    }
+    .fin-amount {
+        font-size: 1.5rem;
+    }
+    .fin-badge {
+        font-size: 3rem;
+    }
+
+    /* ── Finance: detalles en columna única ── */
+    .finance-details-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    /* ── Date filters compactos ── */
+    .date-filters {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    .date-filters select {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    /* ── Tablas: scroll horizontal, texto compacto ── */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .data-table th,
+    .data-table td {
+        padding: 0.55rem 0.65rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+    .data-table th {
+        font-size: 0.7rem;
+    }
+
+    /* ── Timeline Sesiones: compacto ── */
+    .sessions-timeline {
+        padding-left: 1.25rem;
+    }
+    .timeline-card {
+        padding: 0.875rem;
+    }
+    .timeline-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+    }
+
+    /* ── Dashboard split grid: columna ── */
+    .dashboard-split-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem;
+    }
+    .dashboard-block {
+        height: auto;
+        min-height: 200px;
+    }
+
+    /* ── Cards compactas ── */
+    .card-header {
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .card-body {
+        padding: 0.875rem;
+    }
+
+    /* ── Settings grid: columna ── */
+    .settings-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── Form rows: 2 columnas en mobile pequeño → columna ── */
+    .form-row {
+        flex-direction: column;
+    }
+    .form-group.col-6,
+    .form-group.col-4,
+    .form-group.col-8,
+    .form-group.col-3 {
+        width: 100% !important;
+    }
+
+    /* ── Modal más angosto ── */
+    .modal-content {
+        margin: 0.5rem;
+        max-height: 92vh;
+        overflow-y: auto;
+    }
+    .modal-body {
+        padding: 1rem;
+    }
+    .modal-footer {
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .modal-footer .btn {
+        flex: 1 1 auto;
+    }
+
+    /* ── Pizarra y bloques generales ── */
+    .balance-card {
+        padding: 1rem 1.25rem;
+    }
 }
 
 /* ==========================================
