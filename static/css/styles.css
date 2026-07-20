@@ -431,6 +431,7 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--text-dark);
     cursor: pointer;
     padding: 0.25rem;
+    flex-shrink: 0;
 }
 
 .menu-toggle svg {
@@ -586,7 +587,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
 }
@@ -1330,9 +1331,36 @@ h1, h2, h3, h4, h5, h6 {
         gap: 0.6rem;
     }
     
-    /* Cards de estadísticas más compactas */
+    /* Stats grid: 2 columnas en mobile */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem;
+        margin-bottom: 1.25rem;
+    }
+
+    /* Cards de estadísticas compactas en mobile */
     .stat-card {
-        padding: 0.875rem;
+        padding: 0.7rem;
+        gap: 0.6rem;
+    }
+
+    .stat-icon-wrapper {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+    }
+
+    .stat-icon-wrapper svg {
+        width: 1.1rem;
+        height: 1.1rem;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+    }
+
+    .stat-number {
+        font-size: 1.35rem;
     }
 
     /* Botones de acción en fila con scroll horizontal */
