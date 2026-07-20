@@ -10,10 +10,14 @@ from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # Google Calendar API imports
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow
-from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
+try:
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import Flow
+    from googleapiclient.discovery import build
+    from google.auth.transport.requests import Request
+    GOOGLE_CALENDAR_AVAILABLE = True
+except ImportError:
+    GOOGLE_CALENDAR_AVAILABLE = False
 
 def get_resource_path(relative_path):
     """ Obtener ruta absoluta del recurso, funciona para dev, WSGI y PyInstaller """
@@ -4887,6 +4891,8 @@ def delete_agenda_event(event_id):
 # ==========================================
 
 def get_calendar_service():
+    if not GOOGLE_CALENDAR_AVAILABLE:
+        return None
     db = get_db()
     cursor = db.cursor()
     cursor.execute("SELECT valor FROM configuracion WHERE clave = 'google_token'")
