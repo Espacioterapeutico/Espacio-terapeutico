@@ -4865,6 +4865,49 @@ def add_agenda_event():
     except Exception as e:
         return jsonify({'error': f'Error al agendar cita: {str(e)}'}), 500
 
+@app.route('/api/agenda/quick-pay', methods=['POST'])
+@login_required
+def agenda_quick_pay():
+    """Registra un pago directo sin necesidad de agendar cita."""
+    data = request.json
+    db = get_db()
+    cursor = db.cursor()
+
+    paciente_id = data.get('paciente_id')
+    if not paciente_id:
+        return jsonify({'error': 'Paciente requerido.'}), 400
+
+    monto           = float(data.get('monto', 0.0) or 0.0)
+    moneda          = data.get('moneda', 'USD')
+    tipo_consulta   = data.get('tipo_consulta', 'Individual')
+    estado_pago     = data.get('estado_pago', 'Paga')
+    cantidad_ses    = int(data.get('cantidad_sesiones', 1) or 1)
+    referencia      = data.get('referencia', '')
+    metodo_pago     = data.get('metodo_pago', 'Efectivo')
+    fecha           = data.get('fecha') or datetime.datetime.now().strftime('%Y-%m-%d')
+    fecha_pago      = data.get('fecha_pago') or fecha
+    hora            = data.get('hora', '00:00')
+
+    try:
+        cursor.execute("""
+            INSERT INTO agenda_finanzas (
+                paciente_id, fecha, hora, tipo_consulta, monto, moneda,
+                estado_pago, control_uso, cantidad_sesiones,
+                referencia, metodo_pago, fecha_pago, confirmada
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        """, (
+            paciente_id, fecha, hora, tipo_consulta, monto, moneda,
+            estado_pago, 'Consumida', cantidad_ses,
+            referencia, metodo_pago, fecha_pago
+        ))
+        db.commit()
+        import threading
+        threading.Thread(target=sync_patient_to_firebase, args=(paciente_id,)).start()
+        return jsonify({'success': 'Pago registrado con éxito.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al registrar pago: {str(e)}'}), 500
+
+
 @app.route('/api/agenda/<int:event_id>', methods=['PUT'])
 @login_required
 def update_agenda_event(event_id):
