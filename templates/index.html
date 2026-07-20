@@ -357,7 +357,10 @@
                         <div class="card">
                             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                                 <h3>Psicólogos Registrados en la Plataforma</h3>
-                                <button class="btn btn-primary btn-sm" onclick="loadSuperadminData()">Actualizar Lista</button>
+                                <div>
+                                    <button class="btn btn-primary btn-sm" onclick="openCreatePsychologistModal()" style="margin-right: 0.5rem; font-weight: 600;">➕ Registrar Psicólogo</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="loadSuperadminData()">Actualizar Lista</button>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -2487,12 +2490,12 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group col-6">
-                            <label for="reg-foto-titulo">Foto del Título (URL o Nombre de archivo) *</label>
-                            <input type="text" id="reg-foto-titulo" placeholder="Ej. titulo.jpg">
+                            <label for="reg-foto-titulo">Adjuntar Foto/PDF del Título *</label>
+                            <input type="file" id="reg-foto-titulo" accept="image/*,.pdf" style="padding: 0.5rem; font-size: 0.9rem;">
                         </div>
                         <div class="form-group col-6">
-                            <label for="reg-foto-documento">Foto del Documento de Identidad (URL o Nombre) *</label>
-                            <input type="text" id="reg-foto-documento" placeholder="Ej. cedula.jpg">
+                            <label for="reg-foto-documento">Adjuntar Foto/PDF de Documento de Identidad *</label>
+                            <input type="file" id="reg-foto-documento" accept="image/*,.pdf" style="padding: 0.5rem; font-size: 0.9rem;">
                         </div>
                     </div>
                 </div>
@@ -2703,6 +2706,65 @@
                 <input type="hidden" id="resched-req-hora">
                 
                 <button type="button" onclick="submitRescheduleAppointment()" id="resched-submit-btn" class="btn btn-primary btn-block" style="width: 100%; margin-top: 1rem;" disabled>Confirmar Reprogramación</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR NUEVO PSICÓLOGO (SUPERADMIN) -->
+    <div id="modal-create-psychologist" class="modal hide">
+        <div class="modal-content modal-lg" style="max-width: 700px; width: 95%; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>🩺 Registrar Nuevo Psicólogo en la Plataforma</h3>
+                <button type="button" class="close-btn" onclick="closeCreatePsychologistModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <form id="form-create-psychologist" onsubmit="submitCreatePsychologist(event)">
+                    <div class="form-row mb-3" style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="sa-psic-nombres">Nombres *</label>
+                            <input type="text" id="sa-psic-nombres" required placeholder="Ej. Paulo" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="sa-psic-apellidos">Apellidos *</label>
+                            <input type="text" id="sa-psic-apellidos" required placeholder="Ej. Mora" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                        </div>
+                    </div>
+                    <div class="form-row mb-3" style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="sa-psic-username">Nombre de Usuario *</label>
+                            <input type="text" id="sa-psic-username" required placeholder="Ej. paulomora" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="sa-psic-password">Contraseña *</label>
+                            <input type="password" id="sa-psic-password" required placeholder="Contraseña de acceso" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                        </div>
+                    </div>
+                    <div class="form-row mb-3" style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="sa-psic-estudios">Universidad / Estudios *</label>
+                            <input type="text" id="sa-psic-estudios" required placeholder="Ej. Universidad Central" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="sa-psic-federacion">Número de Federación/Colegio *</label>
+                            <input type="text" id="sa-psic-federacion" required placeholder="Ej. FPV-12345" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                        </div>
+                    </div>
+                    <div class="form-row mb-3" style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="sa-psic-foto-titulo">Adjuntar Foto/PDF del Título *</label>
+                            <input type="file" id="sa-psic-foto-titulo" accept="image/*,.pdf" required style="width: 100%; padding: 0.5rem; font-size: 0.9rem;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="sa-psic-foto-documento">Adjuntar Foto/PDF Cédula/Identidad *</label>
+                            <input type="file" id="sa-psic-foto-documento" accept="image/*,.pdf" required style="width: 100%; padding: 0.5rem; font-size: 0.9rem;">
+                        </div>
+                    </div>
+                    <div id="sa-psic-error" class="alert alert-danger hide mt-2 mb-2" style="color: #991b1b; background-color: #ffeeef; padding: 0.75rem; border-radius: var(--radius-sm);"></div>
+                    <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+                        <button type="button" class="btn btn-secondary" onclick="closeCreatePsychologistModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Registrar Psicólogo</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
