@@ -6043,11 +6043,16 @@ async function loadSuperadminData() {
             const buttonText = p.activo === 1 ? 'Desactivar' : 'Activar';
             const buttonClass = p.activo === 1 ? 'btn-danger' : 'btn-primary';
             
+            const escName = (p.nombres || '').replace(/'/g, "\\'");
+            const tituloBtn = p.foto_titulo ? `<button type="button" class="btn btn-sm btn-outline-primary" style="padding:2px 6px; font-size:0.75rem; margin-right:4px;" onclick="viewDocumentPreview(\`${p.foto_titulo}\`, 'Título de ${escName}')">📄 Título</button>` : '';
+            const docBtn = p.foto_documento ? `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="viewDocumentPreview(\`${p.foto_documento}\`, 'Documento de ${escName}')">🪪 Cédula</button>` : '';
+            const docCell = (tituloBtn || docBtn) ? `${tituloBtn}${docBtn}` : '<span style="font-size:0.75rem; color:var(--text-muted);">Sin adjuntos</span>';
+
             tr.innerHTML = `
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-weight: 600;">${p.username}</td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">${p.nombres} ${p.apellidos}</td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">
-                    ${p.foto_titulo ? `<span style="font-size:0.75rem; color:var(--text-muted);">${p.foto_titulo}</span>` : '-'}
+                    ${docCell}
                 </td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-size: 0.8rem;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
@@ -6680,6 +6685,103 @@ function openFilePreview(filename) {
 function closePreviewModal() {
     const modal = document.getElementById('preview-modal');
     if (modal) modal.classList.add('hide');
+}
+
+function viewDocumentPreview(fileData, titleStr) {
+    const modal = document.getElementById('preview-modal');
+    const title = document.getElementById('preview-modal-title');
+    const body = document.getElementById('preview-modal-body');
+    if (!modal || !body) return;
+    
+    if (title) title.textContent = titleStr || 'Vista Previa del Documento';
+    
+    if (!fileData) {
+        body.innerHTML = '<p class="text-secondary">Sin documento adjunto.</p>';
+    } else if (fileData.startsWith('data:image/')) {
+        body.innerHTML = `<img src="${fileData}" style="max-width: 100%; max-height: 60vh; border-radius: 8px; box-shadow: var(--shadow-md); object-fit: contain;">`;
+    } else if (fileData.startsWith('data:application/pdf')) {
+        body.innerHTML = `<object data="${fileData}" type="application/pdf" style="width:100%; height:60vh;"><p>Tu navegador no admite PDF integrado. <a href="${fileData}" download="documento.pdf" class="btn btn-primary btn-sm">Descargar PDF</a></p></object>`;
+    } else if (fileData.startsWith('http') || fileData.startsWith('/')) {
+        openFilePreview(fileData);
+        return;
+    } else {
+        body.innerHTML = `<p class="text-secondary">Documento guardado: <strong>${fileData}</strong></p>`;
+    }
+    modal.classList.remove('hide');
+}
+
+function readFileAsBase64(fileInput) {
+    return new Promise((resolve) => {
+        if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+            resolve('');
+            return;
+        }
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+    });
+}
+
+function openCreatePsychologistModal() {
+    const modal = document.getElementById('modal-create-psychologist');
+    if (modal) {
+        document.getElementById('form-create-psychologist')?.reset();
+        const err = document.getElementById('sa-psic-error');
+        if (err) err.classList.add('hide');
+        modal.classList.remove('hide');
+    }
+}
+
+function closeCreatePsychologistModal() {
+    const modal = document.getElementById('modal-create-psychologist');
+    if (modal) modal.classList.add('hide');
+}
+
+async function submitCreatePsychologist(e) {
+    e.preventDefault();
+    const nombres = document.getElementById('sa-psic-nombres').value;
+    const apellidos = document.getElementById('sa-psic-apellidos').value;
+    const username = document.getElementById('sa-psic-username').value;
+    const password = document.getElementById('sa-psic-password').value;
+    const estudios = document.getElementById('sa-psic-estudios').value;
+    const federacion = document.getElementById('sa-psic-federacion').value;
+    
+    const fotoTituloInput = document.getElementById('sa-psic-foto-titulo');
+    const fotoDocInput = document.getElementById('sa-psic-foto-documento');
+    const errorMsg = document.getElementById('sa-psic-error');
+    if (errorMsg) errorMsg.classList.add('hide');
+    
+    const foto_titulo = await readFileAsBase64(fotoTituloInput);
+    const foto_documento = await readFileAsBase64(fotoDocInput);
+    
+    try {
+        const res = await fetch('/api/superadmin/create-psychologist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nombres, apellidos, username, password, estudios, federacion,
+                foto_titulo, foto_documento
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('Psicólogo registrado exitosamente.');
+            closeCreatePsychologistModal();
+            loadSuperadminData();
+        } else {
+            if (errorMsg) {
+                errorMsg.textContent = data.error || 'Error al registrar psicólogo.';
+                errorMsg.classList.remove('hide');
+            }
+        }
+    } catch (err) {
+        if (errorMsg) {
+            errorMsg.textContent = 'Error de conexión con el servidor.';
+            errorMsg.classList.remove('hide');
+        }
+    }
 }
 
 // Historial clínico de sesiones evolucionadas para consultantes
