@@ -517,6 +517,8 @@ async function handleAuthSubmit(e) {
             
             if (resAdmin.ok) {
                 showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago);
+                // Re-registrar token FCM con user_id activo del psicólogo
+                setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                 return;
             }
             
@@ -534,6 +536,8 @@ async function handleAuthSubmit(e) {
                 } else {
                     showPatientLayout(dataPatient.username, dataPatient.patient_id);
                 }
+                // Re-registrar token FCM con patient_id activo del consultante
+                setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                 return;
             }
             
