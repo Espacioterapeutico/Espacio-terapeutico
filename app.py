@@ -246,8 +246,53 @@ def init_db():
                 INSERT INTO usuarios (username, password_hash, nombres, apellidos, role, activo)
                 VALUES (?, ?, ?, ?, ?, 1)
             """, ('admin', generate_password_hash('admin'), 'Administrador', 'General', 'superadmin'))
+        # Sincronización / Reparación automática de horarios en la BD del servidor
+        try:
+            cursor.execute("SELECT id, disponibilidad_horarios, configuracion_horarios_visual FROM usuarios")
+            all_users = cursor.fetchall()
+            for u_item in all_users:
+                u_id = u_item[0]
+                disp_str = u_item[1] or ""
+                vis_str = u_item[2] or ""
+
+                need_clean = False
+                if '03:05' in disp_str or '04:10' in disp_str or '09:05' in disp_str or '10:10' in disp_str or '13:05' in disp_str or '14:05' in disp_str or '08:30' in disp_str:
+                    need_clean = True
+                if '"receso": 5' in vis_str or '"receso":5' in vis_str:
+                    need_clean = True
+
+                if need_clean or not disp_str:
+                    clean_dias = [
+                        {'dia': 1, 'nombre': 'Lunes', 'activo': True, 'slots': [{'hora': '12:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '13:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '14:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '15:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
+                        {'dia': 2, 'nombre': 'Martes', 'activo': True, 'slots': [{'hora': '18:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '19:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '20:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '21:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
+                        {'dia': 3, 'nombre': 'Miércoles', 'activo': True, 'slots': [{'hora': '08:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '09:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '10:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '11:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
+                        {'dia': 4, 'nombre': 'Jueves', 'activo': True, 'slots': [{'hora': '08:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '09:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '10:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '11:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
+                        {'dia': 5, 'nombre': 'Viernes', 'activo': True, 'slots': [{'hora': '08:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '09:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '10:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '11:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
+                        {'dia': 6, 'nombre': 'Sábado', 'activo': True, 'slots': [
+                            {'hora': '08:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
+                            {'hora': '09:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
+                            {'hora': '10:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
+                            {'hora': '11:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
+                            {'hora': '14:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
+                            {'hora': '15:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
+                            {'hora': '16:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
+                            {'hora': '17:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']}
+                        ]},
+                        {'dia': 0, 'nombre': 'Domingo', 'activo': False, 'slots': []}
+                    ]
+                    import json
+                    cursor.execute("UPDATE usuarios SET disponibilidad_horarios = ? WHERE id = ?", (json.dumps(clean_dias), u_id))
+                    if vis_str:
+                        try:
+                            cfg_vis = json.loads(vis_str)
+                            cfg_vis['receso'] = 0
+                            cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (json.dumps(cfg_vis), u_id))
+                        except:
+                            pass
             db.commit()
-            
+        except Exception as ex_mig:
+            print("Error en migración automática de horarios:", ex_mig)
+
         # Migración automática de pacientes
         cursor.execute("PRAGMA table_info(pacientes)")
         cols_pac = [row[1] for row in cursor.fetchall()]
