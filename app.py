@@ -2814,6 +2814,8 @@ def get_patient_portal_data_dict(patient_id):
     
     conn.close()
     
+    proxima_cita = proximas_citas[0] if proximas_citas else None
+    
     return {
         "perfil": patient_data,
         "finanzas": {
@@ -2822,6 +2824,7 @@ def get_patient_portal_data_dict(patient_id):
             "deudas_detalle": deudas_detalle
         },
         "compartido": compartido,
+        "proxima_cita": proxima_cita,
         "proximas_citas": proximas_citas,
         "modalidades": list(set(modalidades)),
         "metodos_pago": metodos_pago
