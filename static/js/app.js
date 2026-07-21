@@ -40,14 +40,26 @@ function saveNotifiedKeys() {
     } catch(e) {}
 }
 
+function openNotificationGuideModal() {
+    openModal('notification-guide-modal');
+}
+window.openNotificationGuideModal = openNotificationGuideModal;
+
 async function requestNotificationPermission() {
     if (!('Notification' in window)) return false;
     if (Notification.permission === 'granted') return true;
     if (Notification.permission !== 'denied') {
         try {
             const permission = await Notification.requestPermission();
-            return permission === 'granted';
-        } catch(e) { return false; }
+            if (permission === 'granted') return true;
+            openNotificationGuideModal();
+            return false;
+        } catch(e) {
+            openNotificationGuideModal();
+            return false;
+        }
+    } else {
+        openNotificationGuideModal();
     }
     return false;
 }
