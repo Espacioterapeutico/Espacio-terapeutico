@@ -7630,43 +7630,56 @@ async function handleQuickPayConceptChange(concept) {
 }
 window.handleQuickPayConceptChange = handleQuickPayConceptChange;
 
-async function submitQuickPay() {
-    const patientId = document.getElementById('qp-paciente').value;
-    const concept   = document.getElementById('qp-concepto').value;
-    const monto     = document.getElementById('qp-monto').value;
-    const moneda    = document.getElementById('qp-moneda').value;
-    const metodo    = document.getElementById('qp-metodo').value;
-    const referencia = document.getElementById('qp-referencia').value;
-    const fecha     = document.getElementById('qp-fecha').value;
-    const msgEl     = document.getElementById('qp-status-msg');
-    const submitBtn = document.getElementById('qp-submit-btn');
+// Helper para mostrar mensajes dentro del modal de pago rápido
+function showQuickPayStatus(type, msg) {
+    const msgEl = document.getElementById('qp-status-msg');
+    if (!msgEl) return;
+    msgEl.classList.remove('hide', 'success-msg', 'error-msg');
+    msgEl.classList.add(type === 'success' ? 'success-msg' : 'error-msg');
+    msgEl.textContent = msg;
+    msgEl.style.display = 'block';
+    msgEl.style.padding = '0.5rem 0.75rem';
+    msgEl.style.borderRadius = 'var(--radius-sm)';
+    msgEl.style.marginTop = '0.75rem';
+    msgEl.style.fontSize = '0.85rem';
+    msgEl.style.fontWeight = '600';
+    if (type === 'success') {
+        msgEl.style.background = 'rgba(16, 185, 129, 0.1)';
+        msgEl.style.color = '#059669';
+        msgEl.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+    } else {
+        msgEl.style.background = 'rgba(239, 68, 68, 0.1)';
+        msgEl.style.color = '#dc2626';
+        msgEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+    }
+}
 
-    if (!patientId || !concept || !monto || !fecha) {
-        showStatusMessage(msgEl, 'error', 'Por favor completa todos los campos requeridos.');
+async function submitQuickPay() {
+    const patientId  = document.getElementById('qp-paciente').value;
+    const concept    = document.getElementById('qp-concepto').value;
+    const montoVal   = parseFloat(document.getElementById('qp-monto').value || 0);
+    const moneda     = document.getElementById('qp-moneda').value;
+    const metodo     = document.getElementById('qp-metodo').value;
+    const referencia = document.getElementById('qp-referencia').value;
+    const fecha      = document.getElementById('qp-fecha').value;
+    const submitBtn  = document.getElementById('qp-submit-btn');
+
+    if (!patientId || !concept || !montoVal || !fecha) {
+        showQuickPayStatus('error', 'Por favor completa todos los campos requeridos (Paciente, Concepto, Monto y Fecha).');
         return;
     }
 
-    // Calcular cantidad de sesiones según concepto
-    let cantidadSesiones = 1;
-    let tipoConsulta = 'Individual';
-    let estadoPago = 'Paga';
-
-    if (concept === 'paquete') {
-        cantidadSesiones = (_qpCurrentProfile && _qpCurrentProfile.sesiones_paquete_personalizado) || 1;
-        tipoConsulta = 'Prepagada';
-        estadoPago = 'Prepagada';
-    } else if (concept === 'deuda') {
-        estadoPago = 'Paga';
-        // Obtener IDs de deudas marcadas
+    // Manejo del pago de deudas existentes
+    if (concept === 'deuda') {
         const checks = document.querySelectorAll('#qp-debt-list input[type=checkbox]:checked');
         if (checks.length === 0) {
-            showStatusMessage(msgEl, 'error', 'Selecciona al menos una consulta pendiente a pagar.');
+            showQuickPayStatus('error', 'Selecciona al menos una consulta pendiente a pagar.');
             return;
         }
-        // Marcar deudas como pagadas
         const debtIds = Array.from(checks).map(c => c.value);
         try {
             submitBtn.disabled = true;
+            submitBtn.textContent = 'Procesando...';
             const res = await fetch('/api/mark-debts-paid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -7674,42 +7687,70 @@ async function submitQuickPay() {
             });
             const data = await res.json();
             if (data.success) {
-                showStatusMessage(msgEl, 'success', '¡Deudas marcadas como pagadas correctamente!');
+                showQuickPayStatus('success', '¡Consultas marcadas como pagadas correctamente!');
                 setTimeout(() => {
                     closeQuickPayModal();
-                    loadFinanceData();
-                    loadDashboardStats();
+                    if (typeof loadFinanceData === 'function') loadFinanceData();
+                    if (typeof loadDashboardStats === 'function') loadDashboardStats();
                 }, 1500);
             } else {
-                showStatusMessage(msgEl, 'error', data.error || 'Error al registrar el pago.');
+                showQuickPayStatus('error', data.error || 'Error al registrar el pago.');
             }
         } catch(e) {
-            showStatusMessage(msgEl, 'error', 'Error de conexión.');
+            showQuickPayStatus('error', 'Error de conexión al servidor.');
         } finally {
             submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirmar Pago';
         }
         return;
     }
 
-    // Registrar consulta individual o paquete como entrada en agenda_finanzas
-    const today = new Date().toISOString().split('T')[0];
+    // Calcular costo esperado para detectar pago fraccionado (parcial)
+    let cantidadSesiones = 1;
+    let tipoConsulta = 'Individual';
+    let estadoPago = 'Paga';
+    let costoEsperado = 0;
+
+    if (concept === 'paquete') {
+        cantidadSesiones = (_qpCurrentProfile && _qpCurrentProfile.sesiones_paquete_personalizado) || 1;
+        costoEsperado = (_qpCurrentProfile && _qpCurrentProfile.costo_paquete_personalizado != null) 
+            ? parseFloat(_qpCurrentProfile.costo_paquete_personalizado) 
+            : 0;
+        tipoConsulta = 'Paquete Prepagado';
+        estadoPago = 'Prepagada';
+    } else if (concept === 'consulta') {
+        costoEsperado = (_qpCurrentProfile && _qpCurrentProfile.costo_personalizado != null)
+            ? parseFloat(_qpCurrentProfile.costo_personalizado)
+            : 0;
+        tipoConsulta = 'Individual';
+        estadoPago = 'Paga';
+    }
+
+    // Cálculo de pago fraccionado (deuda por diferencia)
+    let deudaGenerada = 0;
+    if (costoEsperado > 0 && montoVal < costoEsperado) {
+        deudaGenerada = costoEsperado - montoVal;
+    }
+
     const payload = {
         paciente_id: patientId,
         fecha: fecha,
         hora: '00:00',
         tipo_consulta: tipoConsulta,
-        monto: parseFloat(monto),
+        monto: montoVal,
         moneda: moneda,
         estado_pago: estadoPago,
         cantidad_sesiones: cantidadSesiones,
         referencia: referencia,
         metodo_pago: metodo,
         fecha_pago: fecha,
-        confirmada: 1
+        confirmada: 1,
+        deuda_generada: deudaGenerada
     };
 
     try {
         submitBtn.disabled = true;
+        submitBtn.textContent = 'Procesando...';
         const res = await fetch('/api/agenda/quick-pay', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -7717,19 +7758,25 @@ async function submitQuickPay() {
         });
         const data = await res.json();
         if (data.success) {
-            showStatusMessage(msgEl, 'success', '¡Pago registrado con éxito!');
+            let msg = '¡Pago registrado con éxito!';
+            if (deudaGenerada > 0) {
+                msg += ` (Pago parcial registrado. Se generó una deuda pendiente de ${deudaGenerada.toFixed(2)} ${moneda})`;
+            }
+            showQuickPayStatus('success', msg);
             setTimeout(() => {
                 closeQuickPayModal();
-                loadFinanceData();
-                loadDashboardStats();
-            }, 1500);
+                if (typeof loadFinanceData === 'function') loadFinanceData();
+                if (typeof loadDashboardStats === 'function') loadDashboardStats();
+            }, 2000);
         } else {
-            showStatusMessage(msgEl, 'error', data.error || 'Error al registrar el pago.');
+            showQuickPayStatus('error', data.error || 'Error al registrar el pago.');
         }
     } catch(e) {
-        showStatusMessage(msgEl, 'error', 'Error de conexión al servidor.');
+        showQuickPayStatus('error', 'Error de conexión al servidor.');
     } finally {
         submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirmar Pago';
     }
 }
 window.submitQuickPay = submitQuickPay;
+
