@@ -1919,11 +1919,7 @@ def get_available_slots():
         import json
         
         target_dt = datetime.strptime(date_str, "%Y-%m-%d")
-        dates_to_check = [
-            target_dt - timedelta(days=1),
-            target_dt,
-            target_dt + timedelta(days=1)
-        ]
+        dates_to_check = [target_dt]
         
         db = get_db()
         cursor = db.cursor()
@@ -1957,10 +1953,6 @@ def get_available_slots():
                 
         if not avail_config:
             return jsonify({'slots': []})
-        
-        # Calcular offset del huso horario del psicólogo
-        offset_str = datetime.now().astimezone().strftime('%z')
-        formatted_offset = offset_str[:3] + ':' + offset_str[3:]
         
         # Obtener horas de antelación
         antelacion = get_psicologo_antelacion_horas(psicologo_id, cursor)
@@ -2005,9 +1997,10 @@ def get_available_slots():
                     except:
                         pass
                         
-                    iso_str = f"{curr_date_str}T{h}:00{formatted_offset}"
+                    iso_str = f"{curr_date_str}T{h}:00"
                     all_iso_slots.append({
                         "iso": iso_str,
+                        "hora_literal": h,
                         "modalidades": slot_mods
                     })
                     
