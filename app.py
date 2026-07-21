@@ -4903,9 +4903,103 @@ def agenda_quick_pay():
         db.commit()
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(paciente_id,)).start()
-        return jsonify({'success': 'Pago registrado con éxito.'})
+
+        # Calcular deuda si el pago es fraccionado
+        deuda_generada = data.get('deuda_generada', 0)
+        if deuda_generada and float(deuda_generada) > 0:
+            cursor.execute("""
+                INSERT INTO agenda_finanzas (
+                    paciente_id, fecha, hora, tipo_consulta, monto, moneda,
+                    estado_pago, control_uso, cantidad_sesiones,
+                    referencia, metodo_pago, fecha_pago, confirmada
+                ) VALUES (?, ?, '00:00', ?, ?, ?, 'Pendiente', 'Pendiente', 1, ?, ?, ?, 1)
+            """, (
+                paciente_id, fecha,
+                tipo_consulta + ' (Deuda Pago Fraccionado)',
+                float(deuda_generada), moneda,
+                'Saldo pendiente por pago parcial', '', fecha_pago
+            ))
+            db.commit()
+
+        return jsonify({
+            'success': 'Pago registrado con éxito.',
+            'deuda': float(deuda_generada) if deuda_generada else 0
+        })
     except Exception as e:
         return jsonify({'error': f'Error al registrar pago: {str(e)}'}), 500
+
+
+@app.route('/api/patient-profile/<int:patient_id>', methods=['GET'])
+@login_required
+def get_patient_profile_rates(patient_id):
+    """Retorna datos del paciente incluyendo honorarios personalizados."""
+    db = get_db()
+    cursor = db.cursor()
+    psicologo_id = session.get('user_id')
+    cursor.execute("""
+        SELECT id, nombres, apellidos, cedula,
+               costo_personalizado, moneda_personalizada,
+               costo_paquete_personalizado, sesiones_paquete_personalizado
+        FROM pacientes WHERE id = ? AND psicologo_id = ?
+    """, (patient_id, psicologo_id))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Paciente no encontrado.'}), 404
+    return jsonify(dict(row))
+
+
+@app.route('/api/patient-debts/<int:patient_id>', methods=['GET'])
+@login_required
+def get_patient_debts(patient_id):
+    """Retorna las consultas pendientes de cobro de un paciente."""
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT id, fecha, hora, tipo_consulta, monto, moneda, estado_pago
+        FROM agenda_finanzas
+        WHERE paciente_id = ?
+          AND estado_pago IN ('Pendiente', 'Debe')
+        ORDER BY fecha DESC
+    """, (patient_id,))
+    rows = cursor.fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/mark-debts-paid', methods=['POST'])
+@login_required
+def mark_debts_paid():
+    """Marca múltiples registros de agenda_finanzas como pagados."""
+    data = request.json or {}
+    debt_ids = data.get('debt_ids', [])
+    metodo_pago = data.get('metodo_pago', '')
+    referencia = data.get('referencia', '')
+    fecha_pago = data.get('fecha_pago', '')
+
+    if not debt_ids:
+        return jsonify({'error': 'No se indicaron deudas a pagar.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    psicologo_id = session.get('user_id')
+
+    updated = 0
+    for did in debt_ids:
+        # Verificar que el registro pertenece a un paciente del psicólogo
+        cursor.execute("""
+            UPDATE agenda_finanzas SET
+                estado_pago = 'Paga',
+                metodo_pago = ?,
+                referencia = ?,
+                fecha_pago = ?
+            WHERE id = ?
+              AND paciente_id IN (
+                  SELECT id FROM pacientes WHERE psicologo_id = ?
+              )
+        """, (metodo_pago, referencia, fecha_pago, did, psicologo_id))
+        updated += cursor.rowcount
+
+    db.commit()
+    return jsonify({'success': f'{updated} consultas marcadas como pagadas.'})
 
 
 @app.route('/api/agenda/<int:event_id>', methods=['PUT'])
