@@ -173,7 +173,7 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                             "title": title,
                             "body": body,
                             "icon": "/static/logo.png",
-                            "badge": "/static/logo.png"
+                            "badge": "/static/badge.png"
                         },
                         "fcm_options": {
                             "link": url
@@ -6195,7 +6195,7 @@ messaging.onBackgroundMessage((payload) => {{
   const notificationOptions = {{
     body: payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.',
     icon: '/static/logo.png',
-    badge: '/static/logo.png',
+    badge: '/static/badge.png',
     sound: '/static/notification.wav',
     vibrate: [200, 100, 200],
     data: {{
@@ -6964,7 +6964,7 @@ try {{
     self.registration.showNotification(title, {{
       body: body,
       icon: '/static/logo.png',
-      badge: '/static/logo.png',
+      badge: '/static/badge.png',
       sound: '/static/notification.wav',
       vibrate: [200, 100, 200],
       data: {{ url: url }}
