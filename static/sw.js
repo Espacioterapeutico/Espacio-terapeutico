@@ -1,10 +1,11 @@
-const CACHE_NAME = 'mi-consultorio-v2';
+const CACHE_NAME = 'mi-consultorio-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/styles.css',
   '/static/js/app.js',
   '/static/logo.png',
-  '/static/manifest.json'
+  '/static/manifest.json',
+  '/static/notification.wav'
 ];
 
 self.addEventListener('install', (event) => {
@@ -76,8 +77,9 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: '/static/logo.png',
     badge: '/static/logo.png',
+    sound: '/static/notification.wav',
     vibrate: [300, 100, 300, 100, 300],
-    tag: 'miconsultorio-notification',
+    tag: data.tag || 'miconsultorio-notification',
     renotify: true,
     requireInteraction: true,
     data: { url: data.url || '/' },
@@ -87,7 +89,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(data.title || 'Notificación Clínica', options)
   );
 });
 
