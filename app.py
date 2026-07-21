@@ -5968,6 +5968,10 @@ def get_firebase_config():
     except Exception:
         parsed_cfg = json.loads(_def_cfg)
 
+    # Asegurar que el apiKey coincida con el apiKey oficial de Firebase Console
+    parsed_cfg["apiKey"] = "AIzaSyDRQlUEv1SToy5ZdQQyUUYZDIhejeJ81zM"
+    cfg_val = json.dumps(parsed_cfg)
+
     return jsonify({
         "config": cfg_val,
         "vapid_key": vapid_val,
