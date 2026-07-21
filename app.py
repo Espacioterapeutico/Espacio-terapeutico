@@ -2785,7 +2785,8 @@ def get_patient_portal_data_dict(patient_id):
     for next_session_row in next_sessions:
         # Calcular tiempo restante en horas
         try:
-            session_dt = datetime.strptime(f"{next_session_row['fecha']} {next_session_row['hora']}", "%Y-%m-%d %H:%M")
+            hora_clean = next_session_row['hora'][:5] if next_session_row['hora'] else "00:00"
+            session_dt = datetime.strptime(f"{next_session_row['fecha']} {hora_clean}", "%Y-%m-%d %H:%M")
             diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
         except Exception as dt_err:
             diff_hours = 999.0
