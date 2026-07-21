@@ -57,13 +57,27 @@ function showOnboardingTutorialIfNeeded() {
             }
         }, 800);
     }
+    try { updateNotificationBannerVisibility(); } catch(e) {}
 }
 window.showOnboardingTutorialIfNeeded = showOnboardingTutorialIfNeeded;
+
+function updateNotificationBannerVisibility() {
+    const banner = document.getElementById('pat-notif-banner');
+    if (banner) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            banner.style.display = 'none';
+        } else {
+            banner.style.display = 'flex';
+        }
+    }
+}
+window.updateNotificationBannerVisibility = updateNotificationBannerVisibility;
 
 async function requestNotificationPermission() {
     if (!('Notification' in window)) return false;
     if (Notification.permission === 'granted') {
         showOnboardingTutorialIfNeeded();
+        try { updateNotificationBannerVisibility(); } catch(e) {}
         return true;
     }
     if (Notification.permission !== 'denied') {
@@ -71,6 +85,7 @@ async function requestNotificationPermission() {
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
                 showOnboardingTutorialIfNeeded();
+                try { updateNotificationBannerVisibility(); } catch(e) {}
                 return true;
             }
             openNotificationGuideModal();
@@ -197,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         hideLoadingScreen();
         subscribeUserToVapidPush();
+        try { updateNotificationBannerVisibility(); } catch(e) {}
     }, 1500);
 
     try { checkAdminExists(); } catch(e) {}
