@@ -2926,6 +2926,56 @@
         </div>
     </div>
 
+    <!-- MODAL DE GUÍA Y CONFIGURACIÓN DE NOTIFICACIONES EN SEGUNDO PLANO -->
+    <div id="notification-guide-modal" class="modal hide">
+        <div class="modal-content" style="max-width: 500px; border-radius: var(--radius-lg); padding: 1.5rem; border-top: 5px solid var(--primary-color);">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                <h3 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--primary-color); font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    🔔 Activar Notificaciones con App Cerrada
+                </h3>
+                <button type="button" class="close-modal" onclick="closeModal('notification-guide-modal')">&times;</button>
+            </div>
+            <div class="modal-body" style="font-size: 0.9rem; color: var(--text-dark); line-height: 1.5;">
+                <p style="margin-bottom: 1rem; font-weight: 500;">
+                    Para asegurarte de recibir recordatorios de tus citas y notificaciones de pago <strong>incluso cuando la aplicación o el navegador estén cerrados</strong>, sigue estos sencillos pasos:
+                </p>
+
+                <!-- Android Guide -->
+                <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: var(--radius-md); padding: 0.9rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: #166534; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                        📱 En Teléfonos Android (Samsung, Xiaomi, Motorola, Huawei):
+                    </h4>
+                    <ol style="margin: 0; padding-left: 1.2rem; color: #15803d; font-size: 0.85rem; font-weight: 600; line-height: 1.6;">
+                        <li>Ve a los <strong>Ajustes</strong> de tu teléfono.</li>
+                        <li>Entra en <strong>Aplicaciones</strong>.</li>
+                        <li>Busca <strong>Chrome</strong> (o la app instalada).</li>
+                        <li>Toca en <strong>Batería</strong>.</li>
+                        <li>Selecciona <strong>"Sin restricciones"</strong> o <strong>"No optimizar"</strong>.</li>
+                    </ol>
+                </div>
+
+                <!-- iOS Guide -->
+                <div style="background: #fefce8; border: 1.5px solid #fef08a; border-radius: var(--radius-md); padding: 0.9rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: #854d0e; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                        🍎 En iPhone / iPad (iOS):
+                    </h4>
+                    <ol style="margin: 0; padding-left: 1.2rem; color: #a16207; font-size: 0.85rem; font-weight: 600; line-height: 1.6;">
+                        <li>Abre la aplicación en el navegador <strong>Safari</strong>.</li>
+                        <li>Toca el botón <strong>Compartir</strong> (cuadrado con flecha hacia arriba).</li>
+                        <li>Selecciona <strong>"Agregar a pantalla de inicio"</strong>.</li>
+                        <li>Abre la app instalada y permite las notificaciones.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('notification-guide-modal')">Entendido</button>
+                <button type="button" class="btn btn-primary" onclick="requestNotificationPermission(); closeModal('notification-guide-modal');" style="font-weight: 700;">
+                    🔔 Permitir y Conceder Permisos
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
     <script src="/static/js/app.js?v=30"></script>
 </body>
