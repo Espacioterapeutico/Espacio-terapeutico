@@ -5995,40 +5995,54 @@ async function initFirebaseMessagingFlow(registration) {
 window.initFirebaseMessagingFlow = initFirebaseMessagingFlow;
 
 async function loadFirebaseSettings() {
-    try {
-        const res = await fetch('/api/firebase/config');
-        const data = await res.json();
-        
-        const defaultCfg = JSON.stringify({
-            "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
-            "authDomain": "espacio-terapeutico.firebaseapp.com",
-            "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
-            "projectId": "espacio-terapeutico",
-            "storageBucket": "espacio-terapeutico.firebasestorage.app",
-            "messagingSenderId": "437385369836",
-            "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
-            "measurementId": "G-M04FWL2963"
-        }, null, 2);
-        const defaultVapid = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc";
+    const badge = document.getElementById('firebase-sa-status-badge');
+    const defaultCfg = JSON.stringify({
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
+        "authDomain": "espacio-terapeutico.firebaseapp.com",
+        "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
+        "projectId": "espacio-terapeutico",
+        "storageBucket": "espacio-terapeutico.firebasestorage.app",
+        "messagingSenderId": "437385369836",
+        "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
+        "measurementId": "G-M04FWL2963"
+    }, null, 2);
+    const defaultVapid = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc";
 
-        document.getElementById('fcm-web-config').value = data.config || defaultCfg;
-        document.getElementById('fcm-vapid-key').value = data.vapid_key || defaultVapid;
-        
+    try {
+        const cfgElem = document.getElementById('fcm-web-config');
+        const vapidElem = document.getElementById('fcm-vapid-key');
+        if (cfgElem && !cfgElem.value.trim()) cfgElem.value = defaultCfg;
+        if (vapidElem && !vapidElem.value.trim()) vapidElem.value = defaultVapid;
+
+        const res = await fetch('/api/firebase/config');
+        if (res.ok) {
+            const data = await res.json();
+            if (cfgElem && data.config) cfgElem.value = data.config;
+            if (vapidElem && data.vapid_key) vapidElem.value = data.vapid_key;
+        }
+
         const statusRes = await fetch('/api/firebase/status');
-        const statusData = await statusRes.json();
-        
-        const badge = document.getElementById('firebase-sa-status-badge');
-        if (badge) {
-            if (statusData.has_service_account) {
-                badge.textContent = "Cargada y Lista";
-                badge.className = "badge badge-success";
-            } else {
-                badge.textContent = "Falta firebase_service_account.json";
-                badge.className = "badge badge-danger";
+        if (statusRes.ok) {
+            const statusData = await statusRes.json();
+            if (badge) {
+                if (statusData.has_service_account) {
+                    badge.textContent = "Cargada y Lista";
+                    badge.className = "badge badge-success";
+                } else {
+                    badge.textContent = "Falta firebase_service_account.json";
+                    badge.className = "badge badge-danger";
+                }
             }
+        } else if (badge) {
+            badge.textContent = "Falta firebase_service_account.json";
+            badge.className = "badge badge-danger";
         }
     } catch (err) {
         console.error("Error al cargar configuración de Firebase:", err);
+        if (badge) {
+            badge.textContent = "Falta firebase_service_account.json";
+            badge.className = "badge badge-danger";
+        }
     }
 }
 window.loadFirebaseSettings = loadFirebaseSettings;
