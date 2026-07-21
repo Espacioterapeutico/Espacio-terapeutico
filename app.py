@@ -3,6 +3,7 @@ import sys
 import sqlite3
 import datetime
 import shutil
+import json
 from flask import Flask, request, jsonify, session, send_file, redirect, url_for, g
 from werkzeug.security import generate_password_hash, check_password_hash
 import docx
@@ -5933,26 +5934,29 @@ FIREBASE_SA_FILE = os.path.join(BASE_DIR, "firebase_service_account.json")
 
 @app.route('/api/firebase/config', methods=['GET'])
 def get_firebase_config():
-    return jsonify({
-        "config": json.dumps({
-            "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
-            "authDomain": "espacio-terapeutico.firebaseapp.com",
-            "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
-            "projectId": "espacio-terapeutico",
-            "storageBucket": "espacio-terapeutico.firebasestorage.app",
-            "messagingSenderId": "437385369836",
-            "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
-            "measurementId": "G-M04FWL2963"
-        }),
-        "vapid_key": "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc",
-        "vapidKey": "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc",
+    cfg_dict = {
         "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
         "authDomain": "espacio-terapeutico.firebaseapp.com",
         "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
         "projectId": "espacio-terapeutico",
         "storageBucket": "espacio-terapeutico.firebasestorage.app",
         "messagingSenderId": "437385369836",
-        "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9"
+        "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
+        "measurementId": "G-M04FWL2963"
+    }
+    vapid_str = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc"
+
+    return jsonify({
+        "config": json.dumps(cfg_dict),
+        "vapid_key": vapid_str,
+        "vapidKey": vapid_str,
+        "apiKey": cfg_dict["apiKey"],
+        "authDomain": cfg_dict["authDomain"],
+        "databaseURL": cfg_dict["databaseURL"],
+        "projectId": cfg_dict["projectId"],
+        "storageBucket": cfg_dict["storageBucket"],
+        "messagingSenderId": cfg_dict["messagingSenderId"],
+        "appId": cfg_dict["appId"]
     }), 200
 
 @app.route('/api/firebase/config', methods=['POST'])
