@@ -3914,7 +3914,8 @@ function renderProfileBlock(container, profileData) {
         addRangeBtn.style.padding = '0.2rem 0.5rem';
         addRangeBtn.textContent = '+ Agregar Bloque';
         addRangeBtn.onclick = () => {
-            createRangeRow(listRanges, '08:00', '12:00');
+            const hasExisting = listRanges.children.length > 0;
+            createRangeRow(listRanges, hasExisting ? '14:00' : '08:00', hasExisting ? '18:00' : '12:00');
         };
         dayRanges.appendChild(addRangeBtn);
         
