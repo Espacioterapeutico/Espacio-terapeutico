@@ -876,6 +876,7 @@
                         <button type="button" id="set-tab-pagos" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('pagos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Métodos de Pago</button>
                         <button type="button" id="set-tab-firebase" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('firebase')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Notificaciones FCM</button>
                         <button type="button" id="set-tab-enlaces" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('enlaces')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Enlaces de Paciente</button>
+                        <button type="button" id="set-tab-password" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('password')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">🔑 Cambiar Contraseña</button>
                         <button type="button" id="set-tab-soporte" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('soporte')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Soporte Técnico</button>
                     </div>
 
@@ -1137,6 +1138,34 @@
                                     </button>
                                 </div>
                                 <div id="fcm-config-status-msg" class="status-msg hide mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cambiar Contraseña Tab Content -->
+                    <div id="set-card-password" class="settings-tab-content hide">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>🔑 Cambiar Contraseña de Acceso</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-secondary mb-4" style="font-size: 0.88rem;">Ingresa tu contraseña actual y confirma tu nueva contraseña ingresándola dos veces.</p>
+                                <form onsubmit="handleChangeUserPassword(event)">
+                                    <div class="form-group mb-3">
+                                        <label for="change-user-curr-pass" style="font-weight: 700;">Contraseña Actual *</label>
+                                        <input type="password" id="change-user-curr-pass" required placeholder="Tu contraseña actual" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label for="change-user-new-pass" style="font-weight: 700;">Nueva Contraseña *</label>
+                                        <input type="password" id="change-user-new-pass" required minlength="6" placeholder="Nueva contraseña (mínimo 6 caracteres)" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group mb-4">
+                                        <label for="change-user-confirm-pass" style="font-weight: 700;">Confirmar Nueva Contraseña *</label>
+                                        <input type="password" id="change-user-confirm-pass" required minlength="6" placeholder="Repite la nueva contraseña" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700;">Actualizar Contraseña</button>
+                                </form>
+                                <div id="change-user-pass-status-msg" class="status-msg hide mt-3"></div>
                             </div>
                         </div>
                     </div>
@@ -1549,13 +1578,17 @@
                             </div>
                             <div class="card-body">
                                 <form id="pat-change-pw-form" onsubmit="handlePatientChangePwSubmit(event)">
-                                    <div class="form-group">
-                                        <label for="pat-pw-current">Contraseña Actual</label>
+                                    <div class="form-group mb-3">
+                                        <label for="pat-pw-current">Contraseña Actual *</label>
                                         <input type="password" id="pat-pw-current" required placeholder="Contraseña actual">
                                     </div>
-                                    <div class="form-group">
-                                        <label for="pat-pw-new">Nueva Contraseña</label>
-                                        <input type="password" id="pat-pw-new" required placeholder="Nueva contraseña">
+                                    <div class="form-group mb-3">
+                                        <label for="pat-pw-new">Nueva Contraseña *</label>
+                                        <input type="password" id="pat-pw-new" required minlength="6" placeholder="Nueva contraseña">
+                                    </div>
+                                    <div class="form-group mb-4">
+                                        <label for="pat-pw-confirm">Confirmar Nueva Contraseña *</label>
+                                        <input type="password" id="pat-pw-confirm" required minlength="6" placeholder="Repite la nueva contraseña">
                                     </div>
                                     <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Actualizar Contraseña</button>
                                 </form>
