@@ -62,13 +62,15 @@ function showOnboardingTutorialIfNeeded() {
 window.showOnboardingTutorialIfNeeded = showOnboardingTutorialIfNeeded;
 
 function updateNotificationBannerVisibility() {
-    const banner = document.getElementById('pat-notif-banner');
-    if (banner) {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            banner.style.display = 'none';
-        } else {
-            banner.style.display = 'flex';
-        }
+    const patBanner = document.getElementById('pat-notif-banner');
+    const adminBanner = document.getElementById('admin-notif-banner');
+    const isGranted = 'Notification' in window && Notification.permission === 'granted';
+    
+    if (patBanner) {
+        patBanner.style.display = isGranted ? 'none' : 'flex';
+    }
+    if (adminBanner) {
+        adminBanner.style.display = isGranted ? 'none' : 'flex';
     }
 }
 window.updateNotificationBannerVisibility = updateNotificationBannerVisibility;
