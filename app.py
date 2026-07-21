@@ -595,6 +595,21 @@ def init_db():
             )
         """)
 
+        # Pre-cargar configuracion por defecto de Firebase FCM
+        _def_cfg = json.dumps({
+            "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
+            "authDomain": "espacio-terapeutico.firebaseapp.com",
+            "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
+            "projectId": "espacio-terapeutico",
+            "storageBucket": "espacio-terapeutico.firebasestorage.app",
+            "messagingSenderId": "437385369836",
+            "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
+            "measurementId": "G-M04FWL2963"
+        })
+        _def_vapid = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc"
+        cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_config', ?)", (_def_cfg,))
+        cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_vapid_key', ?)", (_def_vapid,))
+
         db.commit()
             
     db.close()
@@ -5926,9 +5941,24 @@ def get_firebase_config():
     cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_vapid_key'")
     row_vapid = cursor.fetchone()
     
+    _def_cfg = json.dumps({
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
+        "authDomain": "espacio-terapeutico.firebaseapp.com",
+        "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
+        "projectId": "espacio-terapeutico",
+        "storageBucket": "espacio-terapeutico.firebasestorage.app",
+        "messagingSenderId": "437385369836",
+        "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
+        "measurementId": "G-M04FWL2963"
+    })
+    _def_vapid = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc"
+
+    cfg_val = (row_cfg[0] if row_cfg and row_cfg[0] else _def_cfg)
+    vapid_val = (row_vapid[0] if row_vapid and row_vapid[0] else _def_vapid)
+    
     return jsonify({
-        'config': row_cfg[0] if row_cfg else '',
-        'vapid_key': row_vapid[0] if row_vapid else ''
+        'config': cfg_val,
+        'vapid_key': vapid_val
     })
 
 @app.route('/api/firebase/config', methods=['POST'])
