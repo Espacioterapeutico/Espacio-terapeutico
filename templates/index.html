@@ -1106,13 +1106,13 @@
                                     <!-- 1. Firebase API Key and general fields (Web Config JSON) -->
                                     <div class="form-group mb-3">
                                         <label for="fcm-web-config" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Configuración SDK de Firebase Web (JSON)</label>
-                                        <textarea id="fcm-web-config" rows="6" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: monospace; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder='Ej: { "apiKey": "...", "authDomain": "...", "projectId": "...", "storageBucket": "...", "messagingSenderId": "...", "appId": "..." }' required></textarea>
+                                        <textarea id="fcm-web-config" rows="6" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: monospace; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder='Ej: { "apiKey": "...", "authDomain": "...", "projectId": "...", "storageBucket": "...", "messagingSenderId": "...", "appId": "..." }'></textarea>
                                     </div>
                                     
                                     <!-- 2. Web Push Certificate VAPID Key -->
                                     <div class="form-group mb-4">
                                         <label for="fcm-vapid-key" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Clave VAPID Web Push (Messaging Web Certificate Key)</label>
-                                        <input type="text" id="fcm-vapid-key" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: monospace; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Clave VAPID generada en la pestaña Cloud Messaging de Firebase" required />
+                                        <input type="text" id="fcm-vapid-key" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: monospace; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Clave VAPID generada en la pestaña Cloud Messaging de Firebase" />
                                     </div>
                                     
                                     <button type="submit" class="btn btn-primary btn-block mb-2" style="width: 100%;">Guardar Configuración Web FCM</button>
