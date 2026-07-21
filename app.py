@@ -576,6 +576,25 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sesiones_paciente ON sesiones(paciente_id, fecha)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_historial_reprog_paciente ON historial_reprogramaciones(paciente_id)")
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS web_push_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                patient_id INTEGER,
+                endpoint TEXT NOT NULL,
+                p256dh TEXT NOT NULL,
+                auth TEXT NOT NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fcm_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                patient_id INTEGER,
+                token TEXT UNIQUE
+            )
+        """)
+
         db.commit()
             
     db.close()
