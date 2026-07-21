@@ -6395,6 +6395,23 @@ async function renderFastCalendar() {
 async function fetchFastAvailableHours(dateStr) {
     const hoursGrid = document.getElementById('fast-hours-grid');
     const hoursContainer = document.getElementById('fast-hours-container');
+    const hoursTitle = document.getElementById('fast-hours-title');
+    
+    // Formatear la fecha para feedback visual
+    try {
+        const parts = dateStr.split('-');
+        const dObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        let dateFormatted = dObj.toLocaleDateString('es-ES', options);
+        dateFormatted = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+        if (hoursTitle) {
+            hoursTitle.textContent = `Los espacios para el día ${dateFormatted} son:`;
+        }
+    } catch(e) {
+        if (hoursTitle) {
+            hoursTitle.textContent = `Los espacios para el día ${dateStr} son:`;
+        }
+    }
     
     hoursGrid.innerHTML = '<span class="text-secondary text-sm">Consultando horarios...</span>';
     hoursContainer.classList.remove('hide');
@@ -6468,10 +6485,15 @@ async function fetchFastAvailableHours(dateStr) {
     }
 }
 
+let isSubmittingFastBooking = false;
 async function submitFastBooking(e) {
     e.preventDefault();
+    if (isSubmittingFastBooking) return;
+    
     const statusMsg = document.getElementById('fast-booking-status-msg');
     statusMsg.classList.add('hide');
+    
+    const submitBtn = document.querySelector('#fast-booking-form button[type="submit"]');
     
     const fecha = document.getElementById('fast-req-fecha').value;
     const hora = document.getElementById('fast-req-hora').value;
@@ -6487,6 +6509,9 @@ async function submitFastBooking(e) {
     }
     
     try {
+        isSubmittingFastBooking = true;
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Agendando..."; }
+        
         const res = await fetch('/api/fast-booking/book', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -6518,9 +6543,12 @@ async function submitFastBooking(e) {
             statusMsg.classList.remove('hide');
         }
     } catch (err) {
-        statusMsg.textContent = "Error de conexión con el servidor.";
+        statusMsg.textContent = "Error de conexión al agendar la cita.";
         statusMsg.className = "status-msg error-msg";
         statusMsg.classList.remove('hide');
+    } finally {
+        isSubmittingFastBooking = false;
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Confirmar & Agendar Cita"; }
     }
 }
 
