@@ -61,9 +61,9 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Soporte para Notificaciones Push Nativas en la barra de tareas del sistema operativo
+// Soporte para Notificaciones Push Nativas VAPID en la barra de tareas y pantalla de bloqueo
 self.addEventListener('push', (event) => {
-  let data = { title: 'Mi Consultorio', body: 'Tienes una nueva notificación.' };
+  let data = { title: 'Mi Consultorio', body: 'Tienes una nueva notificación.', url: '/' };
   if (event.data) {
     try {
       data = event.data.json();
@@ -76,10 +76,13 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: '/static/logo.png',
     badge: '/static/logo.png',
-    vibrate: [200, 100, 200],
+    vibrate: [300, 100, 300, 100, 300],
+    tag: 'miconsultorio-notification',
+    renotify: true,
+    requireInteraction: true,
     data: { url: data.url || '/' },
     actions: [
-      { action: 'open', title: 'Abrir App' }
+      { action: 'open', title: '👁️ Ver en la App' }
     ]
   };
 
@@ -91,10 +94,11 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let client of windowClients) {
-        if (client.url === targetUrl && 'focus' in client) {
+        if (client.url.includes(targetUrl) && 'focus' in client) {
           return client.focus();
         }
       }
