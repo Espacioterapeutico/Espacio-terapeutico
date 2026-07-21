@@ -168,6 +168,17 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                         "title": title,
                         "body": body
                     },
+                    "webpush": {
+                        "notification": {
+                            "title": title,
+                            "body": body,
+                            "icon": "/static/logo.png",
+                            "badge": "/static/logo.png"
+                        },
+                        "fcm_options": {
+                            "link": url
+                        }
+                    },
                     "android": {
                         "notification": {
                             "sound": "default"
