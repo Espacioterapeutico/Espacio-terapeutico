@@ -4998,6 +4998,48 @@ def get_admin_consultation_history():
     except Exception as e:
         return jsonify({'error': f'Error al obtener historial de consultas: {str(e)}'}), 500
 
+@app.route('/api/admin/consultation-history/<int:event_id>', methods=['DELETE'])
+@login_required
+def delete_admin_consultation_history_event(event_id):
+    try:
+        user_id = session.get('user_id')
+        db = get_db()
+        cursor = db.cursor()
+
+        cursor.execute("""
+            SELECT af.id, af.google_event_id, af.paciente_id 
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.id = ? AND p.psicologo_id = ?
+        """, (event_id, user_id))
+        row = cursor.fetchone()
+
+        if not row:
+            return jsonify({'error': 'Consulta no encontrada o sin permiso para eliminar.'}), 404
+
+        google_event_id = row['google_event_id']
+        paciente_id = row['paciente_id']
+
+        if google_event_id:
+            service = get_calendar_service()
+            if service:
+                try:
+                    service.events().delete(calendarId='primary', eventId=google_event_id).execute()
+                except Exception as ge:
+                    print("Error al eliminar evento en Google Calendar:", ge)
+
+        cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
+        cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
+        db.commit()
+
+        if paciente_id:
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(paciente_id,)).start()
+
+        return jsonify({'success': 'Consulta de prueba eliminada con éxito.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al eliminar consulta: {str(e)}'}), 500
+
 @app.route('/api/patient/agenda-history', methods=['GET'])
 @patient_login_required
 def get_patient_agenda_history():
