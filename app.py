@@ -6237,6 +6237,12 @@ def upload_google_credentials():
 def google_authorize():
     import traceback
     try:
+        if not GOOGLE_CALENDAR_AVAILABLE:
+            return jsonify({
+                'error': 'Fallo al iniciar flujo con Google Calendar',
+                'detalle': 'Las librerías de Google Calendar no están instaladas en PythonAnywhere. Ejecuta pip install google-auth-oauthlib google-api-python-client en la consola.'
+            }), 500
+
         if not os.path.exists(CLIENT_SECRETS_FILE):
             return "Error: Falta el archivo credentials.json en el servidor.", 400
             
@@ -6269,6 +6275,9 @@ def google_authorize():
 def google_callback():
     import traceback
     try:
+        if not GOOGLE_CALENDAR_AVAILABLE:
+            return "Error: Librerías de Google no instaladas.", 500
+
         state = session.get('state')
         
         redirect_uri = url_for('google_callback', _external=True)
