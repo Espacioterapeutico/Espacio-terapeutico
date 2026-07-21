@@ -887,6 +887,14 @@
                                     </form>
                                     <div id="restore-status-msg" class="status-msg hide mt-2"></div>
                                 </div>
+
+                                <div class="danger-zone-section mt-6" style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 2px dashed rgba(239, 68, 68, 0.4);">
+                                    <h4 class="mb-2" style="color: #dc2626; font-weight: 700;">⚠️ Zona de Peligro: Reiniciar / Borrar Todos los Datos</h4>
+                                    <p class="text-secondary mb-3" style="font-size: 0.88rem;">Esta opción eliminará de forma permanente todas tus historias clínicas, citas agendadas, evoluciones y registros financieros. Esta acción no se puede deshacer.</p>
+                                    <button type="button" onclick="openClearDataModal()" class="btn btn-secondary btn-block text-danger" style="width:100%; border: 1.5px solid #ef4444; background: rgba(239, 68, 68, 0.05); font-weight: 700;">
+                                        🗑️ Borrar Todos los Datos de la Base de Datos
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2889,6 +2897,30 @@
                 <button type="button" class="btn btn-primary" onclick="submitQuickPay()" id="qp-submit-btn">
                     <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                     Confirmar Pago
+                </button>
+            </div>
+        </div>
+    <!-- MODAL DE CONFIRMACIÓN: BORRAR TODOS LOS DATOS -->
+    <div id="modal-clear-data" class="modal hide">
+        <div class="modal-content" style="max-width: 480px; border-top: 5px solid #dc2626;">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                <h3 style="color: #dc2626; font-size: 1.25rem; font-weight: 700; margin: 0;">🚨 Confirmar Eliminación Total</h3>
+                <button type="button" class="close-modal" onclick="closeClearDataModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding-top: 1rem;">
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #dc2626; padding: 0.85rem; border-radius: var(--radius-sm); font-size: 0.85rem; line-height: 1.4; margin-bottom: 1.25rem;">
+                    <strong>¡ADVERTENCIA CRÍTICA!</strong> Estás a punto de borrar <strong>TODOS LOS DATOS</strong> de tu consultorio (Pacientes, Citas, Evoluciones y Finanzas). Esta operación es <strong>IRREVERSIBLE</strong>.
+                </div>
+                <div class="form-group">
+                    <label style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">Escribe <code style="background:#fee2e2; color:#dc2626; padding:0.15rem 0.4rem; border-radius:4px; font-weight:800;">CONFIRMAR</code> para autorizar:</label>
+                    <input type="text" id="clear-data-confirm-input" class="form-control" placeholder="Escribe CONFIRMAR aquí..." oninput="checkClearDataInput()" style="text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">
+                </div>
+                <div id="clear-data-status-msg" class="status-msg hide mt-2"></div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 0.75rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeClearDataModal()">Cancelar</button>
+                <button type="button" id="btn-submit-clear-data" class="btn btn-danger" onclick="submitClearAllData()" disabled style="background: #dc2626; color: white; opacity: 0.5; cursor: not-allowed; font-weight: 700;">
+                    🗑️ Borrar Todos los Datos Definitivamente
                 </button>
             </div>
         </div>
