@@ -7230,19 +7230,11 @@ async function fetchRescheduleAvailableHours(dateStr) {
         const localSlots = [];
         slots.forEach(slotObj => {
             const therapistDate = slotObj.iso.substring(0, 10);
-            const therapistHour = slotObj.iso.substring(11, 16);
-            
-            let displayTime = therapistHour;
-            try {
-                const d = new Date(slotObj.iso);
-                if (!isNaN(d.getTime())) {
-                    displayTime = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
-                }
-            } catch(e){}
+            const therapistHour = slotObj.hora_literal || slotObj.iso.substring(11, 16);
 
             if (therapistDate === dateStr) {
                 localSlots.push({
-                    displayTime: displayTime,
+                    displayTime: therapistHour,
                     valFecha: therapistDate,
                     valHora: therapistHour
                 });
