@@ -3152,9 +3152,10 @@ async function loadTherapistConsultationHistory() {
                     <td>${item.tipo_consulta || '—'}</td>
                     <td><strong>${Number(item.monto || 0).toFixed(2)} ${item.moneda || 'USD'}</strong></td>
                     <td>${statusBadge}</td>
-                    <td style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+                    <td style="display:flex; gap:0.35rem; flex-wrap:wrap; align-items:center;">
                         ${waBtn}
                         <button class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="openEditEventModal(${item.id})">Gestionar</button>
+                        <button class="btn btn-sm" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-size:0.75rem; font-weight:700; cursor:pointer;" onclick="deleteConsultationFromHistory(${item.id})">🗑️ Eliminar</button>
                     </td>
                 </tr>
             `;
@@ -3164,6 +3165,30 @@ async function loadTherapistConsultationHistory() {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error al cargar historial.</td></tr>';
     }
 }
+
+async function deleteConsultationFromHistory(eventId) {
+    if (!confirm("¿Estás seguro de que deseas eliminar esta consulta del historial de pruebas? Esta acción borrará el registro y sus datos asociados.")) {
+        return;
+    }
+    try {
+        const res = await fetch(`/api/admin/consultation-history/${eventId}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Consulta eliminada con éxito.");
+            loadAdminConsultationHistory();
+            if (typeof loadAgenda === 'function') loadAgenda();
+            if (typeof loadFinanceData === 'function') loadFinanceData();
+        } else {
+            alert(data.error || "Error al eliminar la consulta.");
+        }
+    } catch (err) {
+        console.error("Error al eliminar consulta:", err);
+        alert("Error de conexión al eliminar la consulta.");
+    }
+}
+window.deleteConsultationFromHistory = deleteConsultationFromHistory;
 
 async function renderFullCalendar() {
     const calendarEl = document.getElementById('full-calendar-agenda');
