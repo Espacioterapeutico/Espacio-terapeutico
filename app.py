@@ -1265,20 +1265,45 @@ def fast_booking_book():
         
     try:
         google_event_id = None
-        service = get_calendar_service()
+        service = get_calendar_service(psicologo_id)
         if service:
-            start_datetime = f"{fecha}T{hora}:00"
+            start_datetime = f"{fecha}T{hora}:00-04:00"
             end_hour = str(int(hora.split(':')[0]) + 1).zfill(2)
-            end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00"
+            end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00-04:00"
+            
+            # Obtener datos del psicólogo
+            cursor.execute("SELECT nombres FROM usuarios WHERE id = ?", (psicologo_id,))
+            u_row = cursor.fetchone()
+            therapist_name = u_row['nombres'] if u_row else "Paulo Mora"
             
             event_body = {
-                'summary': f"Consulta Auto-agendada: {pac_nombre}",
-                'description': f"Cédula: {cedula}\nModalidad: {modalidad}\nTeléfono: {telefono}\nNuevo Paciente: {'Sí' if is_new_patient else 'No'}",
+                'summary': f"Consulta Psicológica - {pac_nombre}",
+                'description': f"Modalidad: {modalidad}\nPsicólogo: Psic. {therapist_name}",
                 'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
                 'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
+                'guestsCanInviteOthers': False,
+                'reminders': {
+                    'useDefault': False,
+                    'overrides': [
+                        { 'method': 'email', 'minutes': 1440 },
+                        { 'method': 'popup', 'minutes': 60 }
+                    ]
+                }
             }
+            # Si el paciente no es nuevo y tiene correo, lo agregamos como asistente
+            email_paciente = None
+            if not is_new_patient and patient and patient['email']:
+                email_paciente = patient['email']
+            
+            if email_paciente:
+                event_body['attendees'] = [
+                    {
+                        'email': email_paciente,
+                        'displayName': pac_nombre
+                    }
+                ]
             try:
-                g_event = service.events().insert(calendarId='primary', body=event_body).execute()
+                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
                 google_event_id = g_event.get('id')
             except Exception as ge:
                 print("Error creando evento en Google Calendar desde fast-booking:", ge)
@@ -2598,7 +2623,7 @@ def patient_reschedule_appointment():
             return jsonify({'error': 'El horario seleccionado ya está reservado.'}), 400
             
         if google_event_id:
-            service = get_calendar_service()
+            service = get_calendar_service(psicologo_id)
             if service:
                 try:
                     cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
@@ -2611,12 +2636,34 @@ def patient_reschedule_appointment():
                         except:
                             pass
                     start_dt = datetime.strptime(f"{new_date} {new_hour}", "%Y-%m-%d %H:%M")
+                    start_iso = f"{new_date}T{new_hour}:00-04:00"
                     end_dt = start_dt + timedelta(minutes=duration)
+                    end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+                    
+                    cursor.execute("SELECT nombres, apellidos, email FROM pacientes WHERE id = ?", (patient_id,))
+                    pac_row = cursor.fetchone()
+                    pac_email = pac_row['email'] if pac_row else None
+                    pac_name = f"{pac_row['nombres']} {pac_row['apellidos']}" if pac_row else ""
+                    
+                    cursor.execute("SELECT nombres FROM usuarios WHERE id = ?", (psicologo_id,))
+                    u_row3 = cursor.fetchone()
+                    therapist_name = u_row3['nombres'] if u_row3 else "Paulo Mora"
                     
                     event_body = service.events().get(calendarId='primary', eventId=google_event_id).execute()
-                    event_body['start'] = {'dateTime': start_dt.isoformat(), 'timeZone': 'America/Caracas'}
-                    event_body['end'] = {'dateTime': end_dt.isoformat(), 'timeZone': 'America/Caracas'}
-                    service.events().update(calendarId='primary', eventId=google_event_id, body=event_body).execute()
+                    event_body['summary'] = f"Consulta Psicológica - {pac_name}"
+                    event_body['description'] = f"Modalidad: {event_body.get('description', '').split('Modalidad:')[-1].splitlines()[0] if 'Modalidad:' in event_body.get('description', '') else 'Online'}\nPsicólogo: Psic. {therapist_name}\n[Reprogramada]"
+                    event_body['start'] = {'dateTime': start_iso, 'timeZone': 'America/Caracas'}
+                    event_body['end'] = {'dateTime': end_iso, 'timeZone': 'America/Caracas'}
+                    event_body['guestsCanInviteOthers'] = False
+                    
+                    if pac_email:
+                        event_body['attendees'] = [
+                            {
+                                'email': pac_email,
+                                'displayName': pac_name
+                            }
+                        ]
+                    service.events().update(calendarId='primary', eventId=google_event_id, body=event_body, sendUpdates='all').execute()
                 except Exception as ge:
                     print("Error updating Google Calendar event during reschedule:", ge)
                     
@@ -5283,26 +5330,44 @@ def add_agenda_event():
     try:
         # Intentar registrar en Google Calendar primero si está configurado
         google_event_id = None
-        service = get_calendar_service()
+        user_id = session.get('user_id')
+        service = get_calendar_service(user_id)
         if service:
             # Obtener datos del paciente
-            cursor.execute("SELECT nombres, apellidos, cedula FROM pacientes WHERE id = ?", (paciente_id,))
+            cursor.execute("SELECT nombres, apellidos, cedula, email FROM pacientes WHERE id = ?", (paciente_id,))
             paciente = cursor.fetchone()
             
-            # Formatear fecha y hora para Google RFC3339
-            start_datetime = f"{fecha}T{hora}:00"
+            # Formatear fecha y hora para Google RFC3339 con offset de Caracas (-04:00)
+            start_datetime = f"{fecha}T{hora}:00-04:00"
             # Asumimos 1 hora de consulta
             end_hour = str(int(hora.split(':')[0]) + 1).zfill(2)
-            end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00"
+            end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00-04:00"
+            
+            therapist_name = session.get('user_name', 'Paulo Mora')
             
             event_body = {
-                'summary': f"Consulta: {paciente['nombres']} {paciente['apellidos']}",
-                'description': f"Cédula: {paciente['cedula']}\nModalidad: {tipo_consulta}\nEstado: {estado_pago}",
+                'summary': f"Consulta Psicológica - {paciente['nombres']} {paciente['apellidos']}",
+                'description': f"Modalidad: {tipo_consulta}\nPsicólogo: Psic. {therapist_name}",
                 'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
                 'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
+                'guestsCanInviteOthers': False,
+                'reminders': {
+                    'useDefault': False,
+                    'overrides': [
+                        { 'method': 'email', 'minutes': 1440 },
+                        { 'method': 'popup', 'minutes': 60 }
+                    ]
+                }
             }
+            if paciente and paciente.get('email'):
+                event_body['attendees'] = [
+                    {
+                        'email': paciente['email'],
+                        'displayName': f"{paciente['nombres']} {paciente['apellidos']}"
+                    }
+                ]
             try:
-                g_event = service.events().insert(calendarId='primary', body=event_body).execute()
+                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
                 google_event_id = g_event.get('id')
             except Exception as ge:
                 print("Error creando evento en Google Calendar:", ge)
@@ -5555,22 +5620,46 @@ def update_agenda_event(event_id):
             return jsonify({'error': 'Evento no encontrado.'}), 404
             
         google_event_id = local_event['google_event_id']
+        paciente_id = local_event['paciente_id']
+        
+        # Obtener datos del paciente
+        cursor.execute("SELECT nombres, apellidos, email FROM pacientes WHERE id = ?", (paciente_id,))
+        paciente = cursor.fetchone()
         
         # Sincronizar actualización con Google Calendar
         if google_event_id:
-            service = get_calendar_service()
+            user_id = session.get('user_id')
+            service = get_calendar_service(user_id)
             if service:
-                start_datetime = f"{fecha}T{hora}:00"
+                start_datetime = f"{fecha}T{hora}:00-04:00"
                 end_hour = str(int(hora.split(':')[0]) + 1).zfill(2)
-                end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00"
+                end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00-04:00"
+                
+                therapist_name = session.get('user_name', 'Paulo Mora')
                 
                 try:
                     # Traemos el evento original para mantener campos
                     g_event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
+                    g_event['summary'] = f"Consulta Psicológica - {paciente['nombres']} {paciente['apellidos']}" if paciente else g_event.get('summary')
+                    g_event['description'] = f"Modalidad: {tipo_consulta}\nPsicólogo: Psic. {therapist_name}\n[Actualizado: {estado_pago}]"
                     g_event['start'] = {'dateTime': start_datetime, 'timeZone': 'America/Caracas'}
                     g_event['end'] = {'dateTime': end_datetime, 'timeZone': 'America/Caracas'}
-                    g_event['description'] = g_event.get('description', '') + f"\n[Actualizado: {estado_pago}]"
-                    service.events().update(calendarId='primary', eventId=google_event_id, body=g_event).execute()
+                    g_event['guestsCanInviteOthers'] = False
+                    g_event['reminders'] = {
+                        'useDefault': False,
+                        'overrides': [
+                            { 'method': 'email', 'minutes': 1440 },
+                            { 'method': 'popup', 'minutes': 60 }
+                        ]
+                    }
+                    if paciente and paciente.get('email'):
+                        g_event['attendees'] = [
+                            {
+                                'email': paciente['email'],
+                                'displayName': f"{paciente['nombres']} {paciente['apellidos']}"
+                            }
+                        ]
+                    service.events().update(calendarId='primary', eventId=google_event_id, body=g_event, sendUpdates='all').execute()
                 except Exception as ge:
                     print("Error al actualizar evento de Google Calendar:", ge)
                     
