@@ -756,13 +756,23 @@ h1, h2, h3, h4, h5, h6 {
    2. VISTA: TABLAS (Historias Clínicas)
    ========================================== */
 
-.table-container {
+.card, .card-body {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.table-container, .table-responsive {
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    box-sizing: border-box;
 }
 
 .data-table {
     width: 100%;
+    min-width: 680px;
     border-collapse: collapse;
     text-align: left;
 }
