@@ -5932,7 +5932,6 @@ def delete_agenda_event(event_id):
 FIREBASE_SA_FILE = os.path.join(BASE_DIR, "firebase_service_account.json")
 
 @app.route('/api/firebase/config', methods=['GET'])
-@login_required
 def get_firebase_config():
     db = get_db()
     cursor = db.cursor()
