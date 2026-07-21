@@ -2926,6 +2926,20 @@ def verify_admin_payment(payment_id):
         db.commit()
         auto_settle_patient_debts(db, paciente_id)
 
+        # Notificación Push al paciente de Pago Verificado
+        try:
+            fb_payload = {
+                "id": int(datetime.datetime.now().timestamp() * 1000),
+                "tipo": "pago",
+                "titulo": "💵 Pago Verificado con Éxito",
+                "mensaje": f"Tu pago de {monto_pago} {moneda_pago} (Ref: {referencia_pago}) ha sido verificado con éxito.",
+                "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "leida": False
+            }
+            requests.post(f"{FIREBASE_DB_URL}/pacientes/{paciente_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+        except Exception as fe:
+            print("Error al notificar verificación de pago al paciente:", fe)
+
         # Sincronizar con Firebase
         try:
             import threading
@@ -5057,6 +5071,27 @@ def add_agenda_event():
         ))
         db.commit()
         
+        # Notificación Push al paciente sobre nueva cita agendada por el psicólogo
+        try:
+            from datetime import datetime
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute("SELECT nombres FROM usuarios WHERE id = ?", (session.get('user_id'),))
+            u_row = cursor.fetchone()
+            therapist_name = u_row['nombres'] if u_row else "Paulo Mora"
+            
+            fb_payload = {
+                "id": int(datetime.now().timestamp() * 1000),
+                "tipo": "cita",
+                "titulo": "📅 Nueva Cita Programada",
+                "mensaje": f"El Psic. {therapist_name} ha agendado una nueva cita para el {fecha} a las {hora}.",
+                "fecha": now_str,
+                "leida": False
+            }
+            import requests
+            requests.post(f"{FIREBASE_DB_URL}/pacientes/{paciente_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+        except Exception as fe:
+            print("Error al notificar nueva cita al paciente:", fe)
+
         # Sincronización en segundo plano con Firebase
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(paciente_id,)).start()
