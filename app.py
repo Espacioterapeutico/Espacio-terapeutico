@@ -1301,6 +1301,17 @@ def fast_booking_book():
         """, ('cita', 'Nueva Cita Agendada (Rápida)', f"{pac_nombre} ha auto-agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
         
         db.commit()
+
+        # Enviar notificación WebPush al psicólogo
+        try:
+            send_webpush_notification(
+                user_id=psicologo_id,
+                title="Nueva Cita Auto-Agendada",
+                body=f"{pac_nombre} ha reservado una consulta para el {fecha} a las {hora}.",
+                url="/?view=agenda"
+            )
+        except Exception as wp_ex:
+            print("Error al enviar WebPush de auto-agendamiento:", wp_ex)
         
         # Sincronización en Firebase
         import threading
@@ -2687,9 +2698,10 @@ def patient_add_payment_report():
         except Exception as fe:
             print("Error secundario al guardar pago en Firebase:", fe)
             
-        cursor.execute("SELECT nombres, apellidos FROM pacientes WHERE id = ?", (patient_id,))
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         pac = cursor.fetchone()
         pac_nombre = f"{pac['nombres']} {pac['apellidos']}"
+        psicologo_id = pac['psicologo_id'] or 1
         
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
@@ -2697,6 +2709,17 @@ def patient_add_payment_report():
             VALUES (?, ?, ?, ?, 0, ?)
         """, ('pago', 'Nuevo Pago Notificado', f"{pac_nombre} notificó un pago de {monto} {moneda}.", fecha_notif, 'finance'))
         db.commit()
+
+        # Enviar notificación WebPush al psicólogo
+        try:
+            send_webpush_notification(
+                user_id=psicologo_id,
+                title="Nuevo Pago Notificado",
+                body=f"El paciente {pac_nombre} ha reportado un pago de {monto} {moneda} para su verificación.",
+                url="/?view=finanzas"
+            )
+        except Exception as wp_ex:
+            print("Error al enviar WebPush de pago notificado:", wp_ex)
         
         return jsonify({'success': 'Pago notificado con éxito. Su psicólogo lo verificará pronto.'})
     except Exception as e:
@@ -2726,9 +2749,10 @@ def patient_pizarra():
                 VALUES (?, ?, ?, ?)
             """, (patient_id, fecha_actual, contenido, archivo_adjunto))
             
-            cursor.execute("SELECT nombres, apellidos FROM pacientes WHERE id = ?", (patient_id,))
+            cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
             pac = cursor.fetchone()
             pac_nombre = f"{pac['nombres']} {pac['apellidos']}"
+            psicologo_id = pac['psicologo_id'] or 1
             
             cursor.execute("""
                 INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
@@ -2736,6 +2760,17 @@ def patient_pizarra():
             """, ('pizarra', 'Actualización de Pizarra', f"{pac_nombre} escribió una reflexión en su pizarra terapéutica.", fecha_actual, 'pizarra-visual'))
             
             db.commit()
+
+            # Enviar notificación WebPush al psicólogo
+            try:
+                send_webpush_notification(
+                    user_id=psicologo_id,
+                    title="Actualización de Pizarra",
+                    body=f"{pac_nombre} escribió una reflexión en su pizarra terapéutica.",
+                    url="/?view=pizarra"
+                )
+            except Exception as wp_ex:
+                print("Error al enviar WebPush de actualización de pizarra:", wp_ex)
             
             import requests
             firebase_payload = {
@@ -3081,6 +3116,17 @@ def verify_admin_payment(payment_id):
             requests.post(f"{FIREBASE_DB_URL}/pacientes/{paciente_id}/notificaciones.json", json=fb_payload, timeout=2.0)
         except Exception as fe:
             print("Error al notificar verificación de pago al paciente:", fe)
+
+        # Enviar notificación WebPush al paciente
+        try:
+            send_webpush_notification(
+                patient_id=paciente_id,
+                title="💵 Pago Verificado con Éxito",
+                body=f"Tu pago de {monto_pago} {moneda_pago} (Ref: {referencia_pago}) ha sido verificado con éxito.",
+                url="/?view=patient-payments"
+            )
+        except Exception as wp_ex:
+            print("Error al enviar WebPush de pago verificado:", wp_ex)
 
         # Sincronizar con Firebase
         try:
@@ -5294,6 +5340,18 @@ def add_agenda_event():
             }
             import requests
             requests.post(f"{FIREBASE_DB_URL}/pacientes/{paciente_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+            
+            # Enviar notificación WebPush al paciente
+            try:
+                send_webpush_notification(
+                    patient_id=paciente_id,
+                    title="📅 Nueva Cita Programada",
+                    body=f"El Psic. {therapist_name} ha agendado una nueva cita para el {fecha} a las {hora}.",
+                    url="/"
+                )
+            except Exception as wp_ex:
+                print("Error al enviar WebPush de nueva cita:", wp_ex)
+                
         except Exception as fe:
             print("Error al notificar nueva cita al paciente:", fe)
 
@@ -5530,6 +5588,18 @@ def update_agenda_event(event_id):
         paciente_id = row[0] if row else None
         
         db.commit()
+
+        # Enviar notificación WebPush al paciente
+        if paciente_id:
+            try:
+                send_webpush_notification(
+                    patient_id=paciente_id,
+                    title="🔄 Cita Modificada / Reprogramada",
+                    body=f"Tu cita ha sido reprogramada para el {fecha} a las {hora}.",
+                    url="/"
+                )
+            except Exception as wp_ex:
+                print("Error al enviar WebPush de reprogramación de cita:", wp_ex)
         
         # Sincronización en segundo plano con Firebase
         if paciente_id:
@@ -5560,6 +5630,18 @@ def delete_agenda_event(event_id):
                     
         cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
         db.commit()
+
+        # Enviar notificación WebPush al paciente
+        if paciente_id:
+            try:
+                send_webpush_notification(
+                    patient_id=paciente_id,
+                    title="❌ Cita Cancelada",
+                    body="Tu cita programada ha sido cancelada por tu terapeuta.",
+                    url="/"
+                )
+            except Exception as wp_ex:
+                print("Error al enviar WebPush de cancelación de cita:", wp_ex)
         
         # Sincronización en segundo plano con Firebase
         if paciente_id:
