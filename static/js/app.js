@@ -607,7 +607,8 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago) {
     if (role === 'superadmin') {
         document.querySelector('.user-name').textContent = `Admin: ${username}`;
         document.querySelectorAll('.nav-item').forEach(link => {
-            if (link.getAttribute('data-view') !== 'superadmin-dashboard') {
+            const v = link.getAttribute('data-view');
+            if (v !== 'superadmin-dashboard' && v !== 'settings') {
                 link.classList.add('hide');
             } else {
                 link.classList.remove('hide');
