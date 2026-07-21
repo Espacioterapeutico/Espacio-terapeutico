@@ -94,20 +94,31 @@ let googleConfigured = false;
 let currentYear = new Date().getFullYear();
 let currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
 
-// Al iniciar la ventana (Arranque Seguro Móvil)
+// Al iniciar la ventana (Arranque Seguro Móvil y Escritorio)
 document.addEventListener('DOMContentLoaded', () => {
+    // Garantía absoluta de ocultar pantalla de carga en máximo 1.5s
+    setTimeout(() => {
+        hideLoadingScreen();
+    }, 1500);
+
     try { checkAdminExists(); } catch(e) {}
     try {
         checkFastBookingQuery().then(isFast => {
-            if (!isFast) checkSession();
-        }).catch(() => checkSession());
+            if (!isFast) {
+                checkSession();
+            } else {
+                hideLoadingScreen();
+            }
+        }).catch(() => {
+            checkSession();
+        });
     } catch(e) { checkSession(); }
     try { initializeDateFilters(); } catch(e) {}
 
-    // Solicitar permiso de notificaciones nativas 2 segundos después del arranque
+    // Solicitar permiso de notificaciones nativas suavemente
     setTimeout(() => {
         requestNotificationPermission();
-    }, 2000);
+    }, 2500);
 });
     
     // Detectar cambios de paciente en modal de citas para mostrar/ocultar prepagos
@@ -318,7 +329,7 @@ function hideLoadingScreen() {
         loader.style.visibility = 'hidden';
         setTimeout(() => {
             loader.style.display = 'none';
-        }, 400);
+        }, 350);
     }
 }
 
@@ -338,6 +349,8 @@ async function checkSession() {
         }
     } catch (err) {
         showAuthScreen();
+    } finally {
+        hideLoadingScreen();
     }
 }
 
