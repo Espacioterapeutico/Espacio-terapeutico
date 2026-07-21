@@ -53,6 +53,24 @@ async function requestNotificationPermission() {
 }
 window.requestNotificationPermission = requestNotificationPermission;
 
+function playNotificationSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+    } catch(e) {}
+}
+window.playNotificationSound = playNotificationSound;
+
 function triggerNativeNotification(title, body, key, link) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     if (key && _notifiedKeys.has(String(key))) return; // Evitar duplicados
@@ -61,6 +79,8 @@ function triggerNativeNotification(title, body, key, link) {
         _notifiedKeys.add(String(key));
         saveNotifiedKeys();
     }
+
+    playNotificationSound();
 
     try {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
