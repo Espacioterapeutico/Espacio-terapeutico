@@ -7875,3 +7875,99 @@ async function submitQuickPay() {
 }
 window.submitQuickPay = submitQuickPay;
 
+// ==========================================
+// BORRAR TODOS LOS DATOS (ZONA DE PELIGRO)
+// ==========================================
+function openClearDataModal() {
+    const modal = document.getElementById('modal-clear-data');
+    const input = document.getElementById('clear-data-confirm-input');
+    const btn = document.getElementById('btn-submit-clear-data');
+    const msg = document.getElementById('clear-data-status-msg');
+    
+    if (!modal) return;
+    if (input) input.value = '';
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+    }
+    if (msg) msg.classList.add('hide');
+    modal.classList.remove('hide');
+}
+
+function closeClearDataModal() {
+    const modal = document.getElementById('modal-clear-data');
+    if (modal) modal.classList.add('hide');
+}
+
+function checkClearDataInput() {
+    const input = document.getElementById('clear-data-confirm-input');
+    const btn = document.getElementById('btn-submit-clear-data');
+    if (!input || !btn) return;
+    
+    const val = input.value.trim().toUpperCase();
+    if (val === 'CONFIRMAR') {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+    }
+}
+
+async function submitClearAllData() {
+    const input = document.getElementById('clear-data-confirm-input');
+    const btn = document.getElementById('btn-submit-clear-data');
+    const msg = document.getElementById('clear-data-status-msg');
+    
+    if (!input || input.value.trim().toUpperCase() !== 'CONFIRMAR') return;
+    
+    try {
+        btn.disabled = true;
+        btn.textContent = 'Borrando datos...';
+        
+        const res = await fetch('/api/admin/clear-all-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ confirmation: 'CONFIRMAR' })
+        });
+        
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (msg) {
+                msg.className = 'status-msg success-msg mt-2';
+                msg.textContent = '¡Todos los datos han sido borrados con éxito!';
+                msg.classList.remove('hide');
+            }
+            setTimeout(() => {
+                closeClearDataModal();
+                loadDashboardStats();
+                loadPatients();
+                if (typeof loadFinanceData === 'function') loadFinanceData();
+            }, 1800);
+        } else {
+            if (msg) {
+                msg.className = 'status-msg error-msg mt-2';
+                msg.textContent = data.error || 'Error al borrar los datos.';
+                msg.classList.remove('hide');
+            }
+        }
+    } catch (err) {
+        if (msg) {
+            msg.className = 'status-msg error-msg mt-2';
+            msg.textContent = 'Error de conexión al servidor.';
+            msg.classList.remove('hide');
+        }
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🗑️ Borrar Todos los Datos Definitivamente';
+    }
+}
+
+window.openClearDataModal = openClearDataModal;
+window.closeClearDataModal = closeClearDataModal;
+window.checkClearDataInput = checkClearDataInput;
+window.submitClearAllData = submitClearAllData;
+
