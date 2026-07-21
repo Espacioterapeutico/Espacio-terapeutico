@@ -4272,9 +4272,15 @@ async function checkGoogleStatus() {
             } else {
                 instr.classList.remove('hide');
                 btns.innerHTML = `
-                    <button class="btn btn-secondary btn-block" disabled>
-                        Falta credentials.json
-                    </button>
+                    <div style="border: 2px dashed var(--border-color); padding: 1.25rem; border-radius: var(--radius-md); text-align: center; background: rgba(0,0,0,0.02); margin-top: 1rem;">
+                        <p style="margin: 0 0 1rem 0; font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
+                            Falta credentials.json en el servidor
+                        </p>
+                        <input type="file" id="google-json-upload" accept=".json" style="display:none;" onchange="handleGoogleJsonUpload(this)" />
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('google-json-upload').click()" style="font-weight:700;">
+                            📁 Subir credentials.json desde tu dispositivo
+                        </button>
+                    </div>
                 `;
             }
         }
@@ -4282,6 +4288,34 @@ async function checkGoogleStatus() {
         console.error("Error al obtener estado de Google:", err);
     }
 }
+
+async function handleGoogleJsonUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    showLoadingScreen();
+    try {
+        const res = await fetch('/api/google/upload-credentials', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        hideLoadingScreen();
+        
+        if (data.success) {
+            alert("✅ ¡Archivo credentials.json instalado con éxito! Ahora puedes autorizar tu cuenta.");
+            checkGoogleStatus();
+        } else {
+            alert("❌ Error: " + (data.error || "No se pudo subir el archivo."));
+        }
+    } catch(err) {
+        hideLoadingScreen();
+        alert("❌ Error al conectar con el servidor: " + err.message);
+    }
+}
+window.handleGoogleJsonUpload = handleGoogleJsonUpload;
 
 async function syncGoogleCalendar() {
     const btn = document.querySelector('[onclick="syncGoogleCalendar()"]');
