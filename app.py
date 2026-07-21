@@ -2638,10 +2638,21 @@ def patient_cancel_appointment():
         """, ('cita', notif_title, notif_msg, fecha_notif, 'agenda'))
         
         db.commit()
-        
+
+        # Notificar al psicólogo por Push
+        try:
+            send_webpush_notification(
+                user_id=psicologo_id,
+                title=notif_title,
+                body=notif_msg,
+                url="/?view=agenda"
+            )
+        except Exception as wp_ex:
+            print("Error al enviar WebPush de cancelación por paciente:", wp_ex)
+
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
-        
+
         return jsonify({'success': 'Cita cancelada con éxito.'})
     except Exception as e:
         return jsonify({'error': f'Error al cancelar cita: {str(e)}'}), 500
@@ -2888,10 +2899,22 @@ def patient_reschedule_appointment():
         """, ('cita', 'Cita Reprogramada por Paciente', f"{pac_nombre} ha reprogramado su consulta del {old_fecha} a las {old_hora} para la nueva fecha: {new_date} a las {new_hour}.", fecha_notif, 'agenda'))
         
         db.commit()
-        
+
+        # Notificar al psicólogo por Push si fue el paciente quien reprogramó
+        if not user_id:
+            try:
+                send_webpush_notification(
+                    user_id=psicologo_id,
+                    title="📆 Cita Reprogramada por Paciente",
+                    body=f"{pac_nombre} ha reprogramado su consulta del {old_fecha} a las {old_hora} para el {new_date} a las {new_hour}.",
+                    url="/?view=agenda"
+                )
+            except Exception as wp_ex:
+                print("Error al enviar WebPush de reprogramación por paciente:", wp_ex)
+
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
-        
+
         return jsonify({'success': 'Cita reprogramada con éxito.'})
     except Exception as e:
         return jsonify({'error': f'Error al reprogramar cita: {str(e)}'}), 500
