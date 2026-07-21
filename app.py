@@ -5935,7 +5935,7 @@ FIREBASE_SA_FILE = os.path.join(BASE_DIR, "firebase_service_account.json")
 @app.route('/api/firebase/config', methods=['GET'])
 def get_firebase_config():
     _def_cfg = json.dumps({
-        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQQyUUYZDIhejeJ81zM",
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQQyUuYZDIhejeJ81zM",
         "authDomain": "espacio-terapeutico.firebaseapp.com",
         "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
         "projectId": "espacio-terapeutico",
@@ -5969,7 +5969,7 @@ def get_firebase_config():
         parsed_cfg = json.loads(_def_cfg)
 
     # Asegurar que el apiKey coincida con el apiKey oficial de Firebase Console
-    parsed_cfg["apiKey"] = "AIzaSyDRQlUEv1SToy5ZdQQyUUYZDIhejeJ81zM"
+    parsed_cfg["apiKey"] = "AIzaSyDRQlUEv1SToy5ZdQQyUuYZDIhejeJ81zM"
     cfg_val = json.dumps(parsed_cfg)
 
     return jsonify({
