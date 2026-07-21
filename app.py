@@ -537,6 +537,7 @@ def auto_send_appointment_reminders(db):
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.fecha = ?
+              AND af.confirmada = 1
               AND af.estado_pago NOT LIKE 'Cancelada%'
               AND af.estado_pago != 'Reprogramada'
         """, (today_str,))
@@ -2748,7 +2749,7 @@ def get_patient_portal_data_dict(patient_id):
     cursor.execute("""
         SELECT id, fecha, hora, tipo_consulta, confirmada FROM agenda_finanzas
         WHERE paciente_id = ? 
-          AND (id NOT IN (SELECT DISTINCT agenda_id FROM sesiones WHERE agenda_id IS NOT NULL) OR agenda_id IS NULL)
+          AND (id NOT IN (SELECT DISTINCT agenda_id FROM sesiones WHERE agenda_id IS NOT NULL AND (estado = 'Realizada' OR estado LIKE 'Realizada%')) OR agenda_id IS NULL)
           AND estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'
           AND fecha >= ?
         ORDER BY fecha ASC, hora ASC
