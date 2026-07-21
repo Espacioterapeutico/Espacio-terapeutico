@@ -868,12 +868,13 @@
                     </div>
 
                     <!-- Menú de Sub-módulos (Pestañas de Ajustes) -->
-                    <div class="sub-nav-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+                    <div class="sub-nav-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
                         <button type="button" id="set-tab-backup" class="btn btn-sm btn-primary" onclick="switchSettingsTab('backup')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Copia de Seguridad</button>
                         <button type="button" id="set-tab-google" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('google')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Google Calendar</button>
                         <button type="button" id="set-tab-whatsapp" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('whatsapp')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Plantillas de WhatsApp</button>
                         <button type="button" id="set-tab-horarios" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('horarios')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Horarios de Atención</button>
                         <button type="button" id="set-tab-pagos" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('pagos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Métodos de Pago</button>
+                        <button type="button" id="set-tab-firebase" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('firebase')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Notificaciones FCM</button>
                         <button type="button" id="set-tab-enlaces" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('enlaces')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Enlaces de Paciente</button>
                         <button type="button" id="set-tab-soporte" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('soporte')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Soporte Técnico</button>
                     </div>
@@ -1085,6 +1086,57 @@
                                     Guardar Métodos de Pago
                                 </button>
                                 <div id="set-pagos-status-msg" class="status-msg hide mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FCM / Firebase Tab Content -->
+                    <div id="set-card-firebase" class="settings-tab-content hide">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Configuración de Notificaciones Firebase (FCM)</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-secondary mb-4" style="font-size: 0.85rem; line-height: 1.4;">
+                                    Configura las notificaciones push en segundo plano para que los terapeutas y consultantes reciban alertas en tiempo real, incluso cuando la aplicación está totalmente cerrada.
+                                </p>
+                                
+                                <form id="settings-firebase-form" onsubmit="handleSaveFirebaseConfig(event)">
+                                    <!-- 1. Firebase API Key and general fields (Web Config JSON) -->
+                                    <div class="form-group mb-3">
+                                        <label for="fcm-web-config" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Configuración SDK de Firebase Web (JSON)</label>
+                                        <textarea id="fcm-web-config" rows="6" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: monospace; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder='Ej: { "apiKey": "...", "authDomain": "...", "projectId": "...", "storageBucket": "...", "messagingSenderId": "...", "appId": "..." }' required></textarea>
+                                    </div>
+                                    
+                                    <!-- 2. Web Push Certificate VAPID Key -->
+                                    <div class="form-group mb-4">
+                                        <label for="fcm-vapid-key" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Clave VAPID Web Push (Messaging Web Certificate Key)</label>
+                                        <input type="text" id="fcm-vapid-key" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: monospace; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Clave VAPID generada en la pestaña Cloud Messaging de Firebase" required />
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary btn-block mb-4" style="width: 100%;">Guardar Configuración Web FCM</button>
+                                </form>
+                                
+                                <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border-color);" />
+                                
+                                <!-- 3. Service Account Key JSON Uploader -->
+                                <h4 class="mb-2" style="font-size: 1rem; font-weight: 700;">Credenciales del Servidor (Service Account)</h4>
+                                <p class="text-secondary mb-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                    Sube el archivo JSON de clave privada de la cuenta de servicio de tu proyecto de Firebase. Esto habilita al servidor web para enviar notificaciones push legítimas a los dispositivos.
+                                </p>
+                                
+                                <div id="firebase-sa-status-box" class="google-calendar-status-box mb-3">
+                                    <strong>Cuenta de Servicio: </strong>
+                                    <span id="firebase-sa-status-badge" class="badge">Cargando...</span>
+                                </div>
+                                
+                                <div id="firebase-sa-uploader">
+                                    <input type="file" id="firebase-sa-upload-input" accept=".json" style="display:none;" onchange="handleFirebaseSaUpload(this)" />
+                                    <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('firebase-sa-upload-input').click()" style="width: 100%; font-weight: 700;">
+                                        📁 Subir firebase_service_account.json
+                                    </button>
+                                </div>
+                                <div id="fcm-config-status-msg" class="status-msg hide mt-3"></div>
                             </div>
                         </div>
                     </div>
