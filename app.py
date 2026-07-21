@@ -2561,11 +2561,11 @@ def get_patient_portal_data_dict(patient_id):
     cursor.execute("""
         SELECT id, fecha, hora, tipo_consulta, confirmada FROM agenda_finanzas
         WHERE paciente_id = ? 
-          AND id NOT IN (SELECT DISTINCT agenda_id FROM sesiones WHERE agenda_id IS NOT NULL)
+          AND (id NOT IN (SELECT DISTINCT agenda_id FROM sesiones WHERE agenda_id IS NOT NULL) OR agenda_id IS NULL)
           AND estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'
-          AND (fecha > ? OR (fecha = ? AND hora >= ?))
+          AND fecha >= ?
         ORDER BY fecha ASC, hora ASC
-    """, (patient_id, today_str, today_str, now_time_str))
+    """, (patient_id, today_str))
     next_sessions = cursor.fetchall()
     
     proximas_citas = []
