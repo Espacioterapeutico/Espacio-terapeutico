@@ -1150,7 +1150,7 @@ async function loadPatientPortalData(patientId) {
                     actionsDiv.style.flexWrap = 'wrap';
                     
                     // Botón Confirmar
-                    if (cita.confirmada === 0 && cita.tiempo_restante_horas <= cita.alerta_confirmacion) {
+                    if (cita.confirmada === 0) {
                         const confirmBtn = document.createElement('button');
                         confirmBtn.type = 'button';
                         confirmBtn.className = 'btn btn-primary btn-sm';
