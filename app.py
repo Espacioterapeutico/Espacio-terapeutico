@@ -6098,13 +6098,32 @@ def subscribe_firebase():
 
 @app.route('/firebase-messaging-sw.js')
 def serve_firebase_messaging_sw():
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
-    row = cursor.fetchone()
-    
-    config_dict_str = row[0] if row else '{}'
-    
+    # Configuración oficial de Firebase (siempre válida)
+    valid_cfg = {
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQQyUuYZDIhejeJ81zM",
+        "authDomain": "espacio-terapeutico.firebaseapp.com",
+        "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
+        "projectId": "espacio-terapeutico",
+        "storageBucket": "espacio-terapeutico.firebasestorage.app",
+        "messagingSenderId": "437385369836",
+        "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
+        "measurementId": "G-M04FWL2963"
+    }
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
+        row = cursor.fetchone()
+        if row and row[0]:
+            saved = json.loads(row[0])
+            # Forzar siempre el apiKey correcto
+            saved["apiKey"] = valid_cfg["apiKey"]
+            config_dict_str = json.dumps(saved)
+        else:
+            config_dict_str = json.dumps(valid_cfg)
+    except Exception:
+        config_dict_str = json.dumps(valid_cfg)
+
     # Renderizar el Service Worker dinámicamente inyectando la configuración
     sw_code = f"""
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
