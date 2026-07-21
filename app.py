@@ -6112,59 +6112,96 @@ def upload_google_credentials():
 @app.route('/api/google/authorize')
 @login_required
 def google_authorize():
-    if not os.path.exists(CLIENT_SECRETS_FILE):
-        return "Error: Falta el archivo credentials.json en el servidor.", 400
+    import traceback
+    try:
+        if not os.path.exists(CLIENT_SECRETS_FILE):
+            return "Error: Falta el archivo credentials.json en el servidor.", 400
+            
+        redirect_uri = url_for('google_callback', _external=True)
+        if not redirect_uri.startswith('https://') and 'localhost' not in redirect_uri and '127.0.0.1' not in redirect_uri:
+            redirect_uri = redirect_uri.replace('http://', 'https://')
+            
+        flow = Flow.from_client_secrets_file(
+            CLIENT_SECRETS_FILE,
+            scopes=SCOPES,
+            redirect_uri=redirect_uri
+        )
         
-    flow = Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE,
-        scopes=SCOPES,
-        redirect_uri=url_for('google_callback', _external=True)
-    )
-    
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true'
-    )
-    
-    session['state'] = state
-    return redirect(authorization_url)
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        
+        session['state'] = state
+        return redirect(authorization_url)
+    except Exception as e:
+        print("Error en google_authorize:", traceback.format_exc())
+        return jsonify({
+            'error': 'Fallo al iniciar flujo con Google Calendar',
+            'detalle': str(e)
+        }), 500
 
 @app.route('/api/google/callback')
 def google_callback():
-    state = session.get('state')
-    
-    flow = Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE,
-        scopes=SCOPES,
-        state=state,
-        redirect_uri=url_for('google_callback', _external=True)
-    )
-    
-    flow.fetch_token(authorization_response=request.url)
-    creds = flow.credentials
-    
-    # Guardar en base de datos local
-    db = get_db()
-    cursor = db.cursor()
-    user_id = session.get('user_id')
-    token_key = f'google_token_{user_id}' if user_id else 'google_token'
-    cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", 
-                   (token_key, creds.to_json()))
-    db.commit()
-    
-    # Redirigir de regreso a la interfaz principal (SPA)
-    return """
-    <html>
-        <body onload="window.close();">
-            <h3>Conexión con Google Calendar exitosa. Esta ventana se cerrará automáticamente.</h3>
-            <script>
-                if (window.opener) {
-                    window.opener.location.reload();
-                }
-            </script>
-        </body>
-    </html>
-    """
+    import traceback
+    try:
+        state = session.get('state')
+        
+        redirect_uri = url_for('google_callback', _external=True)
+        if not redirect_uri.startswith('https://') and 'localhost' not in redirect_uri and '127.0.0.1' not in redirect_uri:
+            redirect_uri = redirect_uri.replace('http://', 'https://')
+            
+        flow = Flow.from_client_secrets_file(
+            CLIENT_SECRETS_FILE,
+            scopes=SCOPES,
+            state=state,
+            redirect_uri=redirect_uri
+        )
+        
+        req_url = request.url
+        if not req_url.startswith('https://') and 'localhost' not in req_url and '127.0.0.1' not in req_url:
+            req_url = req_url.replace('http://', 'https://')
+            
+        # Habilitar transporte inseguro por seguridad en proxies locales/remotos
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+        
+        flow.fetch_token(authorization_response=req_url)
+        creds = flow.credentials
+        
+        # Guardar en base de datos local
+        db = get_db()
+        cursor = db.cursor()
+        user_id = session.get('user_id')
+        token_key = f'google_token_{user_id}' if user_id else 'google_token'
+        cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", 
+                       (token_key, creds.to_json()))
+        db.commit()
+        
+        # Redirigir de regreso a la interfaz principal (SPA)
+        return """
+        <html>
+            <body onload="window.close();">
+                <h3>Conexión con Google Calendar exitosa. Esta ventana se cerrará automáticamente.</h3>
+                <script>
+                    if (window.opener) {
+                        window.opener.location.reload();
+                    }
+                </script>
+            </body>
+        </html>
+        """
+    except Exception as e:
+        print("Error en google_callback:", traceback.format_exc())
+        return f"""
+        <html>
+            <body>
+                <h3>Fallo al completar la autorización con Google Calendar</h3>
+                <p>Detalle del error: {str(e)}</p>
+                <button onclick="window.close();">Cerrar Ventana</button>
+            </body>
+        </html>
+        """, 500
 
 @app.route('/api/google/sync', methods=['POST'])
 @login_required
