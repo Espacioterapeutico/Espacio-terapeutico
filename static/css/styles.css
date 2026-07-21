@@ -1924,7 +1924,61 @@ body.is-patient .main-content {
     left: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    z-index: 9999 !important;
-    background-color: rgba(61, 30, 63, 0.55) !important;
-    backdrop-filter: blur(4px) !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 999999 !important;
+}
+
+/* ==========================================
+   CALENDARIO MÓVIL PWA Y AUTOAGENDA RESPONSIVE
+   ========================================== */
+.pat-cal-days-grid, #fast-cal-days-grid, #pat-cal-days-grid, #resched-cal-days-grid {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 4px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    align-items: center !important;
+    justify-items: center !important;
+}
+
+.pat-cal-day-cell, .fast-cal-day-cell {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 36px !important;
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto !important;
+    font-size: clamp(0.75rem, 3.2vw, 0.85rem) !important;
+    font-weight: 700 !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    line-height: 1 !important;
+    user-select: none !important;
+}
+
+.pat-cal-day-cell.available, .fast-cal-day-cell.available {
+    background-color: #ecfdf5 !important;
+    border: 1.5px solid #10b981 !important;
+    color: #047857 !important;
+    cursor: pointer !important;
+}
+
+.pat-cal-day-cell.disabled, .fast-cal-day-cell.disabled {
+    color: #cbd5e1 !important;
+    border: 1px transparent !important;
+    cursor: not-allowed !important;
+    background-color: transparent !important;
+}
+
+.pat-cal-day-cell.selected, .fast-cal-day-cell.selected {
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+    border: 1.5px solid #047857 !important;
 }
