@@ -6445,23 +6445,14 @@ async function fetchFastAvailableHours(dateStr) {
         const localSlots = [];
         if (data.slots && data.slots.length > 0) {
             data.slots.forEach(slotObj => {
-                const d = new Date(slotObj.iso);
-                const yr = d.getFullYear();
-                const mo = String(d.getMonth() + 1).padStart(2, '0');
-                const dy = String(d.getDate()).padStart(2, '0');
-                const localDateStr = `${yr}-${mo}-${dy}`;
+                const hourStr = slotObj.hora_literal || slotObj.iso.substring(11, 16);
+                const therapistDate = slotObj.iso.substring(0, 10);
                 
-                if (localDateStr === dateStr) {
-                    const localTimeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
-                    const therapistDate = slotObj.iso.substring(0, 10);
-                    const therapistHour = slotObj.iso.substring(11, 16);
-                    
-                    localSlots.push({
-                        displayTime: localTimeStr,
-                        valFecha: therapistDate,
-                        valHour: therapistHour
-                    });
-                }
+                localSlots.push({
+                    displayTime: hourStr,
+                    valFecha: therapistDate,
+                    valHour: hourStr
+                });
             });
         }
         
