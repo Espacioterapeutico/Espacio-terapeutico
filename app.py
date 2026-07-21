@@ -5674,40 +5674,27 @@ def export_word(patient_id):
 @app.route('/api/backup', methods=['GET'])
 @login_required
 def create_backup():
-    # Retorna el archivo .db directamente como descarga
+    """Descarga la base de datos .db directamente al navegador."""
     if not os.path.exists(DATABASE):
         return jsonify({'error': 'La base de datos aún no se ha inicializado.'}), 400
         
     dt = datetime.datetime.now()
-    now_str = f"{dt.day}-{dt.month}-{dt.year}"
-    backup_filename = f"Copia seguridad ({now_str}).db"
+    now_str = dt.strftime("%Y-%m-%d_%H-%M")
+    backup_filename = f"copia_seguridad_clinica_{now_str}.db"
     
     try:
-        from tkinter import filedialog, Tk
-        root = Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".db",
-            filetypes=[("Base de Datos SQLite", "*.db")],
-            initialfile=backup_filename,
-            title="Guardar Copia de Seguridad"
-        )
-        root.destroy()
-        
-        if not file_path:
-            return jsonify({'info': 'Guardado cancelado por el usuario.'})
-            
-        # Cerrar conexión de base de datos actual para evitar corrupción
         db = getattr(g, '_database', None)
         if db is not None:
             db.close()
             
-        import shutil
-        shutil.copyfile(DATABASE, file_path)
-        return jsonify({'success': f'Copia de seguridad guardada con éxito en:\n{file_path}'})
+        return send_file(
+            DATABASE,
+            as_attachment=True,
+            download_name=backup_filename,
+            mimetype='application/x-sqlite3'
+        )
     except Exception as e:
-        return jsonify({'error': f'Error al guardar copia de seguridad: {str(e)}'}), 500
+        return jsonify({'error': f'Error al descargar copia de seguridad: {str(e)}'}), 500
 
 @app.route('/api/restore', methods=['POST'])
 @login_required
