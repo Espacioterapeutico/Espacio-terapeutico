@@ -19,6 +19,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 async function installPWA() {
+    requestNotificationPermission();
     if (!deferredPwaPrompt) return;
     deferredPwaPrompt.prompt();
     const { outcome } = await deferredPwaPrompt.userChoice;
@@ -26,6 +27,62 @@ async function installPWA() {
     deferredPwaPrompt = null;
     const installBtn = document.getElementById('pwa-install-btn');
     if (installBtn) installBtn.classList.add('hide');
+}
+
+// ==========================================
+// NOTIFICACIONES PWA NATIVAS (Barra de Tareas/Dispositivo)
+// ==========================================
+let _notifiedKeys = new Set(JSON.parse(localStorage.getItem('_pwa_notified_keys') || '[]'));
+
+function saveNotifiedKeys() {
+    try {
+        localStorage.setItem('_pwa_notified_keys', JSON.stringify(Array.from(_notifiedKeys).slice(-100)));
+    } catch(e) {}
+}
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission !== 'denied') {
+        try {
+            const permission = await Notification.requestPermission();
+            return permission === 'granted';
+        } catch(e) { return false; }
+    }
+    return false;
+}
+window.requestNotificationPermission = requestNotificationPermission;
+
+function triggerNativeNotification(title, body, key, link) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (key && _notifiedKeys.has(String(key))) return; // Evitar duplicados
+
+    if (key) {
+        _notifiedKeys.add(String(key));
+        saveNotifiedKeys();
+    }
+
+    try {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(title, {
+                    body: body,
+                    icon: '/static/logo.png',
+                    badge: '/static/logo.png',
+                    vibrate: [200, 100, 200],
+                    data: { url: link || '/' }
+                });
+            });
+        } else {
+            new Notification(title, {
+                body: body,
+                icon: '/static/logo.png',
+                data: { url: link || '/' }
+            });
+        }
+    } catch(e) {
+        console.warn('Error disparando notificación nativa:', e);
+    }
 }
 
 // ==========================================
@@ -37,15 +94,21 @@ let googleConfigured = false;
 let currentYear = new Date().getFullYear();
 let currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
 
-// Al iniciar la ventana
+// Al iniciar la ventana (Arranque Seguro Móvil)
 document.addEventListener('DOMContentLoaded', () => {
-    checkAdminExists();
-    checkFastBookingQuery().then(isFast => {
-        if (!isFast) {
-            checkSession();
-        }
-    });
-    initializeDateFilters();
+    try { checkAdminExists(); } catch(e) {}
+    try {
+        checkFastBookingQuery().then(isFast => {
+            if (!isFast) checkSession();
+        }).catch(() => checkSession());
+    } catch(e) { checkSession(); }
+    try { initializeDateFilters(); } catch(e) {}
+
+    // Solicitar permiso de notificaciones nativas 2 segundos después del arranque
+    setTimeout(() => {
+        requestNotificationPermission();
+    }, 2000);
+});
     
     // Detectar cambios de paciente en modal de citas para mostrar/ocultar prepagos
     const ePaciente = document.getElementById('e-paciente');
@@ -2639,19 +2702,27 @@ async function loadAgendaCompact() {
         listContainer.innerHTML = '';
         nextConsultation.innerHTML = '';
         
-        const todayStr = new Date().toISOString().split('T')[0];
-        const todayEvents = events.filter(e => e.fecha === todayStr && e.estado_pago !== 'Prepagada' && !e.has_session);
+        const _nowDate = new Date();
+        const todayStr = `${_nowDate.getFullYear()}-${String(_nowDate.getMonth() + 1).padStart(2, '0')}-${String(_nowDate.getDate()).padStart(2, '0')}`;
+        
+        // Buscar la próxima cita agendada desde hoy en adelante (no evolucionada)
+        let upcomingEvents = events.filter(e => e.fecha >= todayStr && e.estado_pago !== 'Prepagada' && !e.has_session);
+        upcomingEvents.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
         
         // 1. Mostrar Siguiente Consulta
-        if (todayEvents.length > 0) {
-            // Ordenar por hora
-            todayEvents.sort((a, b) => a.hora.localeCompare(b.hora));
-            const nextE = todayEvents[0]; // Siguiente más cercana de hoy
+        if (upcomingEvents.length > 0) {
+            const nextE = upcomingEvents[0];
+            const isToday = nextE.fecha === todayStr;
+            const fechaText = isToday ? `Hoy a las <strong>${nextE.hora}</strong>` : `El <strong>${nextE.fecha}</strong> a las <strong>${nextE.hora}</strong>`;
             
-            // Buscar última sesión de este paciente para mostrar recapitulación rápida
-            const summaryRes = await fetch(`/api/patients/${nextE.paciente_id}/summary`);
-            const summary = await summaryRes.json();
-            const lastSes = summary.last_session;
+            let lastSes = null;
+            try {
+                const summaryRes = await fetch(`/api/patients/${nextE.paciente_id}/summary`);
+                if (summaryRes.ok) {
+                    const summary = await summaryRes.json();
+                    lastSes = summary.last_session;
+                }
+            } catch(e) {}
             
             const btnEvolucionar = !nextE.has_session 
                 ? `<button class="btn btn-primary btn-sm" onclick="openRegisterSessionFromEvent(${nextE.id})">Evolucionar</button>` 
@@ -2660,27 +2731,27 @@ async function loadAgendaCompact() {
             nextConsultation.innerHTML = `
                 <div class="next-patient-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 0.5rem;">
                     <div>
-                        <h4 class="next-patient-title" style="margin: 0;">${nextE.nombres} ${nextE.apellidos}</h4>
-                        <p class="text-secondary" style="margin: 0.25rem 0 0 0;">Hora: <strong>${nextE.hora}</strong> | Modalidad: <strong>${nextE.tipo_consulta}</strong></p>
+                        <h4 class="next-patient-title" style="margin: 0; font-size:1.05rem;">${nextE.nombres} ${nextE.apellidos}</h4>
+                        <p class="text-secondary" style="margin: 0.25rem 0 0 0; font-size:0.85rem;">${fechaText} | Modalidad: <strong>${nextE.tipo_consulta}</strong></p>
                     </div>
-                    <div style="display: flex; gap: 0.35rem;">
+                    <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
                         ${btnEvolucionar}
                         <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${nextE.paciente_id})">Ver Ficha</button>
                     </div>
                 </div>
-                <div class="recap-box" style="margin-top: 1rem;">
-                    <h5>Recapitulación de Sesión Anterior:</h5>
+                <div class="recap-box" style="margin-top: 0.85rem; padding: 0.75rem; background: rgba(0,0,0,0.02); border-radius: var(--radius-sm);">
+                    <h5 style="margin: 0 0 0.4rem 0; font-size: 0.85rem; color: var(--primary-color);">Recapitulación de Sesión Anterior:</h5>
                     ${lastSes ? `
                         <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Fecha:</strong> ${lastSes.fecha}</p>
-                        <p><strong>Resumen:</strong> ${lastSes.resumen}</p>
-                        ${lastSes.tareas_asignadas ? `<p style="margin-top:0.35rem;"><strong>Tareas de paciente:</strong> ${lastSes.tareas_asignadas}</p>` : ''}
-                    ` : '<p class="text-secondary">No hay evoluciones previas registradas.</p>'}
+                        <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Resumen:</strong> ${lastSes.resumen}</p>
+                        ${lastSes.tareas_asignadas ? `<p style="font-size:0.8rem; margin:0;"><strong>Tareas de paciente:</strong> ${lastSes.tareas_asignadas}</p>` : ''}
+                    ` : '<p class="text-secondary" style="font-size:0.8rem; margin:0;">No hay evoluciones previas registradas.</p>'}
                 </div>
             `;
         } else {
             nextConsultation.innerHTML = `
                 <div class="empty-state">
-                    <p>No tienes más citas agendadas para el día de hoy.</p>
+                    <p>No tienes citas agendadas registradas.</p>
                 </div>
             `;
         }
@@ -4997,6 +5068,7 @@ async function handlePatientCancelAppointment(apptId, tiempoRestante, limiteCanc
 
 // --- Rol Psicólogo ---
 function toggleNotificationsDropdown() {
+    requestNotificationPermission();
     const dropdown = document.getElementById('notifications-dropdown');
     if (!dropdown) return;
     dropdown.classList.toggle('hide');
@@ -5030,6 +5102,11 @@ async function loadNotifications() {
         list.innerHTML = '';
         if (data.notifications && data.notifications.length > 0) {
             data.notifications.forEach(n => {
+                // Disparar notificación nativa en la barra del OS si no está leída
+                if (!n.leida) {
+                    triggerNativeNotification(n.titulo || 'Mi Consultorio', n.mensaje || '', `n_${n.id}`, n.link);
+                }
+
                 const item = document.createElement('div');
                 item.style.padding = '0.75rem 1rem';
                 item.style.borderBottom = '1px solid var(--border-color)';
@@ -5114,6 +5191,7 @@ async function markAllNotificationsAsRead() {
 
 // --- Rol Paciente ---
 function togglePatientNotificationsDropdown() {
+    requestNotificationPermission();
     const dropdown = document.getElementById('pat-notifications-dropdown');
     if (!dropdown) return;
     dropdown.classList.toggle('hide');
@@ -5167,6 +5245,11 @@ async function loadPatientNotifications(patientId) {
         notifList.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         
         notifList.forEach(n => {
+            // Disparar notificación nativa si no ha sido leída
+            if (!n.leida) {
+                triggerNativeNotification(n.titulo || 'Espacio Terapéutico', n.mensaje || '', `pat_${n.key}`, '');
+            }
+
             const item = document.createElement('div');
             item.style.padding = '0.65rem 0.85rem';
             item.style.borderBottom = '1px solid var(--border-color)';
