@@ -1377,21 +1377,31 @@ h1, h2, h3, h4, h5, h6 {
         padding: 0.3rem 0.6rem;
     }
 
-    /* ── Sub-Nav Tabs: scroll horizontal universal ── */
+    /* ── Sub-Nav Tabs: Adaptación Móvil 100% Visibles ── */
     .sub-nav-tabs {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-        flex-wrap: nowrap !important;
-        padding-bottom: 6px;
-        scrollbar-width: none;
+        display: flex !important;
+        flex-wrap: wrap !important;
         gap: 0.4rem !important;
+        padding-bottom: 0.5rem;
+        border-bottom: 1.5px solid var(--border-color);
+        margin-bottom: 1.25rem !important;
     }
-    .sub-nav-tabs::-webkit-scrollbar { display: none; }
-    .sub-nav-tabs .btn {
-        flex-shrink: 0;
-        white-space: nowrap;
-        padding: 0.4rem 0.75rem !important;
+    .sub-nav-tabs .btn,
+    .sub-nav-tabs button {
+        flex: 1 1 auto !important;
+        min-width: 100px;
+        text-align: center;
+        white-space: normal !important;
+        word-break: break-word;
+        padding: 0.5rem 0.5rem !important;
         font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        line-height: 1.2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-sm);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
     /* ── View Header: botones en fila scrollable, no ancho completo ── */
