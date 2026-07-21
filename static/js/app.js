@@ -4,7 +4,12 @@ let deferredPwaPrompt = null;
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('PWA Service Worker registrado:', reg.scope))
+            .then(reg => {
+                console.log('PWA Service Worker registrado:', reg.scope);
+                setTimeout(() => {
+                    initFirebaseMessagingFlow(reg);
+                }, 1000);
+            })
             .catch(err => console.error('Error al registrar PWA Service Worker:', err));
     });
 }
@@ -5791,7 +5796,7 @@ function switchFinanceTab(tabId) {
 const loadPatientsRatesList = loadPatientRatesTable;
 
 function switchSettingsTab(tabId) {
-    const ids = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'enlaces', 'soporte'];
+    const ids = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'soporte'];
     ids.forEach(id => {
         const card = document.getElementById(`set-card-${id}`);
         const tabBtn = document.getElementById(`set-tab-${id}`);
@@ -5811,6 +5816,8 @@ function switchSettingsTab(tabId) {
         loadPaymentMethods();
     } else if (tabId === 'enlaces') {
         loadPatientLinks();
+    } else if (tabId === 'firebase') {
+        loadFirebaseSettings();
     }
 }
 
@@ -5841,6 +5848,194 @@ function copyToClipboard(inputId) {
         alert("¡Enlace copiado al portapapeles!");
     }
 }
+
+async function initFirebaseMessagingFlow(registration) {
+    try {
+        const res = await fetch('/api/firebase/config');
+        const data = await res.json();
+        
+        if (!data.config || !data.vapid_key) {
+            console.log("Firebase FCM no configurado en este servidor.");
+            return;
+        }
+        
+        // Cargar librerías SDK compat de Firebase dinámicamente si no están en el DOM
+        if (typeof firebase === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const scriptApp = document.createElement('script');
+                scriptApp.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
+                scriptApp.onload = resolve;
+                scriptApp.onerror = reject;
+                document.head.appendChild(scriptApp);
+            });
+            await new Promise((resolve, reject) => {
+                const scriptMsg = document.createElement('script');
+                scriptMsg.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js';
+                scriptMsg.onload = resolve;
+                scriptMsg.onerror = reject;
+                document.head.appendChild(scriptMsg);
+            });
+        }
+        
+        // Inicializar Firebase Web Client
+        const config = JSON.parse(data.config);
+        if (firebase.apps.length === 0) {
+            firebase.initializeApp(config);
+        }
+        
+        const messaging = firebase.messaging();
+        
+        // Solicitar permisos de notificación nativa
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.warn("Permiso de notificaciones push FCM no otorgado.");
+            return;
+        }
+        
+        // Obtener el token de registro de FCM
+        const token = await messaging.getToken({
+            vapidKey: data.vapid_key,
+            serviceWorkerRegistration: registration
+        });
+        
+        if (token) {
+            console.log("FCM Token generado con éxito:", token);
+            // Enviar token al backend
+            await fetch('/api/firebase/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: token })
+            });
+            console.log("Suscripción FCM registrada en BD.");
+        } else {
+            console.warn("No se obtuvo token de FCM.");
+        }
+        
+        // Interceptación en primer plano (Foreground)
+        messaging.onMessage((payload) => {
+            console.log("Mensaje FCM recibido en primer plano:", payload);
+            const title = payload.notification?.title || payload.data?.title || 'Mi Consultorio';
+            const body = payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.';
+            
+            if (typeof showCustomToast === 'function') {
+                showCustomToast(title, body);
+            } else {
+                new Notification(title, {
+                    body: body,
+                    icon: '/static/logo.png',
+                    badge: '/static/logo.png',
+                    data: { url: payload.data?.url || '/' }
+                });
+            }
+        });
+    } catch (err) {
+        console.error("Error al inicializar FCM Flow:", err);
+    }
+}
+window.initFirebaseMessagingFlow = initFirebaseMessagingFlow;
+
+async function loadFirebaseSettings() {
+    try {
+        const res = await fetch('/api/firebase/config');
+        const data = await res.json();
+        
+        document.getElementById('fcm-web-config').value = data.config || '';
+        document.getElementById('fcm-vapid-key').value = data.vapid_key || '';
+        
+        const statusRes = await fetch('/api/firebase/status');
+        const statusData = await statusRes.json();
+        
+        const badge = document.getElementById('firebase-sa-status-badge');
+        if (badge) {
+            if (statusData.has_service_account) {
+                badge.textContent = "Cargada y Lista";
+                badge.className = "badge badge-success";
+            } else {
+                badge.textContent = "Falta firebase_service_account.json";
+                badge.className = "badge badge-danger";
+            }
+        }
+    } catch (err) {
+        console.error("Error al cargar configuración de Firebase:", err);
+    }
+}
+window.loadFirebaseSettings = loadFirebaseSettings;
+
+async function handleSaveFirebaseConfig(event) {
+    event.preventDefault();
+    const configVal = document.getElementById('fcm-web-config').value.trim();
+    const vapidKeyVal = document.getElementById('fcm-vapid-key').value.trim();
+    const statusMsg = document.getElementById('fcm-config-status-msg');
+    
+    statusMsg.classList.add('hide');
+    
+    try {
+        JSON.parse(configVal);
+    } catch(e) {
+        statusMsg.textContent = "❌ Error: La configuración SDK Web debe ser un formato JSON válido.";
+        statusMsg.className = "status-msg error-msg";
+        statusMsg.classList.remove('hide');
+        return;
+    }
+    
+    showLoadingScreen();
+    try {
+        const res = await fetch('/api/firebase/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config: configVal, vapid_key: vapidKeyVal })
+        });
+        const data = await res.json();
+        hideLoadingScreen();
+        
+        if (data.success) {
+            statusMsg.textContent = "✅ Configuración web de Firebase guardada con éxito.";
+            statusMsg.className = "status-msg success-msg";
+            statusMsg.classList.remove('hide');
+            loadFirebaseSettings();
+            
+            try { initFirebaseMessagingFlow(); } catch(e) {}
+        } else {
+            statusMsg.textContent = "❌ Error: " + (data.error || "No se pudo guardar la configuración.");
+            statusMsg.className = "status-msg error-msg";
+            statusMsg.classList.remove('hide');
+        }
+    } catch (err) {
+        hideLoadingScreen();
+        statusMsg.textContent = "❌ Error al conectar con el servidor: " + err.message;
+        statusMsg.className = "status-msg error-msg";
+        statusMsg.classList.remove('hide');
+    }
+}
+window.handleSaveFirebaseConfig = handleSaveFirebaseConfig;
+
+async function handleFirebaseSaUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    showLoadingScreen();
+    try {
+        const res = await fetch('/api/firebase/upload-sa', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        hideLoadingScreen();
+        
+        if (data.success) {
+            alert("✅ ¡Cuenta de servicio de Firebase subida con éxito!");
+            loadFirebaseSettings();
+        } else {
+            alert("❌ Error: " + (data.error || "No se pudo subir el archivo."));
+        }
+    } catch (err) {
+        hideLoadingScreen();
+        alert("❌ Error al conectar con el servidor: " + err.message);
+    }
+}
+window.handleFirebaseSaUpload = handleFirebaseSaUpload;
 
 // ==========================================
 // REGISTRO Y AUTO-AGENDA RÁPIDA (PORTAL)
