@@ -6051,20 +6051,19 @@ async function handleSaveFirebaseConfig(event) {
     event.preventDefault();
     const configVal = document.getElementById('fcm-web-config').value.trim();
     const vapidKeyVal = document.getElementById('fcm-vapid-key').value.trim();
+    const saTextElem = document.getElementById('firebase-sa-text-input');
+    const saTextVal = saTextElem ? saTextElem.value.trim() : '';
     const statusMsg = document.getElementById('fcm-config-status-msg');
     
     if (statusMsg) statusMsg.classList.add('hide');
     
-    try {
-        JSON.parse(configVal);
-    } catch(e) {
-        alert("❌ Error: La configuración SDK Web debe ser un formato JSON válido.");
-        if (statusMsg) {
-            statusMsg.textContent = "❌ Error: La configuración SDK Web debe ser un formato JSON válido.";
-            statusMsg.className = "status-msg error-msg";
-            statusMsg.classList.remove('hide');
+    if (configVal) {
+        try {
+            JSON.parse(configVal);
+        } catch(e) {
+            alert("❌ Error: La configuración SDK Web debe ser un formato JSON válido.");
+            return;
         }
-        return;
     }
     
     showLoadingScreen();
@@ -6072,15 +6071,15 @@ async function handleSaveFirebaseConfig(event) {
         const res = await fetch('/api/firebase/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ config: configVal, vapid_key: vapidKeyVal })
+            body: JSON.stringify({ config: configVal, vapid_key: vapidKeyVal, sa_json: saTextVal })
         });
         const data = await res.json();
         hideLoadingScreen();
         
-        if (data.success) {
-            alert("✅ ¡Configuración web de Firebase guardada con éxito!");
+        if (res.ok && data.success) {
+            alert("✅ ¡Configuración de Firebase guardada con éxito!");
             if (statusMsg) {
-                statusMsg.textContent = "✅ Configuración web de Firebase guardada con éxito.";
+                statusMsg.textContent = "✅ Configuración de Firebase guardada con éxito.";
                 statusMsg.className = "status-msg success-msg";
                 statusMsg.classList.remove('hide');
             }
@@ -6088,20 +6087,10 @@ async function handleSaveFirebaseConfig(event) {
             try { initFirebaseMessagingFlow(); } catch(e) {}
         } else {
             alert("❌ Error: " + (data.error || "No se pudo guardar la configuración."));
-            if (statusMsg) {
-                statusMsg.textContent = "❌ Error: " + (data.error || "No se pudo guardar la configuración.");
-                statusMsg.className = "status-msg error-msg";
-                statusMsg.classList.remove('hide');
-            }
         }
     } catch (err) {
         hideLoadingScreen();
         alert("❌ Error al conectar con el servidor: " + err.message);
-        if (statusMsg) {
-            statusMsg.textContent = "❌ Error al conectar con el servidor: " + err.message;
-            statusMsg.className = "status-msg error-msg";
-            statusMsg.classList.remove('hide');
-        }
     }
 }
 window.handleSaveFirebaseConfig = handleSaveFirebaseConfig;
@@ -6135,25 +6124,27 @@ async function handleFirebaseSaUpload(input) {
 window.handleFirebaseSaUpload = handleFirebaseSaUpload;
 
 async function handleSaveSaText() {
+    const configVal = document.getElementById('fcm-web-config').value.trim();
+    const vapidKeyVal = document.getElementById('fcm-vapid-key').value.trim();
     const saText = document.getElementById('firebase-sa-text-input').value.trim();
-    if (!saText) {
-        alert("❌ Por favor pega el contenido del archivo JSON antes de guardar.");
+    
+    if (!saText && !configVal) {
+        alert("❌ Por favor ingresa los datos antes de guardar.");
         return;
     }
     
     showLoadingScreen();
     try {
-        const res = await fetch('/api/firebase/save-sa-text', {
+        const res = await fetch('/api/firebase/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sa_json: saText })
+            body: JSON.stringify({ config: configVal, vapid_key: vapidKeyVal, sa_json: saText })
         });
         const data = await res.json();
         hideLoadingScreen();
         
-        if (data.success) {
-            alert("✅ ¡Cuenta de servicio de Firebase guardada con éxito!");
-            document.getElementById('firebase-sa-text-input').value = '';
+        if (res.ok && data.success) {
+            alert("✅ ¡Configuración de Firebase guardada con éxito!");
             loadFirebaseSettings();
         } else {
             alert("❌ Error: " + (data.error || "No se pudo guardar la clave."));
