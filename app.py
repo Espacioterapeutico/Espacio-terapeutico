@@ -120,23 +120,26 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         # 1. Obtener tokens de FCM para el usuario/paciente
         db = get_db()
         cursor = db.cursor()
+        tokens = []
         if user_id:
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
-            rows = cursor.fetchall()
-            if not rows:
-                cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id IS NULL AND patient_id IS NULL")
-                rows = cursor.fetchall()
+            tokens = [row['token'] for row in cursor.fetchall()]
+            if not tokens:
+                cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id IS NULL")
+                tokens = [row['token'] for row in cursor.fetchall()]
         elif patient_id:
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
-            rows = cursor.fetchall()
-            if not rows:
-                cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id IS NULL AND patient_id IS NULL")
-                rows = cursor.fetchall()
-        else:
+            tokens = [row['token'] for row in cursor.fetchall()]
+            if not tokens:
+                cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id IS NULL")
+                tokens = [row['token'] for row in cursor.fetchall()]
+
+        if not tokens:
             cursor.execute("SELECT token FROM fcm_subscriptions")
-            rows = cursor.fetchall()
-            
-        tokens = [row['token'] for row in rows]
+            tokens = [row['token'] for row in cursor.fetchall()]
+
+        # Deduplicar manteniendo orden
+        tokens = list(dict.fromkeys(tokens))
         if not tokens:
             return
             
@@ -6153,22 +6156,20 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {{
   console.log('[firebase-messaging-sw.js] Mensaje en segundo plano recibido:', payload);
   
-  // Si el mensaje incluye objeto 'notification', el SDK de Firebase lo muestra automáticamente.
-  // Solo mostramos notificación manualmente si es un data-message sin objeto 'notification'.
-  if (!payload.notification) {{
-    const notificationTitle = payload.data?.title || 'Espacio Terapéutico';
-    const notificationOptions = {{
-      body: payload.data?.body || 'Tienes una nueva notificación.',
-      icon: '/static/logo.png',
-      badge: '/static/badge.png',
-      sound: '/static/notification.wav',
-      vibrate: [200, 100, 200],
-      data: {{
-        url: payload.data ? payload.data.url : '/'
-      }}
-    }};
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  }}
+  const notificationTitle = payload.notification?.title || payload.data?.title || 'Espacio Terapéutico';
+  const notificationBody = payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.';
+  const targetUrl = payload.data?.url || payload.fcmOptions?.link || '/';
+
+  const notificationOptions = {{
+    body: notificationBody,
+    icon: '/static/logo.png',
+    badge: '/static/badge.png',
+    sound: '/static/notification.wav',
+    vibrate: [200, 100, 200],
+    data: {{ url: targetUrl }}
+  }};
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
 }}).catch(err => {{
   console.error('Error en onBackgroundMessage:', err);
 }});
