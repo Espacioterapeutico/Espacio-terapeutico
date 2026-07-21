@@ -105,6 +105,50 @@ function triggerNativeNotification(title, body, key, link) {
     }
 }
 
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function subscribeUserToVapidPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+        const hasPermission = await requestNotificationPermission();
+        if (!hasPermission) return;
+
+        const reg = await navigator.serviceWorker.ready;
+        const res = await fetch('/api/push/public-key');
+        const data = await res.json();
+        if (!data.public_key) return;
+
+        const applicationServerKey = urlBase64ToUint8Array(data.public_key);
+        let sub = await reg.pushManager.getSubscription();
+
+        if (!sub) {
+            sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: applicationServerKey
+            });
+        }
+
+        await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub)
+        });
+        console.log('Suscripción WebPush VAPID registrada con éxito.');
+    } catch (err) {
+        console.error('Error al suscribir a VAPID Push:', err);
+    }
+}
+window.subscribeUserToVapidPush = subscribeUserToVapidPush;
+
 // ==========================================
 // ESTADO GLOBAL DE LA APLICACIÓN
 // ==========================================
@@ -119,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Garantía absoluta de ocultar pantalla de carga en máximo 1.5s
     setTimeout(() => {
         hideLoadingScreen();
+        subscribeUserToVapidPush();
     }, 1500);
 
     try { checkAdminExists(); } catch(e) {}
