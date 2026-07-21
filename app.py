@@ -445,6 +445,7 @@ def auto_cancel_unconfirmed_sessions(db):
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.confirmada = 0 
               AND af.estado_pago = 'Agendada' 
+              AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
               AND af.fecha <= ?
         """, (today_str,))
         
@@ -2751,6 +2752,7 @@ def get_patient_portal_data_dict(patient_id):
         WHERE paciente_id = ? 
           AND (id NOT IN (SELECT DISTINCT agenda_id FROM sesiones WHERE agenda_id IS NOT NULL AND (estado = 'Realizada' OR estado LIKE 'Realizada%')) OR agenda_id IS NULL)
           AND estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'
+          AND (hora != '00:00' AND hora != '' AND hora IS NOT NULL)
           AND fecha >= ?
         ORDER BY fecha ASC, hora ASC
     """, (patient_id, yesterday_str))
@@ -4977,6 +4979,7 @@ def get_agenda():
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN sesiones s ON s.agenda_id = af.id
+        WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
         ORDER BY af.fecha ASC, af.hora ASC
     """)
     events = [dict(row) for row in cursor.fetchall()]
