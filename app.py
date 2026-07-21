@@ -583,6 +583,93 @@ def auto_send_appointment_reminders(db):
     except Exception as e:
         print("Error en auto_send_appointment_reminders:", e)
 
+def auto_send_confirmation_requests(db):
+    """
+    Notifica al paciente cuando su cita entra dentro de la ventana de horas
+    configurada por el psicólogo (alerta_confirmacion, ej: 24h antes) y aún no está confirmada.
+    """
+    cursor = db.cursor()
+    try:
+        from datetime import datetime
+        import requests, json
+
+        now_dt = datetime.now()
+        now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+        today_str = now_dt.strftime("%Y-%m-%d")
+
+        # Buscar citas no confirmadas en estado 'Agendada' desde hoy en adelante
+        cursor.execute("""
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, p.nombres, p.psicologo_id
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.confirmada = 0
+              AND af.estado_pago = 'Agendada'
+              AND af.fecha >= ?
+        """, (today_str,))
+
+        unconfirmed_appts = cursor.fetchall()
+        for appt in unconfirmed_appts:
+            appt_id = appt['id']
+            patient_id = appt['paciente_id']
+            psicologo_id = appt['psicologo_id']
+            fecha_cita = appt['fecha']
+            hora_cita = appt['hora']
+
+            # Obtener alerta_confirmacion del psicólogo
+            alerta_confirmacion = 24
+            if psicologo_id:
+                cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+                u_row = cursor.fetchone()
+                if u_row and u_row[0]:
+                    try:
+                        config = json.loads(u_row[0])
+                        alerta_confirmacion = int(config.get('alerta_confirmacion', 24))
+                    except:
+                        pass
+
+            # Calcular horas restantes
+            try:
+                session_dt = datetime.strptime(f"{fecha_cita} {hora_cita}", "%Y-%m-%d %H:%M")
+                diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
+            except:
+                continue
+
+            # Si ya entró en el rango de confirmación (ej: <= 24h antes) y no ha pasado la cita
+            if 0 < diff_hours <= alerta_confirmacion:
+                notif_key = f"req_conf_{appt_id}"
+                
+                # Evitar enviar la notificación repetidamente
+                try:
+                    res_check = requests.get(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", timeout=2.0)
+                    if res_check.ok and res_check.json():
+                        existing_notifs = res_check.json()
+                        already_sent = any(
+                            n.get('notif_key') == notif_key for n in existing_notifs.values() if isinstance(n, dict)
+                        )
+                        if already_sent:
+                            continue
+                except:
+                    pass
+
+                # Enviar notificación a Firebase para el paciente
+                try:
+                    fb_payload = {
+                        "id": int(now_dt.timestamp() * 1000),
+                        "notif_key": notif_key,
+                        "tipo": "cita",
+                        "titulo": "⚠️ Por favor confirma tu consulta",
+                        "mensaje": f"Tu consulta del {fecha_cita} a las {hora_cita} ya está disponible para confirmar. ¡Por favor confirma tu asistencia!",
+                        "fecha": now_str,
+                        "leida": False
+                    }
+                    requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+                except Exception as fe:
+                    print("Error enviando notif confirmacion a Firebase:", fe)
+
+        db.commit()
+    except Exception as e:
+        print("Error en auto_send_confirmation_requests:", e)
+
 @app.before_request
 def before_request_cleanup():
     # Evitar ejecutar en llamadas de archivos estáticos
@@ -591,6 +678,7 @@ def before_request_cleanup():
     db = get_db()
     auto_cancel_unconfirmed_sessions(db)
     auto_send_appointment_reminders(db)
+    auto_send_confirmation_requests(db)
 
 def auto_settle_patient_debts(db, patient_id):
     if not patient_id:
