@@ -62,39 +62,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Soporte para Notificaciones Push Nativas VAPID en la barra de tareas y pantalla de bloqueo
-self.addEventListener('push', (event) => {
-  let data = { title: 'Espacio Terapéutico', body: 'Tienes una nueva actualización en tu consultorio.', url: '/' };
-  if (event.data) {
-    try {
-      const parsed = event.data.json();
-      data.title = parsed.title || parsed.notification?.title || data.title;
-      data.body = parsed.body || parsed.notification?.body || data.body;
-      data.url = parsed.url || parsed.data?.url || data.url;
-    } catch (e) {
-      data.body = event.data.text() || data.body;
-    }
-  }
-
-  const options = {
-    body: data.body,
-    icon: '/static/logo.png',
-    badge: '/static/badge.png',
-    sound: '/static/notification.wav',
-    vibrate: [300, 100, 300, 100, 300],
-    tag: data.tag || 'miconsultorio-notification',
-    renotify: true,
-    requireInteraction: true,
-    data: { url: data.url || '/' },
-    actions: [
-      { action: 'open', title: '👁️ Ver en la App' }
-    ]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
-});
+// Push notifications handled exclusively by firebase-messaging-sw.js
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
