@@ -1121,10 +1121,10 @@
                                 
                                 <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border-color);" />
                                 
-                                <!-- 3. Service Account Key JSON Uploader -->
+                                <!-- 3. Service Account Key JSON Uploader / Paste Box -->
                                 <h4 class="mb-2" style="font-size: 1rem; font-weight: 700;">Credenciales del Servidor (Service Account)</h4>
                                 <p class="text-secondary mb-3" style="font-size: 0.85rem; line-height: 1.4;">
-                                    Sube el archivo JSON de clave privada de la cuenta de servicio de tu proyecto de Firebase. Esto habilita al servidor web para enviar notificaciones push legítimas a los dispositivos.
+                                    Sube o pega el contenido del archivo JSON de clave privada de la cuenta de servicio de tu proyecto de Firebase.
                                 </p>
                                 
                                 <div id="firebase-sa-status-box" class="google-calendar-status-box mb-3">
@@ -1132,12 +1132,20 @@
                                     <span id="firebase-sa-status-badge" class="badge">Cargando...</span>
                                 </div>
                                 
-                                <div id="firebase-sa-uploader">
+                                <div id="firebase-sa-uploader" class="mb-3">
                                     <input type="file" id="firebase-sa-upload-input" accept=".json" style="display:none;" onchange="handleFirebaseSaUpload(this)" />
-                                    <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('firebase-sa-upload-input').click()" style="width: 100%; font-weight: 700;">
-                                        📁 Subir firebase_service_account.json
+                                    <button type="button" class="btn btn-secondary btn-block mb-3" onclick="document.getElementById('firebase-sa-upload-input').click()" style="width: 100%; font-weight: 700;">
+                                        📁 Subir archivo firebase_service_account.json
                                     </button>
                                 </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="firebase-sa-text-input" style="font-weight: 600; font-size: 0.85rem;">O pega el texto del archivo .json aquí:</label>
+                                    <textarea id="firebase-sa-text-input" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: monospace; font-size: 0.8rem;" placeholder='Pega aquí el contenido del archivo .json...'></textarea>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-block" onclick="handleSaveSaText()" style="width: 100%; font-weight: 700;">
+                                    💾 Guardar Credencial por Texto
+                                </button>
                                 <div id="fcm-config-status-msg" class="status-msg hide mt-3"></div>
                             </div>
                         </div>
