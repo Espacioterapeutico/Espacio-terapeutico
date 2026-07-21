@@ -246,52 +246,7 @@ def init_db():
                 INSERT INTO usuarios (username, password_hash, nombres, apellidos, role, activo)
                 VALUES (?, ?, ?, ?, ?, 1)
             """, ('admin', generate_password_hash('admin'), 'Administrador', 'General', 'superadmin'))
-        # Sincronización / Reparación automática de horarios en la BD del servidor
-        try:
-            cursor.execute("SELECT id, disponibilidad_horarios, configuracion_horarios_visual FROM usuarios")
-            all_users = cursor.fetchall()
-            for u_item in all_users:
-                u_id = u_item[0]
-                disp_str = u_item[1] or ""
-                vis_str = u_item[2] or ""
 
-                need_clean = False
-                if '03:05' in disp_str or '04:10' in disp_str or '09:05' in disp_str or '10:10' in disp_str or '13:05' in disp_str or '14:05' in disp_str or '08:30' in disp_str:
-                    need_clean = True
-                if '"receso": 5' in vis_str or '"receso":5' in vis_str:
-                    need_clean = True
-
-                if need_clean or not disp_str:
-                    clean_dias = [
-                        {'dia': 1, 'nombre': 'Lunes', 'activo': True, 'slots': [{'hora': '12:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '13:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '14:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '15:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
-                        {'dia': 2, 'nombre': 'Martes', 'activo': True, 'slots': [{'hora': '18:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '19:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '20:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '21:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
-                        {'dia': 3, 'nombre': 'Miércoles', 'activo': True, 'slots': [{'hora': '08:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '09:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '10:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '11:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
-                        {'dia': 4, 'nombre': 'Jueves', 'activo': True, 'slots': [{'hora': '08:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '09:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '10:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '11:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
-                        {'dia': 5, 'nombre': 'Viernes', 'activo': True, 'slots': [{'hora': '08:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '09:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '10:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}, {'hora': '11:00', 'modalidades': ['Online', 'Presencial', 'Horario Online']}]},
-                        {'dia': 6, 'nombre': 'Sábado', 'activo': True, 'slots': [
-                            {'hora': '08:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
-                            {'hora': '09:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
-                            {'hora': '10:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
-                            {'hora': '11:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
-                            {'hora': '14:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
-                            {'hora': '15:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
-                            {'hora': '16:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']},
-                            {'hora': '17:00', 'modalidades': ['Online', 'Presencial', 'Horario Presencial']}
-                        ]},
-                        {'dia': 0, 'nombre': 'Domingo', 'activo': False, 'slots': []}
-                    ]
-                    import json
-                    cursor.execute("UPDATE usuarios SET disponibilidad_horarios = ? WHERE id = ?", (json.dumps(clean_dias), u_id))
-                    if vis_str:
-                        try:
-                            cfg_vis = json.loads(vis_str)
-                            cfg_vis['receso'] = 0
-                            cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (json.dumps(cfg_vis), u_id))
-                        except:
-                            pass
-            db.commit()
-        except Exception as ex_mig:
-            print("Error en migración automática de horarios:", ex_mig)
 
         # Migración automática de pacientes
         cursor.execute("PRAGMA table_info(pacientes)")
@@ -1931,6 +1886,153 @@ def modality_matches(req_mod, slot_mods):
             return True
     return False
 
+def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_modality='all', exclude_appt_id=None):
+    """
+    Genera dinámicamente los slots de disponibilidad a partir de configuracion_horarios_visual.
+    Aplica de forma transparente:
+    1. Bloques por día y modalidad.
+    2. División en intervalos fijos de sesión (duracion + receso).
+    3. Regla de Cierre (slot_inicio + duracion <= hora_fin_bloque).
+    4. Descarte de horas ocupadas en agenda_finanzas.
+    5. Descarte de horas dentro del límite de antelación.
+    6. Formateo ISO con offset UTC-4.
+    """
+    import json
+    from datetime import datetime, timedelta
+
+    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+    u_row = cursor.fetchone()
+    
+    config = {}
+    if u_row and u_row['configuracion_horarios_visual']:
+        try:
+            config = json.loads(u_row['configuracion_horarios_visual'])
+        except:
+            pass
+
+    if not config:
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'configuracion_horarios_visual'")
+        row = cursor.fetchone()
+        if row and row['valor']:
+            try:
+                config = json.loads(row['valor'])
+            except:
+                pass
+
+    duracion = int(config.get('duracion', 60))
+    receso = int(config.get('receso', 0))
+    antelacion = int(config.get('antelacion', 24))
+    perfiles = config.get('perfiles', [])
+
+    try:
+        target_dt = datetime.strptime(target_date_str, "%Y-%m-%d")
+    except:
+        return []
+
+    # Python weekday: 0=Mon, 6=Sun. Nuestra app usa: 1=Mon, ..., 6=Sat, 0=Sun
+    day_num = (target_dt.weekday() + 1) % 7
+
+    candidate_slots = []
+    seen_hours = set()
+
+    req_mod_clean = str(requested_modality or 'all').strip().lower()
+
+    for perf in perfiles:
+        perf_modalidad = str(perf.get('modalidad') or perf.get('nombre') or '').strip()
+        perf_mod_clean = perf_modalidad.lower()
+
+        # Filtrar por modalidad requerida
+        if req_mod_clean != 'all' and req_mod_clean not in perf_mod_clean and perf_mod_clean not in req_mod_clean:
+            if not ('online' in req_mod_clean and 'online' in perf_mod_clean) and \
+               not ('presencial' in req_mod_clean and 'presencial' in perf_mod_clean):
+                continue
+
+        dias_list = perf.get('dias', [])
+        for d in dias_list:
+            if int(d.get('dia')) == day_num and d.get('activo', False):
+                rangos = d.get('rangos', [])
+                for r in rangos:
+                    inicio_str = r.get('inicio')
+                    fin_str = r.get('fin')
+                    if not inicio_str or not fin_str:
+                        continue
+                    try:
+                        start_time = datetime.strptime(inicio_str, "%H:%M")
+                        end_time = datetime.strptime(fin_str, "%H:%M")
+
+                        # Auto-corrección si viene en formato 12h (ej. 02:00 a 06:00 -> 14:00 a 18:00)
+                        if start_time.hour < 7 and end_time.hour <= 12 and start_time.hour < end_time.hour:
+                            start_time = start_time.replace(hour=start_time.hour + 12)
+                            if end_time.hour < 12:
+                                end_time = end_time.replace(hour=end_time.hour + 12)
+
+                        curr = start_time
+                        duration_td = timedelta(minutes=duracion)
+                        recess_td = timedelta(minutes=receso)
+
+                        # Regla de cierre: el slot finaliza antes o igual a la hora fin
+                        while curr + duration_td <= end_time:
+                            h_str = curr.strftime("%H:%M")
+                            if h_str not in seen_hours:
+                                seen_hours.add(h_str)
+                                candidate_slots.append({
+                                    "hora": h_str,
+                                    "modalidades": [perf_modalidad or 'Online']
+                                })
+                            else:
+                                for c in candidate_slots:
+                                    if c["hora"] == h_str:
+                                        if perf_modalidad and perf_modalidad not in c["modalidades"]:
+                                            c["modalidades"].append(perf_modalidad)
+                            curr += duration_td + recess_td
+                    except Exception as ex_r:
+                        pass
+
+    candidate_slots.sort(key=lambda x: x["hora"])
+
+    if not candidate_slots:
+        return []
+
+    # Filtrar slots ocupados en agenda_finanzas
+    query = """
+        SELECT hora FROM agenda_finanzas
+        WHERE fecha = ? AND estado_pago NOT IN ('Cancelada', 'Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada sin aviso - Paga', 'Reprogramada')
+    """
+    params = [target_date_str]
+    if exclude_appt_id:
+        query += " AND id != ?"
+        params.append(exclude_appt_id)
+
+    cursor.execute(query, params)
+    booked_rows = cursor.fetchall()
+    booked_hours = set(row['hora'][:5] for row in booked_rows)
+
+    # Validar horas de antelación
+    limit_dt = datetime.now() + timedelta(hours=antelacion)
+
+    valid_slots = []
+    for slot_obj in candidate_slots:
+        h = slot_obj["hora"]
+        if h in booked_hours:
+            continue
+
+        try:
+            slot_dt = datetime.strptime(f"{target_date_str} {h}", "%Y-%m-%d %H:%M")
+            if slot_dt < limit_dt:
+                continue
+        except:
+            pass
+
+        iso_str = f"{target_date_str}T{h}:00-04:00"
+        valid_slots.append({
+            "iso": iso_str,
+            "hora_literal": h,
+            "modalidades": slot_obj["modalidades"]
+        })
+
+    return valid_slots
+
+
 @app.route('/api/patient/available-dates', methods=['GET'])
 def get_available_dates():
     year = request.args.get('year')
@@ -1942,10 +2044,7 @@ def get_available_dates():
         return jsonify({'error': 'Año y mes son requeridos.'}), 400
         
     try:
-        from datetime import datetime
         import calendar as pycalendar
-        import json
-        
         year = int(year)
         month = int(month)
         
@@ -1961,85 +2060,26 @@ def get_available_dates():
         if not psicologo_id and 'user_id' in session:
             psicologo_id = session['user_id']
         if not psicologo_id:
-            cursor.execute("SELECT id FROM usuarios WHERE rol = 'psicologo' OR es_superadmin = 0 ORDER BY id ASC LIMIT 1")
+            cursor.execute("SELECT id FROM usuarios WHERE role = 'psicologo' ORDER BY id ASC LIMIT 1")
             first_u = cursor.fetchone()
             if first_u:
                 psicologo_id = first_u[0]
-                
-        avail_config = []
-        if psicologo_id:
-            cursor.execute("SELECT disponibilidad_horarios FROM usuarios WHERE id = ?", (psicologo_id,))
-            u_row = cursor.fetchone()
-            if u_row and u_row['disponibilidad_horarios']:
-                avail_config = json.loads(u_row['disponibilidad_horarios'])
-                
-        if not avail_config:
-            cursor.execute("SELECT valor FROM configuracion WHERE clave = 'disponibilidad_horarios'")
-            avail_row = cursor.fetchone()
-            if avail_row:
-                avail_config = json.loads(avail_row['valor'])
-                
-        if not avail_config:
-            return jsonify({'dates': []})
-        
-        week_days_slots = {}
-        for item in avail_config:
-            day_num = item['dia']
-            if item.get('activo', False):
-                count = 0
-                for slot in item.get('slots', []):
-                    slot_mods = slot.get('modalidades', [])
-                    if modality_matches(modalidad, slot_mods):
-                        count += 1
-                if count > 0:
-                    week_days_slots[day_num] = count
-                    
+            else:
+                psicologo_id = 1
+
         num_days = pycalendar.monthrange(year, month)[1]
-        
-        start_date = f"{year}-{month:02d}-01"
-        end_date = f"{year}-{month:02d}-{num_days:02d}"
-        
-        query = """
-            SELECT fecha, COUNT(*) as booked_count 
-            FROM agenda_finanzas 
-            WHERE fecha BETWEEN ? AND ? AND estado_pago NOT IN ('Cancelada', 'Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada sin aviso - Paga', 'Reprogramada')
-        """
-        params = [start_date, end_date]
-        if exclude_appt_id:
-            query += " AND id != ?"
-            params.append(exclude_appt_id)
-        query += " GROUP BY fecha"
-        
-        cursor.execute(query, params)
-        booked_rows = cursor.fetchall()
-        booked_map = {row['fecha']: row['booked_count'] for row in booked_rows}
-        
-        # Obtener horas de antelación
-        antelacion = get_psicologo_antelacion_horas(psicologo_id, cursor)
-        from datetime import timedelta
-        limit_dt = datetime.now() + timedelta(hours=antelacion)
-        
         available_dates = []
-        
+
         for day in range(1, num_days + 1):
-            dt = datetime(year, month, day)
-            date_str = dt.strftime("%Y-%m-%d")
-            
-            # Excluir fechas estrictamente anteriores al límite
-            if dt.date() < limit_dt.date():
-                continue
+            date_str = f"{year}-{month:02d}-{day:02d}"
+            slots = generate_dynamic_slots(cursor, psicologo_id, date_str, modalidad, exclude_appt_id)
+            if len(slots) > 0:
+                available_dates.append(date_str)
                 
-            day_num = (dt.weekday() + 1) % 7
-            
-            if day_num in week_days_slots:
-                total_slots = week_days_slots[day_num]
-                booked_count = booked_map.get(date_str, 0)
-                if booked_count < total_slots:
-                    available_dates.append(date_str)
-                    
         return jsonify({'dates': available_dates})
     except Exception as e:
         return jsonify({'error': f'Error al obtener fechas disponibles: {str(e)}'}), 500
+
 
 @app.route('/api/patient/available-slots', methods=['GET'])
 def get_available_slots():
@@ -2051,12 +2091,6 @@ def get_available_slots():
         return jsonify({'error': 'Fecha es requerida.'}), 400
         
     try:
-        from datetime import datetime, timedelta
-        import json
-        
-        target_dt = datetime.strptime(date_str, "%Y-%m-%d")
-        dates_to_check = [target_dt]
-        
         db = get_db()
         cursor = db.cursor()
         
@@ -2069,78 +2103,15 @@ def get_available_slots():
         if not psicologo_id and 'user_id' in session:
             psicologo_id = session['user_id']
         if not psicologo_id:
-            cursor.execute("SELECT id FROM usuarios WHERE rol = 'psicologo' OR es_superadmin = 0 ORDER BY id ASC LIMIT 1")
+            cursor.execute("SELECT id FROM usuarios WHERE role = 'psicologo' ORDER BY id ASC LIMIT 1")
             first_u = cursor.fetchone()
             if first_u:
                 psicologo_id = first_u[0]
-                
-        avail_config = []
-        if psicologo_id:
-            cursor.execute("SELECT disponibilidad_horarios FROM usuarios WHERE id = ?", (psicologo_id,))
-            u_row = cursor.fetchone()
-            if u_row and u_row['disponibilidad_horarios']:
-                avail_config = json.loads(u_row['disponibilidad_horarios'])
-                
-        if not avail_config:
-            cursor.execute("SELECT valor FROM configuracion WHERE clave = 'disponibilidad_horarios'")
-            avail_row = cursor.fetchone()
-            if avail_row:
-                avail_config = json.loads(avail_row['valor'])
-                
-        if not avail_config:
-            return jsonify({'slots': []})
-        
-        # Obtener horas de antelación
-        antelacion = get_psicologo_antelacion_horas(psicologo_id, cursor)
-        limit_dt = datetime.now() + timedelta(hours=antelacion)
-        
-        all_iso_slots = []
-        
-        for dt in dates_to_check:
-            curr_date_str = dt.strftime("%Y-%m-%d")
-            day_num = (dt.weekday() + 1) % 7
-            
-            day_config = next((item for item in avail_config if item['dia'] == day_num), None)
-            if not day_config or not day_config.get('activo', False):
-                continue
-                
-            defined_slots = day_config.get('slots', [])
-            
-            query = """
-                SELECT hora FROM agenda_finanzas 
-                WHERE fecha = ? AND estado_pago NOT IN ('Cancelada', 'Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada sin aviso - Paga', 'Reprogramada')
-            """
-            params = [curr_date_str]
-            if exclude_appt_id:
-                query += " AND id != ?"
-                params.append(exclude_appt_id)
-                
-            cursor.execute(query, params)
-            booked_rows = cursor.fetchall()
-            booked_hours = [row['hora'][:5] for row in booked_rows]
-            
-            for slot_obj in defined_slots:
-                h = slot_obj.get('hora')
-                slot_mods = slot_obj.get('modalidades', [])
-                if not modality_matches(modalidad, slot_mods):
-                    continue
-                if h not in booked_hours:
-                    # Validar antelación
-                    try:
-                        slot_datetime = datetime.strptime(f"{curr_date_str} {h}", "%Y-%m-%d %H:%M")
-                        if slot_datetime < limit_dt:
-                            continue
-                    except:
-                        pass
-                        
-                    iso_str = f"{curr_date_str}T{h}:00"
-                    all_iso_slots.append({
-                        "iso": iso_str,
-                        "hora_literal": h,
-                        "modalidades": slot_mods
-                    })
-                    
-        return jsonify({'slots': all_iso_slots})
+            else:
+                psicologo_id = 1
+
+        slots = generate_dynamic_slots(cursor, psicologo_id, date_str, modalidad, exclude_appt_id)
+        return jsonify({'slots': slots})
     except Exception as e:
         return jsonify({'error': f'Error al obtener disponibilidad: {str(e)}'}), 500
 
