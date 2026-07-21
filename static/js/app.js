@@ -6108,6 +6108,37 @@ async function handleFirebaseSaUpload(input) {
 }
 window.handleFirebaseSaUpload = handleFirebaseSaUpload;
 
+async function handleSaveSaText() {
+    const saText = document.getElementById('firebase-sa-text-input').value.trim();
+    if (!saText) {
+        alert("❌ Por favor pega el contenido del archivo JSON antes de guardar.");
+        return;
+    }
+    
+    showLoadingScreen();
+    try {
+        const res = await fetch('/api/firebase/save-sa-text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sa_json: saText })
+        });
+        const data = await res.json();
+        hideLoadingScreen();
+        
+        if (data.success) {
+            alert("✅ ¡Cuenta de servicio de Firebase guardada con éxito!");
+            document.getElementById('firebase-sa-text-input').value = '';
+            loadFirebaseSettings();
+        } else {
+            alert("❌ Error: " + (data.error || "No se pudo guardar la clave."));
+        }
+    } catch (err) {
+        hideLoadingScreen();
+        alert("❌ Error al conectar con el servidor: " + err.message);
+    }
+}
+window.handleSaveSaText = handleSaveSaText;
+
 // ==========================================
 // REGISTRO Y AUTO-AGENDA RÁPIDA (PORTAL)
 // ==========================================
