@@ -1992,12 +1992,19 @@ def patient_reset_password():
 @app.route('/api/patient/change-password', methods=['POST'])
 @patient_login_required
 def patient_change_password():
-    data = request.json
+    data = request.json or {}
     current_password = data.get('current_password')
     new_password = data.get('new_password')
+    confirm_password = data.get('confirm_password')
     
     if not current_password or not new_password:
         return jsonify({'error': 'Ambas contraseñas son obligatorias.'}), 400
+
+    if confirm_password and new_password != confirm_password:
+        return jsonify({'error': 'La nueva contraseña y su confirmación no coinciden.'}), 400
+
+    if len(new_password) < 6:
+        return jsonify({'error': 'La nueva contraseña debe tener al menos 6 caracteres.'}), 400
         
     patient_id = session['patient_id']
     db = get_db()
@@ -2018,7 +2025,43 @@ def patient_change_password():
         
         return jsonify({'success': 'Contraseña actualizada con éxito.'})
     except Exception as e:
-        return jsonify({'error': f'Error al actualizar: {str(e)}'}), 500
+        db.rollback()
+        return jsonify({'error': f'Error al actualizar contraseña: {str(e)}'}), 500
+
+@app.route('/api/user/change-password', methods=['POST'])
+@login_required
+def user_change_password():
+    data = request.json or {}
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    confirm_password = data.get('confirm_password')
+    
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({'error': 'Todos los campos son obligatorios.'}), 400
+
+    if new_password != confirm_password:
+        return jsonify({'error': 'La nueva contraseña y su confirmación no coinciden.'}), 400
+
+    if len(new_password) < 6:
+        return jsonify({'error': 'La nueva contraseña debe tener al menos 6 caracteres.'}), 400
+
+    user_id = session['user_id']
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT password_hash FROM usuarios WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    
+    if not user or not check_password_hash(user['password_hash'], current_password):
+        return jsonify({'error': 'La contraseña actual es incorrecta.'}), 401
+        
+    password_hash = generate_password_hash(new_password)
+    try:
+        cursor.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+        db.commit()
+        return jsonify({'success': 'Contraseña actualizada con éxito.'})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al actualizar contraseña: {str(e)}'}), 500
 
 @app.route('/api/patient/appointments', methods=['GET'])
 @patient_login_required
