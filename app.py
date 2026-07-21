@@ -3470,7 +3470,11 @@ def get_patient(patient_id):
     row = cursor.fetchone()
     if row is None:
         return jsonify({'error': 'Paciente no encontrado.'}), 404
-    return jsonify(dict(row))
+    p_dict = dict(row)
+    for k in ['diagnostico', 'antecedentes_medicos_personales', 'antecedentes_psicologicos_personales', 'historia_clinica']:
+        if k in p_dict and p_dict[k]:
+            p_dict[k] = decrypt_clinical_text(p_dict[k])
+    return jsonify(p_dict)
 
 @app.route('/api/patients', methods=['POST'])
 @login_required
@@ -3739,9 +3743,20 @@ def get_patient_summary(patient_id):
         estado_name = row['estado'] if row['estado'] in session_counts else 'Realizada'
         session_counts[estado_name] = row['cantidad']
 
+    patient_dict = dict(patient)
+    for k in ['diagnostico', 'antecedentes_medicos_personales', 'antecedentes_psicologicos_personales', 'historia_clinica']:
+        if k in patient_dict and patient_dict[k]:
+            patient_dict[k] = decrypt_clinical_text(patient_dict[k])
+            
+    last_session_dict = dict(last_session) if last_session else None
+    if last_session_dict:
+        for k in ['resumen', 'tareas_asignadas', 'anotaciones_proxima', 'recursos_entregados', 'compromisos_psicologo']:
+            if k in last_session_dict and last_session_dict[k]:
+                last_session_dict[k] = decrypt_clinical_text(last_session_dict[k])
+
     summary = {
-        'patient': dict(patient),
-        'last_session': dict(last_session) if last_session else None,
+        'patient': patient_dict,
+        'last_session': last_session_dict,
         'finance': {
             'pagas': finance_stats['pagas'] or 0,
             'pendientes': finance_stats['pendientes'] or 0,
