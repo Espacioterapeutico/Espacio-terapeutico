@@ -105,7 +105,102 @@ def get_vapid_keys(cursor):
             cfg = {'vapid_public_key': '', 'vapid_private_key': ''}
     return cfg
 
+def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
+    if not os.path.exists(FIREBASE_SA_FILE):
+        return
+        
+    try:
+        import json
+        import urllib.request
+        from google.oauth2 import service_account
+        import google.auth.transport.requests
+        
+        # 1. Obtener tokens de FCM para el usuario/paciente
+        db = get_db()
+        cursor = db.cursor()
+        if user_id:
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+        elif patient_id:
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+        else:
+            cursor.execute("SELECT token FROM fcm_subscriptions")
+            
+        rows = cursor.fetchall()
+        tokens = [row['token'] for row in rows]
+        if not tokens:
+            return
+            
+        # 2. Obtener project_id y access_token del service account JSON
+        with open(FIREBASE_SA_FILE, 'r', encoding='utf-8') as f:
+            sa_info = json.load(f)
+            project_id = sa_info.get('project_id')
+            
+        if not project_id:
+            return
+            
+        scopes = ["https://www.googleapis.com/auth/firebase.messaging"]
+        creds = service_account.Credentials.from_service_account_file(
+            FIREBASE_SA_FILE, scopes=scopes
+        )
+        auth_req = google.auth.transport.requests.Request()
+        creds.refresh(auth_req)
+        access_token = creds.token
+        
+        # 3. Enviar por FCM a cada token
+        fcm_url = f"https://fcm.googleapis.com/v1/projects/{project_id}/messages:send"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; UTF-8"
+        }
+        
+        for token in tokens:
+            payload = {
+                "message": {
+                    "token": token,
+                    "notification": {
+                        "title": title,
+                        "body": body
+                    },
+                    "data": {
+                        "url": url,
+                        "title": title,
+                        "body": body
+                    },
+                    "android": {
+                        "notification": {
+                            "sound": "default"
+                        }
+                    },
+                    "apns": {
+                        "payload": {
+                            "aps": {
+                                "sound": "default"
+                            }
+                        }
+                    }
+                }
+            }
+            req = urllib.request.Request(
+                fcm_url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers=headers,
+                method='POST'
+            )
+            try:
+                with urllib.request.urlopen(req) as response:
+                    response.read()
+            except Exception as fcm_ex:
+                print("Error de envío a token FCM individual:", fcm_ex)
+    except Exception as e:
+        print("Error global en send_fcm_notification:", e)
+
 def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
+    # Disparar también Firebase Cloud Messaging (FCM) para garantizar segundo plano
+    try:
+        send_fcm_notification(user_id=user_id, patient_id=patient_id, title=title, body=body, url=url)
+    except Exception as fcm_err:
+        print("Fallo secundario al disparar FCM:", fcm_err)
+
     try:
         import json
         from pywebpush import webpush, WebPushException
@@ -115,14 +210,14 @@ def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultor
         vapid_private_key = vapid_keys.get('vapid_private_key')
         if not vapid_private_key:
             return
-
+ 
         if user_id:
             cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ?", (user_id,))
         elif patient_id:
             cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE patient_id = ?", (patient_id,))
         else:
             cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions")
-
+ 
         subs = cursor.fetchall()
         payload = json.dumps({
             "title": title,
@@ -130,7 +225,7 @@ def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultor
             "url": url
         })
         vapid_claims = {"sub": "mailto:soporte@miconsultorio.com"}
-
+ 
         for sub in subs:
             sub_info = {
                 "endpoint": sub["endpoint"],
@@ -237,6 +332,16 @@ def init_db():
             if 'aviso_pago' not in cols_usr:
                 cursor.execute("ALTER TABLE usuarios ADD COLUMN aviso_pago INTEGER DEFAULT 0")
             db.commit()
+            
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fcm_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                patient_id INTEGER,
+                token TEXT UNIQUE
+            )
+        """)
+        db.commit()
             
         # Asegurar existencia del superadministrador por defecto
         cursor.execute("SELECT id FROM usuarios WHERE role = 'superadmin'")
@@ -5743,6 +5848,167 @@ def delete_agenda_event(event_id):
 
 
 # ==========================================
+# CONFIGURACIÓN FIREBASE CLOUD MESSAGING (FCM)
+# ==========================================
+
+FIREBASE_SA_FILE = "firebase_service_account.json"
+
+@app.route('/api/firebase/config', methods=['GET'])
+@login_required
+def get_firebase_config():
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
+    row_cfg = cursor.fetchone()
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_vapid_key'")
+    row_vapid = cursor.fetchone()
+    
+    return jsonify({
+        'config': row_cfg[0] if row_cfg else '',
+        'vapid_key': row_vapid[0] if row_vapid else ''
+    })
+
+@app.route('/api/firebase/config', methods=['POST'])
+@login_required
+def save_firebase_config():
+    data = request.json or {}
+    config_json = data.get('config')
+    vapid_key = data.get('vapid_key')
+    
+    if not config_json or not vapid_key:
+        return jsonify({'error': 'La configuración y la clave VAPID son requeridas.'}), 400
+        
+    try:
+        import json
+        json.loads(config_json) # Validar que sea JSON válido
+    except Exception as e:
+        return jsonify({'error': f'Configuración SDK de Firebase Web no es un JSON válido: {str(e)}'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('firebase_config', ?)", (config_json,))
+    cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('firebase_vapid_key', ?)", (vapid_key,))
+    db.commit()
+    return jsonify({'success': 'Configuración de Firebase Web guardada con éxito.'})
+
+@app.route('/api/firebase/upload-sa', methods=['POST'])
+@login_required
+def upload_firebase_sa():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No se proporcionó ningún archivo.'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Nombre de archivo vacío.'}), 400
+    if not file.filename.endswith('.json'):
+        return jsonify({'error': 'El archivo debe ser en formato JSON.'}), 400
+    try:
+        import json
+        content = file.read().decode('utf-8')
+        config_data = json.loads(content)
+        # Validar estructura de cuenta de servicio de Firebase / Google Cloud
+        if 'private_key' not in config_data or 'client_email' not in config_data:
+            return jsonify({'error': 'El archivo no es una cuenta de servicio de Firebase válida.'}), 400
+        
+        with open(FIREBASE_SA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=4)
+            
+        return jsonify({'success': 'Cuenta de servicio de Firebase subida e instalada con éxito.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al procesar el archivo: {str(e)}'}), 500
+
+@app.route('/api/firebase/status', methods=['GET'])
+@login_required
+def get_firebase_status():
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
+    has_config = cursor.fetchone() is not None
+    has_sa = os.path.exists(FIREBASE_SA_FILE)
+    return jsonify({
+        'configured': has_config,
+        'has_service_account': has_sa
+    })
+
+@app.route('/api/firebase/subscribe', methods=['POST'])
+def subscribe_firebase():
+    data = request.json or {}
+    token = data.get('token')
+    if not token:
+        return jsonify({'error': 'Token FCM requerido.'}), 400
+        
+    user_id = session.get('user_id')
+    patient_id = session.get('patient_id')
+    
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+        VALUES (?, ?, ?)
+    """, (user_id, patient_id, token))
+    db.commit()
+    return jsonify({'success': 'Suscrito a notificaciones FCM con éxito.'})
+
+@app.route('/firebase-messaging-sw.js')
+def serve_firebase_messaging_sw():
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
+    row = cursor.fetchone()
+    
+    config_dict_str = row[0] if row else '{}'
+    
+    # Renderizar el Service Worker dinámicamente inyectando la configuración
+    sw_code = f"""
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+firebase.initializeApp({config_dict_str});
+
+const messaging = firebase.messaging();
+
+// Handler de notificaciones en SEGUNDO PLANO / CERRADO
+messaging.onBackgroundMessage((payload) => {{
+  console.log('[firebase-messaging-sw.js] Mensaje en segundo plano recibido:', payload);
+  
+  const notificationTitle = payload.notification?.title || payload.data?.title || 'Espacio Terapéutico';
+  const notificationOptions = {{
+    body: payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.',
+    icon: '/static/logo.png',
+    badge: '/static/logo.png',
+    sound: '/static/notification.wav',
+    vibrate: [200, 100, 200],
+    data: {{
+      url: payload.data ? payload.data.url : '/'
+    }}
+  }};
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+}}).catch(err => {{
+  console.error('Error en onBackgroundMessage:', err);
+}});
+
+// Manejo del clic en la notificación para abrir/enfocar la app
+self.addEventListener('notificationclick', (event) => {{
+  event.notification.close();
+  const targetUrl = event.notification.data ? event.notification.data.url : '/';
+  
+  event.waitUntil(
+    clients.matchAll({{ type: 'window', includeUncontrolled: true }}).then((windowClients) => {{
+      for (let client of windowClients) {{
+        if (client.url.includes(targetUrl) && 'focus' in client) {{
+          return client.focus();
+        }}
+      }}
+      if (clients.openWindow) {{
+        return clients.openWindow(targetUrl);
+      }}
+    }})
+  );
+}});
+"""
+    return Response(sw_code, mimetype='application/javascript')
+
+# ==========================================
 # CONFIGURACIÓN GOOGLE OAUTH
 # ==========================================
 
@@ -6390,8 +6656,55 @@ def serve_manifest():
 
 @app.route('/sw.js')
 def serve_sw():
-    response = send_file(get_resource_path('static/sw.js'), mimetype='application/javascript')
+    try:
+        sw_path = get_resource_path('static/sw.js')
+        with open(sw_path, 'r', encoding='utf-8') as f:
+            sw_content = f.read()
+    except Exception as e:
+        sw_content = ""
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
+    row = cursor.fetchone()
+    
+    if row and row[0]:
+        config_dict_str = row[0]
+        firebase_sw_code = f"""
+// === FIREBASE CLOUD MESSAGING INTEGRATION ===
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+try {{
+  firebase.initializeApp({config_dict_str});
+  const messaging = firebase.messaging();
+  
+  messaging.onBackgroundMessage((payload) => {{
+    console.log('[sw.js FCM] Mensaje en segundo plano:', payload);
+    const title = payload.notification?.title || payload.data?.title || 'Mi Consultorio';
+    const body = payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.';
+    const url = payload.data?.url || '/';
+    
+    self.registration.showNotification(title, {{
+      body: body,
+      icon: '/static/logo.png',
+      badge: '/static/logo.png',
+      sound: '/static/notification.wav',
+      vibrate: [200, 100, 200],
+      data: {{ url: url }}
+    }});
+  }});
+}} catch(err) {{
+  console.error("Fallo al inicializar Firebase en el Service Worker:", err);
+}}
+"""
+        sw_content += firebase_sw_code
+        
+    response = Response(sw_content, mimetype='application/javascript')
     response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     return response
 
 if __name__ == '__main__':
