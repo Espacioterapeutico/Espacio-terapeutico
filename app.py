@@ -5967,22 +5967,33 @@ def save_firebase_config():
     data = request.json or {}
     config_json = data.get('config')
     vapid_key = data.get('vapid_key')
+    sa_json = data.get('sa_json')
     
-    if not config_json or not vapid_key:
-        return jsonify({'error': 'La configuración y la clave VAPID son requeridas.'}), 400
-        
-    try:
-        import json
-        json.loads(config_json) # Validar que sea JSON válido
-    except Exception as e:
-        return jsonify({'error': f'Configuración SDK de Firebase Web no es un JSON válido: {str(e)}'}), 400
-        
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('firebase_config', ?)", (config_json,))
-    cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('firebase_vapid_key', ?)", (vapid_key,))
-    db.commit()
-    return jsonify({'success': 'Configuración de Firebase Web guardada con éxito.'})
+    if config_json and vapid_key:
+        try:
+            import json
+            json.loads(config_json) # Validar que sea JSON válido
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('firebase_config', ?)", (config_json,))
+            cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('firebase_vapid_key', ?)", (vapid_key,))
+            db.commit()
+        except Exception as e:
+            return jsonify({'error': f'Configuración SDK de Firebase Web no es un JSON válido: {str(e)}'}), 400
+
+    if sa_json and sa_json.strip():
+        try:
+            import json
+            config_data = json.loads(sa_json.strip())
+            if 'private_key' in config_data and 'client_email' in config_data:
+                with open(FIREBASE_SA_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(config_data, f, indent=4)
+            else:
+                return jsonify({'error': 'El JSON pegado no corresponde a una cuenta de servicio válida.'}), 400
+        except Exception as e:
+            return jsonify({'error': f'JSON de cuenta de servicio inválido: {str(e)}'}), 400
+
+    return jsonify({'success': 'Configuración de Firebase guardada con éxito.'})
 
 @app.route('/api/firebase/upload-sa', methods=['POST'])
 @login_required
