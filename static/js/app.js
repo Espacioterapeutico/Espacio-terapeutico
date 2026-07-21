@@ -115,12 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) { checkSession(); }
     try { initializeDateFilters(); } catch(e) {}
 
-    // Solicitar permiso de notificaciones nativas suavemente
-    setTimeout(() => {
-        requestNotificationPermission();
-    }, 2500);
-});
-    
     // Detectar cambios de paciente en modal de citas para mostrar/ocultar prepagos
     const ePaciente = document.getElementById('e-paciente');
     if (ePaciente) {
@@ -144,6 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Solicitar permiso de notificaciones nativas suavemente
+    setTimeout(() => {
+        requestNotificationPermission();
+    }, 2500);
 });
 
 // ==========================================
