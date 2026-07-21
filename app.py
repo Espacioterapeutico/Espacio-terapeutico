@@ -5657,16 +5657,37 @@ def delete_agenda_event(event_id):
 # CONFIGURACIÓN GOOGLE OAUTH
 # ==========================================
 
-def get_calendar_service():
+def get_calendar_service(user_id=None):
     if not GOOGLE_CALENDAR_AVAILABLE:
         return None
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'google_token'")
+    
+    if not user_id:
+        try:
+            user_id = session.get('user_id')
+        except RuntimeError:
+            user_id = None
+            
+    if not user_id:
+        try:
+            cursor.execute("SELECT id FROM usuarios ORDER BY id ASC LIMIT 1")
+            row = cursor.fetchone()
+            if row:
+                user_id = row[0]
+        except Exception as e:
+            print("Error al obtener primer usuario para Google Calendar:", e)
+            
+    token_key = f'google_token_{user_id}' if user_id else 'google_token'
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (token_key,))
     row = cursor.fetchone()
     
+    # Si no tiene token específico, intentar con el token global anterior 'google_token'
     if not row:
-        return None
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'google_token'")
+        row = cursor.fetchone()
+        if not row:
+            return None
         
     try:
         # El token está guardado como JSON
@@ -5678,8 +5699,8 @@ def get_calendar_service():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
             # Actualizar en BD
-            cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('google_token', ?)", 
-                           (creds.to_json(),))
+            cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", 
+                           (token_key, creds.to_json()))
             db.commit()
             
         return build('calendar', 'v3', credentials=creds)
@@ -5760,8 +5781,10 @@ def google_callback():
     # Guardar en base de datos local
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('google_token', ?)", 
-                   (creds.to_json(),))
+    user_id = session.get('user_id')
+    token_key = f'google_token_{user_id}' if user_id else 'google_token'
+    cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", 
+                   (token_key, creds.to_json()))
     db.commit()
     
     # Redirigir de regreso a la interfaz principal (SPA)
