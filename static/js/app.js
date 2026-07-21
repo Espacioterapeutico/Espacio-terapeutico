@@ -5999,8 +5999,20 @@ async function loadFirebaseSettings() {
         const res = await fetch('/api/firebase/config');
         const data = await res.json();
         
-        document.getElementById('fcm-web-config').value = data.config || '';
-        document.getElementById('fcm-vapid-key').value = data.vapid_key || '';
+        const defaultCfg = JSON.stringify({
+            "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
+            "authDomain": "espacio-terapeutico.firebaseapp.com",
+            "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
+            "projectId": "espacio-terapeutico",
+            "storageBucket": "espacio-terapeutico.firebasestorage.app",
+            "messagingSenderId": "437385369836",
+            "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
+            "measurementId": "G-M04FWL2963"
+        }, null, 2);
+        const defaultVapid = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc";
+
+        document.getElementById('fcm-web-config').value = data.config || defaultCfg;
+        document.getElementById('fcm-vapid-key').value = data.vapid_key || defaultVapid;
         
         const statusRes = await fetch('/api/firebase/status');
         const statusData = await statusRes.json();
