@@ -4604,21 +4604,16 @@ function filterEventPatientSelect(query) {
     }
 }
 
-async function downloadBackup() {
+function downloadBackup() {
     try {
-        const res = await fetch('/api/backup');
-        const data = await res.json();
-        if (res.ok) {
-            if (data.success) {
-                alert(data.success);
-            } else if (data.info) {
-                console.log(data.info);
-            }
-        } else {
-            alert(data.error || "Error al generar la copia de seguridad.");
-        }
+        const link = document.createElement('a');
+        link.href = '/api/backup';
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     } catch (err) {
-        alert("Error de conexión al realizar la copia de seguridad.");
+        window.location.href = '/api/backup';
     }
 }
 
