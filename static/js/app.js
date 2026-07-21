@@ -5997,7 +5997,7 @@ window.initFirebaseMessagingFlow = initFirebaseMessagingFlow;
 async function loadFirebaseSettings() {
     const badge = document.getElementById('firebase-sa-status-badge');
     const defaultCfg = JSON.stringify({
-        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQQyUUYZDIhejeJ81zM",
         "authDomain": "espacio-terapeutico.firebaseapp.com",
         "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
         "projectId": "espacio-terapeutico",
@@ -6047,9 +6047,31 @@ async function loadFirebaseSettings() {
 }
 window.loadFirebaseSettings = loadFirebaseSettings;
 
+function cleanAndParseFirebaseConfig(str) {
+    if (!str || !str.trim()) return null;
+    let s = str.trim();
+    const firstBrace = s.indexOf('{');
+    const lastBrace = s.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        s = s.substring(firstBrace, lastBrace + 1);
+    }
+    try {
+        return JSON.parse(s);
+    } catch(e) {}
+    try {
+        const jsonLike = s
+            .replace(/\/\/.*/g, '')
+            .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+            .replace(/'/g, '"')
+            .replace(/,\s*}/g, '}');
+        return JSON.parse(jsonLike);
+    } catch(e) {}
+    return null;
+}
+
 async function handleSaveFirebaseConfig(event) {
     event.preventDefault();
-    const configVal = document.getElementById('fcm-web-config').value.trim();
+    const rawConfigVal = document.getElementById('fcm-web-config').value.trim();
     const vapidKeyVal = document.getElementById('fcm-vapid-key').value.trim();
     const saTextElem = document.getElementById('firebase-sa-text-input');
     const saTextVal = saTextElem ? saTextElem.value.trim() : '';
@@ -6057,13 +6079,15 @@ async function handleSaveFirebaseConfig(event) {
     
     if (statusMsg) statusMsg.classList.add('hide');
     
-    if (configVal) {
-        try {
-            JSON.parse(configVal);
-        } catch(e) {
-            alert("❌ Error: La configuración SDK Web debe ser un formato JSON válido.");
+    let configVal = rawConfigVal;
+    if (rawConfigVal) {
+        const parsed = cleanAndParseFirebaseConfig(rawConfigVal);
+        if (!parsed) {
+            alert("❌ Error: No se pudo interpretar la configuración pegada. Asegúrate de copiar las líneas entre corchetes { ... } de Firebase Console.");
             return;
         }
+        configVal = JSON.stringify(parsed, null, 2);
+        document.getElementById('fcm-web-config').value = configVal;
     }
     
     showLoadingScreen();
