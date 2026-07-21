@@ -2741,9 +2741,9 @@ def get_patient_portal_data_dict(patient_id):
         "recursos_entregados": last_session["recursos_entregados"] if last_session else ""
     }
     
-    from datetime import datetime
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    now_time_str = datetime.now().strftime("%H:%M")
+    from datetime import datetime, timedelta
+    now_dt = datetime.now()
+    yesterday_str = (now_dt - timedelta(days=1)).strftime("%Y-%m-%d")
 
     cursor.execute("""
         SELECT id, fecha, hora, tipo_consulta, confirmada FROM agenda_finanzas
@@ -2752,7 +2752,7 @@ def get_patient_portal_data_dict(patient_id):
           AND estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'
           AND fecha >= ?
         ORDER BY fecha ASC, hora ASC
-    """, (patient_id, today_str))
+    """, (patient_id, yesterday_str))
     next_sessions = cursor.fetchall()
     
     proximas_citas = []
@@ -2783,12 +2783,15 @@ def get_patient_portal_data_dict(patient_id):
     for next_session_row in next_sessions:
         # Calcular tiempo restante en horas
         try:
-            from datetime import datetime
             session_dt = datetime.strptime(f"{next_session_row['fecha']} {next_session_row['hora']}", "%Y-%m-%d %H:%M")
-            diff_hours = (session_dt - datetime.now()).total_seconds() / 3600.0
+            diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
         except Exception as dt_err:
             diff_hours = 999.0
             
+        # Omitir sesiones que hayan concluido hace más de 6 horas
+        if diff_hours < -6.0:
+            continue
+
         proximas_citas.append({
             "id": next_session_row["id"],
             "fecha": next_session_row["fecha"],
