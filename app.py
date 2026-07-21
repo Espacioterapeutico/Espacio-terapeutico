@@ -6009,6 +6009,26 @@ def upload_firebase_sa():
     except Exception as e:
         return jsonify({'error': f'Error al procesar el archivo: {str(e)}'}), 500
 
+@app.route('/api/firebase/save-sa-text', methods=['POST'])
+@login_required
+def save_firebase_sa_text():
+    data = request.json or {}
+    sa_text = data.get('sa_json')
+    if not sa_text:
+        return jsonify({'error': 'El contenido del JSON es requerido.'}), 400
+    try:
+        import json
+        config_data = json.loads(sa_text)
+        if 'private_key' not in config_data or 'client_email' not in config_data:
+            return jsonify({'error': 'El texto ingresado no corresponde a una cuenta de servicio de Firebase válida.'}), 400
+            
+        with open(FIREBASE_SA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=4)
+            
+        return jsonify({'success': 'Cuenta de servicio de Firebase guardada con éxito.'})
+    except Exception as e:
+        return jsonify({'error': f'JSON inválido: {str(e)}'}), 500
+
 @app.route('/api/firebase/status', methods=['GET'])
 @login_required
 def get_firebase_status():
