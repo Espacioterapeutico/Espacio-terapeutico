@@ -121,9 +121,9 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         db = get_db()
         cursor = db.cursor()
         if user_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
         elif patient_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ? OR patient_id IS NULL", (patient_id,))
         else:
             cursor.execute("SELECT token FROM fcm_subscriptions")
             
@@ -225,9 +225,9 @@ def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultor
             return
  
         if user_id:
-            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ?", (user_id,))
+            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
         elif patient_id:
-            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE patient_id = ?", (patient_id,))
+            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE patient_id = ? OR patient_id IS NULL", (patient_id,))
         else:
             cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions")
  
