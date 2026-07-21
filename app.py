@@ -1249,10 +1249,20 @@ def get_psychologist_modalities(psic_id):
             config = json.loads(u_row[0])
             perfiles = config.get('perfiles', [])
             if perfiles:
-                modalities = [p.get('nombre') for p in perfiles if p.get('nombre')]
+                raw_mods = [p.get('modalidad') or p.get('nombre') for p in perfiles if p.get('nombre')]
+                clean_mods = []
+                for m in raw_mods:
+                    if 'online' in m.lower():
+                        clean_mods.append('Online')
+                    elif 'presencial' in m.lower():
+                        clean_mods.append('Presencial')
+                    else:
+                        clean_mods.append(m)
+                if clean_mods:
+                    modalities = list(set(clean_mods))
         except:
             pass
-    return jsonify(list(set(modalities)))
+    return jsonify(modalities)
 
 @app.route('/api/fast-booking/book', methods=['POST'])
 def fast_booking_book():
