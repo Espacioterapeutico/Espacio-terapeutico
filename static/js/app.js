@@ -1820,27 +1820,35 @@ async function handlePatientChangePwSubmit(e) {
     
     const current_password = document.getElementById('pat-pw-current').value;
     const new_password = document.getElementById('pat-pw-new').value;
+    const confirm_password = document.getElementById('pat-pw-confirm') ? document.getElementById('pat-pw-confirm').value : null;
+    
+    if (confirm_password && new_password !== confirm_password) {
+        statusMsg.textContent = '❌ La nueva contraseña y la confirmación no coinciden.';
+        statusMsg.className = 'status-msg error-msg';
+        statusMsg.classList.remove('hide');
+        return;
+    }
     
     try {
         const res = await fetch('/api/patient/change-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ current_password, new_password })
+            body: JSON.stringify({ current_password, new_password, confirm_password })
         });
         const data = await res.json();
         
         if (res.ok) {
-            statusMsg.textContent = 'Contraseña actualizada con éxito.';
+            statusMsg.textContent = '✅ Contraseña actualizada con éxito.';
             statusMsg.className = 'status-msg success-msg';
             statusMsg.classList.remove('hide');
             document.getElementById('pat-change-pw-form').reset();
         } else {
-            statusMsg.textContent = data.error || 'Error al actualizar contraseña.';
+            statusMsg.textContent = '❌ ' + (data.error || 'Error al actualizar contraseña.');
             statusMsg.className = 'status-msg error-msg';
             statusMsg.classList.remove('hide');
         }
     } catch (err) {
-        statusMsg.textContent = 'Error de red con el servidor.';
+        statusMsg.textContent = '❌ Error de red con el servidor.';
         statusMsg.className = 'status-msg error-msg';
         statusMsg.classList.remove('hide');
     }
@@ -5797,7 +5805,7 @@ function switchFinanceTab(tabId) {
 const loadPatientsRatesList = loadPatientRatesTable;
 
 function switchSettingsTab(tabId) {
-    const ids = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'soporte'];
+    const ids = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'soporte'];
     ids.forEach(id => {
         const card = document.getElementById(`set-card-${id}`);
         const tabBtn = document.getElementById(`set-tab-${id}`);
@@ -5821,6 +5829,57 @@ function switchSettingsTab(tabId) {
         loadFirebaseSettings();
     }
 }
+
+async function handleChangeUserPassword(e) {
+    e.preventDefault();
+    const currPass = document.getElementById('change-user-curr-pass').value;
+    const newPass = document.getElementById('change-user-new-pass').value;
+    const confirmPass = document.getElementById('change-user-confirm-pass').value;
+    const statusMsg = document.getElementById('change-user-pass-status-msg');
+    
+    statusMsg.classList.add('hide');
+    
+    if (newPass !== confirmPass) {
+        statusMsg.textContent = '❌ La nueva contraseña y la confirmación no coinciden.';
+        statusMsg.className = 'status-msg error-msg';
+        statusMsg.classList.remove('hide');
+        return;
+    }
+    
+    showLoadingScreen();
+    try {
+        const res = await fetch('/api/user/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                current_password: currPass,
+                new_password: newPass,
+                confirm_password: confirmPass
+            })
+        });
+        const data = await res.json();
+        hideLoadingScreen();
+        
+        if (res.ok && data.success) {
+            statusMsg.textContent = '✅ ' + data.success;
+            statusMsg.className = 'status-msg success-msg';
+            statusMsg.classList.remove('hide');
+            document.getElementById('change-user-curr-pass').value = '';
+            document.getElementById('change-user-new-pass').value = '';
+            document.getElementById('change-user-confirm-pass').value = '';
+        } else {
+            statusMsg.textContent = '❌ ' + (data.error || 'Error al actualizar contraseña.');
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+    } catch (err) {
+        hideLoadingScreen();
+        statusMsg.textContent = '❌ Error al conectar con el servidor: ' + err.message;
+        statusMsg.className = 'status-msg error-msg';
+        statusMsg.classList.remove('hide');
+    }
+}
+window.handleChangeUserPassword = handleChangeUserPassword;
 
 function loadPatientLinks() {
     const userId = sessionStorage.getItem('user_id');
