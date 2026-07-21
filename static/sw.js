@@ -79,7 +79,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body,
     icon: '/static/logo.png',
-    badge: '/static/logo.png',
+    badge: '/static/badge.png',
     sound: '/static/notification.wav',
     vibrate: [300, 100, 300, 100, 300],
     tag: data.tag || 'miconsultorio-notification',
