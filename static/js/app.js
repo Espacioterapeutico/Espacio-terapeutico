@@ -8080,19 +8080,15 @@ window.closeClearDataModal = closeClearDataModal;
 window.checkClearDataInput = checkClearDataInput;
 window.submitClearAllData = submitClearAllData;
 
-async function openNotificationGuideModal() {
-    if ('Notification' in window && Notification.permission !== 'granted') {
-        try {
-            await Notification.requestPermission();
-        } catch (e) {
-            console.warn("Permission request error:", e);
-        }
-    }
+function openNotificationGuideModal() {
     if (typeof openModal === 'function') {
         openModal('notification-guide-modal');
     } else {
         const modal = document.getElementById('notification-guide-modal');
-        if (modal) modal.classList.remove('hide');
+        if (modal) {
+            modal.classList.remove('hide');
+            modal.style.display = 'block';
+        }
     }
 }
 window.openNotificationGuideModal = openNotificationGuideModal;
