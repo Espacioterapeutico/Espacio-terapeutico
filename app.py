@@ -208,61 +208,15 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         print("Error global en send_fcm_notification:", e)
 
 def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
-    # Disparar también Firebase Cloud Messaging (FCM) para garantizar segundo plano
+    # Usa exclusivamente FCM (Firebase Cloud Messaging) para evitar duplicados.
+    # El envío VAPID (pywebpush) fue desactivado porque generaba notificaciones duplicadas:
+    # FCM usa firebase-messaging-sw.js y VAPID usa sw.js — son Service Workers distintos
+    # que no pueden deduplicarse entre sí mediante 'tag'.
     try:
         send_fcm_notification(user_id=user_id, patient_id=patient_id, title=title, body=body, url=url)
     except Exception as fcm_err:
-        print("Fallo secundario al disparar FCM:", fcm_err)
+        print("Error al disparar FCM en send_webpush_notification:", fcm_err)
 
-    try:
-        import json
-        from pywebpush import webpush, WebPushException
-        db = get_db()
-        cursor = db.cursor()
-        vapid_keys = get_vapid_keys(cursor)
-        vapid_private_key = vapid_keys.get('vapid_private_key')
-        if not vapid_private_key:
-            return
- 
-        if user_id:
-            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
-        elif patient_id:
-            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE patient_id = ? OR patient_id IS NULL", (patient_id,))
-        else:
-            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions")
- 
-        subs = cursor.fetchall()
-        payload = json.dumps({
-            "title": title,
-            "body": body,
-            "url": url
-        })
-        vapid_claims = {"sub": "mailto:soporte@miconsultorio.com"}
- 
-        for sub in subs:
-            sub_info = {
-                "endpoint": sub["endpoint"],
-                "keys": {
-                    "p256dh": sub["p256dh"],
-                    "auth": sub["auth"]
-                }
-            }
-            try:
-                webpush(
-                    subscription_info=sub_info,
-                    data=payload,
-                    vapid_private_key=vapid_private_key,
-                    vapid_claims=vapid_claims,
-                    ttl=86400
-                )
-            except WebPushException as ex:
-                if ex.response and ex.response.status_code in [404, 410]:
-                    cursor.execute("DELETE FROM web_push_subscriptions WHERE id = ?", (sub["id"],))
-                    db.commit()
-            except Exception as ex_err:
-                print("Error WebPush individual:", ex_err)
-    except Exception as e:
-        print("Error global send_webpush_notification:", e)
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
