@@ -121,13 +121,21 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         db = get_db()
         cursor = db.cursor()
         if user_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+            rows = cursor.fetchall()
+            if not rows:
+                cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id IS NULL AND patient_id IS NULL")
+                rows = cursor.fetchall()
         elif patient_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ? OR patient_id IS NULL", (patient_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+            rows = cursor.fetchall()
+            if not rows:
+                cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id IS NULL AND patient_id IS NULL")
+                rows = cursor.fetchall()
         else:
             cursor.execute("SELECT token FROM fcm_subscriptions")
+            rows = cursor.fetchall()
             
-        rows = cursor.fetchall()
         tokens = [row['token'] for row in rows]
         if not tokens:
             return
@@ -6145,19 +6153,22 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {{
   console.log('[firebase-messaging-sw.js] Mensaje en segundo plano recibido:', payload);
   
-  const notificationTitle = payload.notification?.title || payload.data?.title || 'Espacio Terapéutico';
-  const notificationOptions = {{
-    body: payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.',
-    icon: '/static/logo.png',
-    badge: '/static/badge.png',
-    sound: '/static/notification.wav',
-    vibrate: [200, 100, 200],
-    data: {{
-      url: payload.data ? payload.data.url : '/'
-    }}
-  }};
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  // Si el mensaje incluye objeto 'notification', el SDK de Firebase lo muestra automáticamente.
+  // Solo mostramos notificación manualmente si es un data-message sin objeto 'notification'.
+  if (!payload.notification) {{
+    const notificationTitle = payload.data?.title || 'Espacio Terapéutico';
+    const notificationOptions = {{
+      body: payload.data?.body || 'Tienes una nueva notificación.',
+      icon: '/static/logo.png',
+      badge: '/static/badge.png',
+      sound: '/static/notification.wav',
+      vibrate: [200, 100, 200],
+      data: {{
+        url: payload.data ? payload.data.url : '/'
+      }}
+    }};
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  }}
 }}).catch(err => {{
   console.error('Error en onBackgroundMessage:', err);
 }});
