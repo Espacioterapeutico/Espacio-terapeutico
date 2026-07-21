@@ -2436,7 +2436,18 @@ def patient_add_appointment():
         """, ('cita', 'Nueva Cita Agendada', f"{pac_nombre} ha agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
         
         db.commit()
-        
+
+        # Enviar notificación Push al psicólogo
+        try:
+            send_webpush_notification(
+                user_id=psicologo_id,
+                title="📅 Nueva Cita Auto-Agendada",
+                body=f"{pac_nombre} ha reservado una consulta para el {fecha} a las {hora}.",
+                url="/?view=agenda"
+            )
+        except Exception as wp_ex:
+            print("Error al enviar Push de auto-agendamiento por paciente:", wp_ex)
+
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
         
