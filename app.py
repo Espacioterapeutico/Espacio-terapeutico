@@ -515,6 +515,74 @@ def auto_cancel_unconfirmed_sessions(db):
     except Exception as e:
         print("Error en auto_cancel_unconfirmed_sessions:", e)
 
+def auto_send_appointment_reminders(db):
+    """
+    Envia notificaciones automaticas de recordatorio de citas del dia
+    tanto al psicologo como al paciente (Firebase + SQLite).
+    """
+    cursor = db.cursor()
+    try:
+        from datetime import datetime
+        import requests
+        
+        now_dt = datetime.now()
+        today_str = now_dt.strftime("%Y-%m-%d")
+        
+        # Buscar citas agendadas para el día de hoy no canceladas
+        cursor.execute("""
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, p.nombres, p.apellidos
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.fecha = ?
+              AND af.estado_pago NOT LIKE 'Cancelada%'
+              AND af.estado_pago != 'Reprogramada'
+        """, (today_str,))
+        
+        today_appts = cursor.fetchall()
+        if not today_appts:
+            return
+            
+        now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+        for appt in today_appts:
+            appt_id = appt['id']
+            patient_id = appt['paciente_id']
+            pac_nombre = f"{appt['nombres']} {appt['apellidos']}"
+            hora_cita = appt['hora']
+            notif_link = f"remind_{appt_id}_{today_str}"
+            
+            # Evitar enviar más de 1 recordatorio al día por la misma cita
+            cursor.execute("SELECT id FROM notificaciones WHERE link = ?", (notif_link,))
+            if cursor.fetchone():
+                continue
+                
+            # 1. Notificación al psicólogo
+            cursor.execute("""
+                INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
+                VALUES ('cita', '⏰ Recordatorio de Consulta Hoy', ?, ?, 0, ?)
+            """, (
+                f"Tienes consulta programada hoy con {pac_nombre} a las {hora_cita} ({appt['tipo_consulta']}).",
+                now_str,
+                notif_link
+            ))
+            
+            # 2. Notificación al paciente en Firebase
+            try:
+                fb_payload = {
+                    "id": int(now_dt.timestamp() * 1000),
+                    "tipo": "cita",
+                    "titulo": "⏰ Recordatorio de Consulta Hoy",
+                    "mensaje": f"Hola {appt['nombres']}, te recordamos tu consulta programada para hoy a las {hora_cita}.",
+                    "fecha": now_str,
+                    "leida": False
+                }
+                requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+            except Exception as fe:
+                pass
+                
+        db.commit()
+    except Exception as e:
+        print("Error en auto_send_appointment_reminders:", e)
+
 @app.before_request
 def before_request_cleanup():
     # Evitar ejecutar en llamadas de archivos estáticos
@@ -522,6 +590,7 @@ def before_request_cleanup():
         return
     db = get_db()
     auto_cancel_unconfirmed_sessions(db)
+    auto_send_appointment_reminders(db)
 
 def auto_settle_patient_debts(db, patient_id):
     if not patient_id:
@@ -2202,6 +2271,31 @@ def patient_confirm_appointment():
             return jsonify({'error': f'Aún no puedes confirmar esta cita. Estará disponible {alerta_confirmacion} horas antes de la sesión.'}), 400
             
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt['id'],))
+        
+        # Notificar al psicólogo y al paciente
+        cursor.execute("SELECT nombres, apellidos FROM pacientes WHERE id = ?", (patient_id,))
+        p_info = cursor.fetchone()
+        pac_nombre = f"{p_info['nombres']} {p_info['apellidos']}" if p_info else "El consultante"
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        cursor.execute("""
+            INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
+            VALUES ('cita', '✅ Cita Confirmada', ?, ?, 0, 'agenda')
+        """, (f"{pac_nombre} ha confirmado su asistencia a la consulta del {appt['fecha']} a las {appt['hora']}.", now_str))
+        
+        try:
+            fb_payload = {
+                "id": int(datetime.now().timestamp() * 1000),
+                "tipo": "cita",
+                "titulo": "✅ Cita Confirmada",
+                "mensaje": f"Has confirmado exitosamente tu consulta para el {appt['fecha']} a las {appt['hora']}.",
+                "fecha": now_str,
+                "leida": False
+            }
+            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+        except Exception as fe:
+            pass
+
         db.commit()
         
         import threading
