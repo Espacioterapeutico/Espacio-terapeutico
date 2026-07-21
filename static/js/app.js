@@ -5997,7 +5997,7 @@ window.initFirebaseMessagingFlow = initFirebaseMessagingFlow;
 async function loadFirebaseSettings() {
     const badge = document.getElementById('firebase-sa-status-badge');
     const defaultCfg = JSON.stringify({
-        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQQyUUYZDIhejeJ81zM",
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQQyUuYZDIhejeJ81zM",
         "authDomain": "espacio-terapeutico.firebaseapp.com",
         "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
         "projectId": "espacio-terapeutico",
