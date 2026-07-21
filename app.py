@@ -1146,8 +1146,14 @@ def fast_booking_book():
     db = get_db()
     cursor = db.cursor()
     
-    # 1. Verificar si el paciente existe por cédula
-    cursor.execute("SELECT id, nombres, apellidos, telefono, email FROM pacientes WHERE cedula = ?", (cedula,))
+    # 1. Verificar si el paciente existe por cédula (normalizando espacios, puntos y guiones)
+    clean_cedula = cedula.strip()
+    cursor.execute("""
+        SELECT id, nombres, apellidos, telefono, email 
+        FROM pacientes 
+        WHERE LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', ''))
+           OR (LOWER(username) = LOWER(?) AND username != '')
+    """, (clean_cedula, clean_cedula))
     patient = cursor.fetchone()
     
     is_new_patient = False
