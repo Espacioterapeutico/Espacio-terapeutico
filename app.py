@@ -36,9 +36,10 @@ app.secret_key = os.environ.get('SECRET_KEY', 'espacio_terapeutico_secret_key_20
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
-DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'clinica.db')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DIR, 'clinica.db')
 SCHEMA_FILE = get_resource_path('schema.sql')
-CLIENT_SECRETS_FILE = "credentials.json"
+CLIENT_SECRETS_FILE = os.path.join(BASE_DIR, "credentials.json")
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 # Deshabilitar HTTPS obligatorio para OAuth en entorno local de desarrollo
@@ -5851,7 +5852,7 @@ def delete_agenda_event(event_id):
 # CONFIGURACIÓN FIREBASE CLOUD MESSAGING (FCM)
 # ==========================================
 
-FIREBASE_SA_FILE = "firebase_service_account.json"
+FIREBASE_SA_FILE = os.path.join(BASE_DIR, "firebase_service_account.json")
 
 @app.route('/api/firebase/config', methods=['GET'])
 @login_required
@@ -6066,12 +6067,21 @@ def get_calendar_service(user_id=None):
 @app.route('/api/google/status', methods=['GET'])
 @login_required
 def google_status():
-    has_credentials_json = os.path.exists(CLIENT_SECRETS_FILE)
-    service = get_calendar_service()
-    return jsonify({
-        'configured': service is not None,
-        'has_credentials_json': has_credentials_json
-    })
+    import traceback
+    try:
+        has_credentials_json = os.path.exists(CLIENT_SECRETS_FILE)
+        service = get_calendar_service()
+        return jsonify({
+            'configured': service is not None,
+            'has_credentials_json': has_credentials_json
+        })
+    except Exception as e:
+        print("Error en google_status:", traceback.format_exc())
+        return jsonify({
+            'configured': False,
+            'has_credentials_json': os.path.exists(CLIENT_SECRETS_FILE),
+            'error': str(e)
+        }), 200
 
 @app.route('/api/google/upload-credentials', methods=['POST'])
 @login_required
@@ -6159,11 +6169,11 @@ def google_callback():
 @app.route('/api/google/sync', methods=['POST'])
 @login_required
 def sync_google_calendar():
-    service = get_calendar_service()
-    if not service:
-        return jsonify({'error': 'Google Calendar no está configurado o autorizado.'}), 400
-        
+    import traceback
     try:
+        service = get_calendar_service()
+        if not service:
+            return jsonify({'error': 'Google Calendar no está configurado o autorizado.'}), 400
         # 1. Traer eventos futuros de Google Calendar
         now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indica UTC
         events_result = service.events().list(
