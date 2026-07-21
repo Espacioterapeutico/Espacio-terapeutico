@@ -5934,7 +5934,7 @@ FIREBASE_SA_FILE = os.path.join(BASE_DIR, "firebase_service_account.json")
 
 @app.route('/api/firebase/config', methods=['GET'])
 def get_firebase_config():
-    cfg_dict = {
+    _def_cfg = json.dumps({
         "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
         "authDomain": "espacio-terapeutico.firebaseapp.com",
         "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
@@ -5943,20 +5943,42 @@ def get_firebase_config():
         "messagingSenderId": "437385369836",
         "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
         "measurementId": "G-M04FWL2963"
-    }
-    vapid_str = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc"
+    })
+    _def_vapid = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc"
+
+    cfg_val = _def_cfg
+    vapid_val = _def_vapid
+
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
+        row_cfg = cursor.fetchone()
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_vapid_key'")
+        row_vapid = cursor.fetchone()
+        if row_cfg and row_cfg[0]:
+            cfg_val = row_cfg[0]
+        if row_vapid and row_vapid[0]:
+            vapid_val = row_vapid[0]
+    except Exception as e:
+        print("Error leyendo configuracion DB:", e)
+
+    try:
+        parsed_cfg = json.loads(cfg_val)
+    except Exception:
+        parsed_cfg = json.loads(_def_cfg)
 
     return jsonify({
-        "config": json.dumps(cfg_dict),
-        "vapid_key": vapid_str,
-        "vapidKey": vapid_str,
-        "apiKey": cfg_dict["apiKey"],
-        "authDomain": cfg_dict["authDomain"],
-        "databaseURL": cfg_dict["databaseURL"],
-        "projectId": cfg_dict["projectId"],
-        "storageBucket": cfg_dict["storageBucket"],
-        "messagingSenderId": cfg_dict["messagingSenderId"],
-        "appId": cfg_dict["appId"]
+        "config": cfg_val,
+        "vapid_key": vapid_val,
+        "vapidKey": vapid_val,
+        "apiKey": parsed_cfg.get("apiKey", ""),
+        "authDomain": parsed_cfg.get("authDomain", ""),
+        "databaseURL": parsed_cfg.get("databaseURL", ""),
+        "projectId": parsed_cfg.get("projectId", ""),
+        "storageBucket": parsed_cfg.get("storageBucket", ""),
+        "messagingSenderId": parsed_cfg.get("messagingSenderId", ""),
+        "appId": parsed_cfg.get("appId", "")
     }), 200
 
 @app.route('/api/firebase/config', methods=['POST'])
