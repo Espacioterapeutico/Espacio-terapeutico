@@ -3363,6 +3363,12 @@ def admin_availability():
                                 start_time = datetime.strptime(inicio_str, "%H:%M")
                                 end_time = datetime.strptime(fin_str, "%H:%M")
                                 
+                                # Auto-corrección inteligente para bloques de tarde (ej. 02:00 a 06:00 -> 14:00 a 18:00)
+                                if start_time.hour < 7 and end_time.hour <= 12 and start_time.hour < end_time.hour:
+                                    start_time = start_time.replace(hour=start_time.hour + 12)
+                                    if end_time.hour < 12:
+                                        end_time = end_time.replace(hour=end_time.hour + 12)
+                                
                                 current = start_time
                                 duration_td = timedelta(minutes=duracion)
                                 recess_td = timedelta(minutes=receso)
