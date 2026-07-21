@@ -1918,7 +1918,7 @@ body.is-patient .main-content {
     50% { transform: scale(1.05); opacity: 0.9; }
 }
 
-#register-modal {
+#register-modal:not(.hide) {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -1929,6 +1929,10 @@ body.is-patient .main-content {
     justify-content: center !important;
     align-items: center !important;
     z-index: 999999 !important;
+}
+
+#register-modal.hide {
+    display: none !important;
 }
 
 /* ==========================================
