@@ -2744,26 +2744,11 @@ def get_patient_portal_data_dict(patient_id):
     
     from datetime import datetime, timedelta
     now_dt = datetime.now()
-    yesterday_str = (now_dt - timedelta(days=1)).strftime("%Y-%m-%d")
-
-    cursor.execute("""
-        SELECT id, fecha, hora, tipo_consulta, confirmada FROM agenda_finanzas
-        WHERE paciente_id = ? 
-          AND (id NOT IN (SELECT DISTINCT agenda_id FROM sesiones WHERE agenda_id IS NOT NULL AND (estado = 'Realizada' OR estado LIKE 'Realizada%')) OR agenda_id IS NULL)
-          AND estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'
-          AND (hora != '00:00' AND hora != '' AND hora IS NOT NULL)
-          AND fecha >= ?
-        ORDER BY fecha ASC, hora ASC
-    """, (patient_id, yesterday_str))
-    next_sessions = cursor.fetchall()
     
-    proximas_citas = []
     psicologo_id = patient["psicologo_id"]
-    
-    # Obtener configuración de tiempos del psicólogo, modalidades y datos de pago
     alerta_confirmacion = 24
     limite_cancelacion = 24
-    modalidades = ["Online", "Presencial"] # Default fallback
+    modalidades = ["Online", "Presencial"]
     metodos_pago = ""
     
     if psicologo_id:
@@ -2781,33 +2766,55 @@ def get_patient_portal_data_dict(patient_id):
                         modalidades = [p.get('nombre') for p in perfiles if p.get('nombre')]
                 except:
                     pass
-                
-    for next_session_row in next_sessions:
-        # Calcular tiempo restante en horas
+
+    # Citas agendadas del paciente que NO hayan sido evolucionadas (Realizada) ni canceladas
+    cursor.execute("""
+        SELECT id, fecha, hora, tipo_consulta, confirmada, estado_pago, monto, moneda
+        FROM agenda_finanzas
+        WHERE paciente_id = ?
+          AND (hora != '00:00' AND hora != '' AND hora IS NOT NULL)
+          AND (estado_pago IS NULL OR (estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'))
+          AND (
+              id NOT IN (
+                  SELECT agenda_id FROM sesiones 
+                  WHERE agenda_id IS NOT NULL AND (estado = 'Realizada' OR estado LIKE 'Realizada%')
+              )
+          )
+        ORDER BY fecha ASC, hora ASC
+    """, (patient_id,))
+    
+    candidate_rows = cursor.fetchall()
+    proximas_citas = []
+
+    for row in candidate_rows:
+        fecha_str = row["fecha"]
+        hora_str = row["hora"] or "00:00"
+        hora_clean = hora_str[:5]
+        
         try:
-            hora_clean = next_session_row['hora'][:5] if next_session_row['hora'] else "00:00"
-            session_dt = datetime.strptime(f"{next_session_row['fecha']} {hora_clean}", "%Y-%m-%d %H:%M")
+            session_dt = datetime.strptime(f"{fecha_str} {hora_clean}", "%Y-%m-%d %H:%M")
             diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
-        except Exception as dt_err:
+        except Exception:
             diff_hours = 999.0
-            
-        # Omitir sesiones que hayan concluido hace más de 6 horas
-        if diff_hours < -6.0:
+
+        # Mantener sesiones futuras o de hoy en adelante (no concluidas hace más de 12 horas)
+        if diff_hours < -12.0:
             continue
 
         proximas_citas.append({
-            "id": next_session_row["id"],
-            "fecha": next_session_row["fecha"],
-            "hora": next_session_row["hora"],
-            "tipo_consulta": next_session_row["tipo_consulta"],
-            "confirmada": next_session_row["confirmada"],
+            "id": row["id"],
+            "fecha": row["fecha"],
+            "hora": row["hora"],
+            "tipo_consulta": row["tipo_consulta"],
+            "confirmada": row["confirmada"],
+            "estado_pago": row["estado_pago"],
             "alerta_confirmacion": alerta_confirmacion,
             "limite_cancelacion": limite_cancelacion,
             "tiempo_restante_horas": diff_hours
         })
-    
+
     conn.close()
-    
+
     proxima_cita = proximas_citas[0] if proximas_citas else None
     
     return {
