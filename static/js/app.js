@@ -6027,14 +6027,17 @@ async function handleSaveFirebaseConfig(event) {
     const vapidKeyVal = document.getElementById('fcm-vapid-key').value.trim();
     const statusMsg = document.getElementById('fcm-config-status-msg');
     
-    statusMsg.classList.add('hide');
+    if (statusMsg) statusMsg.classList.add('hide');
     
     try {
         JSON.parse(configVal);
     } catch(e) {
-        statusMsg.textContent = "❌ Error: La configuración SDK Web debe ser un formato JSON válido.";
-        statusMsg.className = "status-msg error-msg";
-        statusMsg.classList.remove('hide');
+        alert("❌ Error: La configuración SDK Web debe ser un formato JSON válido.");
+        if (statusMsg) {
+            statusMsg.textContent = "❌ Error: La configuración SDK Web debe ser un formato JSON válido.";
+            statusMsg.className = "status-msg error-msg";
+            statusMsg.classList.remove('hide');
+        }
         return;
     }
     
@@ -6049,22 +6052,30 @@ async function handleSaveFirebaseConfig(event) {
         hideLoadingScreen();
         
         if (data.success) {
-            statusMsg.textContent = "✅ Configuración web de Firebase guardada con éxito.";
-            statusMsg.className = "status-msg success-msg";
-            statusMsg.classList.remove('hide');
+            alert("✅ ¡Configuración web de Firebase guardada con éxito!");
+            if (statusMsg) {
+                statusMsg.textContent = "✅ Configuración web de Firebase guardada con éxito.";
+                statusMsg.className = "status-msg success-msg";
+                statusMsg.classList.remove('hide');
+            }
             loadFirebaseSettings();
-            
             try { initFirebaseMessagingFlow(); } catch(e) {}
         } else {
-            statusMsg.textContent = "❌ Error: " + (data.error || "No se pudo guardar la configuración.");
-            statusMsg.className = "status-msg error-msg";
-            statusMsg.classList.remove('hide');
+            alert("❌ Error: " + (data.error || "No se pudo guardar la configuración."));
+            if (statusMsg) {
+                statusMsg.textContent = "❌ Error: " + (data.error || "No se pudo guardar la configuración.");
+                statusMsg.className = "status-msg error-msg";
+                statusMsg.classList.remove('hide');
+            }
         }
     } catch (err) {
         hideLoadingScreen();
-        statusMsg.textContent = "❌ Error al conectar con el servidor: " + err.message;
-        statusMsg.className = "status-msg error-msg";
-        statusMsg.classList.remove('hide');
+        alert("❌ Error al conectar con el servidor: " + err.message);
+        if (statusMsg) {
+            statusMsg.textContent = "❌ Error al conectar con el servidor: " + err.message;
+            statusMsg.className = "status-msg error-msg";
+            statusMsg.classList.remove('hide');
+        }
     }
 }
 window.handleSaveFirebaseConfig = handleSaveFirebaseConfig;
