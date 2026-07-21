@@ -6094,16 +6094,36 @@ def subscribe_firebase():
     token = data.get('token')
     if not token:
         return jsonify({'error': 'Token FCM requerido.'}), 400
-        
+
     user_id = session.get('user_id')
     patient_id = session.get('patient_id')
-    
+
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("""
-        INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
-        VALUES (?, ?, ?)
-    """, (user_id, patient_id, token))
+
+    if user_id:
+        # Actualizar cualquier token anónimo existente (NULL) o insertar con user_id
+        cursor.execute("UPDATE fcm_subscriptions SET user_id = ? WHERE token = ?", (user_id, token))
+        if cursor.rowcount == 0:
+            cursor.execute("""
+                INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+                VALUES (?, NULL, ?)
+            """, (user_id, token))
+    elif patient_id:
+        # Actualizar o insertar con patient_id
+        cursor.execute("UPDATE fcm_subscriptions SET patient_id = ? WHERE token = ?", (patient_id, token))
+        if cursor.rowcount == 0:
+            cursor.execute("""
+                INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+                VALUES (NULL, ?, ?)
+            """, (patient_id, token))
+    else:
+        # Sin sesión activa: guardar como anónimo (se actualizará al hacer login)
+        cursor.execute("""
+            INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+            VALUES (NULL, NULL, ?)
+        """, (token,))
+
     db.commit()
     return jsonify({'success': 'Suscrito a notificaciones FCM con éxito.'})
 
