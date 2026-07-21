@@ -5697,6 +5697,32 @@ def google_status():
         'has_credentials_json': has_credentials_json
     })
 
+@app.route('/api/google/upload-credentials', methods=['POST'])
+@login_required
+def upload_google_credentials():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No se proporcionó ningún archivo.'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Nombre de archivo vacío.'}), 400
+    if not file.filename.endswith('.json'):
+        return jsonify({'error': 'El archivo debe ser en formato JSON.'}), 400
+    try:
+        import json
+        content = file.read().decode('utf-8')
+        config_data = json.loads(content)
+        # Validar estructura básica de Google OAuth JSON
+        if 'web' not in config_data and 'installed' not in config_data:
+            return jsonify({'error': 'El archivo no es un JSON de credenciales de Google válido.'}), 400
+        
+        with open(CLIENT_SECRETS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=4)
+            
+        return jsonify({'success': 'Credenciales subidas e instaladas con éxito.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al procesar el archivo: {str(e)}'}), 500
+
+
 @app.route('/api/google/authorize')
 @login_required
 def google_authorize():
