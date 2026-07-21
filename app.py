@@ -32,7 +32,10 @@ app = Flask(
     static_folder=get_resource_path('static'),
     template_folder=get_resource_path('templates')
 )
-app.secret_key = os.urandom(24) # Sesión local segura
+app.secret_key = os.environ.get('SECRET_KEY', 'espacio_terapeutico_secret_key_2026_prod_fixed')
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
 DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'clinica.db')
 SCHEMA_FILE = get_resource_path('schema.sql')
 CLIENT_SECRETS_FILE = "credentials.json"
@@ -1454,6 +1457,7 @@ def login():
     user = cursor.fetchone()
     
     if user and check_password_hash(user['password_hash'], password):
+        session.permanent = True
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['role'] = user['role']
@@ -1591,6 +1595,7 @@ def patient_login():
             'username': patient['username'] or patient['cedula']
         })
         
+    session.permanent = True
     session['patient_id'] = patient['id']
     session['patient_username'] = patient['username']
     session['role'] = 'paciente'
@@ -5182,6 +5187,42 @@ def mark_debts_paid():
 
     db.commit()
     return jsonify({'success': f'{updated} consultas marcadas como pagadas.'})
+
+
+@app.route('/api/admin/clear-all-data', methods=['POST'])
+@login_required
+def clear_all_data():
+    """Borra todos los datos del psicólogo previa confirmación explícita escribiendo CONFIRMAR."""
+    data = request.json or {}
+    confirmation = str(data.get('confirmation', '')).strip().upper()
+    
+    if confirmation != 'CONFIRMAR':
+        return jsonify({'error': 'Debes escribir "CONFIRMAR" para autorizar esta acción.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    psicologo_id = session.get('user_id')
+
+    try:
+        # Obtener IDs de pacientes del psicólogo
+        cursor.execute("SELECT id FROM pacientes WHERE psicologo_id = ?", (psicologo_id,))
+        patient_ids = [r[0] for r in cursor.fetchall()]
+
+        if patient_ids:
+            placeholders = ','.join('?' for _ in patient_ids)
+            cursor.execute(f"DELETE FROM sesiones WHERE paciente_id IN ({placeholders})", patient_ids)
+            cursor.execute(f"DELETE FROM agenda_finanzas WHERE paciente_id IN ({placeholders})", patient_ids)
+            cursor.execute(f"DELETE FROM pacientes WHERE id IN ({placeholders})", patient_ids)
+
+        cursor.execute("DELETE FROM pizarra_visual WHERE psicologo_id = ?", (psicologo_id,))
+        cursor.execute("DELETE FROM notificaciones")
+
+        db.commit()
+
+        return jsonify({'success': 'Todos los datos de tu consultorio han sido eliminados con éxito.'})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al eliminar datos: {str(e)}'}), 500
 
 
 @app.route('/api/agenda/<int:event_id>', methods=['PUT'])
