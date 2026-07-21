@@ -84,7 +84,77 @@ def decrypt_clinical_text(cipher_text):
     except Exception as e:
         print(f"Error decrypting: {e}")
         return cipher_text
+def get_vapid_keys(cursor):
+    cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('vapid_public_key', 'vapid_private_key')")
+    cfg = dict(cursor.fetchall())
+    if 'vapid_public_key' not in cfg or 'vapid_private_key' not in cfg:
+        try:
+            from cryptography.hazmat.primitives.asymmetric import ec
+            import base64
+            pk = ec.generate_private_key(ec.SECP256R1())
+            priv_bytes = pk.private_numbers().private_value.to_bytes(32, 'big')
+            pub_numbers = pk.public_key().public_numbers()
+            pub_bytes = b'\x04' + pub_numbers.x.to_bytes(32, 'big') + pub_numbers.y.to_bytes(32, 'big')
+            pub_key = base64.urlsafe_b64encode(pub_bytes).decode('utf-8').rstrip('=')
+            priv_key = base64.urlsafe_b64encode(priv_bytes).decode('utf-8').rstrip('=')
+            cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('vapid_public_key', ?)", (pub_key,))
+            cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('vapid_private_key', ?)", (priv_key,))
+            cfg = {'vapid_public_key': pub_key, 'vapid_private_key': priv_key}
+        except Exception as e:
+            print("Error generando VAPID keys:", e)
+            cfg = {'vapid_public_key': '', 'vapid_private_key': ''}
+    return cfg
 
+def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
+    try:
+        import json
+        from pywebpush import webpush, WebPushException
+        db = get_db()
+        cursor = db.cursor()
+        vapid_keys = get_vapid_keys(cursor)
+        vapid_private_key = vapid_keys.get('vapid_private_key')
+        if not vapid_private_key:
+            return
+
+        if user_id:
+            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ?", (user_id,))
+        elif patient_id:
+            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE patient_id = ?", (patient_id,))
+        else:
+            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions")
+
+        subs = cursor.fetchall()
+        payload = json.dumps({
+            "title": title,
+            "body": body,
+            "url": url
+        })
+        vapid_claims = {"sub": "mailto:soporte@miconsultorio.com"}
+
+        for sub in subs:
+            sub_info = {
+                "endpoint": sub["endpoint"],
+                "keys": {
+                    "p256dh": sub["p256dh"],
+                    "auth": sub["auth"]
+                }
+            }
+            try:
+                webpush(
+                    subscription_info=sub_info,
+                    data=payload,
+                    vapid_private_key=vapid_private_key,
+                    vapid_claims=vapid_claims,
+                    ttl=86400
+                )
+            except WebPushException as ex:
+                if ex.response and ex.response.status_code in [404, 410]:
+                    cursor.execute("DELETE FROM web_push_subscriptions WHERE id = ?", (sub["id"],))
+                    db.commit()
+            except Exception as ex_err:
+                print("Error WebPush individual:", ex_err)
+    except Exception as e:
+        print("Error global send_webpush_notification:", e)
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -243,6 +313,17 @@ def init_db():
                 moneda TEXT NOT NULL,
                 FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE,
                 UNIQUE(psicologo_id, pais, modalidad)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS web_push_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                patient_id INTEGER,
+                endpoint TEXT UNIQUE,
+                p256dh TEXT,
+                auth TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         db.commit()
@@ -2830,6 +2911,37 @@ def get_patient_portal_data_dict(patient_id):
         "modalidades": list(set(modalidades)),
         "metodos_pago": metodos_pago
     }
+
+@app.route('/api/push/public-key', methods=['GET'])
+def get_push_public_key():
+    db = get_db()
+    cursor = db.cursor()
+    vapid_keys = get_vapid_keys(cursor)
+    db.commit()
+    return jsonify({'public_key': vapid_keys['vapid_public_key']})
+
+@app.route('/api/push/subscribe', methods=['POST'])
+def subscribe_push():
+    data = request.json or {}
+    endpoint = data.get('endpoint')
+    keys = data.get('keys') or {}
+    p256dh = keys.get('p256dh')
+    auth = keys.get('auth')
+
+    if not endpoint or not p256dh or not auth:
+        return jsonify({'error': 'Suscripción inválida.'}), 400
+
+    user_id = session.get('user_id')
+    patient_id = session.get('patient_id')
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT OR REPLACE INTO web_push_subscriptions (user_id, patient_id, endpoint, p256dh, auth)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, patient_id, endpoint, p256dh, auth))
+    db.commit()
+    return jsonify({'success': 'Suscrito exitosamente a notificaciones Push en segundo plano.'})
 
 @app.route('/api/admin/payments/notified', methods=['GET'])
 @login_required
