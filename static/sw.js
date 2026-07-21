@@ -64,12 +64,15 @@ self.addEventListener('fetch', (event) => {
 
 // Soporte para Notificaciones Push Nativas VAPID en la barra de tareas y pantalla de bloqueo
 self.addEventListener('push', (event) => {
-  let data = { title: 'Mi Consultorio', body: 'Tienes una nueva notificación.', url: '/' };
+  let data = { title: 'Espacio Terapéutico', body: 'Tienes una nueva actualización en tu consultorio.', url: '/' };
   if (event.data) {
     try {
-      data = event.data.json();
+      const parsed = event.data.json();
+      data.title = parsed.title || parsed.notification?.title || data.title;
+      data.body = parsed.body || parsed.notification?.body || data.body;
+      data.url = parsed.url || parsed.data?.url || data.url;
     } catch (e) {
-      data.body = event.data.text();
+      data.body = event.data.text() || data.body;
     }
   }
 
@@ -89,7 +92,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Notificación Clínica', options)
+    self.registration.showNotification(data.title, options)
   );
 });
 
