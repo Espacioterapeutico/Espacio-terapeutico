@@ -45,13 +45,34 @@ function openNotificationGuideModal() {
 }
 window.openNotificationGuideModal = openNotificationGuideModal;
 
+function showOnboardingTutorialIfNeeded() {
+    if (localStorage.getItem('tutorial_notificaciones_visto') !== 'true') {
+        localStorage.setItem('tutorial_notificaciones_visto', 'true');
+        setTimeout(() => {
+            if (typeof openModal === 'function') {
+                openModal('onboarding-notification-modal');
+            } else {
+                const modal = document.getElementById('onboarding-notification-modal');
+                if (modal) modal.classList.remove('hide');
+            }
+        }, 800);
+    }
+}
+window.showOnboardingTutorialIfNeeded = showOnboardingTutorialIfNeeded;
+
 async function requestNotificationPermission() {
     if (!('Notification' in window)) return false;
-    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'granted') {
+        showOnboardingTutorialIfNeeded();
+        return true;
+    }
     if (Notification.permission !== 'denied') {
         try {
             const permission = await Notification.requestPermission();
-            if (permission === 'granted') return true;
+            if (permission === 'granted') {
+                showOnboardingTutorialIfNeeded();
+                return true;
+            }
             openNotificationGuideModal();
             return false;
         } catch(e) {
