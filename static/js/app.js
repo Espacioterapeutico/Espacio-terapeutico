@@ -5956,10 +5956,19 @@ async function initFirebaseMessagingFlow(registration) {
             return;
         }
         
+        let fcmReg = registration;
+        if ('serviceWorker' in navigator) {
+            try {
+                fcmReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            } catch(e) {
+                console.warn("FCM usando SW secundario:", e);
+            }
+        }
+        
         // Obtener el token de registro de FCM
         const token = await messaging.getToken({
             vapidKey: data.vapid_key,
-            serviceWorkerRegistration: registration
+            serviceWorkerRegistration: fcmReg
         });
         
         if (token) {
