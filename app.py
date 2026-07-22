@@ -176,6 +176,9 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         icon_url = f"{base_url}/static/logo.png" if base_url else "/static/logo.png"
         badge_url = f"{base_url}/static/badge.png" if base_url else "/static/badge.png"
 
+        import hashlib
+        tag_id = f"notif-{hashlib.md5((title + body).encode('utf-8')).hexdigest()[:10]}"
+
         for token in tokens:
             payload = {
                 "message": {
@@ -189,14 +192,19 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                         "title": title,
                         "body": body,
                         "icon": icon_url,
-                        "badge": badge_url
+                        "badge": badge_url,
+                        "tag": tag_id,
+                        "click_action": url
                     },
                     "webpush": {
                         "notification": {
                             "title": title,
                             "body": body,
                             "icon": icon_url,
-                            "badge": badge_url
+                            "badge": badge_url,
+                            "tag": tag_id,
+                            "renotify": True,
+                            "vibrate": [200, 100, 200]
                         },
                         "fcm_options": {
                             "link": url
@@ -204,7 +212,8 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                     },
                     "android": {
                         "notification": {
-                            "sound": "default"
+                            "sound": "default",
+                            "tag": tag_id
                         }
                     },
                     "apns": {
@@ -6641,14 +6650,14 @@ firebase.initializeApp({config_dict_str});
 
 const messaging = firebase.messaging();
 
-function showBackgroundNotification(title, body, url, icon, badge) {{
+function showBackgroundNotification(title, body, url, icon, badge, tag) {{
   const notificationOptions = {{
-    body: body || 'Tienes una nueva notificación.',
+    body: body || 'Tienes una nueva actualización.',
     icon: icon || '/static/logo.png',
     badge: badge || '/static/badge.png',
     sound: '/static/notification.wav',
     vibrate: [200, 100, 200],
-    tag: 'espacio-terapeutico-' + Date.now(),
+    tag: tag || 'espacio-terapeutico-notif',
     renotify: true,
     data: {{ url: url || '/' }},
     actions: [
@@ -6660,41 +6669,47 @@ function showBackgroundNotification(title, body, url, icon, badge) {{
 
 // Handler de notificaciones en SEGUNDO PLANO via FCM SDK
 messaging.onBackgroundMessage((payload) => {{
-  console.log('[firebase-messaging-sw.js] Mensaje FCM recibido:', payload);
-  const title = payload.notification?.title || payload.data?.title || 'Espacio Terapéutico';
-  const body = payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.';
-  const url = payload.data?.url || payload.fcmOptions?.link || '/';
-  const icon = payload.data?.icon || payload.notification?.icon || '/static/logo.png';
-  const badge = payload.data?.badge || payload.notification?.badge || '/static/badge.png';
+  console.log('[firebase-messaging-sw.js] Evento FCM recibido en segundo plano:', payload);
 
-  showBackgroundNotification(title, body, url, icon, badge);
+  // Si el mensaje ya fue dibujado automáticamente por el navegador mediante el objeto 'notification', evitamos duplicar
+  if (payload.notification && payload.notification.title) {{
+    return;
+  }}
+
+  const title = payload.data?.title || 'Espacio Terapéutico';
+  const body = payload.data?.body || 'Tienes una nueva actualización.';
+  const url = payload.data?.url || payload.data?.click_action || payload.fcmOptions?.link || '/';
+  const icon = payload.data?.icon || '/static/logo.png';
+  const badge = payload.data?.badge || '/static/badge.png';
+  const tag = payload.data?.tag || 'espacio-terapeutico-notif';
+
+  return showBackgroundNotification(title, body, url, icon, badge, tag);
 }});
 
 // Listener nativo WebPush para notificaciones cuando la PWA está en segundo plano o cerrada
 self.addEventListener('push', (event) => {{
   console.log('[firebase-messaging-sw.js] Evento Push nativo recibido:', event);
-  let title = 'Espacio Terapéutico';
-  let body = 'Tienes una nueva notificación.';
-  let url = '/';
-  let icon = '/static/logo.png';
-  let badge = '/static/badge.png';
+  if (!event.data) return;
 
-  if (event.data) {{
-    try {{
-      const pData = event.data.json();
-      title = pData.notification?.title || pData.data?.title || pData.title || title;
-      body = pData.notification?.body || pData.data?.body || pData.body || body;
-      url = pData.data?.url || pData.fcmOptions?.link || url;
-      icon = pData.data?.icon || pData.notification?.icon || icon;
-      badge = pData.data?.badge || pData.notification?.badge || badge;
-    }} catch(e) {{
-      body = event.data.text() || body;
+  try {{
+    const pData = event.data.json();
+    if (pData.notification && pData.notification.title) {{
+      // El navegador se encarga automáticamente
+      return;
     }}
-  }}
+    const title = pData.data?.title || pData.title || 'Espacio Terapéutico';
+    const body = pData.data?.body || pData.body || 'Tienes una nueva notificación.';
+    const url = pData.data?.url || pData.data?.click_action || pData.fcmOptions?.link || '/';
+    const icon = pData.data?.icon || '/static/logo.png';
+    const badge = pData.data?.badge || '/static/badge.png';
+    const tag = pData.data?.tag || 'espacio-terapeutico-notif';
 
-  event.waitUntil(
-    showBackgroundNotification(title, body, url, icon, badge)
-  );
+    event.waitUntil(
+      showBackgroundNotification(title, body, url, icon, badge, tag)
+    );
+  }} catch(e) {{
+    console.error('Error procesando push event:', e);
+  }}
 }});
 
 // Manejo del clic en la notificación para abrir/enfocar la app
