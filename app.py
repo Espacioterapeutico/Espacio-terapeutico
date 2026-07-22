@@ -78,15 +78,16 @@ def encrypt_clinical_text(text):
 def decrypt_clinical_text(cipher_text):
     if not cipher_text or not isinstance(cipher_text, str):
         return cipher_text
-    if not cipher_text.startswith("enc:"):
-        return cipher_text
-    try:
-        raw_cipher = cipher_text[4:].encode('utf-8')
-        decrypted_bytes = fernet_cipher.decrypt(raw_cipher)
-        return decrypted_bytes.decode('utf-8')
-    except Exception as e:
-        print(f"Error decrypting: {e}")
-        return cipher_text
+    current = cipher_text
+    while isinstance(current, str) and current.startswith("enc:"):
+        try:
+            raw_cipher = current[4:].encode('utf-8')
+            decrypted_bytes = fernet_cipher.decrypt(raw_cipher)
+            current = decrypted_bytes.decode('utf-8')
+        except Exception as e:
+            print(f"Error decrypting: {e}")
+            break
+    return current
 def get_vapid_keys(cursor):
     cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('vapid_public_key', 'vapid_private_key')")
     cfg = dict(cursor.fetchall())
@@ -5110,7 +5111,14 @@ def update_session_detail(session_id):
         ses = cursor.fetchone()
         if not ses:
             return jsonify({'error': 'Evolución no encontrada.'}), 404
-        return jsonify(dict(ses))
+        s_dict = dict(ses)
+        s_dict['resumen'] = decrypt_clinical_text(s_dict.get('resumen'))
+        s_dict['resumen_paciente'] = decrypt_clinical_text(s_dict.get('resumen_paciente'))
+        s_dict['anotaciones_proxima'] = decrypt_clinical_text(s_dict.get('anotaciones_proxima'))
+        s_dict['compromisos_psicologo'] = decrypt_clinical_text(s_dict.get('compromisos_psicologo'))
+        s_dict['diagnostico'] = decrypt_clinical_text(s_dict.get('diagnostico'))
+        s_dict['test_aplicados'] = decrypt_clinical_text(s_dict.get('test_aplicados'))
+        return jsonify(s_dict)
         
     data = request.json
     try:
