@@ -123,18 +123,13 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         cursor = db.cursor()
         tokens = []
         if user_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
         elif patient_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ? OR patient_id IS NULL", (patient_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
         else:
-            cursor.execute("SELECT token FROM fcm_subscriptions")
-            tokens = [row['token'] for row in cursor.fetchall()]
-
-        if not tokens:
-            cursor.execute("SELECT token FROM fcm_subscriptions")
-            tokens = [row['token'] for row in cursor.fetchall()]
+            tokens = []
 
         # Deduplicar manteniendo orden
         tokens = list(dict.fromkeys(tokens))
