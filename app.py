@@ -228,6 +228,54 @@ def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultor
     except Exception as fcm_err:
         print("Error al disparar FCM en send_webpush_notification:", fcm_err)
 
+def clean_digits_only(s):
+    if not s:
+        return ""
+    return re.sub(r'\D', '', str(s))
+
+def normalize_date_str(d_str):
+    if not d_str:
+        return ""
+    d_str = str(d_str).strip()
+    try:
+        dt = datetime.strptime(d_str, "%Y-%m-%d")
+        return dt.strftime("%Y-%m-%d")
+    except:
+        pass
+    try:
+        dt = datetime.strptime(d_str, "%d/%m/%Y")
+        return dt.strftime("%Y-%m-%d")
+    except:
+        pass
+    try:
+        parts = d_str.split('-')
+        if len(parts) == 3 and len(parts[0]) == 4:
+            return f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+    except:
+        pass
+    return d_str
+
+def normalize_time_str(t_str):
+    if not t_str:
+        return "00:00"
+    t_str = str(t_str).strip().lower()
+    is_pm = 'pm' in t_str
+    is_am = 'am' in t_str
+    clean_t = re.sub(r'[^\d:]', '', t_str)
+    parts = clean_t.split(':')
+    if not parts or not parts[0]:
+        return "00:00"
+    try:
+        h = int(parts[0])
+        m = int(parts[1]) if len(parts) > 1 and parts[1] else 0
+        if is_pm and h < 12:
+            h += 12
+        elif is_am and h == 12:
+            h = 0
+        return f"{h:02d}:{m:02d}"
+    except:
+        return t_str[:5]
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -1334,17 +1382,7 @@ def get_psychologist_modalities(psic_id):
             config = json.loads(u_row[0])
             perfiles = config.get('perfiles', [])
             if perfiles:
-                raw_mods = [p.get('modalidad') or p.get('nombre') for p in perfiles if p.get('nombre')]
-                clean_mods = []
-                for m in raw_mods:
-                    if 'online' in m.lower():
-                        clean_mods.append('Online')
-                    elif 'presencial' in m.lower():
-                        clean_mods.append('Presencial')
-                    else:
-                        clean_mods.append(m)
-                if clean_mods:
-                    modalities = list(set(clean_mods))
+                modalities = list(set([p.get('nombre') or p.get('modalidad') for p in perfiles if (p.get('nombre') or p.get('modalidad'))]))
         except:
             pass
     return jsonify(modalities)
@@ -1367,24 +1405,39 @@ def fast_booking_book():
     db = get_db()
     cursor = db.cursor()
 
-    # 0. Verificar si el horario seleccionado ya está reservado
+    fecha_norm = normalize_date_str(fecha)
+    hora_norm = normalize_time_str(hora)
+    alt_fecha = fecha_norm
+    try:
+        dt_tmp = datetime.strptime(fecha_norm, "%Y-%m-%d")
+        alt_fecha = dt_tmp.strftime("%d/%m/%Y")
+    except:
+        pass
+
+    # 0. Verificar si el horario seleccionado ya está reservado por cualquier consultante en ese psicólogo
     cursor.execute("""
         SELECT af.id FROM agenda_finanzas af
-        JOIN pacientes p ON af.paciente_id = p.id
-        WHERE af.fecha = ? AND af.hora = ? AND p.psicologo_id = ?
-          AND af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'
-    """, (fecha, hora, psicologo_id))
+        LEFT JOIN pacientes p ON af.paciente_id = p.id
+        WHERE (af.fecha = ? OR af.fecha = ?) 
+          AND (af.hora = ? OR af.hora LIKE ?)
+          AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
+          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+    """, (fecha_norm, alt_fecha, hora_norm, f"{hora_norm}%", psicologo_id, psicologo_id))
     if cursor.fetchone():
         return jsonify({'error': 'El horario seleccionado ya fue reservado. Por favor elige otro horario.'}), 400
     
-    # 1. Verificar si el paciente existe por cédula (normalizando espacios, puntos y guiones)
+    # 1. Verificar si el paciente existe por cédula limpia (dígitos), usuario o teléfono
     clean_cedula = cedula.strip()
+    digits_cedula = clean_digits_only(clean_cedula)
+    digits_telefono = clean_digits_only(telefono)
+
     cursor.execute("""
         SELECT id, nombres, apellidos, telefono, email 
         FROM pacientes 
-        WHERE LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', ''))
+        WHERE (LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
+           OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', '')))
            OR (LOWER(username) = LOWER(?) AND username != '')
-    """, (clean_cedula, clean_cedula))
+    """, (digits_cedula, digits_cedula, clean_cedula, clean_cedula.lower()))
     patient = cursor.fetchone()
     
     is_new_patient = False
@@ -2212,37 +2265,48 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     if not candidate_slots:
         return []
 
-    # Filtrar slots ocupados en agenda_finanzas
+    target_date_norm = normalize_date_str(target_date_str)
+    alt_date_str = target_date_norm
+    try:
+        dt_tmp = datetime.strptime(target_date_norm, "%Y-%m-%d")
+        alt_date_str = dt_tmp.strftime("%d/%m/%Y")
+    except:
+        pass
+
+    # Filtrar slots ocupados en agenda_finanzas para ese psicólogo en CUALQUIER modalidad
     query = """
-        SELECT hora FROM agenda_finanzas
-        WHERE fecha = ? AND estado_pago NOT IN ('Cancelada', 'Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada sin aviso - Paga', 'Reprogramada')
+        SELECT af.hora FROM agenda_finanzas af
+        LEFT JOIN pacientes p ON af.paciente_id = p.id
+        WHERE (af.fecha = ? OR af.fecha = ?)
+          AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
+          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
     """
-    params = [target_date_str]
+    params = [target_date_norm, alt_date_str, psicologo_id, psicologo_id]
     if exclude_appt_id:
-        query += " AND id != ?"
+        query += " AND af.id != ?"
         params.append(exclude_appt_id)
 
     cursor.execute(query, params)
     booked_rows = cursor.fetchall()
-    booked_hours = set(row['hora'][:5] for row in booked_rows)
+    booked_hours = set(normalize_time_str(row['hora']) for row in booked_rows if row['hora'])
 
     # Validar horas de antelación
     limit_dt = datetime.now() + timedelta(hours=antelacion)
 
     valid_slots = []
     for slot_obj in candidate_slots:
-        h = slot_obj["hora"]
-        if h in booked_hours:
+        h = normalize_time_str(slot_obj["hora"])
+        if h in booked_hours or slot_obj["hora"] in booked_hours:
             continue
 
         try:
-            slot_dt = datetime.strptime(f"{target_date_str} {h}", "%Y-%m-%d %H:%M")
+            slot_dt = datetime.strptime(f"{target_date_norm} {h}", "%Y-%m-%d %H:%M")
             if slot_dt < limit_dt:
                 continue
         except:
             pass
 
-        iso_str = f"{target_date_str}T{h}:00-04:00"
+        iso_str = f"{target_date_norm}T{h}:00-04:00"
         valid_slots.append({
             "iso": iso_str,
             "hora_literal": h,
@@ -2416,31 +2480,38 @@ def patient_add_appointment():
         return jsonify({'error': 'Fecha, Hora y Modalidad son obligatorios.'}), 400
         
     try:
+        fecha_norm = normalize_date_str(fecha)
+        hora_norm = normalize_time_str(hora)
+        alt_fecha = fecha_norm
+        try:
+            dt_tmp = datetime.strptime(fecha_norm, "%Y-%m-%d")
+            alt_fecha = dt_tmp.strftime("%d/%m/%Y")
+        except:
+            pass
+
         cursor.execute("SELECT nombres, apellidos, cedula, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         paciente = cursor.fetchone()
-        psicologo_id = paciente['psicologo_id']
+        psicologo_id = paciente['psicologo_id'] if paciente else 1
 
         # Verificar si el horario ya está reservado por otro consultante
         cursor.execute("""
             SELECT af.id FROM agenda_finanzas af
-            JOIN pacientes p ON af.paciente_id = p.id
-            WHERE af.fecha = ? AND af.hora = ? AND p.psicologo_id = ?
-              AND af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'
-        """, (fecha, hora, psicologo_id))
+            LEFT JOIN pacientes p ON af.paciente_id = p.id
+            WHERE (af.fecha = ? OR af.fecha = ?) 
+              AND (af.hora = ? OR af.hora LIKE ?)
+              AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
+              AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+        """, (fecha_norm, alt_fecha, hora_norm, f"{hora_norm}%", psicologo_id, psicologo_id))
         if cursor.fetchone():
             return jsonify({'error': 'El horario seleccionado ya ha sido reservado. Por favor elige otro horario.'}), 400
 
         google_event_id = None
         service = get_calendar_service(psicologo_id)
         
-        cursor.execute("SELECT nombres, apellidos, cedula, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
-        paciente = cursor.fetchone()
-        psicologo_id = paciente['psicologo_id']
-        
         if service:
-            start_datetime = f"{fecha}T{hora}:00"
-            end_hour = str(int(hora.split(':')[0]) + 1).zfill(2)
-            end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00"
+            start_datetime = f"{fecha_norm}T{hora_norm}:00-04:00"
+            end_hour = str(int(hora_norm.split(':')[0]) + 1).zfill(2)
+            end_datetime = f"{fecha_norm}T{end_hour}:{hora_norm.split(':')[1]}:00-04:00"
             
             event_body = {
                 'summary': f"Consulta Auto-agendada: {paciente['nombres']} {paciente['apellidos']}",
@@ -2461,7 +2532,7 @@ def patient_add_appointment():
                 paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
                 estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia
             ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, 1, ?)
-        """, (patient_id, fecha, hora, tipo_consulta, monto, moneda, google_event_id, f"Auto-agendada por paciente. Nota: {nota}"))
+        """, (patient_id, fecha_norm, hora_norm, tipo_consulta, monto, moneda, google_event_id, f"Auto-agendada por paciente. Nota: {nota}"))
         
         pac_nombre = f"{paciente['nombres']} {paciente['apellidos']}"
         
@@ -3281,11 +3352,27 @@ def get_patient_portal_data_dict(patient_id):
                 except:
                     pass
 
-    # Citas agendadas del paciente que NO hayan sido evolucionadas (Realizada) ni canceladas
+    # Obtener todos los IDs de paciente pertenecientes a la misma persona (por ID, cédula o teléfono)
+    pat_cedula_clean = clean_digits_only(patient["cedula"])
+    pat_telefono_clean = clean_digits_only(patient["telefono"])
+
     cursor.execute("""
+        SELECT id FROM pacientes
+        WHERE id = ?
+           OR (REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '') = ? AND ? != '')
+           OR (telefono != '' AND ? != '' AND REPLACE(REPLACE(REPLACE(telefono, '-', ''), ' ', ''), '+', '') LIKE ?)
+    """, (patient_id, pat_cedula_clean, pat_cedula_clean, pat_telefono_clean, f"%{pat_telefono_clean}%"))
+    all_pat_ids = [r[0] for r in cursor.fetchall()]
+    if not all_pat_ids:
+        all_pat_ids = [patient_id]
+
+    placeholders = ','.join('?' for _ in all_pat_ids)
+
+    # Citas agendadas del paciente que NO hayan sido evolucionadas (Realizada) ni canceladas
+    cursor.execute(f"""
         SELECT id, fecha, hora, tipo_consulta, confirmada, estado_pago, monto, moneda
         FROM agenda_finanzas
-        WHERE paciente_id = ?
+        WHERE paciente_id IN ({placeholders})
           AND (hora != '00:00' AND hora != '' AND hora IS NOT NULL)
           AND (estado_pago IS NULL OR (estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'))
           AND (
@@ -3295,25 +3382,21 @@ def get_patient_portal_data_dict(patient_id):
               )
           )
         ORDER BY fecha ASC, hora ASC
-    """, (patient_id,))
+    """, all_pat_ids)
     
     candidate_rows = cursor.fetchall()
     proximas_citas = []
 
     for row in candidate_rows:
-        fecha_str = row["fecha"]
-        hora_str = row["hora"] or "00:00"
-        hora_clean = hora_str[:5]
+        fecha_raw = row["fecha"]
+        fecha_str = normalize_date_str(fecha_raw)
+        hora_str = normalize_time_str(row["hora"])
         
         try:
-            session_dt = datetime.strptime(f"{fecha_str} {hora_clean}", "%Y-%m-%d %H:%M")
+            session_dt = datetime.strptime(f"{fecha_str} {hora_str}", "%Y-%m-%d %H:%M")
             diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
         except Exception:
-            try:
-                session_dt = datetime.strptime(f"{fecha_str} {hora_clean}", "%d/%m/%Y %H:%M")
-                diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
-            except Exception:
-                diff_hours = 0.0
+            diff_hours = 0.0
 
         # Mantener sesiones futuras o de hoy en adelante (no concluidas hace más de 12 horas)
         if diff_hours < -12.0:
@@ -3321,8 +3404,8 @@ def get_patient_portal_data_dict(patient_id):
 
         proximas_citas.append({
             "id": row["id"],
-            "fecha": row["fecha"],
-            "hora": row["hora"],
+            "fecha": fecha_str,
+            "hora": hora_str,
             "tipo_consulta": row["tipo_consulta"],
             "confirmada": row["confirmada"],
             "estado_pago": row["estado_pago"],
