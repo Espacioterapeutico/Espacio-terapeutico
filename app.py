@@ -4390,13 +4390,13 @@ def get_patients():
         # Búsqueda por Nombre, Apellido o Cédula
         query = "%" + search + "%"
         cursor.execute("""
-            SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual 
+            SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad 
             FROM pacientes 
             WHERE nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ?
             ORDER BY nombres ASC, apellidos ASC
         """, (query, query, query))
     else:
-        cursor.execute("SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual FROM pacientes ORDER BY nombres ASC, apellidos ASC")
+        cursor.execute("SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad FROM pacientes ORDER BY nombres ASC, apellidos ASC")
         
     patients = [dict(row) for row in cursor.fetchall()]
     return jsonify(patients)
@@ -4614,7 +4614,7 @@ def get_patient_summary(patient_id):
     
     # 1. Datos personales básicos
     cursor.execute("""
-        SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, diagnostico,
+        SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad, diagnostico,
                fecha_nacimiento, con_quien_reside, antecedentes_medicos_personales, antecedentes_psicologicos_personales
         FROM pacientes WHERE id = ?
     """, (patient_id,))
@@ -7101,7 +7101,7 @@ def export_word(patient_id):
         ("Pronombre / Género", f"{pac['pronombre'] or 'N/A'} / {pac['genero'] or 'N/A'}"),
         ("Edad", str(pac['edad']) if pac['edad'] else "N/A"),
         ("Lugar y Fecha de Nacimiento", f"{pac['lugar_nacimiento'] or 'N/A'} ({pac['fecha_nacimiento'] or 'N/A'})"),
-        ("Residencia Actual", pac['residencia_actual'] or "N/A"),
+        ("Residencia Actual", ", ".join(filter(None, [pac.get('residencia_actual') or pac.get('ciudad'), pac.get('pais')])) or "N/A"),
         ("Reside con", pac['con_quien_reside'] or "N/A"),
         ("Nivel Académico / Ocupación", f"{pac['nivel_academico'] or 'N/A'} / {pac['ocupacion'] or 'N/A'}"),
         ("Estado Civil / Relacional", pac['estado_civil'] or "N/A"),
