@@ -423,6 +423,13 @@ def init_db():
             # Asegurar que todos los consultantes antiguos tengan terminos_aceptados = 0 y psicologo_id por defecto si son NULL
             cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
             cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
+            
+            # Normalizar fechas con barras en agenda_finanzas a formato ISO YYYY-MM-DD
+            cursor.execute("SELECT id, fecha FROM agenda_finanzas WHERE fecha LIKE '%/%'")
+            slash_rows = cursor.fetchall()
+            for r_slash in slash_rows:
+                norm_f = normalize_date_str(r_slash['fecha'])
+                cursor.execute("UPDATE agenda_finanzas SET fecha = ? WHERE id = ?", (norm_f, r_slash['id']))
             db.commit()
 
         # Migración automática de pizarra_terapeutica
@@ -3289,14 +3296,21 @@ def get_patient_portal_data_dict(patient_id):
         conn.close()
         return None
         
-    psic_nombre = "Psic. Paulo Mora"
+    psic_nombre = "Psic. Terapeuta"
     metodos_pago = ""
     terms_text = DEFAULT_TERMS_TEXT
-    if patient["psicologo_id"]:
-        cursor.execute("SELECT nombres, apellidos, metodos_pago, terminos_condiciones FROM usuarios WHERE id = ?", (patient["psicologo_id"],))
+    psic_id = patient["psicologo_id"]
+    if not psic_id:
+        cursor.execute("SELECT id FROM usuarios WHERE role != 'superadmin' AND activo = 1 ORDER BY id ASC LIMIT 1")
+        p_first = cursor.fetchone()
+        if p_first:
+            psic_id = p_first['id']
+
+    if psic_id:
+        cursor.execute("SELECT nombres, apellidos, metodos_pago, terminos_condiciones FROM usuarios WHERE id = ?", (psic_id,))
         psic = cursor.fetchone()
         if psic:
-            psic_nombre = f"Psic. {psic['nombres']} {psic['apellidos']}"
+            psic_nombre = f"Psic. {psic['nombres']} {psic['apellidos']}".strip()
             metodos_pago = psic['metodos_pago'] or ""
             if psic['terminos_condiciones'] and psic['terminos_condiciones'].strip():
                 terms_text = psic['terminos_condiciones'].strip()
@@ -3446,6 +3460,7 @@ def get_patient_portal_data_dict(patient_id):
             "tiempo_restante_horas": diff_hours
         })
 
+    proximas_citas.sort(key=lambda x: (x["fecha"], x["hora"]))
     proxima_cita = proximas_citas[0] if proximas_citas else None
     
     return {
