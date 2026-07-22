@@ -700,20 +700,29 @@ function showPatientLayout(username, patientId) {
     document.getElementById('patient-header').classList.remove('hide');
     document.getElementById('patient-menu').classList.remove('hide');
     
-    // Inyección optimista e inmediata del nombre del consultante para evitar "Cargando..."
+    // Inyección optimista e inmediata del nombre del consultante y terapeuta
     if (username) {
         const menuUserName = document.getElementById('pat-menu-user-name');
         if (menuUserName) {
             menuUserName.textContent = username;
         }
-        const headerUserName = document.getElementById('pat-header-user-name');
-        if (headerUserName && headerUserName.textContent === 'Espacio Terapéutico') {
-            headerUserName.textContent = username;
-        }
         const welcomeTitle = document.getElementById('pat-welcome-title');
         if (welcomeTitle) {
             welcomeTitle.textContent = `Hola, ${username} 👋`;
         }
+    }
+    
+    const cachedTherapist = sessionStorage.getItem('patient_therapist_name') || 'Psic. Paulo Mora';
+    const menuTherapist = document.getElementById('pat-menu-therapist-name');
+    if (menuTherapist) {
+        menuTherapist.innerHTML = `
+            <span style="display: inline-block; width: 6px; height: 6px; background-color: var(--primary-color); border-radius: 50%;"></span>
+            <span>Terapeuta: ${cachedTherapist}</span>
+        `;
+    }
+    const headerTherapist = document.getElementById('pat-header-therapist-name');
+    if (headerTherapist) {
+        headerTherapist.textContent = cachedTherapist;
     }
     
     switchPatientView('patient-home');
@@ -1214,6 +1223,7 @@ async function loadPatientPortalData(patientId) {
             
             // Inyectar nombre del terapeuta asignado
             const therapistName = data.perfil.psicologo_asignado || "Psic. Paulo Mora";
+            sessionStorage.setItem('patient_therapist_name', therapistName);
             
             const headerTherapist = document.getElementById('pat-header-therapist-name');
             if (headerTherapist) headerTherapist.textContent = therapistName;
