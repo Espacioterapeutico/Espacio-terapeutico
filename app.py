@@ -371,14 +371,21 @@ def init_db():
         """)
         db.commit()
             
-        # Asegurar existencia del superadministrador por defecto
-        cursor.execute("SELECT id FROM usuarios WHERE role = 'superadmin'")
-        if not cursor.fetchone():
-            from werkzeug.security import generate_password_hash
-            cursor.execute("""
-                INSERT INTO usuarios (username, password_hash, nombres, apellidos, role, activo)
-                VALUES (?, ?, ?, ?, ?, 1)
-            """, ('admin', generate_password_hash('admin'), 'Administrador', 'General', 'superadmin'))
+        # Migración automática de usuarios (slug)
+        cursor.execute("PRAGMA table_info(usuarios)")
+        cols_usr = [row[1] for row in cursor.fetchall()]
+        if 'slug' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN slug TEXT")
+            db.commit()
+
+        cursor.execute("SELECT id, nombres, apellidos, username FROM usuarios WHERE slug IS NULL OR slug = ''")
+        unslugged = cursor.fetchall()
+        for u_row in unslugged:
+            raw_n = f"psic.{u_row['nombres']}{u_row['apellidos']}".lower().replace(" ", "").replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
+            if not raw_n or raw_n == "psic.":
+                raw_n = f"psic.{u_row['username']}".lower()
+            cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (raw_n, u_row['id']))
+        db.commit()
 
 
         # Migración automática de pacientes
@@ -1392,10 +1399,48 @@ def get_active_psychologists():
     rows = cursor.fetchall()
     return jsonify([{'id': r['id'], 'nombres': r['nombres'], 'apellidos': r['apellidos']} for r in rows])
 
-@app.route('/api/psychologists/<int:psic_id>/modalities', methods=['GET'])
-def get_psychologist_modalities(psic_id):
+def get_psychologist_by_id_or_slug(cursor, identifier):
+    if not identifier:
+        return None
+    ident_str = str(identifier).strip().lower()
+    
+    if ident_str.isdigit():
+        cursor.execute("SELECT * FROM usuarios WHERE id = ?", (int(ident_str),))
+        r = cursor.fetchone()
+        if r:
+            return r
+
+    cursor.execute("SELECT * FROM usuarios WHERE LOWER(slug) = ? OR LOWER(username) = ?", (ident_str, ident_str))
+    r = cursor.fetchone()
+    if r:
+        return r
+
+    clean_id = ident_str.replace("psic.", "").replace("psic-", "").strip()
+    cursor.execute("SELECT * FROM usuarios WHERE LOWER(slug) LIKE ? OR LOWER(username) LIKE ?", (f"%{clean_id}%", f"%{clean_id}%"))
+    return cursor.fetchone()
+
+@app.route('/agendar/<identifier>', methods=['GET'])
+def vanity_fast_booking(identifier):
     db = get_db()
     cursor = db.cursor()
+    psych = get_psychologist_by_id_or_slug(cursor, identifier)
+    psic_id = psych['id'] if psych else 1
+    return redirect(f"/?fast_booking={psic_id}")
+
+@app.route('/registro/<identifier>', methods=['GET'])
+def vanity_registration(identifier):
+    db = get_db()
+    cursor = db.cursor()
+    psych = get_psychologist_by_id_or_slug(cursor, identifier)
+    psic_id = psych['id'] if psych else 1
+    return redirect(f"/?ref_psicologo={psic_id}")
+
+@app.route('/api/psychologists/<identifier>/modalities', methods=['GET'])
+def get_psychologist_modalities(identifier):
+    db = get_db()
+    cursor = db.cursor()
+    psych = get_psychologist_by_id_or_slug(cursor, identifier)
+    psic_id = psych['id'] if psych else 1
     cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
     u_row = cursor.fetchone()
     modalities = ["Online", "Presencial"] # Default fallback
@@ -1425,6 +1470,10 @@ def get_agenda_disponibilidad():
     db = get_db()
     cursor = db.cursor()
     
+    if psicologo_id:
+        psych = get_psychologist_by_id_or_slug(cursor, psicologo_id)
+        if psych:
+            psicologo_id = psych['id']
     if not psicologo_id and 'patient_id' in session:
         cursor.execute("SELECT psicologo_id FROM pacientes WHERE id = ?", (session['patient_id'],))
         p_row = cursor.fetchone()
@@ -1483,6 +1532,10 @@ def fast_booking_book():
         
     db = get_db()
     cursor = db.cursor()
+
+    psych = get_psychologist_by_id_or_slug(cursor, psicologo_id)
+    if psych:
+        psicologo_id = psych['id']
 
     fecha_norm = normalize_date_str(fecha)
     hora_norm = normalize_time_str(hora)
@@ -2439,7 +2492,12 @@ def get_available_dates():
         db = get_db()
         cursor = db.cursor()
         
-        psicologo_id = request.args.get('psicologo_id')
+        psic_param = request.args.get('psicologo_id')
+        psicologo_id = None
+        if psic_param:
+            psych = get_psychologist_by_id_or_slug(cursor, psic_param)
+            if psych:
+                psicologo_id = psych['id']
         if not psicologo_id and 'patient_id' in session:
             cursor.execute("SELECT psicologo_id FROM pacientes WHERE id = ?", (session['patient_id'],))
             p_row = cursor.fetchone()
@@ -2482,7 +2540,12 @@ def get_available_slots():
         db = get_db()
         cursor = db.cursor()
         
-        psicologo_id = request.args.get('psicologo_id')
+        psic_param = request.args.get('psicologo_id')
+        psicologo_id = None
+        if psic_param:
+            psych = get_psychologist_by_id_or_slug(cursor, psic_param)
+            if psych:
+                psicologo_id = psych['id']
         if not psicologo_id and 'patient_id' in session:
             cursor.execute("SELECT psicologo_id FROM pacientes WHERE id = ?", (session['patient_id'],))
             p_row = cursor.fetchone()
@@ -4173,6 +4236,45 @@ def admin_availability():
             return jsonify({'success': 'Perfiles de horario y bloques guardados con éxito.'})
         except Exception as e:
             return jsonify({'error': f'Error al guardar horarios: {str(e)}'}), 500
+
+@app.route('/api/admin/profile-slug', methods=['GET', 'POST'])
+@login_required
+def admin_profile_slug():
+    db = get_db()
+    cursor = db.cursor()
+    user_id = session['user_id']
+    if request.method == 'GET':
+        cursor.execute("SELECT id, nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (user_id,))
+        u = cursor.fetchone()
+        if not u:
+            return jsonify({'error': 'Usuario no encontrado.'}), 404
+        current_slug = u['slug'] or f"psic.{u['nombres']}{u['apellidos']}".lower().replace(" ", "")
+        return jsonify({
+            'id': u['id'],
+            'username': u['username'],
+            'slug': current_slug,
+            'fast_booking_url': f"/agendar/{current_slug}",
+            'registration_url': f"/registro/{current_slug}"
+        })
+    else:
+        data = request.json or {}
+        new_slug = str(data.get('slug', '')).strip().lower().replace(" ", "-")
+        new_slug = re.sub(r'[^a-z0-9\.\-_]', '', new_slug)
+        if not new_slug:
+            return jsonify({'error': 'El identificador personalizado (slug) no puede estar vacío.'}), 400
+        
+        cursor.execute("SELECT id FROM usuarios WHERE (LOWER(slug) = ? OR LOWER(username) = ?) AND id != ?", (new_slug, new_slug, user_id))
+        if cursor.fetchone():
+            return jsonify({'error': 'El enlace personalizado ya está en uso por otro profesional.'}), 400
+            
+        cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (new_slug, user_id))
+        db.commit()
+        return jsonify({
+            'success': 'Enlace personalizado actualizado con éxito.',
+            'slug': new_slug,
+            'fast_booking_url': f"/agendar/{new_slug}",
+            'registration_url': f"/registro/{new_slug}"
+        })
 
 @app.route('/api/admin/rates', methods=['POST'])
 @login_required
@@ -6514,7 +6616,12 @@ messaging.onBackgroundMessage((payload) => {{
     badge: '/static/badge.png',
     sound: '/static/notification.wav',
     vibrate: [200, 100, 200],
-    data: {{ url: targetUrl }}
+    tag: 'espacio-terapeutico-' + Date.now(),
+    renotify: true,
+    data: {{ url: targetUrl }},
+    actions: [
+      {{ action: 'open_app', title: 'Ver en App' }}
+    ]
   }};
 
   self.registration.showNotification(notificationTitle, notificationOptions);
