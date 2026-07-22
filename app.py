@@ -1918,11 +1918,22 @@ def patient_login():
         patient = cursor.fetchone()
         
     if not patient:
+        digits_user = clean_digits_only(username)
+        if digits_user:
+            cursor.execute("""
+                SELECT * FROM pacientes 
+                WHERE REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '') = ?
+            """, (digits_user,))
+            patient = cursor.fetchone()
+        
+    if not patient:
         return jsonify({'error': 'Usuario no registrado.'}), 401
         
     is_default = False
     if not patient['password_hash']:
-        is_default = (password == patient['cedula'])
+        clean_pwd = clean_digits_only(password)
+        clean_ced = clean_digits_only(patient['cedula'])
+        is_default = (password == patient['cedula']) or (clean_pwd != '' and clean_pwd == clean_ced)
     else:
         is_default = check_password_hash(patient['password_hash'], password)
         
