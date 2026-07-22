@@ -6080,6 +6080,20 @@ async function handleSaveAdminTerms(e) {
     }
 }
 
+function openPatientTermsModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const modal = document.getElementById('patient-terms-modal');
+    if (modal) {
+        modal.classList.remove('hide');
+        modal.style.display = 'flex';
+        modal.style.zIndex = '100000';
+    }
+    const drawer = document.getElementById('patient-drawer');
+    const overlay = document.getElementById('patient-menu-overlay');
+    if (drawer) drawer.classList.remove('active');
+    if (overlay) overlay.classList.add('hide');
+}
+
 async function handleAcceptPatientTerms() {
     const btn = document.getElementById('accept-terms-btn');
     if (btn) btn.disabled = true;
