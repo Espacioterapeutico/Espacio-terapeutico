@@ -1250,15 +1250,29 @@ async function loadPatientPortalData(patientId) {
                     box.style.borderLeft = '5px solid var(--primary-color)';
                     box.style.marginBottom = '1rem';
                     
-                    const dateParts = cita.fecha.split('-');
-                    const yearObj = parseInt(dateParts[0], 10);
-                    const monthObj = parseInt(dateParts[1], 10) - 1;
-                    const dayObj = parseInt(dateParts[2], 10);
-                    const d = new Date(yearObj, monthObj, dayObj);
-                    
-                    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                    let dateFormatted = d.toLocaleDateString('es-ES', options);
-                    dateFormatted = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+                    let dateFormatted = cita.fecha;
+                    try {
+                        let yearObj, monthObj, dayObj;
+                        if (cita.fecha.includes('-')) {
+                            const dateParts = cita.fecha.split('-');
+                            yearObj = parseInt(dateParts[0], 10);
+                            monthObj = parseInt(dateParts[1], 10) - 1;
+                            dayObj = parseInt(dateParts[2], 10);
+                        } else if (cita.fecha.includes('/')) {
+                            const dateParts = cita.fecha.split('/');
+                            dayObj = parseInt(dateParts[0], 10);
+                            monthObj = parseInt(dateParts[1], 10) - 1;
+                            yearObj = parseInt(dateParts[2], 10);
+                        }
+                        if (yearObj && !isNaN(monthObj) && dayObj) {
+                            const d = new Date(yearObj, monthObj, dayObj);
+                            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                            dateFormatted = d.toLocaleDateString('es-ES', options);
+                            dateFormatted = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+                        }
+                    } catch (e) {
+                        console.error("Error formateando fecha de cita:", e);
+                    }
                     
                     const timeFormatted = format12h(cita.hora);
                     const modalityText = cita.tipo_consulta || 'Online';
