@@ -1276,12 +1276,15 @@ async function loadPatientPortalData(patientId) {
             }
         }
         
+        const textBox = document.getElementById('patient-terms-text-box');
+        if (textBox && data.terminos_texto) {
+            textBox.textContent = data.terminos_texto;
+        }
+
         const termsBadge = document.getElementById('pat-menu-terms-badge');
+        const acceptBtn = document.getElementById('accept-terms-btn');
+
         if (data.terminos_requeridos) {
-            const textBox = document.getElementById('patient-terms-text-box');
-            if (textBox) {
-                textBox.textContent = data.terminos_texto || 'Cargando términos...';
-            }
             if (termsBadge) {
                 termsBadge.style.display = 'inline-block';
                 termsBadge.textContent = '⚠️ Pendiente';
@@ -1289,10 +1292,18 @@ async function loadPatientPortalData(patientId) {
                 termsBadge.style.color = '#d97706';
                 termsBadge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
             }
+            if (acceptBtn) {
+                acceptBtn.textContent = '✓ He leído y acepto los Términos y Condiciones';
+                acceptBtn.onclick = handleAcceptPatientTerms;
+            }
             openModal('patient-terms-modal');
         } else {
             if (termsBadge) {
                 termsBadge.style.display = 'none';
+            }
+            if (acceptBtn) {
+                acceptBtn.textContent = '✓ Términos Aceptados (Encuadre Vigente)';
+                acceptBtn.onclick = () => closeModal('patient-terms-modal');
             }
         }
         
