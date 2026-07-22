@@ -5059,6 +5059,12 @@ def create_session():
                         SET estado_pago = 'Paga', monto = 0.0, moneda = ?, metodo_pago = 'Descontado de Prepago', referencia = 'Prepago'
                         WHERE id = ?
                     """, (moneda, agenda_id))
+                elif tipo_liquidacion == 'Vincular paquete fraccionado':
+                    cursor.execute("""
+                        UPDATE agenda_finanzas 
+                        SET estado_pago = 'Paga', monto = 0.0, moneda = ?, metodo_pago = 'Paquete Fraccionado', referencia = 'Cubierto por Paquete Fraccionado'
+                        WHERE id = ?
+                    """, (moneda, agenda_id))
                 elif tipo_liquidacion == 'Cobrar ahora':
                     cursor.execute("""
                         UPDATE agenda_finanzas 
@@ -5241,6 +5247,12 @@ def update_session_detail(session_id):
                     cursor.execute("""
                         UPDATE agenda_finanzas 
                         SET estado_pago = 'Paga', monto = 0.0, moneda = ?, metodo_pago = 'Descontado de Prepago', referencia = 'Prepago'
+                        WHERE id = ?
+                    """, (moneda, agenda_id))
+                elif tipo_liquidacion == 'Vincular paquete fraccionado':
+                    cursor.execute("""
+                        UPDATE agenda_finanzas 
+                        SET estado_pago = 'Paga', monto = 0.0, moneda = ?, metodo_pago = 'Paquete Fraccionado', referencia = 'Cubierto por Paquete Fraccionado'
                         WHERE id = ?
                     """, (moneda, agenda_id))
                 elif tipo_liquidacion == 'Cobrar ahora':
