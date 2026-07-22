@@ -3231,38 +3231,36 @@
         </div>
     </div>
 
-    <!-- MODAL DE TÉRMINOS Y CONDICIONES DEL PACIENTE (ENCUADRE TERAPÉUTICO) -->
-    <div id="patient-terms-modal" class="modal hide" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; padding: 1rem;">
-        <div class="modal-content" style="background: #ffffff !important; color: #1f2937 !important; max-width: 650px; width: 92%; max-height: 88vh; display: flex; flex-direction: column; border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); position: relative; margin: auto;">
-            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%); color: white; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-weight: 700; color: white; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem;">
-                    <span>📜</span> Términos y Condiciones del Encuadre Terapéutico
+    <!-- MODAL REESCRITO DE TÉRMINOS Y CONDICIONES (ENCUADRE TERAPÉUTICO) -->
+    <div id="patient-terms-modal" class="modal hide" style="position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999999 !important; background: rgba(0, 0, 0, 0.8) !important; backdrop-filter: blur(6px) !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 1rem !important;">
+        <div class="modal-content" style="background: #ffffff !important; color: #111827 !important; max-width: 600px; width: 95%; max-height: 85vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); margin: auto; position: relative;">
+            <div class="modal-header" style="background: #a95993 !important; color: #ffffff !important; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #ffffff !important; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>📜</span> Encuadre Terapéutico
                 </h3>
-                <button type="button" class="close-modal" onclick="closeModal('patient-terms-modal')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 0.2rem 0.5rem;">&times;</button>
+                <button type="button" onclick="closeModal('patient-terms-modal')" style="background: none; border: none; color: #ffffff !important; font-size: 1.6rem; cursor: pointer; line-height: 1; padding: 0.2rem 0.5rem;">&times;</button>
             </div>
             <div class="modal-body" style="padding: 1.25rem; overflow-y: auto; flex: 1; background: #ffffff !important;">
-                <div id="patient-terms-status-banner" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                    <!-- Se llena dinámicamente con JS -->
-                </div>
-                <p class="text-secondary mb-3" style="font-size: 0.85rem; font-weight: 600; color: #4b5563 !important;">
-                    Para gestionar tu proceso terapéutico, lee detenidamente los términos y condiciones de la consulta:
+                <div id="patient-terms-status-banner" style="margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.88rem; font-weight: 600;"></div>
+                <p style="font-size: 0.85rem; color: #4b5563 !important; margin-bottom: 0.75rem; font-weight: 600;">
+                    Términos y condiciones acordados para el proceso de consulta:
                 </p>
-                <div id="patient-terms-text-box" style="background: #f9fafb !important; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; font-size: 0.88rem; line-height: 1.6; color: #1f2937 !important; max-height: 320px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 0.5rem;">
+                <div id="patient-terms-text-box" style="background: #f9fafb !important; border: 1px solid #e5e7eb !important; border-radius: 8px; padding: 1rem; font-size: 0.88rem; line-height: 1.6; color: #1f2937 !important; max-height: 300px; overflow-y: auto; white-space: pre-wrap;">
                     Cargando términos y condiciones...
                 </div>
             </div>
-            <div class="modal-footer" style="padding: 1rem 1.25rem; border-top: 1.5px solid var(--border-color); background: #ffffff !important; display: flex; justify-content: space-between; gap: 0.75rem;">
-                <button type="button" id="close-terms-btn" onclick="closeModal('patient-terms-modal')" class="btn btn-secondary" style="flex: 1; padding: 0.75rem; font-weight: 600; border-radius: var(--radius-md); display: none;">
+            <div class="modal-footer" style="padding: 1rem 1.25rem; border-top: 1px solid #e5e7eb !important; background: #ffffff !important; display: flex; justify-content: space-between; gap: 0.75rem;">
+                <button type="button" id="close-terms-btn" onclick="closeModal('patient-terms-modal')" class="btn btn-secondary" style="padding: 0.75rem 1.25rem; font-weight: 600; border-radius: 8px; display: none; flex: 1;">
                     Cerrar Ventana
                 </button>
-                <button type="button" id="accept-terms-btn" onclick="handleAcceptPatientTerms()" class="btn btn-primary" style="flex: 2; padding: 0.75rem; font-weight: 700; font-size: 0.95rem; border-radius: var(--radius-md);">
-                    ✓ He leído y acepto los Términos y Condiciones
+                <button type="button" id="accept-terms-btn" onclick="handleAcceptPatientTerms()" class="btn btn-primary" style="padding: 0.75rem 1.25rem; font-weight: 700; border-radius: 8px; flex: 2;">
+                    ✓ Aceptar Encuadre Terapéutico
                 </button>
             </div>
         </div>
     </div>
 
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v=30"></script>
+    <script src="/static/js/app.js?v=35"></script>
 </body>
 </html>
