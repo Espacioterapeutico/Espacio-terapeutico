@@ -4864,6 +4864,12 @@ function togglePrepaymentCheckbox(checked) {
     }
 }
 
+function toggleSessionFinanceFields(val) {
+    toggleSessionFinanceInputs(val);
+}
+window.toggleSessionFinanceFields = toggleSessionFinanceFields;
+window.toggleSessionFinanceInputs = toggleSessionFinanceInputs;
+
 function toggleSessionFinanceInputs(tipo) {
     const isPrepay = (tipo === 'Descontar prepago');
     const isFraccionado = (tipo === 'Vincular paquete fraccionado');
