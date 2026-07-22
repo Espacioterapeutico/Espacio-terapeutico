@@ -903,7 +903,9 @@ async function fetchAvailableHours(dateStr) {
     hoursTitle.textContent = `Horas disponibles para el día ${dateStr.split('-').reverse().join('/')}:`;
     
     try {
-        const res = await fetch(`/api/patient/available-slots?date=${dateStr}`);
+        const modalitySelect = document.getElementById('pat-req-modalidad');
+        const modality = modalitySelect ? modalitySelect.value : 'all';
+        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}`);
         const data = await res.json();
         
         hoursGrid.innerHTML = '';
@@ -7134,7 +7136,8 @@ async function fetchFastAvailableHours(dateStr) {
     hoursContainer.classList.remove('hide');
     
     try {
-        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&psicologo_id=${fastBookingTherapistId}`);
+        const modality = document.getElementById('fast-modalidad') ? document.getElementById('fast-modalidad').value : 'all';
+        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}&psicologo_id=${fastBookingTherapistId}`);
         const data = await res.json();
         
         hoursGrid.innerHTML = '';
