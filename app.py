@@ -120,17 +120,16 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         import google.auth.transport.requests
         
         # 1. Obtener tokens de FCM para el usuario/paciente
-        db = get_db()
-        cursor = db.cursor()
         tokens = []
         if user_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
         elif patient_id:
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
         else:
-            tokens = []
+            cursor.execute("SELECT token FROM fcm_subscriptions")
+            tokens = [row['token'] for row in cursor.fetchall()]
 
         # Deduplicar manteniendo orden
         tokens = list(dict.fromkeys(tokens))
@@ -1378,6 +1377,9 @@ def register():
                     existing_patient['id']
                 ))
                 patient_id = existing_patient['id']
+                target_psic = existing_patient['psicologo_id'] or psicologo_id or 1
+                pat_name = f"{data.get('nombres') or existing_patient.get('nombres') or ''} {data.get('apellidos') or existing_patient.get('apellidos') or ''}".strip() or username
+                notif_msg = f"El consultante {pat_name} ha completado la creación de su cuenta de acceso."
             else:
                 cursor.execute("""
                     INSERT INTO pacientes (
@@ -1396,18 +1398,20 @@ def register():
                     username, password_hash, pregunta_1, resp_1_hash, pregunta_2, resp_2_hash, psicologo_id
                 ))
                 patient_id = cursor.lastrowid
-                
-                # Generar notificación interna y push al psicólogo asignado
-                from datetime import datetime
-                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                pat_name = f"{nombres} {apellidos}".strip()
                 target_psic = psicologo_id or 1
+                pat_name = f"{nombres} {apellidos}".strip() or username
                 notif_msg = f"El consultante {pat_name} se ha registrado en la plataforma."
-                cursor.execute("""
-                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                    VALUES (?, 'nuevo_paciente', '👤 Nuevo Registro de Consultante', ?, ?, 0, '/#pacientes')
-                """, (target_psic, notif_msg, now_str))
-                send_fcm_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
+
+            # Generar notificación interna y push al psicólogo asignado
+            from datetime import datetime
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'nuevo_paciente', '👤 Nuevo Registro de Consultante', ?, ?, 0, '/#pacientes')
+            """, (target_psic, notif_msg, now_str))
+            
+            send_fcm_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
+            send_webpush_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
 
             db.commit()
             
