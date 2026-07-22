@@ -507,44 +507,49 @@ async function handleAuthSubmit(e) {
     } else {
         // Modo Login: Identificación Automática de Rol
         try {
-            // 1. Intentar como Psicólogo (Admin)
-            const resAdmin = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const dataAdmin = await resAdmin.json();
-            
-            if (resAdmin.ok) {
-                showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago);
-                // Re-registrar token FCM con user_id activo del psicólogo
-                setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
-                return;
+            let dataAdmin = {};
+            try {
+                const resAdmin = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                dataAdmin = await resAdmin.json();
+                if (resAdmin.ok) {
+                    showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago);
+                    setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
+                    return;
+                }
+            } catch (errAdmin) {
+                console.warn("Fallo login admin, intentando login paciente:", errAdmin);
             }
             
             // 2. Si no es admin o contraseña incorrecta para admin, intentar como Paciente
-            const resPatient = await fetch('/api/patient/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const dataPatient = await resPatient.json();
-            
-            if (resPatient.ok) {
-                if (dataPatient.first_login) {
-                    showPatientWizard(dataPatient.patient_id, dataPatient.username);
-                } else {
-                    showPatientLayout(dataPatient.username, dataPatient.patient_id);
+            let dataPatient = {};
+            try {
+                const resPatient = await fetch('/api/patient/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                dataPatient = await resPatient.json();
+                
+                if (resPatient.ok) {
+                    if (dataPatient.first_login) {
+                        showPatientWizard(dataPatient.patient_id, dataPatient.username);
+                    } else {
+                        showPatientLayout(dataPatient.username, dataPatient.patient_id);
+                    }
+                    setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
+                    return;
                 }
-                // Re-registrar token FCM con patient_id activo del consultante
-                setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
-                return;
+            } catch (errPatient) {
+                console.warn("Fallo login paciente:", errPatient);
             }
             
             // Si ambos fallaron, mostrar el error más descriptivo
-            errorMsg.textContent = dataAdmin.error && dataAdmin.error !== 'Credenciales inválidas.' 
-                ? dataAdmin.error 
-                : (dataPatient.error || 'Credenciales incorrectas.');
+            const finalError = dataPatient.error || dataAdmin.error || 'Usuario o contraseña incorrectos.';
+            errorMsg.textContent = finalError;
             errorMsg.classList.remove('hide');
             
         } catch (err) {
