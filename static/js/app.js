@@ -6152,7 +6152,10 @@ document.addEventListener('click', function(e) {
 
 async function handleAcceptPatientTerms() {
     const btn = document.getElementById('pat-view-accept-terms-btn') || document.getElementById('accept-terms-btn');
-    if (btn) btn.disabled = true;
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+    }
     try {
         const res = await fetch('/api/patient/accept-terms', {
             method: 'POST',
@@ -6178,14 +6181,26 @@ async function handleAcceptPatientTerms() {
             const viewAcceptBtn = document.getElementById('pat-view-accept-terms-btn');
             if (viewAcceptBtn) viewAcceptBtn.style.display = 'none';
 
-            showToast('✓ Encuadre Terapéutico Aceptado con éxito', 'success');
+            const patientId = sessionStorage.getItem('patient_id');
+            if (patientId) {
+                loadPatientPortalData(patientId);
+            }
+
+            alert('✓ Encuadre Terapéutico Aceptado con éxito');
         } else {
-            showToast(data.error || 'Ocurrió un error al registrar la aceptación de términos.', 'error');
-            if (btn) btn.disabled = false;
+            alert(data.error || 'Ocurrió un error al registrar la aceptación de términos.');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '✓ He leído y acepto los Términos y Condiciones';
+            }
         }
     } catch (err) {
-        showToast('Error de conexión al aceptar los términos.', 'error');
-        if (btn) btn.disabled = false;
+        console.error('Error al aceptar términos:', err);
+        alert('Error de conexión al aceptar los términos.');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '✓ He leído y acepto los Términos y Condiciones';
+        }
     }
 }
 
