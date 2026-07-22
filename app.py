@@ -309,6 +309,8 @@ def init_db():
                 cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_pizarra INTEGER DEFAULT 0")
             if 'aviso_pago' not in cols_usr:
                 cursor.execute("ALTER TABLE usuarios ADD COLUMN aviso_pago INTEGER DEFAULT 0")
+            if 'terminos_condiciones' not in cols_usr:
+                cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
             db.commit()
             
         cursor.execute("""
@@ -365,6 +367,10 @@ def init_db():
                 cursor.execute("ALTER TABLE pacientes ADD COLUMN pais TEXT")
             if 'ciudad' not in cols_pac:
                 cursor.execute("ALTER TABLE pacientes ADD COLUMN ciudad TEXT")
+            if 'terminos_aceptados' not in cols_pac:
+                cursor.execute("ALTER TABLE pacientes ADD COLUMN terminos_aceptados INTEGER DEFAULT 0")
+            if 'fecha_aceptacion_terminos' not in cols_pac:
+                cursor.execute("ALTER TABLE pacientes ADD COLUMN fecha_aceptacion_terminos TEXT")
             db.commit()
             
         # Migración automática de agenda_finanzas
@@ -469,8 +475,15 @@ def init_db():
         """)
         cursor.execute("PRAGMA table_info(pizarra_terapeutica)")
         cols_piz = [row[1] for row in cursor.fetchall()]
-        if cols_piz and 'archivo_adjunto' not in cols_piz:
-            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN archivo_adjunto TEXT")
+        if cols_piz:
+            if 'archivo_adjunto' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN archivo_adjunto TEXT")
+            if 'estado_animo' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN estado_animo TEXT")
+            if 'comentario_animo' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
+            if 'emoji_animo' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
         db.commit()
         # Asegurar existencia de la tabla notificaciones
         cursor.execute("""
@@ -1353,6 +1366,16 @@ def fast_booking_book():
         
     db = get_db()
     cursor = db.cursor()
+
+    # 0. Verificar si el horario seleccionado ya está reservado
+    cursor.execute("""
+        SELECT af.id FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        WHERE af.fecha = ? AND af.hora = ? AND p.psicologo_id = ?
+          AND af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'
+    """, (fecha, hora, psicologo_id))
+    if cursor.fetchone():
+        return jsonify({'error': 'El horario seleccionado ya fue reservado. Por favor elige otro horario.'}), 400
     
     # 1. Verificar si el paciente existe por cédula (normalizando espacios, puntos y guiones)
     clean_cedula = cedula.strip()
@@ -2393,8 +2416,22 @@ def patient_add_appointment():
         return jsonify({'error': 'Fecha, Hora y Modalidad son obligatorios.'}), 400
         
     try:
+        cursor.execute("SELECT nombres, apellidos, cedula, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        paciente = cursor.fetchone()
+        psicologo_id = paciente['psicologo_id']
+
+        # Verificar si el horario ya está reservado por otro consultante
+        cursor.execute("""
+            SELECT af.id FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.fecha = ? AND af.hora = ? AND p.psicologo_id = ?
+              AND af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'
+        """, (fecha, hora, psicologo_id))
+        if cursor.fetchone():
+            return jsonify({'error': 'El horario seleccionado ya ha sido reservado. Por favor elige otro horario.'}), 400
+
         google_event_id = None
-        service = get_calendar_service()
+        service = get_calendar_service(psicologo_id)
         
         cursor.execute("SELECT nombres, apellidos, cedula, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         paciente = cursor.fetchone()
@@ -2977,6 +3014,14 @@ def patient_pizarra():
         data = request.json
         contenido = data.get('contenido', '').strip()
         archivo_adjunto = data.get('archivo_adjunto', None)
+        estado_animo = data.get('estado_animo', '').strip()
+        comentario_animo = data.get('comentario_animo', '').strip()
+        emoji_animo = data.get('emoji_animo', '').strip()
+        
+        if estado_animo and not contenido:
+            contenido = f"Estado de ánimo: {emoji_animo} {estado_animo}"
+            if comentario_animo:
+                contenido += f" — \"{comentario_animo}\""
         
         if not contenido and not archivo_adjunto:
             return jsonify({'error': 'El contenido o archivo adjunto es requerido.'}), 400
@@ -2986,19 +3031,22 @@ def patient_pizarra():
         
         try:
             cursor.execute("""
-                INSERT INTO pizarra_terapeutica (paciente_id, fecha, contenido, archivo_adjunto)
-                VALUES (?, ?, ?, ?)
-            """, (patient_id, fecha_actual, contenido, archivo_adjunto))
+                INSERT INTO pizarra_terapeutica (paciente_id, fecha, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (patient_id, fecha_actual, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo))
             
             cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
             pac = cursor.fetchone()
             pac_nombre = f"{pac['nombres']} {pac['apellidos']}"
             psicologo_id = pac['psicologo_id'] or 1
             
+            titulo_notif = "Registro de Estado de Ánimo" if estado_animo else "Actualización de Pizarra"
+            mensaje_notif = f"{pac_nombre} registró su estado de ánimo: {emoji_animo} {estado_animo}." if estado_animo else f"{pac_nombre} escribió una reflexión en su pizarra terapéutica."
+
             cursor.execute("""
                 INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
                 VALUES (?, ?, ?, ?, 0, ?)
-            """, ('pizarra', 'Actualización de Pizarra', f"{pac_nombre} escribió una reflexión en su pizarra terapéutica.", fecha_actual, 'pizarra-visual'))
+            """, ('pizarra', titulo_notif, mensaje_notif, fecha_actual, 'pizarra-visual'))
             
             db.commit()
 
@@ -3006,9 +3054,9 @@ def patient_pizarra():
             try:
                 send_webpush_notification(
                     user_id=psicologo_id,
-                    title="Actualización de Pizarra",
-                    body=f"{pac_nombre} escribió una reflexión en su pizarra terapéutica.",
-                    url="/?view=pizarra"
+                    title=titulo_notif,
+                    body=mensaje_notif,
+                    url="/?view=pizarra-visual"
                 )
             except Exception as wp_ex:
                 print("Error al enviar WebPush de actualización de pizarra:", wp_ex)
@@ -3017,7 +3065,10 @@ def patient_pizarra():
             firebase_payload = {
                 'fecha': fecha_actual,
                 'contenido': contenido,
-                'archivo_adjunto': archivo_adjunto
+                'archivo_adjunto': archivo_adjunto,
+                'estado_animo': estado_animo,
+                'comentario_animo': comentario_animo,
+                'emoji_animo': emoji_animo
             }
             requests.post(f"{FIREBASE_DB_URL}/pizarra_terapeutica/{patient_id}.json", json=firebase_payload)
             
@@ -3028,16 +3079,22 @@ def patient_pizarra():
     elif request.method == 'GET':
         try:
             cursor.execute("""
-                SELECT fecha, contenido, archivo_adjunto FROM pizarra_terapeutica
+                SELECT fecha, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo FROM pizarra_terapeutica
                 WHERE paciente_id = ?
                 ORDER BY fecha DESC
             """, (patient_id,))
             rows = cursor.fetchall()
-            updates = [{'fecha': r['fecha'], 'contenido': r['contenido'], 'archivo_adjunto': r['archivo_adjunto']} for r in rows]
+            updates = [{
+                'fecha': r['fecha'],
+                'contenido': r['contenido'],
+                'archivo_adjunto': r['archivo_adjunto'],
+                'estado_animo': r['estado_animo'] if 'estado_animo' in r.keys() else None,
+                'comentario_animo': r['comentario_animo'] if 'comentario_animo' in r.keys() else None,
+                'emoji_animo': r['emoji_animo'] if 'emoji_animo' in r.keys() else None
+            } for r in rows]
             return jsonify({'updates': updates})
         except Exception as e:
             return jsonify({'error': f'Error al obtener pizarra: {str(e)}'}), 500
-
 @app.route('/api/patient/portal-data', methods=['GET'])
 @patient_login_required
 def get_patient_portal_data():
@@ -3049,6 +3106,73 @@ def get_patient_portal_data():
         return jsonify(data)
     except Exception as e:
         return jsonify({'error': f'Error al obtener datos: {str(e)}'}), 500
+
+DEFAULT_TERMS_TEXT = """Términos y Condiciones del Encuadre Terapéutico
+Estimado/a consultante:
+
+A continuación se presentan las condiciones operativas que rigen nuestro proceso terapéutico. Este marco tiene como objetivo proteger el tiempo de ambos, garantizar el compromiso mutuo y brindar una estructura clara a nuestras sesiones.
+
+1. Duración de la Sesión
+Cada sesión tiene una duración estimada de entre 45 minutos y 1 hora.
+
+2. Gestión del Tiempo y Tardanzas
+Retrasos por parte del consultante:
+- Si llegas con retraso a la cita, el tiempo extra se otorgará únicamente si la agenda del terapeuta lo permite.
+- Si el terapeuta tiene consultas posteriores, la sesión finalizará a la hora programada originalmente para no afectar el espacio de otros consultantes, aprovechando únicamente los minutos restantes.
+- Tolerancia máxima: Pasados 15 minutos de retraso sin notificación, la consulta se considerará como consulta perdida (asistencia fallida) y deberá ser abonada en su totalidad (o descontada del paquete activo).
+
+Retrasos por parte del terapeuta:
+- En caso de que el terapeuta inicie la sesión con retraso, se garantizará el cumplimiento del tiempo total asignado (45 a 60 minutos), adaptando la agenda para no perjudicar al consultante.
+
+3. Confirmación, Cancelación y Tiempo de Gracia
+Confirmación de la cita:
+- Toda sesión requiere confirmación previa. Si llega el día de la cita y esta no ha sido confirmada, el espacio no se reservará y la consulta se registrará automáticamente como cancelada con previo aviso.
+
+Regla de cancelación y tiempo de gracia:
+- Una vez confirmada la consulta, dispones de un tiempo de gracia de hasta 3 horas antes de la hora agendada para realizar cualquier cambio o cancelación sin costo alguno (cancelación con aviso).
+- Pasado dicho límite (menos de 3 horas antes de la sesión), si cancelas o no te presentas, la sesión se computará como realizada y deberá ser abonada en su totalidad.
+
+4. Paquetes de Sesiones
+En caso de contar con un paquete de sesiones prepagado, cualquier inasistencia o cancelación fuera del tiempo de gracia permitido se descontará automáticamente del saldo de sesiones disponibles.
+
+5. Cancelaciones por Parte del Terapeuta
+Si el terapeuta debiera cancelar una sesión sin el debido aviso previo, asume el compromiso de reprogramar la consulta en la fecha disponible más próxima, habilitando de ser necesario fines de semana o días feriados para garantizar la atención oportuna.
+
+Al agendar y confirmar tus sesiones a través de la plataforma, declaras haber leído y aceptado estos Términos y Condiciones para el desarrollo del proceso terapéutico."""
+
+@app.route('/api/patient/accept-terms', methods=['POST'])
+@patient_login_required
+def accept_patient_terms():
+    patient_id = session['patient_id']
+    db = get_db()
+    cursor = db.cursor()
+    from datetime import datetime
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        cursor.execute("UPDATE pacientes SET terminos_aceptados = 1, fecha_aceptacion_terminos = ? WHERE id = ?", (now_str, patient_id))
+        db.commit()
+        return jsonify({'success': 'Términos y condiciones aceptados.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/terms', methods=['GET', 'POST'])
+@login_required
+def admin_terms():
+    user_id = session['user_id']
+    db = get_db()
+    cursor = db.cursor()
+    if request.method == 'GET':
+        cursor.execute("SELECT terminos_condiciones FROM usuarios WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        terms = (row['terminos_condiciones'] if row and row['terminos_condiciones'] else '').strip()
+        if not terms:
+            terms = DEFAULT_TERMS_TEXT
+        return jsonify({'terms': terms})
+    elif request.method == 'POST':
+        terms = request.json.get('terms', '').strip()
+        cursor.execute("UPDATE usuarios SET terminos_condiciones = ? WHERE id = ?", (terms, user_id))
+        db.commit()
+        return jsonify({'success': 'Términos y condiciones actualizados correctamente.'})
 
 def get_patient_portal_data_dict(patient_id):
     import sqlite3
@@ -3064,12 +3188,18 @@ def get_patient_portal_data_dict(patient_id):
         
     psic_nombre = "Psic. Paulo Mora"
     metodos_pago = ""
+    terms_text = DEFAULT_TERMS_TEXT
     if patient["psicologo_id"]:
-        cursor.execute("SELECT nombres, apellidos, metodos_pago FROM usuarios WHERE id = ?", (patient["psicologo_id"],))
+        cursor.execute("SELECT nombres, apellidos, metodos_pago, terminos_condiciones FROM usuarios WHERE id = ?", (patient["psicologo_id"],))
         psic = cursor.fetchone()
         if psic:
             psic_nombre = f"Psic. {psic['nombres']} {psic['apellidos']}"
             metodos_pago = psic['metodos_pago'] or ""
+            if psic['terminos_condiciones'] and psic['terminos_condiciones'].strip():
+                terms_text = psic['terminos_condiciones'].strip()
+
+    patient_dict = dict(patient)
+    terminos_aceptados = patient_dict.get("terminos_aceptados", 0) or 0
 
     patient_data = {
         "id": patient["id"],
@@ -3084,7 +3214,8 @@ def get_patient_portal_data_dict(patient_id):
         "sesiones_paquete_personalizado": patient["sesiones_paquete_personalizado"],
         "moneda_personalizada": patient["moneda_personalizada"] or 'USD',
         "psicologo_asignado": psic_nombre,
-        "metodos_pago": metodos_pago
+        "metodos_pago": metodos_pago,
+        "terminos_aceptados": terminos_aceptados
     }
     
     cursor.execute("""
@@ -3104,10 +3235,10 @@ def get_patient_portal_data_dict(patient_id):
             deudas[currency] = 0.0
 
     cursor.execute("""
-        SELECT id, fecha, hora, tipo_consulta, monto, moneda, estado_pago, referencia
-        FROM agenda_finanzas
-        WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso')
-        ORDER BY fecha ASC, hora ASC
+        SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.monto, af.moneda, af.estado_pago, af.referencia, af.metodo_pago
+        FROM agenda_finanzas af
+        WHERE af.paciente_id = ? AND af.estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+        ORDER BY af.fecha ASC
     """, (patient_id,))
     deudas_detalle = [dict(r) for r in cursor.fetchall()]
             
@@ -3178,7 +3309,11 @@ def get_patient_portal_data_dict(patient_id):
             session_dt = datetime.strptime(f"{fecha_str} {hora_clean}", "%Y-%m-%d %H:%M")
             diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
         except Exception:
-            diff_hours = 999.0
+            try:
+                session_dt = datetime.strptime(f"{fecha_str} {hora_clean}", "%d/%m/%Y %H:%M")
+                diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
+            except Exception:
+                diff_hours = 0.0
 
         # Mantener sesiones futuras o de hoy en adelante (no concluidas hace más de 12 horas)
         if diff_hours < -12.0:
@@ -3211,7 +3346,9 @@ def get_patient_portal_data_dict(patient_id):
         "proxima_cita": proxima_cita,
         "proximas_citas": proximas_citas,
         "modalidades": list(set(modalidades)),
-        "metodos_pago": metodos_pago
+        "metodos_pago": metodos_pago,
+        "terminos_texto": terms_text,
+        "terminos_requeridos": (terminos_aceptados == 0)
     }
 
 @app.route('/api/push/public-key', methods=['GET'])
