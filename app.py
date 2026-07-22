@@ -3430,7 +3430,7 @@ def accept_patient_terms():
             """, (psic_id, notif_msg, now_str))
             send_fcm_notification(user_id=psic_id, title="📜 Términos Aceptados", body=notif_msg, url="/#pacientes")
         db.commit()
-        return jsonify({'success': 'Términos y condiciones aceptados.'})
+        return jsonify({'success': 'Términos y condiciones aceptados.', 'fecha': now_str})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -3651,7 +3651,8 @@ def get_patient_portal_data_dict(patient_id):
         "modalidades": list(set(modalidades)),
         "metodos_pago": metodos_pago,
         "terminos_texto": terms_text,
-        "terminos_requeridos": (terminos_aceptados == 0)
+        "terminos_requeridos": (terminos_aceptados == 0),
+        "fecha_aceptacion_terminos": patient_data.get("fecha_aceptacion_terminos")
     }
 
 @app.route('/api/push/public-key', methods=['GET'])
