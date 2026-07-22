@@ -2211,13 +2211,17 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
 
     for perf in perfiles:
         perf_modalidad = str(perf.get('modalidad') or perf.get('nombre') or '').strip()
+        perf_nombre = str(perf.get('nombre') or perf.get('modalidad') or '').strip()
         perf_mod_clean = perf_modalidad.lower()
+        perf_nom_clean = perf_nombre.lower()
 
-        # Filtrar por modalidad requerida
-        if req_mod_clean != 'all' and req_mod_clean not in perf_mod_clean and perf_mod_clean not in req_mod_clean:
-            if not ('online' in req_mod_clean and 'online' in perf_mod_clean) and \
-               not ('presencial' in req_mod_clean and 'presencial' in perf_mod_clean):
-                continue
+        # Filtrar por modalidad requerida (soporta nombre de perfil como 'Horario Uptaeb', 'Horario online', etc.)
+        if req_mod_clean != 'all':
+            if req_mod_clean not in perf_mod_clean and perf_mod_clean not in req_mod_clean and \
+               req_mod_clean not in perf_nom_clean and perf_nom_clean not in req_mod_clean:
+                if not ('online' in req_mod_clean and 'online' in perf_mod_clean) and \
+                   not ('presencial' in req_mod_clean and 'presencial' in perf_mod_clean):
+                    continue
 
         dias_list = perf.get('dias', [])
         for d in dias_list:
@@ -2245,17 +2249,18 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                         # Regla de cierre: el slot finaliza antes o igual a la hora fin
                         while curr + duration_td <= end_time:
                             h_str = curr.strftime("%H:%M")
+                            mod_label = perf_nombre or perf_modalidad or 'Online'
                             if h_str not in seen_hours:
                                 seen_hours.add(h_str)
                                 candidate_slots.append({
                                     "hora": h_str,
-                                    "modalidades": [perf_modalidad or 'Online']
+                                    "modalidades": [mod_label]
                                 })
                             else:
                                 for c in candidate_slots:
                                     if c["hora"] == h_str:
-                                        if perf_modalidad and perf_modalidad not in c["modalidades"]:
-                                            c["modalidades"].append(perf_modalidad)
+                                        if mod_label and mod_label not in c["modalidades"]:
+                                            c["modalidades"].append(mod_label)
                             curr += duration_td + recess_td
                     except Exception as ex_r:
                         pass
@@ -3413,8 +3418,6 @@ def get_patient_portal_data_dict(patient_id):
             "limite_cancelacion": limite_cancelacion,
             "tiempo_restante_horas": diff_hours
         })
-
-    conn.close()
 
     proxima_cita = proximas_citas[0] if proximas_citas else None
     
