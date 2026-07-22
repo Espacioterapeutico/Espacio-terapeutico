@@ -1387,6 +1387,18 @@ def register():
                 ))
                 patient_id = cursor.lastrowid
                 
+                # Generar notificación interna y push al psicólogo asignado
+                from datetime import datetime
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                pat_name = f"{nombres} {apellidos}".strip()
+                target_psic = psicologo_id or 1
+                notif_msg = f"El consultante {pat_name} se ha registrado en la plataforma."
+                cursor.execute("""
+                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                    VALUES (?, 'nuevo_paciente', '👤 Nuevo Registro de Consultante', ?, ?, 0, '/#pacientes')
+                """, (target_psic, notif_msg, now_str))
+                send_fcm_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
+
             db.commit()
             
             # Sincronización en segundo plano con Firebase
@@ -3405,6 +3417,17 @@ def accept_patient_terms():
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 1, fecha_aceptacion_terminos = ? WHERE id = ?", (now_str, patient_id))
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        p_row = cursor.fetchone()
+        if p_row:
+            pat_name = f"{p_row['nombres']} {p_row['apellidos']}".strip()
+            psic_id = p_row['psicologo_id'] or 1
+            notif_msg = f"El consultante {pat_name} ha aceptado los Términos y Condiciones del Encuadre Terapéutico."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'terminos_aceptados', '📜 Términos Aceptados', ?, ?, 0, '/#pacientes')
+            """, (psic_id, notif_msg, now_str))
+            send_fcm_notification(user_id=psic_id, title="📜 Términos Aceptados", body=notif_msg, url="/#pacientes")
         db.commit()
         return jsonify({'success': 'Términos y condiciones aceptados.'})
     except Exception as e:
