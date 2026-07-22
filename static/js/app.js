@@ -4732,23 +4732,29 @@ function applyPrepaymentDiscount() {
 }
 
 async function checkSessionPatientPrepayments(patientId) {
-    const optConsumir = document.getElementById('s-opt-descontar-prepago');
+    return await checkPrepaymentsAndDebtsForSession(patientId);
+}
+
+async function checkPrepaymentsAndDebtsForSession(patientId) {
     const alertsDiv = document.getElementById('s-paciente-alerts');
+    const optConsumir = document.getElementById('s-opt-descontar-prepago');
+    const optFraccionado = document.getElementById('s-opt-vincular-fraccionado');
+    const selectLiq = document.getElementById('s-tipo-liq');
     const montoInput = document.getElementById('s-monto');
     const monedaSelect = document.getElementById('s-moneda');
-    const selectLiq = document.getElementById('s-tipo-liq');
     
     if (!patientId) {
-        if (optConsumir) optConsumir.style.display = 'none';
         if (alertsDiv) {
             alertsDiv.classList.add('hide');
             alertsDiv.innerHTML = '';
         }
+        if (optConsumir) optConsumir.style.display = 'none';
+        if (optFraccionado) optFraccionado.style.display = 'none';
         return;
     }
     
     try {
-        // 1. Obtener la tarifa personalizada asignada al paciente
+        // Cargar tarifa personalizada por defecto si existe
         const resPatient = await fetch(`/api/patients/${patientId}`);
         if (resPatient.ok) {
             const patient = await resPatient.json();
@@ -4759,17 +4765,41 @@ async function checkSessionPatientPrepayments(patientId) {
                 monedaSelect.value = patient.moneda_personalizada;
             }
         }
-        
-        // 2. Obtener resumen de prepagos y deudas del paciente
         const resSummary = await fetch(`/api/patients/${patientId}/summary`);
         if (!resSummary.ok) return;
         const summary = await resSummary.json();
         
         const prepagas = summary.finance.prepagadas_no_consumidas || 0;
         const pendientes = summary.finance.pendientes || 0;
+        const deudasDetalle = summary.finance.deudas_detalle || [];
+        const deudaMontoStr = summary.finance.deuda_monto_str || '0.00 USD';
         
         let alertHTML = '';
         
+        // 1. Detectar si hay deudas por pagos fraccionados/parciales de paquetes
+        const deudasFraccionadas = deudasDetalle.filter(d => 
+            (d.tipo_consulta && d.tipo_consulta.toLowerCase().includes('fraccionad')) ||
+            (d.referencia && (d.referencia.toLowerCase().includes('parcial') || d.referencia.toLowerCase().includes('fraccionad')))
+        );
+        
+        if (deudasFraccionadas.length > 0) {
+            if (optFraccionado) optFraccionado.style.display = 'block';
+            const totalFrac = deudasFraccionadas.reduce((sum, d) => sum + (Number(d.monto) || 0), 0);
+            const currFrac = deudasFraccionadas[0]?.moneda || 'USD';
+            
+            alertHTML += `
+                <div style="background-color: rgba(245, 158, 11, 0.12); color: #b45309; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                    <span>📦 <strong>Saldo Pendiente por Pago Fraccionado / Paquete:</strong> <strong>${totalFrac.toFixed(2)} ${currFrac}</strong></span>
+                    <button type="button" onclick="selectFraccionadoOption()" style="background: #b45309; color: white; border: none; padding: 0.25rem 0.6rem; border-radius: 4px; font-weight: 600; font-size: 0.78rem; cursor: pointer;">
+                        ✓ Vincular a Paquete Fraccionado
+                    </button>
+                </div>
+            `;
+        } else {
+            if (optFraccionado) optFraccionado.style.display = 'none';
+        }
+        
+        // 2. Prepagos 100% verificados
         if (prepagas > 0) {
             if (optConsumir) optConsumir.style.display = 'block';
             optConsumir.textContent = `Descontar de Prepago (${prepagas} disponibles)`;
@@ -4786,15 +4816,16 @@ async function checkSessionPatientPrepayments(patientId) {
         } else {
             if (optConsumir) optConsumir.style.display = 'none';
             if (selectLiq && selectLiq.value === 'Descontar prepago') {
-                selectLiq.value = 'Dejar pendiente';
-                toggleSessionFinanceInputs('Dejar pendiente');
+                selectLiq.value = deudasFraccionadas.length > 0 ? 'Vincular paquete fraccionado' : 'Dejar pendiente';
+                toggleSessionFinanceInputs(selectLiq.value);
             }
         }
         
-        if (pendientes > 0) {
+        // 3. Deudas estándar
+        if (pendientes > 0 && deudasFraccionadas.length === 0) {
             alertHTML += `
                 <div style="background-color: rgba(220, 53, 69, 0.1); color: #bd2130; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid rgba(220, 53, 69, 0.2);">
-                    ⚠️ <strong>Atención:</strong> El consultante tiene <strong>${pendientes}</strong> citas o cargos anteriores pendientes por cobrar.
+                    ⚠️ <strong>Atención:</strong> El consultante tiene <strong>${pendientes}</strong> citas o cargos anteriores pendientes por cobrar (Monto total: <strong>${deudaMontoStr}</strong>).
                 </div>
             `;
         }
@@ -4813,6 +4844,14 @@ async function checkSessionPatientPrepayments(patientId) {
     }
 }
 
+function selectFraccionadoOption() {
+    const select = document.getElementById('s-tipo-liq');
+    if (select) {
+        select.value = 'Vincular paquete fraccionado';
+        toggleSessionFinanceInputs('Vincular paquete fraccionado');
+    }
+}
+
 function togglePrepaymentCheckbox(checked) {
     const select = document.getElementById('s-tipo-liq');
     if (select) {
@@ -4821,32 +4860,9 @@ function togglePrepaymentCheckbox(checked) {
     }
 }
 
-function applySessionPrepaymentDiscount() {
-    const chk = document.getElementById('s-chk-prepago');
-    if (chk) {
-        chk.checked = true;
-        togglePrepaymentCheckbox(true);
-    } else {
-        const select = document.getElementById('s-tipo-liq');
-        if (select) {
-            select.value = 'Descontar prepago';
-            toggleSessionFinanceInputs('Descontar prepago');
-        }
-    }
-}
-
-function toggleSessionFinanceFields(status) {
-    const financeSection = document.getElementById('s-finance-section');
-    if (!financeSection) return;
-    if (status === 'Realizada' || status === 'Cancelada sin aviso') {
-        financeSection.style.display = 'block';
-    } else {
-        financeSection.style.display = 'none';
-    }
-}
-
 function toggleSessionFinanceInputs(tipo) {
     const isPrepay = (tipo === 'Descontar prepago');
+    const isFraccionado = (tipo === 'Vincular paquete fraccionado');
     const isPending = (tipo === 'Dejar pendiente');
     const isExonerated = (tipo === 'Exonerar');
     
@@ -4854,7 +4870,7 @@ function toggleSessionFinanceInputs(tipo) {
     const pagoDetallesRow = document.getElementById('s-pago-detalles-row');
     const pagoFechaRow = document.getElementById('s-pago-fecha-row');
     
-    if (isPrepay) {
+    if (isPrepay || isFraccionado) {
         montoInput.value = '0.00';
         montoInput.disabled = true;
         if (pagoDetallesRow) pagoDetallesRow.style.display = 'none';
@@ -4878,10 +4894,6 @@ function toggleSessionFinanceInputs(tipo) {
 function filterSessionsPatientDropdown(query) {
     const select = document.getElementById('session-filter-patient');
     if (!select) return;
-    const options = select.options;
-    const lowerQuery = query.toLowerCase();
-    
-    let firstVisibleMatch = null;
     
     for (let i = 0; i < options.length; i++) {
         const option = options[i];
