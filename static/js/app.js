@@ -4864,8 +4864,15 @@ function togglePrepaymentCheckbox(checked) {
     }
 }
 
-function toggleSessionFinanceFields(val) {
-    toggleSessionFinanceInputs(val);
+function toggleSessionFinanceFields(status) {
+    const finSection = document.getElementById('s-finance-fields') || document.getElementById('session-finance-section');
+    const selectLiq = document.getElementById('s-tipo-liq');
+    if (status === 'Cancelada con aviso' || status === 'Reprogramada') {
+        if (finSection) finSection.style.display = 'none';
+    } else {
+        if (finSection) finSection.style.display = 'block';
+        if (selectLiq) toggleSessionFinanceInputs(selectLiq.value);
+    }
 }
 window.toggleSessionFinanceFields = toggleSessionFinanceFields;
 window.toggleSessionFinanceInputs = toggleSessionFinanceInputs;
