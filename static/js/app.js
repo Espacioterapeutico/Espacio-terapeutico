@@ -1277,12 +1277,14 @@ async function loadPatientPortalData(patientId) {
         }
         
         const textBox = document.getElementById('patient-terms-text-box');
+        const statusBanner = document.getElementById('patient-terms-status-banner');
+        const termsBadge = document.getElementById('pat-menu-terms-badge');
+        const acceptBtn = document.getElementById('accept-terms-btn');
+        const closeBtn = document.getElementById('close-terms-btn');
+
         if (textBox && data.terminos_texto) {
             textBox.textContent = data.terminos_texto;
         }
-
-        const termsBadge = document.getElementById('pat-menu-terms-badge');
-        const acceptBtn = document.getElementById('accept-terms-btn');
 
         if (data.terminos_requeridos) {
             if (termsBadge) {
@@ -1292,18 +1294,42 @@ async function loadPatientPortalData(patientId) {
                 termsBadge.style.color = '#d97706';
                 termsBadge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
             }
+            if (statusBanner) {
+                statusBanner.style.background = 'rgba(245, 158, 11, 0.15)';
+                statusBanner.style.color = '#d97706';
+                statusBanner.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+                statusBanner.innerHTML = '<span>⚠️ Pendiente de Aceptación</span><span style="font-size:0.8rem; font-weight:normal;">Por favor lee y acepta los términos para continuar.</span>';
+                statusBanner.style.display = 'flex';
+            }
             if (acceptBtn) {
+                acceptBtn.style.display = 'block';
+                acceptBtn.disabled = false;
                 acceptBtn.textContent = '✓ He leído y acepto los Términos y Condiciones';
                 acceptBtn.onclick = handleAcceptPatientTerms;
             }
+            if (closeBtn) {
+                closeBtn.style.display = 'none';
+            }
             openModal('patient-terms-modal');
         } else {
+            const fechaAcept = data.fecha_aceptacion_terminos || 'Fecha no registrada';
             if (termsBadge) {
                 termsBadge.style.display = 'none';
             }
+            if (statusBanner) {
+                statusBanner.style.background = 'rgba(16, 185, 129, 0.15)';
+                statusBanner.style.color = '#059669';
+                statusBanner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                statusBanner.innerHTML = `<span> Aceptado el: <strong>${fechaAcept}</strong></span><span style="font-size:0.8rem; font-weight:normal;">Encuadre vigente</span>`;
+                statusBanner.style.display = 'flex';
+            }
             if (acceptBtn) {
-                acceptBtn.textContent = '✓ Términos Aceptados (Encuadre Vigente)';
-                acceptBtn.onclick = () => closeModal('patient-terms-modal');
+                acceptBtn.style.display = 'none';
+            }
+            if (closeBtn) {
+                closeBtn.style.display = 'block';
+                closeBtn.textContent = 'Cerrar Ventana';
+                closeBtn.onclick = () => closeModal('patient-terms-modal');
             }
         }
         
@@ -6062,14 +6088,33 @@ async function handleAcceptPatientTerms() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
+        const data = await res.json();
         if (res.ok) {
             closeModal('patient-terms-modal');
+            const fechaActual = data.fecha || new Date().toLocaleString();
+            
             const termsBadge = document.getElementById('pat-menu-terms-badge');
-            if (termsBadge) {
-                termsBadge.style.display = 'none';
+            if (termsBadge) termsBadge.style.display = 'none';
+
+            const statusBanner = document.getElementById('patient-terms-status-banner');
+            if (statusBanner) {
+                statusBanner.style.background = 'rgba(16, 185, 129, 0.15)';
+                statusBanner.style.color = '#059669';
+                statusBanner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                statusBanner.innerHTML = `<span> Aceptado el: <strong>${fechaActual}</strong></span><span style="font-size:0.8rem; font-weight:normal;">Encuadre vigente</span>`;
+                statusBanner.style.display = 'flex';
+            }
+            const acceptBtn = document.getElementById('accept-terms-btn');
+            if (acceptBtn) acceptBtn.style.display = 'none';
+
+            const closeBtn = document.getElementById('close-terms-btn');
+            if (closeBtn) {
+                closeBtn.style.display = 'block';
+                closeBtn.textContent = 'Cerrar Ventana';
+                closeBtn.onclick = () => closeModal('patient-terms-modal');
             }
         } else {
-            alert('Ocurrió un error al registrar la aceptación de términos.');
+            alert(data.error || 'Ocurrió un error al registrar la aceptación de términos.');
             if (btn) btn.disabled = false;
         }
     } catch (err) {
