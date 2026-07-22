@@ -1,18 +1,17 @@
-const CACHE_NAME = 'mi-consultorio-v3';
+const CACHE_NAME = 'mi-consultorio-v35';
 const ASSETS_TO_CACHE = [
   '/',
-  '/static/css/styles.css',
-  '/static/js/app.js',
   '/static/logo.png',
   '/static/manifest.json',
   '/static/notification.wav'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE).catch(() => {});
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
@@ -34,30 +33,26 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // APIs always network-first
-  if (url.pathname.startsWith('/api/')) {
+  // APIs & JS/CSS: Always Network-First to prevent stale UI bugs
+  if (url.pathname.startsWith('/api/') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname === '/') {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return new Response(JSON.stringify({ error: 'Sin conexión a internet' }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css'))) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(event.request).then(cached => cached || new Response('Offline', { status: 503 }));
       })
     );
     return;
   }
 
-  // Static assets: Stale-While-Revalidate
+  // Other assets: Cache First
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-        }
-        return networkResponse;
-      }).catch(() => cachedResponse);
-
-      return cachedResponse || fetchPromise;
+      return cachedResponse || fetch(event.request);
     })
   );
 });
