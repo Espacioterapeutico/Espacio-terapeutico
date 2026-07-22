@@ -3231,24 +3231,31 @@
         </div>
     </div>
 
-    <!-- MODAL OBLIGATORIO DE TÉRMINOS Y CONDICIONES DEL PACIENTE -->
+    <!-- MODAL DE TÉRMINOS Y CONDICIONES DEL PACIENTE (ENCUADRE TERAPÉUTICO) -->
     <div id="patient-terms-modal" class="modal hide" style="z-index: 10000; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);">
         <div class="modal-content" style="max-width: 650px; width: 92%; max-height: 88vh; display: flex; flex-direction: column; border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);">
-            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%); color: white; padding: 1.25rem 1.5rem;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%); color: white; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-weight: 700; color: white; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem;">
                     <span>📜</span> Términos y Condiciones del Encuadre Terapéutico
                 </h3>
+                <button type="button" class="close-modal" onclick="closeModal('patient-terms-modal')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; line-height: 1;">&times;</button>
             </div>
             <div class="modal-body" style="padding: 1.25rem; overflow-y: auto; flex: 1;">
+                <div id="patient-terms-status-banner" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                    <!-- Se llena dinámicamente con JS -->
+                </div>
                 <p class="text-secondary mb-3" style="font-size: 0.85rem; font-weight: 600;">
-                    Para continuar utilizando la plataforma y gestionar tu proceso terapéutico, por favor lee detenidamente los términos y condiciones de la consulta:
+                    Para gestionar tu proceso terapéutico, lee detenidamente los términos y condiciones de la consulta:
                 </p>
-                <div id="patient-terms-text-box" style="background: var(--bg-light); border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; font-size: 0.88rem; line-height: 1.6; color: var(--text-dark); max-height: 340px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 1rem;">
+                <div id="patient-terms-text-box" style="background: var(--bg-light); border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; font-size: 0.88rem; line-height: 1.6; color: var(--text-dark); max-height: 320px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 0.5rem;">
                     Cargando términos y condiciones...
                 </div>
             </div>
-            <div class="modal-footer" style="padding: 1rem 1.25rem; border-top: 1.5px solid var(--border-color); background: var(--card-bg); display: flex; justify-content: flex-end;">
-                <button type="button" id="accept-terms-btn" onclick="handleAcceptPatientTerms()" class="btn btn-primary btn-block" style="width: 100%; padding: 0.75rem; font-weight: 700; font-size: 1rem; border-radius: var(--radius-md);">
+            <div class="modal-footer" style="padding: 1rem 1.25rem; border-top: 1.5px solid var(--border-color); background: var(--card-bg); display: flex; justify-content: space-between; gap: 0.75rem;">
+                <button type="button" id="close-terms-btn" onclick="closeModal('patient-terms-modal')" class="btn btn-secondary" style="flex: 1; padding: 0.75rem; font-weight: 600; border-radius: var(--radius-md); display: none;">
+                    Cerrar Ventana
+                </button>
+                <button type="button" id="accept-terms-btn" onclick="handleAcceptPatientTerms()" class="btn btn-primary" style="flex: 2; padding: 0.75rem; font-weight: 700; font-size: 0.95rem; border-radius: var(--radius-md);">
                     ✓ He leído y acepto los Términos y Condiciones
                 </button>
             </div>
