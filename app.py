@@ -3442,7 +3442,7 @@ def get_patient_portal_data_dict(patient_id):
     from datetime import datetime, timedelta
     now_dt = datetime.now()
     
-    psicologo_id = patient["psicologo_id"]
+    psicologo_id = patient["psicologo_id"] or psic_id
     alerta_confirmacion = 24
     limite_cancelacion = 24
     modalidades = ["Online", "Presencial"]
@@ -3459,8 +3459,14 @@ def get_patient_portal_data_dict(patient_id):
                     alerta_confirmacion = int(config.get('alerta_confirmacion', 24))
                     limite_cancelacion = int(config.get('limite_cancelacion', 24))
                     perfiles = config.get('perfiles', [])
-                    if perfiles:
-                        modalidades = [p.get('nombre') for p in perfiles if p.get('nombre')]
+                    if isinstance(perfiles, dict):
+                        m_list = list(perfiles.keys())
+                        if m_list:
+                            modalidades = m_list
+                    elif isinstance(perfiles, list):
+                        m_list = [p.get('nombre') or p.get('modalidad') for p in perfiles if (isinstance(p, dict) and (p.get('nombre') or p.get('modalidad')))]
+                        if m_list:
+                            modalidades = m_list
                 except:
                     pass
 
