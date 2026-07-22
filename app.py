@@ -1005,9 +1005,11 @@ def auto_settle_patient_debts(db, patient_id):
     cursor = db.cursor()
     
     cursor.execute("""
-        SELECT id, estado_pago, monto 
+        SELECT id, estado_pago, monto, tipo_consulta, referencia 
         FROM agenda_finanzas 
         WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+          AND (tipo_consulta IS NULL OR tipo_consulta NOT LIKE '%Fraccionad%')
+          AND (referencia IS NULL OR referencia NOT LIKE '%pago parcial%')
         ORDER BY fecha ASC, id ASC
     """, (patient_id,))
     debts = cursor.fetchall()
@@ -3770,7 +3772,7 @@ def verify_admin_payment(payment_id):
             if row_monto <= 0:
                 continue
             if remaining >= row_monto:
-                # Pago cubre toda esta cita
+                # Pago cubre toda esta deuda
                 new_estado = 'Cancelada sin aviso - Paga' if row['estado_pago'] == 'Cancelada sin aviso' else 'Paga'
                 cursor.execute("""
                     UPDATE agenda_finanzas 
@@ -3780,14 +3782,25 @@ def verify_admin_payment(payment_id):
                 """, (new_estado, fecha_pago, metodo_pago, referencia_pago, fecha_pago, row['id']))
                 remaining -= row_monto
             else:
-                # Pago parcial: marcar como pagada y ajustar el monto restante
-                new_estado = 'Cancelada sin aviso - Paga' if row['estado_pago'] == 'Cancelada sin aviso' else 'Paga'
+                # Pago parcial de deuda: reducir la deuda existente al saldo restante y registrar el abono
+                nuevo_saldo_deuda = row_monto - remaining
                 cursor.execute("""
                     UPDATE agenda_finanzas 
-                    SET estado_pago = ?, control_uso = 'Consumida',
-                        fecha_liquidacion = ?, metodo_pago = ?, referencia = ?, fecha_pago = ?
+                    SET monto = ? 
                     WHERE id = ?
-                """, (new_estado, fecha_pago, metodo_pago, referencia_pago, fecha_pago, row['id']))
+                """, (nuevo_saldo_deuda, row['id']))
+                
+                # Registrar el abono recibido
+                cursor.execute("""
+                    INSERT INTO agenda_finanzas (
+                        paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
+                        control_uso, fecha_liquidacion, cantidad_sesiones, referencia, metodo_pago, fecha_pago, confirmada
+                    ) VALUES (?, ?, '00:00', ?, ?, ?, 'Paga', 'Consumida', ?, 0, ?, ?, ?, 1)
+                """, (
+                    paciente_id, fecha_pago, row['tipo_consulta'] or 'Abono a Deuda',
+                    remaining, moneda_pago, fecha_pago,
+                    f"Abono parcial a deuda. Ref: {referencia_pago}", metodo_pago, fecha_pago
+                ))
                 remaining = 0
 
         if remaining > 0:
@@ -6182,6 +6195,16 @@ def agenda_quick_pay():
     hora            = data.get('hora', '00:00')
 
     try:
+        # Determinar control_uso: Si es paquete o prepagada, asignar 'No consumida' para que las sesiones queden disponibles
+        control_uso_val = data.get('control_uso')
+        if not control_uso_val:
+            if cantidad_ses > 1 or estado_pago == 'Prepagada' or 'paquete' in tipo_consulta.lower():
+                control_uso_val = 'No consumida'
+                if estado_pago == 'Paga':
+                    estado_pago = 'Prepagada'
+            else:
+                control_uso_val = 'Consumida'
+
         cursor.execute("""
             INSERT INTO agenda_finanzas (
                 paciente_id, fecha, hora, tipo_consulta, monto, moneda,
@@ -6190,7 +6213,7 @@ def agenda_quick_pay():
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
         """, (
             paciente_id, fecha, hora, tipo_consulta, monto, moneda,
-            estado_pago, 'Consumida', cantidad_ses,
+            estado_pago, control_uso_val, cantidad_ses,
             referencia, metodo_pago, fecha_pago
         ))
         db.commit()
@@ -6205,12 +6228,12 @@ def agenda_quick_pay():
                     paciente_id, fecha, hora, tipo_consulta, monto, moneda,
                     estado_pago, control_uso, cantidad_sesiones,
                     referencia, metodo_pago, fecha_pago, confirmada
-                ) VALUES (?, ?, '00:00', ?, ?, ?, 'Pendiente', 'Pendiente', 1, ?, ?, ?, 1)
+                ) VALUES (?, ?, '00:00', ?, ?, ?, 'Pendiente', 'Pendiente', 0, ?, ?, ?, 1)
             """, (
                 paciente_id, fecha,
                 tipo_consulta + ' (Deuda Pago Fraccionado)',
                 float(deuda_generada), moneda,
-                'Saldo pendiente por pago parcial', '', fecha_pago
+                'Saldo pendiente por pago parcial de paquete', '', fecha_pago
             ))
             db.commit()
 
