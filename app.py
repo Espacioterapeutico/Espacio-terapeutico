@@ -328,6 +328,8 @@ def init_db():
                 cursor.execute("ALTER TABLE sesiones ADD COLUMN test_aplicados TEXT")
             if 'archivo_adjunto' not in columns:
                 cursor.execute("ALTER TABLE sesiones ADD COLUMN archivo_adjunto TEXT")
+            if 'resumen_paciente' not in columns:
+                cursor.execute("ALTER TABLE sesiones ADD COLUMN resumen_paciente TEXT")
             db.commit()
             
         # Migración automática de usuarios (psicólogos)
@@ -3547,15 +3549,19 @@ def get_patient_portal_data_dict(patient_id):
     deudas_detalle = [dict(r) for r in cursor.fetchall()]
             
     cursor.execute("""
-        SELECT anotaciones_proxima, tareas_asignadas, recursos_entregados
+        SELECT resumen_paciente, anotaciones_proxima, tareas_asignadas, recursos_entregados
         FROM sesiones
         WHERE paciente_id = ?
         ORDER BY fecha DESC, id DESC LIMIT 1
     """, (patient_id,))
     last_session = cursor.fetchone()
     
+    res_pac_dec = decrypt_clinical_text(last_session["resumen_paciente"]) if (last_session and last_session["resumen_paciente"]) else ""
+    temas_prox_dec = decrypt_clinical_text(last_session["anotaciones_proxima"]) if (last_session and last_session["anotaciones_proxima"]) else ""
+
     compartido = {
-        "temas_proxima_sesion": last_session["anotaciones_proxima"] if last_session else "",
+        "resumen_sesion": res_pac_dec,
+        "temas_proxima_sesion": temas_prox_dec,
         "tareas_asignadas": last_session["tareas_asignadas"] if last_session else "",
         "recursos_entregados": last_session["recursos_entregados"] if last_session else ""
     }
@@ -3911,13 +3917,18 @@ def get_patient_session_history():
     db = get_db()
     cursor = db.cursor()
     cursor.execute("""
-        SELECT id, fecha, modalidad, resumen, tareas_asignadas, recursos_entregados, anotaciones_proxima, archivo_adjunto
+        SELECT id, fecha, modalidad, resumen_paciente, tareas_asignadas, recursos_entregados, anotaciones_proxima, archivo_adjunto
         FROM sesiones
         WHERE paciente_id = ? AND estado = 'Realizada'
         ORDER BY fecha DESC, id DESC
     """, (patient_id,))
     rows = cursor.fetchall()
-    return jsonify([dict(r) for r in rows])
+    results = []
+    for r in rows:
+        d = dict(r)
+        d['resumen_paciente'] = decrypt_clinical_text(d.get('resumen_paciente')) or ''
+        results.append(d)
+    return jsonify(results)
 
 @app.route('/api/admin/pizarra', methods=['GET'])
 @login_required
@@ -4932,6 +4943,7 @@ def get_sessions():
     sessions = []
     for s in raw_sessions:
         s['resumen'] = decrypt_clinical_text(s.get('resumen'))
+        s['resumen_paciente'] = decrypt_clinical_text(s.get('resumen_paciente'))
         s['anotaciones_proxima'] = decrypt_clinical_text(s.get('anotaciones_proxima'))
         s['compromisos_psicologo'] = decrypt_clinical_text(s.get('compromisos_psicologo'))
         s['diagnostico'] = decrypt_clinical_text(s.get('diagnostico'))
@@ -4957,6 +4969,7 @@ def create_session():
         
     try:
         resumen_enc = encrypt_clinical_text(data.get('resumen'))
+        resumen_paciente_enc = encrypt_clinical_text(data.get('resumen_paciente'))
         anot_prox_enc = encrypt_clinical_text(data.get('anotaciones_proxima'))
         comp_enc = encrypt_clinical_text(data.get('compromisos_psicologo'))
         diag_enc = encrypt_clinical_text(data.get('diagnostico'))
@@ -4965,12 +4978,12 @@ def create_session():
         # Insertar evolución clínica
         cursor.execute("""
             INSERT INTO sesiones (
-                paciente_id, agenda_id, fecha, modalidad, estado, resumen, tareas_asignadas, 
+                paciente_id, agenda_id, fecha, modalidad, estado, resumen, resumen_paciente, tareas_asignadas, 
                 recursos_entregados, anotaciones_proxima, compromisos_psicologo,
                 diagnostico, test_aplicados, archivo_adjunto
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            patient_id, agenda_id, fecha, modalidad, estado, resumen_enc, data.get('tareas_asignadas'),
+            patient_id, agenda_id, fecha, modalidad, estado, resumen_enc, resumen_paciente_enc, data.get('tareas_asignadas'),
             data.get('recursos_entregados'), anot_prox_enc, comp_enc,
             diag_enc, tests_enc, data.get('archivo_adjunto')
         ))
@@ -5108,13 +5121,14 @@ def update_session_detail(session_id):
             
         agenda_id = ses['agenda_id']
         estado = data.get('estado', ses['estado'])
-        resumen = data.get('resumen') if 'resumen' in data else ses['resumen']
+        resumen = encrypt_clinical_text(data.get('resumen')) if 'resumen' in data else ses['resumen']
+        resumen_paciente = encrypt_clinical_text(data.get('resumen_paciente')) if 'resumen_paciente' in data else ses['resumen_paciente']
         tareas_asignadas = data.get('tareas_asignadas') if 'tareas_asignadas' in data else ses['tareas_asignadas']
         recursos_entregados = data.get('recursos_entregados') if 'recursos_entregados' in data else ses['recursos_entregados']
-        anotaciones_proxima = data.get('anotaciones_proxima') if 'anotaciones_proxima' in data else ses['anotaciones_proxima']
-        compromisos_psicologo = data.get('compromisos_psicologo') if 'compromisos_psicologo' in data else ses['compromisos_psicologo']
-        diagnostico = data.get('diagnostico') if 'diagnostico' in data else ses['diagnostico']
-        test_aplicados = data.get('test_aplicados') if 'test_aplicados' in data else ses['test_aplicados']
+        anotaciones_proxima = encrypt_clinical_text(data.get('anotaciones_proxima')) if 'anotaciones_proxima' in data else ses['anotaciones_proxima']
+        compromisos_psicologo = encrypt_clinical_text(data.get('compromisos_psicologo')) if 'compromisos_psicologo' in data else ses['compromisos_psicologo']
+        diagnostico = encrypt_clinical_text(data.get('diagnostico')) if 'diagnostico' in data else ses['diagnostico']
+        test_aplicados = encrypt_clinical_text(data.get('test_aplicados')) if 'test_aplicados' in data else ses['test_aplicados']
         archivo_adjunto = data.get('archivo_adjunto') if 'archivo_adjunto' in data else ses['archivo_adjunto']
         
         modalidad = data.get('modalidad', ses['modalidad'])
@@ -5123,10 +5137,10 @@ def update_session_detail(session_id):
         
         cursor.execute("""
             UPDATE sesiones 
-            SET estado = ?, resumen = ?, tareas_asignadas = ?, recursos_entregados = ?, anotaciones_proxima = ?, compromisos_psicologo = ?,
+            SET estado = ?, resumen = ?, resumen_paciente = ?, tareas_asignadas = ?, recursos_entregados = ?, anotaciones_proxima = ?, compromisos_psicologo = ?,
                 diagnostico = ?, test_aplicados = ?, archivo_adjunto = ?, modalidad = ?, fecha = ?, paciente_id = ?
             WHERE id = ?
-        """, (estado, resumen, tareas_asignadas, recursos_entregados, anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto, modalidad, fecha, patient_id, session_id))
+        """, (estado, resumen, resumen_paciente, tareas_asignadas, recursos_entregados, anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto, modalidad, fecha, patient_id, session_id))
         
         # Si no tiene agenda_id asociado, la creamos al vuelo
         if not agenda_id:
