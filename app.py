@@ -1403,12 +1403,68 @@ def get_psychologist_modalities(psic_id):
         try:
             import json
             config = json.loads(u_row[0])
-            perfiles = config.get('perfiles', [])
-            if perfiles:
-                modalities = list(set([p.get('nombre') or p.get('modalidad') for p in perfiles if (p.get('nombre') or p.get('modalidad'))]))
+            raw_perfiles = config.get('perfiles', [])
+            if isinstance(raw_perfiles, dict):
+                m_names = list(raw_perfiles.keys())
+                if m_names:
+                    modalities = m_names
+            elif isinstance(raw_perfiles, list):
+                m_names = [p.get('nombre') or p.get('modalidad') for p in raw_perfiles if (p.get('nombre') or p.get('modalidad'))]
+                if m_names:
+                    modalities = list(set(m_names))
         except:
             pass
     return jsonify(modalities)
+
+@app.route('/api/agenda/disponibilidad', methods=['GET'])
+def get_agenda_disponibilidad():
+    psicologo_id = request.args.get('psicologo_id')
+    fecha_str = request.args.get('fecha')
+    modalidad = request.args.get('modalidad', 'all')
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    if not psicologo_id and 'patient_id' in session:
+        cursor.execute("SELECT psicologo_id FROM pacientes WHERE id = ?", (session['patient_id'],))
+        p_row = cursor.fetchone()
+        if p_row and p_row['psicologo_id']:
+            psicologo_id = p_row['psicologo_id']
+    if not psicologo_id and 'user_id' in session:
+        psicologo_id = session['user_id']
+    if not psicologo_id:
+        cursor.execute("SELECT id FROM usuarios WHERE role != 'superadmin' AND activo = 1 ORDER BY id ASC LIMIT 1")
+        first_u = cursor.fetchone()
+        psicologo_id = first_u[0] if first_u else 1
+        
+    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+    u_row = cursor.fetchone()
+    modalidades_list = ["Online", "Presencial"]
+    if u_row and u_row[0]:
+        try:
+            import json
+            config = json.loads(u_row[0])
+            raw_perfiles = config.get('perfiles', [])
+            if isinstance(raw_perfiles, dict):
+                modalidades_list = list(raw_perfiles.keys())
+            elif isinstance(raw_perfiles, list):
+                m_found = [p.get('nombre') or p.get('modalidad') for p in raw_perfiles if (p.get('nombre') or p.get('modalidad'))]
+                if m_found:
+                    modalidades_list = list(set(m_found))
+        except:
+            pass
+            
+    horas_disponibles = []
+    slots = []
+    if fecha_str:
+        slots = generate_dynamic_slots(cursor, psicologo_id, fecha_str, modalidad)
+        horas_disponibles = [s['hora_literal'] for s in slots]
+        
+    return jsonify({
+        "modalidades": modalidades_list,
+        "horas_disponibles": horas_disponibles,
+        "slots": slots
+    })
 
 @app.route('/api/fast-booking/book', methods=['POST'])
 def fast_booking_book():
@@ -2228,7 +2284,17 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     duracion = int(config.get('duracion', 60))
     receso = int(config.get('receso', 0))
     antelacion = int(config.get('antelacion', 24))
-    perfiles = config.get('perfiles', [])
+    raw_perfiles = config.get('perfiles', [])
+    perfiles = []
+    if isinstance(raw_perfiles, dict):
+        for k, v in raw_perfiles.items():
+            if isinstance(v, dict):
+                v_copy = dict(v)
+                if 'nombre' not in v_copy:
+                    v_copy['nombre'] = k
+                perfiles.append(v_copy)
+    elif isinstance(raw_perfiles, list):
+        perfiles = raw_perfiles
 
     try:
         target_dt = datetime.strptime(target_date_str, "%Y-%m-%d")
