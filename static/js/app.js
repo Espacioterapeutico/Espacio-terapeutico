@@ -6085,11 +6085,7 @@ async function openPatientTermsModal(e) {
     const modal = document.getElementById('patient-terms-modal');
     if (modal) {
         modal.classList.remove('hide');
-        modal.style.setProperty('display', 'flex', 'important');
-        modal.style.setProperty('align-items', 'center', 'important');
-        modal.style.setProperty('justify-content', 'center', 'important');
-        modal.style.setProperty('position', 'fixed', 'important');
-        modal.style.setProperty('z-index', '999999', 'important');
+        modal.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999999 !important; background: rgba(0, 0, 0, 0.8) !important; backdrop-filter: blur(6px) !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 1rem !important;';
     }
     const drawer = document.getElementById('patient-drawer');
     const overlay = document.getElementById('patient-menu-overlay');
@@ -6097,59 +6093,57 @@ async function openPatientTermsModal(e) {
     if (overlay) overlay.classList.add('hide');
 
     const textBox = document.getElementById('patient-terms-text-box');
-    if (textBox && (textBox.textContent.trim() === '' || textBox.textContent.includes('Cargando'))) {
-        try {
-            const res = await fetch('/api/patient/portal-data');
-            if (res.ok) {
-                const data = await res.json();
-                if (data.terminos_texto) {
-                    textBox.textContent = data.terminos_texto;
-                }
-                const statusBanner = document.getElementById('patient-terms-status-banner');
-                const acceptBtn = document.getElementById('accept-terms-btn');
-                const closeBtn = document.getElementById('close-terms-btn');
-                const termsBadge = document.getElementById('pat-menu-terms-badge');
+    const statusBanner = document.getElementById('patient-terms-status-banner');
+    const acceptBtn = document.getElementById('accept-terms-btn');
+    const closeBtn = document.getElementById('close-terms-btn');
+    const termsBadge = document.getElementById('pat-menu-terms-badge');
 
-                if (data.terminos_requeridos) {
-                    if (termsBadge) {
-                        termsBadge.style.display = 'inline-block';
-                        termsBadge.textContent = '⚠️ Pendiente';
-                    }
-                    if (statusBanner) {
-                        statusBanner.style.background = 'rgba(245, 158, 11, 0.15)';
-                        statusBanner.style.color = '#d97706';
-                        statusBanner.style.border = '1px solid rgba(245, 158, 11, 0.3)';
-                        statusBanner.innerHTML = '<span>⚠️ Pendiente de Aceptación</span><span style="font-size:0.8rem; font-weight:normal;">Por favor lee y acepta los términos para continuar.</span>';
-                        statusBanner.style.display = 'flex';
-                    }
-                    if (acceptBtn) {
-                        acceptBtn.style.display = 'block';
-                        acceptBtn.disabled = false;
-                        acceptBtn.textContent = '✓ He leído y acepto los Términos y Condiciones';
-                        acceptBtn.onclick = handleAcceptPatientTerms;
-                    }
-                    if (closeBtn) closeBtn.style.display = 'none';
-                } else {
-                    const fechaAcept = data.fecha_aceptacion_terminos || 'Fecha no registrada';
-                    if (termsBadge) termsBadge.style.display = 'none';
-                    if (statusBanner) {
-                        statusBanner.style.background = 'rgba(16, 185, 129, 0.15)';
-                        statusBanner.style.color = '#059669';
-                        statusBanner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-                        statusBanner.innerHTML = `<span> Aceptado el: <strong>${fechaAcept}</strong></span><span style="font-size:0.8rem; font-weight:normal;">Encuadre vigente</span>`;
-                        statusBanner.style.display = 'flex';
-                    }
-                    if (acceptBtn) acceptBtn.style.display = 'none';
-                    if (closeBtn) {
-                        closeBtn.style.display = 'block';
-                        closeBtn.textContent = 'Cerrar Ventana';
-                        closeBtn.onclick = () => closeModal('patient-terms-modal');
-                    }
+    try {
+        const res = await fetch('/api/patient/portal-data');
+        if (res.ok) {
+            const data = await res.json();
+            if (textBox && data.terminos_texto) {
+                textBox.textContent = data.terminos_texto;
+            }
+            if (data.terminos_requeridos) {
+                if (termsBadge) {
+                    termsBadge.style.display = 'inline-block';
+                    termsBadge.textContent = '⚠️ Pendiente';
+                }
+                if (statusBanner) {
+                    statusBanner.style.background = 'rgba(245, 158, 11, 0.15)';
+                    statusBanner.style.color = '#d97706';
+                    statusBanner.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+                    statusBanner.innerHTML = '⚠️ <strong>Pendiente de Aceptación:</strong> Lee los términos para continuar.';
+                    statusBanner.style.display = 'block';
+                }
+                if (acceptBtn) {
+                    acceptBtn.style.display = 'block';
+                    acceptBtn.disabled = false;
+                    acceptBtn.textContent = '✓ Aceptar Encuadre Terapéutico';
+                    acceptBtn.onclick = handleAcceptPatientTerms;
+                }
+                if (closeBtn) closeBtn.style.display = 'none';
+            } else {
+                const fechaAcept = data.fecha_aceptacion_terminos || 'Fecha no registrada';
+                if (termsBadge) termsBadge.style.display = 'none';
+                if (statusBanner) {
+                    statusBanner.style.background = 'rgba(16, 185, 129, 0.15)';
+                    statusBanner.style.color = '#059669';
+                    statusBanner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                    statusBanner.innerHTML = ` <strong>Encuadre Aceptado</strong> el ${fechaAcept}`;
+                    statusBanner.style.display = 'block';
+                }
+                if (acceptBtn) acceptBtn.style.display = 'none';
+                if (closeBtn) {
+                    closeBtn.style.display = 'block';
+                    closeBtn.textContent = 'Cerrar Ventana';
+                    closeBtn.onclick = () => closeModal('patient-terms-modal');
                 }
             }
-        } catch(err) {
-            console.error('Error al cargar términos para modal:', err);
         }
+    } catch(err) {
+        console.error('Error al cargar términos para modal:', err);
     }
 }
 window.openPatientTermsModal = openPatientTermsModal;
