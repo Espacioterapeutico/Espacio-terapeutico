@@ -419,6 +419,22 @@ def init_db():
                 cursor.execute("ALTER TABLE pacientes ADD COLUMN terminos_aceptados INTEGER DEFAULT 0")
             if 'fecha_aceptacion_terminos' not in cols_pac:
                 cursor.execute("ALTER TABLE pacientes ADD COLUMN fecha_aceptacion_terminos TEXT")
+            
+            # Asegurar que todos los consultantes antiguos tengan terminos_aceptados = 0 y psicologo_id por defecto si son NULL
+            cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
+            cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
+            db.commit()
+
+        # Migración automática de pizarra_terapeutica
+        cursor.execute("PRAGMA table_info(pizarra_terapeutica)")
+        cols_piz = [row[1] for row in cursor.fetchall()]
+        if cols_piz:
+            if 'estado_animo' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN estado_animo TEXT")
+            if 'comentario_animo' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
+            if 'emoji_animo' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
             db.commit()
             
         # Migración automática de agenda_finanzas
