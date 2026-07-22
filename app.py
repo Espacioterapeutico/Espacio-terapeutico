@@ -167,6 +167,15 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
             "Content-Type": "application/json; UTF-8"
         }
         
+        try:
+            from flask import request
+            base_url = request.host_url.rstrip('/') if request else ""
+        except:
+            base_url = ""
+
+        icon_url = f"{base_url}/static/logo.png" if base_url else "/static/logo.png"
+        badge_url = f"{base_url}/static/badge.png" if base_url else "/static/badge.png"
+
         for token in tokens:
             payload = {
                 "message": {
@@ -178,14 +187,16 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                     "data": {
                         "url": url,
                         "title": title,
-                        "body": body
+                        "body": body,
+                        "icon": icon_url,
+                        "badge": badge_url
                     },
                     "webpush": {
                         "notification": {
                             "title": title,
                             "body": body,
-                            "icon": "/static/logo.png",
-                            "badge": "/static/badge.png"
+                            "icon": icon_url,
+                            "badge": badge_url
                         },
                         "fcm_options": {
                             "link": url
@@ -6607,31 +6618,60 @@ firebase.initializeApp({config_dict_str});
 
 const messaging = firebase.messaging();
 
-// Handler de notificaciones en SEGUNDO PLANO / CERRADO
-messaging.onBackgroundMessage((payload) => {{
-  console.log('[firebase-messaging-sw.js] Mensaje en segundo plano recibido:', payload);
-  
-  const notificationTitle = payload.notification?.title || payload.data?.title || 'Espacio Terapéutico';
-  const notificationBody = payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.';
-  const targetUrl = payload.data?.url || payload.fcmOptions?.link || '/';
-
+function showBackgroundNotification(title, body, url, icon, badge) {{
   const notificationOptions = {{
-    body: notificationBody,
-    icon: '/static/logo.png',
-    badge: '/static/badge.png',
+    body: body || 'Tienes una nueva notificación.',
+    icon: icon || '/static/logo.png',
+    badge: badge || '/static/badge.png',
     sound: '/static/notification.wav',
     vibrate: [200, 100, 200],
     tag: 'espacio-terapeutico-' + Date.now(),
     renotify: true,
-    data: {{ url: targetUrl }},
+    data: {{ url: url || '/' }},
     actions: [
       {{ action: 'open_app', title: 'Ver en App' }}
     ]
   }};
+  return self.registration.showNotification(title || 'Espacio Terapéutico', notificationOptions);
+}}
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
-}}).catch(err => {{
-  console.error('Error en onBackgroundMessage:', err);
+// Handler de notificaciones en SEGUNDO PLANO via FCM SDK
+messaging.onBackgroundMessage((payload) => {{
+  console.log('[firebase-messaging-sw.js] Mensaje FCM recibido:', payload);
+  const title = payload.notification?.title || payload.data?.title || 'Espacio Terapéutico';
+  const body = payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.';
+  const url = payload.data?.url || payload.fcmOptions?.link || '/';
+  const icon = payload.data?.icon || payload.notification?.icon || '/static/logo.png';
+  const badge = payload.data?.badge || payload.notification?.badge || '/static/badge.png';
+
+  showBackgroundNotification(title, body, url, icon, badge);
+}});
+
+// Listener nativo WebPush para notificaciones cuando la PWA está en segundo plano o cerrada
+self.addEventListener('push', (event) => {{
+  console.log('[firebase-messaging-sw.js] Evento Push nativo recibido:', event);
+  let title = 'Espacio Terapéutico';
+  let body = 'Tienes una nueva notificación.';
+  let url = '/';
+  let icon = '/static/logo.png';
+  let badge = '/static/badge.png';
+
+  if (event.data) {{
+    try {{
+      const pData = event.data.json();
+      title = pData.notification?.title || pData.data?.title || pData.title || title;
+      body = pData.notification?.body || pData.data?.body || pData.body || body;
+      url = pData.data?.url || pData.fcmOptions?.link || url;
+      icon = pData.data?.icon || pData.notification?.icon || icon;
+      badge = pData.data?.badge || pData.notification?.badge || badge;
+    }} catch(e) {{
+      body = event.data.text() || body;
+    }}
+  }}
+
+  event.waitUntil(
+    showBackgroundNotification(title, body, url, icon, badge)
+  );
 }});
 
 // Manejo del clic en la notificación para abrir/enfocar la app
