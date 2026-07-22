@@ -1284,6 +1284,14 @@
                                         <p class="text-secondary">Si lo deseas, puedes agendar una cita a continuación.</p>
                                     </div>
                                 </div>
+
+                                <!-- Fila: Resumen de la Última Sesión -->
+                                <div class="mb-5" style="border-top: 1.5px solid var(--border-color); padding-top: 1.5rem;">
+                                    <h4 class="mb-2" style="font-weight: 700; color: var(--text-dark);">📝 Resumen de la Última Sesión</h4>
+                                    <div id="pat-last-session-summary" class="text-secondary" style="background-color: var(--bg-light); padding: 1rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); min-height: 70px; white-space: pre-wrap; line-height: 1.5;">
+                                        Aún no se ha registrado un resumen de tu última sesión.
+                                    </div>
+                                </div>
                                 
                                 <!-- Fila 2: Temas a trabajar -->
                                 <div class="mb-5" style="border-top: 1.5px solid var(--border-color); padding-top: 1.5rem;">
@@ -2288,8 +2296,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="s-resumen">Resumen de lo Abordado en Sesión</label>
-                        <textarea id="s-resumen" rows="4" required placeholder="Escribe el resumen terapéutico aquí..."></textarea>
+                        <label for="s-resumen-paciente" style="color: var(--primary-color); font-weight: 700;">📝 Resumen de la Sesión (Visible para el Consultante)</label>
+                        <textarea id="s-resumen-paciente" rows="3" placeholder="Resumen claro y reflexivo para que el consultante lo revise desde su portal..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="s-resumen">Observaciones clínicas de la sesión (Privado / Confidencial Terapeuta)</label>
+                        <textarea id="s-resumen" rows="4" required placeholder="Escribe tus observaciones clínicas confidenciales aquí..."></textarea>
                     </div>
                     <div class="form-group">
                         <label for="s-tareas">Tareas Asignadas al Consultante</label>
