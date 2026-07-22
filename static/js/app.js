@@ -2078,12 +2078,13 @@ function renderPatientsTable(list) {
     
     list.forEach(p => {
         const tr = document.createElement('tr');
+        const loc = typeof formatPatientLocation === 'function' ? formatPatientLocation(p) : (p.residencia_actual || 'N/A');
         tr.innerHTML = `
-            <td><strong>${p.cedula}</strong></td>
-            <td>${p.nombres} ${p.apellidos}</td>
+            <td><strong>${p.cedula || 'N/A'}</strong></td>
+            <td>${p.nombres || ''} ${p.apellidos || ''}</td>
             <td>${p.edad || 'N/A'}</td>
             <td>${p.genero || 'N/A'}</td>
-            <td>${p.residencia_actual || 'N/A'}</td>
+            <td>${loc}</td>
             <td class="actions-cell">
                 <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${p.id})">Ficha Resumen</button>
                 <button class="btn btn-primary btn-sm" onclick="openEditPatientModal(${p.id})">Editar</button>
@@ -7119,32 +7120,7 @@ function formatPatientLocation(p) {
     return parts.length > 0 ? parts.join(', ') : 'N/A';
 }
 
-async function loadPatients() {
-    try {
-        const res = await fetch('/api/patients');
-        const list = await res.json();
-        const tbody = document.getElementById('patients-tbody');
-        tbody.innerHTML = '';
-        
-        if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay pacientes registrados.</td></tr>';
-            return;
-        }
-        
-        list.forEach(p => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><strong>${p.cedula}</strong></td>
-                <td>${p.nombres} ${p.apellidos}</td>
-                <td>${p.edad || 'N/A'}</td>
-                <td>${p.genero || 'N/A'}</td>
-                <td>${formatPatientLocation(p)}</td>`;
-            tbody.appendChild(tr);
-        });
-    } catch (e) {
-        console.error(e);
-    }
-}
+
 
 async function loadSuperadminData() {
     const tbody = document.getElementById('superadmin-therapists-body');
