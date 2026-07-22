@@ -1276,12 +1276,24 @@ async function loadPatientPortalData(patientId) {
             }
         }
         
+        const termsBadge = document.getElementById('pat-menu-terms-badge');
         if (data.terminos_requeridos) {
             const textBox = document.getElementById('patient-terms-text-box');
             if (textBox) {
                 textBox.textContent = data.terminos_texto || 'Cargando términos...';
             }
+            if (termsBadge) {
+                termsBadge.style.display = 'inline-block';
+                termsBadge.textContent = '⚠️ Pendiente';
+                termsBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+                termsBadge.style.color = '#d97706';
+                termsBadge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+            }
             openModal('patient-terms-modal');
+        } else {
+            if (termsBadge) {
+                termsBadge.style.display = 'none';
+            }
         }
         
         const container = document.getElementById('pat-next-sessions-container');
@@ -6041,6 +6053,10 @@ async function handleAcceptPatientTerms() {
         });
         if (res.ok) {
             closeModal('patient-terms-modal');
+            const termsBadge = document.getElementById('pat-menu-terms-badge');
+            if (termsBadge) {
+                termsBadge.style.display = 'none';
+            }
         } else {
             alert('Ocurrió un error al registrar la aceptación de términos.');
             if (btn) btn.disabled = false;
