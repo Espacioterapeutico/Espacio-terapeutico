@@ -4618,7 +4618,11 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hide');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hide');
+        modal.style.display = 'none';
+    }
 }
 
 async function checkPatientPrepayments(patientId) {
@@ -6098,7 +6102,7 @@ async function openPatientTermsModal(e) {
     const modal = document.getElementById('patient-terms-modal');
     if (modal) {
         modal.classList.remove('hide');
-        modal.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999999 !important; background: rgba(0, 0, 0, 0.8) !important; backdrop-filter: blur(6px) !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 1rem !important;';
+        modal.style.display = 'flex';
     }
     const drawer = document.getElementById('patient-drawer');
     const overlay = document.getElementById('patient-menu-overlay');
