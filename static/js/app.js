@@ -2346,7 +2346,7 @@ async function openSummaryModal(patientId) {
                         <li><strong>Correo:</strong> ${p.email || 'N/A'}</li>
                         <li><strong>Género / Pronombre:</strong> ${p.genero || 'N/A'} / ${p.pronombre || 'N/A'}</li>
                         <li><strong>Edad:</strong> ${p.edad || 'N/A'} años</li>
-                        <li><strong>Residencia:</strong> ${p.residencia_actual || 'N/A'}</li>
+                        <li><strong>Residencia:</strong> ${formatPatientLocation(p)}</li>
                         <li style="border-top:1px dashed var(--border-color); padding-top:0.4rem; margin-top:0.4rem; color:var(--primary-color); display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <strong>Honorario Personalizado:</strong> ${p.costo_personalizado ? `${p.costo_personalizado} ${p.moneda_personalizada}` : 'Tarifa estándar'}
@@ -5096,7 +5096,7 @@ async function updateSessionPatientQuickInfo(patientId) {
         
         const antecedentsText = p.antecedentes_psicologicos_personales || p.antecedentes_medicos_personales || 'Ninguno registrado';
         const residenciaText = p.con_quien_reside ? `Con quién reside: ${p.con_quien_reside}` : 'Con quién reside: N/A';
-        const residenciaActualText = p.residencia_actual ? `Residencia actual: ${p.residencia_actual}` : 'Residencia actual: N/A';
+        const residenciaActualText = `Residencia actual: ${formatPatientLocation(p)}`;
         
         let lastSessionSummaryHtml = '<strong>Sesión Anterior:</strong> <em>No hay evoluciones previas registradas.</em>';
         if (lastSes) {
@@ -7070,6 +7070,53 @@ async function loadPatientAppointmentsList() {
 // ==========================================
 // GESTIÓN DE SUPERADMINISTRADOR
 // ==========================================
+function formatPatientLocation(p) {
+    if (!p) return 'N/A';
+    const parts = [];
+    const res = (p.residencia_actual || '').trim();
+    const city = (p.ciudad || '').trim();
+    const country = (p.pais || '').trim();
+    
+    if (res) {
+        parts.push(res);
+    } else if (city) {
+        parts.push(city);
+    }
+    
+    if (country && !parts.join(', ').toLowerCase().includes(country.toLowerCase())) {
+        parts.push(country);
+    }
+    
+    return parts.length > 0 ? parts.join(', ') : 'N/A';
+}
+
+async function loadPatients() {
+    try {
+        const res = await fetch('/api/patients');
+        const list = await res.json();
+        const tbody = document.getElementById('patients-tbody');
+        tbody.innerHTML = '';
+        
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay pacientes registrados.</td></tr>';
+            return;
+        }
+        
+        list.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${p.cedula}</strong></td>
+                <td>${p.nombres} ${p.apellidos}</td>
+                <td>${p.edad || 'N/A'}</td>
+                <td>${p.genero || 'N/A'}</td>
+                <td>${formatPatientLocation(p)}</td>`;
+            tbody.appendChild(tr);
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 async function loadSuperadminData() {
     const tbody = document.getElementById('superadmin-therapists-body');
     if (!tbody) return;
