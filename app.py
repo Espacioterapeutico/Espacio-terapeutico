@@ -3415,14 +3415,16 @@ def accept_patient_terms():
     db = get_db()
     cursor = db.cursor()
     from datetime import datetime
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
     try:
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 1, fecha_aceptacion_terminos = ? WHERE id = ?", (now_str, patient_id))
         cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         p_row = cursor.fetchone()
         if p_row:
-            pat_name = f"{p_row['nombres']} {p_row['apellidos']}".strip()
-            psic_id = p_row['psicologo_id'] or 1
+            nombres = p_row[0] if isinstance(p_row, (tuple, list)) else p_row['nombres']
+            apellidos = p_row[1] if isinstance(p_row, (tuple, list)) else p_row['apellidos']
+            psic_id = (p_row[2] if isinstance(p_row, (tuple, list)) else p_row['psicologo_id']) or 1
+            pat_name = f"{nombres} {apellidos}".strip()
             notif_msg = f"El consultante {pat_name} ha aceptado los Términos y Condiciones del Encuadre Terapéutico."
             cursor.execute("""
                 INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
@@ -3432,6 +3434,7 @@ def accept_patient_terms():
         db.commit()
         return jsonify({'success': 'Términos y condiciones aceptados.', 'fecha': now_str})
     except Exception as e:
+        print("Error en accept_patient_terms:", e)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/terms', methods=['GET', 'POST'])
