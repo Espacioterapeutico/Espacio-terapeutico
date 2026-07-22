@@ -123,17 +123,14 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         cursor = db.cursor()
         tokens = []
         if user_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
-            if not tokens:
-                cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id IS NULL")
-                tokens = [row['token'] for row in cursor.fetchall()]
         elif patient_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ? OR patient_id IS NULL", (patient_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
-            if not tokens:
-                cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id IS NULL")
-                tokens = [row['token'] for row in cursor.fetchall()]
+        else:
+            cursor.execute("SELECT token FROM fcm_subscriptions")
+            tokens = [row['token'] for row in cursor.fetchall()]
 
         if not tokens:
             cursor.execute("SELECT token FROM fcm_subscriptions")
@@ -6671,16 +6668,11 @@ function showBackgroundNotification(title, body, url, icon, badge, tag) {{
 messaging.onBackgroundMessage((payload) => {{
   console.log('[firebase-messaging-sw.js] Evento FCM recibido en segundo plano:', payload);
 
-  // Si el mensaje ya fue dibujado automáticamente por el navegador mediante el objeto 'notification', evitamos duplicar
-  if (payload.notification && payload.notification.title) {{
-    return;
-  }}
-
-  const title = payload.data?.title || 'Espacio Terapéutico';
-  const body = payload.data?.body || 'Tienes una nueva actualización.';
+  const title = payload.notification?.title || payload.data?.title || 'Espacio Terapéutico';
+  const body = payload.notification?.body || payload.data?.body || 'Tienes una nueva actualización.';
   const url = payload.data?.url || payload.data?.click_action || payload.fcmOptions?.link || '/';
-  const icon = payload.data?.icon || '/static/logo.png';
-  const badge = payload.data?.badge || '/static/badge.png';
+  const icon = payload.data?.icon || payload.notification?.icon || '/static/logo.png';
+  const badge = payload.data?.badge || payload.notification?.badge || '/static/badge.png';
   const tag = payload.data?.tag || 'espacio-terapeutico-notif';
 
   return showBackgroundNotification(title, body, url, icon, badge, tag);
@@ -6689,27 +6681,30 @@ messaging.onBackgroundMessage((payload) => {{
 // Listener nativo WebPush para notificaciones cuando la PWA está en segundo plano o cerrada
 self.addEventListener('push', (event) => {{
   console.log('[firebase-messaging-sw.js] Evento Push nativo recibido:', event);
-  if (!event.data) return;
+  let title = 'Espacio Terapéutico';
+  let body = 'Tienes una nueva actualización.';
+  let url = '/';
+  let icon = '/static/logo.png';
+  let badge = '/static/badge.png';
+  let tag = 'espacio-terapeutico-notif';
 
-  try {{
-    const pData = event.data.json();
-    if (pData.notification && pData.notification.title) {{
-      // El navegador se encarga automáticamente
-      return;
+  if (event.data) {{
+    try {{
+      const pData = event.data.json();
+      title = pData.notification?.title || pData.data?.title || pData.title || title;
+      body = pData.notification?.body || pData.data?.body || pData.body || body;
+      url = pData.data?.url || pData.data?.click_action || pData.fcmOptions?.link || url;
+      icon = pData.data?.icon || pData.notification?.icon || icon;
+      badge = pData.data?.badge || pData.notification?.badge || badge;
+      tag = pData.data?.tag || tag;
+    }} catch(e) {{
+      body = event.data.text() || body;
     }}
-    const title = pData.data?.title || pData.title || 'Espacio Terapéutico';
-    const body = pData.data?.body || pData.body || 'Tienes una nueva notificación.';
-    const url = pData.data?.url || pData.data?.click_action || pData.fcmOptions?.link || '/';
-    const icon = pData.data?.icon || '/static/logo.png';
-    const badge = pData.data?.badge || '/static/badge.png';
-    const tag = pData.data?.tag || 'espacio-terapeutico-notif';
-
-    event.waitUntil(
-      showBackgroundNotification(title, body, url, icon, badge, tag)
-    );
-  }} catch(e) {{
-    console.error('Error procesando push event:', e);
   }}
+
+  event.waitUntil(
+    showBackgroundNotification(title, body, url, icon, badge, tag)
+  );
 }});
 
 // Manejo del clic en la notificación para abrir/enfocar la app
