@@ -8734,14 +8734,15 @@ async function handleQuickPayConceptChange(concept) {
                 const debts = await res.json();
                 if (debts.length > 0) {
                     debtList.innerHTML = debts.map(d =>
-                        `<label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
-                            <input type="checkbox" value="${d.id}" data-monto="${d.monto}" data-moneda="${d.moneda}" style="accent-color:var(--primary-color);">
-                            ${d.fecha} — ${d.monto} ${d.moneda} (${d.tipo_consulta || 'Consulta'})
+                        `<label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;background:white;padding:0.4rem 0.6rem;border-radius:6px;border:1px solid var(--border-color);font-size:0.82rem;margin-bottom:0.35rem;">
+                            <input type="checkbox" class="qp-debt-chk" value="${d.id}" data-monto="${d.monto}" data-moneda="${d.moneda}" checked onchange="updateQuickPayDebtTotal()" style="accent-color:var(--primary-color);">
+                            <span>${d.fecha} — <strong>${Number(d.monto || 0).toFixed(2)} ${d.moneda || 'USD'}</strong> (${d.tipo_consulta || 'Deuda'})</span>
                         </label>`
                     ).join('');
-                    if (montoEl) montoEl.value = '';
+                    updateQuickPayDebtTotal();
                 } else {
                     debtList.innerHTML = '<span style="color:var(--text-muted);">No hay deudas pendientes.</span>';
+                    if (montoEl) montoEl.value = '0.00';
                 }
                 debtInfo.classList.remove('hide');
             }
@@ -8767,6 +8768,21 @@ async function handleQuickPayConceptChange(concept) {
     footer.style.display = 'flex';
 }
 window.handleQuickPayConceptChange = handleQuickPayConceptChange;
+
+function updateQuickPayDebtTotal() {
+    const checkboxes = document.querySelectorAll('.qp-debt-chk:checked');
+    let total = 0;
+    let currency = 'USD';
+    checkboxes.forEach(chk => {
+        total += parseFloat(chk.getAttribute('data-monto') || 0);
+        currency = chk.getAttribute('data-moneda') || 'USD';
+    });
+    const montoEl = document.getElementById('qp-monto');
+    const monedaEl = document.getElementById('qp-moneda');
+    if (montoEl) montoEl.value = total.toFixed(2);
+    if (monedaEl && currency) monedaEl.value = currency;
+}
+window.updateQuickPayDebtTotal = updateQuickPayDebtTotal;
 
 // Helper para mostrar mensajes dentro del modal de pago rápido
 function showQuickPayStatus(type, msg) {
