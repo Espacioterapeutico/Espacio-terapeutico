@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import sqlite3
 import datetime
 import shutil
@@ -381,10 +382,14 @@ def init_db():
         cursor.execute("SELECT id, nombres, apellidos, username FROM usuarios WHERE slug IS NULL OR slug = ''")
         unslugged = cursor.fetchall()
         for u_row in unslugged:
-            raw_n = f"psic.{u_row['nombres']}{u_row['apellidos']}".lower().replace(" ", "").replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
+            u_id = u_row[0]
+            u_nom = u_row[1] or ""
+            u_ape = u_row[2] or ""
+            u_user = u_row[3] or ""
+            raw_n = f"psic.{u_nom}{u_ape}".lower().replace(" ", "").replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
             if not raw_n or raw_n == "psic.":
-                raw_n = f"psic.{u_row['username']}".lower()
-            cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (raw_n, u_row['id']))
+                raw_n = f"psic.{u_user}".lower()
+            cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (raw_n, u_id))
         db.commit()
 
 
