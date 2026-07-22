@@ -6955,8 +6955,9 @@ let fastBookingTherapistId = null;
 async function checkFastBookingQuery() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('fast_booking')) {
-        fastBookingTherapistId = parseInt(urlParams.get('fast_booking'));
-        if (isNaN(fastBookingTherapistId)) return false;
+        const paramVal = urlParams.get('fast_booking');
+        if (!paramVal) return false;
+        fastBookingTherapistId = paramVal;
         
         const loginScreen = document.getElementById('auth-screen');
         if (loginScreen) loginScreen.classList.add('hide');
