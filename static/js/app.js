@@ -700,6 +700,22 @@ function showPatientLayout(username, patientId) {
     document.getElementById('patient-header').classList.remove('hide');
     document.getElementById('patient-menu').classList.remove('hide');
     
+    // Inyección optimista e inmediata del nombre del consultante para evitar "Cargando..."
+    if (username) {
+        const menuUserName = document.getElementById('pat-menu-user-name');
+        if (menuUserName) {
+            menuUserName.textContent = username;
+        }
+        const headerUserName = document.getElementById('pat-header-user-name');
+        if (headerUserName && headerUserName.textContent === 'Espacio Terapéutico') {
+            headerUserName.textContent = username;
+        }
+        const welcomeTitle = document.getElementById('pat-welcome-title');
+        if (welcomeTitle) {
+            welcomeTitle.textContent = `Hola, ${username} 👋`;
+        }
+    }
+    
     switchPatientView('patient-home');
     loadPatientPortalData(patientId);
     
