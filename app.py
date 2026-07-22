@@ -584,6 +584,7 @@ def init_db():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS notificaciones (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
                 tipo TEXT NOT NULL,
                 titulo TEXT NOT NULL,
                 mensaje TEXT NOT NULL,
@@ -592,6 +593,11 @@ def init_db():
                 link TEXT NOT NULL
             )
         """)
+        cursor.execute("PRAGMA table_info(notificaciones)")
+        cols_notif = [row[1] for row in cursor.fetchall()]
+        if 'user_id' not in cols_notif:
+            cursor.execute("ALTER TABLE notificaciones ADD COLUMN user_id INTEGER")
+        db.commit()
         # Asegurar existencia de la tabla soporte
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS soporte (
@@ -3417,6 +3423,15 @@ def accept_patient_terms():
     from datetime import datetime
     now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
     try:
+        try:
+            cursor.execute("PRAGMA table_info(notificaciones)")
+            cols_notif = [row[1] for row in cursor.fetchall()]
+            if 'user_id' not in cols_notif:
+                cursor.execute("ALTER TABLE notificaciones ADD COLUMN user_id INTEGER")
+                db.commit()
+        except Exception:
+            pass
+
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 1, fecha_aceptacion_terminos = ? WHERE id = ?", (now_str, patient_id))
         cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         p_row = cursor.fetchone()
