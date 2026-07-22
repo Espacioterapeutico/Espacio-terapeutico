@@ -1458,6 +1458,10 @@ async function loadPatientPortalData(patientId) {
         }
         
         if (data.compartido) {
+            const lastSumEl = document.getElementById('pat-last-session-summary');
+            if (lastSumEl) {
+                lastSumEl.textContent = data.compartido.resumen_sesion || 'Aún no se ha registrado un resumen de tu última sesión.';
+            }
             document.getElementById('pat-next-topics').textContent = data.compartido.temas_proxima_sesion || 'Aún no se han definido temas para la próxima sesión.';
             
             const tasksList = document.getElementById('pat-tasks-list');
@@ -2841,6 +2845,7 @@ async function handleSessionSubmit(e) {
         modalidad: document.getElementById('s-modalidad').value,
         estado: estado,
         resumen: document.getElementById('s-resumen').value,
+        resumen_paciente: document.getElementById('s-resumen-paciente').value,
         tareas_asignadas: document.getElementById('s-tareas').value,
         recursos_entregados: recursosValue,
         anotaciones_proxima: document.getElementById('s-anotaciones').value,
@@ -2921,6 +2926,8 @@ async function openEditSessionModal(sessionId) {
         document.getElementById('s-modalidad').value = s.modalidad;
         document.getElementById('s-estado').value = s.estado || 'Realizada';
         document.getElementById('s-resumen').value = s.resumen || '';
+        const resPacEl = document.getElementById('s-resumen-paciente');
+        if (resPacEl) resPacEl.value = s.resumen_paciente || '';
         document.getElementById('s-tareas').value = s.tareas_asignadas || '';
         document.getElementById('s-recursos').value = s.recursos_entregados || '';
         document.getElementById('s-anotaciones').value = s.anotaciones_proxima || '';
@@ -7923,8 +7930,8 @@ async function openPatientSessionHistoryModal() {
                 </div>
                 <div class="card-body" style="padding: 1.25rem;">
                     <div class="mb-3">
-                        <strong style="font-size: 0.85rem; color: var(--text-dark); display: block; margin-bottom: 0.25rem;">Resumen de la sesión:</strong>
-                        <p class="text-secondary" style="font-size: 0.9rem; margin: 0; white-space: pre-wrap; line-height: 1.45;">${s.resumen || 'No hay anotaciones registradas en el resumen clínico.'}</p>
+                        <strong style="font-size: 0.85rem; color: var(--text-dark); display: block; margin-bottom: 0.25rem;">📝 Resumen de la sesión:</strong>
+                        <p class="text-secondary" style="font-size: 0.9rem; margin: 0; white-space: pre-wrap; line-height: 1.45;">${s.resumen_paciente || 'Sin resumen registrado para esta sesión.'}</p>
                     </div>
                     ${s.tareas_asignadas ? `
                     <div class="mb-3 pt-3" style="border-top: 1px dashed rgba(0,0,0,0.06);">
