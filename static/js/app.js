@@ -807,7 +807,17 @@ async function renderBookingCalendar() {
     grid.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 1rem;"><span class="text-secondary text-sm">Cargando disponibilidad...</span></div>';
     
     const modalitySelect = document.getElementById('pat-req-modalidad');
-    const modality = modalitySelect ? modalitySelect.value : 'Online';
+    let modality = modalitySelect ? modalitySelect.value : '';
+    if (!modality && modalitySelect && modalitySelect.options.length > 0) {
+        for (let opt of modalitySelect.options) {
+            if (opt.value) {
+                modality = opt.value;
+                modalitySelect.value = modality;
+                break;
+            }
+        }
+    }
+    if (!modality) modality = 'Horario Online';
     
     let availableDates = [];
     try {
@@ -1237,7 +1247,7 @@ async function loadPatientPortalData(patientId) {
             }
         }
         
-        if (data.modalidades) {
+        if (data.modalidades && data.modalidades.length > 0) {
             const selectElement = document.getElementById('pat-req-modalidad');
             if (selectElement) {
                 const currentVal = selectElement.value;
@@ -1248,8 +1258,13 @@ async function loadPatientPortalData(patientId) {
                     opt.textContent = m;
                     selectElement.appendChild(opt);
                 });
-                if (data.modalidades.includes(currentVal)) {
+                if (currentVal && data.modalidades.includes(currentVal)) {
                     selectElement.value = currentVal;
+                } else {
+                    selectElement.value = data.modalidades[0];
+                }
+                if (typeof renderBookingCalendar === 'function') {
+                    renderBookingCalendar();
                 }
             }
         }
