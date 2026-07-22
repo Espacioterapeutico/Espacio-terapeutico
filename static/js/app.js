@@ -1228,6 +1228,14 @@ async function loadPatientPortalData(patientId) {
             }
         }
         
+        if (data.terminos_requeridos) {
+            const textBox = document.getElementById('patient-terms-text-box');
+            if (textBox) {
+                textBox.textContent = data.terminos_texto || 'Cargando términos...';
+            }
+            openModal('patient-terms-modal');
+        }
+        
         const container = document.getElementById('pat-next-sessions-container');
         if (container) {
             container.innerHTML = '';
@@ -1530,6 +1538,85 @@ async function loadPizarraHistory() {
         }
     } catch (err) {
         historyList.innerHTML = '<span class="text-secondary text-sm" style="color: red;">Error al conectar con la pizarra terapéutica.</span>';
+    }
+}
+
+let selectedMoodState = { mood: '', emoji: '' };
+
+function selectMoodItem(btnEl, mood, emoji) {
+    document.querySelectorAll('.mood-item-btn').forEach(b => {
+        b.style.borderColor = 'var(--border-color)';
+        b.style.backgroundColor = 'white';
+        b.style.transform = 'scale(1)';
+    });
+    
+    btnEl.style.borderColor = 'var(--primary-color)';
+    btnEl.style.backgroundColor = 'rgba(169, 89, 147, 0.1)';
+    btnEl.style.transform = 'scale(1.05)';
+    
+    selectedMoodState = { mood, emoji };
+    
+    const label = document.getElementById('mood-selected-label');
+    if (label) {
+        label.textContent = `Agregar un comentario sobre sentirte ${emoji} ${mood} (Opcional):`;
+    }
+    const sec = document.getElementById('mood-comment-section');
+    if (sec) {
+        sec.classList.remove('hide');
+    }
+}
+
+async function handleSaveMoodCheckin() {
+    const statusMsg = document.getElementById('pat-mood-status-msg');
+    const commentInput = document.getElementById('pat-mood-comment-input');
+    if (!statusMsg) return;
+    statusMsg.classList.add('hide');
+
+    if (!selectedMoodState.mood) {
+        statusMsg.textContent = 'Por favor selecciona un estado de ánimo primero.';
+        statusMsg.className = 'status-msg error-msg';
+        statusMsg.classList.remove('hide');
+        return;
+    }
+
+    const comment = commentInput ? commentInput.value.trim() : '';
+
+    try {
+        const res = await fetch('/api/patient/pizarra', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                estado_animo: selectedMoodState.mood,
+                emoji_animo: selectedMoodState.emoji,
+                comentario_animo: comment
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            statusMsg.textContent = '¡Estado de ánimo registrado con éxito!';
+            statusMsg.className = 'status-msg success-msg';
+            statusMsg.classList.remove('hide');
+            if (commentInput) commentInput.value = '';
+            
+            // Reset mood selection
+            document.querySelectorAll('.mood-item-btn').forEach(b => {
+                b.style.borderColor = 'var(--border-color)';
+                b.style.backgroundColor = 'white';
+                b.style.transform = 'scale(1)';
+            });
+            selectedMoodState = { mood: '', emoji: '' };
+            document.getElementById('mood-comment-section')?.classList.add('hide');
+
+            loadPatientPizarraHistory();
+        } else {
+            statusMsg.textContent = data.error || 'Error al guardar el estado de ánimo.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+    } catch (err) {
+        statusMsg.textContent = 'Error de conexión al registrar el estado de ánimo.';
+        statusMsg.className = 'status-msg error-msg';
+        statusMsg.classList.remove('hide');
     }
 }
 
@@ -5809,7 +5896,7 @@ function switchFinanceTab(tabId) {
 const loadPatientsRatesList = loadPatientRatesTable;
 
 function switchSettingsTab(tabId) {
-    const ids = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'soporte'];
+    const ids = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'terminos', 'password', 'soporte'];
     ids.forEach(id => {
         const card = document.getElementById(`set-card-${id}`);
         const tabBtn = document.getElementById(`set-tab-${id}`);
@@ -5831,6 +5918,74 @@ function switchSettingsTab(tabId) {
         loadPatientLinks();
     } else if (tabId === 'firebase') {
         loadFirebaseSettings();
+    } else if (tabId === 'terminos') {
+        loadAdminTerms();
+    }
+}
+
+async function loadAdminTerms() {
+    const textarea = document.getElementById('admin-terms-textarea');
+    if (!textarea) return;
+    try {
+        const res = await fetch('/api/admin/terms');
+        if (res.ok) {
+            const data = await res.json();
+            textarea.value = data.terms || '';
+        }
+    } catch (err) {
+        console.error("Error al cargar términos para administrador:", err);
+    }
+}
+
+async function handleSaveAdminTerms(e) {
+    e.preventDefault();
+    const textarea = document.getElementById('admin-terms-textarea');
+    const statusMsg = document.getElementById('admin-terms-status-msg');
+    if (!textarea || !statusMsg) return;
+    statusMsg.classList.add('hide');
+
+    const terms = textarea.value.trim();
+
+    try {
+        const res = await fetch('/api/admin/terms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ terms })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            statusMsg.textContent = '¡Términos y condiciones guardados con éxito!';
+            statusMsg.className = 'status-msg success-msg';
+            statusMsg.classList.remove('hide');
+        } else {
+            statusMsg.textContent = data.error || 'Error al guardar los términos y condiciones.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+    } catch (err) {
+        statusMsg.textContent = 'Error de conexión al guardar los términos.';
+        statusMsg.className = 'status-msg error-msg';
+        statusMsg.classList.remove('hide');
+    }
+}
+
+async function handleAcceptPatientTerms() {
+    const btn = document.getElementById('accept-terms-btn');
+    if (btn) btn.disabled = true;
+    try {
+        const res = await fetch('/api/patient/accept-terms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+            closeModal('patient-terms-modal');
+        } else {
+            alert('Ocurrió un error al registrar la aceptación de términos.');
+            if (btn) btn.disabled = false;
+        }
+    } catch (err) {
+        alert('Error de conexión al aceptar los términos.');
+        if (btn) btn.disabled = false;
     }
 }
 
