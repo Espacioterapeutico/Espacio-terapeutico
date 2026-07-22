@@ -6086,7 +6086,10 @@ async function openPatientTermsModal(e) {
     if (modal) {
         modal.classList.remove('hide');
         modal.style.setProperty('display', 'flex', 'important');
-        modal.style.zIndex = '100000';
+        modal.style.setProperty('align-items', 'center', 'important');
+        modal.style.setProperty('justify-content', 'center', 'important');
+        modal.style.setProperty('position', 'fixed', 'important');
+        modal.style.setProperty('z-index', '999999', 'important');
     }
     const drawer = document.getElementById('patient-drawer');
     const overlay = document.getElementById('patient-menu-overlay');
