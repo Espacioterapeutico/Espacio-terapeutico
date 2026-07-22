@@ -6102,17 +6102,76 @@ async function handleChangeUserPassword(e) {
 }
 window.handleChangeUserPassword = handleChangeUserPassword;
 
-function loadPatientLinks() {
-    const userId = sessionStorage.getItem('user_id');
-    if (!userId) return;
-    
+async function loadPatientLinks() {
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
-    const regLink = `${baseUrl}/?ref_psicologo=${userId}`;
-    const agendaLink = `${baseUrl}/?fast_booking=${userId}`;
-    
-    document.getElementById('link-registro-paciente').value = regLink;
-    document.getElementById('link-agenda-rapida').value = agendaLink;
+    try {
+        const res = await fetch('/api/admin/profile-slug');
+        if (res.ok) {
+            const data = await res.json();
+            const slug = data.slug || 'psic.paulomora';
+            const regEl = document.getElementById('link-registro-paciente');
+            const ageEl = document.getElementById('link-agenda-rapida');
+            const slugInp = document.getElementById('psychologist-slug-input');
+            if (regEl) regEl.value = `${baseUrl}/registro/${slug}`;
+            if (ageEl) ageEl.value = `${baseUrl}/agendar/${slug}`;
+            if (slugInp) slugInp.value = slug;
+            return;
+        }
+    } catch (err) {
+        console.error("Error cargando enlaces personalizados:", err);
+    }
+    const regEl = document.getElementById('link-registro-paciente');
+    const ageEl = document.getElementById('link-agenda-rapida');
+    if (regEl) regEl.value = `${baseUrl}/registro/psic.paulomora`;
+    if (ageEl) ageEl.value = `${baseUrl}/agendar/psic.paulomora`;
 }
+
+async function savePsychologistSlug() {
+    const slugInp = document.getElementById('psychologist-slug-input');
+    const statusMsg = document.getElementById('slug-status-msg');
+    if (!slugInp) return;
+    const newSlug = slugInp.value.trim();
+    if (!newSlug) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Por favor ingresa un identificador válido.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        return;
+    }
+    try {
+        showLoadingScreen('Guardando enlace personalizado...');
+        const res = await fetch('/api/admin/profile-slug', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: newSlug })
+        });
+        hideLoadingScreen();
+        const data = await res.json();
+        if (res.ok) {
+            if (statusMsg) {
+                statusMsg.textContent = '✓ ' + (data.success || 'Enlace personalizado actualizado.');
+                statusMsg.className = 'status-msg success-msg';
+                statusMsg.classList.remove('hide');
+            }
+            loadPatientLinks();
+        } else {
+            if (statusMsg) {
+                statusMsg.textContent = '❌ ' + (data.error || 'Error al guardar enlace.');
+                statusMsg.className = 'status-msg error-msg';
+                statusMsg.classList.remove('hide');
+            }
+        }
+    } catch(e) {
+        hideLoadingScreen();
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Error de conexión: ' + e.message;
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+    }
+}
+window.savePsychologistSlug = savePsychologistSlug;
 
 function copyToClipboard(inputId) {
     const input = document.getElementById(inputId);
@@ -6984,11 +7043,20 @@ async function checkFastBookingQuery() {
             const res = await fetch(`/api/active-psychologists`);
             if (res.ok) {
                 const psychologists = await res.json();
-                const matched = psychologists.find(p => p.id === fastBookingTherapistId);
-                if (matched) {
-                    document.getElementById('fast-booking-therapist-name').textContent = `Con Psic. ${matched.nombres} ${matched.apellidos}`;
-                } else {
-                    document.getElementById('fast-booking-therapist-name').textContent = `Psicólogo ID: ${fastBookingTherapistId}`;
+                const matched = psychologists.find(p => 
+                    String(p.id) === String(fastBookingTherapistId) || 
+                    (p.slug && p.slug.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
+                    (p.username && p.username.toLowerCase() === String(fastBookingTherapistId).toLowerCase())
+                );
+                const titleEl = document.getElementById('fast-booking-therapist-name');
+                if (titleEl) {
+                    if (matched) {
+                        titleEl.textContent = `Psic. ${matched.nombres} ${matched.apellidos}`;
+                    } else if (psychologists.length > 0) {
+                        titleEl.textContent = `Psic. ${psychologists[0].nombres} ${psychologists[0].apellidos}`;
+                    } else {
+                        titleEl.textContent = `Psic. Paulo Mora`;
+                    }
                 }
             }
         } catch (e) {
