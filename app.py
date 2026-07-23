@@ -7201,6 +7201,9 @@ def google_authorize():
         )
         
         session['state'] = state
+        if getattr(flow, 'code_verifier', None):
+            session['code_verifier'] = flow.code_verifier
+
         return redirect(authorization_url)
     except Exception as e:
         print("Error en google_authorize:", traceback.format_exc())
@@ -7229,6 +7232,11 @@ def google_callback():
             redirect_uri=redirect_uri
         )
         
+        if 'code_verifier' in session and session['code_verifier']:
+            flow.code_verifier = session['code_verifier']
+        else:
+            flow.code_verifier = None
+
         req_url = request.url
         if not req_url.startswith('https://') and 'localhost' not in req_url and '127.0.0.1' not in req_url:
             req_url = req_url.replace('http://', 'https://')
@@ -7240,7 +7248,7 @@ def google_callback():
             flow.fetch_token(authorization_response=req_url)
         except Exception as token_err:
             err_str = str(token_err)
-            if 'mismatching_state' in err_str or 'State not equal' in err_str:
+            if 'mismatching_state' in err_str or 'State not equal' in err_str or 'Missing code verifier' in err_str or 'invalid_grant' in err_str:
                 url_state = request.args.get('state')
                 flow = Flow.from_client_secrets_file(
                     CLIENT_SECRETS_FILE,
@@ -7248,6 +7256,7 @@ def google_callback():
                     state=url_state,
                     redirect_uri=redirect_uri
                 )
+                flow.code_verifier = None
                 auth_code = request.args.get('code')
                 if auth_code:
                     flow.fetch_token(code=auth_code)
