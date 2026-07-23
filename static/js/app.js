@@ -7271,6 +7271,25 @@ async function loadSuperadminData() {
             const docBtn = p.foto_documento ? `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="viewDocumentPreview(\`${p.foto_documento}\`, 'Documento de ${escName}')">🪪 Cédula</button>` : '';
             const docCell = (tituloBtn || docBtn) ? `${tituloBtn}${docBtn}` : '<span style="font-size:0.75rem; color:var(--text-muted);">Sin adjuntos</span>';
 
+            let trialBadge = '';
+            let subBtnText = p.suscripcion_paga === 1 ? '⭐ Suscripción Paga' : '🚀 Activar Suscripción';
+            let subBtnStyle = p.suscripcion_paga === 1 ? 'background: #10b981; color: #fff;' : 'background: #6366f1; color: #fff; font-weight: 700;';
+            
+            if (p.suscripcion_paga === 1) {
+                trialBadge = '<span class="badge" style="background:#10b981; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">✓ Suscripción Paga</span>';
+            } else if (p.fecha_expiracion_prueba) {
+                const expDate = new Date(p.fecha_expiracion_prueba);
+                const diffHours = (expDate - new Date()) / (1000 * 60 * 60);
+                if (diffHours <= 0) {
+                    trialBadge = '<span class="badge" style="background:#ef4444; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⚠️ Prueba Expirada</span>';
+                } else {
+                    const daysLeft = Math.ceil(diffHours / 24);
+                    trialBadge = `<span class="badge" style="background:#f59e0b; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⏳ Prueba (${daysLeft}d)</span>`;
+                }
+            } else {
+                trialBadge = '<span class="badge" style="background:#6b7280; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">Sin Prueba</span>';
+            }
+
             tr.innerHTML = `
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-weight: 600;">${p.username}</td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">${p.nombres} ${p.apellidos}</td>
@@ -7292,11 +7311,14 @@ async function loadSuperadminData() {
                 </td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); text-align: center;">
                     <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: center;">
-                        <div>
-                            <span class="badge ${activeClass}" style="margin-right: 0.25rem; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; display: inline-block; width: 65px;">${activeLabel}</span>
+                        <div style="margin-bottom: 0.2rem;">
+                            ${trialBadge}
+                        </div>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button class="btn btn-sm" style="padding: 2px 8px; font-size: 0.75rem; ${subBtnStyle}" onclick="toggleTherapistSubscription(${p.id})">${subBtnText}</button>
                             <button class="btn btn-sm ${buttonClass}" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleTherapistActive(${p.id})">${buttonText}</button>
                         </div>
-                        <button type="button" class="btn btn-sm" style="padding: 3px 8px; font-size: 0.75rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">🗑️ Eliminar</button>
+                        <button type="button" class="btn btn-sm" style="padding: 3px 8px; font-size: 0.75rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-top: 0.2rem;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">🗑️ Eliminar</button>
                     </div>
                 </td>
             `;
@@ -9363,5 +9385,20 @@ async function deleteTherapistAccount(userId, therapistName) {
         }
     } catch (err) {
         alert("Error de conexión al intentar eliminar.");
+    }
+}
+
+async function toggleTherapistSubscription(userId) {
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/toggle-subscription`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Estado de suscripción actualizado.");
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo actualizar la suscripción."));
+        }
+    } catch (err) {
+        alert("Error de conexión al cambiar suscripción.");
     }
 }

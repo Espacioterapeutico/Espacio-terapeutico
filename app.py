@@ -395,9 +395,12 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN slug TEXT")
         try:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN primer_inicio INTEGER DEFAULT 1")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN fecha_registro TEXT")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN fecha_expiracion_prueba TEXT")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN suscripcion_paga INTEGER DEFAULT 0")
         except:
             pass
-            db.commit()
+        db.commit()
 
         cursor.execute("SELECT id, nombres, apellidos, username FROM usuarios WHERE slug IS NULL OR slug = ''")
         unslugged = cursor.fetchall()
@@ -1311,12 +1314,18 @@ def register():
             foto_titulo = data.get('foto_titulo', '')
             foto_documento = data.get('foto_documento', '')
             
+            import datetime
+            now_dt = datetime.datetime.now()
+            expiry_dt = now_dt + datetime.timedelta(days=3)
+            now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+            expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
+
             cursor.execute("""
-                INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1)
-            """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento))
+                INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0)
+            """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str))
             db.commit()
-            return jsonify({'success': 'Cuenta de psicólogo creada con éxito.'})
+            return jsonify({'success': 'Cuenta de psicólogo creada con éxito. Tienes 3 días de prueba gratuita.'})
             
         elif tipo_usuario == 'paciente':
             nombres = data.get('nombres')
@@ -1733,7 +1742,7 @@ def superadmin_get_therapists():
     db = get_db()
     cursor = db.cursor()
     cursor.execute("""
-        SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, activo,
+        SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga,
                bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, aviso_pago
         FROM usuarios
         WHERE role = 'psicologo'
@@ -1771,12 +1780,18 @@ def superadmin_create_psychologist():
     password_hash = generate_password_hash(password)
     
     try:
+        import datetime
+        now_dt = datetime.datetime.now()
+        expiry_dt = now_dt + datetime.timedelta(days=3)
+        now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+        expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
+
         cursor.execute("""
-            INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1)
-        """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento))
+            INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0)
+        """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str))
         db.commit()
-        return jsonify({'success': 'Psicólogo registrado con éxito.'})
+        return jsonify({'success': 'Psicólogo registrado con éxito (Modo Prueba 3 Días activo).'})
     except Exception as e:
         db.rollback()
         return jsonify({'error': f'Error al registrar psicólogo: {str(e)}'}), 500
@@ -1969,6 +1984,22 @@ def login():
     user = cursor.fetchone()
     
     if user and check_password_hash(user['password_hash'], password):
+        import datetime
+        u_dict = dict(user)
+        
+        # Verificar vencimiento de prueba gratis de 3 días para psicólogos no pagados
+        if user['role'] == 'psicologo' and u_dict.get('suscripcion_paga', 0) != 1:
+            expiry_str = u_dict.get('fecha_expiracion_prueba')
+            if expiry_str:
+                try:
+                    expiry_dt = datetime.datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+                    if datetime.datetime.now() > expiry_dt:
+                        cursor.execute("UPDATE usuarios SET activo = 0 WHERE id = ?", (user['id'],))
+                        db.commit()
+                        return jsonify({'error': 'Tu periodo de prueba gratis de 3 días ha vencido. Contacta al administrador para activar tu suscripción.'}), 403
+                except Exception:
+                    pass
+                    
         session.permanent = True
         session['user_id'] = user['id']
         session['username'] = user['username']
@@ -1983,6 +2014,8 @@ def login():
             'aviso_pago': u_dict.get('aviso_pago', 0),
             'user_id': user['id'],
             'primer_inicio': u_dict.get('primer_inicio', 1) if u_dict.get('primer_inicio') is not None else 1,
+            'suscripcion_paga': u_dict.get('suscripcion_paga', 0),
+            'fecha_expiracion_prueba': u_dict.get('fecha_expiracion_prueba', ''),
             'bloqueos': {
                 'registro': u_dict.get('bloqueo_registro', 0),
                 'evoluciones': u_dict.get('bloqueo_evoluciones', 0),
@@ -7900,3 +7933,25 @@ def superadmin_delete_therapist(user_id):
     except Exception as e:
         db.rollback()
         return jsonify({'error': f'Error al eliminar psicólogo: {str(e)}'}), 500
+
+@app.route('/api/superadmin/therapists/<int:user_id>/toggle-subscription', methods=['POST'])
+@login_required
+def superadmin_toggle_subscription(user_id):
+    if session.get('role') != 'superadmin':
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT suscripcion_paga, nombres, apellidos FROM usuarios WHERE id = ? AND role = 'psicologo'", (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+        
+    new_sub = 1 if row['suscripcion_paga'] != 1 else 0
+    # Al activar suscripción paga, activar también el usuario
+    new_activo = 1 if new_sub == 1 else 1
+    cursor.execute("UPDATE usuarios SET suscripcion_paga = ?, activo = ? WHERE id = ?", (new_sub, new_activo, user_id))
+    db.commit()
+    
+    status_str = "Suscripción Paga Activada (Acceso Ilimitado)" if new_sub == 1 else "Cambiado a Modo Prueba (3 Días)"
+    return jsonify({'success': f"Estado de {row['nombres']} {row['apellidos']} actualizado: {status_str}.", 'suscripcion_paga': new_sub})
