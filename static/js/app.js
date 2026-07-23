@@ -7291,8 +7291,13 @@ async function loadSuperadminData() {
                     </div>
                 </td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); text-align: center;">
-                    <span class="badge ${activeClass}" style="margin-right: 0.5rem; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; display: inline-block; width: 65px;">${activeLabel}</span>
-                    <button class="btn btn-sm ${buttonClass}" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleTherapistActive(${p.id})">${buttonText}</button>
+                    <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: center;">
+                        <div>
+                            <span class="badge ${activeClass}" style="margin-right: 0.25rem; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; display: inline-block; width: 65px;">${activeLabel}</span>
+                            <button class="btn btn-sm ${buttonClass}" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleTherapistActive(${p.id})">${buttonText}</button>
+                        </div>
+                        <button type="button" class="btn btn-sm" style="padding: 3px 8px; font-size: 0.75rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">🗑️ Eliminar</button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -9340,5 +9345,23 @@ async function handleOnboardingSubmit(e) {
             submitBtn.disabled = false;
             submitBtn.textContent = '✓ Finalizar e Ingresar';
         }
+    }
+}
+
+async function deleteTherapistAccount(userId, therapistName) {
+    const confirmMsg = `⚠️ ¿ESTÁS ABSOLUTAMENTE SEGURO de eliminar al psicólogo "${therapistName}"?\n\nEsta acción borrará PERMANENTEMENTE su cuenta, pacientes, historias clínicas, citas y finanzas de la plataforma. Esta acción no se puede deshacer.`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Psicólogo eliminado con éxito.");
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo eliminar el psicólogo."));
+        }
+    } catch (err) {
+        alert("Error de conexión al intentar eliminar.");
     }
 }

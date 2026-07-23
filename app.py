@@ -7872,3 +7872,31 @@ def complete_onboarding():
         return jsonify({'success': '¡Bienvenido a tu consultorio! Configuración inicial completada.', 'slug': cleaned_slug})
     except Exception as e:
         return jsonify({'error': f'Error al guardar configuración inicial: {str(e)}'}), 500
+
+@app.route('/api/superadmin/therapists/<int:user_id>', methods=['DELETE'])
+@login_required
+def superadmin_delete_therapist(user_id):
+    if session.get('role') != 'superadmin':
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, username, nombres, apellidos FROM usuarios WHERE id = ? AND role = 'psicologo'", (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+        
+    try:
+        # Cascade cleanup of all psychologist data
+        cursor.execute("DELETE FROM pizarra_terapeutica WHERE paciente_id IN (SELECT id FROM pacientes WHERE psicologo_id = ?)", (user_id,))
+        cursor.execute("DELETE FROM agenda_finanzas WHERE paciente_id IN (SELECT id FROM pacientes WHERE psicologo_id = ?)", (user_id,))
+        cursor.execute("DELETE FROM sesiones WHERE paciente_id IN (SELECT id FROM pacientes WHERE psicologo_id = ?)", (user_id,))
+        cursor.execute("DELETE FROM pacientes WHERE psicologo_id = ?", (user_id,))
+        cursor.execute("DELETE FROM notificaciones WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+        db.commit()
+        return jsonify({'success': f"Psicólogo '{row['nombres']} {row['apellidos']}' (@{row['username']}) y toda su información fueron eliminados con éxito."})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al eliminar psicólogo: {str(e)}'}), 500
