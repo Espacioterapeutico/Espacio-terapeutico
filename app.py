@@ -1706,10 +1706,13 @@ def fast_booking_book():
                     ]
                 }
             }
-            # Si el paciente no es nuevo y tiene correo, lo agregamos como asistente
-            email_paciente = None
-            if not is_new_patient and patient and patient['email']:
-                email_paciente = patient['email']
+            # Agregar al paciente como invitado en Google Calendar para enviar invitación por correo
+            email_paciente = data.get('email', '').strip() or data.get('correo', '').strip()
+            if not email_paciente and patient:
+                try:
+                    email_paciente = patient['email'] if isinstance(patient, dict) and 'email' in patient else (patient[14] if len(patient) > 14 else None)
+                except:
+                    pass
             
             if email_paciente:
                 event_body['attendees'] = [
