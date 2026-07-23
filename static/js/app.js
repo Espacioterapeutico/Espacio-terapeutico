@@ -237,6 +237,10 @@ document.addEventListener('DOMContentLoaded', () => {
     try { initializeDateFilters(); } catch(e) {}
 
     // Detectar cambios de paciente en modal de citas para mostrar/ocultar prepagos
+        const pCedulaInput = document.getElementById('p-cedula');
+    if (pCedulaInput) {
+        pCedulaInput.addEventListener('blur', checkCedulaAutoFill);
+    }
     const ePaciente = document.getElementById('e-paciente');
     if (ePaciente) {
         ePaciente.addEventListener('change', (e) => {
@@ -548,7 +552,7 @@ async function handleAuthSubmit(e) {
             }
             
             // Si ambos fallaron, mostrar el error más descriptivo
-            const finalError = dataPatient.error || dataAdmin.error || 'Usuario o contraseña incorrectos.';
+            const finalError = (dataAdmin.error || dataPatient.error) ? 'Usuario o contraseña incorrectos.' : 'Usuario o contraseña incorrectos.';
             errorMsg.textContent = finalError;
             errorMsg.classList.remove('hide');
             
@@ -2094,15 +2098,76 @@ function renderPatientsTable(list) {
     });
 }
 
+async function checkCedulaAutoFill() {
+    const isNew = !document.getElementById('patient-form-id').value;
+    if (!isNew) return;
+    const cedulaInput = document.getElementById('p-cedula');
+    if (!cedulaInput) return;
+    const cedula = cedulaInput.value.trim();
+    if (cedula.length < 4) return;
+    
+    try {
+        const res = await fetch(`/api/pacientes/buscar_cedula/${encodeURIComponent(cedula)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.found && data.paciente) {
+            const p = data.paciente;
+            if (!document.getElementById('p-nombres').value) document.getElementById('p-nombres').value = p.nombres || '';
+            if (!document.getElementById('p-apellidos').value) document.getElementById('p-apellidos').value = p.apellidos || '';
+            if (!document.getElementById('p-edad').value) document.getElementById('p-edad').value = p.edad || '';
+            if (!document.getElementById('p-genero').value) document.getElementById('p-genero').value = p.genero || '';
+            if (!document.getElementById('p-pronombre').value) document.getElementById('p-pronombre').value = p.pronombre || '';
+            if (!document.getElementById('p-fecha-nac').value) document.getElementById('p-fecha-nac').value = p.fecha_nacimiento || '';
+            if (!document.getElementById('p-lugar-nac').value) document.getElementById('p-lugar-nac').value = p.lugar_nacimiento || '';
+            if (document.getElementById('p-pais') && !document.getElementById('p-pais').value) document.getElementById('p-pais').value = p.pais || '';
+            if (document.getElementById('p-ciudad') && !document.getElementById('p-ciudad').value) document.getElementById('p-ciudad').value = p.ciudad || '';
+            if (!document.getElementById('p-con-quien').value) document.getElementById('p-con-quien').value = p.con_quien_reside || '';
+            if (!document.getElementById('p-telefono').value) document.getElementById('p-telefono').value = p.telefono || '';
+            if (!document.getElementById('p-email').value) document.getElementById('p-email').value = p.email || '';
+            if (!document.getElementById('p-academico').value) document.getElementById('p-academico').value = p.nivel_academico || '';
+            if (!document.getElementById('p-ocupacion').value) document.getElementById('p-ocupacion').value = p.ocupacion || '';
+            if (!document.getElementById('p-civil').value) document.getElementById('p-civil').value = p.estado_civil || '';
+            
+            if (window.Swal) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'info',
+                    title: 'Datos personales encontrados',
+                    text: 'Se autocompletó la información personal desde el registro del sistema.',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true
+                });
+            }
+        }
+    } catch(e) {
+        console.error("Error al autocompletar datos por cédula:", e);
+    }
+}
+
 function openNewPatientModal() {
-    document.getElementById('patient-form').reset();
-    document.getElementById('patient-form-id').value = '';
-    document.getElementById('p-ofrecer-paquete-personalizado').checked = false;
-    document.getElementById('p-costo-paquete-personalizado').value = '';
-    document.getElementById('p-sesiones-paquete-personalizado').value = '';
-    togglePatientPkgInputs();
-    document.getElementById('patient-modal-title').textContent = "Nueva Historia Clínica";
-    switchFormTab(null, 'tab-personal');
+    if (typeof isFeatureBlocked === 'function' && isFeatureBlocked('registro')) {
+        alert("La función de Registro de Pacientes está suspendida por administración.");
+        return;
+    }
+    const form = document.getElementById('patient-form');
+    if (form) form.reset();
+    const formId = document.getElementById('patient-form-id');
+    if (formId) formId.value = '';
+    const pkgCheck = document.getElementById('p-ofrecer-paquete-personalizado');
+    if (pkgCheck) pkgCheck.checked = false;
+    const pkgCost = document.getElementById('p-costo-paquete-personalizado');
+    if (pkgCost) pkgCost.value = '';
+    const pkgSess = document.getElementById('p-sesiones-paquete-personalizado');
+    if (pkgSess) pkgSess.value = '';
+    
+    if (typeof togglePatientPkgInputs === 'function') togglePatientPkgInputs();
+    
+    const title = document.getElementById('patient-modal-title');
+    if (title) title.textContent = "Nueva Historia Clínica";
+    
+    if (typeof switchFormTab === 'function') switchFormTab(null, 'tab-personal');
     openModal('patient-modal');
 }
 
@@ -4615,7 +4680,11 @@ async function handleRestoreSubmit(e) {
 // INTERACCIONES CON ELEMENTOS MODALES
 // ==========================================
 function openModal(modalId) {
-    document.getElementById(modalId).classList.remove('hide');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hide');
+        modal.style.display = '';
+    }
 }
 
 function closeModal(modalId) {
@@ -6294,26 +6363,28 @@ window.handleChangeUserPassword = handleChangeUserPassword;
 
 async function loadPatientLinks() {
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
+    const regEl = document.getElementById('link-registro-paciente');
+    const ageEl = document.getElementById('link-agenda-rapida');
+    const slugInp = document.getElementById('psychologist-slug-input');
+    
     try {
         const res = await fetch('/api/admin/profile-slug');
         if (res.ok) {
             const data = await res.json();
-            const slug = data.slug || 'psic.paulomora';
-            const regEl = document.getElementById('link-registro-paciente');
-            const ageEl = document.getElementById('link-agenda-rapida');
-            const slugInp = document.getElementById('psychologist-slug-input');
-            if (regEl) regEl.value = `${baseUrl}/registro/${slug}`;
-            if (ageEl) ageEl.value = `${baseUrl}/agendar/${slug}`;
-            if (slugInp) slugInp.value = slug;
-            return;
+            const slug = data.slug;
+            if (slug) {
+                if (regEl) regEl.value = `${baseUrl}/registro/${slug}`;
+                if (ageEl) ageEl.value = `${baseUrl}/agendar/${slug}`;
+                if (slugInp) slugInp.value = slug;
+                return;
+            }
         }
     } catch (err) {
         console.error("Error cargando enlaces personalizados:", err);
     }
-    const regEl = document.getElementById('link-registro-paciente');
-    const ageEl = document.getElementById('link-agenda-rapida');
-    if (regEl) regEl.value = `${baseUrl}/registro/psic.paulomora`;
-    if (ageEl) ageEl.value = `${baseUrl}/agendar/psic.paulomora`;
+    if (regEl) regEl.value = '';
+    if (ageEl) ageEl.value = '';
+    if (slugInp) slugInp.value = '';
 }
 
 async function savePsychologistSlug() {
@@ -6893,8 +6964,8 @@ async function submitRegister(e) {
     if (tipo_usuario === 'psicologo') {
         payload.estudios = document.getElementById('reg-estudios').value;
         payload.federacion = document.getElementById('reg-federacion').value;
-        payload.foto_titulo = document.getElementById('reg-foto-titulo').value || 'titulo.jpg';
-        payload.foto_documento = document.getElementById('reg-foto-documento').value || 'cedula.jpg';
+        payload.foto_titulo = await readFileAsBase64(document.getElementById('reg-foto-titulo'));
+        payload.foto_documento = await readFileAsBase64(document.getElementById('reg-foto-documento'));
         
         if (!payload.estudios || !payload.federacion) {
             const msg = "Por favor, completa los campos de estudios y federación para psicólogo.";
@@ -7830,17 +7901,21 @@ function viewDocumentPreview(fileData, titleStr) {
     
     if (title) title.textContent = titleStr || 'Vista Previa del Documento';
     
-    if (!fileData) {
-        body.innerHTML = '<p class="text-secondary">Sin documento adjunto.</p>';
+    if (!fileData || fileData === 'titulo.jpg' || fileData === 'cedula.jpg') {
+        body.innerHTML = '<p class="text-secondary text-center" style="padding: 1.5rem;">Sin documento adjunto.</p>';
+    } else if (fileData.includes('fakepath')) {
+        body.innerHTML = '<div style="padding:1.5rem; text-align:center; color:#856404; background-color:#fff3cd; border-radius:8px;">⚠️ El documento fue enviado previamente con una versión de formulario que no procesaba el archivo en segundo plano. Solicita al usuario volver a subir el título o cédula para visualizarlo.</div>';
     } else if (fileData.startsWith('data:image/')) {
-        body.innerHTML = `<img src="${fileData}" style="max-width: 100%; max-height: 60vh; border-radius: 8px; box-shadow: var(--shadow-md); object-fit: contain;">`;
+        body.innerHTML = `<img src="${fileData}" style="max-width: 100%; max-height: 65vh; border-radius: 8px; box-shadow: var(--shadow-md); object-fit: contain; display: block; margin: 0 auto;">`;
     } else if (fileData.startsWith('data:application/pdf')) {
-        body.innerHTML = `<object data="${fileData}" type="application/pdf" style="width:100%; height:60vh;"><p>Tu navegador no admite PDF integrado. <a href="${fileData}" download="documento.pdf" class="btn btn-primary btn-sm">Descargar PDF</a></p></object>`;
+        body.innerHTML = `<object data="${fileData}" type="application/pdf" style="width:100%; height:65vh;"><p class="text-center" style="padding: 1rem;">Visualización de PDF: <a href="${fileData}" download="documento.pdf" class="btn btn-primary btn-sm">Descargar Documento</a></p></object>`;
+    } else if (fileData.startsWith('data:')) {
+        body.innerHTML = `<iframe src="${fileData}" style="width:100%; height:65vh; border:none;"></iframe>`;
     } else if (fileData.startsWith('http') || fileData.startsWith('/')) {
         openFilePreview(fileData);
         return;
     } else {
-        body.innerHTML = `<p class="text-secondary">Documento guardado: <strong>${fileData}</strong></p>`;
+        body.innerHTML = `<p class="text-secondary text-center" style="padding:1.5rem;">Documento: <strong>${fileData}</strong></p>`;
     }
     modal.classList.remove('hide');
 }

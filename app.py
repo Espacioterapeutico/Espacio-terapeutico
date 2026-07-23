@@ -3957,23 +3957,42 @@ def admin_pizarra():
     patient_id = request.args.get('patient_id')
     db = get_db()
     cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
     
     try:
         if patient_id:
-            cursor.execute("""
-                SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
-                FROM pizarra_terapeutica p
-                JOIN pacientes pac ON p.paciente_id = pac.id
-                WHERE p.paciente_id = ?
-                ORDER BY p.fecha DESC
-            """, (patient_id,))
+            if psic_id is not None:
+                cursor.execute("""
+                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
+                    FROM pizarra_terapeutica p
+                    JOIN pacientes pac ON p.paciente_id = pac.id
+                    WHERE p.paciente_id = ? AND pac.psicologo_id = ?
+                    ORDER BY p.fecha DESC
+                """, (patient_id, psic_id))
+            else:
+                cursor.execute("""
+                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
+                    FROM pizarra_terapeutica p
+                    JOIN pacientes pac ON p.paciente_id = pac.id
+                    WHERE p.paciente_id = ?
+                    ORDER BY p.fecha DESC
+                """, (patient_id,))
         else:
-            cursor.execute("""
-                SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
-                FROM pizarra_terapeutica p
-                JOIN pacientes pac ON p.paciente_id = pac.id
-                ORDER BY p.fecha DESC
-            """)
+            if psic_id is not None:
+                cursor.execute("""
+                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
+                    FROM pizarra_terapeutica p
+                    JOIN pacientes pac ON p.paciente_id = pac.id
+                    WHERE pac.psicologo_id = ?
+                    ORDER BY p.fecha DESC
+                """, (psic_id,))
+            else:
+                cursor.execute("""
+                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
+                    FROM pizarra_terapeutica p
+                    JOIN pacientes pac ON p.paciente_id = pac.id
+                    ORDER BY p.fecha DESC
+                """)
             
         rows = cursor.fetchall()
         updates = [{
@@ -4400,24 +4419,73 @@ def admin_rates():
 # GESTIÓN DE PACIENTES
 # ==========================================
 
+def get_psicologo_id_filter():
+    """
+    Retorna el ID del psicólogo para filtrar consultas.
+    Si el rol es superadmin o admin, retorna None (sin filtro global).
+    De lo contrario, retorna session['user_id'] (o 1 por defecto).
+    """
+    role = session.get('role')
+    user_id = session.get('user_id')
+    if role in ['admin', 'superadmin']:
+        req_id = request.args.get('psicologo_id')
+        if req_id and req_id.isdigit():
+            return int(req_id)
+        return None
+    return user_id if user_id else 1
+
+@app.route('/api/pacientes/buscar_cedula/<cedula>', methods=['GET'])
+@login_required
+def buscar_paciente_por_cedula(cedula):
+    cedula_clean = cedula.strip()
+    if not cedula_clean:
+        return jsonify({'found': False}), 404
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT nombres, apellidos, cedula, pronombre, genero, edad, lugar_nacimiento, fecha_nacimiento,
+               residencia_actual, con_quien_reside, nivel_academico, ocupacion, estado_civil, telefono, email, pais, ciudad
+        FROM pacientes
+        WHERE cedula = ?
+        ORDER BY id DESC LIMIT 1
+    """, (cedula_clean,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'found': False}), 404
+    return jsonify({
+        'found': True,
+        'paciente': dict(row)
+    })
+
 @app.route('/api/patients', methods=['GET'])
 @login_required
 def get_patients():
     search = request.args.get('search', '').strip()
     db = get_db()
     cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
     
     if search:
-        # Búsqueda por Nombre, Apellido o Cédula
         query = "%" + search + "%"
-        cursor.execute("""
-            SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad 
-            FROM pacientes 
-            WHERE nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ?
-            ORDER BY nombres ASC, apellidos ASC
-        """, (query, query, query))
+        if psic_id is not None:
+            cursor.execute("""
+                SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad 
+                FROM pacientes 
+                WHERE psicologo_id = ? AND (nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ?)
+                ORDER BY nombres ASC, apellidos ASC
+            """, (psic_id, query, query, query))
+        else:
+            cursor.execute("""
+                SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad 
+                FROM pacientes 
+                WHERE nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ?
+                ORDER BY nombres ASC, apellidos ASC
+            """, (query, query, query))
     else:
-        cursor.execute("SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad FROM pacientes ORDER BY nombres ASC, apellidos ASC")
+        if psic_id is not None:
+            cursor.execute("SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad FROM pacientes WHERE psicologo_id = ? ORDER BY nombres ASC, apellidos ASC", (psic_id,))
+        else:
+            cursor.execute("SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad FROM pacientes ORDER BY nombres ASC, apellidos ASC")
         
     patients = [dict(row) for row in cursor.fetchall()]
     return jsonify(patients)
@@ -4427,7 +4495,11 @@ def get_patients():
 def get_patient(patient_id):
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
+    psic_id = get_psicologo_id_filter()
+    if psic_id is not None:
+        cursor.execute("SELECT * FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, psic_id))
+    else:
+        cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
     row = cursor.fetchone()
     if row is None:
         return jsonify({'error': 'Paciente no encontrado.'}), 404
@@ -4451,10 +4523,11 @@ def create_patient():
     if not nombres or not apellidos or not cedula:
         return jsonify({'error': 'Nombres, Apellidos y Cédula son campos obligatorios.'}), 400
         
-    # Verificar cédula única
-    cursor.execute("SELECT id FROM pacientes WHERE cedula = ?", (cedula,))
+    # Verificar cédula única para el psicólogo actual
+    psic_id = session.get('user_id', 1)
+    cursor.execute("SELECT id FROM pacientes WHERE cedula = ? AND psicologo_id = ?", (cedula, psic_id))
     if cursor.fetchone() is not None:
-        return jsonify({'error': f'Ya existe un paciente registrado con la cédula {cedula}.'}), 400
+        return jsonify({'error': f'Ya tienes un paciente registrado con la cédula {cedula}.'}), 400
 
     costo_personalizado = data.get('costo_personalizado')
     if costo_personalizado == '' or costo_personalizado is None:
@@ -4485,7 +4558,12 @@ def create_patient():
             sesiones_paquete_personalizado = None
 
     try:
-        username = cedula
+        psic_id = session.get('user_id', 1)
+        base_username = cedula
+        cursor.execute("SELECT id FROM pacientes WHERE username = ?", (base_username,))
+        if cursor.fetchone() is not None:
+            base_username = f"{cedula}_{psic_id}"
+        username = base_username
         password_hash = generate_password_hash(cedula)
         
         cursor.execute("""
@@ -4537,10 +4615,11 @@ def update_patient(patient_id):
     if not nombres or not apellidos or not cedula:
         return jsonify({'error': 'Nombres, Apellidos y Cédula son obligatorios.'}), 400
         
-    # Verificar cédula única omitiendo al paciente actual
-    cursor.execute("SELECT id FROM pacientes WHERE cedula = ? AND id != ?", (cedula, patient_id))
+    # Verificar cédula única para el psicólogo actual omitiendo al paciente actual
+    psic_id = session.get('user_id', 1)
+    cursor.execute("SELECT id FROM pacientes WHERE cedula = ? AND psicologo_id = ? AND id != ?", (cedula, psic_id, patient_id))
     if cursor.fetchone() is not None:
-        return jsonify({'error': f'Ya existe otro paciente registrado con la cédula {cedula}.'}), 400
+        return jsonify({'error': f'Ya tienes otro paciente registrado con la cédula {cedula}.'}), 400
         
     costo_personalizado = data.get('costo_personalizado')
     if costo_personalizado == '' or costo_personalizado is None:
@@ -4612,6 +4691,11 @@ def update_patient(patient_id):
 def delete_patient(patient_id):
     db = get_db()
     cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
+    if psic_id is not None:
+        cursor.execute("SELECT id FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, psic_id))
+        if not cursor.fetchone():
+            return jsonify({'error': 'No tienes permisos para eliminar este paciente.'}), 403
     try:
         cursor.execute("DELETE FROM agenda_finanzas WHERE paciente_id = ?", (patient_id,))
         cursor.execute("DELETE FROM sesiones WHERE paciente_id = ?", (patient_id,))
@@ -4632,13 +4716,21 @@ def delete_patient(patient_id):
 def get_patient_summary(patient_id):
     db = get_db()
     cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
     
     # 1. Datos personales básicos
-    cursor.execute("""
-        SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad, diagnostico,
-               fecha_nacimiento, con_quien_reside, antecedentes_medicos_personales, antecedentes_psicologicos_personales
-        FROM pacientes WHERE id = ?
-    """, (patient_id,))
+    if psic_id is not None:
+        cursor.execute("""
+            SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad, diagnostico,
+                   fecha_nacimiento, con_quien_reside, antecedentes_medicos_personales, antecedentes_psicologicos_personales
+            FROM pacientes WHERE id = ? AND psicologo_id = ?
+        """, (patient_id, psic_id))
+    else:
+        cursor.execute("""
+            SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad, diagnostico,
+                   fecha_nacimiento, con_quien_reside, antecedentes_medicos_personales, antecedentes_psicologicos_personales
+            FROM pacientes WHERE id = ?
+        """, (patient_id,))
     patient = cursor.fetchone()
     if not patient:
         return jsonify({'error': 'Paciente no encontrado'}), 404
@@ -4949,16 +5041,35 @@ def get_sessions():
     patient_id = request.args.get('patient_id')
     db = get_db()
     cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
     
     if patient_id:
-        cursor.execute("SELECT * FROM sesiones WHERE paciente_id = ? ORDER BY fecha DESC, id DESC", (patient_id,))
+        if psic_id is not None:
+            cursor.execute("""
+                SELECT s.* 
+                FROM sesiones s 
+                JOIN pacientes p ON s.paciente_id = p.id 
+                WHERE s.paciente_id = ? AND p.psicologo_id = ? 
+                ORDER BY s.fecha DESC, s.id DESC
+            """, (patient_id, psic_id))
+        else:
+            cursor.execute("SELECT * FROM sesiones WHERE paciente_id = ? ORDER BY fecha DESC, id DESC", (patient_id,))
     else:
-        cursor.execute("""
-            SELECT s.*, p.nombres, p.apellidos 
-            FROM sesiones s 
-            JOIN pacientes p ON s.paciente_id = p.id 
-            ORDER BY s.fecha DESC, s.id DESC
-        """)
+        if psic_id is not None:
+            cursor.execute("""
+                SELECT s.*, p.nombres, p.apellidos 
+                FROM sesiones s 
+                JOIN pacientes p ON s.paciente_id = p.id 
+                WHERE p.psicologo_id = ?
+                ORDER BY s.fecha DESC, s.id DESC
+            """, (psic_id,))
+        else:
+            cursor.execute("""
+                SELECT s.*, p.nombres, p.apellidos 
+                FROM sesiones s 
+                JOIN pacientes p ON s.paciente_id = p.id 
+                ORDER BY s.fecha DESC, s.id DESC
+            """)
         
     raw_sessions = [dict(row) for row in cursor.fetchall()]
     sessions = []
@@ -5527,7 +5638,6 @@ def get_patients_rates_list():
 @app.route('/api/finance/balance', methods=['GET'])
 @login_required
 def get_monthly_balance():
-    # Obtener mes y año. Por defecto, mes y año actuales.
     now = datetime.datetime.now()
     month = request.args.get('month', now.strftime('%m'))
     year = request.args.get('year', now.strftime('%Y'))
@@ -5535,76 +5645,146 @@ def get_monthly_balance():
     date_prefix = f"{year}-{month}%"
     db = get_db()
     cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
     
-    # 1. Suma de ingresos totales desglosados por moneda y modalidad
-    # Solo se suman los que están en estado 'Paga', 'Prepagada' o 'Cancelada sin aviso - Paga'
-    cursor.execute("""
-        SELECT moneda, tipo_consulta, SUM(monto) as total_monto
-        FROM agenda_finanzas
-        WHERE (fecha LIKE ? OR fecha_liquidacion LIKE ?) AND estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
-        GROUP BY moneda, tipo_consulta
-    """, (date_prefix, date_prefix))
-    
-    breakdown = [dict(row) for row in cursor.fetchall()]
-    
-    # 2. Cuentas por cobrar — TODAS las deudas activas (sin filtro de mes)
-    cursor.execute("""
-        SELECT af.*, 
-               COALESCE(p.nombres, 'Consultante') as nombres, 
-               COALESCE(p.apellidos, '') as apellidos, 
-               p.cedula
-        FROM agenda_finanzas af
-        LEFT JOIN pacientes p ON af.paciente_id = p.id
-        WHERE af.estado_pago IN ('Pendiente', 'Cancelada sin aviso')
-        ORDER BY af.fecha ASC
-    """)
-    
-    pending_list = [dict(row) for row in cursor.fetchall()]
-    
-    # 2.b. Lista de ingresos pagados o prepagados en el mes
-    cursor.execute("""
-        SELECT af.*, 
-               COALESCE(p.nombres, 'Consultante') as nombres, 
-               COALESCE(p.apellidos, '') as apellidos
-        FROM agenda_finanzas af
-        LEFT JOIN pacientes p ON af.paciente_id = p.id
-        WHERE (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?) AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
-        ORDER BY af.fecha DESC
-    """, (date_prefix, date_prefix))
-    income_list = [dict(row) for row in cursor.fetchall()]
-    
-    # Estadísticas generales del dashboard (Totales históricos o mensuales)
-    cursor.execute("SELECT COUNT(id) FROM pacientes")
-    total_pacientes = cursor.fetchone()[0]
-    
-    cursor.execute("""
-        SELECT SUM(cantidad_sesiones) 
-        FROM agenda_finanzas 
-        WHERE estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
-          AND (fecha LIKE ? OR fecha_liquidacion LIKE ?)
-    """, (date_prefix, date_prefix))
-    total_pagas = cursor.fetchone()[0] or 0
-    
-    cursor.execute("SELECT SUM(cantidad_sesiones) FROM agenda_finanzas WHERE estado_pago IN ('Pendiente', 'Cancelada sin aviso')")
-    total_pendientes = cursor.fetchone()[0] or 0
-    
-    # 3. Estadísticas de sesiones (realizadas, canceladas, reprogramadas) del mes por modalidad
-    cursor.execute("""
-        SELECT modalidad, estado, COUNT(id) as cantidad
-        FROM sesiones
-        WHERE fecha LIKE ?
-        GROUP BY modalidad, estado
-    """, (date_prefix,))
-    session_stats = [dict(row) for row in cursor.fetchall()]
-    
-    # 4. Conteo de consultas (evoluciones) del mes por modalidad
-    cursor.execute("""
-        SELECT modalidad, COUNT(id)
-        FROM sesiones
-        WHERE fecha LIKE ?
-        GROUP BY modalidad
-    """, (date_prefix,))
-    modality_counts = {row[0]: row[1] for row in cursor.fetchall()}
+    if psic_id is not None:
+        cursor.execute("""
+            SELECT af.moneda, af.tipo_consulta, SUM(af.monto) as total_monto
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?) 
+              AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+              AND p.psicologo_id = ?
+            GROUP BY af.moneda, af.tipo_consulta
+        """, (date_prefix, date_prefix, psic_id))
+        breakdown = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute("""
+            SELECT af.*, 
+                   COALESCE(p.nombres, 'Consultante') as nombres, 
+                   COALESCE(p.apellidos, '') as apellidos, 
+                   p.cedula
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+              AND p.psicologo_id = ?
+            ORDER BY af.fecha ASC
+        """, (psic_id,))
+        pending_list = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute("""
+            SELECT af.*, 
+                   COALESCE(p.nombres, 'Consultante') as nombres, 
+                   COALESCE(p.apellidos, '') as apellidos
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?) 
+              AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+              AND p.psicologo_id = ?
+            ORDER BY af.fecha DESC
+        """, (date_prefix, date_prefix, psic_id))
+        income_list = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute("SELECT COUNT(id) FROM pacientes WHERE psicologo_id = ?", (psic_id,))
+        total_pacientes = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT SUM(af.cantidad_sesiones) 
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
+              AND (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?)
+              AND p.psicologo_id = ?
+        """, (date_prefix, date_prefix, psic_id))
+        total_pagas = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT SUM(af.cantidad_sesiones) 
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+              AND p.psicologo_id = ?
+        """, (psic_id,))
+        total_pendientes = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT s.modalidad, s.estado, COUNT(s.id) as cantidad
+            FROM sesiones s
+            JOIN pacientes p ON s.paciente_id = p.id
+            WHERE s.fecha LIKE ? AND p.psicologo_id = ?
+            GROUP BY s.modalidad, s.estado
+        """, (date_prefix, psic_id))
+        session_stats = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute("""
+            SELECT s.modalidad, COUNT(s.id)
+            FROM sesiones s
+            JOIN pacientes p ON s.paciente_id = p.id
+            WHERE s.fecha LIKE ? AND p.psicologo_id = ?
+            GROUP BY s.modalidad
+        """, (date_prefix, psic_id))
+        modality_counts = {row[0]: row[1] for row in cursor.fetchall()}
+    else:
+        cursor.execute("""
+            SELECT moneda, tipo_consulta, SUM(monto) as total_monto
+            FROM agenda_finanzas
+            WHERE (fecha LIKE ? OR fecha_liquidacion LIKE ?) AND estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+            GROUP BY moneda, tipo_consulta
+        """, (date_prefix, date_prefix))
+        breakdown = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute("""
+            SELECT af.*, 
+                   COALESCE(p.nombres, 'Consultante') as nombres, 
+                   COALESCE(p.apellidos, '') as apellidos, 
+                   p.cedula
+            FROM agenda_finanzas af
+            LEFT JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+            ORDER BY af.fecha ASC
+        """)
+        pending_list = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute("""
+            SELECT af.*, 
+                   COALESCE(p.nombres, 'Consultante') as nombres, 
+                   COALESCE(p.apellidos, '') as apellidos
+            FROM agenda_finanzas af
+            LEFT JOIN pacientes p ON af.paciente_id = p.id
+            WHERE (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?) AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+            ORDER BY af.fecha DESC
+        """, (date_prefix, date_prefix))
+        income_list = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute("SELECT COUNT(id) FROM pacientes")
+        total_pacientes = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT SUM(cantidad_sesiones) 
+            FROM agenda_finanzas 
+            WHERE estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
+              AND (fecha LIKE ? OR fecha_liquidacion LIKE ?)
+        """, (date_prefix, date_prefix))
+        total_pagas = cursor.fetchone()[0] or 0
+        
+        cursor.execute("SELECT SUM(cantidad_sesiones) FROM agenda_finanzas WHERE estado_pago IN ('Pendiente', 'Cancelada sin aviso')")
+        total_pendientes = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT modalidad, estado, COUNT(id) as cantidad
+            FROM sesiones
+            WHERE fecha LIKE ?
+            GROUP BY modalidad, estado
+        """, (date_prefix,))
+        session_stats = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute("""
+            SELECT modalidad, COUNT(id)
+            FROM sesiones
+            WHERE fecha LIKE ?
+            GROUP BY modalidad
+        """, (date_prefix,))
+        modality_counts = {row[0]: row[1] for row in cursor.fetchall()}
     
     total_online = modality_counts.get('Online', 0)
     total_presencial = modality_counts.get('Presencial', 0)
@@ -6030,18 +6210,30 @@ def update_transaction(trans_id):
 @app.route('/api/agenda', methods=['GET'])
 @login_required
 def get_agenda():
-    # Retorna eventos de la agenda localmente con información de pacientes
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("""
-        SELECT af.*, p.nombres, p.apellidos, p.cedula,
-               (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
-        FROM agenda_finanzas af
-        JOIN pacientes p ON af.paciente_id = p.id
-        LEFT JOIN sesiones s ON s.agenda_id = af.id
-        WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
-        ORDER BY af.fecha ASC, af.hora ASC
-    """)
+    psic_id = get_psicologo_id_filter()
+    if psic_id is not None:
+        cursor.execute("""
+            SELECT af.*, p.nombres, p.apellidos, p.cedula,
+                   (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            LEFT JOIN sesiones s ON s.agenda_id = af.id
+            WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
+              AND p.psicologo_id = ?
+            ORDER BY af.fecha ASC, af.hora ASC
+        """, (psic_id,))
+    else:
+        cursor.execute("""
+            SELECT af.*, p.nombres, p.apellidos, p.cedula,
+                   (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            LEFT JOIN sesiones s ON s.agenda_id = af.id
+            WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
+            ORDER BY af.fecha ASC, af.hora ASC
+        """)
     events = [dict(row) for row in cursor.fetchall()]
     return jsonify(events)
 
