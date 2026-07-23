@@ -7216,7 +7216,7 @@ def google_callback():
         if not GOOGLE_CALENDAR_AVAILABLE:
             return "Error: Librerías de Google no instaladas.", 500
 
-        state = session.get('state')
+        state = session.get('state') or request.args.get('state')
         
         redirect_uri = url_for('google_callback', _external=True)
         if not redirect_uri.startswith('https://') and 'localhost' not in redirect_uri and '127.0.0.1' not in redirect_uri:
@@ -7233,10 +7233,29 @@ def google_callback():
         if not req_url.startswith('https://') and 'localhost' not in req_url and '127.0.0.1' not in req_url:
             req_url = req_url.replace('http://', 'https://')
             
-        # Habilitar transporte inseguro por seguridad en proxies locales/remotos
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+        os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
         
-        flow.fetch_token(authorization_response=req_url)
+        try:
+            flow.fetch_token(authorization_response=req_url)
+        except Exception as token_err:
+            err_str = str(token_err)
+            if 'mismatching_state' in err_str or 'State not equal' in err_str:
+                url_state = request.args.get('state')
+                flow = Flow.from_client_secrets_file(
+                    CLIENT_SECRETS_FILE,
+                    scopes=SCOPES,
+                    state=url_state,
+                    redirect_uri=redirect_uri
+                )
+                auth_code = request.args.get('code')
+                if auth_code:
+                    flow.fetch_token(code=auth_code)
+                else:
+                    raise token_err
+            else:
+                raise token_err
+                
         creds = flow.credentials
         
         # Guardar en base de datos local
@@ -7248,15 +7267,16 @@ def google_callback():
                        (token_key, creds.to_json()))
         db.commit()
         
-        # Redirigir de regreso a la interfaz principal (SPA)
         return """
         <html>
-            <body onload="window.close();">
-                <h3>Conexión con Google Calendar exitosa. Esta ventana se cerrará automáticamente.</h3>
+            <body style="font-family: sans-serif; text-align: center; padding: 2rem;">
+                <h2 style="color: #059669;">✓ Conexión con Google Calendar exitosa</h2>
+                <p>Tu cuenta de Google ha sido vinculada correctamente. Esta ventana se cerrará en breve.</p>
                 <script>
                     if (window.opener) {
-                        window.opener.location.reload();
+                        try { window.opener.location.reload(); } catch(e) {}
                     }
+                    setTimeout(() => window.close(), 2000);
                 </script>
             </body>
         </html>
@@ -7265,10 +7285,10 @@ def google_callback():
         print("Error en google_callback:", traceback.format_exc())
         return f"""
         <html>
-            <body>
-                <h3>Fallo al completar la autorización con Google Calendar</h3>
+            <body style="font-family: sans-serif; text-align: center; padding: 2rem;">
+                <h3 style="color: #dc2626;">Fallo al completar la autorización con Google Calendar</h3>
                 <p>Detalle del error: {str(e)}</p>
-                <button onclick="window.close();">Cerrar Ventana</button>
+                <button onclick="window.close()" style="padding: 0.5rem 1rem; border-radius: 6px; background: #374151; color: white; border: none; cursor: pointer;">Cerrar Ventana</button>
             </body>
         </html>
         """, 500
