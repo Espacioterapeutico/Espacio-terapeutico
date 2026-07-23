@@ -585,8 +585,12 @@ async function handleLogout() {
     if (!confirm("¿Está seguro de que desea cerrar la sesión por seguridad?")) return;
     try {
         await fetch('/api/logout', { method: 'POST' });
-        showAuthScreen();
     } catch (err) {
+        console.warn("Error enviando petición de logout:", err);
+    } finally {
+        sessionStorage.clear();
+        localStorage.clear();
+        clearAllNotificationIntervals();
         showAuthScreen();
     }
 }

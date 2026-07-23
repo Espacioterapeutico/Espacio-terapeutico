@@ -1320,10 +1320,39 @@ def register():
             now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
             expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
 
+            import unicodedata
+            clean_name = f"psic.{(nombres or '').strip()}{(apellidos or '').strip()}".lower().replace(" ", "")
+            if len(clean_name) <= 5:
+                clean_name = f"psic.{username.lower()}"
+            clean_slug = re.sub(r'[^a-z0-9\.]', '', unicodedata.normalize('NFD', clean_name))
+
+            default_visual_cfg = json.dumps({
+                "duracion": 60,
+                "costo_online": 30.0,
+                "costo_presencial": 35.0,
+                "moneda": "USD",
+                "alerta_confirmacion": 2,
+                "perfiles": [
+                    {
+                        "nombre": "Horario Estándar",
+                        "activo": True,
+                        "dias": [
+                            {"dia": 1, "nombre": "Lunes", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}, {"inicio": "14:00", "fin": "18:00"}]},
+                            {"dia": 2, "nombre": "Martes", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}, {"inicio": "14:00", "fin": "18:00"}]},
+                            {"dia": 3, "nombre": "Miércoles", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}, {"inicio": "14:00", "fin": "18:00"}]},
+                            {"dia": 4, "nombre": "Jueves", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}, {"inicio": "14:00", "fin": "18:00"}]},
+                            {"dia": 5, "nombre": "Viernes", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}, {"inicio": "14:00", "fin": "18:00"}]}
+                        ]
+                    }
+                ]
+            })
+
+            default_pm_str = "Pago Móvil / Transferencia Bancaria\nZelle / PayPal disponible"
+
             cursor.execute("""
-                INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0)
-            """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str))
+                INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug, configuracion_horarios_visual, metodos_pago, primer_inicio)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1)
+            """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug, default_visual_cfg, default_pm_str))
             db.commit()
             return jsonify({'success': 'Cuenta de psicólogo creada con éxito. Tienes 3 días de prueba gratuita.'})
             
