@@ -4417,7 +4417,15 @@ def admin_profile_slug():
         u = cursor.fetchone()
         if not u:
             return jsonify({'error': 'Usuario no encontrado.'}), 404
-        current_slug = u['slug'] or f"psic.{u['nombres']}{u['apellidos']}".lower().replace(" ", "")
+        
+        current_slug = generate_default_slug_for_user(u)
+        if not u['slug']:
+            try:
+                cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (current_slug, user_id))
+                db.commit()
+            except Exception:
+                pass
+
         return jsonify({
             'id': u['id'],
             'username': u['username'],
@@ -7961,3 +7969,24 @@ def superadmin_toggle_subscription(user_id):
     
     status_str = "Suscripción Paga Activada (Acceso Ilimitado)" if new_sub == 1 else "Cambiado a Modo Prueba (3 Días)"
     return jsonify({'success': f"Estado de {row['nombres']} {row['apellidos']} actualizado: {status_str}.", 'suscripcion_paga': new_sub})
+
+def generate_default_slug_for_user(u):
+    if not u:
+        return ""
+    if u['slug'] and u['slug'].strip():
+        return u['slug'].strip()
+    
+    nom = (u['nombres'] or '').strip()
+    ape = (u['apellidos'] or '').strip()
+    uname = (u['username'] or '').strip()
+    
+    if nom or ape:
+        combo = f"psic.{nom}{ape}"
+    else:
+        combo = f"psic.{uname}"
+        
+    import unicodedata, re
+    normalized = unicodedata.normalize('NFD', combo)
+    slug = re.sub(r'[\u0300-\u036f]', '', normalized).lower()
+    slug = re.sub(r'[^a-z0-9\.]', '', slug)
+    return slug or f"psic.{uname.lower()}"

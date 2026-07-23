@@ -349,6 +349,7 @@ function switchView(viewId) {
     } else if (viewId === 'settings') {
         checkGoogleStatus();
         loadAdminAvailability();
+        loadPatientLinks();
     } else if (viewId === 'pizarra-visual') {
         loadPizarraPatients();
         loadPizarraVisual();
