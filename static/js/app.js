@@ -452,6 +452,17 @@ function toggleAuthMode(e) {
     }
 }
 
+function showLoadingScreen(msg) {
+    const loader = document.getElementById('loading-screen');
+    if (loader) {
+        loader.style.display = 'flex';
+        loader.style.visibility = 'visible';
+        loader.style.opacity = '1';
+        const txt = loader.querySelector('p') || loader.querySelector('.loading-text');
+        if (txt && msg) txt.textContent = msg;
+    }
+}
+
 function hideLoadingScreen() {
     const loader = document.getElementById('loading-screen');
     if (loader) {
