@@ -7313,9 +7313,14 @@ def google_callback():
 def sync_google_calendar():
     import traceback
     try:
-        service = get_calendar_service()
+        user_id = session.get('user_id')
+        service = get_calendar_service(user_id)
         if not service:
             return jsonify({'error': 'Google Calendar no está configurado o autorizado.'}), 400
+            
+        db = get_db()
+        cursor = db.cursor()
+        
         # 1. Traer eventos futuros de Google Calendar
         now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indica UTC
         events_result = service.events().list(
@@ -7324,9 +7329,6 @@ def sync_google_calendar():
             orderBy='startTime'
         ).execute()
         g_events = events_result.get('items', [])
-        
-        db = get_db()
-        cursor = db.cursor()
         
         synced_count = 0
         for ge in g_events:
@@ -7340,7 +7342,6 @@ def sync_google_calendar():
             
             if local_event:
                 # Ya existe localmente. Actualizamos fecha/hora si cambió
-                # Google retorna fecha/hora en formato RFC3339 (e.g. 2026-07-06T15:30:00-04:00)
                 start = ge['start'].get('dateTime') or ge['start'].get('date')
                 if start and 'T' in start:
                     fecha_g = start.split('T')[0]
@@ -7353,12 +7354,10 @@ def sync_google_calendar():
                     """, (fecha_g, hora_g, g_id))
                 synced_count += 1
             else:
-                # Es nuevo desde Google Calendar. Intentamos enlazarlo a un paciente por nombre en el summary
-                # El summary suele ser "Consulta: Juan Perez"
+                # Es nuevo desde Google Calendar. Intentamos enlazarlo a un paciente por nombre
                 paciente_id = None
-                if "Consulta:" in summary:
-                    nombre_buscado = summary.replace("Consulta:", "").strip()
-                    # Buscar paciente que coincida por nombre y apellido
+                if "Consulta:" in summary or "Consulta Psicológica -" in summary:
+                    nombre_buscado = summary.replace("Consulta Psicológica -", "").replace("Consulta:", "").strip()
                     cursor.execute("""
                         SELECT id FROM pacientes 
                         WHERE (nombres || ' ' || apellidos) LIKE ? 
@@ -7368,8 +7367,6 @@ def sync_google_calendar():
                     if pac_row:
                         paciente_id = pac_row['id']
                 
-                # Si no encontramos paciente, no creamos la cita local para evitar inconsistencias de llave foránea,
-                # o podemos dejarla en espera. En este flujo, solo importamos si el paciente existe en la BD local.
                 if paciente_id:
                     start = ge['start'].get('dateTime') or ge['start'].get('date')
                     if start and 'T' in start:
@@ -7387,11 +7384,58 @@ def sync_google_calendar():
                             ) VALUES (?, ?, ?, ?, 0.0, 'USD', 'Pendiente', 'Consumida', ?)
                         """, (paciente_id, fecha_g, hora_g, modalidad, g_id))
                         synced_count += 1
-                        
+
+        # 2. Exportar citas futuras locales que no tengan google_event_id hacia Google Calendar
+        today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+        cursor.execute("""
+            SELECT af.id, af.fecha, af.hora, af.tipo_consulta, p.nombres, p.apellidos, p.email
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.google_event_id IS NULL
+              AND af.fecha >= ?
+              AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+              AND (p.psicologo_id = ? OR ? IS NULL)
+        """, (today_str, user_id, user_id))
+        local_pending = cursor.fetchall()
+        
+        pushed_count = 0
+        for lp in local_pending:
+            try:
+                pac_nombre = f"{lp['nombres']} {lp['apellidos']}"
+                start_dt = f"{lp['fecha']}T{lp['hora']}:00-04:00"
+                end_h = str(int(lp['hora'].split(':')[0]) + 1).zfill(2)
+                end_dt = f"{lp['fecha']}T{end_h}:{lp['hora'].split(':')[1]}:00-04:00"
+                
+                event_b = {
+                    'summary': f"Consulta Psicológica - {pac_nombre}",
+                    'description': f"Modalidad: {lp['tipo_consulta']}",
+                    'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},
+                    'end': {'dateTime': end_dt, 'timeZone': 'America/Caracas'}
+                }
+                if lp['email']:
+                    event_b['attendees'] = [{'email': lp['email'], 'displayName': pac_nombre}]
+                    
+                g_ev = service.events().insert(calendarId='primary', body=event_b, sendUpdates='all').execute()
+                if g_ev.get('id'):
+                    cursor.execute("UPDATE agenda_finanzas SET google_event_id = ? WHERE id = ?", (g_ev['id'], lp['id']))
+                    pushed_count += 1
+            except Exception as pe:
+                print("Error enviando cita local a Google Calendar:", pe)
+
         db.commit()
-        return jsonify({'success': f'Sincronización completada. {synced_count} eventos actualizados/importados.'})
+        
+        msg = f"✓ Sincronización completada exitosamente."
+        if pushed_count > 0:
+            msg += f" {pushed_count} cita(s) enviada(s) a Google Calendar."
+        if synced_count > 0:
+            msg += f" {synced_count} evento(s) actualizado(s)/importado(s)."
+        if pushed_count == 0 and synced_count == 0:
+            msg += " Tu agenda ya estaba 100% al día."
+            
+        return jsonify({'success': msg})
         
     except Exception as e:
+        print("Error durante la sincronización de Google Calendar:", traceback.format_exc())
         return jsonify({'error': f'Error durante la sincronización: {str(e)}'}), 500
 
 
