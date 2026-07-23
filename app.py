@@ -4013,16 +4013,28 @@ def admin_pizarra():
 def admin_notifications():
     db = get_db()
     cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
     try:
-        cursor.execute("""
-            SELECT id, tipo, titulo, mensaje, fecha, leida, link
-            FROM notificaciones
-            ORDER BY fecha DESC, id DESC LIMIT 25
-        """)
-        rows = cursor.fetchall()
-        
-        cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE leida = 0")
-        unread_count = cursor.fetchone()[0] or 0
+        if psic_id is not None:
+            cursor.execute("""
+                SELECT id, tipo, titulo, mensaje, fecha, leida, link
+                FROM notificaciones
+                WHERE user_id = ? OR user_id IS NULL
+                ORDER BY fecha DESC, id DESC LIMIT 25
+            """, (psic_id,))
+            rows = cursor.fetchall()
+            
+            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE (user_id = ? OR user_id IS NULL) AND leida = 0", (psic_id,))
+            unread_count = cursor.fetchone()[0] or 0
+        else:
+            cursor.execute("""
+                SELECT id, tipo, titulo, mensaje, fecha, leida, link
+                FROM notificaciones
+                ORDER BY fecha DESC, id DESC LIMIT 25
+            """)
+            rows = cursor.fetchall()
+            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE leida = 0")
+            unread_count = cursor.fetchone()[0] or 0
         
         list_notif = [{
             'id': r['id'],
@@ -4048,11 +4060,18 @@ def admin_notifications_mark_read():
     notification_id = data.get('notification_id')
     db = get_db()
     cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
     try:
         if notification_id:
-            cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ?", (notification_id,))
+            if psic_id is not None:
+                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ? AND (user_id = ? OR user_id IS NULL)", (notification_id, psic_id))
+            else:
+                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ?", (notification_id,))
         else:
-            cursor.execute("UPDATE notificaciones SET leida = 1")
+            if psic_id is not None:
+                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE user_id = ? OR user_id IS NULL", (psic_id,))
+            else:
+                cursor.execute("UPDATE notificaciones SET leida = 1")
         db.commit()
         return jsonify({'success': 'Notificación marcada como leída.'})
     except Exception as e:
