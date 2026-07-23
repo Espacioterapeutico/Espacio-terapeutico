@@ -86,6 +86,29 @@
                 </div>
                 <h1 style="font-size: 1.35rem; font-family: var(--font-title); font-weight: 700; color: var(--primary-color);">Auto-Agendamiento Rápido</h1>
                 <p id="fast-booking-therapist-name" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Cargando terapeuta...</p>
+            
+            <!-- Banner de Zona Horaria Interactiva -->
+            <div id="fast-tz-banner" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #bfdbfe; padding: 0.65rem 0.85rem; border-radius: 8px; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.35rem;">
+                    <span style="font-size: 0.82rem; font-weight: 700; color: #1e40af; display: inline-flex; align-items: center; gap: 4px;">
+                        🌐 Tu Zona Horaria:
+                    </span>
+                    <select id="fast-tz-select" onchange="onFastTimeZoneChange()" style="background: white; border: 1.5px solid #93c5fd; border-radius: 6px; padding: 3px 8px; font-weight: 700; color: #1e3a8a; font-size: 0.82rem; cursor: pointer;">
+                        <option value="Europe/Madrid">España / Madrid (GMT+2)</option>
+                        <option value="America/Caracas">Venezuela (GMT-4)</option>
+                        <option value="America/Argentina/Buenos_Aires">Argentina (GMT-3)</option>
+                        <option value="America/Santiago">Chile (GMT-4)</option>
+                        <option value="America/Bogota">Colombia (GMT-5)</option>
+                        <option value="America/Mexico_City">México (GMT-6)</option>
+                        <option value="America/New_York">EE. UU. / Nueva York (GMT-4)</option>
+                        <option value="America/Lima">Perú (GMT-5)</option>
+                        <option value="Europe/London">Reino Unido / Londres (GMT+1)</option>
+                    </select>
+                </div>
+                <div id="fast-tz-info-text" style="font-size: 0.75rem; color: #1d4ed8; font-weight: 500; line-height: 1.25;">
+                    ⚠️ <em>Tu terapeuta atiende en horario de Venezuela (GMT-4). Las horas mostradas se adaptan a tu hora local.</em>
+                </div>
+            </div>
             </div>
             
             <form id="fast-booking-form" onsubmit="submitFastBooking(event)">
@@ -3448,6 +3471,6 @@
     </div>
 
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v=62"></script>
+    <script src="/static/js/app.js?v=63"></script>
 </body>
 </html>

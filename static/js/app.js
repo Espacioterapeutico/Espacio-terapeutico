@@ -1,3 +1,141 @@
+
+// ==========================================
+// MÓDULO DE DERECCIÓN Y CONVERSIÓN DE ZONA HORARIA
+// ==========================================
+function getPatientUserTimeZone() {
+    try {
+        const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return detected || 'Europe/Madrid';
+    } catch(e) {
+        return 'Europe/Madrid';
+    }
+}
+
+function initFastTimeZoneSelector() {
+    const sel = document.getElementById('fast-tz-select');
+    if (!sel) return;
+    const userTz = getPatientUserTimeZone();
+    let matchFound = false;
+    for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === userTz) {
+            sel.selectedIndex = i;
+            matchFound = true;
+            break;
+        }
+    }
+    if (!matchFound) {
+        const opt = document.createElement('option');
+        opt.value = userTz;
+        opt.textContent = `Detectada (${userTz})`;
+        opt.selected = true;
+        sel.appendChild(opt);
+    }
+}
+
+function onFastTimeZoneChange() {
+    const dateInput = document.getElementById('fast-req-fecha');
+    if (dateInput && dateInput.value) {
+        fetchFastAvailableHours(dateInput.value);
+    }
+}
+
+function convertTimeFromVETToZone(fechaStr, horaStr, targetZone) {
+    if (!fechaStr || !horaStr) return { dateStr: fechaStr, timeStr: horaStr, displayTime: horaStr, dayOffsetStr: '' };
+    try {
+        const cleanDate = fechaStr.replace(/\//g, '-');
+        const dateParts = cleanDate.split('-');
+        const y = dateParts[0].padStart(4, '20');
+        const m = dateParts[1].padStart(2, '0');
+        const d = dateParts[2].padStart(2, '0');
+        
+        const cleanTime = horaStr.trim();
+        const timeParts = cleanTime.split(':');
+        const hh = timeParts[0].padStart(2, '0');
+        const mm = (timeParts[1] || '00').padStart(2, '0');
+        
+        const isoVET = `${y}-${m}-${d}T${hh}:${mm}:00-04:00`;
+        const dateObj = new Date(isoVET);
+        
+        if (isNaN(dateObj.getTime())) {
+            return { dateStr: fechaStr, timeStr: horaStr, displayTime: horaStr, dayOffsetStr: '' };
+        }
+        
+        const localTimeStr = dateObj.toLocaleTimeString('es-ES', {
+            timeZone: targetZone,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        
+        const localDateStr = dateObj.toLocaleDateString('sv-SE', {
+            timeZone: targetZone
+        }); // YYYY-MM-DD
+        
+        let dayOffsetStr = '';
+        if (localDateStr > `${y}-${m}-${d}`) {
+            dayOffsetStr = ' (+1 día)';
+        } else if (localDateStr < `${y}-${m}-${d}`) {
+            dayOffsetStr = ' (-1 día)';
+        }
+        
+        return {
+            dateStr: localDateStr,
+            timeStr: localTimeStr,
+            displayTime: `${localTimeStr}${dayOffsetStr}`,
+            dayOffsetStr: dayOffsetStr
+        };
+    } catch(err) {
+        console.error("Error convirtiendo zona horaria:", err);
+        return { dateStr: fechaStr, timeStr: horaStr, displayTime: horaStr, dayOffsetStr: '' };
+    }
+}
+
+function generateGoogleCalendarUrl(title, description, fechaStr, horaStr, durationMinutes = 60) {
+    try {
+        const cleanDate = fechaStr.replace(/\//g, '-');
+        const dateParts = cleanDate.split('-');
+        const y = dateParts[0].padStart(4, '20');
+        const m = dateParts[1].padStart(2, '0');
+        const d = dateParts[2].padStart(2, '0');
+        
+        const cleanTime = horaStr.trim();
+        const timeParts = cleanTime.split(':');
+        const hh = timeParts[0].padStart(2, '0');
+        const mm = (timeParts[1] || '00').padStart(2, '0');
+        
+        const startDateObj = new Date(`${y}-${m}-${d}T${hh}:${mm}:00-04:00`);
+        const endDateObj = new Date(startDateObj.getTime() + (durationMinutes * 60 * 1000));
+        
+        const startY = startDateObj.getUTCFullYear();
+        const startM = String(startDateObj.getUTCMonth() + 1).padStart(2, '0');
+        const startD = String(startDateObj.getUTCDate()).padStart(2, '0');
+        const startHH = String(startDateObj.getUTCHours()).padStart(2, '0');
+        const startMM = String(startDateObj.getUTCMinutes()).padStart(2, '0');
+        
+        const endY = endDateObj.getUTCFullYear();
+        const endM = String(endDateObj.getUTCMonth() + 1).padStart(2, '0');
+        const endD = String(endDateObj.getUTCDate()).padStart(2, '0');
+        const endHH = String(endDateObj.getUTCHours()).padStart(2, '0');
+        const endMM = String(endDateObj.getUTCMinutes()).padStart(2, '0');
+        
+        const datesParam = `${startY}${startM}${startD}T${startHH}${startMM}00Z/${endY}${endM}${endD}T${endHH}${endMM}00Z`;
+        
+        const baseUrl = "https://calendar.google.com/calendar/render";
+        const params = new URLSearchParams({
+            action: "TEMPLATE",
+            text: title,
+            details: description,
+            dates: datesParam,
+            ctz: "America/Caracas"
+        });
+        
+        return `${baseUrl}?${params.toString()}`;
+    } catch(e) {
+        console.error("Error generando enlace Google Calendar:", e);
+        return "#";
+    }
+}
+
 // --- LÓGICA PWA E INSTALACIÓN DE APLICACIÓN ---
 let deferredPwaPrompt = null;
 
@@ -1421,7 +1559,9 @@ async function loadPatientPortalData(patientId) {
                         console.error("Error formateando fecha de cita:", e);
                     }
                     
-                    const timeFormatted = format12h(cita.hora);
+                    const userTz = getPatientUserTimeZone();
+                    const convertedCita = convertTimeFromVETToZone(cita.fecha, cita.hora, userTz);
+                    const timeFormatted = format12h(convertedCita.timeStr);
                     const modalityText = cita.tipo_consulta || 'Online';
                     
                     const h4 = document.createElement('h4');
@@ -1429,13 +1569,13 @@ async function loadPatientPortalData(patientId) {
                     h4.style.fontWeight = '700';
                     h4.style.fontSize = '1.1rem';
                     h4.style.color = 'var(--text-dark)';
-                    h4.textContent = dateFormatted;
+                    h4.textContent = `${dateFormatted}${convertedCita.dayOffsetStr}`;
                     box.appendChild(h4);
                     
                     const p = document.createElement('p');
                     p.className = 'text-secondary mb-2';
                     p.style.fontSize = '0.9rem';
-                    p.textContent = `${timeFormatted} — Modalidad ${modalityText}`;
+                    p.innerHTML = `<strong>${timeFormatted}</strong> (${userTz}) — <small style="opacity: 0.85;">(${format12h(cita.hora)} hora Venezuela)</small> — Modalidad ${modalityText}`;
                     box.appendChild(p);
                     
                     const actionsDiv = document.createElement('div');
@@ -1469,6 +1609,27 @@ async function loadPatientPortalData(patientId) {
                         actionsDiv.appendChild(confirmedBadge);
                     }
                     
+                    // Botón Google Calendar
+                    const therapistName = sessionStorage.getItem('patient_therapist_name') || 'Psicólogo';
+                    const gcalUrl = generateGoogleCalendarUrl(`Sesión de Terapia - ${therapistName}`, `Consulta Terapéutica (${modalityText})`, cita.fecha, cita.hora, 60);
+                    const gcalBtn = document.createElement('a');
+                    gcalBtn.href = gcalUrl;
+                    gcalBtn.target = '_blank';
+                    gcalBtn.rel = 'noopener';
+                    gcalBtn.className = 'btn btn-sm';
+                    gcalBtn.style.padding = '0.35rem 0.75rem';
+                    gcalBtn.style.fontSize = '0.8rem';
+                    gcalBtn.style.backgroundColor = '#4285f4';
+                    gcalBtn.style.color = 'white';
+                    gcalBtn.style.borderRadius = 'var(--radius-sm)';
+                    gcalBtn.style.fontWeight = '700';
+                    gcalBtn.style.textDecoration = 'none';
+                    gcalBtn.style.display = 'inline-flex';
+                    gcalBtn.style.alignItems = 'center';
+                    gcalBtn.style.gap = '4px';
+                    gcalBtn.textContent = '📅 Google Calendar';
+                    actionsDiv.appendChild(gcalBtn);
+
                     // Botón Reprogramar
                     if (cita.tiempo_restante_horas > cita.limite_cancelacion) {
                         const reschedBtn = document.createElement('button');
@@ -7486,7 +7647,7 @@ async function checkFastBookingQuery() {
             console.error("Error al obtener modalidades para auto-agenda:", e);
         }
         
-        renderFastCalendar();
+        initFastTimeZoneSelector(); renderFastCalendar();
         return true;
     }
     
@@ -7507,7 +7668,7 @@ function changeFastBookingMonth(dir) {
         fastBookingMonth = 0;
         fastBookingYear++;
     }
-    renderFastCalendar();
+    initFastTimeZoneSelector(); renderFastCalendar();
 }
 
 async function renderFastCalendar() {
@@ -7640,13 +7801,19 @@ async function fetchFastAvailableHours(dateStr) {
         hoursGrid.innerHTML = '';
         
         const localSlots = [];
+        const targetTz = document.getElementById('fast-tz-select') ? document.getElementById('fast-tz-select').value : getPatientUserTimeZone();
+        
         if (data.slots && data.slots.length > 0) {
             data.slots.forEach(slotObj => {
                 const hourStr = slotObj.hora_literal || slotObj.iso.substring(11, 16);
                 const therapistDate = slotObj.iso.substring(0, 10);
                 
+                const converted = convertTimeFromVETToZone(therapistDate, hourStr, targetTz);
+                
                 localSlots.push({
-                    displayTime: hourStr,
+                    displayTime: converted.timeStr,
+                    displayFull: `${format12h(converted.timeStr)}${converted.dayOffsetStr}`,
+                    therapistTime: format12h(hourStr),
                     valFecha: therapistDate,
                     valHour: hourStr
                 });
@@ -7660,15 +7827,18 @@ async function fetchFastAvailableHours(dateStr) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'btn-fast-hour';
-                btn.textContent = format12h(slot.displayTime);
+                btn.innerHTML = `<div style="font-weight: 700; font-size: 0.92rem;">${slot.displayFull}</div><div style="font-size: 0.68rem; opacity: 0.85; font-weight: 500; margin-top: 2px;">(${slot.therapistTime} Venezuela)</div>`;
                 
-                btn.style.padding = '0.5rem 1rem';
+                btn.style.padding = '0.45rem 0.85rem';
                 btn.style.border = '1.5px solid #10b981';
-                btn.style.borderRadius = '20px';
+                btn.style.borderRadius = '12px';
                 btn.style.backgroundColor = '#ecfdf5';
                 btn.style.color = '#047857';
-                btn.style.fontWeight = '600';
                 btn.style.cursor = 'pointer';
+                btn.style.textAlign = 'center';
+                btn.style.display = 'inline-flex';
+                btn.style.flexDirection = 'column';
+                btn.style.alignItems = 'center';
                 
                 btn.onclick = () => {
                     document.querySelectorAll('.btn-fast-hour').forEach(b => {
@@ -7738,13 +7908,27 @@ async function submitFastBooking(e) {
         const data = await res.json();
         
         if (res.ok) {
-            statusMsg.textContent = "¡Cita agendada con éxito! Su psicólogo ha sido notificado.";
+            const therapistTitle = document.getElementById('fast-booking-therapist-name') ? document.getElementById('fast-booking-therapist-name').textContent : "Psicólogo";
+            const gcalUrl = generateGoogleCalendarUrl(`Sesión de Terapia - ${therapistTitle}`, `Consulta Terapéutica (${modalidad})`, fecha, hora, 60);
+            const targetTz = document.getElementById('fast-tz-select') ? document.getElementById('fast-tz-select').value : getPatientUserTimeZone();
+            const converted = convertTimeFromVETToZone(fecha, hora, targetTz);
+            
+            statusMsg.innerHTML = `
+                <div style="padding: 0.5rem 0;">
+                    <div style="font-weight: 800; font-size: 1rem; color: #065f46; margin-bottom: 0.35rem;">🎉 ¡Cita agendada con éxito!</div>
+                    <div style="font-size: 0.85rem; color: #047857; margin-bottom: 0.25rem;">🕒 <strong>Tu hora local (${targetTz}):</strong> ${format12h(converted.timeStr)}${converted.dayOffsetStr} (${converted.dateStr})</div>
+                    <div style="font-size: 0.82rem; color: #065f46; opacity: 0.9; margin-bottom: 0.75rem;">🇻🇪 <strong>Hora Terapeuta (Venezuela):</strong> ${format12h(hora)} (${fecha})</div>
+                    <a href="${gcalUrl}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 6px; background: #4285f4; color: white; padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(66,133,244,0.3);">
+                        📅 Agregar a mi Google Calendar
+                    </a>
+                </div>
+            `;
             statusMsg.className = "status-msg success-msg";
             statusMsg.classList.remove('hide');
             document.getElementById('fast-booking-form').reset();
             document.getElementById('fast-hours-container').classList.add('hide');
             document.getElementById('fast-patient-details').classList.add('hide');
-            renderFastCalendar();
+            initFastTimeZoneSelector(); renderFastCalendar();
         } else {
             statusMsg.textContent = data.error || "Error al agendar la consulta.";
             statusMsg.className = "status-msg error-msg";

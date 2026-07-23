@@ -1602,7 +1602,8 @@ def get_agenda_disponibilidad():
     return jsonify({
         "modalidades": modalidades_list,
         "horas_disponibles": horas_disponibles,
-        "slots": slots
+        "slots": slots,
+        "psicologo_timezone": "America/Caracas"
     })
 
 @app.route('/api/fast-booking/book', methods=['POST'])
