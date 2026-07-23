@@ -4266,14 +4266,14 @@ def admin_availability():
         if u_row and u_row['configuracion_horarios_visual']:
             try:
                 config = json.loads(u_row['configuracion_horarios_visual'])
-                if not isinstance(config, dict): config = {}
-                if 'perfiles' not in config or not config['perfiles']:
-                    config['perfiles'] = default_visual['perfiles']
-                if 'antelacion' not in config: config['antelacion'] = 24
-                if 'alerta_confirmacion' not in config: config['alerta_confirmacion'] = 24
-                if 'alerta_recordatorio' not in config: config['alerta_recordatorio'] = 2
-                if 'alerta_cierre' not in config: config['alerta_cierre'] = 2
-                return jsonify(config)
+                if isinstance(config, dict):
+                    if 'perfiles' not in config or not isinstance(config['perfiles'], list) or len(config['perfiles']) == 0:
+                        config['perfiles'] = default_visual['perfiles']
+                    if 'antelacion' not in config: config['antelacion'] = 24
+                    if 'alerta_confirmacion' not in config: config['alerta_confirmacion'] = 24
+                    if 'alerta_recordatorio' not in config: config['alerta_recordatorio'] = 2
+                    if 'alerta_cierre' not in config: config['alerta_cierre'] = 2
+                    return jsonify(config)
             except:
                 pass
         return jsonify(default_visual)

@@ -4272,7 +4272,16 @@ function renderProfileBlock(container, profileData) {
     header.appendChild(delProfileBtn);
     card.appendChild(header);
     
-    profileData.dias.forEach(day => {
+    const diasList = (profileData && Array.isArray(profileData.dias)) ? profileData.dias : [
+        {"dia": 1, "nombre": "Lunes", "activo": false, "rangos": []},
+        {"dia": 2, "nombre": "Martes", "activo": false, "rangos": []},
+        {"dia": 3, "nombre": "Miércoles", "activo": false, "rangos": []},
+        {"dia": 4, "nombre": "Jueves", "activo": false, "rangos": []},
+        {"dia": 5, "nombre": "Viernes", "activo": false, "rangos": []},
+        {"dia": 6, "nombre": "Sábado", "activo": false, "rangos": []},
+        {"dia": 0, "nombre": "Domingo", "activo": false, "rangos": []}
+    ];
+    diasList.forEach(day => {
         const dayRow = document.createElement('div');
         dayRow.className = 'profile-day-row';
         dayRow.setAttribute('data-dia', day.dia);
