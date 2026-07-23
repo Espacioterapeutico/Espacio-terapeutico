@@ -3344,16 +3344,19 @@ def patient_pizarra():
             except Exception as wp_ex:
                 print("Error al enviar WebPush de actualización de pizarra:", wp_ex)
             
-            import requests
-            firebase_payload = {
-                'fecha': fecha_actual,
-                'contenido': contenido,
-                'archivo_adjunto': archivo_adjunto,
-                'estado_animo': estado_animo,
-                'comentario_animo': comentario_animo,
-                'emoji_animo': emoji_animo
-            }
-            requests.post(f"{FIREBASE_DB_URL}/pizarra_terapeutica/{patient_id}.json", json=firebase_payload)
+            try:
+                import requests
+                firebase_payload = {
+                    'fecha': fecha_actual,
+                    'contenido': contenido,
+                    'archivo_adjunto': archivo_adjunto,
+                    'estado_animo': estado_animo,
+                    'comentario_animo': comentario_animo,
+                    'emoji_animo': emoji_animo
+                }
+                requests.post(f"{FIREBASE_DB_URL}/pizarra_terapeutica/{patient_id}.json", json=firebase_payload, timeout=2.0)
+            except Exception as fb_ex:
+                print("Error al sincronizar pizarra con Firebase:", fb_ex)
             
             return jsonify({'success': 'Actualización agregada a tu pizarra con éxito.', 'fecha': fecha_actual})
         except Exception as e:
@@ -5363,8 +5366,11 @@ def delete_session_detail(session_id):
         db.commit()
         
         # Sincronización en segundo plano con Firebase
-        import threading
-        threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        try:
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        except Exception as sync_ex:
+            print("Error al sincronizar paciente tras eliminar sesión:", sync_ex)
         
         return jsonify({'success': 'Evolución eliminada y cita restaurada a agendada.'})
     except Exception as e:
