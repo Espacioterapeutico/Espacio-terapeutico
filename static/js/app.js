@@ -472,7 +472,7 @@ async function checkSession() {
             if (data.role === 'paciente') {
                 showPatientLayout(data.username, data.patient_id);
             } else {
-                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago);
+                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba);
             }
         } else {
             showAuthScreen();
@@ -526,7 +526,7 @@ async function handleAuthSubmit(e) {
                 });
                 dataAdmin = await resAdmin.json();
                 if (resAdmin.ok) {
-                    showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago);
+                    showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago, dataAdmin.primer_inicio, dataAdmin.suscripcion_paga, dataAdmin.fecha_expiracion_prueba);
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
                 }
@@ -598,9 +598,39 @@ function clearAllNotificationIntervals() {
     if (patientNotificationIntervalId) { clearInterval(patientNotificationIntervalId); patientNotificationIntervalId = null; }
 }
 
-function showAppLayout(username, role, activo, bloqueos, userId, avisoPago) {
+function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba) {
     document.body.classList.remove('is-patient');
     document.getElementById('auth-screen').classList.add('hide');
+
+    // Manejar Badge de Prueba Gratis de 3 días en la barra superior
+    const trialBadge = document.getElementById('header-trial-badge');
+    const trialText = document.getElementById('trial-badge-text');
+    if (trialBadge && role === 'psicologo') {
+        if (suscripcionPaga === 1) {
+            trialBadge.classList.add('hide');
+        } else if (fechaExpiracionPrueba) {
+            const expDate = new Date(fechaExpiracionPrueba);
+            const diffHours = (expDate - new Date()) / (1000 * 60 * 60);
+            if (diffHours > 0) {
+                const daysLeft = Math.ceil(diffHours / 24);
+                if (trialText) trialText.textContent = `⏳ Prueba Gratis: Quedan ${daysLeft} día${daysLeft > 1 ? 's' : ''}`;
+                trialBadge.classList.remove('hide');
+            } else {
+                trialBadge.classList.add('hide');
+            }
+        } else {
+            trialBadge.classList.add('hide');
+        }
+    } else if (trialBadge) {
+        trialBadge.classList.add('hide');
+    }
+
+    // Disparar Asistente de Configuración Inicial (Onboarding Wizard) si primerInicio === 1
+    if (role === 'psicologo' && (primerInicio === 1 || primerInicio === true)) {
+        setTimeout(() => {
+            openPsychologistOnboardingWizard({ username, role, userId });
+        }, 400);
+    }
     document.getElementById('patient-header').classList.add('hide');
     document.getElementById('patient-menu').classList.add('hide');
     document.getElementById('patient-menu-overlay').classList.add('hide');

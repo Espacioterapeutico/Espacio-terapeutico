@@ -2058,18 +2058,24 @@ def check_session():
         db = get_db()
         cursor = db.cursor()
         cursor.execute("""
-            SELECT role, activo, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra 
+            SELECT role, activo, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, primer_inicio, suscripcion_paga, fecha_expiracion_prueba 
             FROM usuarios WHERE id = ?
         """, (session['user_id'],))
         row = cursor.fetchone()
         role = row['role'] if row else 'psicologo'
         activo = row['activo'] if row else 1
         aviso_pago = row['aviso_pago'] if row else 0
+        p_inicio = row['primer_inicio'] if row and row['primer_inicio'] is not None else 1
+        s_paga = row['suscripcion_paga'] if row and row['suscripcion_paga'] is not None else 0
+        f_exp = row['fecha_expiracion_prueba'] if row and row['fecha_expiracion_prueba'] else ''
         return jsonify({
             'logged_in': True,
             'role': role,
             'activo': activo,
             'aviso_pago': aviso_pago,
+            'primer_inicio': p_inicio,
+            'suscripcion_paga': s_paga,
+            'fecha_expiracion_prueba': f_exp,
             'username': session['username'],
             'user_id': session['user_id'],
             'bloqueos': {
