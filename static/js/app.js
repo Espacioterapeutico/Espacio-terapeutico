@@ -6441,10 +6441,13 @@ async function loadPatientLinks() {
         const res = await fetch('/api/admin/profile-slug');
         if (res.ok) {
             const data = await res.json();
-            const slug = data.slug;
+            const slug = data.slug || (data.username ? `psic.${data.username.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '');
             if (slug) {
-                if (regEl) regEl.value = `${baseUrl}/registro/${slug}`;
-                if (ageEl) ageEl.value = `${baseUrl}/agendar/${slug}`;
+                const regUrl = data.registration_url ? (data.registration_url.startsWith('http') ? data.registration_url : `${baseUrl}${data.registration_url}`) : `${baseUrl}/registro/${slug}`;
+                const ageUrl = data.fast_booking_url ? (data.fast_booking_url.startsWith('http') ? data.fast_booking_url : `${baseUrl}${data.fast_booking_url}`) : `${baseUrl}/agendar/${slug}`;
+                
+                if (regEl) regEl.value = regUrl;
+                if (ageEl) ageEl.value = ageUrl;
                 if (slugInp) slugInp.value = slug;
                 return;
             }
@@ -6452,9 +6455,6 @@ async function loadPatientLinks() {
     } catch (err) {
         console.error("Error cargando enlaces personalizados:", err);
     }
-    if (regEl) regEl.value = '';
-    if (ageEl) ageEl.value = '';
-    if (slugInp) slugInp.value = '';
 }
 
 async function savePsychologistSlug() {
