@@ -120,6 +120,8 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         import google.auth.transport.requests
         
         # 1. Obtener tokens de FCM para el usuario/paciente
+        db = get_db()
+        cursor = db.cursor()
         tokens = []
         if user_id:
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
@@ -1342,13 +1344,13 @@ def register():
             psicologo_id = data.get('psicologo_id')
             
             # Verificar si la cédula ya existe (comparación flexible)
-            cursor.execute("SELECT id, username, cedula, pregunta_seguridad_1, respuesta_seguridad_1_hash FROM pacientes")
+            cursor.execute("SELECT id, username, cedula, nombres, apellidos, psicologo_id, pregunta_seguridad_1, respuesta_seguridad_1_hash FROM pacientes")
             all_patients = cursor.fetchall()
-            cleaned_input = ''.join(c for c in cedula if c.isdigit())
+            cleaned_input = ''.join(c for c in cedula if c.isdigit()) if cedula else ''
             existing_patient = None
             for p in all_patients:
                 db_cedula = p['cedula'] or ''
-                if db_cedula.strip() == cedula:
+                if cedula and db_cedula.strip() == cedula:
                     existing_patient = p
                     break
                 if cleaned_input and ''.join(c for c in db_cedula if c.isdigit()) == cleaned_input:
@@ -1380,7 +1382,9 @@ def register():
                 ))
                 patient_id = existing_patient['id']
                 target_psic = existing_patient['psicologo_id'] or psicologo_id or 1
-                pat_name = f"{data.get('nombres') or existing_patient.get('nombres') or ''} {data.get('apellidos') or existing_patient.get('apellidos') or ''}".strip() or username
+                ex_nom = existing_patient['nombres'] if existing_patient['nombres'] else ''
+                ex_ape = existing_patient['apellidos'] if existing_patient['apellidos'] else ''
+                pat_name = f"{data.get('nombres') or ex_nom} {data.get('apellidos') or ex_ape}".strip() or username
                 notif_msg = f"El consultante {pat_name} ha completado la creación de su cuenta de acceso."
             else:
                 cursor.execute("""
