@@ -4219,12 +4219,56 @@ def admin_availability():
     cursor = db.cursor()
     import json
     
+    default_visual = {
+        "duracion": 60,
+        "receso": 15,
+        "antelacion": 24,
+        "alerta_confirmacion": 24,
+        "alerta_recordatorio": 2,
+        "alerta_cierre": 2,
+        "limite_cancelacion_tipo": "horas",
+        "limite_cancelacion_valor": 24,
+        "perfiles": [
+            {
+                "id": "default_online",
+                "nombre": "Horario Online",
+                "modalidad": "Online",
+                "dias": [
+                    {"dia": 1, "nombre": "Lunes", "activo": True, "rangos": [{"inicio": "12:00", "fin": "16:00"}, {"inicio": "18:00", "fin": "22:00"}]},
+                    {"dia": 2, "nombre": "Martes", "activo": True, "rangos": [{"inicio": "18:00", "fin": "22:00"}]},
+                    {"dia": 3, "nombre": "Miércoles", "activo": False, "rangos": []},
+                    {"dia": 4, "nombre": "Jueves", "activo": False, "rangos": []},
+                    {"dia": 5, "nombre": "Viernes", "activo": False, "rangos": []},
+                    {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
+                    {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
+                ]
+            },
+            {
+                "id": "default_presencial",
+                "nombre": "Horario Presencial",
+                "modalidad": "Presencial",
+                "dias": [
+                    {"dia": 1, "nombre": "Lunes", "activo": False, "rangos": []},
+                    {"dia": 2, "nombre": "Martes", "activo": False, "rangos": []},
+                    {"dia": 3, "nombre": "Miércoles", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 4, "nombre": "Jueves", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 5, "nombre": "Viernes", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
+                    {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
+                ]
+            }
+        ]
+    }
+
     if request.method == 'GET':
         cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (session.get('user_id'),))
         u_row = cursor.fetchone()
         if u_row and u_row['configuracion_horarios_visual']:
             try:
                 config = json.loads(u_row['configuracion_horarios_visual'])
+                if not isinstance(config, dict): config = {}
+                if 'perfiles' not in config or not config['perfiles']:
+                    config['perfiles'] = default_visual['perfiles']
                 if 'antelacion' not in config: config['antelacion'] = 24
                 if 'alerta_confirmacion' not in config: config['alerta_confirmacion'] = 24
                 if 'alerta_recordatorio' not in config: config['alerta_recordatorio'] = 2
@@ -4232,59 +4276,7 @@ def admin_availability():
                 return jsonify(config)
             except:
                 pass
-            
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'configuracion_horarios_visual'")
-        row = cursor.fetchone()
-        if not row:
-            # Estructura por defecto con dos perfiles independientes
-            default_visual = {
-                "duracion": 60,
-                "receso": 15,
-                "antelacion": 24,
-                "alerta_confirmacion": 24,
-                "alerta_recordatorio": 2,
-                "alerta_cierre": 2,
-                "perfiles": [
-                    {
-                        "id": "default_online",
-                        "nombre": "Horario Online",
-                        "modalidad": "Online",
-                        "dias": [
-                            {"dia": 1, "nombre": "Lunes", "activo": True, "rangos": [{"inicio": "12:00", "fin": "16:00"}, {"inicio": "18:00", "fin": "22:00"}]},
-                            {"dia": 2, "nombre": "Martes", "activo": True, "rangos": [{"inicio": "18:00", "fin": "22:00"}]},
-                            {"dia": 3, "nombre": "Miércoles", "activo": False, "rangos": []},
-                            {"dia": 4, "nombre": "Jueves", "activo": False, "rangos": []},
-                            {"dia": 5, "nombre": "Viernes", "activo": False, "rangos": []},
-                            {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
-                            {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
-                        ]
-                    },
-                    {
-                        "id": "default_presencial",
-                        "nombre": "Horario Presencial",
-                        "modalidad": "Presencial",
-                        "dias": [
-                            {"dia": 1, "nombre": "Lunes", "activo": False, "rangos": []},
-                            {"dia": 2, "nombre": "Martes", "activo": False, "rangos": []},
-                            {"dia": 3, "nombre": "Miércoles", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
-                            {"dia": 4, "nombre": "Jueves", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
-                            {"dia": 5, "nombre": "Viernes", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
-                            {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
-                            {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
-                        ]
-                    }
-                ]
-            }
-            return jsonify(default_visual)
-        try:
-            config = json.loads(row['valor'])
-            if 'antelacion' not in config: config['antelacion'] = 24
-            if 'alerta_confirmacion' not in config: config['alerta_confirmacion'] = 24
-            if 'alerta_recordatorio' not in config: config['alerta_recordatorio'] = 2
-            if 'alerta_cierre' not in config: config['alerta_cierre'] = 2
-            return jsonify(config)
-        except:
-            return jsonify(json.loads(row['valor']))
+        return jsonify(default_visual)
             
     elif request.method == 'POST':
         data = request.json

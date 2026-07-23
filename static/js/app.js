@@ -4404,7 +4404,8 @@ async function loadAdminAvailability() {
         
         listContainer.innerHTML = '';
         
-        data.perfiles.forEach(perf => {
+        const perfiles = (data && Array.isArray(data.perfiles)) ? data.perfiles : [];
+        perfiles.forEach(perf => {
             renderProfileBlock(listContainer, perf);
         });
         
