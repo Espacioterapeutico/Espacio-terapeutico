@@ -6940,8 +6940,20 @@ function toggleRegisterFields() {
     }
 }
 
+let isRegisterSubmitting = false;
+
 async function submitRegister(e) {
     e.preventDefault();
+    if (isRegisterSubmitting) return;
+    
+    const submitBtn = document.querySelector('#reg-form button[type="submit"]') || document.getElementById('reg-submit-btn');
+    isRegisterSubmitting = true;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('data-orig-text', submitBtn.textContent);
+        submitBtn.textContent = 'Registrando...';
+    }
+
     const errorMsg = document.getElementById('reg-error-msg');
     errorMsg.classList.add('hide');
     
@@ -7064,6 +7076,12 @@ async function submitRegister(e) {
         errorMsg.textContent = errText;
         errorMsg.classList.remove('hide');
         alert(errText);
+    } finally {
+        isRegisterSubmitting = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = submitBtn.getAttribute('data-orig-text') || 'Registrar Cuenta';
+        }
     }
 }
 

@@ -6959,7 +6959,7 @@ function showBackgroundNotification(title, body, url, icon, badge, tag) {{
   return self.registration.showNotification(title || 'Espacio Terapéutico', notificationOptions);
 }}
 
-// Handler de notificaciones en SEGUNDO PLANO via FCM SDK
+// Handler de notificaciones en SEGUNDO PLANO via FCM SDK (Único responsable para evitar duplicados y "undefined")
 messaging.onBackgroundMessage((payload) => {{
   console.log('[firebase-messaging-sw.js] Evento FCM recibido en segundo plano:', payload);
 
@@ -6970,36 +6970,9 @@ messaging.onBackgroundMessage((payload) => {{
   const badge = payload.data?.badge || payload.notification?.badge || '/static/badge.png';
   const tag = payload.data?.tag || 'espacio-terapeutico-notif';
 
+  if (title === 'undefined' || body === 'undefined') return;
+
   return showBackgroundNotification(title, body, url, icon, badge, tag);
-}});
-
-// Listener nativo WebPush para notificaciones cuando la PWA está en segundo plano o cerrada
-self.addEventListener('push', (event) => {{
-  console.log('[firebase-messaging-sw.js] Evento Push nativo recibido:', event);
-  let title = 'Espacio Terapéutico';
-  let body = 'Tienes una nueva actualización.';
-  let url = '/';
-  let icon = '/static/logo.png';
-  let badge = '/static/badge.png';
-  let tag = 'espacio-terapeutico-notif';
-
-  if (event.data) {{
-    try {{
-      const pData = event.data.json();
-      title = pData.notification?.title || pData.data?.title || pData.title || title;
-      body = pData.notification?.body || pData.data?.body || pData.body || body;
-      url = pData.data?.url || pData.data?.click_action || pData.fcmOptions?.link || url;
-      icon = pData.data?.icon || pData.notification?.icon || icon;
-      badge = pData.data?.badge || pData.notification?.badge || badge;
-      tag = pData.data?.tag || tag;
-    }} catch(e) {{
-      body = event.data.text() || body;
-    }}
-  }}
-
-  event.waitUntil(
-    showBackgroundNotification(title, body, url, icon, badge, tag)
-  );
 }});
 
 // Manejo del clic en la notificación para abrir/enfocar la app
