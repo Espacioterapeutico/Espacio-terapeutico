@@ -1617,6 +1617,7 @@ def fast_booking_book():
     nombres = data.get('nombres', '').strip()
     apellidos = data.get('apellidos', '').strip()
     telefono = data.get('telefono', '').strip()
+    email = data.get('email', '').strip() or data.get('correo', '').strip()
     
     if not psicologo_id or not fecha or not hora or not cedula or not nombres:
         return jsonify({'error': 'Faltan campos requeridos para agendar.'}), 400
@@ -1668,9 +1669,9 @@ def fast_booking_book():
         is_new_patient = True
         try:
             cursor.execute("""
-                INSERT INTO pacientes (nombres, apellidos, cedula, telefono, psicologo_id)
-                VALUES (?, ?, ?, ?, ?)
-            """, (nombres, apellidos, cedula, telefono, psicologo_id))
+                INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (nombres, apellidos, cedula, telefono, email, psicologo_id))
             patient_id = cursor.lastrowid
             pac_nombre = f"{nombres} {apellidos}"
         except Exception as ex:
@@ -1678,6 +1679,8 @@ def fast_booking_book():
     else:
         patient_id = patient['id']
         pac_nombre = f"{patient['nombres']} {patient['apellidos']}"
+        if email and (isinstance(patient, dict) and not patient.get('email')):
+            cursor.execute("UPDATE pacientes SET email = ? WHERE id = ?", (email, patient_id))
         
     try:
         google_event_id = None

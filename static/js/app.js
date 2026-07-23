@@ -7880,9 +7880,11 @@ async function submitFastBooking(e) {
     const nombres = document.getElementById('fast-nombres').value.trim();
     const apellidos = document.getElementById('fast-apellidos').value.trim();
     const telefono = document.getElementById('fast-telefono').value.trim();
+    const emailEl = document.getElementById('fast-email');
+    const email = emailEl ? emailEl.value.trim() : '';
     
-    if (!fecha || !hora || !cedula || !nombres || !apellidos || !telefono) {
-        alert("Por favor completa los datos requeridos.");
+    if (!fecha || !hora || !cedula || !nombres || !apellidos || !telefono || !email) {
+        alert("Por favor completa todos los datos requeridos (incluyendo correo).");
         return;
     }
     
@@ -7901,7 +7903,8 @@ async function submitFastBooking(e) {
                 cedula,
                 nombres,
                 apellidos,
-                telefono
+                telefono,
+                email
             })
         });
         
