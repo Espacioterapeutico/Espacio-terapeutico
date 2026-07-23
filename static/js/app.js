@@ -9154,3 +9154,191 @@ function openNotificationGuideModal() {
 }
 window.openNotificationGuideModal = openNotificationGuideModal;
 
+
+
+// --- ONBOARDING WIZARD (ASISTENTE DE CONFIGURACIÓN INICIAL PSICÓLOGO) ---
+let currentOnboardingStep = 1;
+
+function openPsychologistOnboardingWizard(userData) {
+    const modal = document.getElementById('psychologist-onboarding-modal');
+    if (!modal) return;
+    
+    currentOnboardingStep = 1;
+    updateOnboardingUI();
+    
+    const uName = userData ? (userData.username || '') : '';
+    const cleanUser = uName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    
+    document.getElementById('ob-nombres').value = userData ? (userData.nombres || uName) : '';
+    document.getElementById('ob-apellidos').value = userData ? (userData.apellidos || '') : '';
+    document.getElementById('ob-slug').value = cleanUser ? `psic.${cleanUser}` : 'psic.miperfil';
+    
+    modal.classList.remove('hide');
+    modal.style.display = 'flex';
+}
+
+function updateOnboardingUI() {
+    const totalSteps = 4;
+    document.getElementById('onboarding-step-num').textContent = currentOnboardingStep;
+    document.getElementById('onboarding-progress-bar').style.width = `${(currentOnboardingStep / totalSteps) * 100}%`;
+    
+    for (let i = 1; i <= totalSteps; i++) {
+        const stepEl = document.getElementById(`ob-step-${i}`);
+        if (stepEl) {
+            if (i === currentOnboardingStep) {
+                stepEl.classList.remove('hide');
+            } else {
+                stepEl.classList.add('hide');
+            }
+        }
+    }
+    
+    const prevBtn = document.getElementById('ob-prev-btn');
+    const nextBtn = document.getElementById('ob-next-btn');
+    const submitBtn = document.getElementById('ob-submit-btn');
+    
+    if (currentOnboardingStep === 1) {
+        prevBtn.classList.add('hide');
+    } else {
+        prevBtn.classList.remove('hide');
+    }
+    
+    if (currentOnboardingStep === totalSteps) {
+        nextBtn.classList.add('hide');
+        submitBtn.classList.remove('hide');
+    } else {
+        nextBtn.classList.remove('hide');
+        submitBtn.classList.add('hide');
+    }
+}
+
+function nextOnboardingStep() {
+    const errBox = document.getElementById('onboarding-error-msg');
+    errBox.classList.add('hide');
+    
+    if (currentOnboardingStep === 1) {
+        const nom = document.getElementById('ob-nombres').value.trim();
+        const ape = document.getElementById('ob-apellidos').value.trim();
+        if (!nom || !ape) {
+            errBox.textContent = 'Por favor ingresa tus Nombres y Apellidos.';
+            errBox.classList.remove('hide');
+            return;
+        }
+    } else if (currentOnboardingStep === 2) {
+        const slug = document.getElementById('ob-slug').value.trim();
+        if (!slug) {
+            errBox.textContent = 'Por favor ingresa un enlace único de perfil.';
+            errBox.classList.remove('hide');
+            return;
+        }
+    }
+    
+    if (currentOnboardingStep < 4) {
+        currentOnboardingStep++;
+        updateOnboardingUI();
+    }
+}
+
+function prevOnboardingStep() {
+    document.getElementById('onboarding-error-msg').classList.add('hide');
+    if (currentOnboardingStep > 1) {
+        currentOnboardingStep--;
+        updateOnboardingUI();
+    }
+}
+
+async function handleOnboardingSubmit(e) {
+    e.preventDefault();
+    const errBox = document.getElementById('onboarding-error-msg');
+    errBox.classList.add('hide');
+    
+    const submitBtn = document.getElementById('ob-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Guardando configuración...';
+    }
+    
+    const nombres = document.getElementById('ob-nombres').value.trim();
+    const apellidos = document.getElementById('ob-apellidos').value.trim();
+    const estudios = document.getElementById('ob-estudios').value.trim();
+    const federacion = document.getElementById('ob-federacion').value.trim();
+    const slug = document.getElementById('ob-slug').value.trim();
+    const duracion = parseInt(document.getElementById('ob-duracion').value || 60);
+    const receso = parseInt(document.getElementById('ob-receso').value || 15);
+    
+    const pm_banco = document.getElementById('ob-pm-banco').value.trim();
+    const pm_cedula = document.getElementById('ob-pm-cedula').value.trim();
+    const pm_telefono = document.getElementById('ob-pm-telefono').value.trim();
+    const zelle_email = document.getElementById('ob-zelle-email').value.trim();
+    
+    const metodos_pago = {
+        pago_movil: { banco: pm_banco, cedula: pm_cedula, telefono: pm_telefono },
+        zelle: { email: zelle_email }
+    };
+    
+    const onlineActivo = document.getElementById('ob-day-lunes').checked || document.getElementById('ob-day-martes').checked;
+    const presencialActivo = document.getElementById('ob-day-miercoles').checked || document.getElementById('ob-day-jueves').checked || document.getElementById('ob-day-viernes').checked;
+    
+    const perfiles = [
+        {
+            id: "default_online",
+            nombre: "Horario Online",
+            modalidad: "Online",
+            dias: [
+                {"dia": 1, "nombre": "Lunes", "activo": document.getElementById('ob-day-lunes').checked, "rangos": [{"inicio": "12:00", "fin": "16:00"}, {"inicio": "18:00", "fin": "22:00"}]},
+                {"dia": 2, "nombre": "Martes", "activo": document.getElementById('ob-day-martes').checked, "rangos": [{"inicio": "18:00", "fin": "22:00"}]},
+                {"dia": 3, "nombre": "Miércoles", "activo": false, "rangos": []},
+                {"dia": 4, "nombre": "Jueves", "activo": false, "rangos": []},
+                {"dia": 5, "nombre": "Viernes", "activo": false, "rangos": []},
+                {"dia": 6, "nombre": "Sábado", "activo": false, "rangos": []},
+                {"dia": 0, "nombre": "Domingo", "activo": false, "rangos": []}
+            ]
+        },
+        {
+            id: "default_presencial",
+            nombre: "Horario Presencial",
+            modalidad: "Presencial",
+            dias: [
+                {"dia": 1, "nombre": "Lunes", "activo": false, "rangos": []},
+                {"dia": 2, "nombre": "Martes", "activo": false, "rangos": []},
+                {"dia": 3, "nombre": "Miércoles", "activo": document.getElementById('ob-day-miercoles').checked, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                {"dia": 4, "nombre": "Jueves", "activo": document.getElementById('ob-day-jueves').checked, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                {"dia": 5, "nombre": "Viernes", "activo": document.getElementById('ob-day-viernes').checked, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                {"dia": 6, "nombre": "Sábado", "activo": false, "rangos": []},
+                {"dia": 0, "nombre": "Domingo", "activo": false, "rangos": []}
+            ]
+        }
+    ];
+
+    try {
+        const res = await fetch('/api/onboarding/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombres, apellidos, estudios, federacion, slug, duracion, receso, perfiles, metodos_pago })
+        });
+        
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || '¡Configuración inicial completada!');
+            const modal = document.getElementById('psychologist-onboarding-modal');
+            if (modal) {
+                modal.classList.add('hide');
+                modal.style.display = 'none';
+            }
+            // Recargar datos principales del consultorio
+            if (typeof loadAdminAvailability === 'function') loadAdminAvailability();
+            if (typeof switchView === 'function') switchView('dashboard');
+        } else {
+            errBox.textContent = data.error || 'Error al guardar la configuración inicial.';
+            errBox.classList.remove('hide');
+        }
+    } catch (err) {
+        errBox.textContent = 'Error de conexión al guardar la configuración.';
+        errBox.classList.remove('hide');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✓ Finalizar e Ingresar';
+        }
+    }
+}

@@ -3305,7 +3305,146 @@
         </div>
     </div>
 
+
+    <!-- MODAL "ASISTENTE DE CONFIGURACIÓN INICIAL (ONBOARDING) PSICÓLOGO" -->
+    <div id="psychologist-onboarding-modal" class="modal hide" style="z-index: 10000; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px);">
+        <div class="modal-content modal-lg" style="max-width: 620px; border-radius: 16px; border: none; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1); overflow: hidden; padding: 0;">
+            <div style="background: linear-gradient(135deg, var(--primary-color) 0%, #6366f1 100%); padding: 1.5rem 1.75rem; color: #ffffff; text-align: center;">
+                <div style="font-size: 2.2rem; margin-bottom: 0.25rem;">📱✨</div>
+                <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #ffffff;">Bienvenido a tu Consultorio</h2>
+                <p style="margin: 0.3rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">Asistente de Configuración Inicial (Paso <span id="onboarding-step-num">1</span> de 4)</p>
+                
+                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 999px; margin-top: 1rem; overflow: hidden;">
+                    <div id="onboarding-progress-bar" style="width: 25%; height: 100%; background: #ffffff; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+
+            <div class="modal-body" style="padding: 1.5rem 1.75rem;">
+                <form id="onboarding-form" onsubmit="handleOnboardingSubmit(event)">
+                    <!-- PASO 1: PERFIL PROFESIONAL -->
+                    <div id="ob-step-1" class="ob-step">
+                        <h3 style="margin-top: 0; font-size: 1.05rem; color: var(--primary-color);">Paso 1: Tu Perfil Profesional</h3>
+                        <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1.1rem;">Verifica cómo aparecerá tu nombre en los informes clínicos y recibos:</p>
+                        
+                        <div class="form-row mb-3">
+                            <div class="form-group col-6">
+                                <label for="ob-nombres" style="font-weight: 600;">Nombres *</label>
+                                <input type="text" id="ob-nombres" required style="padding: 0.65rem;">
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="ob-apellidos" style="font-weight: 600;">Apellidos *</label>
+                                <input type="text" id="ob-apellidos" required style="padding: 0.65rem;">
+                            </div>
+                        </div>
+                        <div class="form-row mb-3">
+                            <div class="form-group col-6">
+                                <label for="ob-estudios" style="font-weight: 600;">Título / Especialidad</label>
+                                <input type="text" id="ob-estudios" placeholder="Ej: Psicólogo Clínico" style="padding: 0.65rem;">
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="ob-federacion" style="font-weight: 600;">N° Colegiado / FPV</label>
+                                <input type="text" id="ob-federacion" placeholder="Ej: FPV 12345" style="padding: 0.65rem;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PASO 2: ENLACE Y TIEMPOS BASE -->
+                    <div id="ob-step-2" class="ob-step hide">
+                        <h3 style="margin-top: 0; font-size: 1.05rem; color: var(--primary-color);">Paso 2: Enlace Personalizado de Agenda</h3>
+                        <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1.1rem;">Define el identificador que compartirás con tus pacientes para solicitar citas:</p>
+                        
+                        <div class="form-group mb-3">
+                            <label for="ob-slug" style="font-weight: 600;">Enlace único *</label>
+                            <div style="display: flex; align-items: center; background: var(--bg-light); border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding-left: 0.75rem;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">.../agendar/</span>
+                                <input type="text" id="ob-slug" required style="border: none; background: transparent; padding: 0.65rem; font-weight: 700; color: var(--primary-color); width: 100%;">
+                            </div>
+                        </div>
+
+                        <div class="form-row mb-3">
+                            <div class="form-group col-6">
+                                <label for="ob-duracion" style="font-weight: 600;">Duración Consulta (min)</label>
+                                <input type="number" id="ob-duracion" value="60" min="15" max="180" style="padding: 0.65rem;">
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="ob-receso" style="font-weight: 600;">Receso entre Citas (min)</label>
+                                <input type="number" id="ob-receso" value="15" min="0" max="120" style="padding: 0.65rem;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PASO 3: DÍAS DE ATENCIÓN -->
+                    <div id="ob-step-3" class="ob-step hide">
+                        <h3 style="margin-top: 0; font-size: 1.05rem; color: var(--primary-color);">Paso 3: Días de Atención Inicial</h3>
+                        <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1.1rem;">Marca los días en los que atiendes (podrás personalizar rangos exactos después):</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 6px; background: var(--bg-light);">
+                                <input type="checkbox" id="ob-day-lunes" checked> <span>Lunes (Online)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 6px; background: var(--bg-light);">
+                                <input type="checkbox" id="ob-day-martes" checked> <span>Martes (Online)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 6px; background: var(--bg-light);">
+                                <input type="checkbox" id="ob-day-miercoles" checked> <span>Miércoles (Presencial)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 6px; background: var(--bg-light);">
+                                <input type="checkbox" id="ob-day-jueves" checked> <span>Jueves (Presencial)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 6px; background: var(--bg-light);">
+                                <input type="checkbox" id="ob-day-viernes" checked> <span>Viernes (Presencial)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- PASO 4: DATOS DE COBRO -->
+                    <div id="ob-step-4" class="ob-step hide">
+                        <h3 style="margin-top: 0; font-size: 1.05rem; color: var(--primary-color);">Paso 4: Datos de Pago Móvil / Cobro</h3>
+                        <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1.1rem;">Ingresa tus datos para recibir pagos de tus consultantes:</p>
+                        
+                        <div class="form-row mb-3">
+                            <div class="form-group col-6">
+                                <label for="ob-pm-banco" style="font-weight: 600;">Banco Pago Móvil</label>
+                                <input type="text" id="ob-pm-banco" placeholder="Ej: Banco de Venezuela" style="padding: 0.65rem;">
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="ob-pm-cedula" style="font-weight: 600;">Cédula / RIF</label>
+                                <input type="text" id="ob-pm-cedula" placeholder="Ej: V-12345678" style="padding: 0.65rem;">
+                            </div>
+                        </div>
+                        <div class="form-row mb-3">
+                            <div class="form-group col-6">
+                                <label for="ob-pm-telefono" style="font-weight: 600;">Teléfono Pago Móvil</label>
+                                <input type="text" id="ob-pm-telefono" placeholder="Ej: 04141234567" style="padding: 0.65rem;">
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="ob-zelle-email" style="font-weight: 600;">Zelle Email (Opcional)</label>
+                                <input type="email" id="ob-zelle-email" placeholder="correo@zelle.com" style="padding: 0.65rem;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="onboarding-error-msg" class="status-msg error-msg hide mb-3"></div>
+
+                    <!-- BOTONES DE NAVEGACIÓN -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; padding-top: 0.85rem; border-top: 1.5px solid var(--border-color);">
+                        <button type="button" id="ob-prev-btn" onclick="prevOnboardingStep()" class="btn btn-secondary hide" style="padding: 0.6rem 1.1rem; font-weight: 600;">
+                            ← Anterior
+                        </button>
+                        <div id="ob-spacer"></div>
+                        <button type="button" id="ob-next-btn" onclick="nextOnboardingStep()" class="btn btn-primary" style="padding: 0.6rem 1.4rem; font-weight: 700;">
+                            Siguiente →
+                        </button>
+                        <button type="submit" id="ob-submit-btn" class="btn btn-primary hide" style="padding: 0.6rem 1.4rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                            ✓ Finalizar e Ingresar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v=53"></script>
+    <script src="/static/js/app.js?v=54"></script>
 </body>
 </html>

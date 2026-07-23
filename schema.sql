@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS sesiones (
     modalidad TEXT NOT NULL, -- 'Presencial', 'Online', 'Uptaeb'
     estado TEXT DEFAULT 'Realizada', -- 'Realizada', 'Cancelada', 'Reprogramada'
     resumen TEXT,
+    resumen_paciente TEXT,
     tareas_asignadas TEXT,
     recursos_entregados TEXT,
     anotaciones_proxima TEXT,
@@ -94,4 +95,20 @@ CREATE TABLE IF NOT EXISTS pizarra_terapeutica (
     fecha TEXT NOT NULL,
     contenido TEXT NOT NULL,
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS web_push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    patient_id INTEGER,
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fcm_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    patient_id INTEGER,
+    token TEXT UNIQUE
 );

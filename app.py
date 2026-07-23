@@ -393,6 +393,10 @@ def init_db():
         cols_usr = [row[1] for row in cursor.fetchall()]
         if 'slug' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN slug TEXT")
+        try:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN primer_inicio INTEGER DEFAULT 1")
+        except:
+            pass
             db.commit()
 
         cursor.execute("SELECT id, nombres, apellidos, username FROM usuarios WHERE slug IS NULL OR slug = ''")
@@ -1978,6 +1982,7 @@ def login():
             'activo': user['activo'],
             'aviso_pago': u_dict.get('aviso_pago', 0),
             'user_id': user['id'],
+            'primer_inicio': u_dict.get('primer_inicio', 1) if u_dict.get('primer_inicio') is not None else 1,
             'bloqueos': {
                 'registro': u_dict.get('bloqueo_registro', 0),
                 'evoluciones': u_dict.get('bloqueo_evoluciones', 0),
@@ -7775,3 +7780,95 @@ if __name__ == '__main__':
         min_size=(1024, 768)
     )
     webview.start()
+
+@app.route('/api/onboarding/complete', methods=['POST'])
+@login_required
+def complete_onboarding():
+    data = request.json or {}
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Sesión no válida.'}), 401
+        
+    db = get_db()
+    cursor = db.cursor()
+    import json
+    
+    nombres = data.get('nombres')
+    apellidos = data.get('apellidos')
+    estudios = data.get('estudios', '')
+    federacion = data.get('federacion', '')
+    raw_slug = data.get('slug') or f"psic.{nombres}{apellidos}"
+    cleaned_slug = raw_slug.strip().lower().replace(" ", "").replace("/", "").replace(".", "")
+    if not cleaned_slug.startswith("psic"):
+        cleaned_slug = "psic." + cleaned_slug
+    else:
+        cleaned_slug = "psic." + cleaned_slug[4:]
+        
+    duracion = int(data.get('duracion', 60))
+    receso = int(data.get('receso', 15))
+    perfiles = data.get('perfiles', [])
+    metodos_pago = data.get('metodos_pago', {})
+    
+    if not nombres or not apellidos:
+        return jsonify({'error': 'Nombres y Apellidos son obligatorios.'}), 400
+        
+    cursor.execute("SELECT id FROM usuarios WHERE slug = ? AND id != ?", (cleaned_slug, user_id))
+    if cursor.fetchone():
+        cleaned_slug = f"{cleaned_slug}{user_id}"
+
+    default_visual = {
+        "duracion": duracion,
+        "receso": receso,
+        "antelacion": 24,
+        "alerta_confirmacion": 24,
+        "alerta_recordatorio": 2,
+        "alerta_cierre": 2,
+        "limite_cancelacion_tipo": "horas",
+        "limite_cancelacion_valor": 24,
+        "perfiles": perfiles if perfiles else [
+            {
+                "id": "default_online",
+                "nombre": "Horario Online",
+                "modalidad": "Online",
+                "dias": [
+                    {"dia": 1, "nombre": "Lunes", "activo": True, "rangos": [{"inicio": "12:00", "fin": "16:00"}, {"inicio": "18:00", "fin": "22:00"}]},
+                    {"dia": 2, "nombre": "Martes", "activo": True, "rangos": [{"inicio": "18:00", "fin": "22:00"}]},
+                    {"dia": 3, "nombre": "Miércoles", "activo": False, "rangos": []},
+                    {"dia": 4, "nombre": "Jueves", "activo": False, "rangos": []},
+                    {"dia": 5, "nombre": "Viernes", "activo": False, "rangos": []},
+                    {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
+                    {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
+                ]
+            },
+            {
+                "id": "default_presencial",
+                "nombre": "Horario Presencial",
+                "modalidad": "Presencial",
+                "dias": [
+                    {"dia": 1, "nombre": "Lunes", "activo": False, "rangos": []},
+                    {"dia": 2, "nombre": "Martes", "activo": False, "rangos": []},
+                    {"dia": 3, "nombre": "Miércoles", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 4, "nombre": "Jueves", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 5, "nombre": "Viernes", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
+                    {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
+                ]
+            }
+        ]
+    }
+    
+    cfg_visual_str = json.dumps(default_visual)
+    metodos_pago_str = json.dumps(metodos_pago) if metodos_pago else json.dumps({})
+
+    try:
+        cursor.execute("""
+            UPDATE usuarios
+            SET nombres = ?, apellidos = ?, estudios = ?, federacion = ?,
+                slug = ?, configuracion_horarios_visual = ?, metodos_pago = ?,
+                primer_inicio = 0
+            WHERE id = ?
+        """, (nombres, apellidos, estudios, federacion, cleaned_slug, cfg_visual_str, metodos_pago_str, user_id))
+        db.commit()
+        return jsonify({'success': '¡Bienvenido a tu consultorio! Configuración inicial completada.', 'slug': cleaned_slug})
+    except Exception as e:
+        return jsonify({'error': f'Error al guardar configuración inicial: {str(e)}'}), 500
