@@ -296,6 +296,12 @@ function switchView(viewId) {
         return;
     }
 
+    // Ocultar cualquier modal abierto al cambiar de vista
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.classList.add('hide');
+        m.style.display = 'none';
+    });
+
     // Ocultar todas las vistas
     document.querySelectorAll('.app-view').forEach(view => {
         view.classList.add('hide');
@@ -2151,6 +2157,18 @@ function openNewPatientModal() {
         alert("La función de Registro de Pacientes está suspendida por administración.");
         return;
     }
+
+    // Actualizar destacado en menú lateral
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    const activeItem = document.querySelector('.nav-item[data-view="register-patient"]');
+    if (activeItem) activeItem.classList.add('active');
+
+    // Cerrar menú móvil si está abierto
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.add('hide');
+
     const form = document.getElementById('patient-form');
     if (form) form.reset();
     const formId = document.getElementById('patient-form-id');
@@ -2168,6 +2186,7 @@ function openNewPatientModal() {
     if (title) title.textContent = "Nueva Historia Clínica";
     
     if (typeof switchFormTab === 'function') switchFormTab(null, 'tab-personal');
+    
     openModal('patient-modal');
 }
 
@@ -4683,7 +4702,7 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('hide');
-        modal.style.display = '';
+        modal.style.display = 'flex';
     }
 }
 
