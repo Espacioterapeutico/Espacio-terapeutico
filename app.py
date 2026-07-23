@@ -5641,18 +5641,11 @@ def add_transaction():
     metodo_pago = data.get('metodo_pago')
     fecha_pago = data.get('fecha_pago')
     
-    if estado_pago == 'Prepagada' and cantidad_sesiones <= 1:
+    if (estado_pago == 'Prepagada' or 'paquete' in (tipo_consulta or '').lower()) and cantidad_sesiones <= 1:
         cursor.execute("SELECT costo_paquete_personalizado, sesiones_paquete_personalizado FROM pacientes WHERE id = ?", (paciente_id,))
         pac = cursor.fetchone()
         if pac and pac['sesiones_paquete_personalizado']:
-            pkg_cost = float(pac['costo_paquete_personalizado'] or 0)
-            pkg_count = int(pac['sesiones_paquete_personalizado'])
-            if pkg_cost > 0 and abs(float(monto or 0) - pkg_cost) < 0.01:
-                cantidad_sesiones = pkg_count
-            elif pkg_cost > 0 and float(monto or 0) >= pkg_cost:
-                calc = int((float(monto or 0) / pkg_cost) * pkg_count)
-                if calc > 0:
-                    cantidad_sesiones = calc
+            cantidad_sesiones = int(pac['sesiones_paquete_personalizado'])
     
     if not paciente_id or not fecha or not tipo_consulta or not moneda or not estado_pago:
         return jsonify({'error': 'Faltan campos requeridos para la transacción.'}), 400
@@ -6204,6 +6197,12 @@ def agenda_quick_pay():
                     estado_pago = 'Prepagada'
             else:
                 control_uso_val = 'Consumida'
+
+        if 'paquete' in tipo_consulta.lower() and cantidad_ses <= 1:
+            cursor.execute("SELECT sesiones_paquete_personalizado FROM pacientes WHERE id = ?", (paciente_id,))
+            pac_pkg = cursor.fetchone()
+            if pac_pkg and pac_pkg['sesiones_paquete_personalizado']:
+                cantidad_ses = int(pac_pkg['sesiones_paquete_personalizado'])
 
         cursor.execute("""
             INSERT INTO agenda_finanzas (
