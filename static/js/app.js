@@ -1485,6 +1485,12 @@ async function loadPatientPortalData(patientId) {
                     <span>Terapeuta: ${therapistName}</span>
                 `;
             }
+            
+            // Inyectar moneda configurada del paciente en el formulario de notificar pago
+            const patMonedaEl = document.getElementById('pat-pay-moneda');
+            if (patMonedaEl && data.perfil.moneda_personalizada) {
+                patMonedaEl.value = data.perfil.moneda_personalizada;
+            }
         }
         
         if (data.modalidades && data.modalidades.length > 0) {
@@ -9358,6 +9364,10 @@ async function handleQuickPayPatientChange(patientId) {
         const res = await fetch(`/api/patient-profile/${patientId}`);
         if (res.ok) {
             _qpCurrentProfile = await res.json();
+            const monedaEl = document.getElementById('qp-moneda');
+            if (monedaEl && _qpCurrentProfile && _qpCurrentProfile.moneda_personalizada) {
+                monedaEl.value = _qpCurrentProfile.moneda_personalizada;
+            }
         }
     } catch(e) { console.warn('No se pudo cargar perfil del paciente'); }
 }
