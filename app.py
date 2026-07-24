@@ -6396,10 +6396,11 @@ def add_agenda_event():
                     ]
                 }
             }
-            if paciente and paciente.get('email'):
+            p_email = paciente['email'] if (paciente and 'email' in paciente.keys()) else None
+            if p_email:
                 event_body['attendees'] = [
                     {
-                        'email': paciente['email'],
+                        'email': p_email,
                         'displayName': f"{paciente['nombres']} {paciente['apellidos']}"
                     }
                 ]
@@ -6705,10 +6706,11 @@ def update_agenda_event(event_id):
                             { 'method': 'popup', 'minutes': 60 }
                         ]
                     }
-                    if paciente and paciente.get('email'):
+                    p_email = paciente['email'] if (paciente and 'email' in paciente.keys()) else None
+                    if p_email:
                         g_event['attendees'] = [
                             {
-                                'email': paciente['email'],
+                                'email': p_email,
                                 'displayName': f"{paciente['nombres']} {paciente['apellidos']}"
                             }
                         ]
@@ -7494,7 +7496,7 @@ def export_word(patient_id):
         ("Pronombre / Género", f"{pac['pronombre'] or 'N/A'} / {pac['genero'] or 'N/A'}"),
         ("Edad", str(pac['edad']) if pac['edad'] else "N/A"),
         ("Lugar y Fecha de Nacimiento", f"{pac['lugar_nacimiento'] or 'N/A'} ({pac['fecha_nacimiento'] or 'N/A'})"),
-        ("Residencia Actual", ", ".join(filter(None, [pac.get('residencia_actual') or pac.get('ciudad'), pac.get('pais')])) or "N/A"),
+        ("Residencia Actual", ", ".join(filter(None, [pac['residencia_actual'] if 'residencia_actual' in pac.keys() else (pac['ciudad'] if 'ciudad' in pac.keys() else None), pac['pais'] if 'pais' in pac.keys() else None])) or "N/A"),
         ("Reside con", pac['con_quien_reside'] or "N/A"),
         ("Nivel Académico / Ocupación", f"{pac['nivel_academico'] or 'N/A'} / {pac['ocupacion'] or 'N/A'}"),
         ("Estado Civil / Relacional", pac['estado_civil'] or "N/A"),
