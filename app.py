@@ -1180,6 +1180,33 @@ def sync_patient_to_firebase(patient_id):
         print(f"Error syncing to Firebase: {e}")
         return False
 
+def delete_patient_from_firebase(patient_id, u_key=None):
+    """Elimina los datos del paciente de Firebase Realtime Database para mantener todo sincronizado."""
+    def _async_delete():
+        try:
+            import requests
+            key_to_delete = u_key
+            if not key_to_delete:
+                conn = sqlite3.connect('clinica.db')
+                conn.row_factory = sqlite3.Row
+                c = conn.cursor()
+                c.execute("SELECT username, cedula FROM pacientes WHERE id = ?", (patient_id,))
+                p = c.fetchone()
+                conn.close()
+                if p:
+                    key_to_delete = (p['username'] or p['cedula'] or '').strip()
+
+            if key_to_delete:
+                clean_key = key_to_delete.replace(".", "_").replace("$", "_").replace("[", "_").replace("]", "_").replace("#", "_").lower()
+                requests.delete(f"{FIREBASE_DB_URL}/usuarios_pacientes/{clean_key}.json")
+            
+            requests.delete(f"{FIREBASE_DB_URL}/pacientes/{patient_id}.json")
+        except Exception as e:
+            print(f"Error deleting patient {patient_id} from Firebase: {e}")
+
+    import threading
+    threading.Thread(target=_async_delete).start()
+
 
 # Decorador para requerir inicio de sesión
 def login_required(f):
@@ -4795,10 +4822,17 @@ def delete_patient(patient_id):
     db = get_db()
     cursor = db.cursor()
     psic_id = get_psicologo_id_filter()
-    if psic_id is not None:
-        cursor.execute("SELECT id FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, psic_id))
-        if not cursor.fetchone():
-            return jsonify({'error': 'No tienes permisos para eliminar este paciente.'}), 403
+    
+    cursor.execute("SELECT username, cedula, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+    pac_info = cursor.fetchone()
+    if not pac_info:
+        return jsonify({'error': 'Paciente no encontrado.'}), 404
+        
+    if psic_id is not None and pac_info['psicologo_id'] != psic_id:
+        return jsonify({'error': 'No tienes permisos para eliminar este paciente.'}), 403
+        
+    username_key = (pac_info['username'] or pac_info['cedula'] or '').strip()
+    
     try:
         cursor.execute("DELETE FROM agenda_finanzas WHERE paciente_id = ?", (patient_id,))
         cursor.execute("DELETE FROM sesiones WHERE paciente_id = ?", (patient_id,))
@@ -4806,6 +4840,10 @@ def delete_patient(patient_id):
         cursor.execute("DELETE FROM pagos_notificados WHERE paciente_id = ?", (patient_id,))
         cursor.execute("DELETE FROM pacientes WHERE id = ?", (patient_id,))
         db.commit()
+        
+        # Eliminar también de Firebase Realtime Database
+        delete_patient_from_firebase(patient_id, username_key)
+        
         return jsonify({'success': 'Paciente y todos sus registros clínicos/financieros fueron eliminados con éxito.'})
     except Exception as e:
         return jsonify({'error': f'Error al eliminar paciente: {str(e)}'}), 500
@@ -8045,6 +8083,10 @@ def superadmin_delete_therapist(user_id):
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
         
     try:
+        # Obtener pacientes del psicólogo antes de eliminar para limpiar Firebase
+        cursor.execute("SELECT id, username, cedula FROM pacientes WHERE psicologo_id = ?", (user_id,))
+        pats_to_delete = cursor.fetchall()
+        
         # Cascade cleanup of all psychologist data
         cursor.execute("DELETE FROM pizarra_terapeutica WHERE paciente_id IN (SELECT id FROM pacientes WHERE psicologo_id = ?)", (user_id,))
         cursor.execute("DELETE FROM agenda_finanzas WHERE paciente_id IN (SELECT id FROM pacientes WHERE psicologo_id = ?)", (user_id,))
@@ -8054,6 +8096,11 @@ def superadmin_delete_therapist(user_id):
         cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
         db.commit()
+        
+        # Limpiar pacientes de Firebase Realtime Database
+        for pt in pats_to_delete:
+            delete_patient_from_firebase(pt['id'], (pt['username'] or pt['cedula'] or '').strip())
+            
         return jsonify({'success': f"Psicólogo '{row['nombres']} {row['apellidos']}' (@{row['username']}) y toda su información fueron eliminados con éxito."})
     except Exception as e:
         db.rollback()
