@@ -5893,6 +5893,7 @@ def get_monthly_balance():
         """, (date_prefix, psic_id))
         session_stats = [dict(row) for row in cursor.fetchall()]
         
+        # Contar sesiones por modalidad desde la tabla de sesiones
         cursor.execute("""
             SELECT s.modalidad, COUNT(s.id)
             FROM sesiones s
@@ -5900,7 +5901,25 @@ def get_monthly_balance():
             WHERE s.fecha LIKE ? AND p.psicologo_id = ?
             GROUP BY s.modalidad
         """, (date_prefix, psic_id))
-        modality_counts = {row[0]: row[1] for row in cursor.fetchall()}
+        ses_counts = {row[0]: row[1] for row in cursor.fetchall() if row[0]}
+
+        # Contar consultas por modalidad desde la tabla agenda_finanzas
+        cursor.execute("""
+            SELECT af.tipo_consulta, COUNT(af.id)
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.fecha LIKE ? AND p.psicologo_id = ? AND af.estado_pago != 'Cancelada'
+            GROUP BY af.tipo_consulta
+        """, (date_prefix, psic_id))
+        af_counts = {row[0]: row[1] for row in cursor.fetchall() if row[0]}
+
+        # Combinar ambos conteos sin perder registros
+        all_keys = set(ses_counts.keys()).union(set(af_counts.keys()))
+        modality_counts = {}
+        for k in all_keys:
+            if k in ['Prepago', 'Paquete Prepagado', 'Paquete Prepagado (Deuda Pago Fraccionado)']:
+                continue
+            modality_counts[k] = max(ses_counts.get(k, 0), af_counts.get(k, 0))
     else:
         cursor.execute("""
             SELECT moneda, tipo_consulta, SUM(monto) as total_monto
@@ -5928,7 +5947,7 @@ def get_monthly_balance():
                    COALESCE(p.apellidos, '') as apellidos
             FROM agenda_finanzas af
             LEFT JOIN pacientes p ON af.paciente_id = p.id
-            WHERE (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?) AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+            WHERE (fecha LIKE ? OR fecha_liquidacion LIKE ?) AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
             ORDER BY af.fecha DESC
         """, (date_prefix, date_prefix))
         income_list = [dict(row) for row in cursor.fetchall()]
@@ -5984,11 +6003,24 @@ def get_monthly_balance():
             except Exception:
                 pass
 
+    def _mod_match(db_mod, profile_mod):
+        if not db_mod or not profile_mod:
+            return False
+        d = db_mod.strip().lower()
+        p = profile_mod.strip().lower()
+        if d == p or d in p or p in d:
+            return True
+        d_words = set(d.split())
+        p_words = set(p.split())
+        if d_words & p_words:
+            return True
+        return False
+
     month_modalities = {}
     for m in active_modalities:
         m_count = 0
         for k, v in modality_counts.items():
-            if k and (k.strip().lower() == m.strip().lower() or m.strip().lower() in k.strip().lower()):
+            if _mod_match(k, m):
                 m_count += v
         month_modalities[m] = m_count
 

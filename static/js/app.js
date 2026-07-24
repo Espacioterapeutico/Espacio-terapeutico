@@ -3515,33 +3515,79 @@ async function loadFinanceData() {
         if (!res.ok) throw new Error("Error de respuesta al obtener balance");
         const data = await res.json();
         
-        // Sumar balances por moneda independientemente
-        let usdTotal = 0;
-        let eurTotal = 0;
-        let bsdTotal = 0;
+        // Agrupar y sumar balances dinámicamente por tipo de moneda recibida en el mes
+        const currencyTotals = {};
         
-        // Objeto para agrupar modalidad
-        const modalities = {};
-        
-        if (data.breakdown) {
+        if (data.breakdown && data.breakdown.length > 0) {
             data.breakdown.forEach(item => {
-                const val = item.total_monto || 0;
-                if (item.moneda === 'USD') usdTotal += val;
-                if (item.moneda === 'EUR') eurTotal += val;
-                if (item.moneda === 'BSD') bsdTotal += val;
-                
-                const key = `${item.tipo_consulta} (${item.moneda})`;
-                modalities[key] = (modalities[key] || 0) + val;
+                const currency = (item.moneda || 'USD').toUpperCase();
+                const val = parseFloat(item.total_monto || 0);
+                if (val > 0) {
+                    currencyTotals[currency] = (currencyTotals[currency] || 0) + val;
+                }
             });
         }
         
-        // Actualizar tarjetas de balance en UI
-        const usdEl = document.getElementById('fin-total-usd');
-        const eurEl = document.getElementById('fin-total-eur');
-        const bsdEl = document.getElementById('fin-total-bsd');
-        if (usdEl) usdEl.textContent = `$ ${usdTotal.toFixed(2)}`;
-        if (eurEl) eurEl.textContent = `€ ${eurTotal.toFixed(2)}`;
-        if (bsdEl) bsdEl.textContent = `Bs. ${bsdTotal.toFixed(2)}`;
+        // Si no hay breakdown, acumular desde income_list
+        if (Object.keys(currencyTotals).length === 0 && data.income_list && data.income_list.length > 0) {
+            data.income_list.forEach(item => {
+                const currency = (item.moneda || 'USD').toUpperCase();
+                const val = parseFloat(item.monto || 0);
+                if (val > 0) {
+                    currencyTotals[currency] = (currencyTotals[currency] || 0) + val;
+                }
+            });
+        }
+        
+        // Renderizar tarjetas dinámicas de balance por moneda en la UI
+        const balancesGrid = document.getElementById('finance-balances-grid');
+        if (balancesGrid) {
+            balancesGrid.innerHTML = '';
+            
+            const currencyKeys = Object.keys(currencyTotals);
+            
+            if (currencyKeys.length === 0) {
+                // Si no hay ingresos en el mes seleccionado, mostrar tarjeta base USD $0.00
+                balancesGrid.innerHTML = `
+                    <div class="finance-card usd" style="background: var(--card-bg); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                        <div class="fin-badge" style="display: inline-block; background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; width: fit-content;">USD</div>
+                        <span class="fin-label" style="font-size: 0.85rem; color: var(--text-secondary);">Ingresos en Dólares ($)</span>
+                        <h3 class="fin-amount" style="font-size: 1.5rem; font-weight: 800; color: var(--text-dark); margin: 0;">$ 0.00</h3>
+                    </div>
+                `;
+            } else {
+                const CURRENCY_CONFIG = {
+                    'USD': { name: 'Dólares', symbol: '$', badgeBg: 'rgba(16, 185, 129, 0.12)', badgeColor: '#059669', border: 'rgba(16, 185, 129, 0.25)' },
+                    'EUR': { name: 'Euros', symbol: '€', badgeBg: 'rgba(99, 102, 241, 0.12)', badgeColor: '#4f46e5', border: 'rgba(99, 102, 241, 0.25)' },
+                    'BSD': { name: 'Bolívares', symbol: 'Bs.', badgeBg: 'rgba(245, 158, 11, 0.12)', badgeColor: '#d97706', border: 'rgba(245, 158, 11, 0.25)' },
+                    'ARS': { name: 'Pesos Argentinos', symbol: '$', badgeBg: 'rgba(59, 130, 246, 0.12)', badgeColor: '#2563eb', border: 'rgba(59, 130, 246, 0.25)' },
+                    'COP': { name: 'Pesos Colombianos', symbol: '$', badgeBg: 'rgba(236, 72, 153, 0.12)', badgeColor: '#db2777', border: 'rgba(236, 72, 153, 0.25)' },
+                    'CLP': { name: 'Pesos Chilenos', symbol: '$', badgeBg: 'rgba(139, 92, 246, 0.12)', badgeColor: '#7c3aed', border: 'rgba(139, 92, 246, 0.25)' },
+                    'MXN': { name: 'Pesos Mexicanos', symbol: '$', badgeBg: 'rgba(20, 184, 166, 0.12)', badgeColor: '#0d9488', border: 'rgba(20, 184, 166, 0.25)' },
+                    'DOP': { name: 'Pesos Dominicanos', symbol: 'RD$', badgeBg: 'rgba(249, 115, 22, 0.12)', badgeColor: '#ea580c', border: 'rgba(249, 115, 22, 0.25)' },
+                    'PEN': { name: 'Soles Peruanos', symbol: 'S/', badgeBg: 'rgba(168, 85, 247, 0.12)', badgeColor: '#9333ea', border: 'rgba(168, 85, 247, 0.25)' },
+                    'UYU': { name: 'Pesos Uruguayos', symbol: '$', badgeBg: 'rgba(14, 165, 233, 0.12)', badgeColor: '#0284c7', border: 'rgba(14, 165, 233, 0.25)' }
+                };
+                
+                currencyKeys.forEach(curr => {
+                    const total = currencyTotals[curr];
+                    const cfg = CURRENCY_CONFIG[curr] || { name: curr, symbol: curr, badgeBg: 'rgba(107, 114, 128, 0.12)', badgeColor: '#4b5563', border: 'rgba(107, 114, 128, 0.25)' };
+                    
+                    const card = document.createElement('div');
+                    card.className = `finance-card ${curr.toLowerCase()}`;
+                    card.style.cssText = `background: var(--card-bg); border: 1.5px solid ${cfg.border}; border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem; transition: transform 0.2s ease, box-shadow 0.2s ease;`;
+                    
+                    const formattedValue = total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    
+                    card.innerHTML = `
+                        <div class="fin-badge" style="display: inline-block; background: ${cfg.badgeBg}; color: ${cfg.badgeColor}; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; width: fit-content;">${curr}</div>
+                        <span class="fin-label" style="font-size: 0.85rem; color: var(--text-secondary);">Ingresos en ${cfg.name} (${cfg.symbol})</span>
+                        <h3 class="fin-amount" style="font-size: 1.5rem; font-weight: 800; color: var(--text-dark); margin: 0;">${cfg.symbol} ${formattedValue} ${curr}</h3>
+                    `;
+                    balancesGrid.appendChild(card);
+                });
+            }
+        }
         
         // Renderizar desglose de ingresos detallado
         const incomeBody = document.getElementById('finance-income-list-body');
