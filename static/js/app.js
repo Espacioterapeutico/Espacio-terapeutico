@@ -7203,124 +7203,157 @@ async function submitRegister(e) {
     }
 
     const errorMsg = document.getElementById('reg-error-msg');
-    errorMsg.classList.add('hide');
+    if (errorMsg) errorMsg.classList.add('hide');
     
-    const tipo_usuario = document.getElementById('reg-tipo-usuario').value;
-    const nombres = document.getElementById('reg-nombres').value.trim();
-    const apellidos = document.getElementById('reg-apellidos').value.trim();
-    const username = document.getElementById('reg-username').value.trim();
-    const password = document.getElementById('reg-password').value;
-    const cedula = document.getElementById('reg-cedula').value.trim();
-    const telefono = document.getElementById('reg-telefono').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    
-    // Validaciones básicas con mensajes claros
-    if (!nombres || !apellidos) {
-        const msg = "Por favor, ingresa tu nombre y apellido.";
-        errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-    }
-    if (!username) {
-        const msg = "Por favor, elige un nombre de usuario.";
-        errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-    }
-    if (!password || password.length < 4) {
-        const msg = "La contraseña es requerida y debe tener al menos 4 caracteres.";
-        errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-    }
-    if (!cedula) {
-        const msg = "La cédula de identidad es requerida.";
-        errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-    }
-    if (!tipo_usuario) {
-        const msg = "Por favor, selecciona el tipo de cuenta (Psicólogo o Paciente).";
-        errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-    }
-    
-    const payload = {
-        tipo_usuario, nombres, apellidos, username, password, cedula, telefono, email
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el ? (el.value || '').trim() : '';
     };
-    
-    if (tipo_usuario === 'psicologo') {
-        payload.estudios = document.getElementById('reg-estudios').value;
-        payload.federacion = document.getElementById('reg-federacion').value;
-        payload.foto_titulo = await readFileAsBase64(document.getElementById('reg-foto-titulo'));
-        payload.foto_documento = await readFileAsBase64(document.getElementById('reg-foto-documento'));
+
+    try {
+        const tipo_usuario = getVal('reg-tipo-usuario');
+        const nombres = getVal('reg-nombres');
+        const apellidos = getVal('reg-apellidos');
+        const username = getVal('reg-username');
+        const password = getVal('reg-password');
+        const cedula = getVal('reg-cedula');
+        const telefono = getVal('reg-telefono');
+        const email = getVal('reg-email');
         
-        if (!payload.estudios || !payload.federacion) {
-            const msg = "Por favor, completa los campos de estudios y federación para psicólogo.";
-            errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
+        // Validaciones básicas con mensajes claros
+        if (!nombres || !apellidos) {
+            const msg = "Por favor, ingresa tu nombre y apellido.";
+            if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+            alert(msg);
+            return;
         }
-    } else if (tipo_usuario === 'paciente') {
-        payload.pregunta_seguridad_1 = document.getElementById('reg-pregunta-1').value;
-        payload.respuesta_seguridad_1 = document.getElementById('reg-respuesta-1').value;
-        payload.pregunta_seguridad_2 = document.getElementById('reg-pregunta-2').value;
-        payload.respuesta_seguridad_2 = document.getElementById('reg-respuesta-2').value;
+        if (!username) {
+            const msg = "Por favor, elige un nombre de usuario.";
+            if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+            alert(msg);
+            return;
+        }
+        if (!password || password.length < 4) {
+            const msg = "La contraseña es requerida y debe tener al menos 4 caracteres.";
+            if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+            alert(msg);
+            return;
+        }
+        if (!cedula) {
+            const msg = "La cédula de identidad es requerida.";
+            if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+            alert(msg);
+            return;
+        }
+        if (!tipo_usuario) {
+            const msg = "Por favor, selecciona el tipo de cuenta (Psicólogo o Paciente).";
+            if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+            alert(msg);
+            return;
+        }
         
-        if (isPreRegisteredPatient) {
-            if (!payload.respuesta_seguridad_1 || !payload.respuesta_seguridad_2) {
-                const msg = "Por favor, completa las respuestas de seguridad para activar tu cuenta.";
-                errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
+        const payload = {
+            tipo_usuario, nombres, apellidos, username, password, cedula, telefono, email
+        };
+        
+        if (tipo_usuario === 'psicologo') {
+            payload.estudios = getVal('reg-estudios');
+            payload.federacion = getVal('reg-federacion');
+            payload.foto_titulo = await readFileAsBase64(document.getElementById('reg-foto-titulo'));
+            payload.foto_documento = await readFileAsBase64(document.getElementById('reg-foto-documento'));
+            
+            if (!payload.estudios || !payload.federacion) {
+                const msg = "Por favor, completa los campos de estudios y federación para psicólogo.";
+                if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                alert(msg);
+                return;
             }
-        } else {
-            let targetPsicId = parseInt(document.getElementById('reg-psicologo-id').value);
-            if (isNaN(targetPsicId) || !targetPsicId) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const refId = urlParams.get('ref_psicologo');
-                if (refId) {
-                    if (!isNaN(parseInt(refId))) {
-                        targetPsicId = parseInt(refId);
-                    } else if (regPsychologists && regPsychologists.length) {
-                        const cleanRef = refId.toLowerCase().replace('psic.', '').replace('psic-', '');
-                        const found = regPsychologists.find(p => 
-                            (p.slug && p.slug.toLowerCase().includes(cleanRef)) || 
-                            (p.username && p.username.toLowerCase().includes(cleanRef))
-                        );
-                        if (found) targetPsicId = found.id;
+        } else if (tipo_usuario === 'paciente') {
+            payload.pregunta_seguridad_1 = getVal('reg-pregunta-1');
+            payload.respuesta_seguridad_1 = getVal('reg-respuesta-1');
+            payload.pregunta_seguridad_2 = getVal('reg-pregunta-2');
+            payload.respuesta_seguridad_2 = getVal('reg-respuesta-2');
+            
+            if (isPreRegisteredPatient) {
+                if (!payload.respuesta_seguridad_1 || !payload.respuesta_seguridad_2) {
+                    const msg = "Por favor, completa las respuestas de seguridad para activar tu cuenta.";
+                    if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                    alert(msg);
+                    return;
+                }
+            } else {
+                let targetPsicId = parseInt(getVal('reg-psicologo-id'));
+                if (isNaN(targetPsicId) || !targetPsicId) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const refId = urlParams.get('ref_psicologo');
+                    if (refId) {
+                        if (!isNaN(parseInt(refId))) {
+                            targetPsicId = parseInt(refId);
+                        } else if (typeof regPsychologists !== 'undefined' && regPsychologists && regPsychologists.length) {
+                            const cleanRef = refId.toLowerCase().replace('psic.', '').replace('psic-', '');
+                            const found = regPsychologists.find(p => 
+                                (p.slug && p.slug.toLowerCase().includes(cleanRef)) || 
+                                (p.username && p.username.toLowerCase().includes(cleanRef))
+                            );
+                            if (found) targetPsicId = found.id;
+                        }
                     }
                 }
-            }
-            payload.psicologo_id = targetPsicId || 1;
+                payload.psicologo_id = targetPsicId || 1;
 
-            payload.pronombre = document.getElementById('reg-pronombre').value;
-            payload.genero = document.getElementById('reg-genero').value;
-            payload.edad = parseInt(document.getElementById('reg-edad').value);
-            payload.lugar_nacimiento = document.getElementById('reg-lugar-nac').value;
-            payload.fecha_nacimiento = document.getElementById('reg-fecha-nac').value;
-            payload.residencia_actual = document.getElementById('reg-residencia').value;
-            payload.con_quien_reside = document.getElementById('reg-con-quien').value;
-            payload.nivel_academico = document.getElementById('reg-academico').value;
-            payload.ocupacion = document.getElementById('reg-ocupacion').value;
-            payload.estado_civil = document.getElementById('reg-estado-civil').value;
-            payload.contacto_emergencia_nombre = document.getElementById('reg-contacto-emergencia').value;
-            payload.contacto_emergencia_parentesco = document.getElementById('reg-contacto-parentesco').value;
-            payload.motivo_consulta = document.getElementById('reg-motivo-consulta').value;
-            payload.expectativas = document.getElementById('reg-expectativas').value;
-            payload.farmacologia = document.getElementById('reg-farmacologia').value;
-            
-            if (!payload.psicologo_id) {
-                const msg = "Por favor, selecciona un psicólogo asignado.";
-                errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-            }
-            if (!payload.edad || payload.edad < 1) {
-                const msg = "Por favor, ingresa tu edad.";
-                errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-            }
-            if (!payload.contacto_emergencia_nombre || !payload.contacto_emergencia_parentesco) {
-                const msg = "El contacto de emergencia (nombre y parentesco) es requerido.";
-                errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-            }
-            if (!payload.motivo_consulta) {
-                const msg = "El motivo de consulta es requerido para completar tu historia clínica.";
-                errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
-            }
-            if (!payload.respuesta_seguridad_1 || !payload.respuesta_seguridad_2) {
-                const msg = "Las respuestas de seguridad son requeridas para proteger tu cuenta.";
-                errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
+                payload.pronombre = getVal('reg-pronombre');
+                payload.genero = getVal('reg-genero');
+                payload.edad = parseInt(getVal('reg-edad')) || 0;
+                payload.lugar_nacimiento = getVal('reg-lugar-nac');
+                payload.fecha_nacimiento = getVal('reg-fecha-nac');
+                const ciudadVal = getVal('reg-ciudad');
+                const paisVal = getVal('reg-pais');
+                payload.pais = paisVal;
+                payload.ciudad = ciudadVal;
+                payload.residencia_actual = getVal('reg-residencia') || [ciudadVal, paisVal].filter(Boolean).join(', ');
+                payload.con_quien_reside = getVal('reg-con-quien');
+                payload.nivel_academico = getVal('reg-academico');
+                payload.ocupacion = getVal('reg-ocupacion');
+                payload.estado_civil = getVal('reg-estado-civil');
+                payload.contacto_emergencia_nombre = getVal('reg-contacto-emergencia');
+                payload.contacto_emergencia_parentesco = getVal('reg-contacto-parentesco');
+                payload.motivo_consulta = getVal('reg-motivo-consulta');
+                payload.expectativas = getVal('reg-expectativas');
+                payload.farmacologia = getVal('reg-farmacologia');
+                
+                if (!payload.psicologo_id) {
+                    const msg = "Por favor, selecciona un psicólogo asignado.";
+                    if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                    alert(msg);
+                    return;
+                }
+                if (!payload.edad || payload.edad < 1) {
+                    const msg = "Por favor, ingresa tu edad.";
+                    if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                    alert(msg);
+                    return;
+                }
+                if (!payload.contacto_emergencia_nombre || !payload.contacto_emergencia_parentesco) {
+                    const msg = "El contacto de emergencia (nombre y parentesco) es requerido.";
+                    if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                    alert(msg);
+                    return;
+                }
+                if (!payload.motivo_consulta) {
+                    const msg = "El motivo de consulta es requerido para completar tu historia clínica.";
+                    if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                    alert(msg);
+                    return;
+                }
+                if (!payload.respuesta_seguridad_1 || !payload.respuesta_seguridad_2) {
+                    const msg = "Las respuestas de seguridad son requeridas para proteger tu cuenta.";
+                    if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                    alert(msg);
+                    return;
+                }
             }
         }
-    }
-    
-    try {
+        
         const res = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -7333,14 +7366,13 @@ async function submitRegister(e) {
             closeRegisterModal();
         } else {
             const errText = data.error || "Error al registrar la cuenta. Verifica los datos ingresados.";
-            errorMsg.textContent = errText;
-            errorMsg.classList.remove('hide');
+            if (errorMsg) { errorMsg.textContent = errText; errorMsg.classList.remove('hide'); }
             alert("Error de registro: " + errText);
         }
     } catch (err) {
-        const errText = "Error de conexión con el servidor. Verifica tu conexión a internet e intenta de nuevo.";
-        errorMsg.textContent = errText;
-        errorMsg.classList.remove('hide');
+        console.error("Error submitRegister:", err);
+        const errText = "Error al procesar el registro. Intenta de nuevo.";
+        if (errorMsg) { errorMsg.textContent = errText; errorMsg.classList.remove('hide'); }
         alert(errText);
     } finally {
         isRegisterSubmitting = false;
