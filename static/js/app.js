@@ -8838,6 +8838,8 @@ window.resetTestData = async function() {
 
 const MONEDAS_DISPONIBLES = ['USD', 'DOP', 'VES', 'EUR', 'COP', 'CLP', 'ARS', 'PEN', 'MXN'];
 
+let allPatientRatesData = [];
+
 async function loadPatientRatesTable() {
     const tbody = document.getElementById('patient-rates-table-body');
     if (!tbody) return;
@@ -8845,44 +8847,76 @@ async function loadPatientRatesTable() {
     try {
         const res = await fetch('/api/admin/patients-rates-list');
         const patients = await res.json();
-        if (!Array.isArray(patients) || patients.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-muted);">No hay pacientes registrados.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = patients.map(p => {
-            const monedasOptions = MONEDAS_DISPONIBLES.map(m => `<option value="${m}" ${m === (p.moneda_personalizada || 'USD') ? 'selected' : ''}>${m}</option>`).join('');
-            const costoIndStr = p.costo_personalizado != null ? Number(p.costo_personalizado).toFixed(2) : '—';
-            const costoPaqStr = p.costo_paquete_personalizado != null ? Number(p.costo_paquete_personalizado).toFixed(2) : '—';
-            const sesionesStr = p.sesiones_paquete_personalizado != null ? p.sesiones_paquete_personalizado : '—';
-            return `
-            <tr id="prt-row-${p.id}" style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 0.65rem 0.75rem; font-weight: 600;">${p.nombres || ''} ${p.apellidos || ''}</td>
-                <td style="padding: 0.65rem 0.75rem; text-align: right;">
-                    <span class="prt-view-${p.id}">${costoIndStr}</span>
-                    <input class="prt-edit-${p.id} hide prt-costo-ind-${p.id}" type="number" min="0" step="0.01" value="${p.costo_personalizado || ''}" style="width: 100px; padding: 0.3rem; border: 1.5px solid var(--border-color); border-radius: 4px; text-align: right;">
-                </td>
-                <td style="padding: 0.65rem 0.75rem; text-align: right;">
-                    <span class="prt-view-${p.id}">${costoPaqStr}</span>
-                    <input class="prt-edit-${p.id} hide prt-costo-paq-${p.id}" type="number" min="0" step="0.01" value="${p.costo_paquete_personalizado || ''}" style="width: 100px; padding: 0.3rem; border: 1.5px solid var(--border-color); border-radius: 4px; text-align: right;">
-                </td>
-                <td style="padding: 0.65rem 0.75rem; text-align: center;">
-                    <span class="prt-view-${p.id}">${sesionesStr}</span>
-                    <input class="prt-edit-${p.id} hide prt-sesiones-${p.id}" type="number" min="1" step="1" value="${p.sesiones_paquete_personalizado || ''}" style="width: 70px; padding: 0.3rem; border: 1.5px solid var(--border-color); border-radius: 4px; text-align: center;">
-                </td>
-                <td style="padding: 0.65rem 0.75rem; text-align: center;">
-                    <span class="prt-view-${p.id}" style="font-weight: 700;">${p.moneda_personalizada || '—'}</span>
-                    <select class="prt-edit-${p.id} hide prt-moneda-${p.id}" style="padding: 0.3rem; border: 1.5px solid var(--border-color); border-radius: 4px;">${monedasOptions}</select>
-                </td>
-                <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
-                    <button id="prt-btn-edit-${p.id}" class="btn btn-sm" style="background: var(--primary-light, #f3e8ff); color: var(--primary-color); border: none; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer; margin-right: 0.25rem; font-size: 0.8rem;" onclick="enablePatientRateEdit(${p.id})">✏️ Editar</button>
-                    <button id="prt-btn-save-${p.id}" class="btn btn-sm hide" style="background: #d1fae5; color: #065f46; border: none; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" onclick="savePatientRateQuick(${p.id})">💾 Guardar</button>
-                </td>
-            </tr>`;
-        }).join('');
+        allPatientRatesData = Array.isArray(patients) ? patients : [];
+        renderPatientRatesTable();
     } catch (err) {
         console.error('Error loading patient rates:', err);
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);">Error al cargar pacientes.</td></tr>';
     }
+}
+
+function filterPatientRatesTable() {
+    renderPatientRatesTable();
+}
+
+function renderPatientRatesTable() {
+    const tbody = document.getElementById('patient-rates-table-body');
+    if (!tbody) return;
+    
+    const searchInput = document.getElementById('patient-rates-search');
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    
+    if (!Array.isArray(allPatientRatesData) || allPatientRatesData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-muted);">No hay pacientes registrados.</td></tr>';
+        return;
+    }
+
+    const filtered = allPatientRatesData.filter(p => {
+        if (!query) return true;
+        const nombreCompleto = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
+        const cedula = (p.cedula || '').toLowerCase();
+        return nombreCompleto.includes(query) || cedula.includes(query);
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-muted);">No se encontraron pacientes que coincidan con la búsqueda.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(p => {
+        const monedasOptions = MONEDAS_DISPONIBLES.map(m => `<option value="${m}" ${m === (p.moneda_personalizada || 'USD') ? 'selected' : ''}>${m}</option>`).join('');
+        const costoIndStr = p.costo_personalizado != null ? Number(p.costo_personalizado).toFixed(2) : '—';
+        const costoPaqStr = p.costo_paquete_personalizado != null ? Number(p.costo_paquete_personalizado).toFixed(2) : '—';
+        const sesionesStr = p.sesiones_paquete_personalizado != null ? p.sesiones_paquete_personalizado : '—';
+        const cedulaStr = p.cedula ? `<span style="display:block; font-size:0.75rem; color:var(--text-muted); font-weight:normal;">C.I: ${p.cedula}</span>` : '';
+        return `
+        <tr id="prt-row-${p.id}" style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 0.65rem 0.75rem; font-weight: 600;">
+                ${p.nombres || ''} ${p.apellidos || ''}
+                ${cedulaStr}
+            </td>
+            <td style="padding: 0.65rem 0.75rem; text-align: right;">
+                <span class="prt-view-${p.id}">${costoIndStr}</span>
+                <input class="prt-edit-${p.id} hide prt-costo-ind-${p.id}" type="number" min="0" step="0.01" value="${p.costo_personalizado || ''}" style="width: 100px; padding: 0.3rem; border: 1.5px solid var(--border-color); border-radius: 4px; text-align: right;">
+            </td>
+            <td style="padding: 0.65rem 0.75rem; text-align: right;">
+                <span class="prt-view-${p.id}">${costoPaqStr}</span>
+                <input class="prt-edit-${p.id} hide prt-costo-paq-${p.id}" type="number" min="0" step="0.01" value="${p.costo_paquete_personalizado || ''}" style="width: 100px; padding: 0.3rem; border: 1.5px solid var(--border-color); border-radius: 4px; text-align: right;">
+            </td>
+            <td style="padding: 0.65rem 0.75rem; text-align: center;">
+                <span class="prt-view-${p.id}">${sesionesStr}</span>
+                <input class="prt-edit-${p.id} hide prt-sesiones-${p.id}" type="number" min="1" step="1" value="${p.sesiones_paquete_personalizado || ''}" style="width: 70px; padding: 0.3rem; border: 1.5px solid var(--border-color); border-radius: 4px; text-align: center;">
+            </td>
+            <td style="padding: 0.65rem 0.75rem; text-align: center;">
+                <span class="prt-view-${p.id}" style="font-weight: 700;">${p.moneda_personalizada || '—'}</span>
+                <select class="prt-edit-${p.id} hide prt-moneda-${p.id}" style="padding: 0.3rem; border: 1.5px solid var(--border-color); border-radius: 4px;">${monedasOptions}</select>
+            </td>
+            <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
+                <button id="prt-btn-edit-${p.id}" class="btn btn-sm" style="background: var(--primary-light, #f3e8ff); color: var(--primary-color); border: none; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer; margin-right: 0.25rem; font-size: 0.8rem;" onclick="enablePatientRateEdit(${p.id})">✏️ Editar</button>
+                <button id="prt-btn-save-${p.id}" class="btn btn-sm hide" style="background: #d1fae5; color: #065f46; border: none; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" onclick="savePatientRateQuick(${p.id})">💾 Guardar</button>
+            </td>
+        </tr>`;
+    }).join('');
 }
 
 function enablePatientRateEdit(patientId) {

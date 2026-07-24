@@ -5794,7 +5794,7 @@ def get_patients_rates_list():
         cursor = db.cursor()
         psicologo_id = session.get('user_id')
         cursor.execute("""
-            SELECT id, nombres, apellidos, pais, ciudad,
+            SELECT id, nombres, apellidos, cedula, pais, ciudad,
                    costo_personalizado, moneda_personalizada,
                    costo_paquete_personalizado, sesiones_paquete_personalizado
             FROM pacientes

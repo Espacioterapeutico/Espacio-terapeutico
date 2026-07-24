@@ -757,6 +757,9 @@
                             </div>
                             <div class="card-body">
                                 <p class="text-secondary mb-3">Ajusta manualmente los honorarios de cada paciente. Haz clic en <strong>✏️ Editar</strong> para modificar los valores y luego en <strong>💾 Guardar</strong> para confirmar.</p>
+                                <div class="mb-3" style="max-width: 450px;">
+                                    <input type="text" id="patient-rates-search" placeholder="🔍 Buscar por nombre, apellido o cédula..." oninput="filterPatientRatesTable()" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.88rem; background: var(--bg-light); color: var(--text-dark);">
+                                </div>
                                 <div style="overflow-x: auto;">
                                     <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
                                         <thead>
