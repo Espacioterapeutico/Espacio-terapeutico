@@ -3921,6 +3921,13 @@ async function loadAdminRates() {
                             <option value="USD" ${tVal.moneda === 'USD' ? 'selected' : ''}>USD ($)</option>
                             <option value="EUR" ${tVal.moneda === 'EUR' ? 'selected' : ''}>EUR (€)</option>
                             <option value="BSD" ${tVal.moneda === 'BSD' ? 'selected' : ''}>BSD (Bs.)</option>
+                            <option value="ARS" ${tVal.moneda === 'ARS' ? 'selected' : ''}>ARS ($ ARS)</option>
+                            <option value="COP" ${tVal.moneda === 'COP' ? 'selected' : ''}>COP ($ COP)</option>
+                            <option value="CLP" ${tVal.moneda === 'CLP' ? 'selected' : ''}>CLP ($ CLP)</option>
+                            <option value="MXN" ${tVal.moneda === 'MXN' ? 'selected' : ''}>MXN ($ MXN)</option>
+                            <option value="DOP" ${tVal.moneda === 'DOP' ? 'selected' : ''}>DOP (RD$)</option>
+                            <option value="PEN" ${tVal.moneda === 'PEN' ? 'selected' : ''}>PEN (S/)</option>
+                            <option value="UYU" ${tVal.moneda === 'UYU' ? 'selected' : ''}>UYU ($ UYU)</option>
                         </select>
                     </div>
                 </div>
@@ -3946,6 +3953,13 @@ async function loadAdminRates() {
                                 <option value="USD" ${pVal.moneda === 'USD' ? 'selected' : ''}>USD ($)</option>
                                 <option value="EUR" ${pVal.moneda === 'EUR' ? 'selected' : ''}>EUR (€)</option>
                                 <option value="BSD" ${pVal.moneda === 'BSD' ? 'selected' : ''}>BSD (Bs.)</option>
+                                <option value="ARS" ${pVal.moneda === 'ARS' ? 'selected' : ''}>ARS ($ ARS)</option>
+                                <option value="COP" ${pVal.moneda === 'COP' ? 'selected' : ''}>COP ($ COP)</option>
+                                <option value="CLP" ${pVal.moneda === 'CLP' ? 'selected' : ''}>CLP ($ CLP)</option>
+                                <option value="MXN" ${pVal.moneda === 'MXN' ? 'selected' : ''}>MXN ($ MXN)</option>
+                                <option value="DOP" ${pVal.moneda === 'DOP' ? 'selected' : ''}>DOP (RD$)</option>
+                                <option value="PEN" ${pVal.moneda === 'PEN' ? 'selected' : ''}>PEN (S/)</option>
+                                <option value="UYU" ${pVal.moneda === 'UYU' ? 'selected' : ''}>UYU ($ UYU)</option>
                             </select>
                         </div>
                     </div>
@@ -8999,7 +9013,7 @@ window.resetTestData = async function() {
 // TABLA SIMPLIFICADA DE HONORARIOS POR PACIENTE
 // ==========================================
 
-const MONEDAS_DISPONIBLES = ['USD', 'DOP', 'VES', 'EUR', 'COP', 'CLP', 'ARS', 'PEN', 'MXN'];
+const MONEDAS_DISPONIBLES = ['USD', 'EUR', 'BSD', 'ARS', 'COP', 'CLP', 'MXN', 'DOP', 'PEN', 'UYU', 'VES'];
 
 let allPatientRatesData = [];
 
