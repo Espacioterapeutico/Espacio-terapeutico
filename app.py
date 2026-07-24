@@ -1207,6 +1207,22 @@ def delete_patient_from_firebase(patient_id, u_key=None):
     import threading
     threading.Thread(target=_async_delete).start()
 
+def sync_all_psychologist_patients_to_firebase(psych_id):
+    """Vuelve a sincronizar todos los pacientes de un psicólogo en Firebase (útil al cambiar métodos de pago)."""
+    def _async_sync():
+        try:
+            conn = sqlite3.connect('clinica.db')
+            c = conn.cursor()
+            c.execute("SELECT id FROM pacientes WHERE psicologo_id = ?", (psych_id,))
+            p_ids = [r[0] for r in c.fetchall()]
+            conn.close()
+            for pid in p_ids:
+                sync_patient_to_firebase(pid)
+        except Exception as e:
+            print(f"Error syncing psychologist {psych_id} patients to Firebase: {e}")
+    import threading
+    threading.Thread(target=_async_sync).start()
+
 
 # Decorador para requerir inicio de sesión
 def login_required(f):
@@ -4229,6 +4245,10 @@ def admin_payment_methods():
     try:
         cursor.execute("UPDATE usuarios SET metodos_pago = ? WHERE id = ?", (metodos, user_id))
         db.commit()
+        
+        # Sincronizar actualización de métodos de pago en todos sus consultantes en Firebase
+        sync_all_psychologist_patients_to_firebase(user_id)
+        
         return jsonify({'success': 'Métodos de pago actualizados con éxito.'})
     except Exception as e:
         db.rollback()
