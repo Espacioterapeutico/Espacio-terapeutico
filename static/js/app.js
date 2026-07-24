@@ -4093,6 +4093,7 @@ async function openNewEventModal(defaultPaid = false) {
     document.getElementById('e-confirmada').disabled = true;
     document.getElementById('e-confirmada-disabled-msg').textContent = '(Se habilita al editar una cita agendada)';
     openModal('event-modal');
+    setTimeout(updateEventTimezoneConversion, 100);
 }
 
 async function openEditEventModal(eventId) {
@@ -4157,7 +4158,7 @@ async function openEditEventModal(eventId) {
             document.getElementById('e-confirmada').disabled = true;
         }
 
-        // Verificar prepagos para el paciente
+        // Verificar prepagos y zona horaria para el paciente
         await checkPatientPrepayments(e.paciente_id);
         
         if (e.estado_pago === 'ConsumirPrepago' || (e.estado_pago === 'Paga' && e.monto === 0)) {
@@ -4178,6 +4179,7 @@ async function openEditEventModal(eventId) {
         
         document.getElementById('event-modal-title').textContent = "Editar Cita / Transacción";
         openModal('event-modal');
+        setTimeout(updateEventTimezoneConversion, 100);
     } catch (err) {
         alert(err.message);
     }
@@ -4222,6 +4224,117 @@ function toggleControlUsoField(status) {
         }
     }
 }
+
+// ==========================================
+// CONVERTIDOR DE ZONA HORARIA (AGENDAR CITA)
+// ==========================================
+
+const COUNTRY_TIMEZONE_MAP = {
+    'ESPAÑA': 'Europe/Madrid',
+    'SPAIN': 'Europe/Madrid',
+    'COLOMBIA': 'America/Bogota',
+    'PERU': 'America/Lima',
+    'PERÚ': 'America/Lima',
+    'ECUADOR': 'America/Guayaquil',
+    'ARGENTINA': 'America/Buenos_Aires',
+    'CHILE': 'America/Santiago',
+    'VENEZUELA': 'America/Caracas',
+    'REPUBLICA DOMINICANA': 'America/Santo_Domingo',
+    'REPÚBLICA DOMINICANA': 'America/Santo_Domingo',
+    'DOMINICAN REPUBLIC': 'America/Santo_Domingo',
+    'EEUU': 'America/New_York',
+    'ESTADOS UNIDOS': 'America/New_York',
+    'USA': 'America/New_York',
+    'MEXICO': 'America/Mexico_City',
+    'MÉXICO': 'America/Mexico_City',
+    'PANAMA': 'America/Panama',
+    'PANAMÁ': 'America/Panama',
+    'COSTA RICA': 'America/Costa_Rica',
+    'URUGUAY': 'America/Montevideo',
+    'PARAGUAY': 'America/Asuncion',
+    'BOLIVIA': 'America/La_Paz'
+};
+
+function toggleEventTimezoneOptions() {
+    const opts = document.getElementById('e-tz-options-row');
+    if (opts) opts.classList.toggle('hide');
+}
+
+function autoDetectPatientTimezone(countryOrResidence) {
+    if (!countryOrResidence) return;
+    const cleanStr = String(countryOrResidence).toUpperCase().trim();
+    for (const [key, tz] of Object.entries(COUNTRY_TIMEZONE_MAP)) {
+        if (cleanStr.includes(key)) {
+            const patientTzSelect = document.getElementById('e-tz-patient');
+            if (patientTzSelect) {
+                patientTzSelect.value = tz;
+                updateEventTimezoneConversion();
+            }
+            break;
+        }
+    }
+}
+
+function updateEventTimezoneConversion() {
+    const fechaInp = document.getElementById('e-fecha');
+    const horaInp = document.getElementById('e-hora');
+    const thTzSelect = document.getElementById('e-tz-therapist');
+    const paTzSelect = document.getElementById('e-tz-patient');
+    const thDisplay = document.getElementById('e-tz-therapist-display');
+    const paDisplay = document.getElementById('e-tz-patient-display');
+
+    if (!fechaInp || !horaInp || !thDisplay || !paDisplay) return;
+
+    const fecha = fechaInp.value;
+    const hora = horaInp.value;
+
+    if (!fecha || !hora) {
+        thDisplay.textContent = '--:--';
+        paDisplay.textContent = '--:--';
+        return;
+    }
+
+    const thTz = thTzSelect ? thTzSelect.value : 'America/Caracas';
+    const paTz = paTzSelect ? paTzSelect.value : 'Europe/Madrid';
+
+    try {
+        const dtStr = `${fecha}T${hora}:00`;
+        const localDate = new Date(dtStr);
+
+        const thTzName = thTz.split('/')[1] ? thTz.split('/')[1].replace('_', ' ') : thTz;
+        thDisplay.textContent = `${hora} (${thTzName})`;
+
+        const formatter = new Intl.DateTimeFormat('es-ES', {
+            timeZone: paTz,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const formattedTime = formatter.format(localDate);
+
+        // Check if date changes
+        const thDayNum = parseInt(fecha.split('-')[2], 10);
+        const dayFormatter = new Intl.DateTimeFormat('es-ES', { timeZone: paTz, day: '2-digit' });
+        const paDayNum = parseInt(dayFormatter.format(localDate), 10);
+
+        let diffDayNotice = '';
+        if (paDayNum > thDayNum || (thDayNum > 27 && paDayNum === 1)) {
+            diffDayNotice = ' ☀️ (+1 día)';
+        } else if (paDayNum < thDayNum || (thDayNum === 1 && paDayNum > 27)) {
+            diffDayNotice = ' 🌙 (-1 día)';
+        }
+
+        const paTzName = paTz.split('/')[1] ? paTz.split('/')[1].replace('_', ' ') : paTz;
+        paDisplay.textContent = `${formattedTime}${diffDayNotice} (${paTzName})`;
+    } catch (err) {
+        console.error('Error updating timezone conversion:', err);
+        paDisplay.textContent = '--:--';
+    }
+}
+window.toggleEventTimezoneOptions = toggleEventTimezoneOptions;
+window.updateEventTimezoneConversion = updateEventTimezoneConversion;
+window.autoDetectPatientTimezone = autoDetectPatientTimezone;
 
 async function handleEventSubmit(e) {
     e.preventDefault();
@@ -4961,6 +5074,10 @@ async function checkPatientPrepayments(patientId) {
         const res = await fetch(`/api/patients/${patientId}/summary`);
         if (!res.ok) return;
         const summary = await res.json();
+        
+        if (summary && summary.patient) {
+            autoDetectPatientTimezone(summary.patient.pais || summary.patient.residencia_actual);
+        }
         
         // CORRECCIÓN: Usar la clave correcta 'finance'
         const prepagas = summary.finance.prepagadas_no_consumidas || 0;

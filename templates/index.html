@@ -2458,11 +2458,60 @@
                     <div class="form-row">
                         <div class="form-group col-6">
                             <label for="e-fecha">Fecha *</label>
-                            <input type="date" id="e-fecha" required>
+                            <input type="date" id="e-fecha" required onchange="updateEventTimezoneConversion()">
                         </div>
                         <div class="form-group col-6">
                             <label for="e-hora">Hora *</label>
-                            <input type="time" id="e-hora" required>
+                            <input type="time" id="e-hora" required oninput="updateEventTimezoneConversion()">
+                        </div>
+                    </div>
+
+                    <!-- Convertidor de Zona Horaria Terapeuta -> Consultante -->
+                    <div id="e-timezone-converter-container" class="mb-3" style="background: rgba(169, 89, 147, 0.04); padding: 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 700; font-size: 0.85rem; color: var(--primary-color); display: flex; align-items: center; gap: 0.35rem;">
+                                🌐 Convertidor de Zona Horaria
+                            </span>
+                            <button type="button" class="btn text-xs btn-secondary" onclick="toggleEventTimezoneOptions()" style="padding: 0.15rem 0.45rem; font-size: 0.75rem;">⚙️ Cambiar Zonas</button>
+                        </div>
+                        
+                        <div class="form-row mb-2 hide" id="e-tz-options-row">
+                            <div class="form-group col-6">
+                                <label style="font-size: 0.75rem; font-weight: 600;">Zona Terapeuta</label>
+                                <select id="e-tz-therapist" style="font-size: 0.78rem; padding: 0.3rem; width: 100%; border-radius: 4px; border: 1px solid var(--border-color);" onchange="updateEventTimezoneConversion()">
+                                    <option value="America/Caracas">Venezuela (GMT-4)</option>
+                                    <option value="America/Bogota">Colombia / Perú / Ecuador (GMT-5)</option>
+                                    <option value="America/Buenos_Aires">Argentina / Chile (GMT-3)</option>
+                                    <option value="Europe/Madrid">España (GMT+1/GMT+2)</option>
+                                    <option value="America/Santo_Domingo">República Dominicana (GMT-4)</option>
+                                    <option value="America/New_York">EEUU Este (Miami/NY)</option>
+                                    <option value="America/Mexico_City">México (GMT-6)</option>
+                                    <option value="America/Panama">Panamá (GMT-5)</option>
+                                    <option value="America/Costa_Rica">Costa Rica (GMT-6)</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-6">
+                                <label style="font-size: 0.75rem; font-weight: 600;">Zona Consultante</label>
+                                <select id="e-tz-patient" style="font-size: 0.78rem; padding: 0.3rem; width: 100%; border-radius: 4px; border: 1px solid var(--border-color);" onchange="updateEventTimezoneConversion()">
+                                    <option value="Europe/Madrid">España (GMT+1/GMT+2)</option>
+                                    <option value="America/Caracas">Venezuela (GMT-4)</option>
+                                    <option value="America/Bogota">Colombia (GMT-5)</option>
+                                    <option value="America/Lima">Perú (GMT-5)</option>
+                                    <option value="America/Guayaquil">Ecuador (GMT-5)</option>
+                                    <option value="America/Buenos_Aires">Argentina (GMT-3)</option>
+                                    <option value="America/Santiago">Chile (GMT-3)</option>
+                                    <option value="America/Santo_Domingo">Rep. Dominicana (GMT-4)</option>
+                                    <option value="America/New_York">EEUU Este (Miami/NY)</option>
+                                    <option value="America/Mexico_City">México (GMT-6)</option>
+                                    <option value="America/Panama">Panamá (GMT-5)</option>
+                                    <option value="America/Costa_Rica">Costa Rica (GMT-6)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="e-tz-conversion-result" style="font-size: 0.85rem; font-weight: 600; color: var(--text-dark); background: white; padding: 0.45rem 0.7rem; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.35rem;">
+                            <span>🕒 Terapeuta: <strong id="e-tz-therapist-display">14:00</strong></span>
+                            <span>➔ 🌍 Consultante: <strong id="e-tz-patient-display" style="color: var(--primary-color);">--:--</strong></span>
                         </div>
                     </div>
                     <div class="form-row">
