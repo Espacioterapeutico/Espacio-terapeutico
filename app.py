@@ -4155,7 +4155,7 @@ def admin_notifications():
             cursor.execute("""
                 SELECT id, tipo, titulo, mensaje, fecha, leida, link
                 FROM notificaciones
-                WHERE user_id = ?
+                WHERE user_id = ? AND leida = 0
                 ORDER BY fecha DESC, id DESC LIMIT 25
             """, (psic_id,))
             rows = cursor.fetchall()
@@ -4166,6 +4166,7 @@ def admin_notifications():
             cursor.execute("""
                 SELECT id, tipo, titulo, mensaje, fecha, leida, link
                 FROM notificaciones
+                WHERE leida = 0
                 ORDER BY fecha DESC, id DESC LIMIT 25
             """)
             rows = cursor.fetchall()
