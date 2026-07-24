@@ -1466,12 +1466,15 @@ def register():
                     existing_patient['id']
                 ))
                 patient_id = existing_patient['id']
-                target_psic = existing_patient['psicologo_id'] or psicologo_id or 1
+                target_psic = psicologo_id or existing_patient['psicologo_id'] or 1
+                if psicologo_id and not existing_patient['psicologo_id']:
+                    cursor.execute("UPDATE pacientes SET psicologo_id = ? WHERE id = ?", (psicologo_id, patient_id))
                 ex_nom = existing_patient['nombres'] if existing_patient['nombres'] else ''
                 ex_ape = existing_patient['apellidos'] if existing_patient['apellidos'] else ''
                 pat_name = f"{data.get('nombres') or ex_nom} {data.get('apellidos') or ex_ape}".strip() or username
                 notif_msg = f"El consultante {pat_name} ha completado la creación de su cuenta de acceso."
             else:
+                target_psic = psicologo_id or 1
                 cursor.execute("""
                     INSERT INTO pacientes (
                         nombres, apellidos, cedula, telefono, email, pronombre, genero, edad,
@@ -1486,10 +1489,9 @@ def register():
                     lugar_nacimiento, fecha_nacimiento, residencia_actual, pais, ciudad, con_quien_reside,
                     nivel_academico, ocupacion, estado_civil, contacto_emergencia_nombre,
                     contacto_emergencia_parentesco, motivo_consulta, expectativas, farmacologia,
-                    username, password_hash, pregunta_1, resp_1_hash, pregunta_2, resp_2_hash, psicologo_id
+                    username, password_hash, pregunta_1, resp_1_hash, pregunta_2, resp_2_hash, target_psic
                 ))
                 patient_id = cursor.lastrowid
-                target_psic = psicologo_id or 1
                 pat_name = f"{nombres} {apellidos}".strip() or username
                 notif_msg = f"El consultante {pat_name} se ha registrado en la plataforma."
 
@@ -1722,7 +1724,7 @@ def fast_booking_book():
     else:
         patient_id = patient['id']
         pac_nombre = f"{patient['nombres']} {patient['apellidos']}"
-        if email and (isinstance(patient, dict) and not patient.get('email')):
+        if email and not patient['email']:
             cursor.execute("UPDATE pacientes SET email = ? WHERE id = ?", (email, patient_id))
         
     try:

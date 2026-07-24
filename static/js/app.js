@@ -6979,10 +6979,29 @@ async function loadActivePsychologists() {
         
         const select = document.getElementById('reg-psicologo-id');
         if (select) {
+            const urlParams = new URLSearchParams(window.location.search);
+            let refId = urlParams.get('ref_psicologo');
+            
+            // Si refId es un slug o username, buscar el id numérico correspondiente
+            if (refId && isNaN(parseInt(refId))) {
+                const cleanRef = refId.toLowerCase().replace('psic.', '').replace('psic-', '');
+                const found = regPsychologists.find(p => 
+                    (p.slug && p.slug.toLowerCase().includes(cleanRef)) || 
+                    (p.username && p.username.toLowerCase().includes(cleanRef))
+                );
+                if (found) refId = found.id;
+            }
+
+            const currentVal = select.value || refId;
             select.innerHTML = '<option value="" disabled selected>Selecciona tu psicólogo...</option>';
             regPsychologists.forEach(p => {
-                select.innerHTML += `<option value="${p.id}">Psic. ${p.nombres} ${p.apellidos}</option>`;
+                const isSelected = currentVal && String(p.id) === String(currentVal);
+                select.innerHTML += `<option value="${p.id}" ${isSelected ? 'selected' : ''}>Psic. ${p.nombres} ${p.apellidos}</option>`;
             });
+
+            if (currentVal) {
+                select.value = currentVal;
+            }
         }
     } catch (err) {
         console.error("Error loading active psychologists:", err);
@@ -7231,7 +7250,25 @@ async function submitRegister(e) {
                 errorMsg.textContent = msg; errorMsg.classList.remove('hide'); alert(msg); return;
             }
         } else {
-            payload.psicologo_id = parseInt(document.getElementById('reg-psicologo-id').value);
+            let targetPsicId = parseInt(document.getElementById('reg-psicologo-id').value);
+            if (isNaN(targetPsicId) || !targetPsicId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const refId = urlParams.get('ref_psicologo');
+                if (refId) {
+                    if (!isNaN(parseInt(refId))) {
+                        targetPsicId = parseInt(refId);
+                    } else if (regPsychologists && regPsychologists.length) {
+                        const cleanRef = refId.toLowerCase().replace('psic.', '').replace('psic-', '');
+                        const found = regPsychologists.find(p => 
+                            (p.slug && p.slug.toLowerCase().includes(cleanRef)) || 
+                            (p.username && p.username.toLowerCase().includes(cleanRef))
+                        );
+                        if (found) targetPsicId = found.id;
+                    }
+                }
+            }
+            payload.psicologo_id = targetPsicId || 1;
+
             payload.pronombre = document.getElementById('reg-pronombre').value;
             payload.genero = document.getElementById('reg-genero').value;
             payload.edad = parseInt(document.getElementById('reg-edad').value);
