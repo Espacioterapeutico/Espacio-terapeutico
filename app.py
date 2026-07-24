@@ -1035,9 +1035,10 @@ def auto_settle_patient_debts(db, patient_id):
         cursor.execute("""
             SELECT id, cantidad_sesiones 
             FROM agenda_finanzas 
-            WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
+            WHERE paciente_id = ? AND estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida'
+              AND id != ?
             ORDER BY fecha ASC, id ASC LIMIT 1
-        """, (patient_id,))
+        """, (patient_id, debt['id']))
         pkg = cursor.fetchone()
         if not pkg:
             break
@@ -1055,7 +1056,7 @@ def auto_settle_patient_debts(db, patient_id):
             
         cursor.execute("""
             UPDATE agenda_finanzas 
-            SET estado_pago = ?, control_uso = 'Consumida', monto = 0.0,
+            SET estado_pago = ?, control_uso = 'No consumida', monto = 0.0,
                 metodo_pago = 'Descontado de Prepago', referencia = 'Prepago',
                 fecha_liquidacion = datetime('now', 'localtime')
             WHERE id = ?
@@ -4928,8 +4929,8 @@ def get_patient_summary(patient_id):
         SELECT 
             SUM(CASE WHEN estado_pago IN ('Paga', 'Cancelada sin aviso - Paga') THEN cantidad_sesiones ELSE 0 END) as pagas,
             SUM(CASE WHEN estado_pago IN ('Pendiente', 'Cancelada sin aviso') THEN cantidad_sesiones ELSE 0 END) as pendientes,
-            SUM(CASE WHEN estado_pago = 'Prepagada' AND control_uso = 'No consumida' THEN cantidad_sesiones ELSE 0 END) as prepagadas_no_consumidas,
-            SUM(CASE WHEN estado_pago = 'Prepagada' AND control_uso = 'Consumida' THEN cantidad_sesiones ELSE 0 END) as prepagadas_consumidas
+            SUM(CASE WHEN estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida' THEN cantidad_sesiones ELSE 0 END) as prepagadas_no_consumidas,
+            SUM(CASE WHEN estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'Consumida' THEN cantidad_sesiones ELSE 0 END) as prepagadas_consumidas
         FROM agenda_finanzas 
         WHERE paciente_id = ?
     """, (patient_id,))
@@ -6621,15 +6622,31 @@ def agenda_quick_pay():
     hora            = data.get('hora', '00:00')
 
     try:
-        # Determinar control_uso: Si es paquete o prepagada, asignar 'No consumida' para que las sesiones queden disponibles
-        control_uso_val = data.get('control_uso')
-        if not control_uso_val:
-            if cantidad_ses > 1 or estado_pago == 'Prepagada' or 'paquete' in tipo_consulta.lower():
-                control_uso_val = 'No consumida'
-                if estado_pago == 'Paga':
-                    estado_pago = 'Prepagada'
-            else:
-                control_uso_val = 'Consumida'
+        # 1. Si el paciente tiene una cita agendada pendiente, actualizar dicha cita directamente
+        cursor.execute("""
+            SELECT id FROM agenda_finanzas
+            WHERE paciente_id = ? AND estado_pago = 'Pendiente'
+            ORDER BY ABS(JULIANDAY(fecha) - JULIANDAY(?)) ASC, id ASC LIMIT 1
+        """, (paciente_id, fecha))
+        pending_match = cursor.fetchone()
+
+        if pending_match and not data.get('forzar_nuevo_registro'):
+            pending_id = pending_match['id']
+            cursor.execute("""
+                UPDATE agenda_finanzas
+                SET monto = ?, moneda = ?, tipo_consulta = ?, estado_pago = 'Paga',
+                    control_uso = 'No consumida', cantidad_sesiones = ?,
+                    referencia = ?, metodo_pago = ?, fecha_pago = ?
+                WHERE id = ?
+            """, (monto, moneda, tipo_consulta, cantidad_ses, referencia, metodo_pago, fecha_pago, pending_id))
+            db.commit()
+            auto_settle_patient_debts(db, paciente_id)
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(paciente_id,)).start()
+            return jsonify({'success': 'Pago asignado y vinculado a la cita agendada del consultante con éxito.'})
+
+        # 2. Si no hay cita pendiente o es un abono/paquete nuevo, guardar registro con control_uso = 'No consumida'
+        control_uso_val = data.get('control_uso') or 'No consumida'
 
         if 'paquete' in tipo_consulta.lower() and cantidad_ses <= 1:
             cursor.execute("SELECT sesiones_paquete_personalizado FROM pacientes WHERE id = ?", (paciente_id,))
@@ -6649,6 +6666,7 @@ def agenda_quick_pay():
             referencia, metodo_pago, fecha_pago
         ))
         db.commit()
+        auto_settle_patient_debts(db, paciente_id)
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(paciente_id,)).start()
 
