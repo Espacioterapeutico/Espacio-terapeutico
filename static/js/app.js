@@ -3312,16 +3312,28 @@ async function loadDashboardStats() {
         const res = await fetch('/api/finance/balance');
         const data = await res.json();
         
-        document.getElementById('stat-total-patients').textContent = data.stats.total_pacientes;
-        document.getElementById('stat-paid-sessions').textContent = data.stats.total_pagas;
-        document.getElementById('stat-pending-sessions').textContent = data.stats.total_pendientes;
+        const totPat = document.getElementById('stat-total-patients');
+        if (totPat) totPat.textContent = data.stats.total_pacientes || 0;
+        const paidSess = document.getElementById('stat-paid-sessions');
+        if (paidSess) paidSess.textContent = data.stats.total_pagas || 0;
+        const pendSess = document.getElementById('stat-pending-sessions');
+        if (pendSess) pendSess.textContent = data.stats.total_pendientes || 0;
         
-        const presVal = document.getElementById('stat-month-presencial');
-        if (presVal) presVal.textContent = data.stats.month_presencial || 0;
-        const onlineVal = document.getElementById('stat-month-online');
-        if (onlineVal) onlineVal.textContent = data.stats.month_online || 0;
-        const uptaebVal = document.getElementById('stat-month-uptaeb');
-        if (uptaebVal) uptaebVal.textContent = data.stats.month_uptaeb || 0;
+        const container = document.getElementById('stat-month-modalities-container');
+        if (container) {
+            container.innerHTML = '';
+            const mods = data.stats.month_modalities || {
+                'Presencial': data.stats.month_presencial || 0,
+                'Online': data.stats.month_online || 0
+            };
+            
+            Object.keys(mods).forEach(modName => {
+                const count = mods[modName] || 0;
+                const item = document.createElement('div');
+                item.innerHTML = `${modName}: <span style="font-weight: bold; color: var(--text-color);">${count}</span>`;
+                container.appendChild(item);
+            });
+        }
     } catch (err) {
         console.error("Error al cargar estadísticas del dashboard:", err);
     }

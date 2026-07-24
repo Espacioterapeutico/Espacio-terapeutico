@@ -608,6 +608,7 @@ def init_db():
         cols_notif = [row[1] for row in cursor.fetchall()]
         if 'user_id' not in cols_notif:
             cursor.execute("ALTER TABLE notificaciones ADD COLUMN user_id INTEGER")
+        cursor.execute("UPDATE notificaciones SET user_id = 1 WHERE user_id IS NULL")
         db.commit()
         # Asegurar existencia de la tabla soporte
         cursor.execute("""
@@ -763,7 +764,7 @@ def auto_cancel_unconfirmed_sessions(db):
         
         # Obtener citas no confirmadas del día de hoy o anteriores en estado 'Agendada'
         cursor.execute("""
-            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.google_event_id, p.nombres, p.apellidos
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.google_event_id, p.nombres, p.apellidos, p.psicologo_id
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.confirmada = 0 
@@ -783,11 +784,12 @@ def auto_cancel_unconfirmed_sessions(db):
             hora_cita = appt['hora']
             pac_nombre = f"{appt['nombres']} {appt['apellidos']}"
             google_event_id = appt['google_event_id']
+            target_psic = appt['psicologo_id'] or 1
             
             # 1. Eliminar de Google Calendar
             if google_event_id:
                 try:
-                    service = get_calendar_service()
+                    service = get_calendar_service(target_psic)
                     if service:
                         service.events().delete(calendarId='primary', eventId=google_event_id).execute()
                 except Exception as ge:
@@ -810,9 +812,10 @@ def auto_cancel_unconfirmed_sessions(db):
             # 3. Notificación al psicólogo
             fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             cursor.execute("""
-                INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-                VALUES (?, ?, ?, ?, 0, ?)
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, ?, ?, ?, ?, 0, ?)
             """, (
+                target_psic,
                 'cita', 
                 'Cita Auto-Cancelada por Falta de Confirmación', 
                 f"La consulta de {pac_nombre} para el {fecha_cita} a las {hora_cita} fue cancelada automáticamente por no confirmarse a tiempo.",
@@ -857,7 +860,7 @@ def auto_send_appointment_reminders(db):
         
         # Buscar citas agendadas para el día de hoy no canceladas
         cursor.execute("""
-            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, p.nombres, p.apellidos
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, p.nombres, p.apellidos, p.psicologo_id
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.fecha = ?
@@ -877,6 +880,7 @@ def auto_send_appointment_reminders(db):
             pac_nombre = f"{appt['nombres']} {appt['apellidos']}"
             hora_cita = appt['hora']
             notif_link = f"remind_{appt_id}_{today_str}"
+            target_psic = appt['psicologo_id'] or 1
             
             # Evitar enviar más de 1 recordatorio al día por la misma cita
             cursor.execute("SELECT id FROM notificaciones WHERE link = ?", (notif_link,))
@@ -885,9 +889,10 @@ def auto_send_appointment_reminders(db):
                 
             # 1. Notificación al psicólogo
             cursor.execute("""
-                INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-                VALUES ('cita', '⏰ Recordatorio de Consulta Hoy', ?, ?, 0, ?)
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'cita', '⏰ Recordatorio de Consulta Hoy', ?, ?, 0, ?)
             """, (
+                target_psic,
                 f"Tienes consulta programada hoy con {pac_nombre} a las {hora_cita} ({appt['tipo_consulta']}).",
                 now_str,
                 notif_link
@@ -1788,9 +1793,9 @@ def fast_booking_book():
         from datetime import datetime
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
-            INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-            VALUES (?, ?, ?, ?, 0, ?)
-        """, ('cita', 'Nueva Cita Agendada (Rápida)', f"{pac_nombre} ha auto-agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, ?, ?, ?, ?, 0, ?)
+        """, (psicologo_id, 'cita', 'Nueva Cita Agendada (Rápida)', f"{pac_nombre} ha auto-agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
         
         db.commit()
 
@@ -2880,9 +2885,9 @@ def patient_add_appointment():
         from datetime import datetime
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
-            INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-            VALUES (?, ?, ?, ?, 0, ?)
-        """, ('cita', 'Nueva Cita Agendada', f"{pac_nombre} ha agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, ?, ?, ?, ?, 0, ?)
+        """, (psicologo_id, 'cita', 'Nueva Cita Agendada', f"{pac_nombre} ha agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
         
         db.commit()
 
@@ -3058,9 +3063,9 @@ def patient_cancel_appointment():
             
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
-            INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-            VALUES (?, ?, ?, ?, 0, ?)
-        """, ('cita', notif_title, notif_msg, fecha_notif, 'agenda'))
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, ?, ?, ?, ?, 0, ?)
+        """, (psicologo_id, 'cita', notif_title, notif_msg, fecha_notif, 'agenda'))
         
         db.commit()
 
@@ -3141,15 +3146,16 @@ def patient_confirm_appointment():
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt['id'],))
         
         # Notificar al psicólogo y al paciente
-        cursor.execute("SELECT nombres, apellidos FROM pacientes WHERE id = ?", (patient_id,))
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         p_info = cursor.fetchone()
         pac_nombre = f"{p_info['nombres']} {p_info['apellidos']}" if p_info else "El consultante"
+        psic_id = (p_info['psicologo_id'] if p_info and p_info['psicologo_id'] else 1)
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         cursor.execute("""
-            INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-            VALUES ('cita', '✅ Cita Confirmada', ?, ?, 0, 'agenda')
-        """, (f"{pac_nombre} ha confirmado su asistencia a la consulta del {appt['fecha']} a las {appt['hora']}.", now_str))
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, 'cita', '✅ Cita Confirmada', ?, ?, 0, 'agenda')
+        """, (psic_id, f"{pac_nombre} ha confirmado su asistencia a la consulta del {appt['fecha']} a las {appt['hora']}.", now_str))
         
         try:
             fb_payload = {
@@ -3313,15 +3319,16 @@ def patient_reschedule_appointment():
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (patient_id, appt_id, old_fecha, old_hora, new_date, new_hour, mod_por, f"Reprogramado del {old_fecha} {old_hora} al {new_date} {new_hour}", fecha_reg))
         
-        cursor.execute("SELECT nombres, apellidos FROM pacientes WHERE id = ?", (patient_id,))
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         pac = cursor.fetchone()
         pac_nombre = f"{pac['nombres']} {pac['apellidos']}"
+        psic_id = (pac['psicologo_id'] if pac and pac['psicologo_id'] else (psicologo_id or 1))
         
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
-            INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-            VALUES (?, ?, ?, ?, 0, ?)
-        """, ('cita', 'Cita Reprogramada por Paciente', f"{pac_nombre} ha reprogramado su consulta del {old_fecha} a las {old_hora} para la nueva fecha: {new_date} a las {new_hour}.", fecha_notif, 'agenda'))
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, ?, ?, ?, ?, 0, ?)
+        """, (psic_id, 'cita', 'Cita Reprogramada por Paciente', f"{pac_nombre} ha reprogramado su consulta del {old_fecha} a las {old_hora} para la nueva fecha: {new_date} a las {new_hour}.", fecha_notif, 'agenda'))
         
         db.commit()
 
@@ -3395,9 +3402,9 @@ def patient_add_payment_report():
         
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
-            INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-            VALUES (?, ?, ?, ?, 0, ?)
-        """, ('pago', 'Nuevo Pago Notificado', f"{pac_nombre} notificó un pago de {monto} {moneda}.", fecha_notif, 'finance'))
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, ?, ?, ?, ?, 0, ?)
+        """, (psicologo_id, 'pago', 'Nuevo Pago Notificado', f"{pac_nombre} notificó un pago de {monto} {moneda}.", fecha_notif, 'finance'))
         db.commit()
 
         # Enviar notificación WebPush al psicólogo
@@ -3456,9 +3463,9 @@ def patient_pizarra():
             mensaje_notif = f"{pac_nombre} registró su estado de ánimo: {emoji_animo} {estado_animo}." if estado_animo else f"{pac_nombre} escribió una reflexión en su pizarra terapéutica."
 
             cursor.execute("""
-                INSERT INTO notificaciones (tipo, titulo, mensaje, fecha, leida, link)
-                VALUES (?, ?, ?, ?, 0, ?)
-            """, ('pizarra', titulo_notif, mensaje_notif, fecha_actual, 'pizarra-visual'))
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, ?, ?, ?, ?, 0, ?)
+            """, (psicologo_id, 'pizarra', titulo_notif, mensaje_notif, fecha_actual, 'pizarra-visual'))
             
             db.commit()
 
@@ -4148,12 +4155,12 @@ def admin_notifications():
             cursor.execute("""
                 SELECT id, tipo, titulo, mensaje, fecha, leida, link
                 FROM notificaciones
-                WHERE user_id = ? OR user_id IS NULL
+                WHERE user_id = ?
                 ORDER BY fecha DESC, id DESC LIMIT 25
             """, (psic_id,))
             rows = cursor.fetchall()
             
-            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE (user_id = ? OR user_id IS NULL) AND leida = 0", (psic_id,))
+            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE user_id = ? AND leida = 0", (psic_id,))
             unread_count = cursor.fetchone()[0] or 0
         else:
             cursor.execute("""
@@ -4193,12 +4200,12 @@ def admin_notifications_mark_read():
     try:
         if notification_id:
             if psic_id is not None:
-                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ? AND (user_id = ? OR user_id IS NULL)", (notification_id, psic_id))
+                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ? AND user_id = ?", (notification_id, psic_id))
             else:
                 cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ?", (notification_id,))
         else:
             if psic_id is not None:
-                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE user_id = ? OR user_id IS NULL", (psic_id,))
+                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE user_id = ?", (psic_id,))
             else:
                 cursor.execute("UPDATE notificaciones SET leida = 1")
         db.commit()
@@ -5949,9 +5956,34 @@ def get_monthly_balance():
         """, (date_prefix,))
         modality_counts = {row[0]: row[1] for row in cursor.fetchall()}
     
-    total_online = modality_counts.get('Online', 0)
-    total_presencial = modality_counts.get('Presencial', 0)
-    total_uptaeb = modality_counts.get('Uptaeb', 0)
+    active_modalities = ["Presencial", "Online"]
+    if psic_id is not None:
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
+        u_row = cursor.fetchone()
+        if u_row and u_row['configuracion_horarios_visual']:
+            try:
+                import json
+                cfg = json.loads(u_row['configuracion_horarios_visual'])
+                raw_perfiles = cfg.get('perfiles', [])
+                custom_mods = []
+                if isinstance(raw_perfiles, list):
+                    for p in raw_perfiles:
+                        if isinstance(p, dict) and (p.get('nombre') or p.get('modalidad')):
+                            custom_mods.append(p.get('nombre') or p.get('modalidad'))
+                elif isinstance(raw_perfiles, dict):
+                    custom_mods = list(raw_perfiles.keys())
+                if custom_mods:
+                    active_modalities = custom_mods
+            except Exception:
+                pass
+
+    month_modalities = {}
+    for m in active_modalities:
+        m_count = 0
+        for k, v in modality_counts.items():
+            if k and (k.strip().lower() == m.strip().lower() or m.strip().lower() in k.strip().lower()):
+                m_count += v
+        month_modalities[m] = m_count
 
     return jsonify({
         'breakdown': breakdown,
@@ -5962,9 +5994,9 @@ def get_monthly_balance():
             'total_pacientes': total_pacientes,
             'total_pagas': total_pagas,
             'total_pendientes': total_pendientes,
-            'month_online': total_online,
-            'month_presencial': total_presencial,
-            'month_uptaeb': total_uptaeb
+            'month_online': modality_counts.get('Online', 0),
+            'month_presencial': modality_counts.get('Presencial', 0),
+            'month_modalities': month_modalities
         }
     })
 
