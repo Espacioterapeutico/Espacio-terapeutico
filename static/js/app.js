@@ -622,7 +622,7 @@ async function checkSession() {
             if (data.role === 'paciente') {
                 showPatientLayout(data.username, data.patient_id);
             } else {
-                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba);
+                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos);
             }
         } else {
             showAuthScreen();
@@ -676,7 +676,7 @@ async function handleAuthSubmit(e) {
                 });
                 dataAdmin = await resAdmin.json();
                 if (resAdmin.ok) {
-                    showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago, dataAdmin.primer_inicio, dataAdmin.suscripcion_paga, dataAdmin.fecha_expiracion_prueba);
+                    showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago, dataAdmin.primer_inicio, dataAdmin.suscripcion_paga, dataAdmin.fecha_expiracion_prueba, dataAdmin.nombres, dataAdmin.apellidos);
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
                 }
@@ -752,9 +752,52 @@ function clearAllNotificationIntervals() {
     if (patientNotificationIntervalId) { clearInterval(patientNotificationIntervalId); patientNotificationIntervalId = null; }
 }
 
-function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba) {
+function getInitials(nombres, apellidos, username) {
+    let first = '';
+    let last = '';
+    if (nombres && String(nombres).trim()) {
+        const nParts = String(nombres).trim().split(/\s+/);
+        first = nParts[0].charAt(0).toUpperCase();
+    }
+    if (apellidos && String(apellidos).trim()) {
+        const aParts = String(apellidos).trim().split(/\s+/);
+        last = aParts[0].charAt(0).toUpperCase();
+    }
+    if (first && last) {
+        return first + last;
+    }
+    if (first && !last) {
+        const nParts = String(nombres).trim().split(/\s+/);
+        if (nParts.length > 1) {
+            return (nParts[0].charAt(0) + nParts[1].charAt(0)).toUpperCase();
+        }
+        return nParts[0].substring(0, 2).toUpperCase();
+    }
+    if (username && String(username).trim()) {
+        const u = String(username).trim().replace(/^psic\.?/i, '');
+        if (u.length >= 2) {
+            return u.substring(0, 2).toUpperCase();
+        }
+        return u.charAt(0).toUpperCase();
+    }
+    return 'ET';
+}
+window.getInitials = getInitials;
+
+function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba, nombres, apellidos) {
     document.body.classList.remove('is-patient');
     document.getElementById('auth-screen').classList.add('hide');
+
+    // Actualizar avatar e iniciales del psicólogo en la barra superior
+    const avatarEl = document.getElementById('header-user-avatar') || document.querySelector('.user-avatar');
+    const nameEl = document.getElementById('header-user-name') || document.querySelector('.user-name');
+    const roleEl = document.getElementById('header-user-role') || document.querySelector('.user-role');
+
+    let fullPersonName = `${nombres || ''} ${apellidos || ''}`.trim();
+    if (!fullPersonName) fullPersonName = username || 'Psicólogo';
+
+    const initials = getInitials(nombres, apellidos, username);
+    if (avatarEl) avatarEl.textContent = initials;
 
     // Manejar Badge de Prueba Gratis de 3 días en la barra superior
     const trialBadge = document.getElementById('header-trial-badge');
@@ -808,7 +851,8 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     }
     
     if (role === 'superadmin') {
-        document.querySelector('.user-name').textContent = `Admin: ${username}`;
+        if (nameEl) nameEl.textContent = `Admin: ${fullPersonName}`;
+        if (roleEl) roleEl.textContent = `Superadministrador`;
         document.querySelectorAll('.nav-item').forEach(link => {
             const v = link.getAttribute('data-view');
             if (v !== 'superadmin-dashboard' && v !== 'settings') {
@@ -822,7 +866,9 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         return;
     }
     
-    document.querySelector('.user-name').textContent = `Psic. ${username}`;
+    const formattedTitle = fullPersonName.toLowerCase().startsWith('psic') ? fullPersonName : `Psic. ${fullPersonName}`;
+    if (nameEl) nameEl.textContent = formattedTitle;
+    if (roleEl) roleEl.textContent = `Terapeuta`;
     
     const saTab = document.querySelector('[data-view="superadmin-dashboard"]');
     if (saTab) saTab.classList.add('hide');

@@ -2095,6 +2095,8 @@ def login():
         return jsonify({
             'success': 'Inicio de sesión correcto.',
             'username': username,
+            'nombres': u_dict.get('nombres') or '',
+            'apellidos': u_dict.get('apellidos') or '',
             'role': user['role'],
             'activo': user['activo'],
             'aviso_pago': u_dict.get('aviso_pago', 0),
@@ -2144,7 +2146,7 @@ def check_session():
         db = get_db()
         cursor = db.cursor()
         cursor.execute("""
-            SELECT role, activo, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, primer_inicio, suscripcion_paga, fecha_expiracion_prueba 
+            SELECT role, activo, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, primer_inicio, suscripcion_paga, fecha_expiracion_prueba, nombres, apellidos 
             FROM usuarios WHERE id = ?
         """, (session['user_id'],))
         row = cursor.fetchone()
@@ -2154,6 +2156,8 @@ def check_session():
         p_inicio = row['primer_inicio'] if row and row['primer_inicio'] is not None else 1
         s_paga = row['suscripcion_paga'] if row and row['suscripcion_paga'] is not None else 0
         f_exp = row['fecha_expiracion_prueba'] if row and row['fecha_expiracion_prueba'] else ''
+        nombres = row['nombres'] if row and row['nombres'] else ''
+        apellidos = row['apellidos'] if row and row['apellidos'] else ''
         return jsonify({
             'logged_in': True,
             'role': role,
@@ -2163,6 +2167,8 @@ def check_session():
             'suscripcion_paga': s_paga,
             'fecha_expiracion_prueba': f_exp,
             'username': session['username'],
+            'nombres': nombres,
+            'apellidos': apellidos,
             'user_id': session['user_id'],
             'bloqueos': {
                 'registro': row['bloqueo_registro'] if row else 0,
