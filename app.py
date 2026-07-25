@@ -8538,23 +8538,38 @@ def send_manual_whatsapp_reminder(cita_id):
 @app.route('/api/whatsapp/cron-send-reminders', methods=['GET', 'POST'])
 def cron_send_whatsapp_reminders():
     from datetime import datetime, timedelta
+    today_str = datetime.now().strftime('%Y-%m-%d')
     tomorrow_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # Se puede especificar la fecha por parámetro query ?date=YYYY-MM-DD (por defecto busca hoy y mañana)
+    target_date = request.args.get('date')
     
     db = get_db()
     cursor = db.cursor()
 
-    cursor.execute("""
-        SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_recordatorio
-        FROM citas c
-        JOIN pacientes p ON c.paciente_id = p.id
-        JOIN usuarios u ON p.psicologo_id = u.id
-        WHERE c.fecha = ? AND c.estado IN ('Agendada', 'Pendiente') AND COALESCE(c.recordatorio_enviado_wa, 0) = 0
-    """, (tomorrow_str,))
+    if target_date:
+        cursor.execute("""
+            SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
+                   u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_recordatorio
+            FROM citas c
+            JOIN pacientes p ON c.paciente_id = p.id
+            JOIN usuarios u ON p.psicologo_id = u.id
+            WHERE c.fecha = ? AND c.estado IN ('Agendada', 'Pendiente') AND COALESCE(c.recordatorio_enviado_wa, 0) = 0
+        """, (target_date,))
+    else:
+        cursor.execute("""
+            SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
+                   u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_recordatorio
+            FROM citas c
+            JOIN pacientes p ON c.paciente_id = p.id
+            JOIN usuarios u ON p.psicologo_id = u.id
+            WHERE c.fecha IN (?, ?) AND c.estado IN ('Agendada', 'Pendiente') AND COALESCE(c.recordatorio_enviado_wa, 0) = 0
+        """, (today_str, tomorrow_str))
+
     citas_pendientes = cursor.fetchall()
 
     if not citas_pendientes:
-        return jsonify({'status': 'no_pending_reminders', 'message': f'No hay citas pendientes de recordatorio para el {tomorrow_str}.', 'count': 0})
+        return jsonify({'status': 'no_pending_reminders', 'message': f'No hay citas pendientes de recordatorio para hoy ({today_str}) o mañana ({tomorrow_str}).', 'count': 0})
 
     import requests
     enviados = []
@@ -8572,7 +8587,7 @@ def cron_send_whatsapp_reminders():
             r = requests.post(f"{WHATSAPP_SERVICE_URL}/send", json={'phone': phone, 'text': mensaje_texto}, timeout=5)
             if r.status_code == 200:
                 cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
-                enviados.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone})
+                enviados.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'fecha_cita': cita['fecha']})
             else:
                 errores.append({'cita_id': cita['id'], 'error': r.text})
         except Exception as e:
@@ -8581,10 +8596,11 @@ def cron_send_whatsapp_reminders():
     db.commit()
     return jsonify({
         'status': 'success',
-        'fecha_procesada': tomorrow_str,
+        'fechas_procesadas': [today_str, tomorrow_str] if not target_date else [target_date],
         'total_enviados': len(enviados),
         'enviados': enviados,
         'errores': errores
     })
+
 
 
