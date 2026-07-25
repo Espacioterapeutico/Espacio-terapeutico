@@ -10020,3 +10020,106 @@ async function toggleTherapistSubscription(userId) {
         alert("Error de conexión al cambiar suscripción.");
     }
 }
+
+// ==========================================
+// INTEGRACIÓN WHATSAPP WEB (QR STATUS & LOGOUT)
+// ==========================================
+let waPollInterval = null;
+
+async function checkWhatsAppQRStatus() {
+    const badge = document.getElementById('wa-connection-status-badge');
+    const loadingBox = document.getElementById('wa-qr-loading');
+    const qrBox = document.getElementById('wa-qr-box');
+    const qrImage = document.getElementById('wa-qr-image');
+    const connectedBox = document.getElementById('wa-connected-box');
+    const connectedPhone = document.getElementById('wa-connected-phone');
+
+    if (!badge || !loadingBox || !qrBox || !connectedBox) return;
+
+    try {
+        const res = await fetch('/api/whatsapp/qr');
+        const data = await res.json();
+
+        if (data.status === 'connected') {
+            badge.className = 'badge badge-success';
+            badge.style.background = '#10b981';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Conectado ✅';
+            
+            loadingBox.classList.add('hide');
+            qrBox.classList.add('hide');
+            connectedBox.classList.remove('hide');
+            if (connectedPhone) connectedPhone.textContent = data.phone || 'Cuenta vinculada';
+
+            if (waPollInterval) {
+                clearInterval(waPollInterval);
+                waPollInterval = null;
+            }
+        } else if (data.qr || data.status === 'qr_ready') {
+            badge.className = 'badge badge-warning';
+            badge.style.background = '#f59e0b';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Escanear QR 📷';
+
+            loadingBox.classList.add('hide');
+            connectedBox.classList.add('hide');
+            qrBox.classList.remove('hide');
+            if (qrImage && data.qr) {
+                qrImage.src = data.qr;
+            }
+
+            if (!waPollInterval) {
+                waPollInterval = setInterval(checkWhatsAppQRStatus, 4000);
+            }
+        } else {
+            badge.className = 'badge badge-secondary';
+            badge.style.background = '#6b7280';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Desconectado ❌';
+
+            loadingBox.classList.remove('hide');
+            loadingBox.textContent = data.error || 'Conectando con microservicio de WhatsApp... Generando QR...';
+            qrBox.classList.add('hide');
+            connectedBox.classList.add('hide');
+
+            if (!waPollInterval) {
+                waPollInterval = setInterval(checkWhatsAppQRStatus, 4000);
+            }
+        }
+    } catch (err) {
+        console.error("Error al obtener estado de WhatsApp QR:", err);
+        if (badge) {
+            badge.className = 'badge badge-danger';
+            badge.style.background = '#ef4444';
+            badge.textContent = 'Servicio offline ⚠️';
+        }
+    }
+}
+
+async function handleLogoutWhatsApp() {
+    if (!confirm('¿Deseas desconectar tu cuenta de WhatsApp Web? Tendrás que escanear el QR nuevamente.')) return;
+    try {
+        const res = await fetch('/api/whatsapp/logout', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || 'Sesión de WhatsApp cerrada.');
+        checkWhatsAppQRStatus();
+    } catch (err) {
+        alert('Error al desconectar WhatsApp.');
+    }
+}
+
+function switchSettingsTab(tabName) {
+    const tabs = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'contrasena', 'terminos', 'soporte'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`set-tab-${t}`);
+        const card = document.getElementById(`set-card-${t}`);
+        if (btn) btn.className = (t === tabName) ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+        if (card) card.classList.toggle('hide', t !== tabName);
+    });
+    if (tabName === 'whatsapp') {
+        checkWhatsAppQRStatus();
+    }
+}
+window.switchSettingsTab = switchSettingsTab;
+
+

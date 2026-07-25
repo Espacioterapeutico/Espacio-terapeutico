@@ -1,0 +1,16 @@
+{
+  "name": "mi-consultorio-whatsapp-service",
+  "version": "1.0.0",
+  "description": "Microservicio sidecar para WhatsApp Web QR y Webhooks de Mi Consultorio",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.12",
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3",
+    "cors": "^2.8.5",
+    "axios": "^1.7.2"
+  }
+}

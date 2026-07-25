@@ -8340,3 +8340,126 @@ def generate_default_slug_for_user(u):
     slug = re.sub(r'[\u0300-\u036f]', '', normalized).lower()
     slug = re.sub(r'[^a-z0-9\.]', '', slug)
     return slug or f"psic.{uname.lower()}"
+
+# ==========================================
+# RUTAS DE INTEGRACIÓN WHATSAPP WEB (QR)
+# ==========================================
+WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3001')
+
+@app.route('/api/whatsapp/status', methods=['GET'])
+@login_required
+def get_whatsapp_status():
+    import requests
+    try:
+        r = requests.get(f"{WHATSAPP_SERVICE_URL}/status", timeout=3)
+        return jsonify(r.json())
+    except Exception as e:
+        return jsonify({'status': 'disconnected', 'error': 'Microservicio de WhatsApp no disponible', 'details': str(e)})
+
+@app.route('/api/whatsapp/qr', methods=['GET'])
+@login_required
+def get_whatsapp_qr():
+    import requests
+    try:
+        r = requests.get(f"{WHATSAPP_SERVICE_URL}/qr", timeout=3)
+        return jsonify(r.json())
+    except Exception as e:
+        return jsonify({'status': 'disconnected', 'qr': None, 'error': str(e)})
+
+@app.route('/api/whatsapp/send', methods=['POST'])
+@login_required
+def send_whatsapp_message():
+    import requests
+    data = request.json or {}
+    phone = data.get('phone')
+    text = data.get('text')
+    if not phone or not text:
+        return jsonify({'error': 'Teléfono y texto son requeridos'}), 400
+    try:
+        r = requests.post(f"{WHATSAPP_SERVICE_URL}/send", json={'phone': phone, 'text': text}, timeout=5)
+        return jsonify(r.json()), r.status_code
+    except Exception as e:
+        return jsonify({'error': f'Error al comunicarse con el microservicio WhatsApp: {str(e)}'}), 500
+
+@app.route('/api/whatsapp/logout', methods=['POST'])
+@login_required
+def logout_whatsapp():
+    import requests
+    try:
+        r = requests.post(f"{WHATSAPP_SERVICE_URL}/logout", timeout=5)
+        return jsonify(r.json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/whatsapp/webhook', methods=['POST'])
+def whatsapp_webhook():
+    data = request.json or {}
+    raw_phone = str(data.get('phone', '')).strip()
+    text = str(data.get('text', '')).strip()
+    
+    if not raw_phone or not text:
+        return jsonify({'error': 'Payload incompleto'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    clean_digits = ''.join(filter(str.isdigit, raw_phone))
+    phone_search = clean_digits[-8:] if len(clean_digits) >= 8 else clean_digits
+
+    cursor.execute("""
+        SELECT id, nombres, apellidos, psicologo_id 
+        FROM pacientes 
+        WHERE REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', '') LIKE '%' || ? || '%'
+    """, (phone_search,))
+    patient = cursor.fetchone()
+
+    if not patient:
+        return jsonify({'status': 'ignored', 'message': f'Teléfono {raw_phone} no asociado a ningún paciente.'})
+
+    patient_id = patient['id']
+    patient_name = f"{patient['nombres']} {patient['apellidos']}"
+    psic_id = patient['psicologo_id']
+    text_lower = text.lower()
+
+    confirm_words = ['si', 'sí', 'confirmo', 'confirmar', 'confirmado', 'confirmada', 'asistire', 'asistiré', 'ok', 'listo']
+    cancel_words = ['no', 'cancelo', 'cancelar', 'cancelado', 'cancelada', 'imposible', 'no podre', 'no podré', 'no asisto']
+
+    from datetime import datetime
+    today_str = datetime.now().strftime('%Y-%m-%d')
+
+    cursor.execute("""
+        SELECT id, fecha, hora, estado 
+        FROM citas 
+        WHERE paciente_id = ? AND fecha >= ? AND estado IN ('Agendada', 'Pendiente')
+        ORDER BY fecha ASC, hora ASC LIMIT 1
+    """, (patient_id, today_str))
+    next_cita = cursor.fetchone()
+
+    if not next_cita:
+        return jsonify({'status': 'no_upcoming_appointment', 'message': f'No hay citas próximas pendientes para {patient_name}'})
+
+    cita_id = next_cita['id']
+    cita_fecha = next_cita['fecha']
+
+    if any(w in text_lower for w in confirm_words):
+        cursor.execute("UPDATE citas SET estado = 'Confirmada' WHERE id = ?", (cita_id,))
+        notif_msg = f"📱 WhatsApp: {patient_name} CONFIRMÓ su cita del {cita_fecha}."
+        cursor.execute("""
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, 'whatsapp_confirmation', 'Cita Confirmada por WhatsApp', ?, ?, 0, '#agenda')
+        """, (psic_id, notif_msg, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        db.commit()
+        return jsonify({'status': 'confirmed', 'message': f'Cita #{cita_id} confirmada para {patient_name}'})
+
+    elif any(w in text_lower for w in cancel_words):
+        cursor.execute("UPDATE citas SET estado = 'Cancelada' WHERE id = ?", (cita_id,))
+        notif_msg = f"⚠️ WhatsApp: {patient_name} CANCELÓ su cita del {cita_fecha}."
+        cursor.execute("""
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, 'whatsapp_cancellation', 'Cita Cancelada por WhatsApp', ?, ?, 0, '#agenda')
+        """, (psic_id, notif_msg, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        db.commit()
+        return jsonify({'status': 'cancelled', 'message': f'Cita #{cita_id} cancelada para {patient_name}'})
+
+    return jsonify({'status': 'text_received_no_action', 'message': 'Mensaje recibido pero no coincide con confirmación o cancelación.'})
+
