@@ -3685,6 +3685,7 @@ def get_patient_portal_data_dict(patient_id):
         "costo_paquete_personalizado": patient["costo_paquete_personalizado"],
         "sesiones_paquete_personalizado": patient["sesiones_paquete_personalizado"],
         "moneda_personalizada": patient["moneda_personalizada"] or 'USD',
+        "psicologo_id": patient["psicologo_id"] or 1,
         "psicologo_asignado": psic_nombre,
         "metodos_pago": metodos_pago,
         "terminos_aceptados": terminos_aceptados

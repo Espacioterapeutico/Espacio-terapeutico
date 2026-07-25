@@ -1462,6 +1462,9 @@ async function loadPatientPortalData(patientId) {
         
         if (data.perfil) {
             window.patientProfile = data.perfil;
+            if (data.perfil.psicologo_id) {
+                window.currentPatientPsicologoId = data.perfil.psicologo_id;
+            }
             const patientFullName = `${data.perfil.nombres} ${data.perfil.apellidos}`;
             document.getElementById('pat-welcome-title').textContent = `Hola, ${data.perfil.nombres} 👋`;
             
