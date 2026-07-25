@@ -4596,7 +4596,7 @@ function renderProfileBlock(container, profileData) {
     // Grid de días de la semana
     const daysList = document.createElement('div');
     daysList.className = 'profile-days-list';
-    daysList.style.display = 'none'; // colapsado por defecto
+    daysList.style.display = 'flex'; // Desplegado por defecto para visualización clara
     daysList.style.flexDirection = 'column';
     daysList.style.gap = '0.75rem';
     daysList.style.marginTop = '0.75rem';
@@ -4626,7 +4626,7 @@ function renderProfileBlock(container, profileData) {
     toggleBtn.style.padding = '0.25rem 0.5rem';
     toggleBtn.style.fontSize = '0.8rem';
     toggleBtn.style.color = 'var(--text-muted)';
-    toggleBtn.style.transform = 'rotate(-90deg)'; // rotado por defecto
+    toggleBtn.style.transform = 'rotate(0deg)';
     toggleBtn.style.transition = 'transform 0.2s';
     
     toggleBtn.onclick = () => {
