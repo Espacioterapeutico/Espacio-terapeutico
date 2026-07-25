@@ -8320,13 +8320,13 @@ def superadmin_toggle_subscription(user_id):
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
         
     new_sub = 1 if row['suscripcion_paga'] != 1 else 0
-    # Al activar suscripción paga, activar también el usuario
     new_activo = 1 if new_sub == 1 else 1
     cursor.execute("UPDATE usuarios SET suscripcion_paga = ?, activo = ? WHERE id = ?", (new_sub, new_activo, user_id))
     db.commit()
     
     status_str = "Suscripción Paga Activada (Acceso Ilimitado)" if new_sub == 1 else "Cambiado a Modo Prueba (3 Días)"
     return jsonify({'success': f"Estado de {row['nombres']} {row['apellidos']} actualizado: {status_str}.", 'suscripcion_paga': new_sub})
+
 
 def generate_default_slug_for_user(u):
     if not u:
@@ -8354,13 +8354,27 @@ def generate_default_slug_for_user(u):
 # ==========================================
 WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'https://espacio-terapeutico-whatsapp.onrender.com')
 
+def make_wa_http_request(method, endpoint, json_data=None, timeout=8):
+    import requests
+    url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/{endpoint.lstrip('/')}"
+    try:
+        s = requests.Session()
+        s.trust_env = False
+        if method.upper() == 'GET':
+            return s.get(url, timeout=timeout)
+        else:
+            return s.post(url, json=json_data, timeout=timeout)
+    except Exception:
+        if method.upper() == 'GET':
+            return requests.get(url, timeout=timeout)
+        else:
+            return requests.post(url, json=json_data, timeout=timeout)
 
 @app.route('/api/whatsapp/status', methods=['GET'])
 @login_required
 def get_whatsapp_status():
-    import requests
     try:
-        r = requests.get(f"{WHATSAPP_SERVICE_URL}/status", timeout=3)
+        r = make_wa_http_request('GET', '/status', timeout=5)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'error': 'Microservicio de WhatsApp no disponible', 'details': str(e)})
@@ -8368,9 +8382,8 @@ def get_whatsapp_status():
 @app.route('/api/whatsapp/qr', methods=['GET'])
 @login_required
 def get_whatsapp_qr():
-    import requests
     try:
-        r = requests.get(f"{WHATSAPP_SERVICE_URL}/qr", timeout=3)
+        r = make_wa_http_request('GET', '/qr', timeout=5)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'qr': None, 'error': str(e)})
@@ -8378,7 +8391,6 @@ def get_whatsapp_qr():
 @app.route('/api/whatsapp/send', methods=['POST'])
 @login_required
 def send_whatsapp_message():
-    import requests
     data = request.json or {}
     phone = data.get('phone')
     text = data.get('text')
