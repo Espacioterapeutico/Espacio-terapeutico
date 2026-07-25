@@ -220,6 +220,10 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
                     <span>Pizarra Visual</span>
                 </a>
+                <a href="#" class="nav-item" data-view="therapist-tools" onclick="switchView('therapist-tools')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                    <span>Herramientas Terapéuticas</span>
+                </a>
                 <a href="#" class="nav-item" data-view="finance" onclick="switchView('finance')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span>Control de Finanzas</span>
@@ -276,6 +280,18 @@
                 <a href="#" class="pat-menu-item" data-pat-view="patient-diary" onclick="selectPatientMenuItem('patient-diary')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     <span>Pizarra Terapéutica</span>
+                </a>
+                <a href="#" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-sleep" data-mod-key="sueno" onclick="selectPatientMenuItem('patient-sleep')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
+                    <span style="font-size: 1.2rem;">🌙</span>
+                    <span>Registro de Sueño</span>
+                </a>
+                <a href="#" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-anxiety" data-mod-key="ansiedad" onclick="selectPatientMenuItem('patient-anxiety')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
+                    <span style="font-size: 1.2rem;">⚡</span>
+                    <span>Diario de Ansiedad</span>
+                </a>
+                <a href="#" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-sobriety" data-mod-key="sobriedad" onclick="selectPatientMenuItem('patient-sobriety')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
+                    <span style="font-size: 1.2rem;">🏆</span>
+                    <span>Mi Sobriedad</span>
                 </a>
                 <a href="#" class="pat-menu-item" data-pat-view="patient-support" onclick="selectPatientMenuItem('patient-support')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -1295,6 +1311,286 @@
                                     <button type="submit" class="btn btn-primary btn-block" style="width:100%;">Enviar Mensaje de Soporte</button>
                                 </form>
                                 <div id="sup-status-msg" class="status-msg hide mt-3" style="padding:0.75rem; border-radius:6px; font-weight:600;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA: HERRAMIENTAS TERAPÉUTICAS (PSICÓLOGO) -->
+                <section id="view-therapist-tools" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>🛠️ Herramientas Terapéuticas Especiales</h2>
+                        <span class="text-secondary">Asignación modular y seguimiento por consultante</span>
+                    </div>
+
+                    <!-- BUSCADOR RÁPIDO Y PANEL DE ASIGNACIÓN AL PACIENTE -->
+                    <div class="card mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%); border: 1.5px solid #e9d5ff;">
+                        <div class="card-header" style="border-bottom: 1.5px solid #f3e8ff;">
+                            <h3 style="color: #6b21a8; display: flex; align-items: center; gap: 0.5rem;">
+                                🔍 Asignar Herramientas a un Consultante
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-secondary mb-3" style="font-size: 0.88rem;">Selecciona o busca a un paciente para activar o desactivar las funciones especiales que podrá ver en su portal:</p>
+                            
+                            <div class="form-group mb-3" style="position: relative;">
+                                <label for="tt-patient-search" style="font-weight: 700;">Buscar Consultante:</label>
+                                <input type="text" id="tt-patient-search" placeholder="Escribe Nombre, Apellido o Cédula..." oninput="onTherapistToolPatientSearch(this.value)" autocomplete="off" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.95rem;">
+                                <div id="tt-patient-dropdown" class="search-results-dropdown hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 100;"></div>
+                            </div>
+
+                            <!-- Panel interactivo de switches (se carga al seleccionar paciente) -->
+                            <div id="tt-patient-toggle-panel" class="hide" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-top: 1rem; box-shadow: var(--shadow-sm);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.65rem; margin-bottom: 0.85rem;">
+                                    <h4 id="tt-selected-patient-name" style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--primary-color);"></h4>
+                                    <span id="tt-selected-patient-code" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);"></span>
+                                </div>
+                                <div id="tt-patient-switches-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                                    <!-- Dinámico con JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CATÁLOGO DE HERRAMIENTAS Y BOTÓN DE REPORTES -->
+                    <h3 class="mb-3" style="font-family: var(--font-title); color: var(--text-dark);">Catálogo de Módulos Disponible</h3>
+                    <div id="tt-modules-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
+                        <!-- Dinámico con JS -->
+                    </div>
+                </section>
+                
+                <!-- ==========================================
+                     PORTAL DE PACIENTES (VISTAS DE CONSULTANTE)
+                     ========================================== -->
+
+                <!-- VISTA PORTAL PACIENTE: REGISTRO DE SUEÑO -->
+                <section id="view-patient-sleep" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>🌙 Registro de Higiene del Sueño</h2>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
+                    </div>
+
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
+                            <h3 style="color: #1e40af; margin: 0;">📝 Cuestionario Diario de Descanso</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="patient-sleep-form" onsubmit="submitPatientSleepLog(event)">
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-6">
+                                        <label for="sleep-fecha" style="font-weight: 700;">Fecha de Registro</label>
+                                        <input type="date" id="sleep-fecha" required style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-3">
+                                        <label for="sleep-hora-dormi" style="font-weight: 700;">Me dormí a las</label>
+                                        <input type="time" id="sleep-hora-dormi" required style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-3">
+                                        <label for="sleep-hora-desperto" style="font-weight: 700;">Me desperté a las</label>
+                                        <input type="time" id="sleep-hora-desperto" required style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="sleep-situaciones" style="font-weight: 700;">Situaciones relevantes durante el día:</label>
+                                    <textarea id="sleep-situaciones" rows="2" placeholder="Eventos importantes del día..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></textarea>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="sleep-emociones" style="font-weight: 700;">Emociones relevantes durante el día:</label>
+                                    <textarea id="sleep-emociones" rows="2" placeholder="¿Cómo te sentiste emocionalmente?" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></textarea>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="sleep-proceso" style="font-weight: 700;">¿Cómo fue el proceso para conciliar el sueño?</label>
+                                    <input type="text" id="sleep-proceso" placeholder="Ej: Rápido, costoso, rumiación mental..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                </div>
+
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-6">
+                                        <label style="font-weight: 700; display: block; margin-bottom: 0.35rem;">¿Te despertaste durante la noche?</label>
+                                        <select id="sleep-desperto-noche" onchange="document.getElementById('sleep-cant-despertares-group').classList.toggle('hide', this.value !== '1')" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                            <option value="0">No, dormí de corrido</option>
+                                            <option value="1">Sí, me desperté</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-6 hide" id="sleep-cant-despertares-group">
+                                        <label for="sleep-cant-despertares" style="font-weight: 700;">¿Cuántas veces aproximadamente?</label>
+                                        <input type="number" id="sleep-cant-despertares" value="1" min="1" max="20" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 700; display: block; margin-bottom: 0.35rem;">¿Sentiste que descansaste al despertar?</label>
+                                    <select id="sleep-senti-descanso" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                        <option value="1">Sí, me sentí descansado/a</option>
+                                        <option value="0">No, desperté fatigado/a</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group mb-4" style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <label style="font-weight: 700; display: block; margin-bottom: 0.4rem; color: #1e293b;">Síntomas durante el día:</label>
+                                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                                        <label style="cursor: pointer; font-size: 0.88rem; font-weight: 600;"><input type="checkbox" id="sleep-somnolencia"> 🥱 Somnolencia</label>
+                                        <label style="cursor: pointer; font-size: 0.88rem; font-weight: 600;"><input type="checkbox" id="sleep-pesadez"> 🪨 Pesadez</label>
+                                        <label style="cursor: pointer; font-size: 0.88rem; font-weight: 600;"><input type="checkbox" id="sleep-agotamiento"> 🔋 Agotamiento</label>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700;">💾 Guardar Registro de Sueño</button>
+                            </form>
+                            <div id="patient-sleep-status" class="status-msg hide mt-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL DE SUEÑO -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📊 Historial de Registro de Sueño</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-sleep-history-list" class="table-responsive">
+                                <p class="text-muted">Cargando historial de sueño...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA PORTAL PACIENTE: DIARIO DE ANSIEDAD -->
+                <section id="view-patient-anxiety" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>⚡ Diario de Ansiedad & Síntomas</h2>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
+                    </div>
+
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);">
+                            <h3 style="color: #c2410c; margin: 0;">📋 Registro Diario de Ansiedad</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="patient-anxiety-form" onsubmit="submitPatientAnxietyLog(event)">
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-6">
+                                        <label for="anx-fecha" style="font-weight: 700;">Fecha de Registro</label>
+                                        <input type="date" id="anx-fecha" required style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="anx-nivel" style="font-weight: 700;">Nivel de Ansiedad percibido (1 a 10) *</label>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <input type="range" id="anx-nivel" min="1" max="10" value="5" oninput="document.getElementById('anx-nivel-val').innerText = this.value" style="flex: 1;">
+                                            <span id="anx-nivel-val" style="font-size: 1.2rem; font-weight: 800; color: #c2410c; min-width: 28px; text-align: center;">5</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-4" style="background: #fffdfb; border: 1.5px solid #fed7aa; padding: 1rem; border-radius: 8px;">
+                                    <h4 style="margin: 0 0 0.65rem 0; color: #9a3412; font-size: 0.95rem; font-weight: 700;">Checklist de Síntomas Experimentados:</h4>
+                                    
+                                    <p style="font-size: 0.82rem; font-weight: 700; color: #c2410c; margin-bottom: 0.4rem;">Síntomas Físicos:</p>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.5rem; margin-bottom: 0.85rem;">
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Taquicardia / Palpitaciones"> 💓 Taquicardia / Palpitaciones</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Opresión en el pecho"> 🫁 Opresión en el pecho</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Sudoración frías/calientes"> 💦 Sudoración excesiva</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Dificultad para respirar / Fuga de aire"> 😮‍💨 Dificultad para respirar</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Tensión muscular / Dolor de cabeza"> 🧠 Tensión muscular / Cefalea</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Mareos / Inestabilidad"> 💫 Mareos / Inestabilidad</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Molestias estomacales / Náuseas"> 🤢 Molestias estomacales</label>
+                                    </div>
+
+                                    <p style="font-size: 0.82rem; font-weight: 700; color: #c2410c; margin-bottom: 0.4rem;">Síntomas Emocionales y Cognitivos:</p>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.5rem;">
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Pensamientos intrusivos / Catastrofismo"> ⚡ Pensamientos intrusivos</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Inquietud / Sensación de peligro"> ⚠️ Inquietud / Peligro inminente</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Dificultad para concentrarse"> 😵‍💫 Dificultad para concentrarse</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500; cursor: pointer;"><input type="checkbox" class="anx-sintoma-cb" value="Irritabilidad / Hipersensibilidad"> 😤 Irritabilidad</label>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-4">
+                                    <label for="anx-situacion" style="font-weight: 700;">Situación Desencadenante o Notas Reflexivas:</label>
+                                    <textarea id="anx-situacion" rows="3" placeholder="¿Qué estabas haciendo o pensando cuando se elevó la ansiedad?" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></textarea>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); border: none;">💾 Guardar Registro de Ansiedad</button>
+                            </form>
+                            <div id="patient-anxiety-status" class="status-msg hide mt-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL DE ANSIEDAD -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📅 Historial de Ansiedad y Frecuencia</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-anxiety-history-list" class="table-responsive">
+                                <p class="text-muted">Cargando historial de ansiedad...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA PORTAL PACIENTE: SOBRIEDAD -->
+                <section id="view-patient-sobriety" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>🏆 Mi Registro & Racha de Sobriedad</h2>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
+                    </div>
+
+                    <!-- TARJETA DEL CONTADOR PRINCIPAL Y RACHA -->
+                    <div class="card mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: var(--radius-md); padding: 1.5rem; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+                        <span style="font-size: 3.5rem; display: block; margin-bottom: 0.25rem;">🔥</span>
+                        <h2 id="sobriety-streak-count" style="font-size: 2.8rem; font-weight: 900; margin: 0; color: #38bdf8; font-family: var(--font-title);">0 Días</h2>
+                        <p style="margin: 0.25rem 0 0 0; font-size: 1rem; color: #94a3b8; font-weight: 600;">Racha Consecutiva de Sobriedad</p>
+                    </div>
+
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                            <h3 style="color: #15803d; margin: 0;">🌱 Check-in Diario de Sobriedad</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="patient-sobriety-form" onsubmit="submitPatientSobrietyLog(event)">
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-6">
+                                        <label for="sob-fecha" style="font-weight: 700;">Fecha de Registro</label>
+                                        <input type="date" id="sob-fecha" required style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="sob-estado" style="font-weight: 700;">¿Te mantuviste sobrio/a hoy?</label>
+                                        <select id="sob-estado" onchange="document.getElementById('sob-tropiezo-group').classList.toggle('hide', this.value === '1')" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 700;">
+                                            <option value="1">🎉 Sí, me mantuve libre de consumo</option>
+                                            <option value="0">⚠️ Tuve un tropiezo / recaída</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div id="sob-tropiezo-group" class="hide mb-3" style="background: #fef2f2; border: 1.5px solid #fca5a5; padding: 1rem; border-radius: 8px;">
+                                    <h4 style="margin: 0 0 0.5rem 0; color: #991b1b; font-size: 0.9rem;">Registro Reflexivo del Tropiezo:</h4>
+                                    <div class="form-group mb-2">
+                                        <label for="sob-disparador" style="font-weight: 600; font-size: 0.85rem;">¿Qué emoción o disparador estuvo presente?</label>
+                                        <input type="text" id="sob-disparador" placeholder="Ej: Ansiedad intensa, presión social, conflicto..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-4">
+                                    <label for="sob-notas" style="font-weight: 700;">Notas o reflexiones personales del día:</label>
+                                    <textarea id="sob-notas" rows="2" placeholder="¿Cómo te sentiste hoy en tu proceso?" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></textarea>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); border: none;">💾 Registrar Check-in de Hoy</button>
+                            </form>
+                            <div id="patient-sobriety-status" class="status-msg hide mt-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL Y LOGROS -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📜 Historial de Registros de Sobriedad</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-sobriety-history-list" class="table-responsive">
+                                <p class="text-muted">Cargando historial de sobriedad...</p>
                             </div>
                         </div>
                     </div>
@@ -3597,7 +3893,25 @@
         </div>
     </div>
 
+    <!-- MODAL DE INSPECCIÓN DE REPORTES TERAPÉUTICOS PARA PSICÓLOGOS -->
+    <div id="therapist-tool-report-modal" class="modal hide">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="ttr-modal-title">📊 Reporte de Módulo Terapéutico</h3>
+                <button type="button" class="btn-close-modal" onclick="closeModal('therapist-tool-report-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="ttr-modal-body-content" class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                    <p class="text-muted">Cargando reporte...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('therapist-tool-report-modal')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v=73"></script>
+    <script src="/static/js/app.js?v=74"></script>
 </body>
 </html>

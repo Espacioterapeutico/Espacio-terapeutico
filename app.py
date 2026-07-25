@@ -721,6 +721,68 @@ def init_db():
         cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_config', ?)", (_def_cfg,))
         cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_vapid_key', ?)", (_def_vapid,))
 
+        # Tablas para Módulos Terapéuticos Personalizados (Sueño, Ansiedad, Sobriedad)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS modulos_terapeuticos_paciente (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                modulo_clave TEXT NOT NULL,
+                activo INTEGER DEFAULT 1,
+                configuracion_json TEXT,
+                fecha_asignacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+                UNIQUE(paciente_id, modulo_clave)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS registros_sueno (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                fecha TEXT NOT NULL,
+                situaciones_dia TEXT,
+                emociones_dia TEXT,
+                proceso_dormir TEXT,
+                hora_dormi TEXT,
+                desperto_noche INTEGER DEFAULT 0,
+                cant_despertares INTEGER DEFAULT 0,
+                hora_desperto TEXT,
+                senti_descanso INTEGER DEFAULT 1,
+                somnolencia_dia INTEGER DEFAULT 0,
+                pesadez_dia INTEGER DEFAULT 0,
+                agotamiento_dia INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+                UNIQUE(paciente_id, fecha)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS registros_ansiedad (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                fecha TEXT NOT NULL,
+                nivel_ansiedad INTEGER NOT NULL,
+                sintomas_json TEXT,
+                situacion_desencadenante TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+                UNIQUE(paciente_id, fecha)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS registros_sobriedad (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                fecha TEXT NOT NULL,
+                sobrio INTEGER NOT NULL,
+                nivel_ansiedad INTEGER,
+                disparador_emocional TEXT,
+                notas TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+                UNIQUE(paciente_id, fecha)
+            )
+        """)
+
         db.commit()
             
     db.close()
@@ -8633,6 +8695,302 @@ def cron_send_whatsapp_reminders():
             'errores': errores
         }
     })
+
+# ==========================================
+# RUTAS DE MÓDULOS TERAPÉUTICOS PERSONALIZADOS
+# (Sueño, Ansiedad, Sobriedad)
+# ==========================================
+
+@app.route('/api/patients/<int:patient_id>/modules', methods=['GET'])
+@login_required
+def get_patient_modules(patient_id):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT id, nombres, apellidos FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    patient = cursor.fetchone()
+    if not patient:
+        return jsonify({'error': 'Paciente no encontrado o sin permisos.'}), 404
+        
+    cursor.execute("SELECT modulo_clave, activo FROM modulos_terapeuticos_paciente WHERE paciente_id = ?", (patient_id,))
+    rows = cursor.fetchall()
+    active_map = {r['modulo_clave']: r['activo'] for r in rows}
+    
+    catalog = [
+        {'clave': 'sueno', 'nombre': 'Higiene del Sueño', 'activo': active_map.get('sueno', 0)},
+        {'clave': 'ansiedad', 'nombre': 'Diario de Ansiedad (Checklist)', 'activo': active_map.get('ansiedad', 0)},
+        {'clave': 'sobriedad', 'nombre': 'Contador & Racha de Sobriedad', 'activo': active_map.get('sobriedad', 0)}
+    ]
+    return jsonify({'patient': dict(patient), 'modules': catalog})
+
+@app.route('/api/patients/<int:patient_id>/modules/toggle', methods=['POST'])
+@login_required
+def toggle_patient_module(patient_id):
+    user_id = session.get('user_id')
+    data = request.json or {}
+    modulo_clave = data.get('modulo_clave')
+    activo = int(data.get('activo', 0))
+    
+    if not modulo_clave:
+        return jsonify({'error': 'Clave de módulo requerida.'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    if not cursor.fetchone():
+        return jsonify({'error': 'Paciente no encontrado o sin permisos.'}), 404
+        
+    cursor.execute("""
+        INSERT INTO modulos_terapeuticos_paciente (paciente_id, modulo_clave, activo)
+        VALUES (?, ?, ?)
+        ON CONFLICT(paciente_id, modulo_clave) DO UPDATE SET activo = excluded.activo
+    """, (patient_id, modulo_clave, activo))
+    db.commit()
+    
+    import threading
+    threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+    
+    return jsonify({'success': True, 'modulo_clave': modulo_clave, 'activo': activo})
+
+@app.route('/api/therapist/modules/catalog', methods=['GET'])
+@login_required
+def get_therapist_modules_catalog():
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        SELECT mt.modulo_clave, COUNT(mt.paciente_id) as total_activos
+        FROM modulos_terapeuticos_paciente mt
+        JOIN pacientes p ON mt.paciente_id = p.id
+        WHERE p.psicologo_id = ? AND mt.activo = 1
+        GROUP BY mt.modulo_clave
+    """, (user_id,))
+    counts = {r['modulo_clave']: r['total_activos'] for r in cursor.fetchall()}
+    
+    catalog = [
+        {
+            'clave': 'sueno',
+            'nombre': 'Registro de Higiene del Sueño',
+            'descripcion': 'Cuestionario de 8 ítems diarios para seguimiento del descanso, despertares nocturnos y síntomas de agotamiento.',
+            'icono': '🌙',
+            'activos': counts.get('sueno', 0)
+        },
+        {
+            'clave': 'ansiedad',
+            'nombre': 'Diario de Ansiedad & Síntomas',
+            'descripcion': 'Registro en calendario con escala 1-10 y checklist de 11 síntomas físicos y cognitivos.',
+            'icono': '⚡',
+            'activos': counts.get('ansiedad', 0)
+        },
+        {
+            'clave': 'sobriedad',
+            'nombre': 'Contador y Racha de Sobriedad',
+            'descripcion': 'Tracker diario con contador de días en racha, medallas de hitos y registro de disparadores.',
+            'icono': '🏆',
+            'activos': counts.get('sobriedad', 0)
+        }
+    ]
+    return jsonify(catalog)
+
+@app.route('/api/therapist/modules/report/<string:modulo_clave>', methods=['GET'])
+@login_required
+def get_therapist_module_report(modulo_clave):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    if modulo_clave == 'sueno':
+        cursor.execute("""
+            SELECT rs.*, p.nombres, p.apellidos, p.cedula
+            FROM registros_sueno rs
+            JOIN pacientes p ON rs.paciente_id = p.id
+            WHERE p.psicologo_id = ?
+            ORDER BY rs.fecha DESC LIMIT 100
+        """, (user_id,))
+    elif modulo_clave == 'ansiedad':
+        cursor.execute("""
+            SELECT ra.*, p.nombres, p.apellidos, p.cedula
+            FROM registros_ansiedad ra
+            JOIN pacientes p ON ra.paciente_id = p.id
+            WHERE p.psicologo_id = ?
+            ORDER BY ra.fecha DESC LIMIT 100
+        """, (user_id,))
+    elif modulo_clave == 'sobriedad':
+        cursor.execute("""
+            SELECT rsob.*, p.nombres, p.apellidos, p.cedula
+            FROM registros_sobriedad rsob
+            JOIN pacientes p ON rsob.paciente_id = p.id
+            WHERE p.psicologo_id = ?
+            ORDER BY rsob.fecha DESC LIMIT 100
+        """, (user_id,))
+    else:
+        return jsonify({'error': 'Módulo desconocido'}), 400
+        
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+# --- RUTAS PORTAL DEL PACIENTE ---
+
+@app.route('/api/patient/active-modules', methods=['GET'])
+@patient_login_required
+def get_patient_active_modules():
+    patient_id = session.get('patient_id')
+    if not patient_id:
+        return jsonify({'error': 'No autenticado'}), 401
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT modulo_clave FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND activo = 1", (patient_id,))
+    active_keys = [r['modulo_clave'] for r in cursor.fetchall()]
+    return jsonify({'active_modules': active_keys})
+
+@app.route('/api/patient/sleep/log', methods=['POST'])
+@patient_login_required
+def log_patient_sleep():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    fecha = data.get('fecha') or datetime.now().strftime('%Y-%m-%d')
+    
+    situaciones_dia = data.get('situaciones_dia', '')
+    emociones_dia = data.get('emociones_dia', '')
+    proceso_dormir = data.get('proceso_dormir', '')
+    hora_dormi = data.get('hora_dormi', '')
+    desperto_noche = 1 if data.get('desperto_noche') else 0
+    cant_despertares = int(data.get('cant_despertares', 0) or 0)
+    hora_desperto = data.get('hora_desperto', '')
+    senti_descanso = 1 if data.get('senti_descanso') else 0
+    somnolencia_dia = 1 if data.get('somnolencia_dia') else 0
+    pesadez_dia = 1 if data.get('pesadez_dia') else 0
+    agotamiento_dia = 1 if data.get('agotamiento_dia') else 0
+    
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO registros_sueno (
+            paciente_id, fecha, situaciones_dia, emociones_dia, proceso_dormir,
+            hora_dormi, desperto_noche, cant_despertares, hora_desperto,
+            senti_descanso, somnolencia_dia, pesadez_dia, agotamiento_dia
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(paciente_id, fecha) DO UPDATE SET
+            situaciones_dia=excluded.situaciones_dia,
+            emociones_dia=excluded.emociones_dia,
+            proceso_dormir=excluded.proceso_dormir,
+            hora_dormi=excluded.hora_dormi,
+            desperto_noche=excluded.desperto_noche,
+            cant_despertares=excluded.cant_despertares,
+            hora_desperto=excluded.hora_desperto,
+            senti_descanso=excluded.senti_descanso,
+            somnolencia_dia=excluded.somnolencia_dia,
+            pesadez_dia=excluded.pesadez_dia,
+            agotamiento_dia=excluded.agotamiento_dia
+    """, (
+        patient_id, fecha, situaciones_dia, emociones_dia, proceso_dormir,
+        hora_dormi, desperto_noche, cant_despertares, hora_desperto,
+        senti_descanso, somnolencia_dia, pesadez_dia, agotamiento_dia
+    ))
+    db.commit()
+    return jsonify({'success': True, 'message': 'Registro de sueño guardado exitosamente.'})
+
+@app.route('/api/patient/sleep/history', methods=['GET'])
+@patient_login_required
+def get_patient_sleep_history():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM registros_sueno WHERE paciente_id = ? ORDER BY fecha DESC LIMIT 30", (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+@app.route('/api/patient/anxiety/log', methods=['POST'])
+@patient_login_required
+def log_patient_anxiety():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    fecha = data.get('fecha') or datetime.now().strftime('%Y-%m-%d')
+    nivel_ansiedad = int(data.get('nivel_ansiedad', 1) or 1)
+    sintomas = data.get('sintomas', [])
+    situacion = data.get('situacion_desencadenante', '')
+    
+    import json
+    sintomas_json = json.dumps(sintomas)
+    
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO registros_ansiedad (paciente_id, fecha, nivel_ansiedad, sintomas_json, situacion_desencadenante)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(paciente_id, fecha) DO UPDATE SET
+            nivel_ansiedad=excluded.nivel_ansiedad,
+            sintomas_json=excluded.sintomas_json,
+            situacion_desencadenante=excluded.situacion_desencadenante
+    """, (patient_id, fecha, nivel_ansiedad, sintomas_json, situacion))
+    db.commit()
+    return jsonify({'success': True, 'message': 'Registro de ansiedad guardado exitosamente.'})
+
+@app.route('/api/patient/anxiety/history', methods=['GET'])
+@patient_login_required
+def get_patient_anxiety_history():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM registros_ansiedad WHERE paciente_id = ? ORDER BY fecha DESC LIMIT 30", (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+@app.route('/api/patient/sobriety/checkin', methods=['POST'])
+@patient_login_required
+def log_patient_sobriety():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    fecha = data.get('fecha') or datetime.now().strftime('%Y-%m-%d')
+    sobrio = 1 if data.get('sobrio') else 0
+    nivel_ansiedad = int(data.get('nivel_ansiedad', 1) or 1)
+    disparador = data.get('disparador_emocional', '')
+    notas = data.get('notas', '')
+    
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO registros_sobriedad (paciente_id, fecha, sobrio, nivel_ansiedad, disparador_emocional, notas)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(paciente_id, fecha) DO UPDATE SET
+            sobrio=excluded.sobrio,
+            nivel_ansiedad=excluded.nivel_ansiedad,
+            disparador_emocional=excluded.disparador_emocional,
+            notas=excluded.notas
+    """, (patient_id, fecha, sobrio, nivel_ansiedad, disparador, notas))
+    db.commit()
+    
+    cursor.execute("SELECT fecha, sobrio FROM registros_sobriedad WHERE paciente_id = ? ORDER BY fecha DESC", (patient_id,))
+    all_logs = cursor.fetchall()
+    streak = 0
+    for l in all_logs:
+        if l['sobrio'] == 1:
+            streak += 1
+        else:
+            break
+            
+    return jsonify({'success': True, 'sobrio': sobrio, 'streak': streak, 'message': 'Check-in de sobriedad guardado.'})
+
+@app.route('/api/patient/sobriety/history', methods=['GET'])
+@patient_login_required
+def get_patient_sobriety_history():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM registros_sobriedad WHERE paciente_id = ? ORDER BY fecha DESC", (patient_id,))
+    all_logs = [dict(r) for r in cursor.fetchall()]
+    
+    streak = 0
+    for l in all_logs:
+        if l['sobrio'] == 1:
+            streak += 1
+        else:
+            break
+            
+    return jsonify({'history': all_logs, 'streak': streak})
+
 
 
 

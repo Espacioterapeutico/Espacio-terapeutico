@@ -491,6 +491,8 @@ function switchView(viewId) {
     } else if (viewId === 'pizarra-visual') {
         loadPizarraPatients();
         loadPizarraVisual();
+    } else if (viewId === 'therapist-tools') {
+        loadTherapistToolsCatalog();
     }
 }
 
@@ -1347,10 +1349,17 @@ function switchPatientView(viewName) {
     const patientId = sessionStorage.getItem('patient_id');
     if (patientId && viewName !== 'patient-first-setup') {
         loadPatientPortalData(patientId);
+        checkPatientActiveModulesNav();
         if (viewName === 'patient-home') {
             switchPatientHomeSubView('next');
         } else if (viewName === 'patient-diary') {
             loadPizarraHistory();
+        } else if (viewName === 'patient-sleep') {
+            loadPatientSleepHistory();
+        } else if (viewName === 'patient-anxiety') {
+            loadPatientAnxietyHistory();
+        } else if (viewName === 'patient-sobriety') {
+            loadPatientSobrietyHistory();
         }
     }
 }
@@ -1455,6 +1464,7 @@ let patDiarySaveTimeout = null;
 
 async function loadPatientPortalData(patientId) {
     try {
+        checkPatientActiveModulesNav();
         const res = await fetch(`/api/patient/portal-data`);
         if (!res.ok) return;
         const data = await res.json();
@@ -10188,6 +10198,499 @@ async function sendManualWhatsAppReminder(citaId) {
     }
 }
 window.sendManualWhatsAppReminder = sendManualWhatsAppReminder;
+
+// ==========================================
+// HERRAMIENTAS TERAPÉUTICAS Y MÓDULOS ESPECIALES
+// ==========================================
+
+let therapistToolsPatientsCatalog = [];
+
+async function loadTherapistToolsCatalog() {
+    const grid = document.getElementById('tt-modules-grid');
+    if (!grid) return;
+    grid.innerHTML = '<p class="text-muted">Cargando catálogo de herramientas...</p>';
+    try {
+        const res = await fetch('/api/therapist/modules/catalog');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al cargar catálogo');
+
+        grid.innerHTML = data.map(m => `
+            <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                        <span style="font-size: 2.2rem; line-height: 1;">${m.icono}</span>
+                        <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25);">
+                            ${m.activos} Paciente(s) Activos
+                        </span>
+                    </div>
+                    <h4 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark);">${m.nombre}</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">${m.descripcion}</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openTherapistModuleReport('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}')" style="flex: 1; font-weight: 600;">
+                        📊 Ver Reporte y Registros
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        grid.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+async function onTherapistToolPatientSearch(query) {
+    const dropdown = document.getElementById('tt-patient-dropdown');
+    if (!dropdown) return;
+    if (!query || query.trim().length < 1) {
+        dropdown.classList.add('hide');
+        return;
+    }
+    const q = query.trim().toLowerCase();
+    try {
+        const res = await fetch('/api/patients');
+        const patients = await res.json();
+        const filtered = patients.filter(p => 
+            (p.nombres && p.nombres.toLowerCase().includes(q)) ||
+            (p.apellidos && p.apellidos.toLowerCase().includes(q)) ||
+            (p.cedula && p.cedula.toLowerCase().includes(q))
+        );
+
+        if (filtered.length === 0) {
+            dropdown.innerHTML = '<div style="padding:0.6rem 0.85rem; font-size:0.85rem; color:var(--text-muted);">No se encontraron consultantes.</div>';
+        } else {
+            dropdown.innerHTML = filtered.map(p => `
+                <div onclick="selectPatientForTherapistTools(${p.id}, '${(p.nombres+' '+p.apellidos).replace(/'/g, "\\'")}', '${p.cedula || ''}')" style="padding:0.65rem 0.85rem; font-size:0.88rem; cursor:pointer; border-bottom:1px solid var(--border-color);">
+                    <strong>${p.nombres} ${p.apellidos}</strong> <span style="color:var(--text-muted); font-size:0.78rem;">(${p.cedula || 'Sin Cédula'})</span>
+                </div>
+            `).join('');
+        }
+        dropdown.classList.remove('hide');
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function selectPatientForTherapistTools(id, name, code) {
+    document.getElementById('tt-patient-dropdown').classList.add('hide');
+    document.getElementById('tt-patient-search').value = name;
+    
+    const panel = document.getElementById('tt-patient-toggle-panel');
+    document.getElementById('tt-selected-patient-name').innerText = name;
+    document.getElementById('tt-selected-patient-code').innerText = code ? `Cédula: ${code}` : '';
+    
+    const list = document.getElementById('tt-patient-switches-list');
+    list.innerHTML = '<p class="text-muted">Cargando estado de módulos...</p>';
+    panel.classList.remove('hide');
+
+    try {
+        const res = await fetch(`/api/patients/${id}/modules`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al cargar módulos');
+
+        list.innerHTML = data.modules.map(m => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color);">
+                <div>
+                    <strong style="font-size: 0.9rem; color: var(--text-dark);">${m.nombre}</strong>
+                    <span style="display: block; font-size: 0.78rem; color: var(--text-muted);">
+                        ${m.activo ? '🟢 Activo en portal del paciente' : '🔴 Desactivado'}
+                    </span>
+                </div>
+                <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
+                    ${m.activo ? ' Desactivar' : ' Activar'}
+                </button>
+            </div>
+        `).join('');
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
+    try {
+        const res = await fetch(`/api/patients/${patientId}/modules/toggle`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ modulo_clave: moduloClave, activo: activoState })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al actualizar');
+        
+        const name = document.getElementById('tt-selected-patient-name').innerText;
+        const code = document.getElementById('tt-selected-patient-code').innerText.replace('Cédula: ', '');
+        selectPatientForTherapistTools(patientId, name, code);
+        loadTherapistToolsCatalog();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function openTherapistModuleReport(moduloClave, moduloNombre) {
+    document.getElementById('ttr-modal-title').innerText = `📊 Reporte: ${moduloNombre}`;
+    const container = document.getElementById('ttr-modal-body-content');
+    container.innerHTML = '<p class="text-muted">Cargando registros...</p>';
+    openModal('therapist-tool-report-modal');
+
+    try {
+        const res = await fetch(`/api/therapist/modules/report/${moduloClave}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al cargar reporte');
+
+        if (data.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-4">Aún no hay registros cargados por ningún paciente en esta herramienta.</p>';
+            return;
+        }
+
+        if (moduloClave === 'sueno') {
+            container.innerHTML = `
+                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                            <th style="padding: 0.5rem;">Fecha</th>
+                            <th style="padding: 0.5rem;">Paciente</th>
+                            <th style="padding: 0.5rem;">Horario</th>
+                            <th style="padding: 0.5rem;">Descansó</th>
+                            <th style="padding: 0.5rem;">Despertares</th>
+                            <th style="padding: 0.5rem;">Síntomas Día</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(r => `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
+                                <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Sí' : '🔴 No'}</td>
+                                <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
+                                <td style="padding: 0.5rem;">
+                                    ${r.somnolencia_dia ? '🥱 ' : ''}${r.pesadez_dia ? '🪨 ' : ''}${r.agotamiento_dia ? '🔋' : ''}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else if (moduloClave === 'ansiedad') {
+            container.innerHTML = `
+                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                            <th style="padding: 0.5rem;">Fecha</th>
+                            <th style="padding: 0.5rem;">Paciente</th>
+                            <th style="padding: 0.5rem;">Nivel Ansiedad</th>
+                            <th style="padding: 0.5rem;">Síntomas Registrados</th>
+                            <th style="padding: 0.5rem;">Situación / Desencadenante</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(r => {
+                            let sints = [];
+                            try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
+                            return `
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                    <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                    <td style="padding: 0.5rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span></td>
+                                    <td style="padding: 0.5rem; max-width: 250px;">${sints.join(', ') || 'Sin síntomas marcados'}</td>
+                                    <td style="padding: 0.5rem;">${r.situacion_desencadenante || '-'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else if (moduloClave === 'sobriedad') {
+            container.innerHTML = `
+                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                            <th style="padding: 0.5rem;">Fecha</th>
+                            <th style="padding: 0.5rem;">Paciente</th>
+                            <th style="padding: 0.5rem;">Estado</th>
+                            <th style="padding: 0.5rem;">Disparador Emocional</th>
+                            <th style="padding: 0.5rem;">Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(r => `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                <td style="padding: 0.5rem;">${r.sobrio ? '🎉 Sobrio/a' : '⚠️ Tropiezo / Recaída'}</td>
+                                <td style="padding: 0.5rem;">${r.disparador_emocional || '-'}</td>
+                                <td style="padding: 0.5rem;">${r.notas || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+    } catch (err) {
+        container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+// --- PORTAL PACIENTE HANDLERS ---
+
+async function checkPatientActiveModulesNav() {
+    try {
+        const res = await fetch('/api/patient/active-modules');
+        if (!res.ok) return;
+        const data = await res.json();
+        const activeKeys = data.active_modules || [];
+        
+        document.querySelectorAll('.pat-mod-item').forEach(el => {
+            const modKey = el.getAttribute('data-mod-key');
+            if (activeKeys.includes(modKey)) {
+                el.classList.remove('hide');
+            } else {
+                el.classList.add('hide');
+            }
+        });
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// 1. Sueño
+async function submitPatientSleepLog(e) {
+    e.preventDefault();
+    const status = document.getElementById('patient-sleep-status');
+    status.classList.add('hide');
+
+    const payload = {
+        fecha: document.getElementById('sleep-fecha').value,
+        hora_dormi: document.getElementById('sleep-hora-dormi').value,
+        hora_desperto: document.getElementById('sleep-hora-desperto').value,
+        situaciones_dia: document.getElementById('sleep-situaciones').value,
+        emociones_dia: document.getElementById('sleep-emociones').value,
+        proceso_dormir: document.getElementById('sleep-proceso').value,
+        desperto_noche: document.getElementById('sleep-desperto-noche').value === '1',
+        cant_despertares: parseInt(document.getElementById('sleep-cant-despertares').value || '0'),
+        senti_descanso: document.getElementById('sleep-senti-descanso').value === '1',
+        somnolencia_dia: document.getElementById('sleep-somnolencia').checked,
+        pesadez_dia: document.getElementById('sleep-pesadez').checked,
+        agotamiento_dia: document.getElementById('sleep-agotamiento').checked
+    };
+
+    try {
+        const res = await fetch('/api/patient/sleep/log', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar');
+
+        status.innerText = '✅ Registro de sueño guardado exitosamente.';
+        status.className = 'status-msg success-msg mt-3';
+        loadPatientSleepHistory();
+    } catch (err) {
+        status.innerText = `⚠️ ${err.message}`;
+        status.className = 'status-msg error-msg mt-3';
+    }
+}
+
+async function loadPatientSleepHistory() {
+    const list = document.getElementById('patient-sleep-history-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/sleep/history');
+        const data = await res.json();
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros de sueño guardados aún.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                        <th style="padding: 0.5rem;">Fecha</th>
+                        <th style="padding: 0.5rem;">Horario</th>
+                        <th style="padding: 0.5rem;">Sensación Descanso</th>
+                        <th style="padding: 0.5rem;">Despertares</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(r => `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                            <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
+                            <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Descansado' : '🔴 Fatigado'}</td>
+                            <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+// 2. Ansiedad
+async function submitPatientAnxietyLog(e) {
+    e.preventDefault();
+    const status = document.getElementById('patient-anxiety-status');
+    status.classList.add('hide');
+
+    const cbs = document.querySelectorAll('.anx-sintoma-cb:checked');
+    const sintomas = Array.from(cbs).map(cb => cb.value);
+
+    const payload = {
+        fecha: document.getElementById('anx-fecha').value,
+        nivel_ansiedad: parseInt(document.getElementById('anx-nivel').value),
+        sintomas: sintomas,
+        situacion_desencadenante: document.getElementById('anx-situacion').value
+    };
+
+    try {
+        const res = await fetch('/api/patient/anxiety/log', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar');
+
+        status.innerText = '✅ Registro de ansiedad guardado exitosamente.';
+        status.className = 'status-msg success-msg mt-3';
+        loadPatientAnxietyHistory();
+    } catch (err) {
+        status.innerText = `⚠️ ${err.message}`;
+        status.className = 'status-msg error-msg mt-3';
+    }
+}
+
+async function loadPatientAnxietyHistory() {
+    const list = document.getElementById('patient-anxiety-history-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/anxiety/history');
+        const data = await res.json();
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros de ansiedad aún.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                        <th style="padding: 0.5rem;">Fecha</th>
+                        <th style="padding: 0.5rem;">Nivel (1-10)</th>
+                        <th style="padding: 0.5rem;">Síntomas</th>
+                        <th style="padding: 0.5rem;">Situación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(r => {
+                        let sints = [];
+                        try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                <td style="padding: 0.5rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad}/10</span></td>
+                                <td style="padding: 0.5rem; max-width: 250px;">${sints.join(', ') || 'Ninguno'}</td>
+                                <td style="padding: 0.5rem;">${r.situacion_desencadenante || '-'}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+// 3. Sobriedad
+async function submitPatientSobrietyLog(e) {
+    e.preventDefault();
+    const status = document.getElementById('patient-sobriety-status');
+    status.classList.add('hide');
+
+    const payload = {
+        fecha: document.getElementById('sob-fecha').value,
+        sobrio: document.getElementById('sob-estado').value === '1',
+        disparador_emocional: document.getElementById('sob-disparador').value,
+        notas: document.getElementById('sob-notas').value
+    };
+
+    try {
+        const res = await fetch('/api/patient/sobriety/checkin', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar');
+
+        status.innerText = '✅ Check-in de sobriedad guardado.';
+        status.className = 'status-msg success-msg mt-3';
+        document.getElementById('sobriety-streak-count').innerText = `${data.streak} Días`;
+        loadPatientSobrietyHistory();
+    } catch (err) {
+        status.innerText = `⚠️ ${err.message}`;
+        status.className = 'status-msg error-msg mt-3';
+    }
+}
+
+async function loadPatientSobrietyHistory() {
+    const list = document.getElementById('patient-sobriety-history-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/sobriety/history');
+        const data = await res.json();
+        
+        document.getElementById('sobriety-streak-count').innerText = `${data.streak || 0} Días`;
+
+        const history = data.history || [];
+        if (history.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes check-ins de sobriedad aún.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                        <th style="padding: 0.5rem;">Fecha</th>
+                        <th style="padding: 0.5rem;">Estado</th>
+                        <th style="padding: 0.5rem;">Disparador</th>
+                        <th style="padding: 0.5rem;">Notas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${history.map(r => `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                            <td style="padding: 0.5rem;">${r.sobrio ? '🎉 Sobrio/a' : '⚠️ Tropiezo'}</td>
+                            <td style="padding: 0.5rem;">${r.disparador_emocional || '-'}</td>
+                            <td style="padding: 0.5rem;">${r.notas || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+window.loadTherapistToolsCatalog = loadTherapistToolsCatalog;
+window.onTherapistToolPatientSearch = onTherapistToolPatientSearch;
+window.selectPatientForTherapistTools = selectPatientForTherapistTools;
+window.togglePatientModuleBackend = togglePatientModuleBackend;
+window.openTherapistModuleReport = openTherapistModuleReport;
+window.checkPatientActiveModulesNav = checkPatientActiveModulesNav;
+window.submitPatientSleepLog = submitPatientSleepLog;
+window.loadPatientSleepHistory = loadPatientSleepHistory;
+window.submitPatientAnxietyLog = submitPatientAnxietyLog;
+window.loadPatientAnxietyHistory = loadPatientAnxietyHistory;
+window.submitPatientSobrietyLog = submitPatientSobrietyLog;
+window.loadPatientSobrietyHistory = loadPatientSobrietyHistory;
+
 
 
 
