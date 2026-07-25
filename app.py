@@ -8720,7 +8720,7 @@ def get_patient_modules(patient_id):
     catalog = [
         {'clave': 'sueno', 'nombre': 'Higiene del Sueño', 'activo': active_map.get('sueno', 0)},
         {'clave': 'ansiedad', 'nombre': 'Diario de Ansiedad (Checklist)', 'activo': active_map.get('ansiedad', 0)},
-        {'clave': 'sobriedad', 'nombre': 'Contador & Racha de Sobriedad', 'activo': active_map.get('sobriedad', 0)}
+        {'clave': 'sobriedad', 'nombre': 'Registro de Consumo (Días Consecutivos)', 'activo': active_map.get('sobriedad', 0)}
     ]
     return jsonify({'patient': dict(patient), 'modules': catalog})
 
@@ -8786,9 +8786,9 @@ def get_therapist_modules_catalog():
         },
         {
             'clave': 'sobriedad',
-            'nombre': 'Contador y Racha de Sobriedad',
-            'descripcion': 'Tracker diario con contador de días en racha, medallas de hitos y registro de disparadores.',
-            'icono': '🏆',
+            'nombre': 'Registro de Consumo',
+            'descripcion': 'Tracker de seguimiento con contador de días consecutivos sin consumo, medalla de logro y registro de eventos.',
+            'icono': '🏅',
             'activos': counts.get('sobriedad', 0)
         }
     ]

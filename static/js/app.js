@@ -10415,7 +10415,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                             <tr style="border-bottom: 1px solid var(--border-color);">
                                 <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
                                 <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
-                                <td style="padding: 0.5rem;">${r.sobrio ? '🎉 Sobrio/a' : '⚠️ Tropiezo / Recaída'}</td>
+                                <td style="padding: 0.5rem;">${r.sobrio ? '✓ Libre de consumo' : '⚠️ Consumo / Evento'}</td>
                                 <td style="padding: 0.5rem;">${r.disparador_emocional || '-'}</td>
                                 <td style="padding: 0.5rem;">${r.notas || '-'}</td>
                             </tr>
@@ -10604,7 +10604,7 @@ async function loadPatientAnxietyHistory() {
     }
 }
 
-// 3. Sobriedad
+// 3. Sobriedad / Consumo
 async function submitPatientSobrietyLog(e) {
     e.preventDefault();
     const status = document.getElementById('patient-sobriety-status');
@@ -10626,7 +10626,7 @@ async function submitPatientSobrietyLog(e) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al guardar');
 
-        status.innerText = '✅ Check-in de sobriedad guardado.';
+        status.innerText = '✅ Check-in de consumo guardado.';
         status.className = 'status-msg success-msg mt-3';
         document.getElementById('sobriety-streak-count').innerText = `${data.streak} Días`;
         loadPatientSobrietyHistory();
@@ -10647,7 +10647,7 @@ async function loadPatientSobrietyHistory() {
 
         const history = data.history || [];
         if (history.length === 0) {
-            list.innerHTML = '<p class="text-muted text-center py-3">No tienes check-ins de sobriedad aún.</p>';
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros de consumo aún.</p>';
             return;
         }
 
@@ -10665,7 +10665,7 @@ async function loadPatientSobrietyHistory() {
                     ${history.map(r => `
                         <tr style="border-bottom: 1px solid var(--border-color);">
                             <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                            <td style="padding: 0.5rem;">${r.sobrio ? '🎉 Sobrio/a' : '⚠️ Tropiezo'}</td>
+                            <td style="padding: 0.5rem;">${r.sobrio ? '✓ Libre de consumo' : '⚠️ Consumo registrado'}</td>
                             <td style="padding: 0.5rem;">${r.disparador_emocional || '-'}</td>
                             <td style="padding: 0.5rem;">${r.notas || '-'}</td>
                         </tr>
