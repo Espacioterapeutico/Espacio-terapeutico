@@ -521,7 +521,13 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        db.commit()
+        # Migración automática de citas (recordatorio_enviado_wa)
+        cursor.execute("PRAGMA table_info(citas)")
+        cols_citas = [row[1] for row in cursor.fetchall()]
+        if cols_citas:
+            if 'recordatorio_enviado_wa' not in cols_citas:
+                cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+            db.commit()
             
         # Sincronización automática de sesiones huérfanas sin fila de finanzas
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sesiones'")
@@ -8462,4 +8468,122 @@ def whatsapp_webhook():
         return jsonify({'status': 'cancelled', 'message': f'Cita #{cita_id} cancelada para {patient_name}'})
 
     return jsonify({'status': 'text_received_no_action', 'message': 'Mensaje recibido pero no coincide con confirmación o cancelación.'})
+
+def format_whatsapp_message(template_str, patient, cita, psicologo):
+    if not template_str:
+        template_str = "Hola {nombre}, te recordamos tu cita agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¿Nos confirmas tu asistencia por favor?"
+    
+    pat_nombres = patient.get('nombres', '') if isinstance(patient, dict) or hasattr(patient, 'get') else patient['nombres']
+    pat_name = pat_nombres.strip().split()[0] if pat_nombres else "Consultante"
+    
+    c_fecha = cita.get('fecha', '') if isinstance(cita, dict) or hasattr(cita, 'get') else cita['fecha']
+    c_hora = cita.get('hora', '') if isinstance(cita, dict) or hasattr(cita, 'get') else cita['hora']
+    c_tipo = cita.get('tipo_consulta', 'Online') if isinstance(cita, dict) or hasattr(cita, 'get') else cita['tipo_consulta']
+    c_link = cita.get('link_conexion', '') if isinstance(cita, dict) or hasattr(cita, 'get') else (cita['link_conexion'] if 'link_conexion' in cita.keys() else '')
+    
+    psic_nom = f"Psic. {psicologo['nombres']} {psicologo['apellidos']}" if psicologo else "Tu Terapeuta"
+    
+    msg = template_str.replace('{nombre}', pat_name)
+    msg = msg.replace('{nombre_paciente}', pat_name)
+    msg = msg.replace('{fecha}', c_fecha)
+    msg = msg.replace('{hora}', c_hora)
+    msg = msg.replace('{modalidad}', c_tipo)
+    msg = msg.replace('{link_conexion}', c_link or "Consultorio Presencial")
+    msg = msg.replace('{psicologo}', psic_nom)
+    msg = msg.replace('{nombre_psicologo}', psic_nom)
+    return msg
+
+@app.route('/api/whatsapp/send-reminder/<int:cita_id>', methods=['POST'])
+@login_required
+def send_manual_whatsapp_reminder(cita_id):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+        FROM citas c
+        JOIN pacientes p ON c.paciente_id = p.id
+        WHERE c.id = ? AND p.psicologo_id = ?
+    """, (cita_id, user_id))
+    cita = cursor.fetchone()
+
+    if not cita:
+        return jsonify({'error': 'Cita o paciente no encontrado.'}), 404
+
+    phone = cita['pat_telefono']
+    if not phone or not phone.strip():
+        return jsonify({'error': 'El paciente no tiene un número de teléfono registrado.'}), 400
+
+    cursor.execute("SELECT nombres, apellidos, template_recordatorio FROM usuarios WHERE id = ?", (user_id,))
+    psicologo = cursor.fetchone()
+
+    template = psicologo['template_recordatorio'] if psicologo and psicologo['template_recordatorio'] else None
+    mensaje_texto = format_whatsapp_message(template, cita, cita, psicologo)
+
+    import requests
+    try:
+        r = requests.post(f"{WHATSAPP_SERVICE_URL}/send", json={'phone': phone, 'text': mensaje_texto}, timeout=5)
+        if r.status_code == 200:
+            cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita_id,))
+            db.commit()
+            return jsonify({'success': f'Recordatorio de WhatsApp enviado con éxito a {phone}.', 'phone': phone})
+        else:
+            res_data = r.json() or {}
+            return jsonify({'error': res_data.get('error', 'Error al enviar mensaje por WhatsApp.')}), r.status_code
+    except Exception as e:
+        return jsonify({'error': f'Error conectando con microservicio de WhatsApp: {str(e)}'}), 500
+
+@app.route('/api/whatsapp/cron-send-reminders', methods=['GET', 'POST'])
+def cron_send_whatsapp_reminders():
+    from datetime import datetime, timedelta
+    tomorrow_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_recordatorio
+        FROM citas c
+        JOIN pacientes p ON c.paciente_id = p.id
+        JOIN usuarios u ON p.psicologo_id = u.id
+        WHERE c.fecha = ? AND c.estado IN ('Agendada', 'Pendiente') AND COALESCE(c.recordatorio_enviado_wa, 0) = 0
+    """, (tomorrow_str,))
+    citas_pendientes = cursor.fetchall()
+
+    if not citas_pendientes:
+        return jsonify({'status': 'no_pending_reminders', 'message': f'No hay citas pendientes de recordatorio para el {tomorrow_str}.', 'count': 0})
+
+    import requests
+    enviados = []
+    errores = []
+
+    for cita in citas_pendientes:
+        phone = cita['pat_telefono']
+        if not phone or not phone.strip():
+            continue
+
+        psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+        mensaje_texto = format_whatsapp_message(cita['template_recordatorio'], cita, cita, psicologo_data)
+
+        try:
+            r = requests.post(f"{WHATSAPP_SERVICE_URL}/send", json={'phone': phone, 'text': mensaje_texto}, timeout=5)
+            if r.status_code == 200:
+                cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
+                enviados.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone})
+            else:
+                errores.append({'cita_id': cita['id'], 'error': r.text})
+        except Exception as e:
+            errores.append({'cita_id': cita['id'], 'error': str(e)})
+
+    db.commit()
+    return jsonify({
+        'status': 'success',
+        'fecha_procesada': tomorrow_str,
+        'total_enviados': len(enviados),
+        'enviados': enviados,
+        'errores': errores
+    })
+
 

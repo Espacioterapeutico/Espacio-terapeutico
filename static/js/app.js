@@ -10122,4 +10122,21 @@ function switchSettingsTab(tabName) {
 }
 window.switchSettingsTab = switchSettingsTab;
 
+async function sendManualWhatsAppReminder(citaId) {
+    if (!confirm('¿Deseas enviar el recordatorio de WhatsApp a este consultante ahora mismo?')) return;
+    try {
+        const res = await fetch(`/api/whatsapp/send-reminder/${citaId}`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || 'Recordatorio de WhatsApp enviado con éxito.');
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo enviar el recordatorio.'));
+        }
+    } catch (err) {
+        alert('Error de conexión al enviar recordatorio por WhatsApp.');
+    }
+}
+window.sendManualWhatsAppReminder = sendManualWhatsAppReminder;
+
+
 
