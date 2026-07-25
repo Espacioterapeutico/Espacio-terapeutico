@@ -7,9 +7,13 @@ import shutil
 import json
 from flask import Flask, request, jsonify, session, send_file, redirect, url_for, g
 from werkzeug.security import generate_password_hash, check_password_hash
-import docx
-from docx.shared import Inches, Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+try:
+    import docx
+    from docx.shared import Inches, Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
 
 # Google Calendar API imports
 try:
@@ -48,23 +52,28 @@ SCOPES = ['https://www.googleapis.com/auth/calendar']
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 import base64
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+try:
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-MASTER_KEY_SECRET = os.environ.get('SECRET_KEY', 'espacio_terapeutico_master_key_2026')
-_kdf = PBKDF2HMAC(
-    algorithm=hashes.SHA256(),
-    length=32,
-    salt=b'espacio_terapeutico_salt',
-    iterations=100000,
-)
-FERNET_KEY = base64.urlsafe_b64encode(_kdf.derive(MASTER_KEY_SECRET.encode()))
-fernet_cipher = Fernet(FERNET_KEY)
+    MASTER_KEY_SECRET = os.environ.get('SECRET_KEY', 'espacio_terapeutico_master_key_2026')
+    _kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=b'espacio_terapeutico_salt',
+        iterations=100000,
+    )
+    FERNET_KEY = base64.urlsafe_b64encode(_kdf.derive(MASTER_KEY_SECRET.encode()))
+    fernet_cipher = Fernet(FERNET_KEY)
+    CRYPTOGRAPHY_AVAILABLE = True
+except Exception as e:
+    CRYPTOGRAPHY_AVAILABLE = False
+    fernet_cipher = None
 
 def encrypt_clinical_text(text):
-    if not text:
-        return ""
+    if not text or not fernet_cipher:
+        return text or ""
     text_str = str(text)
     if text_str.startswith("enc:"):
         return text_str
@@ -76,7 +85,7 @@ def encrypt_clinical_text(text):
         return text_str
 
 def decrypt_clinical_text(cipher_text):
-    if not cipher_text or not isinstance(cipher_text, str):
+    if not cipher_text or not isinstance(cipher_text, str) or not fernet_cipher:
         return cipher_text
     current = cipher_text
     while isinstance(current, str) and current.startswith("enc:"):
