@@ -10179,6 +10179,10 @@ function switchSettingsTab(tabName) {
     });
     if (tabName === 'whatsapp') {
         checkWhatsAppQRStatus();
+    } else if (tabName === 'firebase') {
+        if (typeof loadFirebaseSettings === 'function') {
+            loadFirebaseSettings();
+        }
     }
 }
 window.switchSettingsTab = switchSettingsTab;
