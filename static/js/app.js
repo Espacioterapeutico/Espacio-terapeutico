@@ -676,7 +676,10 @@ async function handleAuthSubmit(e) {
     } else {
         // Modo Login: Identificación Automática de Rol
         try {
-            let dataAdmin = {};
+            let dataAdmin = null;
+            let dataPatient = null;
+            let networkError = false;
+
             try {
                 const resAdmin = await fetch('/api/login', {
                     method: 'POST',
@@ -690,11 +693,11 @@ async function handleAuthSubmit(e) {
                     return;
                 }
             } catch (errAdmin) {
-                console.warn("Fallo login admin, intentando login paciente:", errAdmin);
+                console.warn("Fallo conexión login admin:", errAdmin);
+                networkError = true;
             }
             
             // 2. Si no es admin o contraseña incorrecta para admin, intentar como Paciente
-            let dataPatient = {};
             try {
                 const resPatient = await fetch('/api/patient/login', {
                     method: 'POST',
@@ -713,10 +716,16 @@ async function handleAuthSubmit(e) {
                     return;
                 }
             } catch (errPatient) {
-                console.warn("Fallo login paciente:", errPatient);
+                console.warn("Fallo conexión login paciente:", errPatient);
+            }
+
+            if (!dataAdmin && !dataPatient && networkError) {
+                errorMsg.textContent = 'Error de conexión: El servidor no está iniciado o no responde.';
+                errorMsg.classList.remove('hide');
+                return;
             }
             
-            // Si ambos fallaron, mostrar el error más descriptivo
+            // Si ambos respondieron pero con fallo de credenciales
             let finalError = 'Usuario o contraseña incorrectos.';
             if (dataAdmin && dataAdmin.error && dataAdmin.error !== 'Credenciales inválidas.') {
                 finalError = dataAdmin.error;
