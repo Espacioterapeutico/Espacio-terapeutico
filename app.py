@@ -8408,27 +8408,6 @@ def superadmin_delete_therapist(user_id):
         db.rollback()
         return jsonify({'error': f'Error al eliminar psicólogo: {str(e)}'}), 500
 
-@app.route('/api/superadmin/therapists/<int:user_id>/toggle-subscription', methods=['POST'])
-@login_required
-def superadmin_toggle_subscription(user_id):
-    if session.get('role') != 'superadmin':
-        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
-        
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("SELECT suscripcion_paga, nombres, apellidos FROM usuarios WHERE id = ? AND role = 'psicologo'", (user_id,))
-    row = cursor.fetchone()
-    if not row:
-        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
-        
-    new_sub = 1 if row['suscripcion_paga'] != 1 else 0
-    new_activo = 1 if new_sub == 1 else 1
-    cursor.execute("UPDATE usuarios SET suscripcion_paga = ?, activo = ? WHERE id = ?", (new_sub, new_activo, user_id))
-    db.commit()
-    
-    status_str = "Suscripción Paga Activada (Acceso Ilimitado)" if new_sub == 1 else "Cambiado a Modo Prueba (3 Días)"
-    return jsonify({'success': f"Estado de {row['nombres']} {row['apellidos']} actualizado: {status_str}.", 'suscripcion_paga': new_sub})
-
 
 def generate_default_slug_for_user(u):
     if not u:
