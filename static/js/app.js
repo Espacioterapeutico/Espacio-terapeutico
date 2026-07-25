@@ -717,7 +717,12 @@ async function handleAuthSubmit(e) {
             }
             
             // Si ambos fallaron, mostrar el error más descriptivo
-            const finalError = (dataAdmin.error || dataPatient.error) ? 'Usuario o contraseña incorrectos.' : 'Usuario o contraseña incorrectos.';
+            let finalError = 'Usuario o contraseña incorrectos.';
+            if (dataAdmin && dataAdmin.error && dataAdmin.error !== 'Credenciales inválidas.') {
+                finalError = dataAdmin.error;
+            } else if (dataPatient && dataPatient.error && dataPatient.error !== 'Credenciales inválidas.') {
+                finalError = dataPatient.error;
+            }
             errorMsg.textContent = finalError;
             errorMsg.classList.remove('hide');
             
