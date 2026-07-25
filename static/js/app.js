@@ -2366,6 +2366,30 @@ function renderPatientsTable(list) {
         `;
         tbody.appendChild(tr);
     });
+    filterPatientsTableByInput();
+}
+
+function filterPatientsTableByInput() {
+    const input = document.getElementById('patient-table-search-input');
+    if (!input) return;
+    const query = input.value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#patients-table-body tr');
+    let visibleCount = 0;
+    
+    rows.forEach(tr => {
+        const text = tr.textContent.toLowerCase();
+        if (!query || text.includes(query)) {
+            tr.style.display = '';
+            visibleCount++;
+        } else {
+            tr.style.display = 'none';
+        }
+    });
+    
+    const counter = document.getElementById('patient-search-counter');
+    if (counter) {
+        counter.textContent = query ? `${visibleCount} coincidencia(s)` : '';
+    }
 }
 
 async function checkCedulaAutoFill() {
