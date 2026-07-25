@@ -3552,12 +3552,29 @@ def patient_add_payment_report():
     except Exception as e:
         return jsonify({'error': f'Error al notificar pago: {str(e)}'}), 500
 
+def _ensure_pizarra_columns(cursor):
+    try:
+        cursor.execute("PRAGMA table_info(pizarra_terapeutica)")
+        cols = [r[1] for r in cursor.fetchall()]
+        if cols:
+            if 'archivo_adjunto' not in cols:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN archivo_adjunto TEXT")
+            if 'estado_animo' not in cols:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN estado_animo TEXT")
+            if 'comentario_animo' not in cols:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
+            if 'emoji_animo' not in cols:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
+    except Exception as _e:
+        print("Error al asegurar columnas de pizarra:", _e)
+
 @app.route('/api/patient/pizarra', methods=['GET', 'POST'])
 @patient_login_required
 def patient_pizarra():
     patient_id = session['patient_id']
     db = get_db()
     cursor = db.cursor()
+    _ensure_pizarra_columns(cursor)
     
     if request.method == 'POST':
         data = request.json
@@ -3636,14 +3653,17 @@ def patient_pizarra():
                 ORDER BY fecha DESC
             """, (patient_id,))
             rows = cursor.fetchall()
-            updates = [{
-                'fecha': r['fecha'],
-                'contenido': r['contenido'],
-                'archivo_adjunto': r['archivo_adjunto'],
-                'estado_animo': r['estado_animo'] if 'estado_animo' in r.keys() else None,
-                'comentario_animo': r['comentario_animo'] if 'comentario_animo' in r.keys() else None,
-                'emoji_animo': r['emoji_animo'] if 'emoji_animo' in r.keys() else None
-            } for r in rows]
+            updates = []
+            for r in rows:
+                r_keys = r.keys() if hasattr(r, 'keys') else []
+                updates.append({
+                    'fecha': r['fecha'],
+                    'contenido': r['contenido'],
+                    'archivo_adjunto': r['archivo_adjunto'] if 'archivo_adjunto' in r_keys else None,
+                    'estado_animo': r['estado_animo'] if 'estado_animo' in r_keys else None,
+                    'comentario_animo': r['comentario_animo'] if 'comentario_animo' in r_keys else None,
+                    'emoji_animo': r['emoji_animo'] if 'emoji_animo' in r_keys else None
+                })
             return jsonify({'updates': updates})
         except Exception as e:
             return jsonify({'error': f'Error al obtener pizarra: {str(e)}'}), 500
@@ -8909,6 +8929,29 @@ def log_patient_sleep():
         senti_descanso, somnolencia_dia, pesadez_dia, agotamiento_dia
     ))
     db.commit()
+
+    # Notificar al psicólogo asignado
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            notif_title = "🌙 Registro de Higiene del Sueño"
+            notif_msg = f"El consultante {pac_nombre} completó su registro diario de higiene del sueño para el {fecha}."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+            except Exception:
+                pass
+    except Exception as _ne:
+        print("Error al notificar registro de sueño:", _ne)
+
     return jsonify({'success': True, 'message': 'Registro de sueño guardado exitosamente.'})
 
 @app.route('/api/patient/sleep/history', methods=['GET'])
@@ -8945,6 +8988,29 @@ def log_patient_anxiety():
             situacion_desencadenante=excluded.situacion_desencadenante
     """, (patient_id, fecha, nivel_ansiedad, sintomas_json, situacion))
     db.commit()
+
+    # Notificar al psicólogo asignado
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            notif_title = "⚡ Diario de Ansiedad Actualizado"
+            notif_msg = f"El consultante {pac_nombre} registró su nivel de ansiedad ({nivel_ansiedad}/10) para el {fecha}."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+            except Exception:
+                pass
+    except Exception as _ne:
+        print("Error al notificar registro de ansiedad:", _ne)
+
     return jsonify({'success': True, 'message': 'Registro de ansiedad guardado exitosamente.'})
 
 @app.route('/api/patient/anxiety/history', methods=['GET'])
@@ -8989,7 +9055,30 @@ def log_patient_sobriety():
             streak += 1
         else:
             break
-            
+
+    # Notificar al psicólogo asignado
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            status_text = f"Sobrio (Racha: {streak} días)" if sobrio == 1 else "Reporte de recaída / consumo"
+            notif_title = "🏅 Tracker de Consumo / Sobriedad"
+            notif_msg = f"El consultante {pac_nombre} realizó su check-in: {status_text}."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+            except Exception:
+                pass
+    except Exception as _ne:
+        print("Error al notificar registro de sobriedad:", _ne)
+
     return jsonify({'success': True, 'sobrio': sobrio, 'streak': streak, 'message': 'Check-in de sobriedad guardado.'})
 
 @app.route('/api/patient/sobriety/history', methods=['GET'])
