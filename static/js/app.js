@@ -10034,17 +10034,30 @@ async function checkWhatsAppQRStatus() {
     if (!badge || !loadingBox || !qrBox || !connectedBox) return;
 
     try {
-        let data;
+        let data = null;
+        // Intento 1: Llamada directa al microservicio en Render desde el navegador del usuario (salta el proxy de PythonAnywhere)
         try {
-            const res = await fetch(`${RENDER_WA_URL}/qr`);
-            data = await res.json();
+            const res = await fetch(`${RENDER_WA_URL}/qr`, { mode: 'cors' });
+            if (res.ok) {
+                data = await res.json();
+            }
         } catch (directErr) {
-            console.warn("Direct fetch to Render failed, fallback to backend:", directErr);
-            const res = await fetch('/api/whatsapp/qr');
-            data = await res.json();
+            console.warn("Llamada directa a Render desde el navegador dio error o timeout:", directErr);
         }
 
-        if (data.status === 'connected') {
+        // Intento 2: Si la llamada directa falló, intentar via backend Flask
+        if (!data) {
+            try {
+                const res = await fetch('/api/whatsapp/qr');
+                if (res.ok) {
+                    data = await res.json();
+                }
+            } catch (backendErr) {
+                console.warn("Llamada a backend Flask dio error:", backendErr);
+            }
+        }
+
+        if (data && data.status === 'connected') {
             badge.className = 'badge badge-success';
             badge.style.background = '#10b981';
             badge.style.color = '#ffffff';
@@ -10059,7 +10072,7 @@ async function checkWhatsAppQRStatus() {
                 clearInterval(waPollInterval);
                 waPollInterval = null;
             }
-        } else if (data.qr || data.status === 'qr_ready') {
+        } else if (data && (data.qr || data.status === 'qr_ready')) {
             badge.className = 'badge badge-warning';
             badge.style.background = '#f59e0b';
             badge.style.color = '#ffffff';
@@ -10082,7 +10095,12 @@ async function checkWhatsAppQRStatus() {
             badge.textContent = 'Desconectado ❌';
 
             loadingBox.classList.remove('hide');
-            loadingBox.textContent = data.error || 'Generando código QR... Por favor espera unos segundos.';
+            loadingBox.innerHTML = `
+                <div style="padding: 0.5rem; color: var(--text-dark);">
+                    <p style="font-weight: 600; margin-bottom: 0.3rem;">⌛ Generando código QR...</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Si la instancia de Render estaba inactiva, tardará unos 30 segundos en responder. Presiona <strong>Actualizar Estado</strong> en un momento.</p>
+                </div>
+            `;
             qrBox.classList.add('hide');
             connectedBox.classList.add('hide');
 
@@ -10099,6 +10117,7 @@ async function checkWhatsAppQRStatus() {
         }
     }
 }
+
 
 async function handleLogoutWhatsApp() {
     if (!confirm('¿Deseas desconectar tu cuenta de WhatsApp Web? Tendrás que escanear el QR nuevamente.')) return;
