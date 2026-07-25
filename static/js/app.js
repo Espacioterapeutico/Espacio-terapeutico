@@ -10021,10 +10021,7 @@ async function toggleTherapistSubscription(userId) {
     }
 }
 
-// ==========================================
-// INTEGRACIÓN WHATSAPP WEB (QR STATUS & LOGOUT)
-// ==========================================
-let waPollInterval = null;
+const RENDER_WA_URL = 'https://espacio-terapeutico-whatsapp.onrender.com';
 
 async function checkWhatsAppQRStatus() {
     const badge = document.getElementById('wa-connection-status-badge');
@@ -10037,8 +10034,15 @@ async function checkWhatsAppQRStatus() {
     if (!badge || !loadingBox || !qrBox || !connectedBox) return;
 
     try {
-        const res = await fetch('/api/whatsapp/qr');
-        const data = await res.json();
+        let data;
+        try {
+            const res = await fetch(`${RENDER_WA_URL}/qr`);
+            data = await res.json();
+        } catch (directErr) {
+            console.warn("Direct fetch to Render failed, fallback to backend:", directErr);
+            const res = await fetch('/api/whatsapp/qr');
+            data = await res.json();
+        }
 
         if (data.status === 'connected') {
             badge.className = 'badge badge-success';
@@ -10078,7 +10082,7 @@ async function checkWhatsAppQRStatus() {
             badge.textContent = 'Desconectado ❌';
 
             loadingBox.classList.remove('hide');
-            loadingBox.textContent = data.error || 'Conectando con microservicio de WhatsApp... Generando QR...';
+            loadingBox.textContent = data.error || 'Generando código QR... Por favor espera unos segundos.';
             qrBox.classList.add('hide');
             connectedBox.classList.add('hide');
 
@@ -10099,14 +10103,18 @@ async function checkWhatsAppQRStatus() {
 async function handleLogoutWhatsApp() {
     if (!confirm('¿Deseas desconectar tu cuenta de WhatsApp Web? Tendrás que escanear el QR nuevamente.')) return;
     try {
-        const res = await fetch('/api/whatsapp/logout', { method: 'POST' });
-        const data = await res.json();
-        alert(data.message || 'Sesión de WhatsApp cerrada.');
+        try {
+            await fetch(`${RENDER_WA_URL}/logout`, { method: 'POST' });
+        } catch (e) {
+            await fetch('/api/whatsapp/logout', { method: 'POST' });
+        }
+        alert('Sesión de WhatsApp cerrada.');
         checkWhatsAppQRStatus();
     } catch (err) {
         alert('Error al desconectar WhatsApp.');
     }
 }
+
 
 function switchSettingsTab(tabName) {
     const tabs = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'contrasena', 'terminos', 'soporte'];
