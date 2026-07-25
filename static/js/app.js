@@ -1057,12 +1057,13 @@ async function renderBookingCalendar() {
             }
         }
     }
-    if (!modality) modality = 'Horario Online';
+    if (!modality) modality = 'all';
     
     let availableDates = [];
     try {
         const monthForApi = bookingMonth + 1;
-        const res = await fetch(`/api/patient/available-dates?year=${bookingYear}&month=${monthForApi}&modalidad=${modality}`);
+        const psicParam = (typeof currentPatientPsicologoId !== 'undefined' && currentPatientPsicologoId) ? `&psicologo_id=${currentPatientPsicologoId}` : (typeof fastBookingTherapistId !== 'undefined' && fastBookingTherapistId ? `&psicologo_id=${fastBookingTherapistId}` : '');
+        const res = await fetch(`/api/patient/available-dates?year=${bookingYear}&month=${monthForApi}&modalidad=${encodeURIComponent(modality)}${psicParam}`);
         if (res.ok) {
             const data = await res.json();
             availableDates = data.dates || [];
@@ -1164,7 +1165,8 @@ async function fetchAvailableHours(dateStr) {
     try {
         const modalitySelect = document.getElementById('pat-req-modalidad');
         const modality = modalitySelect ? modalitySelect.value : 'all';
-        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}`);
+        const psicParam = (typeof currentPatientPsicologoId !== 'undefined' && currentPatientPsicologoId) ? `&psicologo_id=${currentPatientPsicologoId}` : (typeof fastBookingTherapistId !== 'undefined' && fastBookingTherapistId ? `&psicologo_id=${fastBookingTherapistId}` : '');
+        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}${psicParam}`);
         const data = await res.json();
         
         hoursGrid.innerHTML = '';

@@ -2553,17 +2553,30 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
         perf_mod_clean = perf_modalidad.lower()
         perf_nom_clean = perf_nombre.lower()
 
-        # Filtrar por modalidad requerida (soporta nombre de perfil como 'Horario Uptaeb', 'Horario online', etc.)
-        if req_mod_clean != 'all':
-            if req_mod_clean not in perf_mod_clean and perf_mod_clean not in req_mod_clean and \
-               req_mod_clean not in perf_nom_clean and perf_nom_clean not in req_mod_clean:
-                if not ('online' in req_mod_clean and 'online' in perf_mod_clean) and \
-                   not ('presencial' in req_mod_clean and 'presencial' in perf_mod_clean):
-                    continue
+        # Filtrar por modalidad requerida (soporta nombres como 'Horario Estándar', 'Horario Online', etc.)
+        if req_mod_clean not in ('all', ''):
+            is_match = False
+            # 1. Coincidencia exacta de substring
+            if (req_mod_clean in perf_mod_clean or perf_mod_clean in req_mod_clean or
+                req_mod_clean in perf_nom_clean or perf_nom_clean in req_mod_clean):
+                is_match = True
+            # 2. Coincidencia de tipo Online / Presencial
+            elif 'online' in req_mod_clean and ('online' in perf_mod_clean or 'online' in perf_nom_clean):
+                is_match = True
+            elif 'presencial' in req_mod_clean and ('presencial' in perf_mod_clean or 'presencial' in perf_nom_clean):
+                is_match = True
+            # 3. Horarios genéricos/estándar (sin etiqueta restrictiva específica): Aplican para cualquier modalidad
+            elif not any(restrictive in perf_nom_clean or restrictive in perf_mod_clean for restrictive in ['online', 'presencial', 'uptaeb']):
+                is_match = True
+            
+            if not is_match:
+                continue
 
         dias_list = perf.get('dias', [])
         for d in dias_list:
-            if int(d.get('dia')) == day_num and d.get('activo', False):
+            d_num = int(d.get('dia', -1))
+            is_today = (d_num == day_num) or (d_num in (0, 7) and day_num in (0, 7))
+            if is_today and d.get('activo', False):
                 rangos = d.get('rangos', [])
                 for r in rangos:
                     inicio_str = r.get('inicio')
