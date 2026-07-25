@@ -2724,10 +2724,10 @@ async function openSummaryModal(patientId) {
                             <span class="sum-fin-label">Pendientes</span>
                         </div>
                         <div class="sum-fin-stat">
-                            <span class="sum-fin-num text-secondary" id="sum-fin-prepago-${data.patient.id}">${fin.prepagadas_no_consumidas}</span>
+                            <span class="sum-fin-num text-secondary" id="sum-fin-prepago-${p.id}">${fin.prepagadas_no_consumidas}</span>
                             <span class="sum-fin-label" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
                                 Prepago (Por Usar)
-                                <button type="button" onclick="promptAdjustPrepayBalance(${data.patient.id}, ${fin.prepagadas_no_consumidas}, '${(data.patient.nombres || '').replace(/'/g, "\\'")}')" title="Ajustar manualmente las consultas prepagadas disponibles" style="background: none; border: none; cursor: pointer; font-size: 0.8rem; padding: 0; color: var(--primary-color);">✏️</button>
+                                <button type="button" onclick="promptAdjustPrepayBalance(${p.id}, ${fin.prepagadas_no_consumidas}, '${(p.nombres || '').replace(/'/g, "\\'")}')" title="Ajustar manualmente las consultas prepagadas disponibles" style="background: none; border: none; cursor: pointer; font-size: 0.8rem; padding: 0; color: var(--primary-color);">✏️</button>
                             </span>
                         </div>
                     </div>
