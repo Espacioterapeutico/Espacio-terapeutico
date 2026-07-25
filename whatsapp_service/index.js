@@ -148,6 +148,9 @@ app.post('/send', async (req, res) => {
 
     try {
         let cleanPhone = phone.toString().replace(/\D/g, '');
+        if (cleanPhone.startsWith('04') && cleanPhone.length === 11) {
+            cleanPhone = '58' + cleanPhone.substring(1);
+        }
         if (!cleanPhone.endsWith('@s.whatsapp.net')) {
             cleanPhone = `${cleanPhone}@s.whatsapp.net`;
         }
