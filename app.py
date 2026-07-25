@@ -8350,7 +8350,8 @@ def generate_default_slug_for_user(u):
 # ==========================================
 # RUTAS DE INTEGRACIÓN WHATSAPP WEB (QR)
 # ==========================================
-WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3001')
+WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'https://espacio-terapeutico-whatsapp.onrender.com')
+
 
 @app.route('/api/whatsapp/status', methods=['GET'])
 @login_required
