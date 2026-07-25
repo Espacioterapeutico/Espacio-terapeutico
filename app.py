@@ -1356,11 +1356,10 @@ def upload_file():
         return jsonify({'error': f'Error al guardar archivo: {str(e)}'}), 500
 
 @app.route('/api/files/<filename>', methods=['GET'])
+@app.route('/uploads/<filename>', methods=['GET'])
 def get_uploaded_file(filename):
-    if 'user_id' not in session and 'patient_id' not in session:
-        return jsonify({'error': 'No autorizado.'}), 401
-        
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    clean_filename = os.path.basename(filename)
+    filepath = os.path.join(UPLOAD_FOLDER, clean_filename)
     if not os.path.exists(filepath):
         return jsonify({'error': 'Archivo no encontrado.'}), 404
     return send_file(filepath)

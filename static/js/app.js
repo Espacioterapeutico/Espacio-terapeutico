@@ -8033,13 +8033,19 @@ async function toggleTherapistAvisoPago(userId) {
 
 function openModal(id) {
     const m = document.getElementById(id);
-    if (m) m.classList.remove('hide');
+    if (m) {
+        m.classList.remove('hide');
+        m.style.display = 'flex';
+    }
 }
 window.openModal = openModal;
 
 function closeModal(id) {
     const m = document.getElementById(id);
-    if (m) m.classList.add('hide');
+    if (m) {
+        m.classList.add('hide');
+        m.style.display = 'none';
+    }
 }
 window.closeModal = closeModal;
 
@@ -8054,13 +8060,28 @@ function viewDocumentPreview(docSrc, title) {
     
     if (titleEl) titleEl.textContent = title || 'Documento del Psicólogo';
     
-    const srcStr = String(docSrc).trim();
+    let srcStr = String(docSrc).trim();
+    if (srcStr.includes('fakepath') || (!srcStr.startsWith('data:') && !srcStr.startsWith('http') && !srcStr.startsWith('/'))) {
+        const cleanName = srcStr.replace(/^.*[\\\/]/, '');
+        srcStr = `/uploads/${cleanName}`;
+    }
+
     if (container) {
         container.innerHTML = '';
-        if (srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().endsWith('.pdf')) {
-            container.innerHTML = `<iframe src="${srcStr}" style="width:100%; height:480px; border:none; border-radius:8px;"></iframe>`;
+        const isPdf = srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().includes('.pdf');
+        if (isPdf) {
+            container.innerHTML = `
+                <div style="width:100%;">
+                    <iframe src="${srcStr}" style="width:100%; height:480px; border:none; border-radius:8px; background:#f9fafb;"></iframe>
+                    <div style="margin-top:10px; display:flex; justify-content:center; gap:10px;">
+                        <a href="${srcStr}" target="_blank" class="btn btn-sm btn-primary" style="font-weight:700;">🔗 Abrir / Descargar PDF en pestaña nueva</a>
+                    </div>
+                </div>`;
         } else {
-            container.innerHTML = `<img src="${srcStr}" style="max-width:100%; max-height:480px; border-radius:8px; object-fit:contain; box-shadow: 0 4px 14px rgba(0,0,0,0.18);" alt="Documento">`;
+            container.innerHTML = `
+                <div style="width:100%;">
+                    <img src="${srcStr}" style="max-width:100%; max-height:480px; border-radius:8px; object-fit:contain; box-shadow: 0 4px 14px rgba(0,0,0,0.18);" alt="Documento" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'text-center py-4\\'><p class=\\'text-muted\\'>📄 Documento adjunto: <strong>${srcStr.replace(/^.*[\\\/]/, '')}</strong></p><a href=\\'${srcStr}\\' target=\\'_blank\\' class=\\'btn btn-primary btn-sm mt-2\\'>📥 Abrir / Descargar Documento</a></div>';">
+                </div>`;
         }
     }
     
@@ -8068,9 +8089,10 @@ function viewDocumentPreview(docSrc, title) {
         downloadBtn.onclick = function() {
             const a = document.createElement('a');
             a.href = srcStr;
+            a.target = '_blank';
             let ext = '.png';
-            if (srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().endsWith('.pdf')) ext = '.pdf';
-            else if (srcStr.startsWith('data:image/jpeg') || srcStr.toLowerCase().endsWith('.jpg') || srcStr.toLowerCase().endsWith('.jpeg')) ext = '.jpg';
+            if (srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().includes('.pdf')) ext = '.pdf';
+            else if (srcStr.startsWith('data:image/jpeg') || srcStr.toLowerCase().includes('.jpg') || srcStr.toLowerCase().includes('.jpeg')) ext = '.jpg';
             
             const cleanTitle = (title || 'documento_adjunto').replace(/[^a-z0-9]/gi, '_').toLowerCase();
             a.download = cleanTitle.endsWith(ext) ? cleanTitle : cleanTitle + ext;
@@ -8542,11 +8564,20 @@ async function loadSupportTickets() {
         data.forEach(t => {
             const tr = document.createElement('tr');
             
-            const dateObj = new Date(t.fecha.replace(/-/g, '/'));
-            const dateStr = dateObj.toLocaleDateString([], {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'});
+            let dateStr = t.fecha || '';
+            try {
+                const dateObj = new Date(t.fecha.replace(/-/g, '/'));
+                if (!isNaN(dateObj)) {
+                    dateStr = dateObj.toLocaleDateString([], {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'});
+                }
+            } catch(e) {}
             
             const badgeClass = t.leido ? 'badge-success' : 'badge-danger';
             const badgeText = t.leido ? 'Leído' : 'Pendiente';
+            
+            const nombreRemitente = t.nombre_remitente || t.remitente_nombre || 'Anónimo';
+            const rolRemitente = t.rol_remitente || t.rol || 'paciente';
+            const contactoRemitente = t.email_remitente || t.email || t.telefono || 'N/A';
             
             let actionBtn = '';
             if (!t.leido) {
@@ -8555,9 +8586,9 @@ async function loadSupportTickets() {
             
             tr.innerHTML = `
                 <td>${dateStr}</td>
-                <td><strong>${t.remitente_nombre || 'N/A'}</strong></td>
-                <td><span class="badge badge-info" style="text-transform: capitalize;">${t.rol}</span></td>
-                <td>${t.email || t.telefono || 'N/A'}</td>
+                <td><strong>${nombreRemitente}</strong></td>
+                <td><span class="badge badge-info" style="text-transform: capitalize;">${rolRemitente}</span></td>
+                <td>${contactoRemitente}</td>
                 <td style="white-space: pre-wrap; font-size: 0.85rem;">${t.mensaje}</td>
                 <td>
                     <span class="badge ${badgeClass}" style="display:inline-block; margin-bottom:0.5rem;">${badgeText}</span>
