@@ -4960,42 +4960,41 @@ def get_patient_summary(patient_id):
     deuda_monto_str = ""
     for r in deuda_monto_rows:
         if r['total'] and r['total'] > 0:
-            deuda_monto_str += f"{r['total']:.2f} {r['moneda']} | "
-    if deuda_monto_str.endswith(' | '):
-        deuda_monto_str = deuda_monto_str[:-3]
+            if deuda_monto_str:
+                deuda_monto_str += " + "
+            deuda_monto_str += f"{r['total']:,.2f} {r['moneda'] or 'USD'}"
     if not deuda_monto_str:
         deuda_monto_str = "0.00 USD"
 
     cursor.execute("""
-        SELECT id, fecha, hora, tipo_consulta, monto, moneda, estado_pago, referencia
+        SELECT id, fecha, tipo_consulta, monto, moneda, estado_pago
         FROM agenda_finanzas
         WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso')
-        ORDER BY fecha ASC
+        ORDER BY fecha DESC, id DESC
     """, (patient_id,))
-    deudas_detalle = [dict(r) for r in cursor.fetchall()]
+    deudas_detalle = [dict(row) for row in cursor.fetchall()]
     
-    # 4. Conteo de sesiones por estado para el paciente
+    # 4. Conteo de sesiones por estado
     cursor.execute("""
-        SELECT estado, COUNT(id) as cantidad
+        SELECT estado, COUNT(id) as cnt
         FROM sesiones
         WHERE paciente_id = ?
         GROUP BY estado
     """, (patient_id,))
-    session_counts_rows = cursor.fetchall()
-    
-    session_counts = {'Realizada': 0, 'Cancelada': 0, 'Reprogramada': 0}
-    for row in session_counts_rows:
-        estado_name = row['estado'] if row['estado'] in session_counts else 'Realizada'
-        session_counts[estado_name] = row['cantidad']
+    session_counts_raw = cursor.fetchall()
+    session_counts = {'Realizada': 0, 'Cancelada': 0, 'Reprogramada': 0, 'Agendada': 0}
+    for row in session_counts_raw:
+        if row['estado'] in session_counts:
+            session_counts[row['estado']] = row['cnt']
 
     patient_dict = dict(patient)
-    for k in ['diagnostico', 'antecedentes_medicos_personales', 'antecedentes_psicologicos_personales', 'historia_clinica']:
+    for k in ['diagnostico', 'antecedentes_medicos_personales', 'antecedentes_psicologicos_personales']:
         if k in patient_dict and patient_dict[k]:
             patient_dict[k] = decrypt_clinical_text(patient_dict[k])
             
     last_session_dict = dict(last_session) if last_session else None
     if last_session_dict:
-        for k in ['resumen', 'tareas_asignadas', 'anotaciones_proxima', 'recursos_entregados', 'compromisos_psicologo']:
+        for k in ['resumen', 'tareas_asignadas', 'anotaciones_proxima']:
             if k in last_session_dict and last_session_dict[k]:
                 last_session_dict[k] = decrypt_clinical_text(last_session_dict[k])
 
@@ -5013,6 +5012,74 @@ def get_patient_summary(patient_id):
         'session_counts': session_counts
     }
     return jsonify(summary)
+
+@app.route('/api/patients/<int:patient_id>/adjust-prepay-balance', methods=['POST'])
+@login_required
+def adjust_patient_prepay_balance(patient_id):
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
+    
+    if psic_id is not None:
+        cursor.execute("SELECT id FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, psic_id))
+    else:
+        cursor.execute("SELECT id FROM pacientes WHERE id = ?", (patient_id,))
+    if not cursor.fetchone():
+        return jsonify({'error': 'Paciente no encontrado'}), 404
+        
+    data = request.json or {}
+    nueva_cantidad = data.get('cantidad_disponible')
+    if nueva_cantidad is None or not isinstance(nueva_cantidad, int) or nueva_cantidad < 0:
+        return jsonify({'error': 'Debes ingresar un número entero válido (>= 0)'}), 400
+
+    cursor.execute("""
+        SELECT SUM(cantidad_sesiones) FROM agenda_finanzas 
+        WHERE paciente_id = ? AND (estado_pago = 'Prepagada' OR estado_pago = 'Paga' OR estado_pago = 'ConsumirPrepago') AND control_uso = 'No consumida'
+    """, (patient_id,))
+    actual_sum = cursor.fetchone()[0] or 0
+
+    if nueva_cantidad == actual_sum:
+        return jsonify({'success': True, 'nueva_cantidad': nueva_cantidad, 'message': 'El saldo ya es igual al valor indicado.'})
+
+    if nueva_cantidad < actual_sum:
+        diff = actual_sum - nueva_cantidad
+        cursor.execute("""
+            SELECT id, cantidad_sesiones, control_uso FROM agenda_finanzas
+            WHERE paciente_id = ? AND (estado_pago = 'Prepagada' OR estado_pago = 'Paga' OR estado_pago = 'ConsumirPrepago') AND control_uso = 'No consumida'
+            ORDER BY id ASC
+        """, (patient_id,))
+        rows = cursor.fetchall()
+        for r in rows:
+            if diff <= 0:
+                break
+            r_cant = r['cantidad_sesiones'] or 1
+            if r_cant <= diff:
+                cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (r['id'],))
+                diff -= r_cant
+            else:
+                nuevas_ses = r_cant - diff
+                cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (nuevas_ses, r['id']))
+                diff = 0
+    else:
+        diff = nueva_cantidad - actual_sum
+        cursor.execute("""
+            SELECT id, cantidad_sesiones FROM agenda_finanzas
+            WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
+            ORDER BY id DESC LIMIT 1
+        """, (patient_id,))
+        last_prep = cursor.fetchone()
+        if last_prep:
+            cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = cantidad_sesiones + ? WHERE id = ?", (diff, last_prep['id']))
+        else:
+            from datetime import datetime
+            now_date = datetime.now().strftime('%Y-%m-%d')
+            cursor.execute("""
+                INSERT INTO agenda_finanzas (paciente_id, fecha, hora, tipo_consulta, monto, estado_pago, control_uso, cantidad_sesiones, uso_sesiones_detalle)
+                VALUES (?, ?, '00:00', 'Prepago', 0.0, 'Prepagada', 'No consumida', ?, 'Ajuste manual de saldo')
+            """, (patient_id, now_date, diff))
+
+    db.commit()
+    return jsonify({'success': True, 'nueva_cantidad': nueva_cantidad, 'message': f'Saldo de consultas prepagadas ajustado exitosamente a {nueva_cantidad}.'})
 
 @app.route('/api/patients/<int:patient_id>/print', methods=['GET'])
 @login_required

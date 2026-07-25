@@ -2724,8 +2724,11 @@ async function openSummaryModal(patientId) {
                             <span class="sum-fin-label">Pendientes</span>
                         </div>
                         <div class="sum-fin-stat">
-                            <span class="sum-fin-num text-secondary">${fin.prepagadas_no_consumidas}</span>
-                            <span class="sum-fin-label">Prepago (Por Usar)</span>
+                            <span class="sum-fin-num text-secondary" id="sum-fin-prepago-${data.patient.id}">${fin.prepagadas_no_consumidas}</span>
+                            <span class="sum-fin-label" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                Prepago (Por Usar)
+                                <button type="button" onclick="promptAdjustPrepayBalance(${data.patient.id}, ${fin.prepagadas_no_consumidas}, '${(data.patient.nombres || '').replace(/'/g, "\\'")}')" title="Ajustar manualmente las consultas prepagadas disponibles" style="background: none; border: none; cursor: pointer; font-size: 0.8rem; padding: 0; color: var(--primary-color);">✏️</button>
+                            </span>
                         </div>
                     </div>
                     
@@ -2808,6 +2811,35 @@ async function openSummaryModal(patientId) {
         openModal('summary-modal');
     } catch (err) {
         alert(err.message);
+    }
+}
+
+async function promptAdjustPrepayBalance(patientId, currentCount, patientName) {
+    const inputVal = prompt(`Ajustar consultas prepagadas disponibles para ${patientName}:\n\nIngresa el número total de consultas prepagadas disponibles que debe tener el paciente:`, currentCount);
+    if (inputVal === null) return;
+    const newCount = parseInt(inputVal.trim());
+    if (isNaN(newCount) || newCount < 0) {
+        alert('Por favor ingresa un número entero válido (igual o mayor a 0).');
+        return;
+    }
+    try {
+        const res = await fetch(`/api/patients/${patientId}/adjust-prepay-balance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cantidad_disponible: newCount })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            alert(data.message || 'Saldo prepagado ajustado con éxito.');
+            if (typeof openPatientDetailsModal === 'function') {
+                openPatientDetailsModal(patientId);
+            }
+        } else {
+            alert(data.error || 'Error al ajustar el saldo prepagado.');
+        }
+    } catch (e) {
+        console.error("Error al ajustar saldo prepagado:", e);
+        alert('Ocurrió un error al conectar con el servidor.');
     }
 }
 
