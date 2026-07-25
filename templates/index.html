@@ -503,6 +503,17 @@
                         </div>
                     </div>
 
+                    <!-- Banner de Cuenta Pendiente de Aprobación -->
+                    <div id="dashboard-pending-approval-banner" class="hide mb-4" style="background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%); border: 2px solid #f59e0b; padding: 1.25rem 1.5rem; border-radius: var(--radius-md); display: flex; align-items: center; gap: 1rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);">
+                        <span style="font-size: 2.2rem; flex-shrink: 0; line-height: 1;">⌛🔒</span>
+                        <div>
+                            <h4 style="margin: 0; color: #92400e; font-weight: 700; font-size: 1rem;">Cuenta en Proceso de Verificación</h4>
+                            <p style="margin: 0.25rem 0 0 0; color: #b45309; font-size: 0.88rem; font-weight: 500; line-height: 1.4;">
+                                ¡Bienvenido/a! Estamos chequeando tu documentación. Mientras validamos tu información, las herramientas de trabajo se mantendrán en pausa (🔒). Una vez aprobada tu cuenta por la administración, se activará tu <strong>mes de prueba gratis (30 días)</strong> con acceso completo.
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Tarjetas de Estadísticas Rápidas -->
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -3915,7 +3926,28 @@
         </div>
     </div>
 
+    <!-- MODAL DE VISTA PREVIA Y DESCARGA DE DOCUMENTOS PARA SUPERADMIN -->
+    <div id="doc-preview-modal" class="modal hide" style="z-index: 10005;">
+        <div class="modal-content" style="max-width: 680px; width: 95%;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                <h3 id="doc-preview-title" style="margin: 0; font-size: 1.15rem; color: var(--primary-color); font-weight: 700;">📄 Documento del Psicólogo</h3>
+                <button type="button" class="btn-close-modal" onclick="closeModal('doc-preview-modal')">✕</button>
+            </div>
+            <div class="modal-body" style="padding: 1.25rem; text-align: center; overflow-y: auto; max-height: 70vh;">
+                <div id="doc-preview-container" style="display: flex; justify-content: center; align-items: center; min-height: 200px;">
+                    <!-- Se inyecta la imagen o iframe aquí -->
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+                <button type="button" id="doc-preview-download-btn" class="btn btn-primary btn-sm" style="font-weight: 700;">
+                    📥 Descargar Documento
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('doc-preview-modal')">Cerrar Ventana</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v=74"></script>
+    <script src="/static/js/app.js?v=75"></script>
 </body>
 </html>

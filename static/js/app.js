@@ -412,6 +412,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // CONTROL DE NAVEGACIÓN Y MENÚ
 // ==========================================
 function switchView(viewId) {
+    const isPending = sessionStorage.getItem('cuenta_pendiente_aprobacion') === '1';
+    const restrictedViews = ['agenda', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance'];
+    if (isPending && restrictedViews.includes(viewId)) {
+        alert("⌛ Cuenta en Proceso de Verificación 🔒\n\nEstamos chequeando tu documentación. Esta herramienta se activará automáticamente en cuanto tu cuenta sea aprobada por la administración.");
+        return;
+    }
+
     // Verificación de bloqueos granulares
     if (viewId === 'register-patient' && isFeatureBlocked('registro')) {
         alert("La función de Registro de Pacientes está suspendida por administración.");
@@ -881,17 +888,37 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
     });
     
-    if (activo === 0) {
-        alert("Atención: Tu suscripción está inactiva. Tus funciones han sido suspendidas.");
+    if (activo === 0 && role === 'psicologo') {
+        sessionStorage.setItem('cuenta_pendiente_aprobacion', '1');
+        const pendingBanner = document.getElementById('dashboard-pending-approval-banner');
+        if (pendingBanner) pendingBanner.classList.remove('hide');
+        
+        const restrictedViews = ['agenda', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance'];
         document.querySelectorAll('.nav-item').forEach(link => {
             const v = link.getAttribute('data-view');
-            if (v !== 'settings' && v !== 'superadmin-dashboard') {
-                link.classList.add('hide');
+            if (restrictedViews.includes(v)) {
+                link.style.opacity = '0.55';
+                link.title = 'Función en espera de aprobación de cuenta 🔒';
+                if (!link.querySelector('.lock-badge-icon')) {
+                    const lockBadge = document.createElement('span');
+                    lockBadge.className = 'lock-badge-icon';
+                    lockBadge.style.cssText = 'margin-left: auto; font-size: 0.85rem; font-weight: bold; color: #d97706;';
+                    lockBadge.textContent = '🔒';
+                    link.appendChild(lockBadge);
+                }
             }
         });
-        switchView('settings');
-        switchSettingsTab('backup');
-        return;
+    } else {
+        sessionStorage.removeItem('cuenta_pendiente_aprobacion');
+        const pendingBanner = document.getElementById('dashboard-pending-approval-banner');
+        if (pendingBanner) pendingBanner.classList.add('hide');
+        
+        document.querySelectorAll('.nav-item').forEach(link => {
+            link.style.opacity = '1';
+            link.removeAttribute('title');
+            const lockBadge = link.querySelector('.lock-badge-icon');
+            if (lockBadge) lockBadge.remove();
+        });
     }
     
     // Guardar bloqueos en memoria para verificación dinámica
@@ -7864,15 +7891,26 @@ async function loadSuperadminData() {
             let subBtnStyle = p.suscripcion_paga === 1 ? 'background: #10b981; color: #fff;' : 'background: #6366f1; color: #fff; font-weight: 700;';
             
             if (p.suscripcion_paga === 1) {
-                trialBadge = '<span class="badge" style="background:#10b981; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">✓ Suscripción Paga</span>';
+                trialBadge = '<span class="badge" style="background:#10b981; color:#fff; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">✓ Suscripción Paga</span>';
             } else if (p.fecha_expiracion_prueba) {
                 const expDate = new Date(p.fecha_expiracion_prueba);
+                const regDate = p.fecha_registro ? new Date(p.fecha_registro) : null;
                 const diffHours = (expDate - new Date()) / (1000 * 60 * 60);
+                const regStr = regDate && !isNaN(regDate) ? regDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+                const expStr = expDate && !isNaN(expDate) ? expDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+                
                 if (diffHours <= 0) {
-                    trialBadge = '<span class="badge" style="background:#ef4444; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⚠️ Prueba Expirada</span>';
+                    trialBadge = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                        <span class="badge" style="background:#ef4444; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⚠️ Prueba Expirada</span>
+                        <span style="font-size:0.7rem; color:var(--text-muted);">Venció: ${expStr}</span>
+                    </div>`;
                 } else {
                     const daysLeft = Math.ceil(diffHours / 24);
-                    trialBadge = `<span class="badge" style="background:#f59e0b; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⏳ Prueba (${daysLeft}d)</span>`;
+                    const rangeText = regStr ? `${regStr} al ${expStr}` : `Vence: ${expStr}`;
+                    trialBadge = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                        <span class="badge" style="background:#f59e0b; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⏳ Prueba (${daysLeft} días disponibles)</span>
+                        <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">📅 ${rangeText}</span>
+                    </div>`;
                 }
             } else {
                 trialBadge = '<span class="badge" style="background:#6b7280; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">Sin Prueba</span>';
@@ -7892,6 +7930,7 @@ async function loadSuperadminData() {
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_agenda === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'agenda', this.checked)"> Bloquear Agenda</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_mensajes === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'mensajes', this.checked)"> Bloquear Recordatorios</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_pizarra === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'pizarra', this.checked)"> Bloquear Pizarra</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_herramientas === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'herramientas', this.checked)"> Bloquear Herramientas</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.35rem; margin-top: 0.25rem;">
                             <input type="checkbox" ${p.aviso_pago === 1 ? 'checked' : ''} onchange="toggleTherapistAvisoPago(${p.id})"> Activar Aviso de Pago (No Solvente)
                         </label>
@@ -7917,8 +7956,22 @@ async function loadSuperadminData() {
     }
 }
 
+async function toggleTherapistSubscription(userId) {
+    if (!confirm("¿Estás seguro de cambiar el estado de Suscripción Paga de este psicólogo?")) return;
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/toggle-subscription`, { method: 'POST' });
+        if (res.ok) {
+            loadSuperadminData();
+        } else {
+            alert("Error al cambiar estado de suscripción.");
+        }
+    } catch (err) {
+        alert("Error de conexión.");
+    }
+}
+
 async function toggleTherapistActive(userId) {
-    if (!confirm("¿Estás seguro de cambiar el estado de suscripción de este psicólogo?")) return;
+    if (!confirm("¿Estás seguro de cambiar el estado de acceso de este psicólogo?")) return;
     try {
         const res = await fetch(`/api/superadmin/therapists/${userId}/toggle-active`, { method: 'POST' });
         if (res.ok) {
@@ -7963,6 +8016,59 @@ async function toggleTherapistAvisoPago(userId) {
         loadSuperadminData();
     }
 }
+
+function openModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.classList.remove('hide');
+}
+window.openModal = openModal;
+
+function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.classList.add('hide');
+}
+window.closeModal = closeModal;
+
+function viewDocumentPreview(docSrc, title) {
+    if (!docSrc || docSrc === 'undefined' || docSrc === 'null' || String(docSrc).trim() === '') {
+        alert("Este psicólogo no adjuntó imagen ni documento de este tipo.");
+        return;
+    }
+    const titleEl = document.getElementById('doc-preview-title');
+    const container = document.getElementById('doc-preview-container');
+    const downloadBtn = document.getElementById('doc-preview-download-btn');
+    
+    if (titleEl) titleEl.textContent = title || 'Documento del Psicólogo';
+    
+    const srcStr = String(docSrc).trim();
+    if (container) {
+        container.innerHTML = '';
+        if (srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().endsWith('.pdf')) {
+            container.innerHTML = `<iframe src="${srcStr}" style="width:100%; height:480px; border:none; border-radius:8px;"></iframe>`;
+        } else {
+            container.innerHTML = `<img src="${srcStr}" style="max-width:100%; max-height:480px; border-radius:8px; object-fit:contain; box-shadow: 0 4px 14px rgba(0,0,0,0.18);" alt="Documento">`;
+        }
+    }
+    
+    if (downloadBtn) {
+        downloadBtn.onclick = function() {
+            const a = document.createElement('a');
+            a.href = srcStr;
+            let ext = '.png';
+            if (srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().endsWith('.pdf')) ext = '.pdf';
+            else if (srcStr.startsWith('data:image/jpeg') || srcStr.toLowerCase().endsWith('.jpg') || srcStr.toLowerCase().endsWith('.jpeg')) ext = '.jpg';
+            
+            const cleanTitle = (title || 'documento_adjunto').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            a.download = cleanTitle.endsWith(ext) ? cleanTitle : cleanTitle + ext;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+    }
+    
+    openModal('doc-preview-modal');
+}
+window.viewDocumentPreview = viewDocumentPreview;
 
 // ==========================================
 // AUTO-AGENDA RÁPIDA (FAST BOOKING)

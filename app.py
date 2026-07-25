@@ -372,6 +372,8 @@ def init_db():
                 cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_mensajes INTEGER DEFAULT 0")
             if 'bloqueo_pizarra' not in cols_usr:
                 cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_pizarra INTEGER DEFAULT 0")
+            if 'bloqueo_herramientas' not in cols_usr:
+                cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 0")
             if 'aviso_pago' not in cols_usr:
                 cursor.execute("ALTER TABLE usuarios ADD COLUMN aviso_pago INTEGER DEFAULT 0")
             if 'terminos_condiciones' not in cols_usr:
@@ -1435,7 +1437,7 @@ def register():
             
             import datetime
             now_dt = datetime.datetime.now()
-            expiry_dt = now_dt + datetime.timedelta(days=3)
+            expiry_dt = now_dt + datetime.timedelta(days=30)
             now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
             expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1473,7 +1475,7 @@ def register():
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1)
             """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug, default_visual_cfg, default_pm_str))
             db.commit()
-            return jsonify({'success': 'Cuenta de psicólogo creada con éxito. Tienes 3 días de prueba gratuita.'})
+            return jsonify({'success': 'Cuenta de psicólogo creada con éxito. Tienes 1 mes (30 días) de prueba gratuita.'})
             
         elif tipo_usuario == 'paciente':
             nombres = data.get('nombres')
@@ -1900,7 +1902,7 @@ def superadmin_get_therapists():
     cursor = db.cursor()
     cursor.execute("""
         SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga,
-               bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, aviso_pago
+               bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, aviso_pago
         FROM usuarios
         WHERE role = 'psicologo'
         ORDER BY id DESC
@@ -1939,7 +1941,7 @@ def superadmin_create_psychologist():
     try:
         import datetime
         now_dt = datetime.datetime.now()
-        expiry_dt = now_dt + datetime.timedelta(days=3)
+        expiry_dt = now_dt + datetime.timedelta(days=30)
         now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1948,7 +1950,7 @@ def superadmin_create_psychologist():
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0)
         """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str))
         db.commit()
-        return jsonify({'success': 'Psicólogo registrado con éxito (Modo Prueba 3 Días activo).'})
+        return jsonify({'success': 'Psicólogo registrado con éxito (Modo Prueba 1 Mes / 30 Días activo).'})
     except Exception as e:
         db.rollback()
         return jsonify({'error': f'Error al registrar psicólogo: {str(e)}'}), 500
@@ -1967,9 +1969,35 @@ def superadmin_toggle_active(user_id):
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
         
     new_status = 0 if row['activo'] == 1 else 1
-    cursor.execute("UPDATE usuarios SET activo = ? WHERE id = ?", (new_status, user_id))
+    if new_status == 1:
+        import datetime
+        now_dt = datetime.datetime.now()
+        expiry_dt = now_dt + datetime.timedelta(days=30)
+        now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+        expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("UPDATE usuarios SET activo = 1, fecha_registro = COALESCE(fecha_registro, ?), fecha_expiracion_prueba = ? WHERE id = ?", (now_str, expiry_str, user_id))
+    else:
+        cursor.execute("UPDATE usuarios SET activo = 0 WHERE id = ?", (user_id,))
     db.commit()
     return jsonify({'success': 'Estado de suscripción actualizado.', 'activo': new_status})
+
+@app.route('/api/superadmin/therapists/<int:user_id>/toggle-subscription', methods=['POST'])
+@login_required
+def superadmin_toggle_subscription(user_id):
+    if session.get('role') != 'superadmin':
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT suscripcion_paga FROM usuarios WHERE id = ? AND role = 'psicologo'", (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+        
+    new_status = 0 if row['suscripcion_paga'] == 1 else 1
+    cursor.execute("UPDATE usuarios SET suscripcion_paga = ? WHERE id = ?", (new_status, user_id))
+    db.commit()
+    return jsonify({'success': 'Estado de suscripción paga actualizado.', 'suscripcion_paga': new_status})
 
 @app.route('/api/superadmin/therapists/<int:user_id>/toggle-feature', methods=['POST'])
 @login_required
@@ -1981,7 +2009,7 @@ def superadmin_toggle_feature(user_id):
     feature = data.get('feature')
     status = data.get('status')
     
-    if feature not in ['registro', 'evoluciones', 'finanzas', 'agenda', 'mensajes', 'pizarra']:
+    if feature not in ['registro', 'evoluciones', 'finanzas', 'agenda', 'mensajes', 'pizarra', 'herramientas']:
         return jsonify({'error': 'Función no válida.'}), 400
         
     if status not in [0, 1]:
@@ -2114,12 +2142,13 @@ def register_admin():
     cursor.execute("SELECT COUNT(id) FROM usuarios")
     user_count = cursor.fetchone()[0] or 0
     user_role = 'superadmin' if user_count == 0 else 'psicologo'
+    user_activo = 1 if user_role == 'superadmin' else 0
     
     try:
         cursor.execute("""
             INSERT INTO usuarios (username, password_hash, nombres, apellidos, role, activo)
-            VALUES (?, ?, 'Administrador', 'General', ?, 1)
-        """, (username, password_hash, user_role))
+            VALUES (?, ?, 'Administrador', 'General', ?, ?)
+        """, (username, password_hash, user_role, user_activo))
         db.commit()
         return jsonify({'success': f'Usuario {user_role} creado con éxito.'})
     except Exception as e:
@@ -2153,7 +2182,7 @@ def login():
                     if datetime.datetime.now() > expiry_dt:
                         cursor.execute("UPDATE usuarios SET activo = 0 WHERE id = ?", (user['id'],))
                         db.commit()
-                        return jsonify({'error': 'Tu periodo de prueba gratis de 3 días ha vencido. Contacta al administrador para activar tu suscripción.'}), 403
+                        return jsonify({'error': 'Tu periodo de prueba gratis ha vencido. Contacta al administrador para activar tu suscripción.'}), 403
                 except Exception:
                     pass
                     
@@ -2181,7 +2210,8 @@ def login():
                 'finanzas': u_dict.get('bloqueo_finanzas', 0),
                 'agenda': u_dict.get('bloqueo_agenda', 0),
                 'mensajes': u_dict.get('bloqueo_mensajes', 0),
-                'pizarra': u_dict.get('bloqueo_pizarra', 0)
+                'pizarra': u_dict.get('bloqueo_pizarra', 0),
+                'herramientas': u_dict.get('bloqueo_herramientas', 0)
             }
         })
     
@@ -2217,7 +2247,7 @@ def check_session():
         db = get_db()
         cursor = db.cursor()
         cursor.execute("""
-            SELECT role, activo, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, primer_inicio, suscripcion_paga, fecha_expiracion_prueba, nombres, apellidos 
+            SELECT role, activo, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, primer_inicio, suscripcion_paga, fecha_expiracion_prueba, nombres, apellidos 
             FROM usuarios WHERE id = ?
         """, (session['user_id'],))
         row = cursor.fetchone()
@@ -2247,7 +2277,8 @@ def check_session():
                 'finanzas': row['bloqueo_finanzas'] if row else 0,
                 'agenda': row['bloqueo_agenda'] if row else 0,
                 'mensajes': row['bloqueo_mensajes'] if row else 0,
-                'pizarra': row['bloqueo_pizarra'] if row else 0
+                'pizarra': row['bloqueo_pizarra'] if row else 0,
+                'herramientas': row['bloqueo_herramientas'] if ('bloqueo_herramientas' in row.keys() and row['bloqueo_herramientas']) else 0
             }
         })
     elif 'patient_id' in session:
