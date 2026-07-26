@@ -1610,6 +1610,132 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- VISTA PORTAL PACIENTE: ADHERENCIA AL TRATAMIENTO -->
+                <section id="view-patient-adherence" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>💊 Adherencia al Tratamiento (Medicación)</h2>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
+                    </div>
+
+                    <!-- SECCIÓN 1: CONFIGURAR MEDICAMENTOS -->
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: #0369a1; margin: 0;">💊 Mis Medicamentos Prescritos</h3>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="openAddMedicationModal()">+ Agregar otro medicamento</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-medications-list">
+                                <p class="text-muted">No tienes medicamentos registrados aún. Haz clic en <strong>"+ Agregar otro medicamento"</strong> para empezar.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN 2: CHECKLIST DIARIO DE TOMA -->
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                            <h3 style="color: #15803d; margin: 0;">📋 Checklist Diario de Cumplimiento</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="patient-adherence-form" onsubmit="submitPatientAdherenceLog(event)">
+                                <div class="form-group mb-3">
+                                    <label for="adh-fecha" style="font-weight: 700;">Fecha de Registro</label>
+                                    <input type="date" id="adh-fecha" required style="width: 100%; max-width: 250px; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);" onchange="loadPatientAdherenceChecklist(this.value)">
+                                </div>
+
+                                <div id="adh-checklist-container" class="mb-4">
+                                    <p class="text-muted">Cargando lista de medicamentos prescritos...</p>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;">💾 Guardar Registro de Medicación</button>
+                            </form>
+                            <div id="patient-adherence-status" class="status-msg hide mt-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL DE CUMPLIMIENTO -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📅 Historial de Tomas Registradas</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-adherence-history-list" class="table-responsive">
+                                <p class="text-muted">Cargando historial...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA PORTAL PACIENTE: ACTIVACIÓN CONDUCTUAL -->
+                <section id="view-patient-activation" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>🏃‍♂️ Activación Conductual</h2>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
+                    </div>
+
+                    <!-- TARJETA CHECKLIST DIARIO POR CATEGORÍAS -->
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+                            <h3 style="color: #92400e; margin: 0;">📌 Check-in Diario de Actividades</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="patient-activation-form" onsubmit="submitPatientActivationLog(event)">
+                                <div class="form-group mb-3">
+                                    <label for="act-fecha" style="font-weight: 700;">Fecha de Registro</label>
+                                    <input type="date" id="act-fecha" required style="width: 100%; max-width: 250px; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);" onchange="loadPatientActivationChecklist(this.value)">
+                                </div>
+
+                                <!-- CATEGORÍA 1: ACTIVIDADES NECESARIAS -->
+                                <div style="background: #fffdf5; border: 1.5px solid #fde68a; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+                                    <h4 style="margin: 0 0 0.5rem 0; color: #b45309; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>🚿</span> Actividades Necesarias (Higiene, Alimentación, Obligaciones)
+                                    </h4>
+                                    <p style="font-size: 0.82rem; color: #78350f; margin-bottom: 0.75rem;">Tareas esenciales para sostener la vida cotidiana básica y autocuidado.</p>
+                                    <div id="act-necesarias-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <p class="text-muted" style="font-size: 0.88rem;">Cargando actividades...</p>
+                                    </div>
+                                </div>
+
+                                <!-- CATEGORÍA 2: ACTIVIDADES DE DISFRUTE / PLACER -->
+                                <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+                                    <h4 style="margin: 0 0 0.5rem 0; color: #be185d; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>🎨</span> Actividades de Disfrute / Placer (Pasatiempos, Contacto Social, Bienestar)
+                                    </h4>
+                                    <p style="font-size: 0.82rem; color: #831843; margin-bottom: 0.75rem;">Acciones gratificantes que estimulan el estado de ánimo positivo y recreación.</p>
+                                    <div id="act-placer-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <p class="text-muted" style="font-size: 0.88rem;">Cargando actividades...</p>
+                                    </div>
+                                </div>
+
+                                <!-- CATEGORÍA 3: ACTIVIDADES COTIDIANAS -->
+                                <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+                                    <h4 style="margin: 0 0 0.5rem 0; color: #15803d; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>🧹</span> Actividades Cotidianas (Orden del Hogar, Organización, Pequeñas Metas)
+                                    </h4>
+                                    <p style="font-size: 0.82rem; color: #14532d; margin-bottom: 0.75rem;">Rutinas del hogar y pequeños avances que generan sensación de logro y dominio.</p>
+                                    <div id="act-cotidiana-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <p class="text-muted" style="font-size: 0.88rem;">Cargando actividades...</p>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); border: none;">💾 Guardar Registro de Activación Conductual</button>
+                            </form>
+                            <div id="patient-activation-status" class="status-msg hide mt-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL DE ACTIVACIÓN -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📊 Historial de Actividades Completadas</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-activation-history-list" class="table-responsive">
+                                <p class="text-muted">Cargando historial de actividades...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
                 
                 <!-- ==========================================
                      PORTAL DE PACIENTES (VISTAS DE CONSULTANTE)
@@ -3947,7 +4073,85 @@
         </div>
     </div>
 
+    <!-- MODAL AGREGAR MEDICAMENTO (PACIENTE) -->
+    <div id="add-medication-modal" class="modal hide">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>💊 Registrar Nuevo Medicamento</h3>
+                <button type="button" class="btn-close-modal" onclick="closeModal('add-medication-modal')">✕</button>
+            </div>
+            <form id="add-medication-form" onsubmit="submitAddMedication(event)">
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label for="med-nombre" style="font-weight: 700;">Nombre del Medicamento *</label>
+                        <input type="text" id="med-nombre" required placeholder="Ej: Sertralina, Clonazepam, Quetiapina..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="med-dosis" style="font-weight: 700;">Dosis / Concentración</label>
+                        <input type="text" id="med-dosis" placeholder="Ej: 50 mg, 1 tableta, 5 ml..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="med-hora" style="font-weight: 700;">Hora Prescrita</label>
+                        <input type="time" id="med-hora" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('add-medication-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="font-weight: 700;">Guardar Medicamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL GESTIÓN DE ACTIVACIÓN CONDUCTUAL (PSICÓLOGO) -->
+    <div id="therapist-activation-modal" class="modal hide">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3 id="tam-title">🏃‍♂️ Configurar Activación Conductual para Consultante</h3>
+                <button type="button" class="btn-close-modal" onclick="closeModal('therapist-activation-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="tam-patient-id">
+                
+                <form id="tam-add-activity-form" onsubmit="submitTherapistAddActivationActivity(event)" class="mb-4" style="background: #fafafa; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.9rem; font-weight: 700;">+ Agregar Nueva Actividad Asignada:</h4>
+                    <div class="form-row" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <select id="tam-categoria" style="padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); font-weight: 600;">
+                            <option value="necesaria">📌 Necesaria (Higiene / Salud / Obligaciones)</option>
+                            <option value="placer">🎉 Disfrute / Placer (Pasatiempos / Social)</option>
+                            <option value="cotidiana">🏠 Cotidiana (Rutina / Orden / Dominio)</option>
+                        </select>
+                        <input type="text" id="tam-nombre" placeholder="Nombre de la actividad..." required style="flex: 1; min-width: 180px; padding: 0.55rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                        <button type="submit" class="btn btn-sm btn-primary" style="font-weight: 700;">Agregar</button>
+                    </div>
+                </form>
+
+                <div class="mb-3">
+                    <h4 style="font-size: 0.9rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem;">Sugerencias Rápidas de la Guía Terapéutica:</h4>
+                    <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addPresetActivity('necesaria', '🚿 Higiene personal y aseo diario')">+ Higiene</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addPresetActivity('necesaria', '🥗 Alimentación balanceada')">+ Alimentación</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addPresetActivity('necesaria', '💊 Tomar medicamentos a tiempo')">+ Medicación</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addPresetActivity('placer', '🚶‍♂️ Caminata al aire libre 15 min')">+ Caminata</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addPresetActivity('placer', '☕ Conversar o llamar a un ser querido')">+ Socializar</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addPresetActivity('placer', '🎵 Escuchar música o leer un capítulo')">+ Pasatiempo</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addPresetActivity('cotidiana', '🛏️ Hacer la cama y ordenar la habitación')">+ Ordenar cama</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addPresetActivity('cotidiana', '📝 Organizar agenda del día')">+ Organizar día</button>
+                    </div>
+                </div>
+
+                <h4 style="font-size: 0.95rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">Actividades Asignadas Activas:</h4>
+                <div id="tam-assigned-activities-list" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                    <p class="text-muted">Cargando actividades...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('therapist-activation-modal')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v=75"></script>
+    <script src="/static/js/app.js?v=76"></script>
 </body>
 </html>

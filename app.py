@@ -793,6 +793,59 @@ def init_db():
                 UNIQUE(paciente_id, fecha)
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS adherencia_medicamentos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                nombre_medicamento TEXT NOT NULL,
+                dosis TEXT,
+                hora_prescrita TEXT,
+                activo INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS adherencia_registros (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                medicamento_id INTEGER NOT NULL,
+                fecha TEXT NOT NULL,
+                tomado INTEGER NOT NULL,
+                hora_tomado TEXT,
+                notas TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+                FOREIGN KEY (medicamento_id) REFERENCES adherencia_medicamentos(id) ON DELETE CASCADE,
+                UNIQUE(paciente_id, medicamento_id, fecha)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS activacion_actividades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                psicologo_id INTEGER,
+                categoria TEXT NOT NULL,
+                nombre_actividad TEXT NOT NULL,
+                activa INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS activacion_registros (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                actividad_id INTEGER NOT NULL,
+                fecha TEXT NOT NULL,
+                completada INTEGER NOT NULL,
+                notas TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+                FOREIGN KEY (actividad_id) REFERENCES activacion_actividades(id) ON DELETE CASCADE,
+                UNIQUE(paciente_id, actividad_id, fecha)
+            )
+        """)
 
         db.commit()
             
@@ -1084,6 +1137,60 @@ def auto_send_confirmation_requests(db):
     except Exception as e:
         print("Error en auto_send_confirmation_requests:", e)
 
+def auto_check_patient_birthdays(db):
+    """
+    Verifica si algún consultante cumple años el día de hoy y genera
+    una notificación en el panel del psicólogo asignado.
+    """
+    cursor = db.cursor()
+    try:
+        from datetime import datetime
+        now_dt = datetime.now()
+        today_md = now_dt.strftime("%m-%d")
+        today_str = now_dt.strftime("%Y-%m-%d")
+        now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        cursor.execute("""
+            SELECT id, nombres, apellidos, fecha_nacimiento, psicologo_id
+            FROM pacientes
+            WHERE fecha_nacimiento IS NOT NULL AND fecha_nacimiento != ''
+        """)
+        patients = cursor.fetchall()
+        for p in patients:
+            dob_str = str(p['fecha_nacimiento']).strip()
+            if not dob_str:
+                continue
+            dob_norm = normalize_date_str(dob_str)
+            if len(dob_norm) >= 10 and dob_norm[5:10] == today_md:
+                psic_id = p['psicologo_id'] or 1
+                pac_id = p['id']
+                pac_nombre = f"{p['nombres']} {p['apellidos']}".strip()
+                notif_msg = f"¡Hoy es el cumpleaños de {pac_nombre}! Deséale un feliz día."
+
+                cursor.execute("""
+                    SELECT id FROM notificaciones
+                    WHERE user_id = ? AND tipo = 'cumpleanos' AND mensaje LIKE ? AND fecha LIKE ?
+                """, (psic_id, f"%{pac_nombre}%", f"{today_str}%"))
+
+                if not cursor.fetchone():
+                    cursor.execute("""
+                        INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                        VALUES (?, 'cumpleanos', '🎉 Cumpleaños de Consultante', ?, ?, 0, '/#agenda')
+                    """, (psic_id, notif_msg, now_str))
+                    db.commit()
+
+                    try:
+                        send_webpush_notification(
+                            user_id=psic_id,
+                            title="🎉 Cumpleaños de Consultante",
+                            body=notif_msg,
+                            url="/#agenda"
+                        )
+                    except Exception:
+                        pass
+    except Exception as e:
+        print("Error en auto_check_patient_birthdays:", e)
+
 @app.before_request
 def before_request_cleanup():
     # Evitar ejecutar en llamadas de archivos estáticos
@@ -1093,6 +1200,7 @@ def before_request_cleanup():
     auto_cancel_unconfirmed_sessions(db)
     auto_send_appointment_reminders(db)
     auto_send_confirmation_requests(db)
+    auto_check_patient_birthdays(db)
 
 def auto_settle_patient_debts(db, patient_id):
     if not patient_id:
@@ -8775,7 +8883,9 @@ def get_patient_modules(patient_id):
     catalog = [
         {'clave': 'sueno', 'nombre': 'Higiene del Sueño', 'activo': active_map.get('sueno', 0)},
         {'clave': 'ansiedad', 'nombre': 'Diario de Ansiedad (Checklist)', 'activo': active_map.get('ansiedad', 0)},
-        {'clave': 'sobriedad', 'nombre': 'Registro de Consumo (Días Consecutivos)', 'activo': active_map.get('sobriedad', 0)}
+        {'clave': 'sobriedad', 'nombre': 'Registro de Consumo (Días Consecutivos)', 'activo': active_map.get('sobriedad', 0)},
+        {'clave': 'adherencia', 'nombre': 'Adherencia al Tratamiento (Medicación)', 'activo': active_map.get('adherencia', 0)},
+        {'clave': 'activacion', 'nombre': 'Activación Conductual (Tareas Diarias)', 'activo': active_map.get('activacion', 0)}
     ]
     return jsonify({'patient': dict(patient), 'modules': catalog})
 
@@ -8845,6 +8955,20 @@ def get_therapist_modules_catalog():
             'descripcion': 'Tracker de seguimiento con contador de días consecutivos sin consumo, medalla de logro y registro de eventos.',
             'icono': '🏅',
             'activos': counts.get('sobriedad', 0)
+        },
+        {
+            'clave': 'adherencia',
+            'nombre': 'Adherencia al Tratamiento (Medicación)',
+            'descripcion': 'Seguimiento de dosis y horarios de medicamentos prescritos con checklist y calendario diario.',
+            'icono': '💊',
+            'activos': counts.get('adherencia', 0)
+        },
+        {
+            'clave': 'activacion',
+            'nombre': 'Activación Conductual',
+            'descripcion': 'Checklist diario de actividades Necesarias, de Disfrute/Placer y Cotidianas/Rutina asignadas por el psicólogo.',
+            'icono': '🏃‍♂️',
+            'activos': counts.get('activacion', 0)
         }
     ]
     return jsonify(catalog)
@@ -8880,9 +9004,268 @@ def get_therapist_module_report(modulo_clave):
             WHERE p.psicologo_id = ?
             ORDER BY rsob.fecha DESC LIMIT 100
         """, (user_id,))
+    elif modulo_clave == 'adherencia':
+        cursor.execute("""
+            SELECT ar.*, am.nombre_medicamento, am.dosis, am.hora_prescrita, p.nombres, p.apellidos, p.cedula
+            FROM adherencia_registros ar
+            JOIN adherencia_medicamentos am ON ar.medicamento_id = am.id
+            JOIN pacientes p ON ar.paciente_id = p.id
+            WHERE p.psicologo_id = ?
+            ORDER BY ar.fecha DESC LIMIT 100
+        """, (user_id,))
+    elif modulo_clave == 'activacion':
+        cursor.execute("""
+            SELECT actr.*, aa.categoria, aa.nombre_actividad, p.nombres, p.apellidos, p.cedula
+            FROM activacion_registros actr
+            JOIN activacion_actividades aa ON actr.actividad_id = aa.id
+            JOIN pacientes p ON actr.paciente_id = p.id
+            WHERE p.psicologo_id = ?
+            ORDER BY actr.fecha DESC LIMIT 100
+        """, (user_id,))
     else:
         return jsonify({'error': 'Módulo desconocido'}), 400
         
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+# --- ENDPOINTS ADHERENCIA AL TRATAMIENTO ---
+
+@app.route('/api/patient/adherence/medications', methods=['GET', 'POST'])
+@patient_login_required
+def patient_adherence_medications():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    if request.method == 'POST':
+        data = request.json or {}
+        nombre_medicamento = (data.get('nombre_medicamento') or '').strip()
+        dosis = (data.get('dosis') or '').strip()
+        hora_prescrita = (data.get('hora_prescrita') or '').strip()
+        
+        if not nombre_medicamento:
+            return jsonify({'error': 'El nombre del medicamento es obligatorio.'}), 400
+            
+        cursor.execute("""
+            INSERT INTO adherencia_medicamentos (paciente_id, nombre_medicamento, dosis, hora_prescrita, activo)
+            VALUES (?, ?, ?, ?, 1)
+        """, (patient_id, nombre_medicamento, dosis, hora_prescrita))
+        db.commit()
+        med_id = cursor.lastrowid
+        return jsonify({'success': True, 'medication': {'id': med_id, 'nombre_medicamento': nombre_medicamento, 'dosis': dosis, 'hora_prescrita': hora_prescrita, 'activo': 1}})
+        
+    cursor.execute("SELECT * FROM adherencia_medicamentos WHERE paciente_id = ? AND activo = 1 ORDER BY hora_prescrita ASC, id ASC", (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+@app.route('/api/patient/adherence/medications/<int:med_id>', methods=['DELETE'])
+@patient_login_required
+def delete_patient_adherence_medication(med_id):
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("UPDATE adherencia_medicamentos SET activo = 0 WHERE id = ? AND paciente_id = ?", (med_id, patient_id))
+    db.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/patient/adherence/log', methods=['POST'])
+@patient_login_required
+def log_patient_adherence():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    fecha = data.get('fecha') or datetime.now().strftime('%Y-%m-%d')
+    registros = data.get('registros', [])
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    for item in registros:
+        med_id = item.get('medicamento_id')
+        tomado = 1 if item.get('tomado') else 0
+        hora_tomado = item.get('hora_tomado', '')
+        notas = item.get('notas', '')
+        
+        if not med_id:
+            continue
+            
+        cursor.execute("""
+            INSERT INTO adherencia_registros (paciente_id, medicamento_id, fecha, tomado, hora_tomado, notas)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(paciente_id, medicamento_id, fecha) DO UPDATE SET
+                tomado = excluded.tomado,
+                hora_tomado = excluded.hora_tomado,
+                notas = excluded.notas
+        """, (patient_id, med_id, fecha, tomado, hora_tomado, notas))
+    db.commit()
+    
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            notif_title = "💊 Adherencia al Tratamiento Registrada"
+            notif_msg = f"El consultante {pac_nombre} registró la toma de medicamentos para la fecha {fecha}."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+            except Exception:
+                pass
+    except Exception as _e:
+        print("Error notif adherencia:", _e)
+        
+    return jsonify({'success': True, 'message': 'Registro de adherencia a medicación guardado.'})
+
+@app.route('/api/patient/adherence/history', methods=['GET'])
+@patient_login_required
+def get_patient_adherence_history():
+    patient_id = session.get('patient_id')
+    fecha_req = request.args.get('fecha')
+    db = get_db()
+    cursor = db.cursor()
+    
+    if fecha_req:
+        cursor.execute("""
+            SELECT ar.*, am.nombre_medicamento, am.dosis, am.hora_prescrita
+            FROM adherencia_registros ar
+            JOIN adherencia_medicamentos am ON ar.medicamento_id = am.id
+            WHERE ar.paciente_id = ? AND ar.fecha = ?
+        """, (patient_id, fecha_req))
+    else:
+        cursor.execute("""
+            SELECT ar.*, am.nombre_medicamento, am.dosis, am.hora_prescrita
+            FROM adherencia_registros ar
+            JOIN adherencia_medicamentos am ON ar.medicamento_id = am.id
+            WHERE ar.paciente_id = ?
+            ORDER BY ar.fecha DESC, am.hora_prescrita ASC LIMIT 100
+        """, (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+# --- ENDPOINTS ACTIVACIÓN CONDUCTUAL ---
+
+@app.route('/api/patient/activation/activities', methods=['GET'])
+@patient_login_required
+def patient_activation_activities():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM activacion_actividades WHERE paciente_id = ? AND activa = 1 ORDER BY categoria ASC, id ASC", (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+@app.route('/api/therapist/patients/<int:patient_id>/activation/activities', methods=['GET', 'POST'])
+@login_required
+def therapist_patient_activation_activities(patient_id):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT id FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    if not cursor.fetchone():
+        return jsonify({'error': 'Paciente no encontrado o sin permisos.'}), 404
+        
+    if request.method == 'POST':
+        data = request.json or {}
+        categoria = data.get('categoria', 'necesaria')
+        nombre_actividad = (data.get('nombre_actividad') or '').strip()
+        activa = 1 if data.get('activa', True) else 0
+        
+        if not nombre_actividad:
+            return jsonify({'error': 'Nombre de actividad es requerido.'}), 400
+            
+        cursor.execute("""
+            INSERT INTO activacion_actividades (paciente_id, psicologo_id, categoria, nombre_actividad, activa)
+            VALUES (?, ?, ?, ?, ?)
+        """, (patient_id, user_id, categoria, nombre_actividad, activa))
+        db.commit()
+        act_id = cursor.lastrowid
+        return jsonify({'success': True, 'activity': {'id': act_id, 'categoria': categoria, 'nombre_actividad': nombre_actividad, 'activa': activa}})
+        
+    cursor.execute("SELECT * FROM activacion_actividades WHERE paciente_id = ? ORDER BY categoria ASC, id ASC", (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+@app.route('/api/therapist/activation/activities/<int:act_id>/toggle', methods=['POST'])
+@login_required
+def toggle_activation_activity(act_id):
+    data = request.json or {}
+    activa = 1 if data.get('activa') else 0
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("UPDATE activacion_actividades SET activa = ? WHERE id = ?", (activa, act_id))
+    db.commit()
+    return jsonify({'success': True, 'activa': activa})
+
+@app.route('/api/patient/activation/log', methods=['POST'])
+@patient_login_required
+def log_patient_activation():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    fecha = data.get('fecha') or datetime.now().strftime('%Y-%m-%d')
+    registros = data.get('registros', [])
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    for item in registros:
+        act_id = item.get('actividad_id')
+        completada = 1 if item.get('completada') else 0
+        notas = item.get('notas', '')
+        
+        if not act_id:
+            continue
+            
+        cursor.execute("""
+            INSERT INTO activacion_registros (paciente_id, actividad_id, fecha, completada, notas)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(paciente_id, actividad_id, fecha) DO UPDATE SET
+                completada = excluded.completada,
+                notas = excluded.notas
+        """, (patient_id, act_id, fecha, completada, notas))
+    db.commit()
+    
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            notif_title = "🏃‍♂️ Activación Conductual Registrada"
+            notif_msg = f"El consultante {pac_nombre} completó su checklist diario de activación conductual para el {fecha}."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+            except Exception:
+                pass
+    except Exception as _e:
+        print("Error notif activacion:", _e)
+        
+    return jsonify({'success': True, 'message': 'Registro de activación conductual guardado.'})
+
+@app.route('/api/patient/activation/history', methods=['GET'])
+@patient_login_required
+def get_patient_activation_history():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT ar.*, aa.categoria, aa.nombre_actividad
+        FROM activacion_registros ar
+        JOIN activacion_actividades aa ON ar.actividad_id = aa.id
+        WHERE ar.paciente_id = ?
+        ORDER BY ar.fecha DESC, aa.categoria ASC
+    """, (patient_id,))
     rows = [dict(r) for r in cursor.fetchall()]
     return jsonify(rows)
 

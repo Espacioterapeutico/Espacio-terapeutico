@@ -10359,6 +10359,14 @@ function switchSettingsTab(tabName) {
         if (typeof loadFirebaseSettings === 'function') {
             loadFirebaseSettings();
         }
+    } else if (tabName === 'pagos') {
+        if (typeof loadPaymentMethods === 'function') {
+            loadPaymentMethods();
+        }
+    } else if (tabName === 'terminos') {
+        if (typeof loadAdminTerms === 'function') {
+            loadAdminTerms();
+        }
     }
 }
 window.switchSettingsTab = switchSettingsTab;
@@ -10475,9 +10483,12 @@ async function selectPatientForTherapistTools(id, name, code) {
                         ${m.activo ? '🟢 Activo en portal del paciente' : '🔴 Desactivado'}
                     </span>
                 </div>
-                <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
-                    ${m.activo ? ' Desactivar' : ' Activar'}
-                </button>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    ${m.clave === 'activacion' ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${name.replace(/'/g, "\\'")}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : ''}
+                    <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
+                        ${m.activo ? ' Desactivar' : ' Activar'}
+                    </button>
+                </div>
             </div>
         `).join('');
     } catch (err) {
@@ -10520,33 +10531,6 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
             return;
         }
 
-        if (moduloClave === 'sueno') {
-            container.innerHTML = `
-                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
-                            <th style="padding: 0.5rem;">Fecha</th>
-                            <th style="padding: 0.5rem;">Paciente</th>
-                            <th style="padding: 0.5rem;">Horario</th>
-                            <th style="padding: 0.5rem;">Descansó</th>
-                            <th style="padding: 0.5rem;">Despertares</th>
-                            <th style="padding: 0.5rem;">Síntomas Día</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(r => `
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
-                                <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
-                                <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Sí' : '🔴 No'}</td>
-                                <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
-                                <td style="padding: 0.5rem;">
-                                    ${r.somnolencia_dia ? '🥱 ' : ''}${r.pesadez_dia ? '🪨 ' : ''}${r.agotamiento_dia ? '🔋' : ''}
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
         if (moduloClave === 'sueno') {
             container.innerHTML = `
                 <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
@@ -10627,6 +10611,61 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                                 <td style="padding: 0.5rem;">${r.notas || '-'}</td>
                             </tr>
                         `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else if (moduloClave === 'adherencia') {
+            container.innerHTML = `
+                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                            <th style="padding: 0.5rem;">Fecha</th>
+                            <th style="padding: 0.5rem;">Paciente</th>
+                            <th style="padding: 0.5rem;">Medicamento</th>
+                            <th style="padding: 0.5rem;">Dosis / Prescripción</th>
+                            <th style="padding: 0.5rem;">Tomado</th>
+                            <th style="padding: 0.5rem;">Hora Real</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(r => `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                <td style="padding: 0.5rem;"><strong>${r.nombre_medicamento}</strong></td>
+                                <td style="padding: 0.5rem;">${r.dosis || '-'} (${r.hora_prescrita || '-'})</td>
+                                <td style="padding: 0.5rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
+                                <td style="padding: 0.5rem;">${r.hora_tomado || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else if (moduloClave === 'activacion') {
+            container.innerHTML = `
+                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                            <th style="padding: 0.5rem;">Fecha</th>
+                            <th style="padding: 0.5rem;">Paciente</th>
+                            <th style="padding: 0.5rem;">Categoría</th>
+                            <th style="padding: 0.5rem;">Actividad</th>
+                            <th style="padding: 0.5rem;">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(r => {
+                            let catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Disfrute/Placer' : '🏠 Cotidiana');
+                            return `
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                    <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                    <td style="padding: 0.5rem;">${catLabel}</td>
+                                    <td style="padding: 0.5rem;">${r.nombre_actividad}</td>
+                                    <td style="padding: 0.5rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
@@ -10902,6 +10941,465 @@ window.submitPatientAnxietyLog = submitPatientAnxietyLog;
 window.loadPatientAnxietyHistory = loadPatientAnxietyHistory;
 window.submitPatientSobrietyLog = submitPatientSobrietyLog;
 window.loadPatientSobrietyHistory = loadPatientSobrietyHistory;
+
+// --- AUTO-SET TODAY'S DATE IN THERAPEUTIC TOOLS FORMS ---
+function setDefaultToolDates() {
+    const today = new Date().toISOString().split('T')[0];
+    ['sleep-fecha', 'anx-fecha', 'sob-fecha', 'adh-fecha', 'act-fecha'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input && !input.value) {
+            input.value = today;
+        }
+    });
+}
+window.setDefaultToolDates = setDefaultToolDates;
+
+// ==========================================
+// MÓDULO PACIENTE: ADHERENCIA AL TRATAMIENTO (MEDICACIÓN)
+// ==========================================
+
+function openAddMedicationModal() {
+    document.getElementById('add-medication-form')?.reset();
+    openModal('add-medication-modal');
+}
+
+async function submitAddMedication(e) {
+    e.preventDefault();
+    const nombre = document.getElementById('med-nombre').value;
+    const dosis = document.getElementById('med-dosis').value;
+    const hora = document.getElementById('med-hora').value;
+
+    try {
+        const res = await fetch('/api/patient/adherence/medications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre_medicamento: nombre, dosis: dosis, hora_prescrita: hora })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar medicamento');
+
+        closeModal('add-medication-modal');
+        loadPatientMedications();
+        const today = document.getElementById('adh-fecha')?.value || new Date().toISOString().split('T')[0];
+        loadPatientAdherenceChecklist(today);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function deletePatientAdherenceMedication(medId) {
+    if (!confirm('¿Deseas eliminar este medicamento de tus medicamentos registrados?')) return;
+    try {
+        const res = await fetch(`/api/patient/adherence/medications/${medId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error al eliminar medicamento');
+        loadPatientMedications();
+        const today = document.getElementById('adh-fecha')?.value || new Date().toISOString().split('T')[0];
+        loadPatientAdherenceChecklist(today);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function loadPatientMedications() {
+    const list = document.getElementById('patient-medications-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/adherence/medications');
+        const data = await res.json();
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-muted">No tienes medicamentos registrados aún. Haz clic en <strong>"+ Agregar otro medicamento"</strong> para empezar.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
+                ${data.map(m => `
+                    <div style="background: #f8fafc; border: 1.5px solid var(--border-color); padding: 0.75rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #0284c7; font-size: 0.95rem;">💊 ${m.nombre_medicamento}</strong>
+                            <span style="display: block; font-size: 0.8rem; color: var(--text-muted);">
+                                ${m.dosis ? `Dosis: ${m.dosis}` : ''} ${m.hora_prescrita ? `(${m.hora_prescrita} hs)` : ''}
+                            </span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="deletePatientAdherenceMedication(${m.id})" style="color: #dc2626; border: none; font-weight: 700;">✕</button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+async function loadPatientAdherenceChecklist(dateStr) {
+    const container = document.getElementById('adh-checklist-container');
+    if (!container) return;
+    if (!dateStr) {
+        dateStr = new Date().toISOString().split('T')[0];
+        const fechaInput = document.getElementById('adh-fecha');
+        if (fechaInput) fechaInput.value = dateStr;
+    }
+
+    try {
+        const res = await fetch(`/api/patient/adherence/checklist?fecha=${dateStr}`);
+        const data = await res.json();
+        if (data.length === 0) {
+            container.innerHTML = '<div class="alert alert-info" style="background: #f0f9ff; border-color: #bae6fd; color: #0369a1; padding: 0.85rem; border-radius: 8px;">No tienes medicamentos agregados en tu lista. Presiona "+ Agregar otro medicamento" arriba para añadirlos.</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                ${data.map(m => `
+                    <div style="background: #fafafa; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.65rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; color: #0f172a; margin: 0;">
+                                <input type="checkbox" class="adh-item-cb" data-med-id="${m.id}" ${m.tomado ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #0284c7;">
+                                <span>💊 ${m.nombre_medicamento} ${m.dosis ? `(${m.dosis})` : ''}</span>
+                            </label>
+                            <span style="font-size: 0.82rem; font-weight: 600; color: #0284c7; background: #e0f2fe; padding: 0.25rem 0.5rem; border-radius: 4px;">
+                                Prescrito: ${m.hora_prescrita || 'Cualquier hora'}
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">
+                                Hora real de toma:
+                                <input type="time" class="adh-item-hora" data-med-id="${m.id}" value="${m.hora_tomado || ''}" style="padding: 0.25rem 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.82rem; margin-left: 0.35rem;">
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (err) {
+        container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+async function submitPatientAdherenceLog(e) {
+    e.preventDefault();
+    const status = document.getElementById('patient-adherence-status');
+    if (status) status.classList.add('hide');
+
+    const fecha = document.getElementById('adh-fecha').value;
+    const cbs = document.querySelectorAll('.adh-item-cb');
+    const items = Array.from(cbs).map(cb => {
+        const medId = cb.getAttribute('data-med-id');
+        const horaInput = document.querySelector(`.adh-item-hora[data-med-id="${medId}"]`);
+        return {
+            medicamento_id: parseInt(medId),
+            tomado: cb.checked,
+            hora_tomado: horaInput ? horaInput.value : ''
+        };
+    });
+
+    try {
+        const res = await fetch('/api/patient/adherence/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fecha, registros: items })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar registro');
+
+        if (status) {
+            status.innerText = '✅ Registro de adherencia a medicamentos guardado exitosamente.';
+            status.className = 'status-msg success-msg mt-3';
+        }
+        loadPatientAdherenceHistory();
+    } catch (err) {
+        if (status) {
+            status.innerText = `⚠️ ${err.message}`;
+            status.className = 'status-msg error-msg mt-3';
+        }
+    }
+}
+
+async function loadPatientAdherenceHistory() {
+    const list = document.getElementById('patient-adherence-history-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/adherence/history');
+        const data = await res.json();
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros de medicación guardados aún.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                        <th style="padding: 0.5rem;">Fecha</th>
+                        <th style="padding: 0.5rem;">Medicamento</th>
+                        <th style="padding: 0.5rem;">Estado</th>
+                        <th style="padding: 0.5rem;">Hora Toma Real</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(r => `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                            <td style="padding: 0.5rem;">💊 ${r.nombre_medicamento} ${r.dosis ? `(${r.dosis})` : ''}</td>
+                            <td style="padding: 0.5rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
+                            <td style="padding: 0.5rem;">${r.hora_tomado || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+function openPatientAdherenceView() {
+    setDefaultToolDates();
+    loadPatientMedications();
+    const today = document.getElementById('adh-fecha')?.value || new Date().toISOString().split('T')[0];
+    loadPatientAdherenceChecklist(today);
+    loadPatientAdherenceHistory();
+    showSection('patient-adherence');
+}
+
+window.openAddMedicationModal = openAddMedicationModal;
+window.submitAddMedication = submitAddMedication;
+window.deletePatientAdherenceMedication = deletePatientAdherenceMedication;
+window.loadPatientMedications = loadPatientMedications;
+window.loadPatientAdherenceChecklist = loadPatientAdherenceChecklist;
+window.submitPatientAdherenceLog = submitPatientAdherenceLog;
+window.loadPatientAdherenceHistory = loadPatientAdherenceHistory;
+window.openPatientAdherenceView = openPatientAdherenceView;
+
+// ==========================================
+// MÓDULO PACIENTE Y PSICÓLOGO: ACTIVACIÓN CONDUCTUAL
+// ==========================================
+
+function openTherapistActivationModal(patientId, patientName) {
+    document.getElementById('tam-patient-id').value = patientId;
+    document.getElementById('tam-title').innerText = `🏃‍♂️ Configurar Activación Conductual: ${patientName || ''}`;
+    document.getElementById('tam-add-activity-form')?.reset();
+    loadTherapistActivationActivities(patientId);
+    openModal('therapist-activation-modal');
+}
+
+async function loadTherapistActivationActivities(patientId) {
+    const list = document.getElementById('tam-assigned-activities-list');
+    if (!list) return;
+    list.innerHTML = '<p class="text-muted">Cargando actividades del consultante...</p>';
+    try {
+        const res = await fetch(`/api/therapist/activation/activities/${patientId}`);
+        const data = await res.json();
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-2">No hay actividades asignadas aún a este consultante.</p>';
+            return;
+        }
+
+        list.innerHTML = data.map(act => {
+            let catBadge = act.categoria === 'necesaria' ? '📌 Necesaria' : (act.categoria === 'placer' ? '🎉 Placer/Disfrute' : '🏠 Cotidiana');
+            return `
+                <div style="background: white; border: 1px solid var(--border-color); padding: 0.65rem 0.85rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="font-size: 0.9rem;">${act.nombre_actividad}</strong>
+                        <span style="display: inline-block; margin-left: 0.5rem; font-size: 0.75rem; padding: 0.15rem 0.4rem; background: #f1f5f9; border-radius: 4px; font-weight: 600;">
+                            ${catBadge}
+                        </span>
+                    </div>
+                    <button type="button" class="btn btn-sm ${act.activa ? 'btn-secondary' : 'btn-primary'}" onclick="toggleActivationActivity(${act.id}, ${act.activa ? 0 : 1})" style="padding: 0.25rem 0.6rem; font-size: 0.8rem; font-weight: 700;">
+                        ${act.activa ? 'Desactivar' : 'Activar'}
+                    </button>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+async function submitTherapistAddActivationActivity(e) {
+    e.preventDefault();
+    const patientId = document.getElementById('tam-patient-id').value;
+    const categoria = document.getElementById('tam-categoria').value;
+    const nombre = document.getElementById('tam-nombre').value;
+
+    try {
+        const res = await fetch('/api/therapist/activation/activities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paciente_id: patientId, categoria: categoria, nombre_actividad: nombre })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al agregar actividad');
+
+        document.getElementById('tam-nombre').value = '';
+        loadTherapistActivationActivities(patientId);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function addPresetActivity(categoria, nombre) {
+    const patientId = document.getElementById('tam-patient-id').value;
+    if (!patientId) return;
+    try {
+        const res = await fetch('/api/therapist/activation/activities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paciente_id: patientId, categoria: categoria, nombre_actividad: nombre })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al agregar sugerencia');
+        loadTherapistActivationActivities(patientId);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function toggleActivationActivity(actId, activaState) {
+    const patientId = document.getElementById('tam-patient-id').value;
+    try {
+        const res = await fetch(`/api/therapist/activation/activities/${actId}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ activa: activaState })
+        });
+        if (!res.ok) throw new Error('Error al actualizar estado');
+        loadTherapistActivationActivities(patientId);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function loadPatientActivationChecklist(dateStr) {
+    const necList = document.getElementById('act-necesarias-list');
+    const plaList = document.getElementById('act-placer-list');
+    const cotList = document.getElementById('act-cotidiana-list');
+
+    if (!dateStr) {
+        dateStr = new Date().toISOString().split('T')[0];
+        const fechaInput = document.getElementById('act-fecha');
+        if (fechaInput) fechaInput.value = dateStr;
+    }
+
+    try {
+        const res = await fetch(`/api/patient/activation/checklist?fecha=${dateStr}`);
+        const data = await res.json();
+
+        const nec = data.filter(a => a.categoria === 'necesaria');
+        const pla = data.filter(a => a.categoria === 'placer');
+        const cot = data.filter(a => a.categoria === 'cotidiana');
+
+        const renderCat = (items) => {
+            if (items.length === 0) return '<p class="text-muted" style="font-size: 0.85rem; margin: 0;">No hay actividades asignadas en esta categoría.</p>';
+            return items.map(a => `
+                <label style="display: flex; align-items: center; gap: 0.65rem; background: white; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; font-size: 0.9rem; font-weight: 600;">
+                    <input type="checkbox" class="act-item-cb" data-act-id="${a.id}" ${a.completada ? 'checked' : ''} style="width: 19px; height: 19px; accent-color: #d97706;">
+                    <span>${a.nombre_actividad}</span>
+                </label>
+            `).join('');
+        };
+
+        if (necList) necList.innerHTML = renderCat(nec);
+        if (plaList) plaList.innerHTML = renderCat(pla);
+        if (cotList) cotList.innerHTML = renderCat(cot);
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function submitPatientActivationLog(e) {
+    e.preventDefault();
+    const status = document.getElementById('patient-activation-status');
+    if (status) status.classList.add('hide');
+
+    const fecha = document.getElementById('act-fecha').value;
+    const cbs = document.querySelectorAll('.act-item-cb');
+    const items = Array.from(cbs).map(cb => ({
+        actividad_id: parseInt(cb.getAttribute('data-act-id')),
+        completada: cb.checked
+    }));
+
+    try {
+        const res = await fetch('/api/patient/activation/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fecha, registros: items })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar');
+
+        if (status) {
+            status.innerText = '✅ Registro diario de activación conductual guardado.';
+            status.className = 'status-msg success-msg mt-3';
+        }
+        loadPatientActivationHistory();
+    } catch (err) {
+        if (status) {
+            status.innerText = `⚠️ ${err.message}`;
+            status.className = 'status-msg error-msg mt-3';
+        }
+    }
+}
+
+async function loadPatientActivationHistory() {
+    const list = document.getElementById('patient-activation-history-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/activation/history');
+        const data = await res.json();
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros de actividades guardados aún.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                        <th style="padding: 0.5rem;">Fecha</th>
+                        <th style="padding: 0.5rem;">Categoría</th>
+                        <th style="padding: 0.5rem;">Actividad</th>
+                        <th style="padding: 0.5rem;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(r => {
+                        let catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Placer' : '🏠 Cotidiana');
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                <td style="padding: 0.5rem;">${catLabel}</td>
+                                <td style="padding: 0.5rem;">${r.nombre_actividad}</td>
+                                <td style="padding: 0.5rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+function openPatientActivationView() {
+    setDefaultToolDates();
+    const today = document.getElementById('act-fecha')?.value || new Date().toISOString().split('T')[0];
+    loadPatientActivationChecklist(today);
+    loadPatientActivationHistory();
+    showSection('patient-activation');
+}
+
+window.openTherapistActivationModal = openTherapistActivationModal;
+window.loadTherapistActivationActivities = loadTherapistActivationActivities;
+window.submitTherapistAddActivationActivity = submitTherapistAddActivationActivity;
+window.addPresetActivity = addPresetActivity;
+window.toggleActivationActivity = toggleActivationActivity;
+window.loadPatientActivationChecklist = loadPatientActivationChecklist;
+window.submitPatientActivationLog = submitPatientActivationLog;
+window.loadPatientActivationHistory = loadPatientActivationHistory;
+window.openPatientActivationView = openPatientActivationView;
+
 
 
 
