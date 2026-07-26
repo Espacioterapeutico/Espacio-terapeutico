@@ -5282,6 +5282,7 @@ function openModal(modalId) {
         modal.style.display = 'flex';
     }
 }
+window.openModal = openModal;
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -5290,6 +5291,7 @@ function closeModal(modalId) {
         modal.style.display = 'none';
     }
 }
+window.closeModal = closeModal;
 
 async function checkPatientPrepayments(patientId) {
     const optConsumir = document.getElementById('opt-consumir-prepago');
@@ -6706,33 +6708,7 @@ function switchFinanceTab(tabId) {
 
 const loadPatientsRatesList = loadPatientRatesTable;
 
-function switchSettingsTab(tabId) {
-    const ids = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'terminos', 'password', 'soporte'];
-    ids.forEach(id => {
-        const card = document.getElementById(`set-card-${id}`);
-        const tabBtn = document.getElementById(`set-tab-${id}`);
-        
-        if (card && tabBtn) {
-            if (id === tabId) {
-                card.classList.remove('hide');
-                tabBtn.className = 'btn btn-sm btn-primary';
-            } else {
-                card.classList.add('hide');
-                tabBtn.className = 'btn btn-sm btn-secondary';
-            }
-        }
-    });
-    
-    if (tabId === 'pagos') {
-        loadPaymentMethods();
-    } else if (tabId === 'enlaces') {
-        loadPatientLinks();
-    } else if (tabId === 'firebase') {
-        loadFirebaseSettings();
-    } else if (tabId === 'terminos') {
-        loadAdminTerms();
-    }
-}
+// Note: switchSettingsTab is defined near line 10359 with full tab dispatching
 
 async function loadAdminTerms() {
     const textarea = document.getElementById('admin-terms-textarea');
@@ -8042,23 +8018,7 @@ async function toggleTherapistAvisoPago(userId) {
     }
 }
 
-function openModal(id) {
-    const m = document.getElementById(id);
-    if (m) {
-        m.classList.remove('hide');
-        m.style.display = 'flex';
-    }
-}
-window.openModal = openModal;
-
-function closeModal(id) {
-    const m = document.getElementById(id);
-    if (m) {
-        m.classList.add('hide');
-        m.style.display = 'none';
-    }
-}
-window.closeModal = closeModal;
+// openModal and closeModal defined at line 5278 with window exports
 
 function viewDocumentPreview(docSrc, title, therapistId, docType) {
     const titleEl = document.getElementById('doc-preview-title');
