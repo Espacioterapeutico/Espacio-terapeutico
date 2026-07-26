@@ -2155,6 +2155,8 @@ def superadmin_toggle_aviso_pago(user_id):
     new_status = 0 if row['aviso_pago'] == 1 else 1
     cursor.execute("UPDATE usuarios SET aviso_pago = ? WHERE id = ?", (new_status, user_id))
     db.commit()
+    return jsonify({'success': True, 'aviso_pago': new_status})
+
 @app.route('/api/superadmin/therapists/<int:user_id>/update-documents', methods=['POST'])
 @login_required
 def superadmin_update_therapist_documents(user_id):

@@ -440,6 +440,10 @@ function switchView(viewId) {
         alert("La función de Agenda y Calendario está suspendida por administración.");
         return;
     }
+    if (viewId === 'therapist-tools' && isFeatureBlocked('herramientas')) {
+        alert("La función de Herramientas Terapéuticas está suspendida por administración.");
+        return;
+    }
 
     // Ocultar cualquier modal abierto al cambiar de vista
     document.querySelectorAll('.modal-overlay').forEach(m => {
@@ -957,6 +961,10 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
         if (bloqueos.agenda === 1) {
             const link = document.querySelector('[data-view="agenda"]');
+            if (link) link.classList.add('hide');
+        }
+        if (bloqueos.herramientas === 1) {
+            const link = document.querySelector('[data-view="therapist-tools"]');
             if (link) link.classList.add('hide');
         }
     } else {
@@ -10502,11 +10510,6 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     const container = document.getElementById('ttr-modal-body-content');
     if (container) container.innerHTML = '<p class="text-muted text-center py-4">Cargando registros de consultantes...</p>';
     
-    const modalEl = document.getElementById('therapist-tool-report-modal');
-    if (modalEl) {
-        modalEl.classList.remove('hide');
-        modalEl.style.display = 'flex';
-    }
     openModal('therapist-tool-report-modal');
 
     try {
@@ -11006,7 +11009,6 @@ window.loadTherapistToolsCatalog = loadTherapistToolsCatalog;
 window.onTherapistToolPatientSearch = onTherapistToolPatientSearch;
 window.selectPatientForTherapistTools = selectPatientForTherapistTools;
 window.togglePatientModuleBackend = togglePatientModuleBackend;
-window.openTherapistModuleReport = openTherapistModuleReport;
 window.checkPatientActiveModulesNav = checkPatientActiveModulesNav;
 window.submitPatientSleepLog = submitPatientSleepLog;
 window.loadPatientSleepHistory = loadPatientSleepHistory;
