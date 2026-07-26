@@ -2047,7 +2047,24 @@ def superadmin_toggle_aviso_pago(user_id):
     new_status = 0 if row['aviso_pago'] == 1 else 1
     cursor.execute("UPDATE usuarios SET aviso_pago = ? WHERE id = ?", (new_status, user_id))
     db.commit()
-    return jsonify({'success': 'Estado de aviso de pago actualizado.', 'aviso_pago': new_status})
+@app.route('/api/superadmin/therapists/<int:user_id>/update-documents', methods=['POST'])
+@login_required
+def superadmin_update_therapist_documents(user_id):
+    if session.get('role') != 'superadmin':
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+        
+    data = request.json or {}
+    foto_titulo = data.get('foto_titulo')
+    foto_documento = data.get('foto_documento')
+    
+    db = get_db()
+    cursor = db.cursor()
+    if foto_titulo is not None:
+        cursor.execute("UPDATE usuarios SET foto_titulo = ? WHERE id = ?", (foto_titulo, user_id))
+    if foto_documento is not None:
+        cursor.execute("UPDATE usuarios SET foto_documento = ? WHERE id = ?", (foto_documento, user_id))
+    db.commit()
+    return jsonify({'success': 'Documento actualizado con éxito.'})
 
 @app.route('/api/support/send', methods=['POST'])
 def send_support_ticket():

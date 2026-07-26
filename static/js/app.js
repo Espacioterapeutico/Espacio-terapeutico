@@ -7896,9 +7896,9 @@ async function loadSuperadminData() {
             const buttonClass = p.activo === 1 ? 'btn-danger' : 'btn-primary';
             
             const escName = (p.nombres || '').replace(/'/g, "\\'");
-            const tituloBtn = p.foto_titulo ? `<button type="button" class="btn btn-sm btn-outline-primary" style="padding:2px 6px; font-size:0.75rem; margin-right:4px;" onclick="viewDocumentPreview(\`${p.foto_titulo}\`, 'Título de ${escName}')">📄 Título</button>` : '';
-            const docBtn = p.foto_documento ? `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="viewDocumentPreview(\`${p.foto_documento}\`, 'Documento de ${escName}')">🪪 Cédula</button>` : '';
-            const docCell = (tituloBtn || docBtn) ? `${tituloBtn}${docBtn}` : '<span style="font-size:0.75rem; color:var(--text-muted);">Sin adjuntos</span>';
+            const tituloBtn = p.foto_titulo ? `<button type="button" class="btn btn-sm btn-outline-primary" style="padding:2px 6px; font-size:0.75rem; margin-right:4px;" onclick="viewDocumentPreview(\`${p.foto_titulo}\`, 'Título de ${escName}', ${p.id}, 'titulo')">📄 Título</button>` : `<button type="button" class="btn btn-sm btn-outline-primary" style="padding:2px 6px; font-size:0.75rem; margin-right:4px;" onclick="viewDocumentPreview('', 'Título de ${escName}', ${p.id}, 'titulo')">➕ Título</button>`;
+            const docBtn = p.foto_documento ? `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="viewDocumentPreview(\`${p.foto_documento}\`, 'Documento de ${escName}', ${p.id}, 'documento')">🪪 Cédula</button>` : `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="viewDocumentPreview('', 'Documento de ${escName}', ${p.id}, 'documento')">➕ Cédula</button>`;
+            const docCell = `${tituloBtn}${docBtn}`;
 
             let trialBadge = '';
             let subBtnText = p.suscripcion_paga === 1 ? '⭐ Suscripción Paga' : '🚀 Activar Suscripción';
@@ -8049,61 +8049,112 @@ function closeModal(id) {
 }
 window.closeModal = closeModal;
 
-function viewDocumentPreview(docSrc, title) {
-    if (!docSrc || docSrc === 'undefined' || docSrc === 'null' || String(docSrc).trim() === '') {
-        alert("Este psicólogo no adjuntó imagen ni documento de este tipo.");
-        return;
-    }
+function viewDocumentPreview(docSrc, title, therapistId, docType) {
     const titleEl = document.getElementById('doc-preview-title');
     const container = document.getElementById('doc-preview-container');
     const downloadBtn = document.getElementById('doc-preview-download-btn');
     
     if (titleEl) titleEl.textContent = title || 'Documento del Psicólogo';
     
-    let srcStr = String(docSrc).trim();
-    if (srcStr.includes('fakepath') || (!srcStr.startsWith('data:') && !srcStr.startsWith('http') && !srcStr.startsWith('/'))) {
-        const cleanName = srcStr.replace(/^.*[\\\/]/, '');
-        srcStr = `/uploads/${cleanName}`;
-    }
-
+    let srcStr = String(docSrc || '').trim();
+    const isLegacyFakepath = !srcStr || srcStr === 'undefined' || srcStr === 'null' || srcStr.includes('fakepath') || srcStr === 'titulo.jpg' || srcStr === 'cedula.jpg';
+    
     if (container) {
         container.innerHTML = '';
-        const isPdf = srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().includes('.pdf');
-        if (isPdf) {
+        if (isLegacyFakepath) {
+            const fileNameDisplay = srcStr ? srcStr.replace(/^.*[\\\/]/, '') : 'Ninguno';
             container.innerHTML = `
-                <div style="width:100%;">
-                    <iframe src="${srcStr}" style="width:100%; height:480px; border:none; border-radius:8px; background:#f9fafb;"></iframe>
-                    <div style="margin-top:10px; display:flex; justify-content:center; gap:10px;">
-                        <a href="${srcStr}" target="_blank" class="btn btn-sm btn-primary" style="font-weight:700;">🔗 Abrir / Descargar PDF en pestaña nueva</a>
+                <div style="width:100%; text-align:center; padding:1.25rem; background:#fff8e6; border:1.5px solid #ffe58f; border-radius:10px;">
+                    <div style="font-size:2.2rem; margin-bottom:0.5rem;">📄⚠️</div>
+                    <h4 style="margin:0 0 0.5rem 0; color:#b78103; font-weight:700; font-size:1.05rem;">Documento registrado previamente en modo texto</h4>
+                    <p style="font-size:0.85rem; color:#785a00; line-height:1.4; margin-bottom:1rem;">
+                        Este psicólogo fue registrado en una versión previa que guardó el nombre de archivo local (<code>${fileNameDisplay}</code>) en lugar del archivo real.<br>Puedes adjuntar y guardar el archivo PDF o imagen oficial ahora mismo:
+                    </p>
+                    <div style="background:#ffffff; padding:1rem; border-radius:8px; border:1px solid #ffe58f; display:flex; flex-direction:column; gap:0.75rem; align-items:center;">
+                        <label style="font-size:0.82rem; font-weight:600; color:#555;">Seleccionar PDF o Imagen:</label>
+                        <input type="file" id="sa-reupload-doc-input" accept="image/*,.pdf" class="form-control" style="max-width:360px; font-size:0.82rem;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveTherapistDocumentFromModal(${therapistId}, '${docType}')" style="font-weight:700; padding:0.4rem 1.25rem;">
+                            💾 Subir y Guardar Documento Ahora
+                        </button>
                     </div>
-                </div>`;
+                </div>
+            `;
+            if (downloadBtn) downloadBtn.style.display = 'none';
         } else {
-            container.innerHTML = `
-                <div style="width:100%;">
-                    <img src="${srcStr}" style="max-width:100%; max-height:480px; border-radius:8px; object-fit:contain; box-shadow: 0 4px 14px rgba(0,0,0,0.18);" alt="Documento" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'text-center py-4\\'><p class=\\'text-muted\\'>📄 Documento adjunto: <strong>${srcStr.replace(/^.*[\\\/]/, '')}</strong></p><a href=\\'${srcStr}\\' target=\\'_blank\\' class=\\'btn btn-primary btn-sm mt-2\\'>📥 Abrir / Descargar Documento</a></div>';">
-                </div>`;
-        }
-    }
-    
-    if (downloadBtn) {
-        downloadBtn.onclick = function() {
-            const a = document.createElement('a');
-            a.href = srcStr;
-            a.target = '_blank';
-            let ext = '.png';
-            if (srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().includes('.pdf')) ext = '.pdf';
-            else if (srcStr.startsWith('data:image/jpeg') || srcStr.toLowerCase().includes('.jpg') || srcStr.toLowerCase().includes('.jpeg')) ext = '.jpg';
+            if (downloadBtn) downloadBtn.style.display = 'inline-block';
+            const isPdf = srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().includes('.pdf');
+            if (isPdf) {
+                container.innerHTML = `
+                    <div style="width:100%;">
+                        <iframe src="${srcStr}" style="width:100%; height:480px; border:none; border-radius:8px; background:#f9fafb;"></iframe>
+                        <div style="margin-top:10px; display:flex; justify-content:center; gap:10px;">
+                            <a href="${srcStr}" target="_blank" class="btn btn-sm btn-primary" style="font-weight:700;">🔗 Abrir / Descargar PDF en pestaña nueva</a>
+                        </div>
+                    </div>`;
+            } else {
+                container.innerHTML = `
+                    <div style="width:100%;">
+                        <img src="${srcStr}" style="max-width:100%; max-height:480px; border-radius:8px; object-fit:contain; box-shadow: 0 4px 14px rgba(0,0,0,0.18);" alt="Documento" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'text-center py-4\\'><p class=\\'text-muted\\'>📄 Documento adjunto: <strong>${srcStr.replace(/^.*[\\\/]/, '')}</strong></p><a href=\\'${srcStr}\\' target=\\'_blank\\' class=\\'btn btn-primary btn-sm mt-2\\'>📥 Abrir / Descargar Documento</a></div>';">
+                    </div>`;
+            }
             
-            const cleanTitle = (title || 'documento_adjunto').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            a.download = cleanTitle.endsWith(ext) ? cleanTitle : cleanTitle + ext;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        };
+            if (downloadBtn) {
+                downloadBtn.onclick = function() {
+                    const a = document.createElement('a');
+                    a.href = srcStr;
+                    a.target = '_blank';
+                    let ext = '.png';
+                    if (srcStr.startsWith('data:application/pdf') || srcStr.toLowerCase().includes('.pdf')) ext = '.pdf';
+                    else if (srcStr.startsWith('data:image/jpeg') || srcStr.toLowerCase().includes('.jpg') || srcStr.toLowerCase().includes('.jpeg')) ext = '.jpg';
+                    
+                    const cleanTitle = (title || 'documento_adjunto').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    a.download = cleanTitle.endsWith(ext) ? cleanTitle : cleanTitle + ext;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+            }
+        }
     }
     
     openModal('doc-preview-modal');
 }
+
+async function saveTherapistDocumentFromModal(therapistId, docType) {
+    const input = document.getElementById('sa-reupload-doc-input');
+    if (!input || !input.files || !input.files[0]) {
+        alert('Por favor selecciona un archivo PDF o imagen primero.');
+        return;
+    }
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = async function() {
+        const base64Data = reader.result;
+        try {
+            const bodyPayload = {};
+            if (docType === 'titulo') bodyPayload.foto_titulo = base64Data;
+            else bodyPayload.foto_documento = base64Data;
+            
+            const res = await fetch(`/api/superadmin/therapists/${therapistId}/update-documents`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(bodyPayload)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert('¡Documento guardado y actualizado con éxito!');
+                closeModal('doc-preview-modal');
+                if (typeof loadSuperadminData === 'function') loadSuperadminData();
+            } else {
+                alert('Error: ' + (data.error || 'No se pudo guardar el documento.'));
+            }
+        } catch(err) {
+            alert('Error de conexión al guardar el documento.');
+        }
+    };
+    reader.readAsDataURL(file);
+}
+window.saveTherapistDocumentFromModal = saveTherapistDocumentFromModal;
 window.viewDocumentPreview = viewDocumentPreview;
 
 // ==========================================
@@ -8732,32 +8783,6 @@ function closePreviewModal() {
     if (modal) modal.classList.add('hide');
 }
 
-function viewDocumentPreview(fileData, titleStr) {
-    const modal = document.getElementById('preview-modal');
-    const title = document.getElementById('preview-modal-title');
-    const body = document.getElementById('preview-modal-body');
-    if (!modal || !body) return;
-    
-    if (title) title.textContent = titleStr || 'Vista Previa del Documento';
-    
-    if (!fileData || fileData === 'titulo.jpg' || fileData === 'cedula.jpg') {
-        body.innerHTML = '<p class="text-secondary text-center" style="padding: 1.5rem;">Sin documento adjunto.</p>';
-    } else if (fileData.includes('fakepath')) {
-        body.innerHTML = '<div style="padding:1.5rem; text-align:center; color:#856404; background-color:#fff3cd; border-radius:8px;">⚠️ El documento fue enviado previamente con una versión de formulario que no procesaba el archivo en segundo plano. Solicita al usuario volver a subir el título o cédula para visualizarlo.</div>';
-    } else if (fileData.startsWith('data:image/')) {
-        body.innerHTML = `<img src="${fileData}" style="max-width: 100%; max-height: 65vh; border-radius: 8px; box-shadow: var(--shadow-md); object-fit: contain; display: block; margin: 0 auto;">`;
-    } else if (fileData.startsWith('data:application/pdf')) {
-        body.innerHTML = `<object data="${fileData}" type="application/pdf" style="width:100%; height:65vh;"><p class="text-center" style="padding: 1rem;">Visualización de PDF: <a href="${fileData}" download="documento.pdf" class="btn btn-primary btn-sm">Descargar Documento</a></p></object>`;
-    } else if (fileData.startsWith('data:')) {
-        body.innerHTML = `<iframe src="${fileData}" style="width:100%; height:65vh; border:none;"></iframe>`;
-    } else if (fileData.startsWith('http') || fileData.startsWith('/')) {
-        openFilePreview(fileData);
-        return;
-    } else {
-        body.innerHTML = `<p class="text-secondary text-center" style="padding:1.5rem;">Documento: <strong>${fileData}</strong></p>`;
-    }
-    modal.classList.remove('hide');
-}
 
 function readFileAsBase64(fileInput) {
     return new Promise((resolve) => {
@@ -10522,6 +10547,33 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                             </tr>
                         `).join('')}
                     </tbody>
+        if (moduloClave === 'sueno') {
+            container.innerHTML = `
+                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                            <th style="padding: 0.5rem;">Fecha</th>
+                            <th style="padding: 0.5rem;">Paciente</th>
+                            <th style="padding: 0.5rem;">Horario</th>
+                            <th style="padding: 0.5rem;">Descansó</th>
+                            <th style="padding: 0.5rem;">Despertares</th>
+                            <th style="padding: 0.5rem;">Síntomas Día</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(r => `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
+                                <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Sí' : '🔴 No'}</td>
+                                <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
+                                <td style="padding: 0.5rem;">
+                                    ${r.somnolencia_dia ? '🥱 ' : ''}${r.pesadez_dia ? '🪨 ' : ''}${r.agotamiento_dia ? '🔋' : ''}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
                 </table>
             `;
         } else if (moduloClave === 'ansiedad') {
@@ -10583,6 +10635,11 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
         container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     }
 }
+window.openTherapistModuleReport = openTherapistModuleReport;
+window.loadTherapistToolsCatalog = loadTherapistToolsCatalog;
+window.onTherapistToolPatientSearch = onTherapistToolPatientSearch;
+window.selectPatientForTherapistTools = selectPatientForTherapistTools;
+window.togglePatientModuleBackend = togglePatientModuleBackend;
 
 // --- PORTAL PACIENTE HANDLERS ---
 
