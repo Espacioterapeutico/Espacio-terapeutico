@@ -10487,14 +10487,15 @@ async function selectPatientForTherapistTools(id, name, code) {
         if (!res.ok) throw new Error(data.error || 'Error al cargar módulos');
 
         list.innerHTML = data.modules.map(m => `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
                 <div>
                     <strong style="font-size: 0.9rem; color: var(--text-dark);">${m.nombre}</strong>
                     <span style="display: block; font-size: 0.78rem; color: var(--text-muted);">
                         ${m.activo ? '🟢 Activo en portal del paciente' : '🔴 Desactivado'}
                     </span>
                 </div>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-info" onclick="openTherapistModuleReport('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}', ${id})" style="padding: 0.35rem 0.65rem; font-weight: 600;">📊 Ver Registros</button>
                     ${m.clave === 'activacion' ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${name.replace(/'/g, "\\'")}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : ''}
                     <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
                         ${m.activo ? ' Desactivar' : ' Activar'}
@@ -10526,7 +10527,7 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
     }
 }
 
-async function openTherapistModuleReport(moduloClave, moduloNombre) {
+async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatientId) {
     const namesMap = {
         'sueno': 'Higiene del Sueño',
         'ansiedad': 'Diario de Ansiedad',
@@ -10570,7 +10571,12 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
             patientsMap[pId].records.push(r);
         });
 
-        const patientsList = Object.values(patientsMap);
+        let patientsList = Object.values(patientsMap);
+
+        // Si se especificó un paciente objetivo, ponerlo primero
+        if (targetPatientId) {
+            patientsList.sort((a, b) => (a.id == targetPatientId ? -1 : (b.id == targetPatientId ? 1 : 0)));
+        }
 
         let html = `<div style="display: flex; flex-direction: column; gap: 1rem;">`;
 
@@ -10715,8 +10721,8 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                 detailHeaders = `<th>Fecha</th><th>Nivel Ansiedad</th><th>Síntomas Registrados</th><th>Situación / Desencadenante</th>`;
             }
 
-            // Auto-expandir el primer paciente por defecto
-            const isFirst = idx === 0;
+            // Desplegar automáticamente si es el objetivo o el primero
+            const isExpanded = targetPatientId ? (p.id == targetPatientId) : (idx === 0);
 
             html += `
                 <div class="card" style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: white;">
@@ -10727,15 +10733,15 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                                     👤 ${p.name} <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: normal;">(${p.cedula ? 'Cédula: ' + p.cedula : 'Cédula no cargada'})</span>
                                 </h4>
                             </div>
-                            <button type="button" class="btn btn-secondary btn-sm" style="font-weight: 600;">
-                                <span id="ttr-patient-icon-${p.id}">${isFirst ? '🔼' : '🔽'}</span> Ver Registros (${recs.length})
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); toggleTtrPatientDetails(${p.id});" style="font-weight: 600;">
+                                <span id="ttr-patient-icon-${p.id}">${isExpanded ? '🔼' : '🔽'}</span> Ver Registros (${recs.length})
                             </button>
                         </div>
                         <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-top: 0.25rem;">
                             ${summaryBadgesHtml}
                         </div>
                     </div>
-                    <div id="ttr-patient-body-${p.id}" class="ttr-patient-body ${isFirst ? '' : 'hide'}" style="padding: 0.75rem;">
+                    <div id="ttr-patient-body-${p.id}" class="ttr-patient-body ${isExpanded ? '' : 'hide'}" style="padding: 0.75rem; display: ${isExpanded ? 'block' : 'none'};">
                         <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.83rem;">
                             <thead>
                                 <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
@@ -10763,11 +10769,14 @@ window.toggleTtrPatientDetails = function(patId) {
     const el = document.getElementById(`ttr-patient-body-${patId}`);
     const icon = document.getElementById(`ttr-patient-icon-${patId}`);
     if (el) {
-        if (el.classList.contains('hide')) {
+        const isHidden = el.style.display === 'none' || el.classList.contains('hide');
+        if (isHidden) {
             el.classList.remove('hide');
+            el.style.display = 'block';
             if (icon) icon.innerText = '🔼';
         } else {
             el.classList.add('hide');
+            el.style.display = 'none';
             if (icon) icon.innerText = '🔽';
         }
     }
