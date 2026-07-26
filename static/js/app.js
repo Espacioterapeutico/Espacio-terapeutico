@@ -10536,10 +10536,10 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
     };
     const titleText = moduloNombre || namesMap[moduloClave] || moduloClave;
     const titleEl = document.getElementById('ttr-modal-title');
-    if (titleEl) titleEl.innerText = `📊 Reporte: ${titleText}`;
+    if (titleEl) titleEl.innerText = `📊 Reporte Consolidado: ${titleText}`;
     
     const container = document.getElementById('ttr-modal-body-content');
-    if (container) container.innerHTML = '<p class="text-muted">Cargando registros...</p>';
+    if (container) container.innerHTML = '<p class="text-muted text-center py-4">Cargando registros de consultantes...</p>';
     
     openModal('therapist-tool-report-modal');
 
@@ -10551,153 +10551,228 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
         if (!container) return;
 
         if (data.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center py-4">Aún no hay registros cargados por ningún paciente en esta herramienta.</p>';
+            container.innerHTML = '<div class="text-muted text-center py-5"><h4>📭 Sin registros</h4><p>Aún no hay datos reportados por ningún consultante para esta herramienta.</p></div>';
             return;
         }
 
-        if (moduloClave === 'sueno') {
-            container.innerHTML = `
-                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
-                            <th style="padding: 0.5rem;">Fecha</th>
-                            <th style="padding: 0.5rem;">Paciente</th>
-                            <th style="padding: 0.5rem;">Horario</th>
-                            <th style="padding: 0.5rem;">Descansó</th>
-                            <th style="padding: 0.5rem;">Despertares</th>
-                            <th style="padding: 0.5rem;">Síntomas Día</th>
+        // Agrupar registros por paciente
+        const patientsMap = {};
+        data.forEach(r => {
+            const pId = r.paciente_id;
+            if (!patientsMap[pId]) {
+                patientsMap[pId] = {
+                    id: pId,
+                    name: `${r.nombres || ''} ${r.apellidos || ''}`.trim() || `Consultante #${pId}`,
+                    cedula: r.cedula || '',
+                    records: []
+                };
+            }
+            patientsMap[pId].records.push(r);
+        });
+
+        const patientsList = Object.values(patientsMap);
+
+        let html = `<div style="display: flex; flex-direction: column; gap: 1rem;">`;
+
+        patientsList.forEach((p, idx) => {
+            const recs = p.records;
+            let summaryBadgesHtml = '';
+
+            if (moduloClave === 'sobriedad') {
+                const totalSobrio = recs.filter(r => r.sobrio === 1).length;
+                const recaidas = recs.filter(r => r.sobrio === 0).length;
+                let streak = 0;
+                for (let r of recs) {
+                    if (r.sobrio === 1) streak++;
+                    else break;
+                }
+                summaryBadgesHtml = `
+                    <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700; padding:0.4rem 0.6rem;">🏅 Racha: ${streak} día(s) en sobriedad</span>
+                    <span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:600; padding:0.4rem 0.6rem;">🟢 Total Días Libre: ${totalSobrio}</span>
+                    ${recaidas > 0 ? `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700; padding:0.4rem 0.6rem;">⚠️ Recaídas/Eventos: ${recaidas}</span>` : ''}
+                `;
+            } else if (moduloClave === 'sueno') {
+                const totalNoches = recs.length;
+                const descansoRestful = recs.filter(r => r.senti_descanso === 1).length;
+                const despertares = recs.filter(r => r.desperto_noche === 1).length;
+                summaryBadgesHtml = `
+                    <span class="badge" style="background:#f3e8ff; color:#6b21a8; font-weight:700; padding:0.4rem 0.6rem;">🌙 Descanso Reparador: ${descansoRestful} / ${totalNoches} noches</span>
+                    <span class="badge" style="background:#eff6ff; color:#1d4ed8; font-weight:600; padding:0.4rem 0.6rem;">🥱 Noches con despertares: ${despertares}</span>
+                `;
+            } else if (moduloClave === 'adherencia') {
+                const tomados = recs.filter(r => r.tomado === 1).length;
+                const noTomados = recs.filter(r => r.tomado === 0).length;
+                const pct = recs.length > 0 ? Math.round((tomados / recs.length) * 100) : 0;
+                summaryBadgesHtml = `
+                    <span class="badge" style="background:${pct >= 80 ? '#f0fdf4' : '#fff7ed'}; color:${pct >= 80 ? '#15803d' : '#c2410c'}; font-weight:800; padding:0.4rem 0.6rem;">💊 ${pct}% Adherencia al tratamiento</span>
+                    <span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:600; padding:0.4rem 0.6rem;">🟢 Tomados: ${tomados}</span>
+                    ${noTomados > 0 ? `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700; padding:0.4rem 0.6rem;">🔴 No Tomados: ${noTomados}</span>` : ''}
+                `;
+            } else if (moduloClave === 'activacion') {
+                const necCount = recs.filter(r => r.categoria === 'necesaria' && r.completada === 1).length;
+                const placCount = recs.filter(r => r.categoria === 'placer' && r.completada === 1).length;
+                const cotCount = recs.filter(r => r.categoria === 'cotidiana' && r.completada === 1).length;
+                summaryBadgesHtml = `
+                    <span class="badge" style="background:#f0fdf4; color:#166534; font-weight:700; padding:0.4rem 0.6rem;">📌 Necesarias: ${necCount}</span>
+                    <span class="badge" style="background:#fdf4ff; color:#86198f; font-weight:700; padding:0.4rem 0.6rem;">🎉 Placenteras: ${placCount}</span>
+                    <span class="badge" style="background:#eff6ff; color:#1e40af; font-weight:700; padding:0.4rem 0.6rem;">🏠 Cotidiana: ${cotCount}</span>
+                `;
+            } else if (moduloClave === 'ansiedad') {
+                const totalAns = recs.reduce((sum, r) => sum + (Number(r.nivel_ansiedad) || 0), 0);
+                const avgAns = (totalAns / recs.length).toFixed(1);
+                
+                const symptomFreq = {};
+                recs.forEach(r => {
+                    let sints = [];
+                    try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
+                    sints.forEach(s => { symptomFreq[s] = (symptomFreq[s] || 0) + 1; });
+                });
+                
+                let topSymptom = '-';
+                let maxF = 0;
+                Object.keys(symptomFreq).forEach(s => {
+                    if (symptomFreq[s] > maxF) {
+                        maxF = symptomFreq[s];
+                        topSymptom = s;
+                    }
+                });
+
+                summaryBadgesHtml = `
+                    <span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800; padding:0.4rem 0.6rem;">⚡ Promedio Ansiedad: ${avgAns} / 10</span>
+                    ${maxF > 0 ? `<span class="badge" style="background:#fef2f2; color:#991b1b; font-weight:700; padding:0.4rem 0.6rem;">⚠️ Síntoma más frecuente: ${topSymptom} (${maxF} veces)</span>` : ''}
+                `;
+            }
+
+            let detailTableRows = '';
+            if (moduloClave === 'sobriedad') {
+                detailTableRows = recs.map(r => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                        <td style="padding: 0.5rem;">${r.sobrio ? '🟢 Libre de consumo' : '⚠️ Consumo / Evento'}</td>
+                        <td style="padding: 0.5rem;">${r.disparador_emocional || '-'}</td>
+                        <td style="padding: 0.5rem;">${r.notas || '-'}</td>
+                    </tr>
+                `).join('');
+            } else if (moduloClave === 'sueno') {
+                detailTableRows = recs.map(r => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                        <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
+                        <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Sí' : '🔴 No'}</td>
+                        <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
+                        <td style="padding: 0.5rem;">
+                            ${r.somnolencia_dia ? '🥱 Somnolencia ' : ''}${r.pesadez_dia ? '🪨 Pesadez ' : ''}${r.agotamiento_dia ? '🔋 Agotamiento' : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            } else if (moduloClave === 'adherencia') {
+                detailTableRows = recs.map(r => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                        <td style="padding: 0.5rem;"><strong>${r.nombre_medicamento}</strong></td>
+                        <td style="padding: 0.5rem;">${r.dosis || '-'} (${r.hora_prescrita || '-'})</td>
+                        <td style="padding: 0.5rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
+                        <td style="padding: 0.5rem;">${r.hora_tomado || '-'}</td>
+                    </tr>
+                `).join('');
+            } else if (moduloClave === 'activacion') {
+                detailTableRows = recs.map(r => {
+                    let catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Disfrute/Placer' : '🏠 Cotidiana');
+                    return `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                            <td style="padding: 0.5rem;">${catLabel}</td>
+                            <td style="padding: 0.5rem;">${r.nombre_actividad}</td>
+                            <td style="padding: 0.5rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(r => `
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
-                                <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
-                                <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Sí' : '🔴 No'}</td>
-                                <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
-                                <td style="padding: 0.5rem;">
-                                    ${r.somnolencia_dia ? '🥱 ' : ''}${r.pesadez_dia ? '🪨 ' : ''}${r.agotamiento_dia ? '🔋' : ''}
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-        } else if (moduloClave === 'ansiedad') {
-            container.innerHTML = `
-                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
-                            <th style="padding: 0.5rem;">Fecha</th>
-                            <th style="padding: 0.5rem;">Paciente</th>
-                            <th style="padding: 0.5rem;">Nivel Ansiedad</th>
-                            <th style="padding: 0.5rem;">Síntomas Registrados</th>
-                            <th style="padding: 0.5rem;">Situación / Desencadenante</th>
+                    `;
+                }).join('');
+            } else if (moduloClave === 'ansiedad') {
+                detailTableRows = recs.map(r => {
+                    let sints = [];
+                    try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
+                    return `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                            <td style="padding: 0.5rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span></td>
+                            <td style="padding: 0.5rem; max-width: 250px;">${sints.join(', ') || 'Sin síntomas marcados'}</td>
+                            <td style="padding: 0.5rem;">${r.situacion_desencadenante || '-'}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(r => {
-                            let sints = [];
-                            try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
-                            return `
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                    <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
-                                    <td style="padding: 0.5rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span></td>
-                                    <td style="padding: 0.5rem; max-width: 250px;">${sints.join(', ') || 'Sin síntomas marcados'}</td>
-                                    <td style="padding: 0.5rem;">${r.situacion_desencadenante || '-'}</td>
+                    `;
+                }).join('');
+            }
+
+            let detailHeaders = '';
+            if (moduloClave === 'sobriedad') {
+                detailHeaders = `<th>Fecha</th><th>Estado</th><th>Disparador Emocional</th><th>Notas</th>`;
+            } else if (moduloClave === 'sueno') {
+                detailHeaders = `<th>Fecha</th><th>Horario</th><th>Descansó</th><th>Despertares</th><th>Síntomas Día</th>`;
+            } else if (moduloClave === 'adherencia') {
+                detailHeaders = `<th>Fecha</th><th>Medicamento</th><th>Dosis / Prescripción</th><th>Tomado</th><th>Hora Real</th>`;
+            } else if (moduloClave === 'activacion') {
+                detailHeaders = `<th>Fecha</th><th>Categoría</th><th>Actividad</th><th>Estado</th>`;
+            } else if (moduloClave === 'ansiedad') {
+                detailHeaders = `<th>Fecha</th><th>Nivel Ansiedad</th><th>Síntomas Registrados</th><th>Situación / Desencadenante</th>`;
+            }
+
+            // Auto-expandir el primer paciente por defecto
+            const isFirst = idx === 0;
+
+            html += `
+                <div class="card" style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: white;">
+                    <div onclick="toggleTtrPatientDetails(${p.id})" style="padding: 1rem; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; gap: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h4 style="margin: 0; color: var(--text-dark); font-family: var(--font-title); font-size: 1.05rem;">
+                                    👤 ${p.name} <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: normal;">(${p.cedula ? 'Cédula: ' + p.cedula : 'Cédula no cargada'})</span>
+                                </h4>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" style="font-weight: 600;">
+                                <span id="ttr-patient-icon-${p.id}">${isFirst ? '🔼' : '🔽'}</span> Ver Registros (${recs.length})
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-top: 0.25rem;">
+                            ${summaryBadgesHtml}
+                        </div>
+                    </div>
+                    <div id="ttr-patient-body-${p.id}" class="ttr-patient-body ${isFirst ? '' : 'hide'}" style="padding: 0.75rem;">
+                        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.83rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                                    ${detailHeaders}
                                 </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody>
+                                ${detailTableRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             `;
-        } else if (moduloClave === 'sobriedad') {
-            container.innerHTML = `
-                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
-                            <th style="padding: 0.5rem;">Fecha</th>
-                            <th style="padding: 0.5rem;">Paciente</th>
-                            <th style="padding: 0.5rem;">Estado</th>
-                            <th style="padding: 0.5rem;">Disparador Emocional</th>
-                            <th style="padding: 0.5rem;">Notas</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(r => `
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
-                                <td style="padding: 0.5rem;">${r.sobrio ? '✓ Libre de consumo' : '⚠️ Consumo / Evento'}</td>
-                                <td style="padding: 0.5rem;">${r.disparador_emocional || '-'}</td>
-                                <td style="padding: 0.5rem;">${r.notas || '-'}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-        } else if (moduloClave === 'adherencia') {
-            container.innerHTML = `
-                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
-                            <th style="padding: 0.5rem;">Fecha</th>
-                            <th style="padding: 0.5rem;">Paciente</th>
-                            <th style="padding: 0.5rem;">Medicamento</th>
-                            <th style="padding: 0.5rem;">Dosis / Prescripción</th>
-                            <th style="padding: 0.5rem;">Tomado</th>
-                            <th style="padding: 0.5rem;">Hora Real</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(r => `
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
-                                <td style="padding: 0.5rem;"><strong>${r.nombre_medicamento}</strong></td>
-                                <td style="padding: 0.5rem;">${r.dosis || '-'} (${r.hora_prescrita || '-'})</td>
-                                <td style="padding: 0.5rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
-                                <td style="padding: 0.5rem;">${r.hora_tomado || '-'}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-        } else if (moduloClave === 'activacion') {
-            container.innerHTML = `
-                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
-                            <th style="padding: 0.5rem;">Fecha</th>
-                            <th style="padding: 0.5rem;">Paciente</th>
-                            <th style="padding: 0.5rem;">Categoría</th>
-                            <th style="padding: 0.5rem;">Actividad</th>
-                            <th style="padding: 0.5rem;">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(r => {
-                            let catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Disfrute/Placer' : '🏠 Cotidiana');
-                            return `
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                    <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
-                                    <td style="padding: 0.5rem;">${catLabel}</td>
-                                    <td style="padding: 0.5rem;">${r.nombre_actividad}</td>
-                                    <td style="padding: 0.5rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            `;
-        }
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+
     } catch (err) {
-        container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        if (container) container.innerHTML = `<p class="text-danger">Error al cargar reporte: ${err.message}</p>`;
     }
 }
+
+window.toggleTtrPatientDetails = function(patId) {
+    const el = document.getElementById(`ttr-patient-body-${patId}`);
+    const icon = document.getElementById(`ttr-patient-icon-${patId}`);
+    if (el) {
+        if (el.classList.contains('hide')) {
+            el.classList.remove('hide');
+            if (icon) icon.innerText = '🔼';
+        } else {
+            el.classList.add('hide');
+            if (icon) icon.innerText = '🔽';
+        }
+    }
+};
+
 window.openTherapistModuleReport = openTherapistModuleReport;
 window.loadTherapistToolsCatalog = loadTherapistToolsCatalog;
 window.onTherapistToolPatientSearch = onTherapistToolPatientSearch;
