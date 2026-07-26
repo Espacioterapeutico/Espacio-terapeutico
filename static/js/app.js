@@ -10542,6 +10542,11 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     const container = document.getElementById('ttr-modal-body-content');
     if (container) container.innerHTML = '<p class="text-muted text-center py-4">Cargando registros de consultantes...</p>';
     
+    const modalEl = document.getElementById('therapist-tool-report-modal');
+    if (modalEl) {
+        modalEl.classList.remove('hide');
+        modalEl.style.display = 'flex';
+    }
     openModal('therapist-tool-report-modal');
 
     try {
