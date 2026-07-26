@@ -1401,6 +1401,17 @@ function switchPatientView(viewName) {
             loadPatientAnxietyHistory();
         } else if (viewName === 'patient-sobriety') {
             loadPatientSobrietyHistory();
+        } else if (viewName === 'patient-adherence') {
+            setDefaultToolDates();
+            loadPatientMedications();
+            const today = document.getElementById('adh-fecha')?.value || new Date().toISOString().split('T')[0];
+            loadPatientAdherenceChecklist(today);
+            loadPatientAdherenceHistory();
+        } else if (viewName === 'patient-activation') {
+            setDefaultToolDates();
+            const today = document.getElementById('act-fecha')?.value || new Date().toISOString().split('T')[0];
+            loadPatientActivationChecklist(today);
+            loadPatientActivationHistory();
         }
     }
 }
@@ -11159,7 +11170,7 @@ function openPatientAdherenceView() {
     const today = document.getElementById('adh-fecha')?.value || new Date().toISOString().split('T')[0];
     loadPatientAdherenceChecklist(today);
     loadPatientAdherenceHistory();
-    showSection('patient-adherence');
+    switchPatientView('patient-adherence');
 }
 
 window.openAddMedicationModal = openAddMedicationModal;
@@ -11387,7 +11398,7 @@ function openPatientActivationView() {
     const today = document.getElementById('act-fecha')?.value || new Date().toISOString().split('T')[0];
     loadPatientActivationChecklist(today);
     loadPatientActivationHistory();
-    showSection('patient-activation');
+    switchPatientView('patient-activation');
 }
 
 window.openTherapistActivationModal = openTherapistActivationModal;
