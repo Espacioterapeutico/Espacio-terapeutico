@@ -10426,7 +10426,7 @@ async function loadTherapistToolsCatalog() {
                     <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">${m.descripcion}</p>
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-primary btn-sm" onclick="openTherapistModuleReport('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}')" style="flex: 1; font-weight: 600;">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openTherapistModuleReport('${m.clave}')" style="flex: 1; font-weight: 600;">
                         📊 Ver Reporte y Registros
                     </button>
                 </div>
@@ -10527,15 +10527,28 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
 }
 
 async function openTherapistModuleReport(moduloClave, moduloNombre) {
-    document.getElementById('ttr-modal-title').innerText = `📊 Reporte: ${moduloNombre}`;
+    const namesMap = {
+        'sueno': 'Higiene del Sueño',
+        'ansiedad': 'Diario de Ansiedad',
+        'sobriedad': 'Registro de Consumo',
+        'adherencia': 'Adherencia al Tratamiento',
+        'activacion': 'Activación Conductual'
+    };
+    const titleText = moduloNombre || namesMap[moduloClave] || moduloClave;
+    const titleEl = document.getElementById('ttr-modal-title');
+    if (titleEl) titleEl.innerText = `📊 Reporte: ${titleText}`;
+    
     const container = document.getElementById('ttr-modal-body-content');
-    container.innerHTML = '<p class="text-muted">Cargando registros...</p>';
+    if (container) container.innerHTML = '<p class="text-muted">Cargando registros...</p>';
+    
     openModal('therapist-tool-report-modal');
 
     try {
         const res = await fetch(`/api/therapist/modules/report/${moduloClave}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al cargar reporte');
+
+        if (!container) return;
 
         if (data.length === 0) {
             container.innerHTML = '<p class="text-muted text-center py-4">Aún no hay registros cargados por ningún paciente en esta herramienta.</p>';
