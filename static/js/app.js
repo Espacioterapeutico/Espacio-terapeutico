@@ -10572,7 +10572,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                         ${data.map(r => `
                             <tr style="border-bottom: 1px solid var(--border-color);">
                                 <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
                                 <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
                                 <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Sí' : '🔴 No'}</td>
                                 <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
@@ -10603,7 +10603,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                             return `
                                 <tr style="border-bottom: 1px solid var(--border-color);">
                                     <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                    <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                    <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
                                     <td style="padding: 0.5rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span></td>
                                     <td style="padding: 0.5rem; max-width: 250px;">${sints.join(', ') || 'Sin síntomas marcados'}</td>
                                     <td style="padding: 0.5rem;">${r.situacion_desencadenante || '-'}</td>
@@ -10629,7 +10629,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                         ${data.map(r => `
                             <tr style="border-bottom: 1px solid var(--border-color);">
                                 <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
                                 <td style="padding: 0.5rem;">${r.sobrio ? '✓ Libre de consumo' : '⚠️ Consumo / Evento'}</td>
                                 <td style="padding: 0.5rem;">${r.disparador_emocional || '-'}</td>
                                 <td style="padding: 0.5rem;">${r.notas || '-'}</td>
@@ -10655,7 +10655,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                         ${data.map(r => `
                             <tr style="border-bottom: 1px solid var(--border-color);">
                                 <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
                                 <td style="padding: 0.5rem;"><strong>${r.nombre_medicamento}</strong></td>
                                 <td style="padding: 0.5rem;">${r.dosis || '-'} (${r.hora_prescrita || '-'})</td>
                                 <td style="padding: 0.5rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
@@ -10683,7 +10683,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre) {
                             return `
                                 <tr style="border-bottom: 1px solid var(--border-color);">
                                     <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                                    <td style="padding: 0.5rem;">${r.nombres} ${r.apellidos}</td>
+                                    <td style="padding: 0.5rem;">${r.nombres || ''} ${r.apellidos || ''}</td>
                                     <td style="padding: 0.5rem;">${catLabel}</td>
                                     <td style="padding: 0.5rem;">${r.nombre_actividad}</td>
                                     <td style="padding: 0.5rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
