@@ -2382,18 +2382,24 @@ def check_session():
         db = get_db()
         cursor = db.cursor()
         cursor.execute("""
-            SELECT role, activo, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, primer_inicio, suscripcion_paga, fecha_expiracion_prueba, nombres, apellidos 
-            FROM usuarios WHERE id = ?
+            SELECT * FROM usuarios WHERE id = ?
         """, (session['user_id'],))
         row = cursor.fetchone()
-        role = row['role'] if row else 'psicologo'
-        activo = row['activo'] if row else 1
-        aviso_pago = row['aviso_pago'] if row else 0
-        p_inicio = row['primer_inicio'] if row and row['primer_inicio'] is not None else 1
-        s_paga = row['suscripcion_paga'] if row and row['suscripcion_paga'] is not None else 0
-        f_exp = row['fecha_expiracion_prueba'] if row and row['fecha_expiracion_prueba'] else ''
-        nombres = row['nombres'] if row and row['nombres'] else ''
-        apellidos = row['apellidos'] if row and row['apellidos'] else ''
+        
+        if row:
+            r_dict = dict(row)
+        else:
+            r_dict = {}
+
+        role = r_dict.get('role', 'psicologo')
+        activo = r_dict.get('activo', 1)
+        aviso_pago = r_dict.get('aviso_pago', 0)
+        p_inicio = r_dict.get('primer_inicio', 1) if r_dict.get('primer_inicio') is not None else 1
+        s_paga = r_dict.get('suscripcion_paga', 0) if r_dict.get('suscripcion_paga') is not None else 0
+        f_exp = r_dict.get('fecha_expiracion_prueba', '')
+        nombres = r_dict.get('nombres', '')
+        apellidos = r_dict.get('apellidos', '')
+        
         return jsonify({
             'logged_in': True,
             'role': role,
@@ -2407,13 +2413,13 @@ def check_session():
             'apellidos': apellidos,
             'user_id': session['user_id'],
             'bloqueos': {
-                'registro': row['bloqueo_registro'] if row else 0,
-                'evoluciones': row['bloqueo_evoluciones'] if row else 0,
-                'finanzas': row['bloqueo_finanzas'] if row else 0,
-                'agenda': row['bloqueo_agenda'] if row else 0,
-                'mensajes': row['bloqueo_mensajes'] if row else 0,
-                'pizarra': row['bloqueo_pizarra'] if row else 0,
-                'herramientas': row['bloqueo_herramientas'] if ('bloqueo_herramientas' in row.keys() and row['bloqueo_herramientas']) else 0
+                'registro': r_dict.get('bloqueo_registro', 0),
+                'evoluciones': r_dict.get('bloqueo_evoluciones', 0),
+                'finanzas': r_dict.get('bloqueo_finanzas', 0),
+                'agenda': r_dict.get('bloqueo_agenda', 0),
+                'mensajes': r_dict.get('bloqueo_mensajes', 0),
+                'pizarra': r_dict.get('bloqueo_pizarra', 0),
+                'herramientas': r_dict.get('bloqueo_herramientas', 0)
             }
         })
     elif 'patient_id' in session:
