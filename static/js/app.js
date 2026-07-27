@@ -10394,12 +10394,24 @@ async function loadTherapistToolsCatalog() {
                     <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">${m.descripcion}</p>
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-primary btn-sm" onclick="openTherapistModuleReport('${m.clave}')" style="flex: 1; font-weight: 600;">
+                    <button type="button" class="btn btn-primary btn-sm btn-tt-report" data-clave="${m.clave}" data-nombre="${m.nombre}" style="flex: 1; font-weight: 600;">
                         📊 Ver Reporte y Registros
                     </button>
                 </div>
             </div>
         `).join('');
+
+        // Event delegation: attach click listeners to dynamically created buttons
+        grid.querySelectorAll('.btn-tt-report').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const clave = this.dataset.clave;
+                const nombre = this.dataset.nombre;
+                console.log('[TT-Report] Click detected for:', clave, nombre);
+                openTherapistModuleReport(clave, nombre);
+            });
+        });
     } catch (err) {
         grid.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     }
