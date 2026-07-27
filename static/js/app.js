@@ -10496,6 +10496,7 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
 }
 
 async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatientId) {
+    console.log('[DEBUG] openTherapistModuleReport called with:', moduloClave, moduloNombre, targetPatientId);
     const namesMap = {
         'sueno': 'Higiene del Sueño',
         'ansiedad': 'Diario de Ansiedad',
@@ -10510,7 +10511,17 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     const container = document.getElementById('ttr-modal-body-content');
     if (container) container.innerHTML = '<p class="text-muted text-center py-4">Cargando registros de consultantes...</p>';
     
-    openModal('therapist-tool-report-modal');
+    console.log('[DEBUG] About to open modal therapist-tool-report-modal');
+    const modalEl = document.getElementById('therapist-tool-report-modal');
+    if (modalEl) {
+        modalEl.classList.remove('hide');
+        modalEl.style.display = 'flex';
+        console.log('[DEBUG] Modal opened successfully, display:', modalEl.style.display, 'classes:', modalEl.className);
+    } else {
+        console.error('[DEBUG] Modal element therapist-tool-report-modal NOT FOUND in DOM!');
+        alert('Error: No se encontró el modal de reportes. Recarga la página.');
+        return;
+    }
 
     try {
         const res = await fetch(`/api/therapist/modules/report/${moduloClave}`);
