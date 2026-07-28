@@ -5,7 +5,7 @@ import sqlite3
 import datetime
 import shutil
 import json
-from flask import Flask, request, jsonify, session, send_file, redirect, url_for, g
+from flask import Flask, request, jsonify, session, send_file, redirect, url_for, g, render_template, render_template_string
 from werkzeug.security import generate_password_hash, check_password_hash
 try:
     import docx
@@ -609,6 +609,26 @@ def init_db():
                 cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
             if 'emoji_animo' not in cols_piz:
                 cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
+            if 'respuesta_psicologo' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN respuesta_psicologo TEXT")
+            if 'fecha_respuesta' not in cols_piz:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN fecha_respuesta TEXT")
+        db.commit()
+
+        # Tabla de Bloqueos de Agenda Específicos (Eventos Personales / Convocatorias)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bloqueos_agenda_especificos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                psicologo_id INTEGER NOT NULL,
+                fecha TEXT NOT NULL,
+                hora_inicio TEXT,
+                hora_fin TEXT,
+                motivo TEXT,
+                todo_el_dia INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE
+            )
+        """)
         db.commit()
         # Asegurar existencia de la tabla notificaciones
         cursor.execute("""
@@ -2888,6 +2908,17 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     booked_rows = cursor.fetchall()
     booked_hours = set(normalize_time_str(row['hora']) for row in booked_rows if row['hora'])
 
+    # Filtrar bloqueos de agenda específicos (Eventos Personales / Convocatorias)
+    cursor.execute("""
+        SELECT hora_inicio, hora_fin, todo_el_dia 
+        FROM bloqueos_agenda_especificos 
+        WHERE (fecha = ? OR fecha = ?) AND psicologo_id = ?
+    """, (target_date_norm, alt_date_str, psicologo_id))
+    blocks_rows = cursor.fetchall()
+
+    if any(b['todo_el_dia'] == 1 for b in blocks_rows):
+        return []
+
     # Validar horas de antelación
     limit_dt = datetime.now() + timedelta(hours=antelacion)
 
@@ -2895,6 +2926,20 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     for slot_obj in candidate_slots:
         h = normalize_time_str(slot_obj["hora"])
         if h in booked_hours or slot_obj["hora"] in booked_hours:
+            continue
+
+        # Verificar si la hora cae dentro de un rango bloqueado
+        slot_blocked = False
+        for b in blocks_rows:
+            if b['todo_el_dia'] == 1:
+                slot_blocked = True
+                break
+            h_init = normalize_time_str(b['hora_inicio'])
+            h_end = normalize_time_str(b['hora_fin'])
+            if h_init and h_end and h_init <= h < h_end:
+                slot_blocked = True
+                break
+        if slot_blocked:
             continue
 
         try:
