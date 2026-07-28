@@ -5351,9 +5351,13 @@ def print_patient_card(patient_id):
     
     # 1. Obtener datos del paciente
     cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
-    patient = cursor.fetchone()
-    if not patient:
+    patient_row = cursor.fetchone()
+    if not patient_row:
         return "Paciente no encontrado", 404
+        
+    patient = dict(patient_row)
+    if patient.get('diagnostico'):
+        patient['diagnostico'] = decrypt_clinical_text(patient['diagnostico'])
         
     # 2. Obtener sesiones en orden cronológico
     cursor.execute("""
@@ -5362,7 +5366,13 @@ def print_patient_card(patient_id):
         WHERE paciente_id = ? AND estado = 'Realizada'
         ORDER BY fecha ASC, id ASC
     """, (patient_id,))
-    sessions = cursor.fetchall()
+    raw_sessions = cursor.fetchall()
+    sessions = []
+    for s in raw_sessions:
+        s_dict = dict(s)
+        s_dict['resumen'] = decrypt_clinical_text(s_dict.get('resumen')) or ''
+        s_dict['test_aplicados'] = decrypt_clinical_text(s_dict.get('test_aplicados')) or ''
+        sessions.append(s_dict)
     
     html_template = """
     <!DOCTYPE html>
@@ -5497,7 +5507,7 @@ def print_patient_card(patient_id):
             <div class="header">
                 <h1>Ficha Clínica Individual</h1>
                 <div class="no-print">
-                    <button class="no-print-btn" onclick="window.print()">Imprimir Ficha / PDF</button>
+                    <button class="no-print-btn" onclick="window.print()">Imprimir Ficha / Guardar como PDF</button>
                 </div>
             </div>
 
@@ -5549,7 +5559,7 @@ def print_patient_card(patient_id):
     </body>
     </html>
     """
-    return render_template_string(html_template, patient=dict(patient), sessions=[dict(s) for s in sessions])
+    return render_template_string(html_template, patient=patient, sessions=sessions)
 
 
 # ==========================================
@@ -7957,6 +7967,15 @@ def export_word(patient_id):
     cursor.execute("SELECT * FROM agenda_finanzas WHERE paciente_id = ? ORDER BY fecha ASC", (patient_id,))
     finance_events = cursor.fetchall()
     
+    # Decodificar datos cifrados del paciente
+    pac_dict = dict(pac)
+    for field in ['antecedentes_medicos_personales', 'antecedentes_medicos_familiares', 
+                  'antecedentes_psicologicos_personales', 'antecedentes_psicologicos_familiares',
+                  'asistencia_previa_psicologo', 'motivo_consulta', 'expectativas', 
+                  'farmacologia', 'diagnostico']:
+        if pac_dict.get(field):
+            pac_dict[field] = decrypt_clinical_text(pac_dict[field])
+            
     # Crear documento Word
     doc = docx.Document()
     
@@ -7969,7 +7988,7 @@ def export_word(patient_id):
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     subtitle = doc.add_paragraph()
-    sub_run = subtitle.add_run(f"Consultante: {pac['nombres']} {pac['apellidos']} | Cédula: {pac['cedula']}")
+    sub_run = subtitle.add_run(f"Consultante: {pac_dict['nombres']} {pac_dict['apellidos']} | Cédula: {pac_dict['cedula']}")
     sub_run.italic = True
     sub_run.font.size = Pt(12)
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -7983,15 +8002,15 @@ def export_word(patient_id):
     h1_run.font.color.rgb = docx.shared.RGBColor(0x3D, 0x1E, 0x3F)
     
     table_data = [
-        ("Nombres y Apellidos", f"{pac['nombres']} {pac['apellidos']}"),
-        ("Cédula de Identidad", pac['cedula']),
-        ("Pronombre / Género", f"{pac['pronombre'] or 'N/A'} / {pac['genero'] or 'N/A'}"),
-        ("Edad", str(pac['edad']) if pac['edad'] else "N/A"),
-        ("Lugar y Fecha de Nacimiento", f"{pac['lugar_nacimiento'] or 'N/A'} ({pac['fecha_nacimiento'] or 'N/A'})"),
-        ("Residencia Actual", ", ".join(filter(None, [pac['residencia_actual'] if 'residencia_actual' in pac.keys() else (pac['ciudad'] if 'ciudad' in pac.keys() else None), pac['pais'] if 'pais' in pac.keys() else None])) or "N/A"),
-        ("Reside con", pac['con_quien_reside'] or "N/A"),
-        ("Nivel Académico / Ocupación", f"{pac['nivel_academico'] or 'N/A'} / {pac['ocupacion'] or 'N/A'}"),
-        ("Estado Civil / Relacional", pac['estado_civil'] or "N/A"),
+        ("Nombres y Apellidos", f"{pac_dict['nombres']} {pac_dict['apellidos']}"),
+        ("Cédula de Identidad", pac_dict['cedula']),
+        ("Pronombre / Género", f"{pac_dict['pronombre'] or 'N/A'} / {pac_dict['genero'] or 'N/A'}"),
+        ("Edad", str(pac_dict['edad']) if pac_dict['edad'] else "N/A"),
+        ("Lugar y Fecha de Nacimiento", f"{pac_dict['lugar_nacimiento'] or 'N/A'} ({pac_dict['fecha_nacimiento'] or 'N/A'})"),
+        ("Residencia Actual", ", ".join(filter(None, [pac_dict['residencia_actual'] if 'residencia_actual' in pac_dict.keys() else (pac_dict['ciudad'] if 'ciudad' in pac_dict.keys() else None), pac_dict['pais'] if 'pais' in pac_dict.keys() else None])) or "N/A"),
+        ("Reside con", pac_dict['con_quien_reside'] or "N/A"),
+        ("Nivel Académico / Ocupación", f"{pac_dict['nivel_academico'] or 'N/A'} / {pac_dict['ocupacion'] or 'N/A'}"),
+        ("Estado Civil / Relacional", pac_dict['estado_civil'] or "N/A"),
     ]
     
     table = doc.add_table(rows=0, cols=2)
@@ -8009,26 +8028,26 @@ def export_word(patient_id):
     h2_run.font.color.rgb = docx.shared.RGBColor(0x3D, 0x1E, 0x3F)
     
     doc.add_paragraph().add_run("Antecedentes Médicos:").bold = True
-    doc.add_paragraph(f"- Personales: {pac['antecedentes_medicos_personales'] or 'Sin registrar'}")
-    doc.add_paragraph(f"- Familiares: {pac['antecedentes_medicos_familiares'] or 'Sin registrar'}")
+    doc.add_paragraph(f"- Personales: {pac_dict['antecedentes_medicos_personales'] or 'Sin registrar'}")
+    doc.add_paragraph(f"- Familiares: {pac_dict['antecedentes_medicos_familiares'] or 'Sin registrar'}")
     
     doc.add_paragraph().add_run("Antecedentes Psicológicos y Psiquiátricos:").bold = True
-    doc.add_paragraph(f"- Personales: {pac['antecedentes_psicologicos_personales'] or 'Sin registrar'}")
-    doc.add_paragraph(f"- Familiares: {pac['antecedentes_psicologicos_familiares'] or 'Sin registrar'}")
+    doc.add_paragraph(f"- Personales: {pac_dict['antecedentes_psicologicos_personales'] or 'Sin registrar'}")
+    doc.add_paragraph(f"- Familiares: {pac_dict['antecedentes_psicologicos_familiares'] or 'Sin registrar'}")
     
     doc.add_paragraph().add_run("Motivo de Consulta y Expectativas:").bold = True
-    doc.add_paragraph(f"- Asistencia previa al psicólogo: {pac['asistencia_previa_psicologo'] or 'Sin registrar'}")
-    doc.add_paragraph(f"- Motivo de consulta actual: {pac['motivo_consulta'] or 'Sin registrar'}")
-    doc.add_paragraph(f"- Expectativas del proceso: {pac['expectativas'] or 'Sin registrar'}")
+    doc.add_paragraph(f"- Asistencia previa al psicólogo: {pac_dict['asistencia_previa_psicologo'] or 'Sin registrar'}")
+    doc.add_paragraph(f"- Motivo de consulta actual: {pac_dict['motivo_consulta'] or 'Sin registrar'}")
+    doc.add_paragraph(f"- Expectativas del proceso: {pac_dict['expectativas'] or 'Sin registrar'}")
     
     doc.add_paragraph().add_run("Tratamiento Farmacológico Activo:").bold = True
-    doc.add_paragraph(pac['farmacologia'] or "Ninguno")
+    doc.add_paragraph(pac_dict['farmacologia'] or "Ninguno")
     
     doc.add_paragraph().add_run("Contacto de Emergencia:").bold = True
-    doc.add_paragraph(f"{pac['contacto_emergencia_nombre'] or 'N/A'} ({pac['contacto_emergencia_parentesco'] or 'N/A'})")
+    doc.add_paragraph(f"{pac_dict['contacto_emergencia_nombre'] or 'N/A'} ({pac_dict['contacto_emergencia_parentesco'] or 'N/A'})")
     
     doc.add_paragraph().add_run("Impresión Diagnóstica Evolutiva:").bold = True
-    doc.add_paragraph(pac['diagnostico'] or "Sin impresión diagnóstica anotada.")
+    doc.add_paragraph(pac_dict['diagnostico'] or "Sin impresión diagnóstica anotada.")
     
     doc.add_page_break()
     
@@ -8041,18 +8060,24 @@ def export_word(patient_id):
         doc.add_paragraph("No hay sesiones de evolución registradas para este consultante.")
     else:
         for idx, s in enumerate(sessions, 1):
+            s_resumen = decrypt_clinical_text(s['resumen']) or "Sin resumen."
+            s_tareas = decrypt_clinical_text(s['tareas_asignadas']) or "Ninguna."
+            s_recursos = decrypt_clinical_text(s['recursos_entregados']) or "Ninguno."
+            s_anotaciones = decrypt_clinical_text(s['anotaciones_proxima']) or "Ninguna."
+            s_compromisos = decrypt_clinical_text(s['compromisos_psicologo']) or "Ninguno."
+            
             p_ses = doc.add_paragraph()
             p_ses.add_run(f"Sesión N° {idx} — Fecha: {s['fecha']} | Modalidad: {s['modalidad']}").bold = True
             doc.add_paragraph().add_run("Resumen abordado:").bold = True
-            doc.add_paragraph(s['resumen'] or "Sin resumen.")
+            doc.add_paragraph(s_resumen)
             doc.add_paragraph().add_run("Tareas asignadas al consultante:").bold = True
-            doc.add_paragraph(s['tareas_asignadas'] or "Ninguna.")
+            doc.add_paragraph(s_tareas)
             doc.add_paragraph().add_run("Recursos entregados:").bold = True
-            doc.add_paragraph(s['recursos_entregados'] or "Ninguno.")
+            doc.add_paragraph(s_recursos)
             doc.add_paragraph().add_run("Anotaciones próxima consulta:").bold = True
-            doc.add_paragraph(s['anotaciones_proxima'] or "Ninguna.")
+            doc.add_paragraph(s_anotaciones)
             doc.add_paragraph().add_run("Compromisos del psicólogo:").bold = True
-            doc.add_paragraph(s['compromisos_psicologo'] or "Ninguno.")
+            doc.add_paragraph(s_compromisos)
             doc.add_paragraph("____________________________________________________")
             
     doc.add_page_break()

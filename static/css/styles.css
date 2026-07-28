@@ -119,7 +119,15 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
     transition: all var(--transition-fast);
+}
+
+.btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--input-focus);
 }
 
 .btn-primary {
