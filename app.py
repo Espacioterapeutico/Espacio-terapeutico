@@ -324,551 +324,550 @@ def init_db():
         with open(SCHEMA_FILE, 'r', encoding='utf-8') as f:
             db.executescript(f.read())
         db.commit()
-    else:
-        # Migración automática de sesiones si la tabla existe
-        cursor.execute("PRAGMA table_info(sesiones)")
-        columns = [row[1] for row in cursor.fetchall()]
-        if columns:
-            if 'estado' not in columns:
-                cursor.execute("ALTER TABLE sesiones ADD COLUMN estado TEXT DEFAULT 'Realizada'")
-            if 'agenda_id' not in columns:
-                cursor.execute("ALTER TABLE sesiones ADD COLUMN agenda_id INTEGER")
-            if 'diagnostico' not in columns:
-                cursor.execute("ALTER TABLE sesiones ADD COLUMN diagnostico TEXT")
-            if 'test_aplicados' not in columns:
-                cursor.execute("ALTER TABLE sesiones ADD COLUMN test_aplicados TEXT")
-            if 'archivo_adjunto' not in columns:
-                cursor.execute("ALTER TABLE sesiones ADD COLUMN archivo_adjunto TEXT")
-            if 'resumen_paciente' not in columns:
-                cursor.execute("ALTER TABLE sesiones ADD COLUMN resumen_paciente TEXT")
-            db.commit()
-            
-        # Migración automática de usuarios (psicólogos)
-        cursor.execute("PRAGMA table_info(usuarios)")
-        cols_usr = [row[1] for row in cursor.fetchall()]
-        if cols_usr:
-            if 'nombres' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN nombres TEXT")
-            if 'apellidos' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN apellidos TEXT")
-            if 'estudios' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN estudios TEXT")
-            if 'federacion' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN federacion TEXT")
-            if 'foto_titulo' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN foto_titulo TEXT")
-            if 'foto_documento' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN foto_documento TEXT")
-            if 'activo' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN activo INTEGER DEFAULT 1")
-            if 'role' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN role TEXT DEFAULT 'psicologo'")
-            if 'metodos_pago' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN metodos_pago TEXT")
-            if 'disponibilidad_horarios' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN disponibilidad_horarios TEXT")
-            if 'configuracion_horarios_visual' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN configuracion_horarios_visual TEXT")
-            if 'bloqueo_registro' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_registro INTEGER DEFAULT 0")
-            if 'bloqueo_evoluciones' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_evoluciones INTEGER DEFAULT 0")
-            if 'bloqueo_finanzas' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_finanzas INTEGER DEFAULT 0")
-            if 'bloqueo_agenda' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_agenda INTEGER DEFAULT 0")
-            if 'bloqueo_mensajes' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_mensajes INTEGER DEFAULT 0")
-            if 'bloqueo_pizarra' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_pizarra INTEGER DEFAULT 0")
-            if 'bloqueo_herramientas' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 0")
-            if 'aviso_pago' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN aviso_pago INTEGER DEFAULT 0")
-            if 'terminos_condiciones' not in cols_usr:
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
-            db.commit()
-            
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS fcm_subscriptions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                patient_id INTEGER,
-                token TEXT UNIQUE
-            )
-        """)
+    # Migración automática de sesiones si la tabla existe
+    cursor.execute("PRAGMA table_info(sesiones)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if columns:
+        if 'estado' not in columns:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN estado TEXT DEFAULT 'Realizada'")
+        if 'agenda_id' not in columns:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN agenda_id INTEGER")
+        if 'diagnostico' not in columns:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN diagnostico TEXT")
+        if 'test_aplicados' not in columns:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN test_aplicados TEXT")
+        if 'archivo_adjunto' not in columns:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN archivo_adjunto TEXT")
+        if 'resumen_paciente' not in columns:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN resumen_paciente TEXT")
         db.commit()
-            
-        # Migración automática de usuarios (slug)
-        cursor.execute("PRAGMA table_info(usuarios)")
-        cols_usr = [row[1] for row in cursor.fetchall()]
-        if 'slug' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN slug TEXT")
-        try:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN primer_inicio INTEGER DEFAULT 1")
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN fecha_registro TEXT")
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN fecha_expiracion_prueba TEXT")
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN suscripcion_paga INTEGER DEFAULT 0")
-        except:
-            pass
+        
+    # Migración automática de usuarios (psicólogos)
+    cursor.execute("PRAGMA table_info(usuarios)")
+    cols_usr = [row[1] for row in cursor.fetchall()]
+    if cols_usr:
+        if 'nombres' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN nombres TEXT")
+        if 'apellidos' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN apellidos TEXT")
+        if 'estudios' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN estudios TEXT")
+        if 'federacion' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN federacion TEXT")
+        if 'foto_titulo' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN foto_titulo TEXT")
+        if 'foto_documento' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN foto_documento TEXT")
+        if 'activo' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN activo INTEGER DEFAULT 1")
+        if 'role' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN role TEXT DEFAULT 'psicologo'")
+        if 'metodos_pago' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN metodos_pago TEXT")
+        if 'disponibilidad_horarios' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN disponibilidad_horarios TEXT")
+        if 'configuracion_horarios_visual' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN configuracion_horarios_visual TEXT")
+        if 'bloqueo_registro' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_registro INTEGER DEFAULT 0")
+        if 'bloqueo_evoluciones' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_evoluciones INTEGER DEFAULT 0")
+        if 'bloqueo_finanzas' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_finanzas INTEGER DEFAULT 0")
+        if 'bloqueo_agenda' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_agenda INTEGER DEFAULT 0")
+        if 'bloqueo_mensajes' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_mensajes INTEGER DEFAULT 0")
+        if 'bloqueo_pizarra' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_pizarra INTEGER DEFAULT 0")
+        if 'bloqueo_herramientas' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 0")
+        if 'aviso_pago' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN aviso_pago INTEGER DEFAULT 0")
+        if 'terminos_condiciones' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
+        db.commit()
+        
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fcm_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            patient_id INTEGER,
+            token TEXT UNIQUE
+        )
+    """)
+    db.commit()
+        
+    # Migración automática de usuarios (slug)
+    cursor.execute("PRAGMA table_info(usuarios)")
+    cols_usr = [row[1] for row in cursor.fetchall()]
+    if 'slug' not in cols_usr:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN slug TEXT")
+    try:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN primer_inicio INTEGER DEFAULT 1")
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN fecha_registro TEXT")
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN fecha_expiracion_prueba TEXT")
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN suscripcion_paga INTEGER DEFAULT 0")
+    except:
+        pass
+    db.commit()
+
+    cursor.execute("SELECT id, nombres, apellidos, username FROM usuarios WHERE slug IS NULL OR slug = ''")
+    unslugged = cursor.fetchall()
+    for u_row in unslugged:
+        u_id = u_row[0]
+        u_nom = u_row[1] or ""
+        u_ape = u_row[2] or ""
+        u_user = u_row[3] or ""
+        raw_n = f"psic.{u_nom}{u_ape}".lower().replace(" ", "").replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
+        if not raw_n or raw_n == "psic.":
+            raw_n = f"psic.{u_user}".lower()
+        cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (raw_n, u_id))
+    db.commit()
+
+
+    # Migración automática de pacientes
+    cursor.execute("PRAGMA table_info(pacientes)")
+    cols_pac = [row[1] for row in cursor.fetchall()]
+    if cols_pac:
+        if 'telefono' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN telefono TEXT")
+        if 'email' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN email TEXT")
+        if 'username' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN username TEXT")
+        if 'password_hash' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN password_hash TEXT")
+        if 'pregunta_seguridad_1' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN pregunta_seguridad_1 TEXT")
+        if 'respuesta_seguridad_1_hash' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN respuesta_seguridad_1_hash TEXT")
+        if 'pregunta_seguridad_2' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN pregunta_seguridad_2 TEXT")
+        if 'respuesta_seguridad_2_hash' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN respuesta_seguridad_2_hash TEXT")
+        if 'psicologo_id' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN psicologo_id INTEGER")
+        if 'costo_personalizado' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN costo_personalizado REAL")
+        if 'moneda_personalizada' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN moneda_personalizada TEXT")
+        if 'costo_paquete_personalizado' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN costo_paquete_personalizado REAL")
+        if 'sesiones_paquete_personalizado' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN sesiones_paquete_personalizado INTEGER")
+        if 'pais' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN pais TEXT")
+        if 'ciudad' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN ciudad TEXT")
+        if 'terminos_aceptados' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN terminos_aceptados INTEGER DEFAULT 0")
+        if 'fecha_aceptacion_terminos' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN fecha_aceptacion_terminos TEXT")
+        
+        # Asegurar que todos los consultantes antiguos tengan terminos_aceptados = 0 y psicologo_id por defecto si son NULL
+        cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
+        cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
+        
+        # Normalizar fechas con barras en agenda_finanzas a formato ISO YYYY-MM-DD
+        cursor.execute("SELECT id, fecha FROM agenda_finanzas WHERE fecha LIKE '%/%'")
+        slash_rows = cursor.fetchall()
+        for r_slash in slash_rows:
+            norm_f = normalize_date_str(r_slash['fecha'])
+            cursor.execute("UPDATE agenda_finanzas SET fecha = ? WHERE id = ?", (norm_f, r_slash['id']))
         db.commit()
 
-        cursor.execute("SELECT id, nombres, apellidos, username FROM usuarios WHERE slug IS NULL OR slug = ''")
-        unslugged = cursor.fetchall()
-        for u_row in unslugged:
-            u_id = u_row[0]
-            u_nom = u_row[1] or ""
-            u_ape = u_row[2] or ""
-            u_user = u_row[3] or ""
-            raw_n = f"psic.{u_nom}{u_ape}".lower().replace(" ", "").replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
-            if not raw_n or raw_n == "psic.":
-                raw_n = f"psic.{u_user}".lower()
-            cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (raw_n, u_id))
+    # Migración automática de pizarra_terapeutica
+    cursor.execute("PRAGMA table_info(pizarra_terapeutica)")
+    cols_piz = [row[1] for row in cursor.fetchall()]
+    if cols_piz:
+        if 'estado_animo' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN estado_animo TEXT")
+        if 'comentario_animo' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
+        if 'emoji_animo' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
         db.commit()
-
-
-        # Migración automática de pacientes
-        cursor.execute("PRAGMA table_info(pacientes)")
-        cols_pac = [row[1] for row in cursor.fetchall()]
-        if cols_pac:
-            if 'telefono' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN telefono TEXT")
-            if 'email' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN email TEXT")
-            if 'username' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN username TEXT")
-            if 'password_hash' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN password_hash TEXT")
-            if 'pregunta_seguridad_1' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN pregunta_seguridad_1 TEXT")
-            if 'respuesta_seguridad_1_hash' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN respuesta_seguridad_1_hash TEXT")
-            if 'pregunta_seguridad_2' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN pregunta_seguridad_2 TEXT")
-            if 'respuesta_seguridad_2_hash' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN respuesta_seguridad_2_hash TEXT")
-            if 'psicologo_id' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN psicologo_id INTEGER")
-            if 'costo_personalizado' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN costo_personalizado REAL")
-            if 'moneda_personalizada' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN moneda_personalizada TEXT")
-            if 'costo_paquete_personalizado' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN costo_paquete_personalizado REAL")
-            if 'sesiones_paquete_personalizado' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN sesiones_paquete_personalizado INTEGER")
-            if 'pais' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN pais TEXT")
-            if 'ciudad' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN ciudad TEXT")
-            if 'terminos_aceptados' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN terminos_aceptados INTEGER DEFAULT 0")
-            if 'fecha_aceptacion_terminos' not in cols_pac:
-                cursor.execute("ALTER TABLE pacientes ADD COLUMN fecha_aceptacion_terminos TEXT")
-            
-            # Asegurar que todos los consultantes antiguos tengan terminos_aceptados = 0 y psicologo_id por defecto si son NULL
-            cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
-            cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
-            
-            # Normalizar fechas con barras en agenda_finanzas a formato ISO YYYY-MM-DD
-            cursor.execute("SELECT id, fecha FROM agenda_finanzas WHERE fecha LIKE '%/%'")
-            slash_rows = cursor.fetchall()
-            for r_slash in slash_rows:
-                norm_f = normalize_date_str(r_slash['fecha'])
-                cursor.execute("UPDATE agenda_finanzas SET fecha = ? WHERE id = ?", (norm_f, r_slash['id']))
-            db.commit()
-
-        # Migración automática de pizarra_terapeutica
-        cursor.execute("PRAGMA table_info(pizarra_terapeutica)")
-        cols_piz = [row[1] for row in cursor.fetchall()]
-        if cols_piz:
-            if 'estado_animo' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN estado_animo TEXT")
-            if 'comentario_animo' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
-            if 'emoji_animo' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
-            db.commit()
-            
-        # Migración automática de agenda_finanzas
-        cursor.execute("PRAGMA table_info(agenda_finanzas)")
-        cols_fin = [row[1] for row in cursor.fetchall()]
-        if cols_fin:
-            if 'cantidad_sesiones' not in cols_fin:
-                cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN cantidad_sesiones INTEGER DEFAULT 1")
-            if 'referencia' not in cols_fin:
-                cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN referencia TEXT")
-            if 'metodo_pago' not in cols_fin:
-                cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN metodo_pago TEXT")
-            if 'fecha_pago' not in cols_fin:
-                cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN fecha_pago TEXT")
-            if 'confirmada' not in cols_fin:
-                cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmada INTEGER DEFAULT 0")
-            db.commit()
-            
-        # Crear tabla de tarifas por país
+        
+    # Migración automática de agenda_finanzas
+    cursor.execute("PRAGMA table_info(agenda_finanzas)")
+    cols_fin = [row[1] for row in cursor.fetchall()]
+    if cols_fin:
+        if 'cantidad_sesiones' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN cantidad_sesiones INTEGER DEFAULT 1")
+        if 'referencia' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN referencia TEXT")
+        if 'metodo_pago' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN metodo_pago TEXT")
+        if 'fecha_pago' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN fecha_pago TEXT")
+        if 'confirmada' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmada INTEGER DEFAULT 0")
+        db.commit()
+        
+    # Crear tabla de tarifas por país
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tarifas_pais (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            psicologo_id INTEGER NOT NULL,
+            pais TEXT NOT NULL,
+            modalidad TEXT NOT NULL,
+            costo_individual REAL NOT NULL,
+            costo_paquete REAL,
+            sesiones_paquete INTEGER,
+            moneda TEXT NOT NULL,
+            FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            UNIQUE(psicologo_id, pais, modalidad)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS web_push_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            patient_id INTEGER,
+            endpoint TEXT UNIQUE,
+            p256dh TEXT,
+            auth TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    # Migración automática de citas (recordatorio_enviado_wa y confirmacion_enviada_wa)
+    cursor.execute("PRAGMA table_info(citas)")
+    cols_citas = [row[1] for row in cursor.fetchall()]
+    if cols_citas:
+        if 'recordatorio_enviado_wa' not in cols_citas:
+            cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+        if 'confirmacion_enviada_wa' not in cols_citas:
+            cursor.execute("ALTER TABLE citas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
+        db.commit()
+        
+    # Sincronización automática de sesiones huérfanas sin fila de finanzas
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sesiones'")
+    if cursor.fetchone():
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tarifas_pais (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                psicologo_id INTEGER NOT NULL,
-                pais TEXT NOT NULL,
-                modalidad TEXT NOT NULL,
-                costo_individual REAL NOT NULL,
-                costo_paquete REAL,
-                sesiones_paquete INTEGER,
-                moneda TEXT NOT NULL,
-                FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-                UNIQUE(psicologo_id, pais, modalidad)
-            )
+            SELECT s.id, s.paciente_id, s.fecha, s.modalidad, s.estado
+            FROM sesiones s
+            LEFT JOIN agenda_finanzas af ON s.agenda_id = af.id
+            WHERE s.agenda_id IS NULL OR af.id IS NULL
         """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS web_push_subscriptions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                patient_id INTEGER,
-                endpoint TEXT UNIQUE,
-                p256dh TEXT,
-                auth TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        # Migración automática de citas (recordatorio_enviado_wa y confirmacion_enviada_wa)
-        cursor.execute("PRAGMA table_info(citas)")
-        cols_citas = [row[1] for row in cursor.fetchall()]
-        if cols_citas:
-            if 'recordatorio_enviado_wa' not in cols_citas:
-                cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
-            if 'confirmacion_enviada_wa' not in cols_citas:
-                cursor.execute("ALTER TABLE citas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
-            db.commit()
-            
-        # Sincronización automática de sesiones huérfanas sin fila de finanzas
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sesiones'")
-        if cursor.fetchone():
-            cursor.execute("""
-                SELECT s.id, s.paciente_id, s.fecha, s.modalidad, s.estado
-                FROM sesiones s
-                LEFT JOIN agenda_finanzas af ON s.agenda_id = af.id
-                WHERE s.agenda_id IS NULL OR af.id IS NULL
-            """)
-            missing = cursor.fetchall()
-            if missing:
-                for row in missing:
-                    session_id = row[0]
-                    patient_id = row[1]
-                    fecha = row[2]
-                    modalidad = row[3]
-                    estado = row[4]
-                    
-                    estado_pago = 'Paga' if modalidad == 'Uptaeb' else 'Pendiente'
-                    metodo_pago = 'Exonerado' if modalidad == 'Uptaeb' else ''
-                    referencia = 'Exonerada / Registro histórico' if modalidad == 'Uptaeb' else ''
-                    
-                    cursor.execute("""
-                        INSERT INTO agenda_finanzas (
-                            paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
-                            control_uso, fecha_liquidacion, cantidad_sesiones, referencia, metodo_pago, fecha_pago
-                        ) VALUES (?, ?, '00:00', ?, 0.0, 'USD', ?, 'No consumida', ?, 1, ?, ?, ?)
-                    """, (patient_id, fecha, modalidad, estado_pago, fecha, referencia, metodo_pago, fecha))
-                    agenda_id = cursor.lastrowid
-                    cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (agenda_id, session_id))
-                db.commit()
+        missing = cursor.fetchall()
+        if missing:
+            for row in missing:
+                session_id = row[0]
+                patient_id = row[1]
+                fecha = row[2]
+                modalidad = row[3]
+                estado = row[4]
                 
-        # Inicializar disponibilidad horaria predeterminada si no existe
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'disponibilidad_horarios'")
-        if not cursor.fetchone():
-            default_avail = """[
-              {"dia": 1, "nombre": "Lunes", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
-              {"dia": 2, "nombre": "Martes", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
-              {"dia": 3, "nombre": "Miércoles", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
-              {"dia": 4, "nombre": "Jueves", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
-              {"dia": 5, "nombre": "Viernes", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
-              {"dia": 6, "nombre": "Sábado", "activo": false, "horas": []},
-              {"dia": 0, "nombre": "Domingo", "activo": false, "horas": []}
-            ]"""
-            cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('disponibilidad_horarios', ?)", (default_avail,))
-        # Asegurar existencia de la tabla pizarra_terapeutica
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS pizarra_terapeutica (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                fecha TEXT NOT NULL,
-                contenido TEXT NOT NULL,
-                archivo_adjunto TEXT,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
-            )
-        """)
-        cursor.execute("PRAGMA table_info(pizarra_terapeutica)")
-        cols_piz = [row[1] for row in cursor.fetchall()]
-        if cols_piz:
-            if 'archivo_adjunto' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN archivo_adjunto TEXT")
-            if 'estado_animo' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN estado_animo TEXT")
-            if 'comentario_animo' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
-            if 'emoji_animo' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
-            if 'respuesta_psicologo' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN respuesta_psicologo TEXT")
-            if 'fecha_respuesta' not in cols_piz:
-                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN fecha_respuesta TEXT")
-        db.commit()
-
-        # Tabla de Bloqueos de Agenda Específicos (Eventos Personales / Convocatorias)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS bloqueos_agenda_especificos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                psicologo_id INTEGER NOT NULL,
-                fecha TEXT NOT NULL,
-                hora_inicio TEXT,
-                hora_fin TEXT,
-                motivo TEXT,
-                todo_el_dia INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE
-            )
-        """)
-        db.commit()
-        # Asegurar existencia de la tabla notificaciones
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS notificaciones (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                tipo TEXT NOT NULL,
-                titulo TEXT NOT NULL,
-                mensaje TEXT NOT NULL,
-                fecha TEXT NOT NULL,
-                leida INTEGER DEFAULT 0,
-                link TEXT NOT NULL
-            )
-        """)
-        cursor.execute("PRAGMA table_info(notificaciones)")
-        cols_notif = [row[1] for row in cursor.fetchall()]
-        if 'user_id' not in cols_notif:
-            cursor.execute("ALTER TABLE notificaciones ADD COLUMN user_id INTEGER")
-        cursor.execute("UPDATE notificaciones SET user_id = 1 WHERE user_id IS NULL")
-        db.commit()
-        # Asegurar existencia de la tabla soporte
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS soporte (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                usuario_id INTEGER,
-                rol_remitente TEXT,
-                nombre_remitente TEXT,
-                email_remitente TEXT,
-                mensaje TEXT NOT NULL,
-                fecha TEXT NOT NULL,
-                leido INTEGER DEFAULT 0
-            )
-        """)
-        # Asegurar existencia de la tabla pagos_notificados
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS pagos_notificados (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                monto REAL NOT NULL,
-                moneda TEXT NOT NULL,
-                metodo TEXT NOT NULL,
-                referencia TEXT,
-                fecha TEXT NOT NULL,
-                estado TEXT DEFAULT 'Pendiente de verificación',
-                motivo_rechazo TEXT,
-                fecha_registro TEXT NOT NULL,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
-            )
-        """)
-        # Inicializar plantillas de mensaje si no existen
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_confirmacion'")
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO configuracion (clave, valor) VALUES ('msg_confirmacion', ?)",
-                           ("Hola {nombre}, espero te encuentres muy bien. Te escribo para confirmar nuestra próxima sesión el día {fecha} a las {hora} ({modalidad}).",))
-                           
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_recordatorio'")
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO configuracion (clave, valor) VALUES ('msg_recordatorio', ?)",
-                           ("Hola {nombre}, te recuerdo que hoy tenemos nuestra sesión programada a las {hora} ({modalidad}). ¡Te espero!",))
-                           
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cierre'")
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO configuracion (clave, valor) VALUES ('msg_cierre', ?)",
-                           ("Hola {nombre}, gracias por compartir el espacio terapéutico hoy. Recuerda realizar las tareas asignadas. Si deseas agendar o reprogramar tu próxima sesión, puedes hacerlo desde tu portal.",))
-        
-        # Asegurar existencia de la tabla historial_reprogramaciones
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS historial_reprogramaciones (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                agenda_id INTEGER,
-                fecha_anterior TEXT NOT NULL,
-                hora_anterior TEXT NOT NULL,
-                fecha_nueva TEXT NOT NULL,
-                hora_nueva TEXT NOT NULL,
-                modificado_por TEXT DEFAULT 'Paciente',
-                motivo TEXT,
-                fecha_registro TEXT NOT NULL,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
-            )
-        """)
-        
-        # Índices de aceleración para consultas financieras y de agenda
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_agenda_paciente_estado ON agenda_finanzas(paciente_id, estado_pago)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_agenda_fecha ON agenda_finanzas(fecha)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_agenda_fecha_liq ON agenda_finanzas(fecha_liquidacion)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sesiones_paciente ON sesiones(paciente_id, fecha)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_historial_reprog_paciente ON historial_reprogramaciones(paciente_id)")
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS web_push_subscriptions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                patient_id INTEGER,
-                endpoint TEXT NOT NULL,
-                p256dh TEXT NOT NULL,
-                auth TEXT NOT NULL
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS fcm_subscriptions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                patient_id INTEGER,
-                token TEXT UNIQUE
-            )
-        """)
-
-        # Pre-cargar configuracion por defecto de Firebase FCM
-        _def_cfg = json.dumps({
-            "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
-            "authDomain": "espacio-terapeutico.firebaseapp.com",
-            "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
-            "projectId": "espacio-terapeutico",
-            "storageBucket": "espacio-terapeutico.firebasestorage.app",
-            "messagingSenderId": "437385369836",
-            "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
-            "measurementId": "G-M04FWL2963"
-        })
-        _def_vapid = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc"
-        cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_config', ?)", (_def_cfg,))
-        cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_vapid_key', ?)", (_def_vapid,))
-
-        # Tablas para Módulos Terapéuticos Personalizados (Sueño, Ansiedad, Sobriedad)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS modulos_terapeuticos_paciente (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                modulo_clave TEXT NOT NULL,
-                activo INTEGER DEFAULT 1,
-                configuracion_json TEXT,
-                fecha_asignacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-                UNIQUE(paciente_id, modulo_clave)
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS registros_sueno (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                fecha TEXT NOT NULL,
-                situaciones_dia TEXT,
-                emociones_dia TEXT,
-                proceso_dormir TEXT,
-                hora_dormi TEXT,
-                desperto_noche INTEGER DEFAULT 0,
-                cant_despertares INTEGER DEFAULT 0,
-                hora_desperto TEXT,
-                senti_descanso INTEGER DEFAULT 1,
-                somnolencia_dia INTEGER DEFAULT 0,
-                pesadez_dia INTEGER DEFAULT 0,
-                agotamiento_dia INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-                UNIQUE(paciente_id, fecha)
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS registros_ansiedad (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                fecha TEXT NOT NULL,
-                nivel_ansiedad INTEGER NOT NULL,
-                sintomas_json TEXT,
-                situacion_desencadenante TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-                UNIQUE(paciente_id, fecha)
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS registros_sobriedad (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                fecha TEXT NOT NULL,
-                sobrio INTEGER NOT NULL,
-                nivel_ansiedad INTEGER,
-                disparador_emocional TEXT,
-                notas TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-                UNIQUE(paciente_id, fecha)
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS adherencia_medicamentos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                nombre_medicamento TEXT NOT NULL,
-                dosis TEXT,
-                hora_prescrita TEXT,
-                activo INTEGER DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS adherencia_registros (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                medicamento_id INTEGER NOT NULL,
-                fecha TEXT NOT NULL,
-                tomado INTEGER NOT NULL,
-                hora_tomado TEXT,
-                notas TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-                FOREIGN KEY (medicamento_id) REFERENCES adherencia_medicamentos(id) ON DELETE CASCADE,
-                UNIQUE(paciente_id, medicamento_id, fecha)
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS activacion_actividades (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                psicologo_id INTEGER,
-                categoria TEXT NOT NULL,
-                nombre_actividad TEXT NOT NULL,
-                activa INTEGER DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS activacion_registros (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                paciente_id INTEGER NOT NULL,
-                actividad_id INTEGER NOT NULL,
-                fecha TEXT NOT NULL,
-                completada INTEGER NOT NULL,
-                notas TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-                FOREIGN KEY (actividad_id) REFERENCES activacion_actividades(id) ON DELETE CASCADE,
-                UNIQUE(paciente_id, actividad_id, fecha)
-            )
-        """)
-
-        db.commit()
+                estado_pago = 'Paga' if modalidad == 'Uptaeb' else 'Pendiente'
+                metodo_pago = 'Exonerado' if modalidad == 'Uptaeb' else ''
+                referencia = 'Exonerada / Registro histórico' if modalidad == 'Uptaeb' else ''
+                
+                cursor.execute("""
+                    INSERT INTO agenda_finanzas (
+                        paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
+                        control_uso, fecha_liquidacion, cantidad_sesiones, referencia, metodo_pago, fecha_pago
+                    ) VALUES (?, ?, '00:00', ?, 0.0, 'USD', ?, 'No consumida', ?, 1, ?, ?, ?)
+                """, (patient_id, fecha, modalidad, estado_pago, fecha, referencia, metodo_pago, fecha))
+                agenda_id = cursor.lastrowid
+                cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (agenda_id, session_id))
+            db.commit()
             
+    # Inicializar disponibilidad horaria predeterminada si no existe
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'disponibilidad_horarios'")
+    if not cursor.fetchone():
+        default_avail = """[
+          {"dia": 1, "nombre": "Lunes", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
+          {"dia": 2, "nombre": "Martes", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
+          {"dia": 3, "nombre": "Miércoles", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
+          {"dia": 4, "nombre": "Jueves", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
+          {"dia": 5, "nombre": "Viernes", "activo": true, "horas": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]},
+          {"dia": 6, "nombre": "Sábado", "activo": false, "horas": []},
+          {"dia": 0, "nombre": "Domingo", "activo": false, "horas": []}
+        ]"""
+        cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('disponibilidad_horarios', ?)", (default_avail,))
+    # Asegurar existencia de la tabla pizarra_terapeutica
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pizarra_terapeutica (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            contenido TEXT NOT NULL,
+            archivo_adjunto TEXT,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("PRAGMA table_info(pizarra_terapeutica)")
+    cols_piz = [row[1] for row in cursor.fetchall()]
+    if cols_piz:
+        if 'archivo_adjunto' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN archivo_adjunto TEXT")
+        if 'estado_animo' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN estado_animo TEXT")
+        if 'comentario_animo' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
+        if 'emoji_animo' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
+        if 'respuesta_psicologo' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN respuesta_psicologo TEXT")
+        if 'fecha_respuesta' not in cols_piz:
+            cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN fecha_respuesta TEXT")
+    db.commit()
+
+    # Tabla de Bloqueos de Agenda Específicos (Eventos Personales / Convocatorias)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bloqueos_agenda_especificos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            psicologo_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            hora_inicio TEXT,
+            hora_fin TEXT,
+            motivo TEXT,
+            todo_el_dia INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+    """)
+    db.commit()
+    # Asegurar existencia de la tabla notificaciones
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notificaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            tipo TEXT NOT NULL,
+            titulo TEXT NOT NULL,
+            mensaje TEXT NOT NULL,
+            fecha TEXT NOT NULL,
+            leida INTEGER DEFAULT 0,
+            link TEXT NOT NULL
+        )
+    """)
+    cursor.execute("PRAGMA table_info(notificaciones)")
+    cols_notif = [row[1] for row in cursor.fetchall()]
+    if 'user_id' not in cols_notif:
+        cursor.execute("ALTER TABLE notificaciones ADD COLUMN user_id INTEGER")
+    cursor.execute("UPDATE notificaciones SET user_id = 1 WHERE user_id IS NULL")
+    db.commit()
+    # Asegurar existencia de la tabla soporte
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS soporte (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER,
+            rol_remitente TEXT,
+            nombre_remitente TEXT,
+            email_remitente TEXT,
+            mensaje TEXT NOT NULL,
+            fecha TEXT NOT NULL,
+            leido INTEGER DEFAULT 0
+        )
+    """)
+    # Asegurar existencia de la tabla pagos_notificados
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pagos_notificados (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            monto REAL NOT NULL,
+            moneda TEXT NOT NULL,
+            metodo TEXT NOT NULL,
+            referencia TEXT,
+            fecha TEXT NOT NULL,
+            estado TEXT DEFAULT 'Pendiente de verificación',
+            motivo_rechazo TEXT,
+            fecha_registro TEXT NOT NULL,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
+    # Inicializar plantillas de mensaje si no existen
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_confirmacion'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO configuracion (clave, valor) VALUES ('msg_confirmacion', ?)",
+                       ("Hola {nombre}, espero te encuentres muy bien. Te escribo para confirmar nuestra próxima sesión el día {fecha} a las {hora} ({modalidad}).",))
+                       
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_recordatorio'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO configuracion (clave, valor) VALUES ('msg_recordatorio', ?)",
+                       ("Hola {nombre}, te recuerdo que hoy tenemos nuestra sesión programada a las {hora} ({modalidad}). ¡Te espero!",))
+                       
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cierre'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO configuracion (clave, valor) VALUES ('msg_cierre', ?)",
+                       ("Hola {nombre}, gracias por compartir el espacio terapéutico hoy. Recuerda realizar las tareas asignadas. Si deseas agendar o reprogramar tu próxima sesión, puedes hacerlo desde tu portal.",))
+    
+    # Asegurar existencia de la tabla historial_reprogramaciones
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS historial_reprogramaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            agenda_id INTEGER,
+            fecha_anterior TEXT NOT NULL,
+            hora_anterior TEXT NOT NULL,
+            fecha_nueva TEXT NOT NULL,
+            hora_nueva TEXT NOT NULL,
+            modificado_por TEXT DEFAULT 'Paciente',
+            motivo TEXT,
+            fecha_registro TEXT NOT NULL,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
+    
+    # Índices de aceleración para consultas financieras y de agenda
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_agenda_paciente_estado ON agenda_finanzas(paciente_id, estado_pago)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_agenda_fecha ON agenda_finanzas(fecha)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_agenda_fecha_liq ON agenda_finanzas(fecha_liquidacion)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sesiones_paciente ON sesiones(paciente_id, fecha)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_historial_reprog_paciente ON historial_reprogramaciones(paciente_id)")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS web_push_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            patient_id INTEGER,
+            endpoint TEXT NOT NULL,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fcm_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            patient_id INTEGER,
+            token TEXT UNIQUE
+        )
+    """)
+
+    # Pre-cargar configuracion por defecto de Firebase FCM
+    _def_cfg = json.dumps({
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
+        "authDomain": "espacio-terapeutico.firebaseapp.com",
+        "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
+        "projectId": "espacio-terapeutico",
+        "storageBucket": "espacio-terapeutico.firebasestorage.app",
+        "messagingSenderId": "437385369836",
+        "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
+        "measurementId": "G-M04FWL2963"
+    })
+    _def_vapid = "BIexDrYPs7iSYmxpkfgQwzatXm_o5pRa1ZAZUvzeF40nAc8N61RFlHqlZ153VNamBelgsKhB4nnowPJm_7Y-Qjc"
+    cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_config', ?)", (_def_cfg,))
+    cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_vapid_key', ?)", (_def_vapid,))
+
+    # Tablas para Módulos Terapéuticos Personalizados (Sueño, Ansiedad, Sobriedad)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS modulos_terapeuticos_paciente (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            modulo_clave TEXT NOT NULL,
+            activo INTEGER DEFAULT 1,
+            configuracion_json TEXT,
+            fecha_asignacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+            UNIQUE(paciente_id, modulo_clave)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registros_sueno (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            situaciones_dia TEXT,
+            emociones_dia TEXT,
+            proceso_dormir TEXT,
+            hora_dormi TEXT,
+            desperto_noche INTEGER DEFAULT 0,
+            cant_despertares INTEGER DEFAULT 0,
+            hora_desperto TEXT,
+            senti_descanso INTEGER DEFAULT 1,
+            somnolencia_dia INTEGER DEFAULT 0,
+            pesadez_dia INTEGER DEFAULT 0,
+            agotamiento_dia INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+            UNIQUE(paciente_id, fecha)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registros_ansiedad (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            nivel_ansiedad INTEGER NOT NULL,
+            sintomas_json TEXT,
+            situacion_desencadenante TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+            UNIQUE(paciente_id, fecha)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registros_sobriedad (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            sobrio INTEGER NOT NULL,
+            nivel_ansiedad INTEGER,
+            disparador_emocional TEXT,
+            notas TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+            UNIQUE(paciente_id, fecha)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS adherencia_medicamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            nombre_medicamento TEXT NOT NULL,
+            dosis TEXT,
+            hora_prescrita TEXT,
+            activo INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS adherencia_registros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            medicamento_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            tomado INTEGER NOT NULL,
+            hora_tomado TEXT,
+            notas TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+            FOREIGN KEY (medicamento_id) REFERENCES adherencia_medicamentos(id) ON DELETE CASCADE,
+            UNIQUE(paciente_id, medicamento_id, fecha)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS activacion_actividades (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            psicologo_id INTEGER,
+            categoria TEXT NOT NULL,
+            nombre_actividad TEXT NOT NULL,
+            activa INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS activacion_registros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            actividad_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            completada INTEGER NOT NULL,
+            notas TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+            FOREIGN KEY (actividad_id) REFERENCES activacion_actividades(id) ON DELETE CASCADE,
+            UNIQUE(paciente_id, actividad_id, fecha)
+        )
+    """)
+
+    db.commit()
+        
     db.close()
 
 # Auto-inicializar base de datos al arrancar el módulo (para WSGI)
@@ -3742,6 +3741,10 @@ def _ensure_pizarra_columns(cursor):
                 cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN comentario_animo TEXT")
             if 'emoji_animo' not in cols:
                 cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN emoji_animo TEXT")
+            if 'respuesta_psicologo' not in cols:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN respuesta_psicologo TEXT")
+            if 'fecha_respuesta' not in cols:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN fecha_respuesta TEXT")
     except Exception as _e:
         print("Error al asegurar columnas de pizarra:", _e)
 
@@ -3825,7 +3828,7 @@ def patient_pizarra():
     elif request.method == 'GET':
         try:
             cursor.execute("""
-                SELECT fecha, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo FROM pizarra_terapeutica
+                SELECT id, fecha, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo, respuesta_psicologo, fecha_respuesta FROM pizarra_terapeutica
                 WHERE paciente_id = ?
                 ORDER BY fecha DESC
             """, (patient_id,))
@@ -3834,12 +3837,15 @@ def patient_pizarra():
             for r in rows:
                 r_keys = r.keys() if hasattr(r, 'keys') else []
                 updates.append({
+                    'id': r['id'],
                     'fecha': r['fecha'],
                     'contenido': r['contenido'],
                     'archivo_adjunto': r['archivo_adjunto'] if 'archivo_adjunto' in r_keys else None,
                     'estado_animo': r['estado_animo'] if 'estado_animo' in r_keys else None,
                     'comentario_animo': r['comentario_animo'] if 'comentario_animo' in r_keys else None,
-                    'emoji_animo': r['emoji_animo'] if 'emoji_animo' in r_keys else None
+                    'emoji_animo': r['emoji_animo'] if 'emoji_animo' in r_keys else None,
+                    'respuesta_psicologo': r['respuesta_psicologo'] if 'respuesta_psicologo' in r_keys else None,
+                    'fecha_respuesta': r['fecha_respuesta'] if 'fecha_respuesta' in r_keys else None
                 })
             return jsonify({'updates': updates})
         except Exception as e:
@@ -4421,13 +4427,14 @@ def admin_pizarra():
     patient_id = request.args.get('patient_id')
     db = get_db()
     cursor = db.cursor()
+    _ensure_pizarra_columns(cursor)
     psic_id = get_psicologo_id_filter()
     
     try:
         if patient_id:
             if psic_id is not None:
                 cursor.execute("""
-                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
+                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, p.estado_animo, p.comentario_animo, p.emoji_animo, p.respuesta_psicologo, p.fecha_respuesta, pac.nombres, pac.apellidos
                     FROM pizarra_terapeutica p
                     JOIN pacientes pac ON p.paciente_id = pac.id
                     WHERE p.paciente_id = ? AND pac.psicologo_id = ?
@@ -4435,7 +4442,7 @@ def admin_pizarra():
                 """, (patient_id, psic_id))
             else:
                 cursor.execute("""
-                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
+                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, p.estado_animo, p.comentario_animo, p.emoji_animo, p.respuesta_psicologo, p.fecha_respuesta, pac.nombres, pac.apellidos
                     FROM pizarra_terapeutica p
                     JOIN pacientes pac ON p.paciente_id = pac.id
                     WHERE p.paciente_id = ?
@@ -4444,7 +4451,7 @@ def admin_pizarra():
         else:
             if psic_id is not None:
                 cursor.execute("""
-                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
+                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, p.estado_animo, p.comentario_animo, p.emoji_animo, p.respuesta_psicologo, p.fecha_respuesta, pac.nombres, pac.apellidos
                     FROM pizarra_terapeutica p
                     JOIN pacientes pac ON p.paciente_id = pac.id
                     WHERE pac.psicologo_id = ?
@@ -4452,25 +4459,71 @@ def admin_pizarra():
                 """, (psic_id,))
             else:
                 cursor.execute("""
-                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, pac.nombres, pac.apellidos
+                    SELECT p.id, p.paciente_id, p.fecha, p.contenido, p.archivo_adjunto, p.estado_animo, p.comentario_animo, p.emoji_animo, p.respuesta_psicologo, p.fecha_respuesta, pac.nombres, pac.apellidos
                     FROM pizarra_terapeutica p
                     JOIN pacientes pac ON p.paciente_id = pac.id
                     ORDER BY p.fecha DESC
                 """)
             
         rows = cursor.fetchall()
-        updates = [{
-            'id': r['id'],
-            'paciente_id': r['paciente_id'],
-            'fecha': r['fecha'],
-            'contenido': r['contenido'],
-            'archivo_adjunto': r['archivo_adjunto'],
-            'paciente_nombre': f"{r['nombres']} {r['apellidos']}"
-        } for r in rows]
+        updates = []
+        for r in rows:
+            r_keys = r.keys() if hasattr(r, 'keys') else []
+            updates.append({
+                'id': r['id'],
+                'paciente_id': r['paciente_id'],
+                'fecha': r['fecha'],
+                'contenido': r['contenido'],
+                'archivo_adjunto': r['archivo_adjunto'] if 'archivo_adjunto' in r_keys else None,
+                'estado_animo': r['estado_animo'] if 'estado_animo' in r_keys else None,
+                'comentario_animo': r['comentario_animo'] if 'comentario_animo' in r_keys else None,
+                'emoji_animo': r['emoji_animo'] if 'emoji_animo' in r_keys else None,
+                'respuesta_psicologo': r['respuesta_psicologo'] if 'respuesta_psicologo' in r_keys else None,
+                'fecha_respuesta': r['fecha_respuesta'] if 'fecha_respuesta' in r_keys else None,
+                'paciente_nombre': f"{r['nombres']} {r['apellidos']}"
+            })
         
         return jsonify({'updates': updates})
     except Exception as e:
         return jsonify({'error': f'Error al obtener pizarra para el administrador: {str(e)}'}), 500
+
+@app.route('/api/admin/pizarra/reply', methods=['POST'])
+@login_required
+def admin_pizarra_reply():
+    data = request.json or {}
+    update_id = data.get('update_id')
+    respuesta = data.get('respuesta', '').strip()
+    
+    if not update_id or not respuesta:
+        return jsonify({'error': 'Faltan parámetros requeridos (update_id, respuesta).'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    _ensure_pizarra_columns(cursor)
+    
+    from datetime import datetime
+    fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    try:
+        cursor.execute("""
+            UPDATE pizarra_terapeutica
+            SET respuesta_psicologo = ?, fecha_respuesta = ?
+            WHERE id = ?
+        """, (respuesta, fecha_actual, update_id))
+        
+        cursor.execute("SELECT paciente_id FROM pizarra_terapeutica WHERE id = ?", (update_id,))
+        row = cursor.fetchone()
+        if row:
+            patient_id = row['paciente_id']
+            cursor.execute("""
+                INSERT INTO notificaciones (patient_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, ?, ?, ?, ?, 0, ?)
+            """, (patient_id, 'pizarra', '💬 Tu Psicólogo/a respondió en tu Pizarra Terapéutica', f'Tu psicólogo/a ha respondido a tu apunte: "{respuesta[:60]}..."', fecha_actual, 'pizarra-terapeutica'))
+            
+        db.commit()
+        return jsonify({'success': 'Respuesta registrada con éxito.', 'fecha_respuesta': fecha_actual, 'respuesta_psicologo': respuesta})
+    except Exception as e:
+        return jsonify({'error': f'Error al guardar respuesta: {str(e)}'}), 500
 
 @app.route('/api/admin/notifications', methods=['GET'])
 @login_required

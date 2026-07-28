@@ -1952,6 +1952,17 @@ async function loadPizarraHistory() {
                 content.textContent = upd.contenido;
                 
                 card.appendChild(meta);
+                if (upd.estado_animo || upd.emoji_animo) {
+                    const animoDiv = document.createElement('div');
+                    animoDiv.style.fontSize = '0.85rem';
+                    animoDiv.style.color = 'var(--text-muted)';
+                    animoDiv.style.display = 'flex';
+                    animoDiv.style.alignItems = 'center';
+                    animoDiv.style.gap = '0.35rem';
+                    animoDiv.innerHTML = `<span style="font-size: 1.1rem;">${upd.emoji_animo || '😊'}</span> <span>Estado de ánimo: <strong>${upd.estado_animo || ''}</strong></span>${upd.comentario_animo ? ` <span style="font-style:italic;">("${upd.comentario_animo}")</span>` : ''}`;
+                    card.appendChild(animoDiv);
+                }
+
                 if (upd.contenido) {
                     card.appendChild(content);
                 }
@@ -1982,6 +1993,19 @@ async function loadPizarraHistory() {
                         `;
                     }
                     card.appendChild(fileDiv);
+                }
+
+                if (upd.respuesta_psicologo) {
+                    const respDiv = document.createElement('div');
+                    respDiv.className = 'pizarra-reply-therapist';
+                    respDiv.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                            <strong style="font-size:0.83rem; color:var(--primary-color); font-weight:700;">💬 Respuesta de tu psicólogo/a:</strong>
+                            <span style="font-size:0.72rem; color:var(--text-muted);">${upd.fecha_respuesta || ''}</span>
+                        </div>
+                        <div style="font-size:0.88rem; color:var(--text-dark); line-height:1.45;">${upd.respuesta_psicologo}</div>
+                    `;
+                    card.appendChild(respDiv);
                 }
                 
                 historyList.appendChild(card);
@@ -2251,6 +2275,17 @@ async function loadPizarraVisual() {
                 body.textContent = upd.contenido;
                 
                 card.appendChild(header);
+                if (upd.estado_animo || upd.emoji_animo) {
+                    const animoDiv = document.createElement('div');
+                    animoDiv.style.marginBottom = '0.5rem';
+                    animoDiv.style.fontSize = '0.85rem';
+                    animoDiv.style.color = 'var(--text-muted)';
+                    animoDiv.style.display = 'flex';
+                    animoDiv.style.alignItems = 'center';
+                    animoDiv.style.gap = '0.35rem';
+                    animoDiv.innerHTML = `<span style="font-size: 1.1rem;">${upd.emoji_animo || '😊'}</span> <span>Estado de ánimo: <strong>${upd.estado_animo || ''}</strong></span>${upd.comentario_animo ? ` <span style="font-style:italic;">("${upd.comentario_animo}")</span>` : ''}`;
+                    card.appendChild(animoDiv);
+                }
                 if (upd.contenido) {
                     card.appendChild(body);
                 }
@@ -2281,6 +2316,23 @@ async function loadPizarraVisual() {
                     }
                     card.appendChild(fileDiv);
                 }
+
+                if (upd.respuesta_psicologo) {
+                    const respDiv = document.createElement('div');
+                    respDiv.style.marginTop = '0.75rem';
+                    respDiv.style.padding = '0.65rem 0.85rem';
+                    respDiv.style.borderRadius = 'var(--radius-sm)';
+                    respDiv.style.backgroundColor = 'rgba(126, 34, 206, 0.06)';
+                    respDiv.style.borderLeft = '3px solid var(--primary-color)';
+                    respDiv.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                            <strong style="font-size:0.82rem; color:var(--primary-color);">💬 Tu Respuesta:</strong>
+                            <span style="font-size:0.72rem; color:var(--text-muted);">${upd.fecha_respuesta || ''}</span>
+                        </div>
+                        <div style="font-size:0.85rem; color:var(--text-dark); line-height:1.4;">${upd.respuesta_psicologo}</div>
+                    `;
+                    card.appendChild(respDiv);
+                }
                 
                 // Formulario de respuesta del terapeuta
                 const replyContainer = document.createElement('div');
@@ -2290,8 +2342,8 @@ async function loadPizarraVisual() {
                 
                 replyContainer.innerHTML = `
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <input type="text" placeholder="Escribe un comentario o respuesta..." style="flex: 1; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.8rem; background-color: var(--card-bg);" id="reply-input-${upd.id}">
-                        <button type="button" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: var(--radius-sm);" onclick="submitPizarraReply(${upd.paciente_id}, ${upd.id})">Enviar</button>
+                        <input type="text" placeholder="${upd.respuesta_psicologo ? 'Enviar nueva respuesta...' : 'Escribe un comentario o respuesta...'}" style="flex: 1; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.8rem; background-color: var(--card-bg);" id="reply-input-${upd.id}">
+                        <button type="button" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: var(--radius-sm);" onclick="submitPizarraReply(${upd.paciente_id}, ${upd.id})">${upd.respuesta_psicologo ? 'Actualizar' : 'Enviar'}</button>
                     </div>
                 `;
                 card.appendChild(replyContainer);
@@ -4027,12 +4079,12 @@ async function renderFullCalendar() {
         // Mapear eventos personales / bloqueos de agenda
         const blockEvents = blocksList.map(b => {
             const startStr = b.todo_el_dia ? `${b.fecha}` : `${b.fecha}T${(b.hora_inicio || '08:00').substring(0, 5)}:00`;
-            const endStr = b.todo_el_dia ? `${b.fecha}` : `${b.fecha}T${(b.hora_fin || '18:00').substring(0, 5)}:00`;
+            const endStr = b.todo_el_dia ? undefined : `${b.fecha}T${(b.hora_fin || '18:00').substring(0, 5)}:00`;
             return {
                 id: `block_${b.id}`,
                 title: `🔒 Bloqueo: ${b.motivo}`,
                 start: startStr,
-                end: endStr,
+                ...(endStr ? { end: endStr } : {}),
                 allDay: b.todo_el_dia === 1,
                 backgroundColor: '#f59e0b',
                 borderColor: '#d97706',
@@ -5472,7 +5524,9 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('hide');
+        modal.style.removeProperty('display');
         modal.style.display = 'none';
+        document.body.style.overflow = '';
     }
 }
 window.closeModal = closeModal;
@@ -6644,29 +6698,42 @@ async function submitPizarraReply(patientId, updateId) {
     if (!comment) return;
     
     try {
-        const payload = {
-            tipo: "pizarra",
-            titulo: "Comentario en Pizarra",
-            mensaje: `Tu terapeuta comentó en tu pizarra: "${comment}"`,
-            fecha: new Date().toISOString(),
-            leida: false
-        };
-        
-        const res = await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`, {
+        const res = await fetch('/api/admin/pizarra/reply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ update_id: updateId, respuesta: comment })
         });
+        const data = await res.json();
         
-        if (res.ok) {
-            alert('Comentario enviado al paciente con éxito.');
+        if (res.ok && !data.error) {
+            // Notificar también vía Firebase RTDB si está configurado
+            try {
+                await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tipo: "pizarra",
+                        titulo: "Comentario en Pizarra",
+                        mensaje: `Tu terapeuta comentó en tu pizarra: "${comment}"`,
+                        fecha: new Date().toISOString(),
+                        leida: false
+                    })
+                });
+            } catch (fbErr) {
+                console.warn("Aviso: Notificación Firebase RTDB no enviada:", fbErr);
+            }
+
+            alert('Respuesta enviada y registrada con éxito.');
             input.value = '';
+            if (typeof loadPizarraVisual === 'function') {
+                loadPizarraVisual();
+            }
         } else {
-            alert('Error al enviar el comentario.');
+            alert(data.error || 'Error al enviar el comentario.');
         }
     } catch (err) {
         console.error("Error al enviar comentario de pizarra:", err);
-        alert('Error de conexión.');
+        alert('Error de conexión al enviar respuesta.');
     }
 }
 
@@ -10689,6 +10756,7 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
 
 async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatientId) {
     console.log('[DEBUG] openTherapistModuleReport called with:', moduloClave, moduloNombre, targetPatientId);
+    openModal('therapist-tool-report-modal');
     const namesMap = {
         'sueno': 'Higiene del Sueño',
         'ansiedad': 'Diario de Ansiedad',
@@ -10711,10 +10779,6 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
         modalEl.style.setProperty('display', 'flex', 'important');
         document.body.style.overflow = 'hidden';
         console.log('[DEBUG] Modal opened successfully, display:', getComputedStyle(modalEl).display, 'classes:', modalEl.className);
-    } else {
-        console.error('[DEBUG] Modal element therapist-tool-report-modal NOT FOUND in DOM!');
-        alert('Error: No se encontró el modal de reportes. Recarga la página.');
-        return;
     }
 
     try {

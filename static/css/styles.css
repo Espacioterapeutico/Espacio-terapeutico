@@ -1994,3 +1994,33 @@ body.is-patient .main-content {
     color: #ffffff !important;
     border: 1.5px solid #047857 !important;
 }
+
+/* ── Pizarra Terapéutica Estilos de Conversación / Hilo de Mensajes ── */
+.pizarra-chat-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pizarra-msg-patient {
+    background-color: var(--card-bg);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pizarra-msg-patient:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.pizarra-reply-therapist {
+    background-color: rgba(126, 34, 206, 0.06);
+    border-left: 4px solid var(--primary-color);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    margin-top: 0.65rem;
+    animation: fadeIn 0.3s ease;
+}
+
