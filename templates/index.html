@@ -1371,69 +1371,10 @@
                         </div>
                     </div>
 
-                    <!-- CATÁLOGO DE HERRAMIENTAS Y BOTÓN DE REPORTES -->
-                    <h3 class="mb-3" style="font-family: var(--font-title); color: var(--text-dark);">Catálogo de Módulos Disponible</h3>
-                    <div id="tt-modules-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
-                        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                                    <span style="font-size: 2.2rem; line-height: 1;">🌙</span>
-                                </div>
-                                <h4 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark);">Registro de Higiene del Sueño</h4>
-                                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">Cuestionario de 8 ítems diarios para seguimiento del descanso, despertares nocturnos y síntomas de agotamiento.</p>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <button type="button" class="btn btn-primary btn-sm btn-tool-report" data-tool="sueno" style="flex: 1; font-weight: 600;">📊 Ver Registro de Sueño</button>
-                            </div>
-                        </div>
-                        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                                    <span style="font-size: 2.2rem; line-height: 1;">⚡</span>
-                                </div>
-                                <h4 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark);">Diario de Ansiedad &amp; Síntomas</h4>
-                                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">Registro en calendario con escala 1-10 y checklist de 11 síntomas físicos y cognitivos.</p>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <button type="button" class="btn btn-primary btn-sm btn-tool-report" data-tool="ansiedad" style="flex: 1; font-weight: 600;">📊 Ver Registro de Ansiedad</button>
-                            </div>
-                        </div>
-                        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                                    <span style="font-size: 2.2rem; line-height: 1;">🏅</span>
-                                </div>
-                                <h4 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark);">Registro de Consumo</h4>
-                                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">Tracker de seguimiento con contador de días consecutivos sin consumo, medalla de logro y registro de eventos.</p>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <button type="button" class="btn btn-primary btn-sm btn-tool-report" data-tool="consumo" style="flex: 1; font-weight: 600;">📊 Ver Registro de Consumo</button>
-                            </div>
-                        </div>
-                        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                                    <span style="font-size: 2.2rem; line-height: 1;">💊</span>
-                                </div>
-                                <h4 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark);">Adherencia al Tratamiento (Medicación)</h4>
-                                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">Seguimiento de dosis y horarios de medicamentos prescritos con checklist y calendario diario.</p>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <button type="button" class="btn btn-primary btn-sm btn-tool-report" data-tool="medicacion" style="flex: 1; font-weight: 600;">📊 Ver Registro de Tratamiento</button>
-                            </div>
-                        </div>
-                        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                                    <span style="font-size: 2.2rem; line-height: 1;">🏃‍♂️</span>
-                                </div>
-                                <h4 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark);">Activación Conductual</h4>
-                                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">Checklist diario de actividades Necesarias, de Disfrute/Placer y Cotidianas/Rutina asignadas por el psicólogo.</p>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <button type="button" class="btn btn-primary btn-sm btn-tool-report" data-tool="activacion" style="flex: 1; font-weight: 600;">📊 Ver Registro de Activación Conductual</button>
-                            </div>
-                        </div>
+                    <!-- CATÁLOGO DE HERRAMIENTAS - VISTA ACORDEÓN POR MÓDULO -->
+                    <h3 class="mb-3" style="font-family: var(--font-title); color: var(--text-dark);">Catálogo de Módulos &amp; Consultantes Activos</h3>
+                    <div id="tt-modules-accordion" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <p class="text-muted">Cargando catálogo de herramientas...</p>
                     </div>
                 </section>
 

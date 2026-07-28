@@ -9117,56 +9117,157 @@ def get_therapist_modules_catalog():
     db = get_db()
     cursor = db.cursor()
     
-    try:
-        cursor.execute("""
-            SELECT mt.modulo_clave, COUNT(mt.paciente_id) as total_activos
-            FROM modulos_terapeuticos_paciente mt
-            JOIN pacientes p ON mt.paciente_id = p.id
-            WHERE p.psicologo_id = ? AND mt.activo = 1
-            GROUP BY mt.modulo_clave
-        """, (user_id,))
-        counts = {r['modulo_clave']: r['total_activos'] for r in cursor.fetchall()}
-    except Exception as e:
-        print(f"[WARN] Error loading module counts: {e}")
-        counts = {}
-    
-    catalog = [
+    modules_info = [
         {
             'clave': 'sueno',
             'nombre': 'Registro de Higiene del Sueño',
             'descripcion': 'Cuestionario de 8 ítems diarios para seguimiento del descanso, despertares nocturnos y síntomas de agotamiento.',
-            'icono': '🌙',
-            'activos': counts.get('sueno', 0)
+            'icono': '🌙'
         },
         {
             'clave': 'ansiedad',
             'nombre': 'Diario de Ansiedad & Síntomas',
             'descripcion': 'Registro en calendario con escala 1-10 y checklist de 11 síntomas físicos y cognitivos.',
-            'icono': '⚡',
-            'activos': counts.get('ansiedad', 0)
+            'icono': '⚡'
         },
         {
             'clave': 'sobriedad',
             'nombre': 'Registro de Consumo',
             'descripcion': 'Tracker de seguimiento con contador de días consecutivos sin consumo, medalla de logro y registro de eventos.',
-            'icono': '🏅',
-            'activos': counts.get('sobriedad', 0)
+            'icono': '🏅'
         },
         {
             'clave': 'adherencia',
             'nombre': 'Adherencia al Tratamiento (Medicación)',
             'descripcion': 'Seguimiento de dosis y horarios de medicamentos prescritos con checklist y calendario diario.',
-            'icono': '💊',
-            'activos': counts.get('adherencia', 0)
+            'icono': '💊'
         },
         {
             'clave': 'activacion',
             'nombre': 'Activación Conductual',
             'descripcion': 'Checklist diario de actividades Necesarias, de Disfrute/Placer y Cotidianas/Rutina asignadas por el psicólogo.',
-            'icono': '🏃‍♂️',
-            'activos': counts.get('activacion', 0)
+            'icono': '🏃‍♂️'
         }
     ]
+    
+    catalog = []
+    
+    for mod in modules_info:
+        clave = mod['clave']
+        try:
+            # Buscar pacientes activos para este módulo
+            cursor.execute("""
+                SELECT mt.paciente_id, p.nombres, p.apellidos, p.cedula
+                FROM modulos_terapeuticos_paciente mt
+                JOIN pacientes p ON mt.paciente_id = p.id
+                WHERE p.psicologo_id = ? AND mt.modulo_clave = ? AND mt.activo = 1
+                ORDER BY p.apellidos ASC, p.nombres ASC
+            """, (user_id, clave))
+            patients_rows = cursor.fetchall()
+            
+            patients_list = []
+            for p_row in patients_rows:
+                pid = p_row['paciente_id']
+                p_name = f"{p_row['nombres'] or ''} {p_row['apellidos'] or ''}".strip() or f"Consultante #{pid}"
+                p_cedula = p_row['cedula'] or ''
+                
+                metric_text = "Sin registros recientes"
+                
+                # Obtener la métrica más reciente según la herramienta
+                if clave == 'sueno':
+                    cursor.execute("""
+                        SELECT hora_dormi, hora_desperto, senti_descanso, fecha
+                        FROM registros_sueno
+                        WHERE paciente_id = ?
+                        ORDER BY fecha DESC, id DESC LIMIT 1
+                    """, (pid,))
+                    r = cursor.fetchone()
+                    if r:
+                        desc_str = "Reparador" if r['senti_descanso'] == 1 else "No reparador"
+                        horario = f"{r['hora_dormi'] or ''} - {r['hora_desperto'] or ''}".strip(' -')
+                        metric_text = f"🌙 Último descanso: {horario or desc_str} ({desc_str})"
+                
+                elif clave == 'ansiedad':
+                    cursor.execute("""
+                        SELECT nivel_ansiedad, sintomas_json, fecha
+                        FROM registros_ansiedad
+                        WHERE paciente_id = ?
+                        ORDER BY fecha DESC, id DESC LIMIT 1
+                    """, (pid,))
+                    r = cursor.fetchone()
+                    if r:
+                        import json
+                        sintomas_count = 0
+                        try:
+                            sintomas_count = len(json.loads(r['sintomas_json'] or '[]'))
+                        except Exception:
+                            pass
+                        metric_text = f"📊 Última Ansiedad: {r['nivel_ansiedad']}/10 | ⚠️ Síntomas: {sintomas_count}"
+                
+                elif clave == 'sobriedad':
+                    cursor.execute("""
+                        SELECT sobrio, nivel_ansiedad, fecha
+                        FROM registros_sobriedad
+                        WHERE paciente_id = ?
+                        ORDER BY fecha DESC, id DESC LIMIT 1
+                    """, (pid,))
+                    r = cursor.fetchone()
+                    if r:
+                        estado = "Sobrio 🟢" if r['sobrio'] == 1 else "Recaída/Evento ⚠️"
+                        craving = f" | 📈 Craving: {r['nivel_ansiedad']}/10" if r['nivel_ansiedad'] is not None else ""
+                        metric_text = f"🏅 Estado: {estado}{craving}"
+                
+                elif clave == 'adherencia':
+                    cursor.execute("""
+                        SELECT ar.tomado, ar.fecha, am.nombre_medicamento
+                        FROM adherencia_registros ar
+                        JOIN adherencia_medicamentos am ON ar.medicamento_id = am.id
+                        WHERE ar.paciente_id = ?
+                        ORDER BY ar.fecha DESC, ar.id DESC LIMIT 1
+                    """, (pid,))
+                    r = cursor.fetchone()
+                    if r:
+                        tomado_str = "Tomado 🟢" if r['tomado'] == 1 else "Pendiente/No tomado 🔴"
+                        metric_text = f"⏰ Última Toma: {r['nombre_medicamento']} - {tomado_str}"
+                
+                elif clave == 'activacion':
+                    cursor.execute("""
+                        SELECT COUNT(*) as total FROM activacion_actividades WHERE paciente_id = ? AND activa = 1
+                    """, (pid,))
+                    total_act = cursor.fetchone()['total']
+                    cursor.execute("""
+                        SELECT COUNT(*) as completadas FROM activacion_registros WHERE paciente_id = ? AND completada = 1
+                    """, (pid,))
+                    comp_act = cursor.fetchone()['completadas']
+                    metric_text = f"✅ Actividades: {comp_act} completadas (Total activas: {total_act})"
+                
+                patients_list.append({
+                    'patient_id': pid,
+                    'nombre_paciente': p_name,
+                    'cedula': p_cedula,
+                    'metric_text': metric_text
+                })
+            
+            catalog.append({
+                'clave': clave,
+                'nombre': mod['nombre'],
+                'descripcion': mod['descripcion'],
+                'icono': mod['icono'],
+                'activos': len(patients_list),
+                'pacientes': patients_list
+            })
+            
+        except Exception as e:
+            print(f"[WARN] Error loading accordion for module {clave}: {e}")
+            catalog.append({
+                'clave': clave,
+                'nombre': mod['nombre'],
+                'descripcion': mod['descripcion'],
+                'icono': mod['icono'],
+                'activos': 0,
+                'pacientes': []
+            })
+            
     return jsonify(catalog)
 
 @app.route('/api/therapist/modules/report/<string:modulo_clave>', methods=['GET'])

@@ -10607,104 +10607,163 @@ const claveToToolMap = {
 let therapistToolsPatientsCatalog = [];
 
 async function loadTherapistToolsCatalog() {
-    const grid = document.getElementById('tt-modules-grid');
-    if (!grid) return;
-    grid.innerHTML = '<p class="text-muted">Cargando catálogo de herramientas...</p>';
+    const container = document.getElementById('tt-modules-accordion') || document.getElementById('tt-modules-grid');
+    if (!container) return;
+    container.innerHTML = '<p class="text-muted">Cargando catálogo de herramientas y consultantes activos...</p>';
     try {
         const res = await fetch('/api/therapist/modules/catalog');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al cargar catálogo');
 
-        grid.innerHTML = data.map(m => {
-            const btnText = toolButtonLabels[m.clave] || `📊 Ver Registro de ${m.nombre}`;
+        container.innerHTML = data.map(m => {
             const toolType = claveToToolMap[m.clave] || m.clave;
-            return `
-            <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                        <span style="font-size: 2.2rem; line-height: 1;">${m.icono}</span>
-                        <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25);">
-                            ${m.activos} Paciente(s) Activos
-                        </span>
+            const targetId = `acc-body-${m.clave}`;
+            const activeCount = m.activos || 0;
+            const patients = m.pacientes || [];
+
+            let patientsHtml = '';
+            if (patients.length === 0) {
+                patientsHtml = `
+                    <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+                        📭 No hay consultantes con esta herramienta activa actualmente.
                     </div>
-                    <h4 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark);">${m.nombre}</h4>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">${m.descripcion}</p>
+                `;
+            } else {
+                patientsHtml = patients.map(p => {
+                    return `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
+                            <div style="flex: 1; min-width: 220px;">
+                                <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-primary btn-sm btn-view-history" data-patient-id="${p.patient_id}" data-tool="${toolType}" style="font-weight: 600; padding: 0.35rem 0.75rem;">
+                                    📋 Ver Historial
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('<div style="height: 0.5rem;"></div>');
+            }
+
+            return `
+            <div class="card accordion-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.75rem; box-shadow: var(--shadow-sm);">
+                <div class="accordion-tool-header" data-target="${targetId}" style="padding: 1rem 1.25rem; background: white; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; transition: background 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1;">
+                        <span style="font-size: 1.8rem; line-height: 1;">${m.icono}</span>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                                <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 1.05rem;">${m.nombre}</h4>
+                                <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.78rem;">
+                                    ${activeCount} Paciente(s) Activos
+                                </span>
+                            </div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.25rem 0 0 0; line-height: 1.3;">${m.descripcion}</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: 0.75rem;">
+                        <span class="accordion-arrow" style="font-size: 1.1rem; color: var(--text-muted); transition: transform 0.25s ease;">🔽</span>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-primary btn-sm btn-tool-report btn-tt-report" data-tool="${toolType}" data-clave="${m.clave}" data-nombre="${m.nombre}" style="flex: 1; font-weight: 600;">
-                        ${btnText}
-                    </button>
+                <div id="${targetId}" class="accordion-tool-body hide" style="padding: 1rem 1.25rem; border-top: 1.5px solid var(--border-color); background: #fafafa;">
+                    <div style="display: flex; flex-direction: column;">
+                        ${patientsHtml}
+                    </div>
                 </div>
             </div>
-        `;
+            `;
         }).join('');
 
     } catch (err) {
-        grid.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     }
 }
 
 // ==========================================
-// FUNCIONES INDEPENDIENTES DE REPORTES TERAPÉUTICOS
+// FUNCIONES E INTERACCIONES DE REPORTES TERAPÉUTICOS
 // ==========================================
 
+function openPatientToolHistoryModal(patientId, toolType) {
+    console.log('📋 Abriendo historial para paciente:', patientId, 'herramienta:', toolType);
+    const namesMap = {
+        'sueno': 'Registro de Higiene del Sueño',
+        'ansiedad': 'Diario de Ansiedad & Síntomas',
+        'sobriedad': 'Registro de Consumo',
+        'consumo': 'Registro de Consumo',
+        'adherencia': 'Adherencia al Tratamiento (Medicación)',
+        'medicacion': 'Adherencia al Tratamiento (Medicación)',
+        'activacion': 'Activación Conductual'
+    };
+    const claveMap = {
+        'sueno': 'sueno',
+        'ansiedad': 'ansiedad',
+        'sobriedad': 'sobriedad',
+        'consumo': 'sobriedad',
+        'adherencia': 'adherencia',
+        'medicacion': 'adherencia',
+        'activacion': 'activacion'
+    };
+    const clave = claveMap[toolType] || toolType;
+    const nombre = namesMap[toolType] || toolType;
+    openTherapistModuleReport(clave, nombre, patientId);
+}
+
 function openSleepReportModal(targetPatientId) {
-    console.log('📊 Abriendo modal independiente para Registro de Sueño', targetPatientId || '');
-    openTherapistModuleReport('sueno', 'Registro de Higiene del Sueño', targetPatientId);
+    openPatientToolHistoryModal(targetPatientId, 'sueno');
 }
 
 function openAnxietyReportModal(targetPatientId) {
-    console.log('📊 Abriendo modal independiente para Registro de Ansiedad', targetPatientId || '');
-    openTherapistModuleReport('ansiedad', 'Diario de Ansiedad & Síntomas', targetPatientId);
+    openPatientToolHistoryModal(targetPatientId, 'ansiedad');
 }
 
 function openConsumpionReportModal(targetPatientId) {
-    console.log('📊 Abriendo modal independiente para Registro de Consumo', targetPatientId || '');
-    openTherapistModuleReport('sobriedad', 'Registro de Consumo', targetPatientId);
+    openPatientToolHistoryModal(targetPatientId, 'sobriedad');
 }
 
 function openMedicationReportModal(targetPatientId) {
-    console.log('📊 Abriendo modal independiente para Adherencia a Medicación', targetPatientId || '');
-    openTherapistModuleReport('adherencia', 'Adherencia al Tratamiento (Medicación)', targetPatientId);
+    openPatientToolHistoryModal(targetPatientId, 'adherencia');
 }
 
 function openBehavioralReportModal(targetPatientId) {
-    console.log('📊 Abriendo modal independiente para Activación Conductual', targetPatientId || '');
-    openTherapistModuleReport('activacion', 'Activación Conductual', targetPatientId);
+    openPatientToolHistoryModal(targetPatientId, 'activacion');
 }
 
-// Delegación independiente de eventos en JavaScript
+// A. Control del Acordeón Desplegable
 document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.btn-tool-report');
-    if (!btn) return;
-    
-    e.preventDefault();
-    const toolType = btn.getAttribute('data-tool');
-    const patientId = btn.getAttribute('data-patient-id');
-    
-    console.log('🔍 Abriendo módulo independiente para:', toolType);
-    
-    // Ruteo a la función independiente según el identificador de la herramienta
-    switch(toolType) {
-        case 'sueno':
-            openSleepReportModal(patientId);
-            break;
-        case 'ansiedad':
-            openAnxietyReportModal(patientId);
-            break;
-        case 'consumo':
-        case 'sobriedad':
-            openConsumpionReportModal(patientId);
-            break;
-        case 'medicacion':
-        case 'adherencia':
-            openMedicationReportModal(patientId);
-            break;
-        case 'activacion':
-            openBehavioralReportModal(patientId);
-            break;
-        default:
-            console.warn('Herramienta no reconocida:', toolType);
+    const accordionHeader = e.target.closest('.accordion-tool-header');
+    if (accordionHeader) {
+        e.preventDefault();
+        const targetId = accordionHeader.getAttribute('data-target');
+        const targetBody = document.getElementById(targetId);
+        if (targetBody) {
+            const isHidden = targetBody.classList.contains('hide') || targetBody.style.display === 'none';
+            if (isHidden) {
+                targetBody.classList.remove('hide');
+                targetBody.style.display = 'block';
+            } else {
+                targetBody.classList.add('hide');
+                targetBody.style.display = 'none';
+            }
+            const arrow = accordionHeader.querySelector('.accordion-arrow');
+            if (arrow) {
+                arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+        }
+    }
+});
+
+// B. Control de Apertura de Historial por Paciente y Herramienta
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-view-history') || e.target.closest('.btn-tool-report');
+    if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const patientId = btn.getAttribute('data-patient-id');
+        const toolType = btn.getAttribute('data-tool');
+        
+        if (toolType) {
+            openPatientToolHistoryModal(patientId, toolType);
+        }
     }
 });
 
@@ -11072,6 +11131,7 @@ window.toggleTtrPatientDetails = function(patId) {
 };
 
 window.openTherapistModuleReport = openTherapistModuleReport;
+window.openPatientToolHistoryModal = openPatientToolHistoryModal;
 window.openSleepReportModal = openSleepReportModal;
 window.openAnxietyReportModal = openAnxietyReportModal;
 window.openConsumpionReportModal = openConsumpionReportModal;
