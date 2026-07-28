@@ -4332,14 +4332,20 @@ async function loadAgenda() {
     }
 }
 
-async function openNewEventModal(defaultPaid = false) {
+async function openNewEventModal(defaultPaid = false, initialType = 'consulta') {
     document.getElementById('event-form').reset();
     document.getElementById('event-form-id').value = '';
     
+    const submitBtn = document.getElementById('event-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = (initialType === 'bloqueo') ? 'Guardar Evento / Bloqueo' : 'Guardar en Agenda';
+    }
+
     const tipoRegSelect = document.getElementById('e-tipo-registro');
     if (tipoRegSelect) {
-        tipoRegSelect.value = 'cita';
-        if (typeof toggleEventTypeFields === 'function') toggleEventTypeFields('cita');
+        tipoRegSelect.value = initialType;
+        if (typeof toggleEventTypeFields === 'function') toggleEventTypeFields(initialType);
     }
     
     const waActions = document.getElementById('event-whatsapp-actions');
@@ -4358,7 +4364,10 @@ async function openNewEventModal(defaultPaid = false) {
         }
     }
     
-    document.getElementById('e-fecha').value = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('e-fecha').value = todayStr;
+    const blockFechaEl = document.getElementById('e-block-fecha') || document.getElementById('e-fecha-bloqueo');
+    if (blockFechaEl) blockFechaEl.value = todayStr;
     
     // Asignar hora actual aproximada
     const now = new Date();
@@ -4373,7 +4382,7 @@ async function openNewEventModal(defaultPaid = false) {
     } else {
         document.getElementById('e-estado').value = 'Agendada';
         document.getElementById('e-finance-fields').classList.add('hide');
-        document.getElementById('event-modal-title').textContent = "Registrar Cita en Agenda";
+        document.getElementById('event-modal-title').textContent = (initialType === 'bloqueo') ? "Registrar Evento Personal / Bloqueo" : "Registrar Cita en Agenda";
     }
     
     document.getElementById('e-cant-sesiones').value = 1;
@@ -4393,8 +4402,8 @@ async function openNewEventModal(defaultPaid = false) {
     }
     
     if (tipoRegSelect) {
-        tipoRegSelect.value = 'cita';
-        toggleEventTypeFields('cita');
+        tipoRegSelect.value = initialType;
+        toggleEventTypeFields(initialType);
     }
 
     document.getElementById('e-control-uso-row').classList.add('hide');
@@ -4646,8 +4655,8 @@ window.updateEventTimezoneConversion = updateEventTimezoneConversion;
 window.autoDetectPatientTimezone = autoDetectPatientTimezone;
 
 function toggleEventTypeFields(val) {
-    const citaFields = document.getElementById('event-cita-fields');
-    const bloqueoFields = document.getElementById('event-bloqueo-fields');
+    const citaFields = document.getElementById('e-consultation-section') || document.getElementById('event-cita-fields');
+    const bloqueoFields = document.getElementById('e-block-section') || document.getElementById('event-bloqueo-fields');
     const financeFields = document.getElementById('e-finance-fields');
     const submitBtn = document.getElementById('event-submit-btn');
 
@@ -4657,7 +4666,7 @@ function toggleEventTypeFields(val) {
         if (financeFields) financeFields.classList.add('hide');
         if (submitBtn) submitBtn.textContent = 'Guardar Evento / Bloqueo';
         
-        const blockFecha = document.getElementById('e-fecha-bloqueo');
+        const blockFecha = document.getElementById('e-block-fecha') || document.getElementById('e-fecha-bloqueo');
         if (blockFecha && !blockFecha.value) {
             blockFecha.value = new Date().toISOString().split('T')[0];
         }
@@ -4669,7 +4678,7 @@ function toggleEventTypeFields(val) {
 }
 
 function toggleBlockTimeInputs(isAllDay) {
-    const timeRow = document.getElementById('e-bloqueo-horario-row');
+    const timeRow = document.getElementById('e-block-hours-row') || document.getElementById('e-bloqueo-horario-row');
     if (timeRow) {
         if (isAllDay) {
             timeRow.classList.add('hide');
@@ -4708,12 +4717,18 @@ async function handleEventSubmit(e) {
     const tipoRegistro = document.getElementById('e-tipo-registro') ? document.getElementById('e-tipo-registro').value : 'cita';
     
     if (tipoRegistro === 'bloqueo') {
+        const blockFechaEl = document.getElementById('e-block-fecha') || document.getElementById('e-fecha-bloqueo');
+        const blockTodoDiaEl = document.getElementById('e-block-todo-dia') || document.getElementById('e-bloqueo-todo-dia');
+        const blockHoraInicioEl = document.getElementById('e-block-hora-inicio') || document.getElementById('e-bloqueo-hora-inicio');
+        const blockHoraFinEl = document.getElementById('e-block-hora-fin') || document.getElementById('e-bloqueo-hora-fin');
+        const blockMotivoEl = document.getElementById('e-block-motivo') || document.getElementById('e-bloqueo-motivo');
+
         const payload = {
-            fecha: document.getElementById('e-fecha-bloqueo').value,
-            todo_el_dia: document.getElementById('e-bloqueo-todo-dia').checked,
-            hora_inicio: document.getElementById('e-bloqueo-hora-inicio').value,
-            hora_fin: document.getElementById('e-bloqueo-hora-fin').value,
-            motivo: document.getElementById('e-bloqueo-motivo').value
+            fecha: blockFechaEl ? blockFechaEl.value : '',
+            todo_el_dia: blockTodoDiaEl ? blockTodoDiaEl.checked : false,
+            hora_inicio: blockHoraInicioEl ? blockHoraInicioEl.value : '08:00',
+            hora_fin: blockHoraFinEl ? blockHoraFinEl.value : '18:00',
+            motivo: blockMotivoEl ? blockMotivoEl.value : ''
         };
         
         try {
