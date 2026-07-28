@@ -2943,16 +2943,56 @@
             <div class="modal-body">
                 <form id="event-form" onsubmit="handleEventSubmit(event)">
                     <input type="hidden" id="event-form-id">
-                    <div class="form-group">
-                        <label for="e-paciente-search">Buscar Consultante (Nombre o Cédula)</label>
-                        <input type="text" id="e-paciente-search" placeholder="Escribe para buscar consultante..." oninput="filterEventPatientSelect(this.value)" style="width: 100%;">
+                    
+                    <div class="form-group mb-3">
+                        <label for="e-tipo-registro" style="font-weight: 700; color: var(--text-dark);">Tipo de Registro *</label>
+                        <select id="e-tipo-registro" onchange="toggleEventTypeFields(this.value)" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 700; background: var(--bg-light);">
+                            <option value="consulta">📅 Consulta con Consultante</option>
+                            <option value="bloqueo">🔒 Evento Personal / Bloqueo de Agenda</option>
+                        </select>
                     </div>
-                    <div class="form-group">
-                        <label for="e-paciente">Consultante Seleccionado *</label>
-                        <select id="e-paciente" required onchange="checkPatientPrepayments(this.value)"></select>
+
+                    <!-- SECCIÓN DE EVENTO PERSONAL / BLOQUEO DE AGENDA -->
+                    <div id="e-block-section" class="hide" style="background: rgba(245, 158, 11, 0.08); padding: 1rem; border-radius: var(--radius-md); border: 1.5px dashed #f59e0b; margin-bottom: 1rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 700; color: #b45309; margin-bottom: 0.75rem;">🔒 Configuración de Evento Personal / Bloqueo</h4>
+                        <div class="form-group mb-3">
+                            <label for="e-block-motivo" style="font-weight: 600;">Nombre del Evento / Motivo de Bloqueo *</label>
+                            <input type="text" id="e-block-motivo" placeholder="Ej. Congreso Psicológico, Cita Médica, Trámite Personal">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700;">
+                                <input type="checkbox" id="e-block-todo-dia" onchange="toggleBlockTimeInputs(this.checked)" style="width: auto; transform: scale(1.2);">
+                                <span>Bloquear Todo el Día</span>
+                            </label>
+                        </div>
+                        <div class="form-row" id="e-block-hours-row">
+                            <div class="form-group col-6">
+                                <label for="e-block-hora-inicio" style="font-weight: 600;">Hora Inicio *</label>
+                                <input type="time" id="e-block-hora-inicio">
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="e-block-hora-fin" style="font-weight: 600;">Hora Fin *</label>
+                                <input type="time" id="e-block-hora-fin">
+                            </div>
+                        </div>
+                        <p class="text-secondary mb-0" style="font-size: 0.78rem; color: #b45309; font-style: italic; margin-top: 0.5rem;">
+                            ⚠️ Este evento bloqueará automáticamente los espacios de reserva pública del paciente en la franja seleccionada.
+                        </p>
                     </div>
-                    <!-- Alertas financieras (prepago/deuda) -->
-                    <div id="e-paciente-alerts" class="hide" style="margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; display: flex; flex-direction: column; gap: 0.5rem; line-height: 1.4;"></div>
+
+                    <!-- SECCIÓN DE CONSULTA DE CONSULTANTE -->
+                    <div id="e-consultation-section">
+                        <div class="form-group">
+                            <label for="e-paciente-search">Buscar Consultante (Nombre o Cédula)</label>
+                            <input type="text" id="e-paciente-search" placeholder="Escribe para buscar consultante..." oninput="filterEventPatientSelect(this.value)" style="width: 100%;">
+                        </div>
+                        <div class="form-group">
+                            <label for="e-paciente">Consultante Seleccionado *</label>
+                            <select id="e-paciente" onchange="checkPatientPrepayments(this.value)"></select>
+                        </div>
+                        <!-- Alertas financieras (prepago/deuda) -->
+                        <div id="e-paciente-alerts" class="hide" style="margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; display: flex; flex-direction: column; gap: 0.5rem; line-height: 1.4;"></div>
+                    </div>
                     <div class="form-row">
                         <div class="form-group col-6">
                             <label for="e-fecha">Fecha *</label>
@@ -4160,6 +4200,6 @@
     </div>
 
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v=84"></script>
+    <script src="/static/js/app.js?v=85"></script>
 </body>
 </html>

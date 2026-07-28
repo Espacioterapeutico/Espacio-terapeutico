@@ -3984,8 +3984,12 @@ async function renderFullCalendar() {
     if (!calendarEl) return;
     
     try {
-        const res = await fetch('/api/agenda');
-        const list = await res.json();
+        const [resEvents, resBlocks] = await Promise.all([
+            fetch('/api/agenda'),
+            fetch('/api/agenda/blocks')
+        ]);
+        const list = resEvents.ok ? await resEvents.json() : [];
+        const blocksList = resBlocks.ok ? await resBlocks.json() : [];
         
         const events = list.map(e => {
             if (!e.fecha || !e.hora || e.estado_pago === 'Prepagada') return null;
@@ -4019,6 +4023,28 @@ async function renderFullCalendar() {
                 }
             };
         }).filter(ev => ev !== null);
+
+        // Mapear eventos personales / bloqueos de agenda
+        const blockEvents = blocksList.map(b => {
+            const startStr = b.todo_el_dia ? `${b.fecha}` : `${b.fecha}T${(b.hora_inicio || '08:00').substring(0, 5)}:00`;
+            const endStr = b.todo_el_dia ? `${b.fecha}` : `${b.fecha}T${(b.hora_fin || '18:00').substring(0, 5)}:00`;
+            return {
+                id: `block_${b.id}`,
+                title: `🔒 Bloqueo: ${b.motivo}`,
+                start: startStr,
+                end: endStr,
+                allDay: b.todo_el_dia === 1,
+                backgroundColor: '#f59e0b',
+                borderColor: '#d97706',
+                textColor: '#ffffff',
+                extendedProps: {
+                    isBlock: true,
+                    rawBlock: b
+                }
+            };
+        });
+
+        const allCalendarEvents = [...events, ...blockEvents];
         
         if (fullCalendarInstance) {
             fullCalendarInstance.destroy();
@@ -4038,8 +4064,16 @@ async function renderFullCalendar() {
                 week: 'Semana',
                 day: 'Día'
             },
-            events: events,
+            events: allCalendarEvents,
             eventClick: function(info) {
+                if (info.event.extendedProps.isBlock) {
+                    const b = info.event.extendedProps.rawBlock;
+                    const horStr = b.todo_el_dia ? 'Todo el día' : `${b.hora_inicio} - ${b.hora_fin}`;
+                    if (confirm(`🔒 Evento Personal / Bloqueo\n\nMotivo: ${b.motivo}\nFecha: ${b.fecha}\nHorario: ${horStr}\n\n¿Desea eliminar este bloqueo de la agenda?`)) {
+                        deleteAgendaBlock(b.id);
+                    }
+                    return;
+                }
                 const raw = info.event.extendedProps.rawEvent;
                 if (!raw.has_session && !raw.estado_pago.startsWith('Cancelada')) {
                     openRegisterSessionFromEvent(raw.id);
@@ -4233,15 +4267,36 @@ async function loadAgenda() {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary">Cargando cronograma...</td></tr>';
     
     try {
-        const res = await fetch('/api/agenda');
-        const list = await res.json();
+        const [resEvents, resBlocks] = await Promise.all([
+            fetch('/api/agenda'),
+            fetch('/api/agenda/blocks')
+        ]);
+        const list = resEvents.ok ? await resEvents.json() : [];
+        const blocksList = resBlocks.ok ? await resBlocks.json() : [];
         
         tbody.innerHTML = '';
         
-        if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary">No hay citas en agenda.</td></tr>';
+        if (list.length === 0 && blocksList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary">No hay citas ni bloqueos en agenda.</td></tr>';
             return;
         }
+
+        // Renderizar Bloqueos de Agenda primero si existen
+        blocksList.forEach(b => {
+            const tr = document.createElement('tr');
+            const horStr = b.todo_el_dia ? 'Todo el día' : `${b.hora_inicio} - ${b.hora_fin}`;
+            tr.innerHTML = `
+                <td><strong>${b.fecha} (${horStr})</strong></td>
+                <td><span style="color: #d97706; font-weight:600;">🔒 Evento Personal / Bloqueo</span></td>
+                <td>${b.motivo}</td>
+                <td>-</td>
+                <td><span class="badge badge-warning" style="background-color:#f59e0b; color:white;">Bloqueado</span></td>
+                <td class="actions-cell">
+                    <button class="btn btn-secondary btn-sm text-danger" onclick="deleteAgendaBlock(${b.id})">Eliminar Bloqueo</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
         
         list.forEach(e => {
             if (e.estado_pago === 'Prepagada') return; // Omitir paquetes prepagados en el calendario de citas
@@ -4280,6 +4335,12 @@ async function loadAgenda() {
 async function openNewEventModal(defaultPaid = false) {
     document.getElementById('event-form').reset();
     document.getElementById('event-form-id').value = '';
+    
+    const tipoRegSelect = document.getElementById('e-tipo-registro');
+    if (tipoRegSelect) {
+        tipoRegSelect.value = 'cita';
+        if (typeof toggleEventTypeFields === 'function') toggleEventTypeFields('cita');
+    }
     
     const waActions = document.getElementById('event-whatsapp-actions');
     if (waActions) waActions.classList.add('hide');
@@ -4331,6 +4392,12 @@ async function openNewEventModal(defaultPaid = false) {
         alertsDiv.innerHTML = '';
     }
     
+    const tipoRegSelect = document.getElementById('e-tipo-registro');
+    if (tipoRegSelect) {
+        tipoRegSelect.value = 'cita';
+        toggleEventTypeFields('cita');
+    }
+
     document.getElementById('e-control-uso-row').classList.add('hide');
     document.getElementById('e-confirmada').checked = false;
     document.getElementById('e-confirmada').disabled = true;
@@ -4579,9 +4646,104 @@ window.toggleEventTimezoneOptions = toggleEventTimezoneOptions;
 window.updateEventTimezoneConversion = updateEventTimezoneConversion;
 window.autoDetectPatientTimezone = autoDetectPatientTimezone;
 
+function toggleEventTypeFields(val) {
+    const citaFields = document.getElementById('event-cita-fields');
+    const bloqueoFields = document.getElementById('event-bloqueo-fields');
+    const financeFields = document.getElementById('e-finance-fields');
+    const submitBtn = document.getElementById('event-submit-btn');
+
+    if (val === 'bloqueo') {
+        if (citaFields) citaFields.classList.add('hide');
+        if (bloqueoFields) bloqueoFields.classList.remove('hide');
+        if (financeFields) financeFields.classList.add('hide');
+        if (submitBtn) submitBtn.textContent = 'Guardar Evento / Bloqueo';
+        
+        const blockFecha = document.getElementById('e-fecha-bloqueo');
+        if (blockFecha && !blockFecha.value) {
+            blockFecha.value = new Date().toISOString().split('T')[0];
+        }
+    } else {
+        if (citaFields) citaFields.classList.remove('hide');
+        if (bloqueoFields) bloqueoFields.classList.add('hide');
+        if (submitBtn) submitBtn.textContent = 'Guardar Cita';
+    }
+}
+
+function toggleBlockTimeInputs(isAllDay) {
+    const timeRow = document.getElementById('e-bloqueo-horario-row');
+    if (timeRow) {
+        if (isAllDay) {
+            timeRow.classList.add('hide');
+        } else {
+            timeRow.classList.remove('hide');
+        }
+    }
+}
+
+async function deleteAgendaBlock(blockId) {
+    if (!confirm('¿Deseas eliminar este evento personal / bloqueo de agenda?')) return;
+    try {
+        const res = await fetch(`/api/agenda/blocks/${blockId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success);
+            if (activeView === 'agenda') {
+                renderFullCalendar();
+                loadAgenda();
+            }
+        } else {
+            alert(data.error || 'Error al eliminar bloqueo.');
+        }
+    } catch (err) {
+        alert('Error de conexión al eliminar bloqueo.');
+    }
+}
+
+window.toggleEventTypeFields = toggleEventTypeFields;
+window.toggleBlockTimeInputs = toggleBlockTimeInputs;
+window.deleteAgendaBlock = deleteAgendaBlock;
+
 async function handleEventSubmit(e) {
     e.preventDefault();
     
+    const tipoRegistro = document.getElementById('e-tipo-registro') ? document.getElementById('e-tipo-registro').value : 'cita';
+    
+    if (tipoRegistro === 'bloqueo') {
+        const payload = {
+            fecha: document.getElementById('e-fecha-bloqueo').value,
+            todo_el_dia: document.getElementById('e-bloqueo-todo-dia').checked,
+            hora_inicio: document.getElementById('e-bloqueo-hora-inicio').value,
+            hora_fin: document.getElementById('e-bloqueo-hora-fin').value,
+            motivo: document.getElementById('e-bloqueo-motivo').value
+        };
+        
+        try {
+            const res = await fetch('/api/agenda/blocks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                let msg = data.success;
+                if (data.google_synced) {
+                    msg += " (Sincronizado con Google Calendar)";
+                }
+                alert(msg);
+                closeModal('event-modal');
+                if (activeView === 'agenda') {
+                    renderFullCalendar();
+                    loadAgenda();
+                }
+            } else {
+                alert(data.error || 'Error al guardar bloqueo.');
+            }
+        } catch (err) {
+            alert('Error de conexión al guardar bloqueo.');
+        }
+        return;
+    }
+
     const id = document.getElementById('event-form-id').value;
     
     const payload = {

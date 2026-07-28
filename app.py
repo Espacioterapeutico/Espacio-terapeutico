@@ -6870,6 +6870,67 @@ def get_agenda():
     events = [dict(row) for row in cursor.fetchall()]
     return jsonify(events)
 
+@app.route('/api/agenda/blocks', methods=['GET', 'POST'])
+@login_required
+def manage_agenda_blocks():
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
+    user_id = session.get('user_id')
+    target_psic_id = psic_id if psic_id is not None else user_id
+
+    if request.method == 'POST':
+        data = request.json or {}
+        fecha = (data.get('fecha') or '').strip()
+        hora_inicio = (data.get('hora_inicio') or '').strip()
+        hora_fin = (data.get('hora_fin') or '').strip()
+        motivo = (data.get('motivo') or 'Evento Personal / Bloqueo').strip()
+        todo_el_dia = 1 if data.get('todo_el_dia') else 0
+
+        if not fecha:
+            return jsonify({'error': 'La fecha es obligatoria para agendar un evento personal / bloqueo.'}), 400
+
+        cursor.execute("""
+            INSERT INTO bloqueos_agenda_especificos (psicologo_id, fecha, hora_inicio, hora_fin, motivo, todo_el_dia)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (target_psic_id, fecha, hora_inicio, hora_fin, motivo, todo_el_dia))
+        db.commit()
+        block_id = cursor.lastrowid
+        return jsonify({
+            'success': True,
+            'message': 'Evento personal / bloqueo registrado correctamente.',
+            'block': {
+                'id': block_id,
+                'psicologo_id': target_psic_id,
+                'fecha': fecha,
+                'hora_inicio': hora_inicio,
+                'hora_fin': hora_fin,
+                'motivo': motivo,
+                'todo_el_dia': todo_el_dia
+            }
+        })
+
+    cursor.execute("""
+        SELECT * FROM bloqueos_agenda_especificos
+        WHERE psicologo_id = ?
+        ORDER BY fecha ASC, hora_inicio ASC
+    """, (target_psic_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+@app.route('/api/agenda/blocks/<int:block_id>', methods=['DELETE'])
+@login_required
+def delete_agenda_block(block_id):
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
+    user_id = session.get('user_id')
+    target_psic_id = psic_id if psic_id is not None else user_id
+
+    cursor.execute("DELETE FROM bloqueos_agenda_especificos WHERE id = ? AND psicologo_id = ?", (block_id, target_psic_id))
+    db.commit()
+    return jsonify({'success': True, 'message': 'Bloqueo eliminado correctamente.'})
+
 @app.route('/api/agenda', methods=['POST'])
 @login_required
 def add_agenda_event():
