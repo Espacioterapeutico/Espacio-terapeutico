@@ -10550,6 +10550,8 @@ function switchSettingsTab(tabName) {
         checkWhatsAppQRStatus();
     } else if (tabName === 'firebase') {
         if (typeof loadFirebaseSettings === 'function') {
+            loadFirebaseSettings();
+        }
     } else if (tabName === 'pagos') {
         if (typeof loadPaymentMethods === 'function') {
             loadPaymentMethods();
@@ -10726,11 +10728,13 @@ async function onTherapistToolPatientSearch(query) {
         if (filtered.length === 0) {
             dropdown.innerHTML = '<div style="padding:0.6rem 0.85rem; font-size:0.85rem; color:var(--text-muted);">No se encontraron consultantes.</div>';
         } else {
-            dropdown.innerHTML = filtered.map(p => `
-                <div onclick="selectPatientForTherapistTools(${p.id}, '${(p.nombres+' '+p.apellidos).replace(/'/g, "\\'")}', '${p.cedula || ''}')" style="padding:0.65rem 0.85rem; font-size:0.88rem; cursor:pointer; border-bottom:1px solid var(--border-color);">
+            dropdown.innerHTML = filtered.map(p => {
+                const fullName = (p.nombres + ' ' + p.apellidos).replace(/'/g, "");
+                const cedula = p.cedula || '';
+                return `<div onclick="selectPatientForTherapistTools(${p.id}, '${fullName}', '${cedula}')" style="padding:0.65rem 0.85rem; font-size:0.88rem; cursor:pointer; border-bottom:1px solid var(--border-color);">
                     <strong>${p.nombres} ${p.apellidos}</strong> <span style="color:var(--text-muted); font-size:0.78rem;">(${p.cedula || 'Sin Cédula'})</span>
-                </div>
-            `).join('');
+                    </div>`;
+            }).join('');
         }
         dropdown.classList.remove('hide');
     } catch (err) {
@@ -10757,6 +10761,9 @@ async function selectPatientForTherapistTools(id, name, code) {
 
         list.innerHTML = data.modules.map(m => {
             const btnText = toolButtonLabels[m.clave] || `📊 Ver Registro de ${m.nombre}`;
+            const safeName = (name || '').replace(/'/g, "");
+            const safeModName = (m.nombre || '').replace(/'/g, "");
+            const actBtn = (m.clave === 'activacion') ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${safeName}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : '';
             return `
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
                 <div>
@@ -10766,14 +10773,15 @@ async function selectPatientForTherapistTools(id, name, code) {
                     </span>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-sm btn-info" onclick="openTherapistModuleReport('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}', ${id})" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
-                    ${m.clave === 'activacion' ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${name.replace(/'/g, "\\'")}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : ''}
+                    <button type="button" class="btn btn-sm btn-info" onclick="openTherapistModuleReport('${m.clave}', '${safeModName}', ${id})" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
+                    ${actBtn}
                     <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
                         ${m.activo ? ' Desactivar' : ' Activar'}
                     </button>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (err) {
         list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     }
