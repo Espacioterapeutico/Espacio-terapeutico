@@ -8933,14 +8933,18 @@ def get_therapist_modules_catalog():
     db = get_db()
     cursor = db.cursor()
     
-    cursor.execute("""
-        SELECT mt.modulo_clave, COUNT(mt.paciente_id) as total_activos
-        FROM modulos_terapeuticos_paciente mt
-        JOIN pacientes p ON mt.paciente_id = p.id
-        WHERE p.psicologo_id = ? AND mt.activo = 1
-        GROUP BY mt.modulo_clave
-    """, (user_id,))
-    counts = {r['modulo_clave']: r['total_activos'] for r in cursor.fetchall()}
+    try:
+        cursor.execute("""
+            SELECT mt.modulo_clave, COUNT(mt.paciente_id) as total_activos
+            FROM modulos_terapeuticos_paciente mt
+            JOIN pacientes p ON mt.paciente_id = p.id
+            WHERE p.psicologo_id = ? AND mt.activo = 1
+            GROUP BY mt.modulo_clave
+        """, (user_id,))
+        counts = {r['modulo_clave']: r['total_activos'] for r in cursor.fetchall()}
+    except Exception as e:
+        print(f"[WARN] Error loading module counts: {e}")
+        counts = {}
     
     catalog = [
         {
@@ -8988,53 +8992,58 @@ def get_therapist_module_report(modulo_clave):
     db = get_db()
     cursor = db.cursor()
     
-    if modulo_clave == 'sueno':
-        cursor.execute("""
-            SELECT rs.*, p.nombres, p.apellidos, p.cedula
-            FROM registros_sueno rs
-            JOIN pacientes p ON rs.paciente_id = p.id
-            WHERE p.psicologo_id = ?
-            ORDER BY rs.fecha DESC LIMIT 100
-        """, (user_id,))
-    elif modulo_clave == 'ansiedad':
-        cursor.execute("""
-            SELECT ra.*, p.nombres, p.apellidos, p.cedula
-            FROM registros_ansiedad ra
-            JOIN pacientes p ON ra.paciente_id = p.id
-            WHERE p.psicologo_id = ?
-            ORDER BY ra.fecha DESC LIMIT 100
-        """, (user_id,))
-    elif modulo_clave == 'sobriedad':
-        cursor.execute("""
-            SELECT rsob.*, p.nombres, p.apellidos, p.cedula
-            FROM registros_sobriedad rsob
-            JOIN pacientes p ON rsob.paciente_id = p.id
-            WHERE p.psicologo_id = ?
-            ORDER BY rsob.fecha DESC LIMIT 100
-        """, (user_id,))
-    elif modulo_clave == 'adherencia':
-        cursor.execute("""
-            SELECT ar.*, am.nombre_medicamento, am.dosis, am.hora_prescrita, p.nombres, p.apellidos, p.cedula
-            FROM adherencia_registros ar
-            JOIN adherencia_medicamentos am ON ar.medicamento_id = am.id
-            JOIN pacientes p ON ar.paciente_id = p.id
-            WHERE p.psicologo_id = ?
-            ORDER BY ar.fecha DESC LIMIT 100
-        """, (user_id,))
-    elif modulo_clave == 'activacion':
-        cursor.execute("""
-            SELECT actr.*, aa.categoria, aa.nombre_actividad, p.nombres, p.apellidos, p.cedula
-            FROM activacion_registros actr
-            JOIN activacion_actividades aa ON actr.actividad_id = aa.id
-            JOIN pacientes p ON actr.paciente_id = p.id
-            WHERE p.psicologo_id = ?
-            ORDER BY actr.fecha DESC LIMIT 100
-        """, (user_id,))
-    else:
-        return jsonify({'error': 'Módulo desconocido'}), 400
+    try:
+        if modulo_clave == 'sueno':
+            cursor.execute("""
+                SELECT rs.*, p.nombres, p.apellidos, p.cedula
+                FROM registros_sueno rs
+                JOIN pacientes p ON rs.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY rs.fecha DESC LIMIT 100
+            """, (user_id,))
+        elif modulo_clave == 'ansiedad':
+            cursor.execute("""
+                SELECT ra.*, p.nombres, p.apellidos, p.cedula
+                FROM registros_ansiedad ra
+                JOIN pacientes p ON ra.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY ra.fecha DESC LIMIT 100
+            """, (user_id,))
+        elif modulo_clave == 'sobriedad':
+            cursor.execute("""
+                SELECT rsob.*, p.nombres, p.apellidos, p.cedula
+                FROM registros_sobriedad rsob
+                JOIN pacientes p ON rsob.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY rsob.fecha DESC LIMIT 100
+            """, (user_id,))
+        elif modulo_clave == 'adherencia':
+            cursor.execute("""
+                SELECT ar.*, am.nombre_medicamento, am.dosis, am.hora_prescrita, p.nombres, p.apellidos, p.cedula
+                FROM adherencia_registros ar
+                JOIN adherencia_medicamentos am ON ar.medicamento_id = am.id
+                JOIN pacientes p ON ar.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY ar.fecha DESC LIMIT 100
+            """, (user_id,))
+        elif modulo_clave == 'activacion':
+            cursor.execute("""
+                SELECT actr.*, aa.categoria, aa.nombre_actividad, p.nombres, p.apellidos, p.cedula
+                FROM activacion_registros actr
+                JOIN activacion_actividades aa ON actr.actividad_id = aa.id
+                JOIN pacientes p ON actr.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY actr.fecha DESC LIMIT 100
+            """, (user_id,))
+        else:
+            return jsonify({'error': 'Módulo desconocido'}), 400
         
-    rows = [dict(r) for r in cursor.fetchall()]
-    return jsonify(rows)
+        rows = [dict(r) for r in cursor.fetchall()]
+        return jsonify(rows)
+    except Exception as e:
+        # Tables may not exist yet - return empty array gracefully
+        print(f"[WARN] Error fetching report for {modulo_clave}: {e}")
+        return jsonify([])
 
 # --- ENDPOINTS ADHERENCIA AL TRATAMIENTO ---
 

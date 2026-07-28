@@ -10394,28 +10394,32 @@ async function loadTherapistToolsCatalog() {
                     <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">${m.descripcion}</p>
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-primary btn-sm btn-tt-report" data-clave="${m.clave}" data-nombre="${m.nombre}" style="flex: 1; font-weight: 600;">
+                    <button type="button" class="btn btn-primary btn-sm btn-tt-report" data-clave="${m.clave}" data-nombre="${m.nombre}" onclick="window.openTherapistModuleReport('${m.clave}', '${m.nombre}')" style="flex: 1; font-weight: 600;">
                         📊 Ver Reporte y Registros
                     </button>
                 </div>
             </div>
         `).join('');
 
-        // Event delegation: attach click listeners to dynamically created buttons
-        grid.querySelectorAll('.btn-tt-report').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const clave = this.dataset.clave;
-                const nombre = this.dataset.nombre;
-                console.log('[TT-Report] Click detected for:', clave, nombre);
-                openTherapistModuleReport(clave, nombre);
-            });
-        });
     } catch (err) {
         grid.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     }
 }
+
+// Event delegation fallback on grid container for report buttons
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-tt-report');
+    if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const clave = btn.dataset.clave;
+        const nombre = btn.dataset.nombre;
+        if (clave) {
+            console.log('[TT-Report Delegation] Click detected for:', clave, nombre);
+            openTherapistModuleReport(clave, nombre);
+        }
+    }
+});
 
 async function onTherapistToolPatientSearch(query) {
     const dropdown = document.getElementById('tt-patient-dropdown');
@@ -10526,9 +10530,11 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     console.log('[DEBUG] About to open modal therapist-tool-report-modal');
     const modalEl = document.getElementById('therapist-tool-report-modal');
     if (modalEl) {
+        // Remove hide class AND force display with !important to overcome CSS .hide { display: none !important }
         modalEl.classList.remove('hide');
-        modalEl.style.display = 'flex';
-        console.log('[DEBUG] Modal opened successfully, display:', modalEl.style.display, 'classes:', modalEl.className);
+        modalEl.style.setProperty('display', 'flex', 'important');
+        document.body.style.overflow = 'hidden';
+        console.log('[DEBUG] Modal opened successfully, display:', getComputedStyle(modalEl).display, 'classes:', modalEl.className);
     } else {
         console.error('[DEBUG] Modal element therapist-tool-report-modal NOT FOUND in DOM!');
         alert('Error: No se encontró el modal de reportes. Recarga la página.');

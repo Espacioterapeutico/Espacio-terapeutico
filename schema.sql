@@ -112,3 +112,109 @@ CREATE TABLE IF NOT EXISTS fcm_subscriptions (
     patient_id INTEGER,
     token TEXT UNIQUE
 );
+
+CREATE TABLE IF NOT EXISTS modulos_terapeuticos_paciente (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    modulo_clave TEXT NOT NULL,
+    activo INTEGER DEFAULT 1,
+    configuracion_json TEXT,
+    fecha_asignacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+    UNIQUE(paciente_id, modulo_clave)
+);
+
+CREATE TABLE IF NOT EXISTS registros_sueno (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    fecha TEXT NOT NULL,
+    situaciones_dia TEXT,
+    emociones_dia TEXT,
+    proceso_dormir TEXT,
+    hora_dormi TEXT,
+    desperto_noche INTEGER DEFAULT 0,
+    cant_despertares INTEGER DEFAULT 0,
+    hora_desperto TEXT,
+    senti_descanso INTEGER DEFAULT 1,
+    somnolencia_dia INTEGER DEFAULT 0,
+    pesadez_dia INTEGER DEFAULT 0,
+    agotamiento_dia INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+    UNIQUE(paciente_id, fecha)
+);
+
+CREATE TABLE IF NOT EXISTS registros_ansiedad (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    fecha TEXT NOT NULL,
+    nivel_ansiedad INTEGER NOT NULL,
+    sintomas_json TEXT,
+    situacion_desencadenante TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+    UNIQUE(paciente_id, fecha)
+);
+
+CREATE TABLE IF NOT EXISTS registros_sobriedad (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    fecha TEXT NOT NULL,
+    sobrio INTEGER NOT NULL,
+    nivel_ansiedad INTEGER,
+    disparador_emocional TEXT,
+    notas TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+    UNIQUE(paciente_id, fecha)
+);
+
+CREATE TABLE IF NOT EXISTS adherencia_medicamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    nombre_medicamento TEXT NOT NULL,
+    dosis TEXT,
+    hora_prescrita TEXT,
+    activo INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS adherencia_registros (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    medicamento_id INTEGER NOT NULL,
+    fecha TEXT NOT NULL,
+    tomado INTEGER NOT NULL,
+    hora_tomado TEXT,
+    notas TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicamento_id) REFERENCES adherencia_medicamentos(id) ON DELETE CASCADE,
+    UNIQUE(paciente_id, medicamento_id, fecha)
+);
+
+CREATE TABLE IF NOT EXISTS activacion_actividades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    psicologo_id INTEGER,
+    categoria TEXT NOT NULL,
+    nombre_actividad TEXT NOT NULL,
+    activa INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS activacion_registros (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    actividad_id INTEGER NOT NULL,
+    fecha TEXT NOT NULL,
+    completada INTEGER NOT NULL,
+    notas TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+    FOREIGN KEY (actividad_id) REFERENCES activacion_actividades(id) ON DELETE CASCADE,
+    UNIQUE(paciente_id, actividad_id, fecha)
+);
+
