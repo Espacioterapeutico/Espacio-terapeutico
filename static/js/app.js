@@ -10550,8 +10550,6 @@ function switchSettingsTab(tabName) {
         checkWhatsAppQRStatus();
     } else if (tabName === 'firebase') {
         if (typeof loadFirebaseSettings === 'function') {
-            loadFirebaseSettings();
-        }
     } else if (tabName === 'pagos') {
         if (typeof loadPaymentMethods === 'function') {
             loadPaymentMethods();
@@ -10584,6 +10582,26 @@ window.sendManualWhatsAppReminder = sendManualWhatsAppReminder;
 // HERRAMIENTAS TERAPÉUTICAS Y MÓDULOS ESPECIALES
 // ==========================================
 
+const toolButtonLabels = {
+    'sueno': '📊 Ver Registro de Sueño',
+    'ansiedad': '📊 Ver Registro de Ansiedad',
+    'sobriedad': '📊 Ver Registro de Consumo',
+    'consumo': '📊 Ver Registro de Consumo',
+    'adherencia': '📊 Ver Registro de Tratamiento',
+    'medicacion': '📊 Ver Registro de Tratamiento',
+    'activacion': '📊 Ver Registro de Activación Conductual'
+};
+
+const claveToToolMap = {
+    'sueno': 'sueno',
+    'ansiedad': 'ansiedad',
+    'sobriedad': 'consumo',
+    'consumo': 'consumo',
+    'adherencia': 'medicacion',
+    'medicacion': 'medicacion',
+    'activacion': 'activacion'
+};
+
 let therapistToolsPatientsCatalog = [];
 
 async function loadTherapistToolsCatalog() {
@@ -10595,7 +10613,10 @@ async function loadTherapistToolsCatalog() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al cargar catálogo');
 
-        grid.innerHTML = data.map(m => `
+        grid.innerHTML = data.map(m => {
+            const btnText = toolButtonLabels[m.clave] || `📊 Ver Registro de ${m.nombre}`;
+            const toolType = claveToToolMap[m.clave] || m.clave;
+            return `
             <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
@@ -10608,30 +10629,80 @@ async function loadTherapistToolsCatalog() {
                     <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1rem;">${m.descripcion}</p>
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-primary btn-sm btn-tt-report" data-clave="${m.clave}" data-nombre="${m.nombre}" onclick="window.openTherapistModuleReport('${m.clave}', '${m.nombre}')" style="flex: 1; font-weight: 600;">
-                        📊 Ver Reporte y Registros
+                    <button type="button" class="btn btn-primary btn-sm btn-tool-report btn-tt-report" data-tool="${toolType}" data-clave="${m.clave}" data-nombre="${m.nombre}" style="flex: 1; font-weight: 600;">
+                        ${btnText}
                     </button>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
     } catch (err) {
         grid.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     }
 }
 
-// Event delegation fallback on grid container for report buttons
+// ==========================================
+// FUNCIONES INDEPENDIENTES DE REPORTES TERAPÉUTICOS
+// ==========================================
+
+function openSleepReportModal(targetPatientId) {
+    console.log('📊 Abriendo modal independiente para Registro de Sueño', targetPatientId || '');
+    openTherapistModuleReport('sueno', 'Registro de Higiene del Sueño', targetPatientId);
+}
+
+function openAnxietyReportModal(targetPatientId) {
+    console.log('📊 Abriendo modal independiente para Registro de Ansiedad', targetPatientId || '');
+    openTherapistModuleReport('ansiedad', 'Diario de Ansiedad & Síntomas', targetPatientId);
+}
+
+function openConsumpionReportModal(targetPatientId) {
+    console.log('📊 Abriendo modal independiente para Registro de Consumo', targetPatientId || '');
+    openTherapistModuleReport('sobriedad', 'Registro de Consumo', targetPatientId);
+}
+
+function openMedicationReportModal(targetPatientId) {
+    console.log('📊 Abriendo modal independiente para Adherencia a Medicación', targetPatientId || '');
+    openTherapistModuleReport('adherencia', 'Adherencia al Tratamiento (Medicación)', targetPatientId);
+}
+
+function openBehavioralReportModal(targetPatientId) {
+    console.log('📊 Abriendo modal independiente para Activación Conductual', targetPatientId || '');
+    openTherapistModuleReport('activacion', 'Activación Conductual', targetPatientId);
+}
+
+// Delegación independiente de eventos en JavaScript
 document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.btn-tt-report');
-    if (btn) {
-        e.preventDefault();
-        e.stopPropagation();
-        const clave = btn.dataset.clave;
-        const nombre = btn.dataset.nombre;
-        if (clave) {
-            console.log('[TT-Report Delegation] Click detected for:', clave, nombre);
-            openTherapistModuleReport(clave, nombre);
-        }
+    const btn = e.target.closest('.btn-tool-report');
+    if (!btn) return;
+    
+    e.preventDefault();
+    const toolType = btn.getAttribute('data-tool');
+    const patientId = btn.getAttribute('data-patient-id');
+    
+    console.log('🔍 Abriendo módulo independiente para:', toolType);
+    
+    // Ruteo a la función independiente según el identificador de la herramienta
+    switch(toolType) {
+        case 'sueno':
+            openSleepReportModal(patientId);
+            break;
+        case 'ansiedad':
+            openAnxietyReportModal(patientId);
+            break;
+        case 'consumo':
+        case 'sobriedad':
+            openConsumpionReportModal(patientId);
+            break;
+        case 'medicacion':
+        case 'adherencia':
+            openMedicationReportModal(patientId);
+            break;
+        case 'activacion':
+            openBehavioralReportModal(patientId);
+            break;
+        default:
+            console.warn('Herramienta no reconocida:', toolType);
     }
 });
 
@@ -10663,20 +10734,20 @@ async function onTherapistToolPatientSearch(query) {
         }
         dropdown.classList.remove('hide');
     } catch (err) {
-        console.error(err);
+        console.error('Error en búsqueda de pacientes para herramientas:', err);
     }
 }
 
 async function selectPatientForTherapistTools(id, name, code) {
-    document.getElementById('tt-patient-dropdown').classList.add('hide');
     document.getElementById('tt-patient-search').value = name;
+    document.getElementById('tt-patient-dropdown').classList.add('hide');
     
-    const panel = document.getElementById('tt-patient-toggle-panel');
     document.getElementById('tt-selected-patient-name').innerText = name;
-    document.getElementById('tt-selected-patient-code').innerText = code ? `Cédula: ${code}` : '';
+    document.getElementById('tt-selected-patient-code').innerText = code ? `Cédula: ${code}` : 'Sin Cédula';
     
-    const list = document.getElementById('tt-patient-switches-list');
-    list.innerHTML = '<p class="text-muted">Cargando estado de módulos...</p>';
+    const panel = document.getElementById('tt-patient-details-panel');
+    const list = document.getElementById('tt-patient-modules-list');
+    list.innerHTML = '<p class="text-muted">Cargando módulos asignados...</p>';
     panel.classList.remove('hide');
 
     try {
@@ -10684,7 +10755,9 @@ async function selectPatientForTherapistTools(id, name, code) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al cargar módulos');
 
-        list.innerHTML = data.modules.map(m => `
+        list.innerHTML = data.modules.map(m => {
+            const btnText = toolButtonLabels[m.clave] || `📊 Ver Registro de ${m.nombre}`;
+            return `
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
                 <div>
                     <strong style="font-size: 0.9rem; color: var(--text-dark);">${m.nombre}</strong>
@@ -10693,7 +10766,7 @@ async function selectPatientForTherapistTools(id, name, code) {
                     </span>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-sm btn-info" onclick="openTherapistModuleReport('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}', ${id})" style="padding: 0.35rem 0.65rem; font-weight: 600;">📊 Ver Registros</button>
+                    <button type="button" class="btn btn-sm btn-info" onclick="openTherapistModuleReport('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}', ${id})" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
                     ${m.clave === 'activacion' ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${name.replace(/'/g, "\\'")}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : ''}
                     <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
                         ${m.activo ? ' Desactivar' : ' Activar'}
@@ -10991,6 +11064,12 @@ window.toggleTtrPatientDetails = function(patId) {
 };
 
 window.openTherapistModuleReport = openTherapistModuleReport;
+window.openSleepReportModal = openSleepReportModal;
+window.openAnxietyReportModal = openAnxietyReportModal;
+window.openConsumpionReportModal = openConsumpionReportModal;
+window.openConsumptionReportModal = openConsumpionReportModal;
+window.openMedicationReportModal = openMedicationReportModal;
+window.openBehavioralReportModal = openBehavioralReportModal;
 window.loadTherapistToolsCatalog = loadTherapistToolsCatalog;
 window.onTherapistToolPatientSearch = onTherapistToolPatientSearch;
 window.selectPatientForTherapistTools = selectPatientForTherapistTools;
