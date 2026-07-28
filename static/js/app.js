@@ -1916,99 +1916,70 @@ async function loadPizarraHistory() {
         
         if (data.updates && data.updates.length > 0) {
             data.updates.forEach(upd => {
-                const card = document.createElement('div');
-                card.style.border = '1px solid var(--border-color)';
-                card.style.borderRadius = 'var(--radius-sm)';
-                card.style.padding = '0.85rem';
-                card.style.backgroundColor = 'var(--card-bg)';
-                card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.01)';
-                card.style.display = 'flex';
-                card.style.flexDirection = 'column';
-                card.style.gap = '0.5rem';
-                
-                const meta = document.createElement('div');
-                meta.style.display = 'flex';
-                meta.style.justifyContent = 'space-between';
-                meta.style.alignItems = 'center';
-                meta.style.fontSize = '0.8rem';
-                meta.style.color = 'var(--text-muted)';
-                meta.style.borderBottom = '1px solid rgba(0,0,0,0.03)';
-                meta.style.paddingBottom = '0.25rem';
-                
+                const thread = document.createElement('div');
+                thread.className = 'pizarra-msg-card';
+
                 const dateObj = new Date(upd.fecha.replace(/-/g, '/'));
                 const dateStr = dateObj.toLocaleDateString([], {day: '2-digit', month: '2-digit', year: 'numeric'});
                 const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+
+                // 1. Burbuja del Paciente (Tú)
+                const patientBubble = document.createElement('div');
+                patientBubble.className = 'chat-bubble-patient';
                 
-                meta.innerHTML = `
-                    <span style="font-weight: 600; color: var(--primary-color);">📝 Actualización</span>
-                    <span>${dateStr} a las ${timeStr}</span>
-                `;
-                
-                const content = document.createElement('div');
-                content.style.fontSize = '0.9rem';
-                content.style.lineHeight = '1.4';
-                content.style.whiteSpace = 'pre-wrap';
-                content.style.color = 'var(--text-dark)';
-                content.textContent = upd.contenido;
-                
-                card.appendChild(meta);
+                let animoHtml = '';
                 if (upd.estado_animo || upd.emoji_animo) {
-                    const animoDiv = document.createElement('div');
-                    animoDiv.style.fontSize = '0.85rem';
-                    animoDiv.style.color = 'var(--text-muted)';
-                    animoDiv.style.display = 'flex';
-                    animoDiv.style.alignItems = 'center';
-                    animoDiv.style.gap = '0.35rem';
-                    animoDiv.innerHTML = `<span style="font-size: 1.1rem;">${upd.emoji_animo || '😊'}</span> <span>Estado de ánimo: <strong>${upd.estado_animo || ''}</strong></span>${upd.comentario_animo ? ` <span style="font-style:italic;">("${upd.comentario_animo}")</span>` : ''}`;
-                    card.appendChild(animoDiv);
-                }
-
-                if (upd.contenido) {
-                    card.appendChild(content);
-                }
-                
-                if (upd.archivo_adjunto) {
-                    const fileDiv = document.createElement('div');
-                    fileDiv.style.marginTop = '0.25rem';
-                    fileDiv.style.fontSize = '0.8rem';
-                    fileDiv.style.padding = '0.35rem 0.5rem';
-                    fileDiv.style.borderRadius = '4px';
-                    fileDiv.style.backgroundColor = 'var(--bg-light)';
-                    fileDiv.style.display = 'inline-flex';
-                    fileDiv.style.alignItems = 'center';
-                    fileDiv.style.gap = '0.35rem';
-                    fileDiv.style.alignSelf = 'flex-start';
-                    fileDiv.style.border = '1px solid var(--border-color)';
-                    
-                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(upd.archivo_adjunto);
-                    if (isImage) {
-                        fileDiv.innerHTML = `
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Ver Imagen Adjunta</a>
-                        `;
-                    } else {
-                        fileDiv.innerHTML = `
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Ver Documento Adjunto</a>
-                        `;
-                    }
-                    card.appendChild(fileDiv);
-                }
-
-                if (upd.respuesta_psicologo) {
-                    const respDiv = document.createElement('div');
-                    respDiv.className = 'pizarra-reply-therapist';
-                    respDiv.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
-                            <strong style="font-size:0.83rem; color:var(--primary-color); font-weight:700;">💬 Respuesta de tu psicólogo/a:</strong>
-                            <span style="font-size:0.72rem; color:var(--text-muted);">${upd.fecha_respuesta || ''}</span>
+                    animoHtml = `
+                        <div style="font-size:0.83rem; color:var(--text-muted); margin-bottom:0.35rem; display:flex; align-items:center; gap:0.35rem;">
+                            <span style="font-size:1.1rem;">${upd.emoji_animo || '😊'}</span>
+                            <span>Estado de ánimo: <strong>${upd.estado_animo || ''}</strong></span>
+                            ${upd.comentario_animo ? `<span style="font-style:italic;">("${upd.comentario_animo}")</span>` : ''}
                         </div>
-                        <div style="font-size:0.88rem; color:var(--text-dark); line-height:1.45;">${upd.respuesta_psicologo}</div>
                     `;
-                    card.appendChild(respDiv);
                 }
-                
-                historyList.appendChild(card);
+
+                let fileHtml = '';
+                if (upd.archivo_adjunto) {
+                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(upd.archivo_adjunto);
+                    fileHtml = `
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.35rem 0.6rem; border-radius: 6px; background-color: rgba(255,255,255,0.85); display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--border-color);">
+                            ${isImage 
+                                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+                                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+                            }
+                            <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">
+                                ${isImage ? 'Ver Imagen Adjunta' : 'Ver Documento Adjunto'}
+                            </a>
+                        </div>
+                    `;
+                }
+
+                patientBubble.innerHTML = `
+                    <div class="chat-bubble-header">
+                        <span class="chat-author-tag patient">👤 Tu Registro</span>
+                        <span class="chat-time-tag">${dateStr} ${timeStr}</span>
+                    </div>
+                    ${animoHtml}
+                    ${upd.contenido ? `<div class="chat-bubble-body">${upd.contenido}</div>` : ''}
+                    ${fileHtml}
+                `;
+                thread.appendChild(patientBubble);
+
+                // 2. Burbuja del Psicólogo/a (si ya existe respuesta)
+                if (upd.respuesta_psicologo) {
+                    const therapistBubble = document.createElement('div');
+                    therapistBubble.className = 'chat-bubble-therapist';
+                    therapistBubble.innerHTML = `
+                        <div class="chat-bubble-header">
+                            <span class="chat-author-tag therapist">🩺 Respuesta de tu Psicólogo/a</span>
+                            <span class="chat-time-tag">${upd.fecha_respuesta || ''}</span>
+                        </div>
+                        <div class="chat-bubble-body">${upd.respuesta_psicologo}</div>
+                    `;
+                    thread.appendChild(therapistBubble);
+                }
+
+                historyList.appendChild(thread);
             });
         } else {
             historyList.innerHTML = '<span class="text-secondary text-sm" style="font-style: italic;">No tienes actualizaciones registradas en tu pizarra terapéutica aún.</span>';
@@ -5515,7 +5486,7 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('hide');
-        modal.style.display = 'flex';
+        modal.style.setProperty('display', 'flex', 'important');
     }
 }
 window.openModal = openModal;

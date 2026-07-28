@@ -1377,6 +1377,45 @@
                         <!-- Dinámico con JS -->
                     </div>
                 </section>
+
+                <!-- VISTA: DETALLE Y ESTADÍSTICAS INDIVIDUALES DE HERRAMIENTA TERAPÉUTICA (PSICÓLOGO) -->
+                <section id="view-therapist-tool-detail" class="app-view hide">
+                    <div class="view-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <h2 id="ttd-tool-title" style="margin: 0; font-family: var(--font-title); color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+                                📊 Reporte y Estadísticas
+                            </h2>
+                            <span id="ttd-tool-subtitle" class="text-secondary">Visualización de evoluciones y datos clínicos por consultante</span>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="switchView('therapist-tools')" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.1rem; border-radius: var(--radius-md); border: 1.5px solid var(--border-color); background: white; color: var(--text-dark);">
+                            ← Volver a Herramientas Terapéuticas
+                        </button>
+                    </div>
+
+                    <!-- TARJETAS RESUMEN DE MÉTRICAS GLOBALES -->
+                    <div id="ttd-summary-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <!-- Dinámico con JS -->
+                    </div>
+
+                    <!-- FILTRO RÁPIDO DE CONSULTANTE -->
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 250px;">
+                                <label for="ttd-patient-filter" style="font-weight: 700; font-size: 0.88rem; margin-bottom: 0.35rem; display: block; color: var(--text-dark);">🔍 Filtrar por Consultante:</label>
+                                <input type="text" id="ttd-patient-filter" placeholder="Escribe nombre, apellido o cédula para filtrar..." oninput="window.filterTtdPatients(this.value)" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.9rem;">
+                            </div>
+                            <div id="ttd-records-count-badge" style="font-size: 0.88rem; font-weight: 700; color: var(--primary-color); background: rgba(126, 34, 206, 0.08); padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(126, 34, 206, 0.2);">
+                                Cargando datos...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENEDOR DE REGISTROS POR CONSULTANTE -->
+                    <div id="ttd-body-content" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <p class="text-muted text-center py-4">Cargando registros...</p>
+                    </div>
+                </section>
+
                 
                 <!-- ==========================================
                      PORTAL DE PACIENTES (VISTAS DE CONSULTANTE)
