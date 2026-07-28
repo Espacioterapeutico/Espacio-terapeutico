@@ -4392,7 +4392,6 @@ async function openNewEventModal(defaultPaid = false) {
         alertsDiv.innerHTML = '';
     }
     
-    const tipoRegSelect = document.getElementById('e-tipo-registro');
     if (tipoRegSelect) {
         tipoRegSelect.value = 'cita';
         toggleEventTypeFields('cita');
