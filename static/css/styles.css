@@ -1469,14 +1469,15 @@ h1, h2, h3, h4, h5, h6 {
         gap: 0.75rem !important;
     }
 
-    /* ── Date filters compactos ── */
+    /* ── Date filters compactos en una sola línea ── */
     .date-filters {
-        flex-wrap: wrap;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
         gap: 0.35rem;
     }
     .date-filters select {
         font-size: 0.8rem;
-        padding: 0.3rem 0.5rem;
+        padding: 0.3rem 0.45rem;
     }
 
     /* ── Tablas: scroll horizontal, texto compacto ── */

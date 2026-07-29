@@ -6548,11 +6548,13 @@ async function loadPatientNotifications(patientId) {
         let unreadCount = 0;
         Object.keys(data).forEach(key => {
             const n = data[key];
-            if (!n.leida) unreadCount++;
-            notifList.push({
-                key,
-                ...n
-            });
+            if (!n.leida) {
+                unreadCount++;
+                notifList.push({
+                    key,
+                    ...n
+                });
+            }
         });
         
         // Actualizar badge
@@ -6564,6 +6566,12 @@ async function loadPatientNotifications(patientId) {
         } else {
             badge.classList.add('hide');
             if (headerTitle) headerTitle.textContent = 'Notificaciones';
+            list.innerHTML = `
+                <div style="padding: 1.25rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+                    No tienes notificaciones
+                </div>
+            `;
+            return;
         }
         
         // Ordenar por fecha desc
@@ -6571,16 +6579,14 @@ async function loadPatientNotifications(patientId) {
         
         notifList.forEach(n => {
             // Disparar notificación nativa si no ha sido leída
-            if (!n.leida) {
-                triggerNativeNotification(n.titulo || 'Espacio Terapéutico', n.mensaje || '', `pat_${n.key}`, '');
-            }
+            triggerNativeNotification(n.titulo || 'Espacio Terapéutico', n.mensaje || '', `pat_${n.key}`, '');
 
             const item = document.createElement('div');
             item.style.padding = '0.65rem 0.85rem';
             item.style.borderBottom = '1px solid var(--border-color)';
             item.style.cursor = 'pointer';
             item.style.transition = 'background-color 0.2s';
-            item.style.backgroundColor = n.leida ? 'transparent' : 'rgba(169, 89, 147, 0.03)';
+            item.style.backgroundColor = 'rgba(169, 89, 147, 0.03)';
             item.style.fontSize = '0.8rem';
             
             let icon = '🔔';
@@ -6598,7 +6604,7 @@ async function loadPatientNotifications(patientId) {
                     <div style="flex: 1;">
                         <div style="font-weight: 700; color: var(--text-dark); margin-bottom: 0.1rem; display: flex; justify-content: space-between; align-items: center;">
                             <span>${n.titulo}</span>
-                            ${!n.leida ? '<span style="width: 5px; height: 5px; background-color: #ef4444; border-radius: 50%; display: inline-block;"></span>' : ''}
+                            <span style="width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; display: inline-block;"></span>
                         </div>
                         <div style="color: var(--text-muted); line-height: 1.25; margin-bottom: 0.2rem; font-size: 0.75rem;">${n.mensaje}</div>
                         <div style="color: var(--text-muted); font-size: 0.68rem; font-style: italic;">${dateStr} a las ${timeStr}</div>
@@ -6620,9 +6626,7 @@ async function loadPatientNotifications(patientId) {
 async function markPatientNotificationAsRead(patientId, key) {
     try {
         await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones/${key}.json`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ leida: true })
+            method: 'DELETE'
         });
         
         const dropdown = document.getElementById('pat-notifications-dropdown');
@@ -6639,24 +6643,11 @@ async function markAllPatientNotificationsAsRead() {
     if (!patientId) return;
     
     try {
-        const res = await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`);
-        if (!res.ok) return;
-        const data = await res.json();
+        await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`, {
+            method: 'DELETE'
+        });
         
-        if (data) {
-            const updates = {};
-            Object.keys(data).forEach(key => {
-                updates[`${key}/leida`] = true;
-            });
-            
-            await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updates)
-            });
-            
-            loadPatientNotifications(patientId);
-        }
+        loadPatientNotifications(patientId);
     } catch (err) {
         console.error("Error al marcar todas las notificaciones del paciente:", err);
     }

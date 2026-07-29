@@ -898,11 +898,11 @@
                         <div class="card mb-4">
                             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                                 <h3>Historial de Consultas por Mes</h3>
-                                <div class="date-filters" style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <label style="font-weight: 600; font-size: 0.85rem;">Año:</label>
-                                    <select id="agenda-history-filter-year" onchange="loadTherapistConsultationHistory()" style="padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></select>
-                                    <label style="font-weight: 600; font-size: 0.85rem;">Mes:</label>
-                                    <select id="agenda-history-filter-month" onchange="loadTherapistConsultationHistory()" style="padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></select>
+                                <div class="date-filters" style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: nowrap;">
+                                    <label style="font-weight: 600; font-size: 0.85rem; white-space: nowrap;">Año:</label>
+                                    <select id="agenda-history-filter-year" onchange="loadTherapistConsultationHistory()" style="padding: 0.35rem 0.5rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></select>
+                                    <label style="font-weight: 600; font-size: 0.85rem; white-space: nowrap; margin-left: 0.25rem;">Mes:</label>
+                                    <select id="agenda-history-filter-month" onchange="loadTherapistConsultationHistory()" style="padding: 0.35rem 0.5rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></select>
                                 </div>
                             </div>
                             <div class="table-container">
@@ -2151,30 +2151,30 @@
                         <div class="card-body">
                             <p class="text-secondary text-sm mb-3">Selecciona el estado de ánimo que describe cómo te sientes hoy:</p>
                             
-                            <div id="mood-selector-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem; margin-bottom: 1rem;">
-                                <button type="button" class="mood-item-btn" data-mood="Enojado" data-emoji="😡" onclick="selectMoodItem(this, 'Enojado', '😡')" style="display: flex; flex-direction: column; align-items: center; padding: 0.6rem 0.3rem; border: 1.5px solid var(--border-color); background: white; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;">
-                                    <span style="font-size: 1.8rem; line-height: 1;">😡</span>
-                                    <span style="font-size: 0.75rem; font-weight: 600; margin-top: 0.3rem; color: var(--text-dark);">Enojado</span>
+                            <div id="mood-selector-grid">
+                                <button type="button" class="mood-item-btn" data-mood="Enojado" data-emoji="😡" onclick="selectMoodItem(this, 'Enojado', '😡')">
+                                    <span>😡</span>
+                                    <span>Enojado</span>
                                 </button>
-                                <button type="button" class="mood-item-btn" data-mood="Feliz" data-emoji="😊" onclick="selectMoodItem(this, 'Feliz', '😊')" style="display: flex; flex-direction: column; align-items: center; padding: 0.6rem 0.3rem; border: 1.5px solid var(--border-color); background: white; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;">
-                                    <span style="font-size: 1.8rem; line-height: 1;">😊</span>
-                                    <span style="font-size: 0.75rem; font-weight: 600; margin-top: 0.3rem; color: var(--text-dark);">Feliz</span>
+                                <button type="button" class="mood-item-btn" data-mood="Feliz" data-emoji="😊" onclick="selectMoodItem(this, 'Feliz', '😊')">
+                                    <span>😊</span>
+                                    <span>Feliz</span>
                                 </button>
-                                <button type="button" class="mood-item-btn" data-mood="Ansioso" data-emoji="😰" onclick="selectMoodItem(this, 'Ansioso', '😰')" style="display: flex; flex-direction: column; align-items: center; padding: 0.6rem 0.3rem; border: 1.5px solid var(--border-color); background: white; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;">
-                                    <span style="font-size: 1.8rem; line-height: 1;">😰</span>
-                                    <span style="font-size: 0.75rem; font-weight: 600; margin-top: 0.3rem; color: var(--text-dark);">Ansioso</span>
+                                <button type="button" class="mood-item-btn" data-mood="Ansioso" data-emoji="😰" onclick="selectMoodItem(this, 'Ansioso', '😰')">
+                                    <span>😰</span>
+                                    <span>Ansioso</span>
                                 </button>
-                                <button type="button" class="mood-item-btn" data-mood="Preocupado" data-emoji="😟" onclick="selectMoodItem(this, 'Preocupado', '😟')" style="display: flex; flex-direction: column; align-items: center; padding: 0.6rem 0.3rem; border: 1.5px solid var(--border-color); background: white; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;">
-                                    <span style="font-size: 1.8rem; line-height: 1;">😟</span>
-                                    <span style="font-size: 0.75rem; font-weight: 600; margin-top: 0.3rem; color: var(--text-dark);">Preocupado</span>
+                                <button type="button" class="mood-item-btn" data-mood="Preocupado" data-emoji="😟" onclick="selectMoodItem(this, 'Preocupado', '😟')">
+                                    <span>😟</span>
+                                    <span>Preocupado</span>
                                 </button>
-                                <button type="button" class="mood-item-btn" data-mood="Triste" data-emoji="😢" onclick="selectMoodItem(this, 'Triste', '😢')" style="display: flex; flex-direction: column; align-items: center; padding: 0.6rem 0.3rem; border: 1.5px solid var(--border-color); background: white; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;">
-                                    <span style="font-size: 1.8rem; line-height: 1;">😢</span>
-                                    <span style="font-size: 0.75rem; font-weight: 600; margin-top: 0.3rem; color: var(--text-dark);">Triste</span>
+                                <button type="button" class="mood-item-btn" data-mood="Triste" data-emoji="😢" onclick="selectMoodItem(this, 'Triste', '😢')">
+                                    <span>😢</span>
+                                    <span>Triste</span>
                                 </button>
-                                <button type="button" class="mood-item-btn" data-mood="Avergonzado" data-emoji="😳" onclick="selectMoodItem(this, 'Avergonzado', '😳')" style="display: flex; flex-direction: column; align-items: center; padding: 0.6rem 0.3rem; border: 1.5px solid var(--border-color); background: white; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;">
-                                    <span style="font-size: 1.8rem; line-height: 1;">😳</span>
-                                    <span style="font-size: 0.75rem; font-weight: 600; margin-top: 0.3rem; color: var(--text-dark);">Avergonzado</span>
+                                <button type="button" class="mood-item-btn" data-mood="Avergonzado" data-emoji="😳" onclick="selectMoodItem(this, 'Avergonzado', '😳')">
+                                    <span>😳</span>
+                                    <span>Avergonzado</span>
                                 </button>
                             </div>
 
