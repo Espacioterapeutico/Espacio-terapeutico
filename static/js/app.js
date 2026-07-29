@@ -10822,6 +10822,340 @@ window.triggerManualCronReminders = triggerManualCronReminders;
 // HERRAMIENTAS TERAPÉUTICAS Y MÓDULOS ESPECIALES
 // ==========================================
 
+function switchTherapistToolsTab(tab) {
+    const viewAsignar = document.getElementById('tt-sub-view-asignar');
+    const viewPlantillas = document.getElementById('tt-sub-view-plantillas');
+    const tabAsignar = document.getElementById('tt-tab-asignar');
+    const tabPlantillas = document.getElementById('tt-tab-plantillas');
+
+    if (!viewAsignar || !viewPlantillas) return;
+
+    if (tab === 'asignar') {
+        viewAsignar.classList.remove('hide');
+        viewPlantillas.classList.add('hide');
+        
+        if (tabAsignar) {
+            tabAsignar.className = 'btn btn-sm btn-primary';
+        }
+        if (tabPlantillas) {
+            tabPlantillas.className = 'btn btn-sm btn-secondary';
+        }
+    } else {
+        viewAsignar.classList.add('hide');
+        viewPlantillas.classList.remove('hide');
+
+        if (tabAsignar) {
+            tabAsignar.className = 'btn btn-sm btn-secondary';
+        }
+        if (tabPlantillas) {
+            tabPlantillas.className = 'btn btn-sm btn-primary';
+        }
+
+        renderTherapistPreviewTemplates();
+    }
+}
+window.switchTherapistToolsTab = switchTherapistToolsTab;
+
+// ==========================================
+// PLANTILLAS DE PREVISUALIZACIÓN VISTA PACIENTE (2 POR PÁGINA)
+// ==========================================
+
+let currentTtPreviewPage = 1;
+const TT_PREVIEW_PER_PAGE = 2;
+
+const therapistPreviewTemplates = [
+    {
+        clave: 'sueno',
+        titulo: '🌙 Registro Diario de Higiene del Sueño',
+        descripcion: 'Cuestionario de 8 ítems diarios para seguimiento de horas dormidas, despertares nocturnos y calidad percibida del descanso.',
+        html: `
+            <div style="background: white; border: 1.5px solid #d8b4fe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #6b21a8; font-size: 1.05rem;">
+                        🌙 Registro de Higiene del Sueño (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #f3e8ff; color: #6b21a8; font-weight: 700; border: 1px solid #d8b4fe; padding: 0.25rem 0.6rem;">
+                        Formulario Diario Paciente
+                    </span>
+                </div>
+                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff;">
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. ¿A qué hora te acostaste anoche?</label>
+                        <input type="time" value="23:00" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">2. ¿A qué hora te despertaste hoy?</label>
+                        <input type="time" value="06:30" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">3. Horas estimadas de descanso continuo:</label>
+                        <input type="number" value="7.5" step="0.5" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">4. Calidad percibida del descanso (1 al 5):</label>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                            <span style="padding: 0.35rem 0.75rem; background: white; border-radius: 6px; border: 1.5px solid #d8b4fe; font-weight: 700; font-size: 0.88rem; color: #6b21a8;">⭐ 4 / 5 (Reparador y Tranquilo)</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">5. Factores o despertares nocturnos:</label>
+                        <input type="text" value="Despertó 1 vez a las 3:00 AM, tomó agua y volvió a dormirse rápidamente." disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem;">💾 Guardar Registro Diario (Simulación)</button>
+                </div>
+            </div>
+        `
+    },
+    {
+        clave: 'ansiedad',
+        titulo: '⚡ Diario de Ansiedad & Síntomas Físicos',
+        descripcion: 'Registro interactivo para que el paciente identifique niveles de malestar (1 al 10), contexto desencadenante y sintomatología somática.',
+        html: `
+            <div style="background: white; border: 1.5px solid #fdba74; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #ffedd5; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #c2410c; font-size: 1.05rem;">
+                        ⚡ Diario de Ansiedad (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #ffedd5; color: #c2410c; font-weight: 700; border: 1px solid #fdba74; padding: 0.25rem 0.6rem;">
+                        Episodio / Crisis Paciente
+                    </span>
+                </div>
+                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #fff7ed; padding: 1rem; border-radius: 8px; border: 1px solid #fed7aa;">
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Nivel de Ansiedad experimentado (1 al 10):</label>
+                        <input type="text" value="7 / 10 (Ansiedad Moderada-Alta)" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1.5px solid #fdba74; background: white; font-weight: 700; color: #c2410c;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">2. Situación o Desencadenante:</label>
+                        <input type="text" value="Reunión de trabajo presencial antes de realizar una presentación oral" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">3. Síntomas Físicos Somáticos:</label>
+                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.35rem;">
+                            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 700;">💓 Taquicardia</span>
+                            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 700;">🫁 Dificultad para respirar</span>
+                            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 700;">💦 Tensión muscular</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">4. Pensamiento o Temor asociado:</label>
+                        <input type="text" value="'Siento que me voy a equivocar y que todos me juzgarán.'" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem; background: #c2410c; border-color: #c2410c;">💾 Registrar Episodio (Simulación)</button>
+                </div>
+            </div>
+        `
+    },
+    {
+        clave: 'sobriedad',
+        titulo: '🏆 Contador & Registro de Sobriedad / Consumo',
+        descripcion: 'Rastreador continuo de días en sobriedad, nivel de deseo/craving (1 a 5) y factores de protección.',
+        html: `
+            <div style="background: white; border: 1.5px solid #a7f3d0; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #d1fae5; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #047857; font-size: 1.05rem;">
+                        🏆 Contador de Sobriedad (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #d1fae5; color: #047857; font-weight: 700; border: 1px solid #a7f3d0; padding: 0.25rem 0.6rem;">
+                        Progreso Paciente
+                    </span>
+                </div>
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.25rem; border-radius: 10px; text-align: center; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
+                    <div style="font-size: 2.2rem; font-weight: 800; line-height: 1;">14 Días</div>
+                    <div style="font-size: 0.88rem; opacity: 0.95; margin-top: 0.25rem;">Continuos libre de consumo de sustancias</div>
+                </div>
+                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #ecfdf5; padding: 1rem; border-radius: 8px; border: 1px solid #a7f3d0;">
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">Deseo o Impulso de consumo hoy (Craving 1 a 5):</label>
+                        <input type="text" value="2 / 5 (Craving bajo, completamente manejable)" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700; color: #047857;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">Estrategia o factor de afrontamiento aplicado:</label>
+                        <input type="text" value="Salió a ejercitarse y llamó a un familiar al sentir inquietud." disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem; background: #10b981; border-color: #10b981;">💾 Registrar Día de Sobriedad (Simulación)</button>
+                </div>
+            </div>
+        `
+    },
+    {
+        clave: 'adherencia',
+        titulo: '💊 Adherencia al Tratamiento Médico / Psiquiátrico',
+        descripcion: 'Formulario de confirmación de tomas horarias de psicofármacos y reporte de efectos secundarios.',
+        html: `
+            <div style="background: white; border: 1.5px solid #bfdbfe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #dbeafe; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #1d4ed8; font-size: 1.05rem;">
+                        💊 Adherencia a Medicación (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #dbeafe; color: #1d4ed8; font-weight: 700; border: 1px solid #bfdbfe; padding: 0.25rem 0.6rem;">
+                        Tratamiento Paciente
+                    </span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; max-width: 550px; background: #eff6ff; padding: 1rem; border-radius: 8px; border: 1px solid #bfdbfe;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #bfdbfe;">
+                        <div>
+                            <strong style="display: block; font-size: 0.92rem; color: #1e293b;">Sertralina 50mg</strong>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Dosis de la Mañana (8:00 AM)</span>
+                        </div>
+                        <span class="badge badge-success" style="background: #10b981; color: white; padding: 0.35rem 0.7rem; font-size: 0.82rem; font-weight: 700;">Tomado a tiempo ✅</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #bfdbfe;">
+                        <div>
+                            <strong style="display: block; font-size: 0.92rem; color: #1e293b;">Clonazepam 0.5mg</strong>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Dosis de la Noche (9:30 PM)</span>
+                        </div>
+                        <button type="button" disabled class="btn btn-primary btn-sm" style="font-size: 0.8rem; font-weight: 700; padding: 0.35rem 0.7rem;">Marcar como Tomado</button>
+                    </div>
+                </div>
+            </div>
+        `
+    },
+    {
+        clave: 'activacion',
+        titulo: '🏃 Registro de Activación Conductual',
+        descripcion: 'Formulario de programación y reporte de actividades placenteras, necesarias y cotidianas.',
+        html: `
+            <div style="background: white; border: 1.5px solid #c084fc; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #7e22ce; font-size: 1.05rem;">
+                        🏃 Activación Conductual (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #f3e8ff; color: #7e22ce; font-weight: 700; border: 1px solid #c084fc; padding: 0.25rem 0.6rem;">
+                        Actividades Paciente
+                    </span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; max-width: 550px; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff;">
+                    <div style="padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #e9d5ff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                            <strong style="font-size: 0.9rem; color: var(--text-dark);">🚶‍♂️ Caminata al aire libre 20 min</strong>
+                            <span class="badge" style="background: #fdf4ff; color: #a21caf; border: 1px solid #f5d0fe; font-weight: 700;">🎉 Placer / Disfrute</span>
+                        </div>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Nivel de satisfacción logrado: <strong>8 / 10</strong></span>
+                    </div>
+                    <div style="padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #e9d5ff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                            <strong style="font-size: 0.9rem; color: var(--text-dark);">🛏️ Ordenar la habitación y hacer la cama</strong>
+                            <span class="badge" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700;">🏠 Cotidiana</span>
+                        </div>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Nivel de logro o dominio: <strong>9 / 10</strong></span>
+                    </div>
+                </div>
+            </div>
+        `
+    },
+    {
+        clave: 'ingesta',
+        titulo: '🥗 Registro de Ingesta Emocional & Alimentación',
+        descripcion: 'Formulario para registrar comidas, estados emocionales asociados previo a la ingesta y nivel de saciedad.',
+        html: `
+            <div style="background: white; border: 1.5px solid #fde047; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #fef9c3; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #a16207; font-size: 1.05rem;">
+                        🥗 Diario de Ingesta Emocional (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #fef9c3; color: #a16207; font-weight: 700; border: 1px solid #fde047; padding: 0.25rem 0.6rem;">
+                        Alimentación Paciente
+                    </span>
+                </div>
+                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #fefce8; padding: 1rem; border-radius: 8px; border: 1px solid #fef08a;">
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Tipo de Comida / Alimento:</label>
+                        <input type="text" value="Almuerzo: Pechuga a la plancha, ensalada y arroz" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">2. Emoción sentida antes de comer:</label>
+                        <input type="text" value="Ansiedad leve por estrés laboral" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">3. Sensación de saciedad (1 al 5):</label>
+                        <input type="text" value="3 / 5 (Satisfecho adecuadamente)" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem; background: #ca8a04; border-color: #ca8a04;">💾 Registrar Comida (Simulación)</button>
+                </div>
+            </div>
+        `
+    },
+    {
+        clave: 'cognitivo',
+        titulo: '🧠 Reestructuración Cognitiva & Registro de Pensamientos',
+        descripcion: 'Formulario ABC/CBT para identificar pensamientos automáticos distorsionados y generar pensamientos alternativos adaptativos.',
+        html: `
+            <div style="background: white; border: 1.5px solid #94a3b8; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #334155; font-size: 1.05rem;">
+                        🧠 Registro de Pensamientos CBT (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #f1f5f9; color: #334155; font-weight: 700; border: 1px solid #cbd5e1; padding: 0.25rem 0.6rem;">
+                        Cognitivo Paciente
+                    </span>
+                </div>
+                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Situación Desencadenante (A):</label>
+                        <input type="text" value="Enviar un mensaje de trabajo y no recibir respuesta inmediata" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">2. Pensamiento Automático (B):</label>
+                        <input type="text" value="'Están molestos conmigo o hice algo mal en mi informe.'" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; color: #b91c1c; font-weight: 700;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">3. Pensamiento Alternativo Racional (C):</label>
+                        <input type="text" value="'Es probable que estén ocupados en una reunión. No todo gira en torno a mi informe.'" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1.5px solid #10b981; background: white; color: #047857; font-weight: 700;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem; background: #475569; border-color: #475569;">💾 Registrar Pensamiento (Simulación)</button>
+                </div>
+            </div>
+        `
+    }
+];
+
+function renderTherapistPreviewTemplates() {
+    const container = document.getElementById('tt-preview-templates-container');
+    if (!container) return;
+
+    const totalPages = Math.ceil(therapistPreviewTemplates.length / TT_PREVIEW_PER_PAGE);
+    if (currentTtPreviewPage > totalPages) currentTtPreviewPage = totalPages;
+    if (currentTtPreviewPage < 1) currentTtPreviewPage = 1;
+
+    const start = (currentTtPreviewPage - 1) * TT_PREVIEW_PER_PAGE;
+    const pageRecords = therapistPreviewTemplates.slice(start, start + TT_PREVIEW_PER_PAGE);
+
+    container.innerHTML = pageRecords.map(tmpl => tmpl.html).join('');
+
+    renderTtTemplatesPaginationControls(therapistPreviewTemplates.length, totalPages);
+}
+
+function renderTtTemplatesPaginationControls(totalRecords, totalPages) {
+    let container = document.getElementById('tt-templates-pagination-controls');
+    if (!container) return;
+
+    if (totalRecords === 0 || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeTtPreviewPage(${currentTtPreviewPage - 1})" ${currentTtPreviewPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.35rem 0.85rem;">
+                ◀️ Plantillas Anteriores
+            </button>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
+                Página ${currentTtPreviewPage} de ${totalPages} (${totalRecords} plantillas disponibles)
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeTtPreviewPage(${currentTtPreviewPage + 1})" ${currentTtPreviewPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.35rem 0.85rem;">
+                Plantillas Siguientes ▶️
+            </button>
+        </div>
+    `;
+}
+
+function changeTtPreviewPage(newPage) {
+    currentTtPreviewPage = newPage;
+    renderTherapistPreviewTemplates();
+}
+window.changeTtPreviewPage = changeTtPreviewPage;
+
 const toolButtonLabels = {
     'sueno': '📊 Ver Registro de Sueño',
     'ansiedad': '📊 Ver Registro de Ansiedad',
