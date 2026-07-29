@@ -2185,6 +2185,10 @@ async function loadPizarraPatients() {
     }
 }
 
+let currentPizarraUpdates = [];
+let currentPizarraPage = 1;
+const PIZARRA_PER_PAGE = 6;
+
 async function loadPizarraVisual() {
     const grid = document.getElementById('pizarra-updates-grid');
     if (!grid) return;
@@ -2199,160 +2203,198 @@ async function loadPizarraVisual() {
         const res = await fetch(url);
         const data = await res.json();
         
-        grid.innerHTML = '';
-        
-        if (data.updates && data.updates.length > 0) {
-            data.updates.forEach((upd, index) => {
-                const card = document.createElement('div');
-                card.className = 'pizarra-update-card';
-                card.style.border = '1px solid var(--border-color)';
-                card.style.borderRadius = 'var(--radius-md)';
-                card.style.padding = '1.25rem';
-                card.style.backgroundColor = 'var(--card-bg)';
-                card.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.02)';
-                card.style.position = 'relative';
-                
-                const colors = [
-                    'rgba(169, 89, 147, 0.04)',
-                    'rgba(16, 185, 129, 0.04)',
-                    'rgba(59, 130, 246, 0.04)',
-                    'rgba(245, 158, 11, 0.04)'
-                ];
-                card.style.borderLeft = `5px solid ${['var(--primary-color)', '#10b981', '#3b82f6', '#f59e0b'][index % 4]}`;
-                card.style.backgroundColor = colors[index % 4];
-                
-                const header = document.createElement('div');
-                header.style.display = 'flex';
-                header.style.justifyContent = 'space-between';
-                header.style.alignItems = 'flex-start';
-                header.style.marginBottom = '0.75rem';
-                header.style.borderBottom = '1px solid rgba(0,0,0,0.04)';
-                header.style.paddingBottom = '0.5rem';
-                
-                const userPart = document.createElement('div');
-                userPart.style.display = 'flex';
-                userPart.style.flexDirection = 'column';
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.style.fontWeight = '700';
-                nameSpan.style.color = 'var(--text-dark)';
-                nameSpan.style.fontSize = '0.95rem';
-                nameSpan.textContent = upd.paciente_nombre;
-                
-                const roleSpan = document.createElement('span');
-                roleSpan.style.fontSize = '0.75rem';
-                roleSpan.style.color = 'var(--text-muted)';
-                roleSpan.textContent = 'Paciente';
-                
-                userPart.appendChild(nameSpan);
-                userPart.appendChild(roleSpan);
-                
-                const dateObj = new Date(upd.fecha.replace(/-/g, '/'));
-                const dateStr = dateObj.toLocaleDateString([], {day: '2-digit', month: '2-digit', year: 'numeric'});
-                const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-                
-                const timeSpan = document.createElement('span');
-                timeSpan.style.fontSize = '0.75rem';
-                timeSpan.style.color = 'var(--text-muted)';
-                timeSpan.textContent = `${dateStr} ${timeStr}`;
-                
-                header.appendChild(userPart);
-                header.appendChild(timeSpan);
-                
-                const body = document.createElement('div');
-                body.style.fontSize = '0.9rem';
-                body.style.lineHeight = '1.5';
-                body.style.whiteSpace = 'pre-wrap';
-                body.style.color = 'var(--text-dark)';
-                body.textContent = upd.contenido;
-                
-                card.appendChild(header);
-                if (upd.estado_animo || upd.emoji_animo) {
-                    const animoDiv = document.createElement('div');
-                    animoDiv.style.marginBottom = '0.5rem';
-                    animoDiv.style.fontSize = '0.85rem';
-                    animoDiv.style.color = 'var(--text-muted)';
-                    animoDiv.style.display = 'flex';
-                    animoDiv.style.alignItems = 'center';
-                    animoDiv.style.gap = '0.35rem';
-                    animoDiv.innerHTML = `<span style="font-size: 1.1rem;">${upd.emoji_animo || '😊'}</span> <span>Estado de ánimo: <strong>${upd.estado_animo || ''}</strong></span>${upd.comentario_animo ? ` <span style="font-style:italic;">("${upd.comentario_animo}")</span>` : ''}`;
-                    card.appendChild(animoDiv);
-                }
-                if (upd.contenido) {
-                    card.appendChild(body);
-                }
-                
-                if (upd.archivo_adjunto) {
-                    const fileDiv = document.createElement('div');
-                    fileDiv.style.marginTop = '0.5rem';
-                    fileDiv.style.fontSize = '0.8rem';
-                    fileDiv.style.padding = '0.35rem 0.5rem';
-                    fileDiv.style.borderRadius = '4px';
-                    fileDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.6)';
-                    fileDiv.style.display = 'inline-flex';
-                    fileDiv.style.alignItems = 'center';
-                    fileDiv.style.gap = '0.35rem';
-                    fileDiv.style.border = '1px solid var(--border-color)';
-                    
-                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(upd.archivo_adjunto);
-                    if (isImage) {
-                        fileDiv.innerHTML = `
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">Ver Imagen Adjunta</a>
-                        `;
-                    } else {
-                        fileDiv.innerHTML = `
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">Ver Documento Adjunto</a>
-                        `;
-                    }
-                    card.appendChild(fileDiv);
-                }
-
-                if (upd.respuesta_psicologo) {
-                    const respDiv = document.createElement('div');
-                    respDiv.style.marginTop = '0.75rem';
-                    respDiv.style.padding = '0.65rem 0.85rem';
-                    respDiv.style.borderRadius = 'var(--radius-sm)';
-                    respDiv.style.backgroundColor = 'rgba(126, 34, 206, 0.06)';
-                    respDiv.style.borderLeft = '3px solid var(--primary-color)';
-                    respDiv.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
-                            <strong style="font-size:0.82rem; color:var(--primary-color);">💬 Tu Respuesta:</strong>
-                            <span style="font-size:0.72rem; color:var(--text-muted);">${upd.fecha_respuesta || ''}</span>
-                        </div>
-                        <div style="font-size:0.85rem; color:var(--text-dark); line-height:1.4;">${upd.respuesta_psicologo}</div>
-                    `;
-                    card.appendChild(respDiv);
-                }
-                
-                // Formulario de respuesta del terapeuta
-                const replyContainer = document.createElement('div');
-                replyContainer.style.marginTop = '1rem';
-                replyContainer.style.borderTop = '1px dashed rgba(0,0,0,0.06)';
-                replyContainer.style.paddingTop = '0.75rem';
-                
-                replyContainer.innerHTML = `
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <input type="text" placeholder="${upd.respuesta_psicologo ? 'Enviar nueva respuesta...' : 'Escribe un comentario o respuesta...'}" style="flex: 1; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.8rem; background-color: var(--card-bg);" id="reply-input-${upd.id}">
-                        <button type="button" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: var(--radius-sm);" onclick="submitPizarraReply(${upd.paciente_id}, ${upd.id})">${upd.respuesta_psicologo ? 'Actualizar' : 'Enviar'}</button>
-                    </div>
-                `;
-                card.appendChild(replyContainer);
-                
-                grid.appendChild(card);
-            });
-        } else {
-            grid.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: var(--bg-light); border-radius: var(--radius-md); border: 1.5px dashed var(--border-color);">
-                    <p class="text-secondary" style="font-style: italic;">No hay actualizaciones registradas en la pizarra terapéutica para los criterios seleccionados.</p>
-                </div>
-            `;
-        }
+        currentPizarraUpdates = data.updates || [];
+        currentPizarraPage = 1;
+        renderPizarraVisual();
     } catch (err) {
         grid.innerHTML = '<span class="text-secondary text-sm" style="color: red;">Error de conexión al cargar la pizarra visual.</span>';
     }
 }
+
+function renderPizarraVisual() {
+    const grid = document.getElementById('pizarra-updates-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    if (currentPizarraUpdates.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: var(--bg-light); border-radius: var(--radius-md); border: 1.5px dashed var(--border-color);">
+                <p class="text-secondary" style="font-style: italic;">No hay actualizaciones registradas en la pizarra terapéutica para los criterios seleccionados.</p>
+            </div>
+        `;
+        renderPizarraPaginationControls(0, 1);
+        return;
+    }
+
+    const totalPages = Math.ceil(currentPizarraUpdates.length / PIZARRA_PER_PAGE);
+    if (currentPizarraPage > totalPages) currentPizarraPage = totalPages;
+    if (currentPizarraPage < 1) currentPizarraPage = 1;
+
+    const start = (currentPizarraPage - 1) * PIZARRA_PER_PAGE;
+    const pageRecords = currentPizarraUpdates.slice(start, start + PIZARRA_PER_PAGE);
+
+    pageRecords.forEach((upd, index) => {
+        const card = document.createElement('div');
+        card.className = 'pizarra-update-card';
+        card.style.border = '1px solid var(--border-color)';
+        card.style.borderRadius = 'var(--radius-md)';
+        card.style.padding = '1.25rem';
+        card.style.backgroundColor = 'var(--card-bg)';
+        card.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.02)';
+        card.style.position = 'relative';
+        
+        const colors = [
+            'rgba(169, 89, 147, 0.04)',
+            'rgba(16, 185, 129, 0.04)',
+            'rgba(59, 130, 246, 0.04)',
+            'rgba(245, 158, 11, 0.04)'
+        ];
+        card.style.borderLeft = `5px solid ${['var(--primary-color)', '#10b981', '#3b82f6', '#f59e0b'][index % 4]}`;
+        card.style.backgroundColor = colors[index % 4];
+        
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'flex-start';
+        header.style.marginBottom = '0.75rem';
+        header.style.borderBottom = '1px solid rgba(0,0,0,0.04)';
+        header.style.paddingBottom = '0.5rem';
+        
+        const userPart = document.createElement('div');
+        userPart.style.display = 'flex';
+        userPart.style.flexDirection = 'column';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.style.fontWeight = '700';
+        nameSpan.style.color = 'var(--text-dark)';
+        nameSpan.style.fontSize = '0.95rem';
+        nameSpan.textContent = upd.paciente_nombre;
+        
+        const roleSpan = document.createElement('span');
+        roleSpan.style.fontSize = '0.75rem';
+        roleSpan.style.color = 'var(--text-muted)';
+        roleSpan.textContent = 'Paciente';
+        
+        userPart.appendChild(nameSpan);
+        userPart.appendChild(roleSpan);
+        
+        const dateObj = new Date(upd.fecha.replace(/-/g, '/'));
+        const dateSpan = document.createElement('span');
+        dateSpan.style.fontSize = '0.75rem';
+        dateSpan.style.color = 'var(--text-muted)';
+        dateSpan.textContent = isNaN(dateObj.getTime()) ? upd.fecha : dateObj.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+        
+        header.appendChild(userPart);
+        header.appendChild(dateSpan);
+        card.appendChild(header);
+        
+        const body = document.createElement('div');
+        body.style.fontSize = '0.9rem';
+        body.style.lineHeight = '1.5';
+        body.style.color = 'var(--text-dark)';
+        
+        if (upd.tipo === 'emocion') {
+            body.innerHTML = `<strong>Estado de ánimo:</strong> ${upd.contenido}`;
+        } else {
+            body.textContent = upd.contenido;
+        }
+        if (upd.contenido) {
+            card.appendChild(body);
+        }
+        
+        if (upd.archivo_adjunto) {
+            const fileDiv = document.createElement('div');
+            fileDiv.style.marginTop = '0.5rem';
+            fileDiv.style.fontSize = '0.8rem';
+            fileDiv.style.padding = '0.35rem 0.5rem';
+            fileDiv.style.borderRadius = '4px';
+            fileDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.6)';
+            fileDiv.style.display = 'inline-flex';
+            fileDiv.style.alignItems = 'center';
+            fileDiv.style.gap = '0.35rem';
+            fileDiv.style.border = '1px solid var(--border-color)';
+            
+            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(upd.archivo_adjunto);
+            if (isImage) {
+                fileDiv.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">Ver Imagen Adjunta</a>
+                `;
+            } else {
+                fileDiv.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">Ver Documento Adjunto</a>
+                `;
+            }
+            card.appendChild(fileDiv);
+        }
+
+        if (upd.respuesta_psicologo) {
+            const respDiv = document.createElement('div');
+            respDiv.style.marginTop = '0.75rem';
+            respDiv.style.padding = '0.65rem 0.85rem';
+            respDiv.style.borderRadius = 'var(--radius-sm)';
+            respDiv.style.backgroundColor = 'rgba(126, 34, 206, 0.06)';
+            respDiv.style.borderLeft = '3px solid var(--primary-color)';
+            respDiv.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                    <strong style="font-size:0.82rem; color:var(--primary-color);">💬 Tu Respuesta:</strong>
+                    <span style="font-size:0.72rem; color:var(--text-muted);">${upd.fecha_respuesta || ''}</span>
+                </div>
+                <div style="font-size:0.85rem; color:var(--text-dark); line-height:1.4;">${upd.respuesta_psicologo}</div>
+            `;
+            card.appendChild(respDiv);
+        }
+        
+        const replyContainer = document.createElement('div');
+        replyContainer.style.marginTop = '1rem';
+        replyContainer.style.borderTop = '1px dashed rgba(0,0,0,0.06)';
+        replyContainer.style.paddingTop = '0.75rem';
+        
+        replyContainer.innerHTML = `
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="text" placeholder="${upd.respuesta_psicologo ? 'Enviar nueva respuesta...' : 'Escribe un comentario o respuesta...'}" style="flex: 1; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.8rem; background-color: var(--card-bg);" id="reply-input-${upd.id}">
+                <button type="button" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: var(--radius-sm);" onclick="submitPizarraReply(${upd.paciente_id}, ${upd.id})">${upd.respuesta_psicologo ? 'Actualizar' : 'Enviar'}</button>
+            </div>
+        `;
+        card.appendChild(replyContainer);
+        
+        grid.appendChild(card);
+    });
+
+    renderPizarraPaginationControls(currentPizarraUpdates.length, totalPages);
+}
+
+function renderPizarraPaginationControls(totalRecords, totalPages) {
+    let container = document.getElementById('pizarra-pagination-controls');
+    if (!container) return;
+
+    if (totalRecords === 0 || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePizarraPage(${currentPizarraPage - 1})" ${currentPizarraPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                ◀️ Tarjetas Anteriores
+            </button>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
+                Página ${currentPizarraPage} de ${totalPages} (${totalRecords} publicaciones)
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePizarraPage(${currentPizarraPage + 1})" ${currentPizarraPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                Tarjetas Siguientes ▶️
+            </button>
+        </div>
+    `;
+}
+
+function changePizarraPage(newPage) {
+    currentPizarraPage = newPage;
+    renderPizarraVisual();
+}
+window.changePizarraPage = changePizarraPage;
 
 async function handlePatientPaymentSubmit(e) {
     e.preventDefault();
@@ -2455,16 +2497,42 @@ async function loadPatients() {
     }
 }
 
+let currentPatientsPage = 1;
+const PATIENTS_PER_PAGE = 6;
+
 function renderPatientsTable(list) {
     const tbody = document.getElementById('patients-table-body');
+    if (!tbody) return;
     tbody.innerHTML = '';
     
-    if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay pacientes registrados.</td></tr>';
+    const input = document.getElementById('patient-table-search-input');
+    const query = input ? input.value.toLowerCase().trim() : '';
+
+    const filtered = (list || []).filter(p => {
+        if (!query) return true;
+        const fullText = `${p.cedula || ''} ${p.nombres || ''} ${p.apellidos || ''} ${p.residencia_actual || ''}`.toLowerCase();
+        return fullText.includes(query);
+    });
+
+    const counter = document.getElementById('patient-search-counter');
+    if (counter) {
+        counter.textContent = query ? `${filtered.length} coincidencia(s)` : `${filtered.length} consultantes`;
+    }
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-secondary">No se encontraron consultantes.</td></tr>';
+        renderPatientsPaginationControls(0, 1);
         return;
     }
-    
-    list.forEach(p => {
+
+    const totalPages = Math.ceil(filtered.length / PATIENTS_PER_PAGE);
+    if (currentPatientsPage > totalPages) currentPatientsPage = totalPages;
+    if (currentPatientsPage < 1) currentPatientsPage = 1;
+
+    const start = (currentPatientsPage - 1) * PATIENTS_PER_PAGE;
+    const pageRecords = filtered.slice(start, start + PATIENTS_PER_PAGE);
+
+    pageRecords.forEach(p => {
         const tr = document.createElement('tr');
         const loc = typeof formatPatientLocation === 'function' ? formatPatientLocation(p) : (p.residencia_actual || 'N/A');
         tr.innerHTML = `
@@ -2480,31 +2548,45 @@ function renderPatientsTable(list) {
         `;
         tbody.appendChild(tr);
     });
-    filterPatientsTableByInput();
+
+    renderPatientsPaginationControls(filtered.length, totalPages);
+}
+
+function renderPatientsPaginationControls(totalRecords, totalPages) {
+    let container = document.getElementById('patients-pagination-controls');
+    if (!container) return;
+
+    if (totalRecords === 0 || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePatientsPage(${currentPatientsPage - 1})" ${currentPatientsPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                ◀️ Anterior
+            </button>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
+                Página ${currentPatientsPage} de ${totalPages} (${totalRecords} consultantes)
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePatientsPage(${currentPatientsPage + 1})" ${currentPatientsPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                Siguiente ▶️
+            </button>
+        </div>
+    `;
+}
+
+function changePatientsPage(newPage) {
+    currentPatientsPage = newPage;
+    renderPatientsTable(patients);
 }
 
 function filterPatientsTableByInput() {
-    const input = document.getElementById('patient-table-search-input');
-    if (!input) return;
-    const query = input.value.toLowerCase().trim();
-    const rows = document.querySelectorAll('#patients-table-body tr');
-    let visibleCount = 0;
-    
-    rows.forEach(tr => {
-        const text = tr.textContent.toLowerCase();
-        if (!query || text.includes(query)) {
-            tr.style.display = '';
-            visibleCount++;
-        } else {
-            tr.style.display = 'none';
-        }
-    });
-    
-    const counter = document.getElementById('patient-search-counter');
-    if (counter) {
-        counter.textContent = query ? `${visibleCount} coincidencia(s)` : '';
-    }
+    currentPatientsPage = 1;
+    renderPatientsTable(patients);
 }
+
+window.changePatientsPage = changePatientsPage;
 
 async function checkCedulaAutoFill() {
     const isNew = !document.getElementById('patient-form-id').value;
@@ -3066,16 +3148,22 @@ async function loadSessions(patientId = '') {
     }
 }
 
-function applySessionsFilters() {
+let currentSessionsPage = 1;
+const SESSIONS_PER_PAGE = 1;
+
+function applySessionsFilters(resetPage = false) {
+    if (resetPage) currentSessionsPage = 1;
+
     const timeline = document.getElementById('sessions-timeline');
-    const modalityFilter = document.getElementById('session-filter-modalidad').value;
+    if (!timeline) return;
+    const modalityFilter = document.getElementById('session-filter-modalidad')?.value || '';
     const searchInput = document.getElementById('session-search-patient');
     const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const countLabel = document.getElementById('session-filter-count');
     
     timeline.innerHTML = '';
     
-    let filteredList = currentSessionsList;
+    let filteredList = [...currentSessionsList];
     
     // 1. Filtrar por búsqueda de texto (nombre, apellido, cédula)
     if (searchQuery) {
@@ -3091,17 +3179,27 @@ function applySessionsFilters() {
         filteredList = filteredList.filter(s => s.modalidad === modalityFilter);
     }
     
-    // 3. Actualizar conteo (por ejemplo: "3 de 10 consultas")
+    // Ordenar por fecha descendente (la más reciente primero)
+    filteredList.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
     if (countLabel) {
         countLabel.textContent = `${filteredList.length} de ${currentSessionsList.length} consultas`;
     }
     
     if (filteredList.length === 0) {
         timeline.innerHTML = '<div class="empty-state"><p>No se encontraron registros de evoluciones clínicas para los filtros aplicados.</p></div>';
+        renderSessionsPaginationControls(0, 1);
         return;
     }
+
+    const totalPages = Math.ceil(filteredList.length / SESSIONS_PER_PAGE);
+    if (currentSessionsPage > totalPages) currentSessionsPage = totalPages;
+    if (currentSessionsPage < 1) currentSessionsPage = 1;
+
+    const start = (currentSessionsPage - 1) * SESSIONS_PER_PAGE;
+    const pageRecords = filteredList.slice(start, start + SESSIONS_PER_PAGE);
     
-    filteredList.forEach(s => {
+    pageRecords.forEach(s => {
         const item = document.createElement('div');
         item.className = 'timeline-item';
         
@@ -3196,7 +3294,39 @@ function applySessionsFilters() {
         `;
         timeline.appendChild(item);
     });
+
+    renderSessionsPaginationControls(filteredList.length, totalPages);
 }
+
+function renderSessionsPaginationControls(totalRecords, totalPages) {
+    let container = document.getElementById('sessions-pagination-controls');
+    if (!container) return;
+
+    if (totalRecords === 0 || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeSessionsPage(${currentSessionsPage - 1})" ${currentSessionsPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                ◀️ Evolución Anterior
+            </button>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
+                Evolución ${currentSessionsPage} de ${totalPages} ${currentSessionsPage === 1 ? '(Última Sesión)' : ''}
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeSessionsPage(${currentSessionsPage + 1})" ${currentSessionsPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                Evolución Siguiente ▶️
+            </button>
+        </div>
+    `;
+}
+
+function changeSessionsPage(newPage) {
+    currentSessionsPage = newPage;
+    applySessionsFilters(false);
+}
+window.changeSessionsPage = changeSessionsPage;
 
 async function openNewSessionModal() {
     document.getElementById('session-form').reset();
@@ -10714,6 +10844,10 @@ const claveToToolMap = {
 
 let therapistToolsPatientsCatalog = [];
 
+let currentToolsCatalogList = [];
+let currentToolsCatalogPage = 1;
+const TOOLS_CATALOG_PER_PAGE = 3;
+
 async function loadTherapistToolsCatalog() {
     const container = document.getElementById('tt-modules-accordion') || document.getElementById('tt-modules-grid');
     if (!container) return;
@@ -10723,79 +10857,131 @@ async function loadTherapistToolsCatalog() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al cargar catálogo');
 
-        container.innerHTML = data.map(m => {
-            const toolType = claveToToolMap[m.clave] || m.clave;
-            const targetId = `acc-body-${m.clave}`;
-            const activeCount = m.activos || 0;
-            const patients = m.pacientes || [];
-
-            let patientsHtml = '';
-            if (patients.length === 0) {
-                patientsHtml = `
-                    <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
-                        📭 No hay consultantes con esta herramienta activa actualmente.
-                    </div>
-                `;
-            } else {
-                patientsHtml = patients.map(p => {
-                    const inlineContainerId = `inline-history-acc-${p.patient_id}-${toolType}`;
-                    return `
-                        <div style="display: flex; flex-direction: column; width: 100%;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
-                                <div style="flex: 1; min-width: 220px;">
-                                    <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
-                                    <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
-                                </div>
-                                <div>
-                                    <button type="button" class="btn btn-primary btn-sm btn-view-history" onclick="toggleInlinePatientHistory(${p.patient_id}, '${toolType}', '${inlineContainerId}')" style="font-weight: 600; padding: 0.35rem 0.75rem;">
-                                        📋 Ver Historial
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="${inlineContainerId}" class="inline-patient-history hide" style="display: none; margin-top: 0.5rem; width: 100%;"></div>
-                        </div>
-                    `;
-                }).join('<div style="height: 0.5rem;"></div>');
-            }
-
-            return `
-            <div class="card accordion-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm);">
-                <!-- CABECERA: Línea 1 (Ícono + Nombre Completo + Flecha) / Línea 2 (Pacientes Activos) -->
-                <div class="accordion-tool-header" data-target="${targetId}" style="padding: 0.55rem 0.85rem; background: white; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; user-select: none; transition: background 0.2s;">
-                    <!-- LÍNEA 1: Ícono + Nombre Completo + Botón Flecha -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
-                            <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
-                            <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; line-height: 1.2; word-break: break-word;">${m.nombre}</h4>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color); background: #f9fafb;">
-                            <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
-                        </button>
-                    </div>
-                    <!-- LÍNEA 2: Número de pacientes activos -->
-                    <div style="margin-left: 1.75rem; line-height: 1;">
-                        <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.72rem; padding: 0.12rem 0.4rem;">
-                            ${activeCount} Paciente(s) Activos
-                        </span>
-                    </div>
-                </div>
-                <!-- CUERPO DESPLEGABLE: Descripción + Lista de Consultantes -->
-                <div id="${targetId}" class="accordion-tool-body hide" style="display: none; padding: 0.85rem 1rem; border-top: 1.5px solid var(--border-color); background: #fafafa;">
-                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        <p style="font-size: 0.83rem; color: var(--text-muted); margin: 0; line-height: 1.4; background: white; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                            ℹ️ <strong>Descripción:</strong> ${m.descripcion}
-                        </p>
-                        ${patientsHtml}
-                    </div>
-                </div>
-            </div>
-            `;
-        }).join('');
-
+        currentToolsCatalogList = data;
+        renderTherapistToolsCatalog();
     } catch (err) {
         container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     }
 }
+
+function renderTherapistToolsCatalog() {
+    const container = document.getElementById('tt-modules-accordion') || document.getElementById('tt-modules-grid');
+    if (!container) return;
+
+    if (currentToolsCatalogList.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-3">No hay herramientas terapéuticas disponibles.</p>';
+        renderToolsCatalogPaginationControls(0, 1);
+        return;
+    }
+
+    const totalPages = Math.ceil(currentToolsCatalogList.length / TOOLS_CATALOG_PER_PAGE);
+    if (currentToolsCatalogPage > totalPages) currentToolsCatalogPage = totalPages;
+    if (currentToolsCatalogPage < 1) currentToolsCatalogPage = 1;
+
+    const start = (currentToolsCatalogPage - 1) * TOOLS_CATALOG_PER_PAGE;
+    const pageRecords = currentToolsCatalogList.slice(start, start + TOOLS_CATALOG_PER_PAGE);
+
+    container.innerHTML = pageRecords.map(m => {
+        const toolType = claveToToolMap[m.clave] || m.clave;
+        const targetId = `acc-body-${m.clave}`;
+        const activeCount = m.activos || 0;
+        const patients = m.pacientes || [];
+
+        let patientsHtml = '';
+        if (patients.length === 0) {
+            patientsHtml = `
+                <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+                    📭 No hay consultantes con esta herramienta activa actualmente.
+                </div>
+            `;
+        } else {
+            patientsHtml = patients.map(p => {
+                const inlineContainerId = `inline-history-acc-${p.patient_id}-${toolType}`;
+                return `
+                    <div style="display: flex; flex-direction: column; width: 100%;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
+                            <div style="flex: 1; min-width: 220px;">
+                                <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-primary btn-sm btn-view-history" onclick="toggleInlinePatientHistory(${p.patient_id}, '${toolType}', '${inlineContainerId}')" style="font-weight: 600; padding: 0.35rem 0.75rem;">
+                                    📋 Ver Historial
+                                </button>
+                            </div>
+                        </div>
+                        <div id="${inlineContainerId}" class="inline-patient-history hide" style="display: none; margin-top: 0.5rem; width: 100%;"></div>
+                    </div>
+                `;
+            }).join('<div style="height: 0.5rem;"></div>');
+        }
+
+        return `
+        <div class="card accordion-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm);">
+            <!-- CABECERA: Línea 1 (Ícono + Nombre Completo + Flecha) / Línea 2 (Pacientes Activos) -->
+            <div class="accordion-tool-header" data-target="${targetId}" style="padding: 0.55rem 0.85rem; background: white; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; user-select: none; transition: background 0.2s;">
+                <!-- LÍNEA 1: Ícono + Nombre Completo + Botón Flecha -->
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+                        <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
+                        <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; line-height: 1.2; word-break: break-word;">${m.nombre}</h4>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color); background: #f9fafb;">
+                        <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
+                    </button>
+                </div>
+                <!-- LÍNEA 2: Número de pacientes activos -->
+                <div style="margin-left: 1.75rem; line-height: 1;">
+                    <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.72rem; padding: 0.12rem 0.4rem;">
+                        ${activeCount} Paciente(s) Activos
+                    </span>
+                </div>
+            </div>
+            <!-- CUERPO DESPLEGABLE: Descripción + Lista de Consultantes -->
+            <div id="${targetId}" class="accordion-tool-body hide" style="display: none; padding: 0.85rem 1rem; border-top: 1.5px solid var(--border-color); background: #fafafa;">
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <p style="font-size: 0.83rem; color: var(--text-muted); margin: 0; line-height: 1.4; background: white; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                        ℹ️ <strong>Descripción:</strong> ${m.descripcion}
+                    </p>
+                    ${patientsHtml}
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+
+    renderToolsCatalogPaginationControls(currentToolsCatalogList.length, totalPages);
+}
+
+function renderToolsCatalogPaginationControls(totalRecords, totalPages) {
+    let container = document.getElementById('tools-catalog-pagination-controls');
+    if (!container) return;
+
+    if (totalRecords === 0 || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeToolsCatalogPage(${currentToolsCatalogPage - 1})" ${currentToolsCatalogPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                ◀️ Módulos Anteriores
+            </button>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
+                Página ${currentToolsCatalogPage} de ${totalPages} (${totalRecords} módulos)
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeToolsCatalogPage(${currentToolsCatalogPage + 1})" ${currentToolsCatalogPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                Módulos Siguientes ▶️
+            </button>
+        </div>
+    `;
+}
+
+function changeToolsCatalogPage(newPage) {
+    currentToolsCatalogPage = newPage;
+    renderTherapistToolsCatalog();
+}
+window.changeToolsCatalogPage = changeToolsCatalogPage;
 
 // ==========================================
 // ESTADO Y RENDERIZADO DE HISTORIAL DESPLEGABLE CON PAGINACIÓN (5 REGISTROS POR PÁGINA)
