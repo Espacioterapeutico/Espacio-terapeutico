@@ -10438,6 +10438,23 @@ async function toggleTherapistSubscription(userId) {
 
 const RENDER_WA_URL = 'https://espacio-terapeutico-whatsapp.onrender.com';
 
+async function fetchWithTimeout(resource, options = {}) {
+    const { timeout = 4000 } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (err) {
+        clearTimeout(id);
+        throw err;
+    }
+}
+
 async function checkWhatsAppQRStatus() {
     const badge = document.getElementById('wa-connection-status-badge');
     const loadingBox = document.getElementById('wa-qr-loading');
@@ -10450,24 +10467,25 @@ async function checkWhatsAppQRStatus() {
 
     try {
         let statusData = null;
-        // Intento 1: Verificar el ESTADO de conexión primero
+        // Intento 1: Consultar estado via backend Flask (más rápido y sin problemas de CORS)
         try {
-            const resStatus = await fetch(`${RENDER_WA_URL}/status`, { mode: 'cors' });
+            const resStatus = await fetchWithTimeout('/api/whatsapp/status', { timeout: 4500 });
             if (resStatus.ok) {
                 statusData = await resStatus.json();
             }
-        } catch (directErr) {
-            console.warn("Llamada directa /status a Render falló, intentando via backend Flask:", directErr);
+        } catch (backendErr) {
+            console.warn("Consulta Flask /api/whatsapp/status dio timeout, intentando directo:", backendErr);
         }
 
+        // Intento 2: Si el backend tardó, intentar llamado directo a Render
         if (!statusData) {
             try {
-                const resStatus = await fetch('/api/whatsapp/status');
+                const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 3500 });
                 if (resStatus.ok) {
                     statusData = await resStatus.json();
                 }
-            } catch (backendErr) {
-                console.warn("Llamada a /api/whatsapp/status dio error:", backendErr);
+            } catch (directErr) {
+                console.warn("Llamada directa /status a Render falló:", directErr);
             }
         }
 
@@ -10493,19 +10511,19 @@ async function checkWhatsAppQRStatus() {
         // Si NO está conectada, procedemos a solicitar el código QR
         let qrData = null;
         try {
-            const resQr = await fetch(`${RENDER_WA_URL}/qr`, { mode: 'cors' });
+            const resQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 6000 });
             if (resQr.ok) {
                 qrData = await resQr.json();
             }
-        } catch (directErr) {}
+        } catch (backendErr) {}
 
         if (!qrData) {
             try {
-                const resQr = await fetch('/api/whatsapp/qr');
+                const resQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 5000 });
                 if (resQr.ok) {
                     qrData = await resQr.json();
                 }
-            } catch (backendErr) {}
+            } catch (directErr) {}
         }
 
         if (qrData && qrData.status === 'connected') {
@@ -10548,8 +10566,8 @@ async function checkWhatsAppQRStatus() {
             loadingBox.classList.remove('hide');
             loadingBox.innerHTML = `
                 <div style="padding: 0.5rem; color: var(--text-dark);">
-                    <p style="font-weight: 600; margin-bottom: 0.3rem;">⌛ Generando código QR...</p>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Si la instancia de Render estaba inactiva, tardará unos 30 segundos en responder. Presiona <strong>Actualizar Estado</strong> en un momento.</p>
+                    <p style="font-weight: 600; margin-bottom: 0.3rem;">⌛ Verificando o generando código QR...</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Si el servidor estaba inactivo, tarda unos 20-30 segundos en responder por primera vez. Presiona <strong>Actualizar Estado</strong> si tarda en cargar.</p>
                 </div>
             `;
             qrBox.classList.add('hide');
