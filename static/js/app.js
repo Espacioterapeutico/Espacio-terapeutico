@@ -10869,7 +10869,7 @@ const therapistPreviewTemplates = [
         titulo: '🌙 Registro Diario de Higiene del Sueño',
         descripcion: 'Cuestionario de 8 ítems diarios para seguimiento de horas dormidas, despertares nocturnos y calidad percibida del descanso.',
         html: `
-            <div style="background: white; border: 1.5px solid #d8b4fe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="background: white; border: 1.5px solid #d8b4fe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #6b21a8; font-size: 1.05rem;">
                         🌙 Registro de Higiene del Sueño (Vista del Consultante)
@@ -10878,7 +10878,7 @@ const therapistPreviewTemplates = [
                         Formulario Diario Paciente
                     </span>
                 </div>
-                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff;">
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff; box-sizing: border-box;">
                     <div>
                         <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. ¿A qué hora te acostaste anoche?</label>
                         <input type="time" value="23:00" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
@@ -10911,7 +10911,7 @@ const therapistPreviewTemplates = [
         titulo: '⚡ Diario de Ansiedad & Síntomas Físicos',
         descripcion: 'Registro interactivo para que el paciente identifique niveles de malestar (1 al 10), contexto desencadenante y sintomatología somática.',
         html: `
-            <div style="background: white; border: 1.5px solid #fdba74; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="background: white; border: 1.5px solid #fdba74; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #ffedd5; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #c2410c; font-size: 1.05rem;">
                         ⚡ Diario de Ansiedad (Vista del Consultante)
@@ -10920,7 +10920,7 @@ const therapistPreviewTemplates = [
                         Episodio / Crisis Paciente
                     </span>
                 </div>
-                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #fff7ed; padding: 1rem; border-radius: 8px; border: 1px solid #fed7aa;">
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #fff7ed; padding: 1rem; border-radius: 8px; border: 1px solid #fed7aa; box-sizing: border-box;">
                     <div>
                         <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Nivel de Ansiedad experimentado (1 al 10):</label>
                         <input type="text" value="7 / 10 (Ansiedad Moderada-Alta)" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1.5px solid #fdba74; background: white; font-weight: 700; color: #c2410c;">
@@ -10951,7 +10951,7 @@ const therapistPreviewTemplates = [
         titulo: '🏆 Contador & Registro de Sobriedad / Consumo',
         descripcion: 'Rastreador continuo de días en sobriedad, nivel de deseo/craving (1 a 5) y factores de protección.',
         html: `
-            <div style="background: white; border: 1.5px solid #a7f3d0; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="background: white; border: 1.5px solid #a7f3d0; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #d1fae5; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #047857; font-size: 1.05rem;">
                         🏆 Contador de Sobriedad (Vista del Consultante)
@@ -10964,7 +10964,7 @@ const therapistPreviewTemplates = [
                     <div style="font-size: 2.2rem; font-weight: 800; line-height: 1;">14 Días</div>
                     <div style="font-size: 0.88rem; opacity: 0.95; margin-top: 0.25rem;">Continuos libre de consumo de sustancias</div>
                 </div>
-                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #ecfdf5; padding: 1rem; border-radius: 8px; border: 1px solid #a7f3d0;">
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #ecfdf5; padding: 1rem; border-radius: 8px; border: 1px solid #a7f3d0; box-sizing: border-box;">
                     <div>
                         <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">Deseo o Impulso de consumo hoy (Craving 1 a 5):</label>
                         <input type="text" value="2 / 5 (Craving bajo, completamente manejable)" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700; color: #047857;">
@@ -10983,7 +10983,7 @@ const therapistPreviewTemplates = [
         titulo: '💊 Adherencia al Tratamiento Médico / Psiquiátrico',
         descripcion: 'Formulario de confirmación de tomas horarias de psicofármacos y reporte de efectos secundarios.',
         html: `
-            <div style="background: white; border: 1.5px solid #bfdbfe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="background: white; border: 1.5px solid #bfdbfe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #dbeafe; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #1d4ed8; font-size: 1.05rem;">
                         💊 Adherencia a Medicación (Vista del Consultante)
@@ -10992,7 +10992,7 @@ const therapistPreviewTemplates = [
                         Tratamiento Paciente
                     </span>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 0.85rem; max-width: 550px; background: #eff6ff; padding: 1rem; border-radius: 8px; border: 1px solid #bfdbfe;">
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; width: 100%; background: #eff6ff; padding: 1rem; border-radius: 8px; border: 1px solid #bfdbfe; box-sizing: border-box;">
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #bfdbfe;">
                         <div>
                             <strong style="display: block; font-size: 0.92rem; color: #1e293b;">Sertralina 50mg</strong>
@@ -11016,7 +11016,7 @@ const therapistPreviewTemplates = [
         titulo: '🏃 Registro de Activación Conductual',
         descripcion: 'Formulario de programación y reporte de actividades placenteras, necesarias y cotidianas.',
         html: `
-            <div style="background: white; border: 1.5px solid #c084fc; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="background: white; border: 1.5px solid #c084fc; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #7e22ce; font-size: 1.05rem;">
                         🏃 Activación Conductual (Vista del Consultante)
@@ -11025,7 +11025,7 @@ const therapistPreviewTemplates = [
                         Actividades Paciente
                     </span>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 0.85rem; max-width: 550px; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff;">
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; width: 100%; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff; box-sizing: border-box;">
                     <div style="padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #e9d5ff;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
                             <strong style="font-size: 0.9rem; color: var(--text-dark);">🚶‍♂️ Caminata al aire libre 20 min</strong>
@@ -11049,7 +11049,7 @@ const therapistPreviewTemplates = [
         titulo: '🥗 Registro de Ingesta Emocional & Alimentación',
         descripcion: 'Formulario para registrar comidas, estados emocionales asociados previo a la ingesta y nivel de saciedad.',
         html: `
-            <div style="background: white; border: 1.5px solid #fde047; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="background: white; border: 1.5px solid #fde047; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #fef9c3; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #a16207; font-size: 1.05rem;">
                         🥗 Diario de Ingesta Emocional (Vista del Consultante)
@@ -11058,7 +11058,7 @@ const therapistPreviewTemplates = [
                         Alimentación Paciente
                     </span>
                 </div>
-                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #fefce8; padding: 1rem; border-radius: 8px; border: 1px solid #fef08a;">
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #fefce8; padding: 1rem; border-radius: 8px; border: 1px solid #fef08a; box-sizing: border-box;">
                     <div>
                         <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Tipo de Comida / Alimento:</label>
                         <input type="text" value="Almuerzo: Pechuga a la plancha, ensalada y arroz" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
@@ -11081,7 +11081,7 @@ const therapistPreviewTemplates = [
         titulo: '🧠 Reestructuración Cognitiva & Registro de Pensamientos',
         descripcion: 'Formulario ABC/CBT para identificar pensamientos automáticos distorsionados y generar pensamientos alternativos adaptativos.',
         html: `
-            <div style="background: white; border: 1.5px solid #94a3b8; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="background: white; border: 1.5px solid #94a3b8; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #334155; font-size: 1.05rem;">
                         🧠 Registro de Pensamientos CBT (Vista del Consultante)
@@ -11090,7 +11090,7 @@ const therapistPreviewTemplates = [
                         Cognitivo Paciente
                     </span>
                 </div>
-                <div style="display: grid; gap: 0.85rem; max-width: 550px; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; box-sizing: border-box;">
                     <div>
                         <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Situación Desencadenante (A):</label>
                         <input type="text" value="Enviar un mensaje de trabajo y no recibir respuesta inmediata" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">

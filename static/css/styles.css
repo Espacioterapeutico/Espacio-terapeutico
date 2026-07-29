@@ -2185,4 +2185,18 @@ body.is-patient .main-content {
     display: block !important;
 }
 
+/* Grid de 2 columnas para Plantillas de Previsualización en versión Web y 1 columna en Móvil */
+.tt-templates-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+@media (max-width: 992px) {
+    .tt-templates-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 
