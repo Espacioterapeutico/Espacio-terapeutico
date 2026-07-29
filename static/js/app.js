@@ -10872,36 +10872,57 @@ const therapistPreviewTemplates = [
             <div style="background: white; border: 1.5px solid #d8b4fe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #6b21a8; font-size: 1.05rem;">
-                        🌙 Registro de Higiene del Sueño (Vista del Consultante)
+                        🌙 Cuestionario Diario de Descanso (Vista del Consultante)
                     </h4>
                     <span class="badge" style="background: #f3e8ff; color: #6b21a8; font-weight: 700; border: 1px solid #d8b4fe; padding: 0.25rem 0.6rem;">
-                        Formulario Diario Paciente
+                        Formulario Completo Paciente
                     </span>
                 </div>
                 <div style="display: grid; gap: 0.85rem; width: 100%; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff; box-sizing: border-box;">
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. ¿A qué hora te acostaste anoche?</label>
-                        <input type="time" value="23:00" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
-                    </div>
-                    <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">2. ¿A qué hora te despertaste hoy?</label>
-                        <input type="time" value="06:30" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
-                    </div>
-                    <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">3. Horas estimadas de descanso continuo:</label>
-                        <input type="number" value="7.5" step="0.5" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700;">
-                    </div>
-                    <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">4. Calidad percibida del descanso (1 al 5):</label>
-                        <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
-                            <span style="padding: 0.35rem 0.75rem; background: white; border-radius: 6px; border: 1.5px solid #d8b4fe; font-weight: 700; font-size: 0.88rem; color: #6b21a8;">⭐ 4 / 5 (Reparador y Tranquilo)</span>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">1. Fecha de Registro &amp; Horarios:</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem;">
+                            <div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">Me dormí a las:</span>
+                                <input type="text" value="11:00 p. m." disabled style="width: 100%; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 600;">
+                            </div>
+                            <div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">Me desperté a las:</span>
+                                <input type="text" value="06:30 a. m." disabled style="width: 100%; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 600;">
+                            </div>
                         </div>
                     </div>
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">5. Factores o despertares nocturnos:</label>
-                        <input type="text" value="Despertó 1 vez a las 3:00 AM, tomó agua y volvió a dormirse rápidamente." disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">2. Situaciones relevantes durante el día:</label>
+                        <input type="text" value="Jornada laboral intensa con reunión de proyecto en la tarde." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
                     </div>
-                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem;">💾 Guardar Registro Diario (Simulación)</button>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">3. Emociones relevantes durante el día:</label>
+                        <input type="text" value="Algo inquieto por la tarde, más relajado tras cenar." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">4. ¿Cómo fue el proceso para conciliar el sueño?</label>
+                        <input type="text" value="Conciliación rápida en 15-20 minutos tras leer un capítulo." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">5. ¿Te despertaste durante la noche?</label>
+                        <input type="text" value="Sí, me desperté 1 vez a las 3:00 AM (tomó agua)." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">6. ¿Sentiste que descansaste al despertar?</label>
+                        <div style="margin-top: 0.2rem;">
+                            <span style="padding: 0.3rem 0.6rem; background: white; border-radius: 6px; border: 1.5px solid #d8b4fe; font-weight: 700; font-size: 0.82rem; color: #6b21a8;">Sí, me sentí descansado/a ⭐ 4/5</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">7. Síntomas durante el día (Checklist):</label>
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                            <span class="badge" style="background: white; color: #6b21a8; border: 1px solid #d8b4fe; padding: 0.25rem 0.5rem; font-size: 0.78rem; font-weight: 600;">☑️ 🥱 Somnolencia leve</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid var(--border-color); padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 🪨 Pesadez</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid var(--border-color); padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 🔋 Agotamiento</span>
+                        </div>
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; margin-top: 0.25rem;">💾 Guardar Registro de Sueño (Simulación)</button>
                 </div>
             </div>
         `
@@ -10917,31 +10938,40 @@ const therapistPreviewTemplates = [
                         ⚡ Diario de Ansiedad (Vista del Consultante)
                     </h4>
                     <span class="badge" style="background: #ffedd5; color: #c2410c; font-weight: 700; border: 1px solid #fdba74; padding: 0.25rem 0.6rem;">
-                        Episodio / Crisis Paciente
+                        Formulario Completo Paciente
                     </span>
                 </div>
                 <div style="display: grid; gap: 0.85rem; width: 100%; background: #fff7ed; padding: 1rem; border-radius: 8px; border: 1px solid #fed7aa; box-sizing: border-box;">
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Nivel de Ansiedad experimentado (1 al 10):</label>
-                        <input type="text" value="7 / 10 (Ansiedad Moderada-Alta)" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1.5px solid #fdba74; background: white; font-weight: 700; color: #c2410c;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">1. Nivel de Ansiedad percibido (1 a 10):</label>
+                        <input type="text" value="7 / 10 (Ansiedad Moderada-Alta)" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1.5px solid #fdba74; background: white; font-weight: 700; color: #c2410c;">
                     </div>
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">2. Situación o Desencadenante:</label>
-                        <input type="text" value="Reunión de trabajo presencial antes de realizar una presentación oral" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
-                    </div>
-                    <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">3. Síntomas Físicos Somáticos:</label>
-                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.35rem;">
-                            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 700;">💓 Taquicardia</span>
-                            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 700;">🫁 Dificultad para respirar</span>
-                            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 700;">💦 Tensión muscular</span>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #9a3412;">2. Checklist de Síntomas Físicos:</label>
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                            <span class="badge" style="background: white; color: #c2410c; border: 1px solid #fdba74; padding: 0.25rem 0.5rem; font-size: 0.78rem; font-weight: 600;">☑️ 💓 Taquicardia / Palpitaciones</span>
+                            <span class="badge" style="background: white; color: #c2410c; border: 1px solid #fdba74; padding: 0.25rem 0.5rem; font-size: 0.78rem; font-weight: 600;">☑️ 🫁 Opresión en el pecho</span>
+                            <span class="badge" style="background: white; color: #c2410c; border: 1px solid #fdba74; padding: 0.25rem 0.5rem; font-size: 0.78rem; font-weight: 600;">☑️ 💦 Sudoración excesiva</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fed7aa; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 😮‍💨 Dificultad para respirar</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fed7aa; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 🧠 Tensión muscular / Cefalea</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fed7aa; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 💫 Mareos</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fed7aa; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 🤢 Molestias estomacales</span>
                         </div>
                     </div>
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">4. Pensamiento o Temor asociado:</label>
-                        <input type="text" value="'Siento que me voy a equivocar y que todos me juzgarán.'" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #9a3412;">3. Checklist de Síntomas Emocionales &amp; Cognitivos:</label>
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                            <span class="badge" style="background: white; color: #c2410c; border: 1px solid #fdba74; padding: 0.25rem 0.5rem; font-size: 0.78rem; font-weight: 600;">☑️ ⚡ Pensamientos intrusivos</span>
+                            <span class="badge" style="background: white; color: #c2410c; border: 1px solid #fdba74; padding: 0.25rem 0.5rem; font-size: 0.78rem; font-weight: 600;">☑️ ⚠️ Inquietud / Peligro</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fed7aa; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 😵‍💫 Dificultad concentración</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fed7aa; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 😤 Irritabilidad</span>
+                        </div>
                     </div>
-                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem; background: #c2410c; border-color: #c2410c;">💾 Registrar Episodio (Simulación)</button>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">4. Situación Desencadenante o Notas Reflexivas:</label>
+                        <input type="text" value="Reunión de trabajo presencial antes de realizar una presentación oral" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #c2410c; border-color: #c2410c; margin-top: 0.25rem;">💾 Guardar Registro de Ansiedad (Simulación)</button>
                 </div>
             </div>
         `
@@ -10954,26 +10984,30 @@ const therapistPreviewTemplates = [
             <div style="background: white; border: 1.5px solid #a7f3d0; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #d1fae5; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #047857; font-size: 1.05rem;">
-                        🏆 Contador de Sobriedad (Vista del Consultante)
+                        🏆 Registro de Sobriedad / Consumo (Vista del Consultante)
                     </h4>
                     <span class="badge" style="background: #d1fae5; color: #047857; font-weight: 700; border: 1px solid #a7f3d0; padding: 0.25rem 0.6rem;">
-                        Progreso Paciente
+                        Formulario Completo Paciente
                     </span>
                 </div>
-                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.25rem; border-radius: 10px; text-align: center; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
-                    <div style="font-size: 2.2rem; font-weight: 800; line-height: 1;">14 Días</div>
-                    <div style="font-size: 0.88rem; opacity: 0.95; margin-top: 0.25rem;">Continuos libre de consumo de sustancias</div>
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1rem; border-radius: 10px; text-align: center; margin-bottom: 0.85rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
+                    <div style="font-size: 2rem; font-weight: 800; line-height: 1;">14 Días</div>
+                    <div style="font-size: 0.85rem; opacity: 0.95; margin-top: 0.2rem;">Continuos libre de consumo de sustancias</div>
                 </div>
                 <div style="display: grid; gap: 0.85rem; width: 100%; background: #ecfdf5; padding: 1rem; border-radius: 8px; border: 1px solid #a7f3d0; box-sizing: border-box;">
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">Deseo o Impulso de consumo hoy (Craving 1 a 5):</label>
-                        <input type="text" value="2 / 5 (Craving bajo, completamente manejable)" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700; color: #047857;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">1. Deseo o Impulso de consumo hoy (Craving 1 a 5):</label>
+                        <input type="text" value="2 / 5 (Craving bajo, completamente manejable)" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700; color: #047857;">
                     </div>
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">Estrategia o factor de afrontamiento aplicado:</label>
-                        <input type="text" value="Salió a ejercitarse y llamó a un familiar al sentir inquietud." disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">2. Estrategia o factor de afrontamiento aplicado:</label>
+                        <input type="text" value="Salió a ejercitarse y llamó a un familiar al sentir inquietud." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
                     </div>
-                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem; background: #10b981; border-color: #10b981;">💾 Registrar Día de Sobriedad (Simulación)</button>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">3. Situaciones o desencadenantes de riesgo identificados:</label>
+                        <input type="text" value="Reunión social nocturna el fin de semana, evitó la exposición al alcohol." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #10b981; border-color: #10b981; margin-top: 0.25rem;">💾 Registrar Día de Sobriedad (Simulación)</button>
                 </div>
             </div>
         `
@@ -10989,24 +11023,34 @@ const therapistPreviewTemplates = [
                         💊 Adherencia a Medicación (Vista del Consultante)
                     </h4>
                     <span class="badge" style="background: #dbeafe; color: #1d4ed8; font-weight: 700; border: 1px solid #bfdbfe; padding: 0.25rem 0.6rem;">
-                        Tratamiento Paciente
+                        Formulario Completo Paciente
                     </span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.85rem; width: 100%; background: #eff6ff; padding: 1rem; border-radius: 8px; border: 1px solid #bfdbfe; box-sizing: border-box;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #bfdbfe;">
-                        <div>
-                            <strong style="display: block; font-size: 0.92rem; color: #1e293b;">Sertralina 50mg</strong>
-                            <span style="font-size: 0.8rem; color: var(--text-muted);">Dosis de la Mañana (8:00 AM)</span>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">1. Medicación Asignada &amp; Tomas del Día:</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #bfdbfe;">
+                                <div>
+                                    <strong style="display: block; font-size: 0.88rem; color: #1e293b;">Sertralina 50mg</strong>
+                                    <span style="font-size: 0.78rem; color: var(--text-muted);">Dosis Mañana (8:00 AM)</span>
+                                </div>
+                                <span class="badge badge-success" style="background: #10b981; color: white; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 700;">Tomado a tiempo ✅</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #bfdbfe;">
+                                <div>
+                                    <strong style="display: block; font-size: 0.88rem; color: #1e293b;">Clonazepam 0.5mg</strong>
+                                    <span style="font-size: 0.78rem; color: var(--text-muted);">Dosis Noche (9:30 PM)</span>
+                                </div>
+                                <button type="button" disabled class="btn btn-primary btn-sm" style="font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.65rem;">Marcar como Tomado</button>
+                            </div>
                         </div>
-                        <span class="badge badge-success" style="background: #10b981; color: white; padding: 0.35rem 0.7rem; font-size: 0.82rem; font-weight: 700;">Tomado a tiempo ✅</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #bfdbfe;">
-                        <div>
-                            <strong style="display: block; font-size: 0.92rem; color: #1e293b;">Clonazepam 0.5mg</strong>
-                            <span style="font-size: 0.8rem; color: var(--text-muted);">Dosis de la Noche (9:30 PM)</span>
-                        </div>
-                        <button type="button" disabled class="btn btn-primary btn-sm" style="font-size: 0.8rem; font-weight: 700; padding: 0.35rem 0.7rem;">Marcar como Tomado</button>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">2. Observaciones o efectos secundarios reportados:</label>
+                        <input type="text" value="Boca levemente seca tras tomar la dosis matutina." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
                     </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #1d4ed8; border-color: #1d4ed8; margin-top: 0.25rem;">💾 Guardar Adherencia (Simulación)</button>
                 </div>
             </div>
         `
@@ -11022,24 +11066,34 @@ const therapistPreviewTemplates = [
                         🏃 Activación Conductual (Vista del Consultante)
                     </h4>
                     <span class="badge" style="background: #f3e8ff; color: #7e22ce; font-weight: 700; border: 1px solid #c084fc; padding: 0.25rem 0.6rem;">
-                        Actividades Paciente
+                        Formulario Completo Paciente
                     </span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.85rem; width: 100%; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff; box-sizing: border-box;">
-                    <div style="padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #e9d5ff;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                            <strong style="font-size: 0.9rem; color: var(--text-dark);">🚶‍♂️ Caminata al aire libre 20 min</strong>
-                            <span class="badge" style="background: #fdf4ff; color: #a21caf; border: 1px solid #f5d0fe; font-weight: 700;">🎉 Placer / Disfrute</span>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">1. Actividades Programadas y Nivel de Logro:</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem;">
+                            <div style="padding: 0.65rem 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #e9d5ff;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                    <strong style="font-size: 0.88rem; color: var(--text-dark);">🚶‍♂️ Caminata al aire libre 20 min</strong>
+                                    <span class="badge" style="background: #fdf4ff; color: #a21caf; border: 1px solid #f5d0fe; font-weight: 700; font-size: 0.75rem;">🎉 Placer / Disfrute</span>
+                                </div>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Nivel de satisfacción logrado: <strong>8 / 10</strong></span>
+                            </div>
+                            <div style="padding: 0.65rem 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #e9d5ff;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                    <strong style="font-size: 0.88rem; color: var(--text-dark);">🛏️ Ordenar la habitación y hacer la cama</strong>
+                                    <span class="badge" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700; font-size: 0.75rem;">🏠 Cotidiana</span>
+                                </div>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Nivel de logro o dominio: <strong>9 / 10</strong></span>
+                            </div>
                         </div>
-                        <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Nivel de satisfacción logrado: <strong>8 / 10</strong></span>
                     </div>
-                    <div style="padding: 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #e9d5ff;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                            <strong style="font-size: 0.9rem; color: var(--text-dark);">🛏️ Ordenar la habitación y hacer la cama</strong>
-                            <span class="badge" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700;">🏠 Cotidiana</span>
-                        </div>
-                        <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Nivel de logro o dominio: <strong>9 / 10</strong></span>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">2. Estado de Ánimo previo y posterior a la actividad:</label>
+                        <input type="text" value="Antes: 4/10 (Apatía) ➔ Después: 8/10 (Energizado)" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
                     </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #7e22ce; border-color: #7e22ce; margin-top: 0.25rem;">💾 Registrar Activación (Simulación)</button>
                 </div>
             </div>
         `
@@ -11055,23 +11109,49 @@ const therapistPreviewTemplates = [
                         🥗 Diario de Ingesta Emocional (Vista del Consultante)
                     </h4>
                     <span class="badge" style="background: #fef9c3; color: #a16207; font-weight: 700; border: 1px solid #fde047; padding: 0.25rem 0.6rem;">
-                        Alimentación Paciente
+                        Formulario Completo Paciente
                     </span>
                 </div>
                 <div style="display: grid; gap: 0.85rem; width: 100%; background: #fefce8; padding: 1rem; border-radius: 8px; border: 1px solid #fef08a; box-sizing: border-box;">
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Tipo de Comida / Alimento:</label>
-                        <input type="text" value="Almuerzo: Pechuga a la plancha, ensalada y arroz" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">1. Tipo de Comida &amp; Descripción del Plato:</label>
+                        <input type="text" value="Almuerzo: Pechuga a la plancha, ensalada de vegetales y 1 taza de arroz" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 700;">Apetito Previo (0 a 10):</span>
+                            <input type="text" value="6 / 10 (Hambre moderada)" disabled style="width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700; color: #15803d;">
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 700;">Escala de Saciedad (0 a 10):</span>
+                            <input type="text" value="7 / 10 (Satisfecho adecuadamente)" disabled style="width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700; color: #15803d;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 700;">Contexto (¿Dónde comí?):</span>
+                            <input type="text" value="En el comedor del trabajo" disabled style="width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 700;">Afectividad (¿Cómo me sentí?):</span>
+                            <input type="text" value="Tranquilo, sin prisa" disabled style="width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        </div>
                     </div>
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">2. Emoción sentida antes de comer:</label>
-                        <input type="text" value="Ansiedad leve por estrés laboral" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">2. Pensamiento negativo asociado:</label>
+                        <input type="text" value="Sin pensamientos negativos durante la comida." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
                     </div>
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">3. Sensación de saciedad (1 al 5):</label>
-                        <input type="text" value="3 / 5 (Satisfecho adecuadamente)" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #15803d;">3. Checklist de Conductas Problema:</label>
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fef08a; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ ⚠️ Atracón</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fef08a; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 🚨 Conducta purgativa</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fef08a; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 🚫 Restricción severa</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fef08a; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ 😔 Comer con culpa</span>
+                            <span class="badge" style="background: white; color: var(--text-muted); border: 1px solid #fef08a; padding: 0.25rem 0.5rem; font-size: 0.78rem;">☐ ⚡ Comer por ansiedad</span>
+                        </div>
                     </div>
-                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem; background: #ca8a04; border-color: #ca8a04;">💾 Registrar Comida (Simulación)</button>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #ca8a04; border-color: #ca8a04; margin-top: 0.25rem;">💾 Registrar Comida (Simulación)</button>
                 </div>
             </div>
         `
@@ -11084,26 +11164,40 @@ const therapistPreviewTemplates = [
             <div style="background: white; border: 1.5px solid #94a3b8; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 1rem;">
                     <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #334155; font-size: 1.05rem;">
-                        🧠 Registro de Pensamientos CBT (Vista del Consultante)
+                        🧠 Registro Cognitivo TCC (Vista del Consultante)
                     </h4>
                     <span class="badge" style="background: #f1f5f9; color: #334155; font-weight: 700; border: 1px solid #cbd5e1; padding: 0.25rem 0.6rem;">
-                        Cognitivo Paciente
+                        Formulario Completo Paciente
                     </span>
                 </div>
                 <div style="display: grid; gap: 0.85rem; width: 100%; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; box-sizing: border-box;">
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">1. Situación Desencadenante (A):</label>
-                        <input type="text" value="Enviar un mensaje de trabajo y no recibir respuesta inmediata" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">1. Intensidad Emocional (0 a 10):</label>
+                        <input type="text" value="7 / 10 (Intensidad Elevada)" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1.5px solid #94a3b8; background: white; font-weight: 700; color: #7e22ce;">
                     </div>
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">2. Pensamiento Automático (B):</label>
-                        <input type="text" value="'Están molestos conmigo o hice algo mal en mi informe.'" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; color: #b91c1c; font-weight: 700;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">2. Situación (A: ¿Qué sucedió?):</label>
+                        <input type="text" value="Enviar un mensaje de trabajo importante y no recibir respuesta inmediata." disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
                     </div>
                     <div>
-                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">3. Pensamiento Alternativo Racional (C):</label>
-                        <input type="text" value="'Es probable que estén ocupados en una reunión. No todo gira en torno a mi informe.'" disabled style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1.5px solid #10b981; background: white; color: #047857; font-weight: 700;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">3. Pensamiento Automático (B: ¿Qué pasa por mi mente?):</label>
+                        <input type="text" value="'Están molestos conmigo o cometí un error en mi informe.'" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; color: #b91c1c; font-weight: 700;">
                     </div>
-                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.55rem; background: #475569; border-color: #475569;">💾 Registrar Pensamiento (Simulación)</button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 700;">Emoción o Sensación:</span>
+                            <input type="text" value="Ansiedad y opresión en el pecho" disabled style="width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 700;">Conducta (¿Qué hice?):</span>
+                            <input type="text" value="Revisé el correo obsesivamente" disabled style="width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #047857;">4. Pensamiento Alternativo Racional (CBT):</label>
+                        <input type="text" value="'Es muy probable que estén ocupados en una reunión. Mi informe está correcto.'" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1.5px solid #10b981; background: white; color: #047857; font-weight: 700;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #475569; border-color: #475569; margin-top: 0.25rem;">💾 Guardar Registro Cognitivo (Simulación)</button>
                 </div>
             </div>
         `
