@@ -865,6 +865,37 @@ def init_db():
             UNIQUE(paciente_id, actividad_id, fecha)
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registros_ingesta (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            tipo_comida TEXT NOT NULL,
+            descripcion_plato TEXT,
+            apetito_previo INTEGER DEFAULT 5,
+            saciedad INTEGER DEFAULT 5,
+            contexto TEXT,
+            afectividad TEXT,
+            pensamiento TEXT,
+            conductas_json TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registros_cognitivos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            situacion TEXT NOT NULL,
+            pensamiento TEXT NOT NULL,
+            emocion_sensacion TEXT,
+            intensidad_emocion INTEGER DEFAULT 5,
+            conducta TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
 
     db.commit()
         
@@ -9077,7 +9108,9 @@ def get_patient_modules(patient_id):
         {'clave': 'ansiedad', 'nombre': 'Diario de Ansiedad (Checklist)', 'activo': active_map.get('ansiedad', 0)},
         {'clave': 'sobriedad', 'nombre': 'Registro de Consumo (Días Consecutivos)', 'activo': active_map.get('sobriedad', 0)},
         {'clave': 'adherencia', 'nombre': 'Adherencia al Tratamiento (Medicación)', 'activo': active_map.get('adherencia', 0)},
-        {'clave': 'activacion', 'nombre': 'Activación Conductual (Tareas Diarias)', 'activo': active_map.get('activacion', 0)}
+        {'clave': 'activacion', 'nombre': 'Activación Conductual (Tareas Diarias)', 'activo': active_map.get('activacion', 0)},
+        {'clave': 'ingesta', 'nombre': 'Ingesta de Alimentos y Apetito', 'activo': active_map.get('ingesta', 0)},
+        {'clave': 'cognitivo', 'nombre': 'Registro Cognitivo (TCC)', 'activo': active_map.get('cognitivo', 0)}
     ]
     return jsonify({'patient': dict(patient), 'modules': catalog})
 
@@ -9147,6 +9180,18 @@ def get_therapist_modules_catalog():
             'nombre': 'Activación Conductual',
             'descripcion': 'Checklist diario de actividades Necesarias, de Disfrute/Placer y Cotidianas/Rutina asignadas por el psicólogo.',
             'icono': '🏃‍♂️'
+        },
+        {
+            'clave': 'ingesta',
+            'nombre': 'Ingesta de Alimentos y Apetito',
+            'descripcion': 'Registro de comidas (desayuno, almuerzo, merienda, cena), escalas de apetito y saciedad (0-10), contexto, afectividad y conductas.',
+            'icono': '🥗'
+        },
+        {
+            'clave': 'cognitivo',
+            'nombre': 'Registro Cognitivo',
+            'descripcion': 'Reestructuración cognitiva TCC: registro de situación desencadenante, pensamientos automáticos, emoción/sensación (0-10) y conducta realizada.',
+            'icono': '🧠'
         }
     ]
     
@@ -9241,6 +9286,29 @@ def get_therapist_modules_catalog():
                     comp_act = cursor.fetchone()['completadas']
                     metric_text = f"✅ Actividades: {comp_act} completadas (Total activas: {total_act})"
                 
+                elif clave == 'ingesta':
+                    cursor.execute("""
+                        SELECT tipo_comida, apetito_previo, saciedad, fecha
+                        FROM registros_ingesta
+                        WHERE paciente_id = ?
+                        ORDER BY fecha DESC, id DESC LIMIT 1
+                    """, (pid,))
+                    r = cursor.fetchone()
+                    if r:
+                        metric_text = f"🥗 Última Comida: {r['tipo_comida']} | Apetito: {r['apetito_previo'] or 0}/10 | Saciedad: {r['saciedad'] or 0}/10"
+
+                elif clave == 'cognitivo':
+                    cursor.execute("""
+                        SELECT pensamiento, emocion_sensacion, intensidad_emocion, fecha
+                        FROM registros_cognitivos
+                        WHERE paciente_id = ?
+                        ORDER BY fecha DESC, id DESC LIMIT 1
+                    """, (pid,))
+                    r = cursor.fetchone()
+                    if r:
+                        pens = (r['pensamiento'] or '')[:30]
+                        metric_text = f"🧠 Último Registro: \"{pens}...\" | Emoción: {r['emocion_sensacion'] or 'N/A'} ({r['intensidad_emocion'] or 0}/10)"
+
                 patients_list.append({
                     'patient_id': pid,
                     'nombre_paciente': p_name,
@@ -9324,6 +9392,22 @@ def get_therapist_module_report(modulo_clave):
                 JOIN pacientes p ON actr.paciente_id = p.id
                 WHERE p.psicologo_id = ?
                 ORDER BY actr.fecha DESC LIMIT 100
+            """, (user_id,))
+        elif modulo_clave == 'ingesta':
+            cursor.execute("""
+                SELECT ring.*, p.nombres, p.apellidos, p.cedula
+                FROM registros_ingesta ring
+                JOIN pacientes p ON ring.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY ring.fecha DESC LIMIT 100
+            """, (user_id,))
+        elif modulo_clave == 'cognitivo':
+            cursor.execute("""
+                SELECT rcog.*, p.nombres, p.apellidos, p.cedula
+                FROM registros_cognitivos rcog
+                JOIN pacientes p ON rcog.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY rcog.fecha DESC LIMIT 100
             """, (user_id,))
         else:
             return jsonify({'error': 'Módulo desconocido'}), 400
@@ -9804,6 +9888,130 @@ def get_patient_sobriety_history():
             break
             
     return jsonify({'history': all_logs, 'streak': streak})
+
+
+# --- ENDPOINTS INGESTA DE ALIMENTOS Y APETITO ---
+
+@app.route('/api/patient/food-intake/log', methods=['POST'])
+@patient_login_required
+def log_patient_food_intake():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    fecha = (data.get('fecha') or '').strip() or datetime.now().strftime('%Y-%m-%d %H:%M')
+    tipo_comida = (data.get('tipo_comida') or 'Almuerzo').strip()
+    descripcion_plato = (data.get('descripcion_plato') or '').strip()
+    apetito_previo = int(data.get('apetito_previo', 5))
+    saciedad = int(data.get('saciedad', 5))
+    contexto = (data.get('contexto') or '').strip()
+    afectividad = (data.get('afectividad') or '').strip()
+    pensamiento = (data.get('pensamiento') or '').strip()
+    import json
+    conductas_json = json.dumps(data.get('conductas', []), ensure_ascii=False)
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO registros_ingesta (
+            paciente_id, fecha, tipo_comida, descripcion_plato,
+            apetito_previo, saciedad, contexto, afectividad, pensamiento, conductas_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (patient_id, fecha, tipo_comida, descripcion_plato, apetito_previo, saciedad, contexto, afectividad, pensamiento, conductas_json))
+    db.commit()
+
+    # Notificar al psicólogo
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            notif_title = "🥗 Registro de Ingesta y Apetito"
+            notif_msg = f"El consultante {pac_nombre} registró una ingesta ({tipo_comida}) para el {fecha}."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+            except Exception:
+                pass
+    except Exception as _ne:
+        print("Error al notificar registro de ingesta:", _ne)
+
+    return jsonify({'success': True, 'message': 'Registro de ingesta guardado exitosamente.'})
+
+@app.route('/api/patient/food-intake/history', methods=['GET'])
+@patient_login_required
+def get_patient_food_intake_history():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM registros_ingesta WHERE paciente_id = ? ORDER BY fecha DESC LIMIT 50", (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+
+# --- ENDPOINTS REGISTRO COGNITIVO ---
+
+@app.route('/api/patient/cognitive-record/log', methods=['POST'])
+@patient_login_required
+def log_patient_cognitive_record():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    fecha = (data.get('fecha') or '').strip() or datetime.now().strftime('%Y-%m-%d %H:%M')
+    situacion = (data.get('situacion') or '').strip()
+    pensamiento = (data.get('pensamiento') or '').strip()
+    emocion_sensacion = (data.get('emocion_sensacion') or '').strip()
+    intensidad_emocion = int(data.get('intensidad_emocion', 5))
+    conducta = (data.get('conducta') or '').strip()
+
+    if not situacion or not pensamiento:
+        return jsonify({'error': 'La situación y el pensamiento son requeridos.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO registros_cognitivos (
+            paciente_id, fecha, situacion, pensamiento, emocion_sensacion, intensidad_emocion, conducta
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (patient_id, fecha, situacion, pensamiento, emocion_sensacion, intensidad_emocion, conducta))
+    db.commit()
+
+    # Notificar al psicólogo
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            notif_title = "🧠 Registro Cognitivo (TCC)"
+            notif_msg = f"El consultante {pac_nombre} completó un nuevo registro cognitivo para el {fecha}."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+            except Exception:
+                pass
+    except Exception as _ne:
+        print("Error al notificar registro cognitivo:", _ne)
+
+    return jsonify({'success': True, 'message': 'Registro cognitivo guardado exitosamente.'})
+
+@app.route('/api/patient/cognitive-record/history', methods=['GET'])
+@patient_login_required
+def get_patient_cognitive_record_history():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM registros_cognitivos WHERE paciente_id = ? ORDER BY fecha DESC LIMIT 50", (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
 
 
 

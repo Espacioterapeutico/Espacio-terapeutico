@@ -1420,6 +1420,12 @@ function switchPatientView(viewName) {
             const today = document.getElementById('act-fecha')?.value || new Date().toISOString().split('T')[0];
             loadPatientActivationChecklist(today);
             loadPatientActivationHistory();
+        } else if (viewName === 'patient-ingesta') {
+            setDefaultToolDates();
+            loadPatientFoodIntakeHistory();
+        } else if (viewName === 'patient-cognitivo') {
+            setDefaultToolDates();
+            loadPatientCognitiveRecordHistory();
         }
     }
 }
@@ -10933,6 +10939,51 @@ function renderPaginatedHistoryTable(stateKey) {
                 </div>
             `;
         }).join('');
+    } else if (moduloClave === 'ingesta') {
+        cardsHtml = pageRecords.map(r => {
+            let conds = [];
+            try { conds = JSON.parse(r.conductas_json || '[]'); } catch(e){}
+            const condsBadges = conds.length > 0 ? conds.map(c => `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700; margin:2px;">⚠️ ${c}</span>`).join(' ') : '<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700;">🟢 Ninguna</span>';
+
+            return `
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha} - 🥗 ${r.tipo_comida || 'Comida'}</strong>
+                        <div><span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700;">Apetito: ${r.apetito_previo}/10 | Saciedad: ${r.saciedad}/10</span></div>
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        🍽️ <strong>Plato / Cantidades:</strong> ${r.descripcion_plato || 'Sin descripción'}
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        📍 <strong>Dónde:</strong> ${r.contexto || 'Sin especificar'} | 💭 <strong>Sentimiento:</strong> ${r.afectividad || 'Sin especificar'}
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #f9fafb; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #16a34a;">
+                        🚨 <strong>Conductas problema:</strong> ${condsBadges}
+                        ${r.pensamiento ? `<div style="margin-top:0.25rem; font-style:italic;">💭 <strong>Pensamiento negativo:</strong> "${r.pensamiento}"</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else if (moduloClave === 'cognitivo') {
+        cardsHtml = pageRecords.map(r => {
+            return `
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha}</strong>
+                        <div><span class="badge" style="background:#faf5ff; color:#7e22ce; font-weight:800;">⚡ Intensidad: ${r.intensidad_emocion}/10</span></div>
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        🎯 <strong>Situación:</strong> ${r.situacion}
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #faf5ff; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #7e22ce;">
+                        💭 <strong>Pensamiento Automático:</strong> "${r.pensamiento}"
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        ❤️ <strong>Emoción/Sensación:</strong> ${r.emocion_sensacion || 'N/A'} | 🏃‍♂️ <strong>Conducta:</strong> ${r.conducta || 'N/A'}
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     const paginationControls = totalPages > 1 ? `
@@ -11723,11 +11774,21 @@ window.loadPatientSobrietyHistory = loadPatientSobrietyHistory;
 
 // --- AUTO-SET TODAY'S DATE IN THERAPEUTIC TOOLS FORMS ---
 function setDefaultToolDates() {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const nowLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
     ['sleep-fecha', 'anx-fecha', 'sob-fecha', 'adh-fecha', 'act-fecha'].forEach(id => {
         const input = document.getElementById(id);
         if (input && !input.value) {
             input.value = today;
+        }
+    });
+
+    ['ingesta-fecha', 'cog-fecha'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input && !input.value) {
+            input.value = nowLocal;
         }
     });
 }
@@ -12178,6 +12239,194 @@ window.loadPatientActivationChecklist = loadPatientActivationChecklist;
 window.submitPatientActivationLog = submitPatientActivationLog;
 window.loadPatientActivationHistory = loadPatientActivationHistory;
 window.openPatientActivationView = openPatientActivationView;
+
+
+// --- INGESTA DE ALIMENTOS Y APETITO ---
+
+async function submitPatientFoodIntakeLog(e) {
+    e.preventDefault();
+    const status = document.getElementById('patient-ingesta-status');
+    if (status) status.classList.add('hide');
+
+    const conductas = Array.from(document.querySelectorAll('.ingesta-conducta-cb:checked')).map(cb => cb.value);
+
+    const payload = {
+        fecha: document.getElementById('ingesta-fecha').value,
+        tipo_comida: document.getElementById('ingesta-tipo-comida').value,
+        descripcion_plato: document.getElementById('ingesta-descripcion').value,
+        apetito_previo: parseInt(document.getElementById('ingesta-apetito').value || '5'),
+        saciedad: parseInt(document.getElementById('ingesta-saciedad').value || '5'),
+        contexto: document.getElementById('ingesta-contexto').value,
+        afectividad: document.getElementById('ingesta-afectividad').value,
+        pensamiento: document.getElementById('ingesta-pensamiento').value,
+        conductas: conductas
+    };
+
+    try {
+        const res = await fetch('/api/patient/food-intake/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            status.textContent = '¡Registro de ingesta guardado con éxito!';
+            status.className = 'status-msg success-msg mt-3';
+            status.classList.remove('hide');
+            
+            // Limpiar formulario y recargar historial
+            document.getElementById('ingesta-descripcion').value = '';
+            document.getElementById('ingesta-contexto').value = '';
+            document.getElementById('ingesta-afectividad').value = '';
+            document.getElementById('ingesta-pensamiento').value = '';
+            document.querySelectorAll('.ingesta-conducta-cb').forEach(cb => cb.checked = false);
+            
+            loadPatientFoodIntakeHistory();
+        } else {
+            status.textContent = data.error || 'Error al guardar el registro de ingesta.';
+            status.className = 'status-msg error-msg mt-3';
+            status.classList.remove('hide');
+        }
+    } catch (err) {
+        status.textContent = 'Error de conexión al guardar el registro de ingesta.';
+        status.className = 'status-msg error-msg mt-3';
+        status.classList.remove('hide');
+    }
+}
+
+async function loadPatientFoodIntakeHistory() {
+    const list = document.getElementById('patient-ingesta-history-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/food-intake/history');
+        const data = await res.json();
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros de ingesta guardados aún.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                        <th style="padding: 0.5rem;">Fecha</th>
+                        <th style="padding: 0.5rem;">Tipo</th>
+                        <th style="padding: 0.5rem;">Apetito / Saciedad</th>
+                        <th style="padding: 0.5rem;">Plato & Conductas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(r => {
+                        let conds = [];
+                        try { conds = JSON.parse(r.conductas_json || '[]'); } catch(e){}
+                        const condsText = conds.length > 0 ? conds.map(c => `⚠️ ${c}`).join(', ') : '🟢 Sin conductas problema';
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                                <td style="padding: 0.5rem;">${r.tipo_comida}</td>
+                                <td style="padding: 0.5rem;">Apetito: <strong>${r.apetito_previo}/10</strong><br><small>Saciedad: ${r.saciedad}/10</small></td>
+                                <td style="padding: 0.5rem;">${r.descripcion_plato || 'Sin descripción'}<br><small style="color: var(--text-muted);">${condsText}</small></td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+
+// --- REGISTRO COGNITIVO ---
+
+async function submitPatientCognitiveRecordLog(e) {
+    e.preventDefault();
+    const status = document.getElementById('patient-cognitivo-status');
+    if (status) status.classList.add('hide');
+
+    const payload = {
+        fecha: document.getElementById('cog-fecha').value,
+        situacion: document.getElementById('cog-situacion').value,
+        pensamiento: document.getElementById('cog-pensamiento').value,
+        emocion_sensacion: document.getElementById('cog-emocion').value,
+        intensidad_emocion: parseInt(document.getElementById('cog-intensidad').value || '5'),
+        conducta: document.getElementById('cog-conducta').value
+    };
+
+    try {
+        const res = await fetch('/api/patient/cognitive-record/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            status.textContent = '¡Registro cognitivo guardado con éxito!';
+            status.className = 'status-msg success-msg mt-3';
+            status.classList.remove('hide');
+
+            // Limpiar formulario y recargar historial
+            document.getElementById('cog-situacion').value = '';
+            document.getElementById('cog-pensamiento').value = '';
+            document.getElementById('cog-emocion').value = '';
+            document.getElementById('cog-conducta').value = '';
+
+            loadPatientCognitiveRecordHistory();
+        } else {
+            status.textContent = data.error || 'Error al guardar el registro cognitivo.';
+            status.className = 'status-msg error-msg mt-3';
+            status.classList.remove('hide');
+        }
+    } catch (err) {
+        status.textContent = 'Error de conexión al guardar el registro cognitivo.';
+        status.className = 'status-msg error-msg mt-3';
+        status.classList.remove('hide');
+    }
+}
+
+async function loadPatientCognitiveRecordHistory() {
+    const list = document.getElementById('patient-cognitivo-history-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/cognitive-record/history');
+        const data = await res.json();
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros cognitivos guardados aún.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                        <th style="padding: 0.5rem;">Fecha</th>
+                        <th style="padding: 0.5rem;">Situación</th>
+                        <th style="padding: 0.5rem;">Pensamiento Automático</th>
+                        <th style="padding: 0.5rem;">Emoción & Conducta</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(r => `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
+                            <td style="padding: 0.5rem;">${r.situacion}</td>
+                            <td style="padding: 0.5rem;">"${r.pensamiento}"</td>
+                            <td style="padding: 0.5rem;">${r.emocion_sensacion || 'N/A'} (${r.intensidad_emocion}/10)<br><small style="color: var(--text-muted);">Conducta: ${r.conducta || 'N/A'}</small></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+
+window.submitPatientFoodIntakeLog = submitPatientFoodIntakeLog;
+window.loadPatientFoodIntakeHistory = loadPatientFoodIntakeHistory;
+window.submitPatientCognitiveRecordLog = submitPatientCognitiveRecordLog;
+window.loadPatientCognitiveRecordHistory = loadPatientCognitiveRecordHistory;
 
 
 

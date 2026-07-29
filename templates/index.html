@@ -301,6 +301,14 @@
                     <span style="font-size: 1.2rem;">🏃‍♂️</span>
                     <span>Activación Conductual</span>
                 </a>
+                <a href="#" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-ingesta" data-mod-key="ingesta" onclick="selectPatientMenuItem('patient-ingesta')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
+                    <span style="font-size: 1.2rem;">🥗</span>
+                    <span>Ingesta y Apetito</span>
+                </a>
+                <a href="#" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-cognitivo" data-mod-key="cognitivo" onclick="selectPatientMenuItem('patient-cognitivo')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
+                    <span style="font-size: 1.2rem;">🧠</span>
+                    <span>Registro Cognitivo</span>
+                </a>
                 <a href="#" class="pat-menu-item" data-pat-view="patient-support" onclick="selectPatientMenuItem('patient-support')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     <span>Soporte Técnico</span>
@@ -1779,6 +1787,181 @@
                         <div class="card-body">
                             <div id="patient-activation-history-list" class="table-responsive">
                                 <p class="text-muted">Cargando historial de actividades...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA PORTAL PACIENTE: INGESTA DE ALIMENTOS Y APETITO -->
+                <section id="view-patient-ingesta" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>🥗 Ingesta de Alimentos y Apetito</h2>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
+                    </div>
+
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                            <h3 style="color: #15803d; margin: 0;">📝 Registro de Ingesta y Sensaciones</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="patient-ingesta-form" onsubmit="submitPatientFoodIntakeLog(event)">
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-6">
+                                        <label for="ingesta-fecha" style="font-weight: 700;">Fecha y Hora *</label>
+                                        <input type="datetime-local" id="ingesta-fecha" required style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="ingesta-tipo-comida" style="font-weight: 700;">Tipo de Comida *</label>
+                                        <select id="ingesta-tipo-comida" required style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                            <option value="Desayuno">🌅 Desayuno</option>
+                                            <option value="Almuerzo" selected>☀️ Almuerzo</option>
+                                            <option value="Merienda">☕ Merienda</option>
+                                            <option value="Cena">🌙 Cena</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="ingesta-descripcion" style="font-weight: 700;">Descripción del Plato (Alimentos, Cantidades):</label>
+                                    <textarea id="ingesta-descripcion" rows="2" placeholder="Ej: Ensalada de pollo, 1 taza de arroz, vaso de agua..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></textarea>
+                                </div>
+
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-6">
+                                        <label for="ingesta-apetito" style="font-weight: 700;">Apetito Previo (0 a 10) *</label>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <input type="range" id="ingesta-apetito" min="0" max="10" value="5" oninput="document.getElementById('ingesta-apetito-val').innerText = this.value" style="flex: 1;">
+                                            <span id="ingesta-apetito-val" style="font-size: 1.2rem; font-weight: 800; color: #15803d; min-width: 28px; text-align: center;">5</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-top: 0.2rem;">
+                                            <span>0 (Sin apetito)</span>
+                                            <span>10 (Mucha hambre)</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="ingesta-saciedad" style="font-weight: 700;">Escala de Saciedad (0 a 10) *</label>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <input type="range" id="ingesta-saciedad" min="0" max="10" value="5" oninput="document.getElementById('ingesta-saciedad-val').innerText = this.value" style="flex: 1;">
+                                            <span id="ingesta-saciedad-val" style="font-size: 1.2rem; font-weight: 800; color: #15803d; min-width: 28px; text-align: center;">5</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-top: 0.2rem;">
+                                            <span>0 (Vacía)</span>
+                                            <span>10 (Llena)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-4">
+                                        <label for="ingesta-contexto" style="font-weight: 700;">Contexto (¿Dónde comí?):</label>
+                                        <input type="text" id="ingesta-contexto" placeholder="Ej: En la mesa del comedor, escritorio..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label for="ingesta-afectividad" style="font-weight: 700;">Afectividad (¿Cómo me sentí?):</label>
+                                        <input type="text" id="ingesta-afectividad" placeholder="Ej: Tranquilo, ansioso, apurado..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label for="ingesta-pensamiento" style="font-weight: 700;">Pensamiento negativo:</label>
+                                        <input type="text" id="ingesta-pensamiento" placeholder="¿Identificas algún pensamiento negativo?" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-4" style="background: #f8fafc; border: 1.5px solid var(--border-color); padding: 1rem; border-radius: 8px;">
+                                    <h4 style="margin: 0 0 0.65rem 0; color: #1e293b; font-size: 0.95rem; font-weight: 700;">Checklist de Conductas Problema:</h4>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500; cursor: pointer; background: white; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color);"><input type="checkbox" class="ingesta-conducta-cb" value="Atracón" style="flex-shrink: 0; margin: 0; width: 17px; height: 17px; accent-color: #15803d;"> <span>⚠️ Atracón</span></label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500; cursor: pointer; background: white; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color);"><input type="checkbox" class="ingesta-conducta-cb" value="Conducta purgativa" style="flex-shrink: 0; margin: 0; width: 17px; height: 17px; accent-color: #15803d;"> <span>🚨 Conducta purgativa</span></label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500; cursor: pointer; background: white; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color);"><input type="checkbox" class="ingesta-conducta-cb" value="Restricción severa" style="flex-shrink: 0; margin: 0; width: 17px; height: 17px; accent-color: #15803d;"> <span>🚫 Restricción severa</span></label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500; cursor: pointer; background: white; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color);"><input type="checkbox" class="ingesta-conducta-cb" value="Comer con culpa" style="flex-shrink: 0; margin: 0; width: 17px; height: 17px; accent-color: #15803d;"> <span>😔 Comer con culpa</span></label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500; cursor: pointer; background: white; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color);"><input type="checkbox" class="ingesta-conducta-cb" value="Comer por emoción/ansiedad" style="flex-shrink: 0; margin: 0; width: 17px; height: 17px; accent-color: #15803d;"> <span>⚡ Comer por ansiedad</span></label>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); border: none;">💾 Guardar Registro de Ingesta</button>
+                            </form>
+                            <div id="patient-ingesta-status" class="status-msg hide mt-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL DE INGESTA -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📊 Historial de Ingesta y Apetito</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-ingesta-history-list" class="table-responsive">
+                                <p class="text-muted">Cargando historial de ingesta...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA PORTAL PACIENTE: REGISTRO COGNITIVO -->
+                <section id="view-patient-cognitivo" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>🧠 Registro Cognitivo (TCC)</h2>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
+                    </div>
+
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);">
+                            <h3 style="color: #7e22ce; margin: 0;">💭 Reestructuración Cognitiva Diario</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="patient-cognitivo-form" onsubmit="submitPatientCognitiveRecordLog(event)">
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-6">
+                                        <label for="cog-fecha" style="font-weight: 700;">Fecha y Hora *</label>
+                                        <input type="datetime-local" id="cog-fecha" required style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="cog-intensidad" style="font-weight: 700;">Intensidad Emocional (0 a 10) *</label>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <input type="range" id="cog-intensidad" min="0" max="10" value="5" oninput="document.getElementById('cog-intensidad-val').innerText = this.value" style="flex: 1;">
+                                            <span id="cog-intensidad-val" style="font-size: 1.2rem; font-weight: 800; color: #7e22ce; min-width: 28px; text-align: center;">5</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-top: 0.2rem;">
+                                            <span>0 (Muy leve)</span>
+                                            <span>10 (Extrema)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="cog-situacion" style="font-weight: 700;">Situación (¿Qué sucedió?) *</label>
+                                    <textarea id="cog-situacion" rows="2" required placeholder="Describe brevemente la situación o evento desencadenante..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></textarea>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="cog-pensamiento" style="font-weight: 700;">Pensamiento Automático (¿Qué pasa por mi mente?) *</label>
+                                    <textarea id="cog-pensamiento" rows="2" required placeholder="¿Qué pensaste o qué interpretación le diste a la situación?" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);"></textarea>
+                                </div>
+
+                                <div class="form-row mb-3">
+                                    <div class="form-group col-6">
+                                        <label for="cog-emocion" style="font-weight: 700;">Emoción o Sensación:</label>
+                                        <input type="text" id="cog-emocion" placeholder="Ej: Ansiedad, rabia, tristeza, taquicardia..." style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="cog-conducta" style="font-weight: 700;">Conducta (¿Qué hice?):</label>
+                                        <input type="text" id="cog-conducta" placeholder="¿Cómo reaccionaste o qué acción realizaste?" style="width: 100%; padding: 0.55rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color);">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%); border: none;">💾 Guardar Registro Cognitivo</button>
+                            </form>
+                            <div id="patient-cognitivo-status" class="status-msg hide mt-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL COGNITIVO -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📊 Historial de Registros Cognitivos</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-cognitivo-history-list" class="table-responsive">
+                                <p class="text-muted">Cargando historial cognitivo...</p>
                             </div>
                         </div>
                     </div>
