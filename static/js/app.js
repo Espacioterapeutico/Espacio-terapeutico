@@ -10763,116 +10763,175 @@ function renderPaginatedHistoryTable(stateKey) {
     const pageRecords = state.records.slice(startIndex, endIndex);
 
     const moduloClave = state.clave;
-    let detailHeaders = '';
-    let detailTableRows = '';
+    let cardsHtml = '';
 
     if (moduloClave === 'sobriedad') {
-        detailHeaders = `<th>📅 Fecha</th><th>Estado</th><th>Craving (1-10)</th><th>Disparador Emocional</th><th>Notas</th>`;
-        detailTableRows = pageRecords.map(r => `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
-                <td style="padding: 0.6rem;">${r.sobrio ? '🟢 Libre de consumo' : '⚠️ Consumo / Recaída'}</td>
-                <td style="padding: 0.6rem;">${r.nivel_ansiedad !== null && r.nivel_ansiedad !== undefined ? `<span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span>` : '-'}</td>
-                <td style="padding: 0.6rem;">${r.disparador_emocional || '-'}</td>
-                <td style="padding: 0.6rem;">${r.notas || '-'}</td>
-            </tr>
-        `).join('');
-    } else if (moduloClave === 'sueno') {
-        detailHeaders = `<th>📅 Fecha</th><th>Horario Sueño</th><th>¿Descansó?</th><th>Despertares</th><th>Síntomas Día</th><th>Detalles Día & Conciliación</th>`;
-        detailTableRows = pageRecords.map(r => `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
-                <td style="padding: 0.6rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
-                <td style="padding: 0.6rem;">${r.senti_descanso ? '🟢 Reparador' : '🔴 No reparador'}</td>
-                <td style="padding: 0.6rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1} veces)` : 'No'}</td>
-                <td style="padding: 0.6rem;">
-                    ${r.somnolencia_dia ? '🥱 Somnolencia ' : ''}${r.pesadez_dia ? '🪨 Pesadez ' : ''}${r.agotamiento_dia ? '🔋 Agotamiento' : ''}
-                </td>
-                <td style="padding: 0.6rem; font-size: 0.8rem; max-width: 220px;">
-                    ${r.proceso_dormir ? `<div><strong>Conciliación:</strong> ${r.proceso_dormir}</div>` : ''}
-                    ${r.situaciones_dia ? `<div><strong>Situaciones:</strong> ${r.situaciones_dia}</div>` : ''}
-                    ${r.emociones_dia ? `<div><strong>Emociones:</strong> ${r.emociones_dia}</div>` : ''}
-                </td>
-            </tr>
-        `).join('');
-    } else if (moduloClave === 'adherencia') {
-        detailHeaders = `<th>📅 Fecha</th><th>Medicamento</th><th>Dosis / Prescripción</th><th>Estado Toma</th><th>Hora Real</th><th>Notas</th>`;
-        detailTableRows = pageRecords.map(r => `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
-                <td style="padding: 0.6rem;"><strong>💊 ${r.nombre_medicamento}</strong></td>
-                <td style="padding: 0.6rem;">${r.dosis || '-'} (${r.hora_prescrita || '-'})</td>
-                <td style="padding: 0.6rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
-                <td style="padding: 0.6rem;">${r.hora_tomado || '-'}</td>
-                <td style="padding: 0.6rem;">${r.notas || '-'}</td>
-            </tr>
-        `).join('');
-    } else if (moduloClave === 'activacion') {
-        detailHeaders = `<th>📅 Fecha</th><th>Categoría</th><th>Actividad</th><th>Estado</th><th>Notas</th>`;
-        detailTableRows = pageRecords.map(r => {
-            let catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Disfrute/Placer' : '🏠 Cotidiana');
+        cardsHtml = pageRecords.map(r => {
+            const estadoBadge = r.sobrio ?
+                `<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700;">🟢 Libre de consumo</span>` :
+                `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700;">⚠️ Consumo / Recaída</span>`;
+            const cravingText = (r.nivel_ansiedad !== null && r.nivel_ansiedad !== undefined) ?
+                `<span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span>` : 'Sin registrar';
+            
             return `
-                <tr style="border-bottom: 1px solid var(--border-color);">
-                    <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
-                    <td style="padding: 0.6rem;">${catLabel}</td>
-                    <td style="padding: 0.6rem;"><strong>${r.nombre_actividad}</strong></td>
-                    <td style="padding: 0.6rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
-                    <td style="padding: 0.6rem;">${r.notas || '-'}</td>
-                </tr>
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <!-- Línea 1: Fecha / Estado -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha}</strong>
+                        <div>${estadoBadge}</div>
+                    </div>
+                    <!-- Línea 2: Deseo / Impulso de consumo (Craving) -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        🧠 <strong>Deseo / Impulso de consumo (Craving):</strong> ${cravingText}
+                    </div>
+                    <!-- Línea 3: Disparador Emocional -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        🎯 <strong>Disparador Emocional:</strong> ${r.disparador_emocional || 'Ninguno especificado'}
+                    </div>
+                    <!-- Línea 4: Notas -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #f9fafb; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid var(--primary-color);">
+                        📝 <strong>Notas:</strong> ${r.notas || 'Sin notas adicionales'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else if (moduloClave === 'sueno') {
+        cardsHtml = pageRecords.map(r => {
+            const descansoBadge = r.senti_descanso ?
+                `<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700;">🟢 Reparador</span>` :
+                `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700;">🔴 No reparador</span>`;
+            const despertaresText = r.desperto_noche ? `Sí (${r.cant_despertares || 1} veces)` : 'No';
+            const horarioText = `${r.hora_dormi || '--:--'} a ${r.hora_desperto || '--:--'}`;
+            const sintomasList = [
+                r.somnolencia_dia ? '🥱 Somnolencia' : null,
+                r.pesadez_dia ? '🪨 Pesadez' : null,
+                r.agotamiento_dia ? '🔋 Agotamiento' : null
+            ].filter(Boolean).join(', ') || 'Ninguno';
+
+            return `
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <!-- Línea 1: Fecha / Estado Descanso -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha}</strong>
+                        <div>${descansoBadge}</div>
+                    </div>
+                    <!-- Línea 2: Horario y Despertares -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        ⏰ <strong>Horario de Sueño:</strong> ${horarioText} | 🥱 <strong>Despertares nocturnos:</strong> ${despertaresText}
+                    </div>
+                    <!-- Línea 3: Síntomas del día -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        🔋 <strong>Síntomas en el día:</strong> ${sintomasList}
+                    </div>
+                    <!-- Línea 4: Conciliación / Situaciones -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #f9fafb; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #7e22ce;">
+                        💭 <strong>Conciliación / Situaciones del día:</strong> ${r.proceso_dormir || r.situaciones_dia || r.emociones_dia || 'Sin detalles adicionales'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else if (moduloClave === 'adherencia') {
+        cardsHtml = pageRecords.map(r => {
+            const tomadoBadge = r.tomado ?
+                `<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700;">🟢 Tomado</span>` :
+                `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700;">🔴 No tomado</span>`;
+
+            return `
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <!-- Línea 1: Fecha / Medicamento / Estado -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha} - 💊 ${r.nombre_medicamento}</strong>
+                        <div>${tomadoBadge}</div>
+                    </div>
+                    <!-- Línea 2: Prescripción y Hora Real -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        ⏰ <strong>Prescripción:</strong> ${r.dosis || '-'} (${r.hora_prescrita || '-'}) | 🕒 <strong>Hora Real Toma:</strong> ${r.hora_tomado || '-'}
+                    </div>
+                    <!-- Línea 3: Notas -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #f9fafb; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #15803d;">
+                        📝 <strong>Notas:</strong> ${r.notas || 'Sin observaciones'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else if (moduloClave === 'activacion') {
+        cardsHtml = pageRecords.map(r => {
+            const catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Disfrute/Placer' : '🏠 Cotidiana');
+            const compBadge = r.completada ?
+                `<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700;">🟢 Completada</span>` :
+                `<span class="badge" style="background:#f3f4f6; color:#6b7280; font-weight:700;">⚪ Pendiente</span>`;
+
+            return `
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <!-- Línea 1: Fecha / Categoría / Estado -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha} (${catLabel})</strong>
+                        <div>${compBadge}</div>
+                    </div>
+                    <!-- Línea 2: Actividad -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        🎯 <strong>Actividad:</strong> ${r.nombre_actividad}
+                    </div>
+                    <!-- Línea 3: Notas -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #f9fafb; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #0284c7;">
+                        📝 <strong>Notas:</strong> ${r.notas || 'Sin notas adicionales'}
+                    </div>
+                </div>
             `;
         }).join('');
     } else if (moduloClave === 'ansiedad') {
-        detailHeaders = `<th>📅 Fecha</th><th>Nivel Ansiedad</th><th>Síntomas Registrados</th><th>Situación Desencadenante</th>`;
-        detailTableRows = pageRecords.map(r => {
+        cardsHtml = pageRecords.map(r => {
             let sints = [];
             try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
+            const sintsBadges = sints.length > 0 ? sints.map(s => `<span class="badge" style="background:#f3f4f6; color:#374151; margin:2px;">${s}</span>`).join(' ') : 'Sin síntomas marcados';
+
             return `
-                <tr style="border-bottom: 1px solid var(--border-color);">
-                    <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
-                    <td style="padding: 0.6rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span></td>
-                    <td style="padding: 0.6rem; max-width: 250px;">${sints.length > 0 ? sints.map(s => `<span class="badge" style="background:#f3f4f6; color:#374151; margin:2px;">${s}</span>`).join(' ') : 'Sin síntomas marcados'}</td>
-                    <td style="padding: 0.6rem;">${r.situacion_desencadenante || '-'}</td>
-                </tr>
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <!-- Línea 1: Fecha / Nivel Ansiedad -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha}</strong>
+                        <div><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">⚡ Nivel: ${r.nivel_ansiedad} / 10</span></div>
+                    </div>
+                    <!-- Línea 2: Síntomas registrados -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        ⚠️ <strong>Síntomas Físicos / Cognitivos:</strong> ${sintsBadges}
+                    </div>
+                    <!-- Línea 3: Situación desencadenante -->
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #f9fafb; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #c2410c;">
+                        🎯 <strong>Situación Desencadenante:</strong> ${r.situacion_desencadenante || 'Sin situación registrada'}
+                    </div>
+                </div>
             `;
         }).join('');
     }
 
     const paginationControls = totalPages > 1 ? `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: #f9fafb; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1px solid var(--border-color); border-radius: 8px; margin-top: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePatientHistoryPage('${stateKey}', ${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
                 ◀️ Anterior
             </button>
             <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">
-                Página ${currentPage} de ${totalPages} (${totalRecords} registros en total)
+                Página ${currentPage} de ${totalPages} (${totalRecords} registros)
             </span>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePatientHistoryPage('${stateKey}', ${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
                 Siguiente ▶️
             </button>
         </div>
     ` : `
-        <div style="text-align: right; padding: 0.4rem 0.85rem; font-size: 0.78rem; color: var(--text-muted); background: #f9fafb; border-top: 1px solid var(--border-color);">
+        <div style="text-align: right; padding: 0.4rem 0.85rem; font-size: 0.78rem; color: var(--text-muted);">
             Mostrando ${totalRecords} registro(s)
         </div>
     `;
 
-    const tableHtml = `
-        <div style="overflow-x: auto; border: 1.5px solid var(--border-color); border-radius: 8px; background: white; margin-top: 0.5rem; box-shadow: var(--shadow-sm);">
-            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 0;">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: #f3f4f6;">
-                        ${detailHeaders}
-                    </tr>
-                </thead>
-                <tbody>
-                    ${detailTableRows}
-                </tbody>
-            </table>
+    const fullContentHtml = `
+        <div style="margin-top: 0.5rem;">
+            ${cardsHtml}
             ${paginationControls}
         </div>
     `;
 
     const container = document.getElementById(state.containerId);
-    if (container) container.innerHTML = tableHtml;
+    if (container) container.innerHTML = fullContentHtml;
 }
 
 function changePatientHistoryPage(stateKey, newPage) {
