@@ -10539,12 +10539,29 @@ async function handleLogoutWhatsApp() {
 
 
 function switchSettingsTab(tabName) {
+    const isPsicologo = (window.currentUser && window.currentUser.rol === 'psicologo') || (sessionStorage.getItem('userRole') === 'psicologo');
+    const fcmBtn = document.getElementById('set-tab-firebase');
+    const fcmCard = document.getElementById('set-card-firebase');
+    if (isPsicologo) {
+        if (fcmBtn) fcmBtn.style.setProperty('display', 'none', 'important');
+        if (fcmCard) fcmCard.style.setProperty('display', 'none', 'important');
+        if (tabName === 'firebase') tabName = 'backup';
+    } else if (fcmBtn) {
+        fcmBtn.style.display = '';
+    }
+
     const tabs = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'contrasena', 'terminos', 'soporte'];
     tabs.forEach(t => {
         const btn = document.getElementById(`set-tab-${t}`);
         const card = document.getElementById(`set-card-${t}`);
         if (btn) btn.className = (t === tabName) ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
-        if (card) card.classList.toggle('hide', t !== tabName);
+        if (card) {
+            if (t === 'firebase' && isPsicologo) {
+                card.style.setProperty('display', 'none', 'important');
+            } else {
+                card.classList.toggle('hide', t !== tabName);
+            }
+        }
     });
     if (tabName === 'whatsapp') {
         checkWhatsAppQRStatus();
@@ -10652,18 +10669,24 @@ async function loadTherapistToolsCatalog() {
 
             return `
             <div class="card accordion-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm);">
-                <!-- CABECERA DE UNA SOLA LÍNEA COMPACTA: Ícono + Título + Badge + Flecha -->
-                <div class="accordion-tool-header" data-target="${targetId}" style="padding: 0.65rem 0.85rem; background: white; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; user-select: none; transition: background 0.2s;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
-                        <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
-                        <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.nombre}</h4>
-                        <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.72rem; padding: 0.18rem 0.45rem; flex-shrink: 0;">
+                <!-- CABECERA: Línea 1 (Ícono + Nombre Completo + Flecha) / Línea 2 (Pacientes Activos) -->
+                <div class="accordion-tool-header" data-target="${targetId}" style="padding: 0.55rem 0.85rem; background: white; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; user-select: none; transition: background 0.2s;">
+                    <!-- LÍNEA 1: Ícono + Nombre Completo + Botón Flecha -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+                            <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
+                            <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; line-height: 1.2; word-break: break-word;">${m.nombre}</h4>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color); background: #f9fafb;">
+                            <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
+                        </button>
+                    </div>
+                    <!-- LÍNEA 2: Número de pacientes activos -->
+                    <div style="margin-left: 1.75rem; line-height: 1;">
+                        <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.72rem; padding: 0.12rem 0.4rem;">
                             ${activeCount} Paciente(s) Activos
                         </span>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color); background: #f9fafb;">
-                        <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
-                    </button>
                 </div>
                 <!-- CUERPO DESPLEGABLE: Descripción + Lista de Consultantes -->
                 <div id="${targetId}" class="accordion-tool-body hide" style="display: none; padding: 0.85rem 1rem; border-top: 1.5px solid var(--border-color); background: #fafafa;">

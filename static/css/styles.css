@@ -1259,8 +1259,8 @@ h1, h2, h3, h4, h5, h6 {
     }
     
     .finance-balances-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 0.65rem;
     }
     
     .finance-details-grid {
@@ -2077,6 +2077,88 @@ body.is-patient .main-content {
     color: var(--text-dark);
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+/* FullCalendar Mobile Responsive Overrides */
+.fc .fc-toolbar {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.65rem !important;
+    margin-bottom: 1.25rem !important;
+    flex-wrap: wrap !important;
+}
+
+@media (min-width: 768px) {
+    .fc .fc-toolbar {
+        flex-direction: row !important;
+        justify-content: space-between !important;
+    }
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    color: var(--text-dark) !important;
+    text-align: center !important;
+    margin: 0.2rem 0 !important;
+}
+
+.fc .fc-toolbar-chunk {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    flex-wrap: wrap !important;
+}
+
+.fc .fc-button {
+    font-size: 0.8rem !important;
+    padding: 0.3rem 0.65rem !important;
+}
+
+/* Equal-Sized Mood Buttons Styling */
+#mood-selector-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.65rem !important;
+    margin-bottom: 1rem !important;
+}
+
+.mood-item-btn {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 90px !important;
+    padding: 0.5rem 0.25rem !important;
+    border: 1.5px solid var(--border-color) !important;
+    background: white !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.mood-item-btn span:first-child {
+    font-size: 2.2rem !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+}
+
+.mood-item-btn span:last-child {
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    margin-top: 0.35rem !important;
+    color: var(--text-dark) !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    width: 100% !important;
 }
 
 

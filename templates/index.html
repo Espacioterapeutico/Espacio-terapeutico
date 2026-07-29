@@ -850,10 +850,10 @@
                     </div>
 
                     <!-- Sub-pestañas de Agenda -->
-                    <div class="sub-nav-tabs mb-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                        <button type="button" id="agenda-tab-calendar" class="btn btn-sm btn-primary" onclick="switchAgendaSubView('calendar')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Vista Calendario</button>
-                        <button type="button" id="agenda-tab-list" class="btn btn-sm btn-secondary" onclick="switchAgendaSubView('list')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Listado de Citas</button>
-                        <button type="button" id="agenda-tab-history" class="btn btn-sm btn-secondary" onclick="switchAgendaSubView('history')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Historial de Consultas</button>
+                    <div class="sub-nav-tabs mb-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+                        <button type="button" id="agenda-tab-calendar" class="btn btn-sm btn-primary" onclick="switchAgendaSubView('calendar')" style="font-weight: 600; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: none; cursor: pointer; text-align: center; width: 100%;">Vista Calendario</button>
+                        <button type="button" id="agenda-tab-list" class="btn btn-sm btn-secondary" onclick="switchAgendaSubView('list')" style="font-weight: 600; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: none; cursor: pointer; text-align: center; width: 100%;">Listado de Citas</button>
+                        <button type="button" id="agenda-tab-history" class="btn btn-sm btn-secondary" onclick="switchAgendaSubView('history')" style="font-weight: 600; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: none; cursor: pointer; text-align: center; width: 100%;">Historial Consultas</button>
                     </div>
 
                     <!-- Sub-vista 1: Calendario -->
@@ -2301,7 +2301,7 @@
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
-                            <div id="pat-view-terms-banner" style="margin-bottom: 1.25rem; padding: 0.85rem 1.2rem; border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                            <div id="pat-view-terms-banner" style="display: none; margin-bottom: 1.25rem; padding: 0.85rem 1.2rem; border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 600; align-items: center; justify-content: space-between; gap: 0.5rem;">
                                 <!-- Banner dinámico -->
                             </div>
                             <p class="text-secondary mb-3" style="font-weight: 600; font-size: 0.9rem;">
@@ -3968,7 +3968,7 @@
                 <button type="button" onclick="closeModal('patient-terms-modal')" style="background: none; border: none; color: #ffffff !important; font-size: 1.6rem; cursor: pointer; line-height: 1; padding: 0.2rem 0.5rem;">&times;</button>
             </div>
             <div class="modal-body" style="padding: 1.25rem; overflow-y: auto; flex: 1; background: #ffffff !important;">
-                <div id="patient-terms-status-banner" style="margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.88rem; font-weight: 600;"></div>
+                <div id="patient-terms-status-banner" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.88rem; font-weight: 600;"></div>
                 <p style="font-size: 0.85rem; color: #4b5563 !important; margin-bottom: 0.75rem; font-weight: 600;">
                     Términos y condiciones acordados para el proceso de consulta:
                 </p>
