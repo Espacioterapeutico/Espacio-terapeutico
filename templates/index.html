@@ -4431,6 +4431,28 @@
         </div>
     </div>
 
+    <!-- MODAL DE PREVISUALIZACIÓN DE HERRAMIENTA VISTA PACIENTE (PARA EL PSICÓLOGO) -->
+    <div id="modal-tool-patient-preview" class="modal hide">
+        <div class="modal-content" style="max-width: 650px; border-radius: 12px; border: 2px solid var(--primary-color);">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, #6b21a8 100%); color: white; border-top-left-radius: 10px; border-top-right-radius: 10px; padding: 1rem 1.25rem;">
+                <div>
+                    <h3 id="tpp-modal-title" style="margin: 0; color: white; font-family: var(--font-title); font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                        👁️ Previsualización: Vista del Consultante
+                    </h3>
+                    <span style="font-size: 0.8rem; opacity: 0.9;">Así interactúa tu paciente con este módulo desde su portal privado.</span>
+                </div>
+                <button type="button" class="btn-close" onclick="closeModal('modal-tool-patient-preview')" style="color: white; font-size: 1.5rem; background: none; border: none; cursor: pointer;">✕</button>
+            </div>
+            <div class="modal-body" id="tpp-modal-body" style="padding: 1.25rem; background: #faf5ff;">
+                <!-- Dinámico generado con JS -->
+            </div>
+            <div class="modal-footer" style="background: white; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">💡 Vista previa interactiva de simulación.</span>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-tool-patient-preview')">Cerrar Previsualización</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
     <script src="/static/js/app.js?v=88"></script>
 </body>

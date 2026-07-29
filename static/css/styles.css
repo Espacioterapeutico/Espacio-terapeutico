@@ -282,31 +282,33 @@ h1, h2, h3, h4, h5, h6 {
    ========================================== */
 
 .app-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
+    display: flex;
     min-height: 100vh;
-    max-width: 100vw;
+    width: 100%;
     overflow-x: hidden;
+    position: relative;
 }
 
 /* Sidebar */
 .sidebar {
     background-color: var(--text-dark);
     color: var(--bg-color);
-    padding: 1.5rem 1rem;
+    padding: 1.25rem 1rem;
     display: flex;
     flex-direction: column;
     height: 100vh;
-    position: sticky;
+    width: 260px;
+    position: fixed;
     top: 0;
+    left: 0;
+    bottom: 0;
     z-index: 100;
     box-shadow: 4px 0 20px rgba(61, 30, 63, 0.15);
-    overflow-y: auto;
 }
 
 .sidebar-footer {
     margin-top: auto;
-    padding-top: 1.5rem;
+    padding-top: 1.25rem;
     border-top: 1px solid rgba(119, 102, 130, 0.2);
     flex-shrink: 0;
 }
@@ -421,6 +423,9 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: column;
     min-height: 100vh;
     min-width: 0;
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    flex: 1;
 }
 
 .main-header {
@@ -1219,7 +1224,12 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 1024px) {
     /* El sidebar pasa a ser overlay flotante */
     .app-layout {
-        grid-template-columns: 1fr;
+        display: block;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
     }
     
     .sidebar {

@@ -10926,9 +10926,12 @@ function renderTherapistToolsCatalog() {
                         <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
                         <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; line-height: 1.2; word-break: break-word;">${m.nombre}</h4>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color); background: #f9fafb;">
-                        <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); previewToolForTherapist('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}')" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 600;">👁️ Previsualizar</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #f9fafb;">
+                            <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
+                        </button>
+                    </div>
                 </div>
                 <!-- LÍNEA 2: Número de pacientes activos -->
                 <div style="margin-left: 1.75rem; line-height: 1;">
