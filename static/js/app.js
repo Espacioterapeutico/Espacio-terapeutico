@@ -10772,77 +10772,97 @@ async function onTherapistToolPatientSearch(query) {
     if (!dropdown) return;
     if (!query || query.trim().length < 1) {
         dropdown.classList.add('hide');
+        dropdown.style.display = 'none';
         return;
     }
     const q = query.trim().toLowerCase();
     try {
         const res = await fetch('/api/patients');
         const patients = await res.json();
-        const filtered = patients.filter(p => 
-            (p.nombres && p.nombres.toLowerCase().includes(q)) ||
-            (p.apellidos && p.apellidos.toLowerCase().includes(q)) ||
-            (p.cedula && p.cedula.toLowerCase().includes(q))
-        );
+        const filtered = patients.filter(p => {
+            const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
+            const cedula = (p.cedula || '').toLowerCase();
+            return fullName.includes(q) || cedula.includes(q);
+        });
 
         if (filtered.length === 0) {
-            dropdown.innerHTML = '<div style="padding:0.6rem 0.85rem; font-size:0.85rem; color:var(--text-muted);">No se encontraron consultantes.</div>';
+            dropdown.innerHTML = '<div style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text-muted); background: white;">No se encontraron consultantes.</div>';
         } else {
             dropdown.innerHTML = filtered.map(p => {
-                const fullName = (p.nombres + ' ' + p.apellidos).replace(/'/g, "");
+                const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.trim();
+                const safeFullName = fullName.replace(/'/g, "");
                 const cedula = p.cedula || '';
-                return `<div onclick="selectPatientForTherapistTools(${p.id}, '${fullName}', '${cedula}')" style="padding:0.65rem 0.85rem; font-size:0.88rem; cursor:pointer; border-bottom:1px solid var(--border-color);">
-                    <strong>${p.nombres} ${p.apellidos}</strong> <span style="color:var(--text-muted); font-size:0.78rem;">(${p.cedula || 'Sin Cédula'})</span>
-                    </div>`;
+                return `
+                <div class="search-result-item" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${cedula}')" style="padding:0.75rem 1rem; font-size:0.88rem; cursor:pointer; border-bottom:1px solid var(--border-color); background: white; color: var(--text-dark);">
+                    <strong style="display:block; color: var(--text-dark);">👤 ${fullName}</strong>
+                    <span style="color:var(--text-muted); font-size:0.78rem;">${p.cedula ? 'Cédula: ' + p.cedula : 'Sin Cédula'}</span>
+                </div>`;
             }).join('');
         }
         dropdown.classList.remove('hide');
+        dropdown.style.setProperty('display', 'block', 'important');
     } catch (err) {
         console.error('Error en búsqueda de pacientes para herramientas:', err);
     }
 }
 
 async function selectPatientForTherapistTools(id, name, code) {
-    document.getElementById('tt-patient-search').value = name;
-    document.getElementById('tt-patient-dropdown').classList.add('hide');
+    const searchInput = document.getElementById('tt-patient-search');
+    if (searchInput) searchInput.value = name;
     
-    document.getElementById('tt-selected-patient-name').innerText = name;
-    document.getElementById('tt-selected-patient-code').innerText = code ? `Cédula: ${code}` : 'Sin Cédula';
+    const dropdown = document.getElementById('tt-patient-dropdown');
+    if (dropdown) {
+        dropdown.classList.add('hide');
+        dropdown.style.display = 'none';
+    }
     
-    const panel = document.getElementById('tt-patient-details-panel');
-    const list = document.getElementById('tt-patient-modules-list');
-    list.innerHTML = '<p class="text-muted">Cargando módulos asignados...</p>';
-    panel.classList.remove('hide');
+    const nameEl = document.getElementById('tt-selected-patient-name');
+    if (nameEl) nameEl.innerText = name;
+    
+    const codeEl = document.getElementById('tt-selected-patient-code');
+    if (codeEl) codeEl.innerText = code ? `Cédula: ${code}` : 'Sin Cédula';
+    
+    const panel = document.getElementById('tt-patient-toggle-panel') || document.getElementById('tt-patient-details-panel');
+    const list = document.getElementById('tt-patient-switches-list') || document.getElementById('tt-patient-modules-list');
+    
+    if (list) list.innerHTML = '<p class="text-muted">Cargando módulos asignados...</p>';
+    if (panel) {
+        panel.classList.remove('hide');
+        panel.style.setProperty('display', 'block', 'important');
+    }
 
     try {
         const res = await fetch(`/api/patients/${id}/modules`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al cargar módulos');
 
-        list.innerHTML = data.modules.map(m => {
-            const btnText = toolButtonLabels[m.clave] || `📊 Ver Registro de ${m.nombre}`;
-            const safeName = (name || '').replace(/'/g, "");
-            const safeModName = (m.nombre || '').replace(/'/g, "");
-            const actBtn = (m.clave === 'activacion') ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${safeName}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : '';
-            return `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
-                <div>
-                    <strong style="font-size: 0.9rem; color: var(--text-dark);">${m.nombre}</strong>
-                    <span style="display: block; font-size: 0.78rem; color: var(--text-muted);">
-                        ${m.activo ? '🟢 Activo en portal del paciente' : '🔴 Desactivado'}
-                    </span>
+        if (list) {
+            list.innerHTML = data.modules.map(m => {
+                const btnText = toolButtonLabels[m.clave] || `📊 Ver Registro de ${m.nombre}`;
+                const safeName = (name || '').replace(/'/g, "");
+                const safeModName = (m.nombre || '').replace(/'/g, "");
+                const actBtn = (m.clave === 'activacion') ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${safeName}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : '';
+                return `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <strong style="font-size: 0.92rem; color: var(--text-dark);">${m.nombre}</strong>
+                        <span style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                            ${m.activo ? '🟢 Activo en portal del paciente' : '🔴 Desactivado'}
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-sm btn-info" onclick="openTherapistModuleReport('${m.clave}', '${safeModName}', ${id})" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
+                        ${actBtn}
+                        <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
+                            ${m.activo ? ' Desactivar' : ' Activar'}
+                        </button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-sm btn-info" onclick="openTherapistModuleReport('${m.clave}', '${safeModName}', ${id})" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
-                    ${actBtn}
-                    <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
-                        ${m.activo ? ' Desactivar' : ' Activar'}
-                    </button>
-                </div>
-            </div>
-            `;
-        }).join('');
+                `;
+            }).join('');
+        }
     } catch (err) {
-        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        if (list) list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     }
 }
 
