@@ -1448,19 +1448,19 @@ h1, h2, h3, h4, h5, h6 {
         align-items: center;
     }
 
-    /* ── Finance: balance cards en columna única ── */
+    /* ── Finance: balance cards en 3 columnas ── */
     .finance-balances-grid {
-        grid-template-columns: 1fr !important;
-        gap: 0.75rem !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 0.45rem !important;
     }
     .finance-card {
-        padding: 1rem 1.25rem;
+        padding: 0.5rem 0.35rem !important;
     }
     .fin-amount {
-        font-size: 1.5rem;
+        font-size: 0.9rem !important;
     }
     .fin-badge {
-        font-size: 3rem;
+        font-size: 0.68rem !important;
     }
 
     /* ── Finance: detalles en columna única ── */
