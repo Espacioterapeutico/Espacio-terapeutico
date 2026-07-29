@@ -10651,26 +10651,26 @@ async function loadTherapistToolsCatalog() {
             }
 
             return `
-            <div class="card accordion-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.6rem; box-shadow: var(--shadow-sm);">
-                <div class="accordion-tool-header" data-target="${targetId}" style="padding: 0.75rem 1rem; background: white; cursor: pointer; display: flex; flex-direction: column; gap: 0.35rem; user-select: none; transition: background 0.2s;">
-                    <!-- LÍNEA 1: Ícono + Título + Badge + Botón Flecha -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; flex-wrap: wrap;">
-                            <span style="font-size: 1.3rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
-                            <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">${m.nombre}</h4>
-                            <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.72rem; padding: 0.2rem 0.45rem; flex-shrink: 0;">
-                                ${activeCount} Paciente(s) Activos
-                            </span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color); background: #f9fafb;">
-                            <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
-                        </button>
+            <div class="card accordion-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm);">
+                <!-- CABECERA DE UNA SOLA LÍNEA COMPACTA: Ícono + Título + Badge + Flecha -->
+                <div class="accordion-tool-header" data-target="${targetId}" style="padding: 0.65rem 0.85rem; background: white; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; user-select: none; transition: background 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+                        <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
+                        <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.nombre}</h4>
+                        <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.72rem; padding: 0.18rem 0.45rem; flex-shrink: 0;">
+                            ${activeCount} Paciente(s) Activos
+                        </span>
                     </div>
-                    <!-- LÍNEA 2: Descripción breve en texto secundario (1 a 3 líneas máx) -->
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${m.descripcion}</p>
+                    <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color); background: #f9fafb;">
+                        <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
+                    </button>
                 </div>
+                <!-- CUERPO DESPLEGABLE: Descripción + Lista de Consultantes -->
                 <div id="${targetId}" class="accordion-tool-body hide" style="display: none; padding: 0.85rem 1rem; border-top: 1.5px solid var(--border-color); background: #fafafa;">
-                    <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <p style="font-size: 0.83rem; color: var(--text-muted); margin: 0; line-height: 1.4; background: white; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                            ℹ️ <strong>Descripción:</strong> ${m.descripcion}
+                        </p>
                         ${patientsHtml}
                     </div>
                 </div>
