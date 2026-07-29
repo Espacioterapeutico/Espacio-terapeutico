@@ -10610,6 +10610,30 @@ async function sendManualWhatsAppReminder(citaId) {
 }
 window.sendManualWhatsAppReminder = sendManualWhatsAppReminder;
 
+async function triggerManualCronReminders() {
+    if (!confirm('¿Deseas procesar y enviar los recordatorios de WhatsApp pendientes ahora?')) return;
+    try {
+        const res = await fetch('/api/whatsapp/cron-send-reminders', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            const totalConfirm = data.confirmaciones_enviadas || 0;
+            const totalRemind = data.recordatorios_enviados || 0;
+            const totalErr = (data.detalles && data.detalles.errores) ? data.detalles.errores.length : 0;
+            
+            let msg = `✅ Proceso de WhatsApp completado:\n• Confirmaciones enviadas: ${totalConfirm}\n• Recordatorios enviados: ${totalRemind}`;
+            if (totalErr > 0) {
+                msg += `\n⚠️ Hubo ${totalErr} error(es) de envío.`;
+            }
+            alert(msg);
+        } else {
+            alert('Error al ejecutar envío de recordatorios: ' + (data.error || 'Error desconocido'));
+        }
+    } catch (err) {
+        alert('Error de conexión con el servidor al procesar los recordatorios.');
+    }
+}
+window.triggerManualCronReminders = triggerManualCronReminders;
+
 // ==========================================
 // HERRAMIENTAS TERAPÉUTICAS Y MÓDULOS ESPECIALES
 // ==========================================

@@ -8802,7 +8802,7 @@ def generate_default_slug_for_user(u):
 # ==========================================
 WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'https://espacio-terapeutico-whatsapp.onrender.com')
 
-def make_wa_http_request(method, endpoint, json_data=None, timeout=8):
+def make_wa_http_request(method, endpoint, json_data=None, timeout=15):
     import requests
     url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/{endpoint.lstrip('/')}"
     try:
@@ -8822,7 +8822,7 @@ def make_wa_http_request(method, endpoint, json_data=None, timeout=8):
 @login_required
 def get_whatsapp_status():
     try:
-        r = make_wa_http_request('GET', '/status', timeout=5)
+        r = make_wa_http_request('GET', '/status', timeout=10)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'error': 'Microservicio de WhatsApp no disponible', 'details': str(e)})
@@ -8831,7 +8831,7 @@ def get_whatsapp_status():
 @login_required
 def get_whatsapp_qr():
     try:
-        r = make_wa_http_request('GET', '/qr', timeout=5)
+        r = make_wa_http_request('GET', '/qr', timeout=12)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'qr': None, 'error': str(e)})
@@ -8845,7 +8845,7 @@ def send_whatsapp_message():
     if not phone or not text:
         return jsonify({'error': 'Teléfono y texto son requeridos'}), 400
     try:
-        r = requests.post(f"{WHATSAPP_SERVICE_URL}/send", json={'phone': phone, 'text': text}, timeout=5)
+        r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': text}, timeout=15)
         return jsonify(r.json()), r.status_code
     except Exception as e:
         return jsonify({'error': f'Error al comunicarse con el microservicio WhatsApp: {str(e)}'}), 500
@@ -8853,9 +8853,8 @@ def send_whatsapp_message():
 @app.route('/api/whatsapp/logout', methods=['POST'])
 @login_required
 def logout_whatsapp():
-    import requests
     try:
-        r = requests.post(f"{WHATSAPP_SERVICE_URL}/logout", timeout=5)
+        r = make_wa_http_request('POST', '/logout', timeout=10)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -8984,16 +8983,15 @@ def send_manual_whatsapp_reminder(cita_id):
     template = psicologo['template_recordatorio'] if psicologo and psicologo['template_recordatorio'] else None
     mensaje_texto = format_whatsapp_message(template, cita, cita, psicologo)
 
-    import requests
     try:
-        r = requests.post(f"{WHATSAPP_SERVICE_URL}/send", json={'phone': phone, 'text': mensaje_texto}, timeout=5)
-        if r.status_code == 200:
+        r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
+        if r and r.status_code == 200:
             cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita_id,))
             db.commit()
             return jsonify({'success': f'Recordatorio de WhatsApp enviado con éxito a {phone}.', 'phone': phone})
         else:
-            res_data = r.json() or {}
-            return jsonify({'error': res_data.get('error', 'Error al enviar mensaje por WhatsApp.')}), r.status_code
+            res_data = r.json() if r else {}
+            return jsonify({'error': res_data.get('error', 'Error al enviar mensaje por WhatsApp.')}), r.status_code if r else 500
     except Exception as e:
         return jsonify({'error': f'Error conectando con microservicio de WhatsApp: {str(e)}'}), 500
 
@@ -9005,7 +9003,6 @@ def cron_send_whatsapp_reminders():
     
     db = get_db()
     cursor = db.cursor()
-    import requests
 
     enviados_confirmaciones = []
     enviados_recordatorios = []
@@ -9031,16 +9028,16 @@ def cron_send_whatsapp_reminders():
         mensaje_texto = format_whatsapp_message(tmpl, cita, cita, psicologo_data)
 
         try:
-            r = requests.post(f"{WHATSAPP_SERVICE_URL}/send", json={'phone': phone, 'text': mensaje_texto}, timeout=5)
-            if r.status_code == 200:
+            r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
+            if r and r.status_code == 200:
                 cursor.execute("UPDATE citas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
                 enviados_confirmaciones.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'confirmacion'})
             else:
-                errores.append({'cita_id': cita['id'], 'error': r.text})
+                errores.append({'cita_id': cita['id'], 'error': r.text if r else 'Timeout de microservicio'})
         except Exception as e:
             errores.append({'cita_id': cita['id'], 'error': str(e)})
 
-    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy a las 8 AM)
+    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy)
     cursor.execute("""
         SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_recordatorio
@@ -9060,12 +9057,12 @@ def cron_send_whatsapp_reminders():
         mensaje_texto = format_whatsapp_message(tmpl, cita, cita, psicologo_data)
 
         try:
-            r = requests.post(f"{WHATSAPP_SERVICE_URL}/send", json={'phone': phone, 'text': mensaje_texto}, timeout=5)
-            if r.status_code == 200:
+            r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
+            if r and r.status_code == 200:
                 cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
                 enviados_recordatorios.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'recordatorio'})
             else:
-                errores.append({'cita_id': cita['id'], 'error': r.text})
+                errores.append({'cita_id': cita['id'], 'error': r.text if r else 'Timeout de microservicio'})
         except Exception as e:
             errores.append({'cita_id': cita['id'], 'error': str(e)})
 
@@ -9081,6 +9078,45 @@ def cron_send_whatsapp_reminders():
             'errores': errores
         }
     })
+
+# --- SCHEDULER DE WHATSAPP EN SEGUNDO PLANO (AUTOMÁTICO) ---
+_wa_cron_thread_started = False
+
+def start_whatsapp_cron_scheduler():
+    global _wa_cron_thread_started
+    if _wa_cron_thread_started:
+        return
+    _wa_cron_thread_started = True
+
+    import threading
+    import time
+
+    def _scheduler_loop():
+        time.sleep(10)
+        while True:
+            try:
+                # 1. Heartbeat a Render para mantener despierto el microservicio 24/7
+                try:
+                    make_wa_http_request('GET', '/status', timeout=10)
+                except Exception:
+                    pass
+
+                # 2. Ejecutar chequeo de envio de recordatorios y confirmaciones
+                with app.app_context():
+                    cron_send_whatsapp_reminders()
+
+            except Exception as e:
+                print(f"[WARN] Error en scheduler background de WhatsApp: {e}")
+            
+            time.sleep(600)  # Chequear cada 10 minutos (600s)
+
+    t = threading.Thread(target=_scheduler_loop, daemon=True)
+    t.start()
+
+try:
+    start_whatsapp_cron_scheduler()
+except Exception as _st_err:
+    print("[WARN] Error iniciando scheduler de WhatsApp:", _st_err)
 
 # ==========================================
 # RUTAS DE MÓDULOS TERAPÉUTICOS PERSONALIZADOS
