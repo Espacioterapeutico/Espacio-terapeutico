@@ -10867,6 +10867,19 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
 
 async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatientId) {
     console.log('[DEBUG] openTherapistModuleReport called with:', moduloClave, moduloNombre, targetPatientId);
+    
+    // Normalizar clave del módulo
+    const claveMap = {
+        'sueno': 'sueno',
+        'ansiedad': 'ansiedad',
+        'sobriedad': 'sobriedad',
+        'consumo': 'sobriedad',
+        'adherencia': 'adherencia',
+        'medicacion': 'adherencia',
+        'activacion': 'activacion'
+    };
+    moduloClave = claveMap[moduloClave] || moduloClave;
+
     openModal('therapist-tool-report-modal');
     const namesMap = {
         'sueno': 'Higiene del Sueño',
@@ -10877,19 +10890,16 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     };
     const titleText = moduloNombre || namesMap[moduloClave] || moduloClave;
     const titleEl = document.getElementById('ttr-modal-title');
-    if (titleEl) titleEl.innerText = `📊 Reporte Consolidado: ${titleText}`;
+    if (titleEl) titleEl.innerText = `📊 Reporte e Historial: ${titleText}`;
     
     const container = document.getElementById('ttr-modal-body-content');
     if (container) container.innerHTML = '<p class="text-muted text-center py-4">Cargando registros de consultantes...</p>';
     
-    console.log('[DEBUG] About to open modal therapist-tool-report-modal');
     const modalEl = document.getElementById('therapist-tool-report-modal');
     if (modalEl) {
-        // Remove hide class AND force display with !important to overcome CSS .hide { display: none !important }
         modalEl.classList.remove('hide');
         modalEl.style.setProperty('display', 'flex', 'important');
         document.body.style.overflow = 'hidden';
-        console.log('[DEBUG] Modal opened successfully, display:', getComputedStyle(modalEl).display, 'classes:', modalEl.className);
     }
 
     try {
@@ -10899,8 +10909,8 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
 
         if (!container) return;
 
-        if (data.length === 0) {
-            container.innerHTML = '<div class="text-muted text-center py-5"><h4>📭 Sin registros</h4><p>Aún no hay datos reportados por ningún consultante para esta herramienta.</p></div>';
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center py-5"><h4>📭 Sin registros</h4><p>Aún no hay datos reportados para esta herramienta.</p></div>';
             return;
         }
 
@@ -10921,9 +10931,17 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
 
         let patientsList = Object.values(patientsMap);
 
-        // Si se especificó un paciente objetivo, ponerlo primero
+        // Si se especificó un paciente objetivo, filtrar para mostrar su historial
         if (targetPatientId) {
-            patientsList.sort((a, b) => (a.id == targetPatientId ? -1 : (b.id == targetPatientId ? 1 : 0)));
+            const filtered = patientsList.filter(p => p.id == targetPatientId);
+            if (filtered.length > 0) {
+                patientsList = filtered;
+            }
+        }
+
+        if (patientsList.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center py-5"><h4>📭 Sin registros</h4><p>El consultante seleccionado aún no ha registrado datos para esta herramienta.</p></div>';
+            return;
         }
 
         let html = `<div style="display: flex; flex-direction: column; gap: 1rem;">`;
@@ -10941,8 +10959,8 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                     else break;
                 }
                 summaryBadgesHtml = `
-                    <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700; padding:0.4rem 0.6rem;">🏅 Racha: ${streak} día(s) en sobriedad</span>
-                    <span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:600; padding:0.4rem 0.6rem;">🟢 Total Días Libre: ${totalSobrio}</span>
+                    <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700; padding:0.4rem 0.6rem;">🏅 Racha: ${streak} día(s) sobrio</span>
+                    <span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:600; padding:0.4rem 0.6rem;">🟢 Días Libre: ${totalSobrio}</span>
                     ${recaidas > 0 ? `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700; padding:0.4rem 0.6rem;">⚠️ Recaídas/Eventos: ${recaidas}</span>` : ''}
                 `;
             } else if (moduloClave === 'sueno') {
@@ -10958,7 +10976,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                 const noTomados = recs.filter(r => r.tomado === 0).length;
                 const pct = recs.length > 0 ? Math.round((tomados / recs.length) * 100) : 0;
                 summaryBadgesHtml = `
-                    <span class="badge" style="background:${pct >= 80 ? '#f0fdf4' : '#fff7ed'}; color:${pct >= 80 ? '#15803d' : '#c2410c'}; font-weight:800; padding:0.4rem 0.6rem;">💊 ${pct}% Adherencia al tratamiento</span>
+                    <span class="badge" style="background:${pct >= 80 ? '#f0fdf4' : '#fff7ed'}; color:${pct >= 80 ? '#15803d' : '#c2410c'}; font-weight:800; padding:0.4rem 0.6rem;">💊 ${pct}% Adherencia</span>
                     <span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:600; padding:0.4rem 0.6rem;">🟢 Tomados: ${tomados}</span>
                     ${noTomados > 0 ? `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700; padding:0.4rem 0.6rem;">🔴 No Tomados: ${noTomados}</span>` : ''}
                 `;
@@ -10993,106 +11011,108 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
 
                 summaryBadgesHtml = `
                     <span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800; padding:0.4rem 0.6rem;">⚡ Promedio Ansiedad: ${avgAns} / 10</span>
-                    ${maxF > 0 ? `<span class="badge" style="background:#fef2f2; color:#991b1b; font-weight:700; padding:0.4rem 0.6rem;">⚠️ Síntoma más frecuente: ${topSymptom} (${maxF} veces)</span>` : ''}
+                    ${maxF > 0 ? `<span class="badge" style="background:#fef2f2; color:#991b1b; font-weight:700; padding:0.4rem 0.6rem;">⚠️ Síntoma frecuente: ${topSymptom}</span>` : ''}
                 `;
             }
 
+            let detailHeaders = '';
             let detailTableRows = '';
+
             if (moduloClave === 'sobriedad') {
+                detailHeaders = `<th>📅 Fecha</th><th>Estado</th><th>Craving (1-10)</th><th>Disparador Emocional</th><th>Notas</th>`;
                 detailTableRows = recs.map(r => `
                     <tr style="border-bottom: 1px solid var(--border-color);">
-                        <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                        <td style="padding: 0.5rem;">${r.sobrio ? '🟢 Libre de consumo' : '⚠️ Consumo / Evento'}</td>
-                        <td style="padding: 0.5rem;">${r.disparador_emocional || '-'}</td>
-                        <td style="padding: 0.5rem;">${r.notas || '-'}</td>
+                        <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                        <td style="padding: 0.6rem;">${r.sobrio ? '🟢 Libre de consumo' : '⚠️ Consumo / Recaída'}</td>
+                        <td style="padding: 0.6rem;">${r.nivel_ansiedad !== null && r.nivel_ansiedad !== undefined ? `<span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span>` : '-'}</td>
+                        <td style="padding: 0.6rem;">${r.disparador_emocional || '-'}</td>
+                        <td style="padding: 0.6rem;">${r.notas || '-'}</td>
                     </tr>
                 `).join('');
             } else if (moduloClave === 'sueno') {
+                detailHeaders = `<th>📅 Fecha</th><th>Horario Sueño</th><th>¿Descansó?</th><th>Despertares</th><th>Síntomas Día</th><th>Detalles Día & Conciliación</th>`;
                 detailTableRows = recs.map(r => `
                     <tr style="border-bottom: 1px solid var(--border-color);">
-                        <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                        <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
-                        <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Sí' : '🔴 No'}</td>
-                        <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
-                        <td style="padding: 0.5rem;">
+                        <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                        <td style="padding: 0.6rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
+                        <td style="padding: 0.6rem;">${r.senti_descanso ? '🟢 Reparador' : '🔴 No reparador'}</td>
+                        <td style="padding: 0.6rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1} veces)` : 'No'}</td>
+                        <td style="padding: 0.6rem;">
                             ${r.somnolencia_dia ? '🥱 Somnolencia ' : ''}${r.pesadez_dia ? '🪨 Pesadez ' : ''}${r.agotamiento_dia ? '🔋 Agotamiento' : ''}
+                        </td>
+                        <td style="padding: 0.6rem; font-size: 0.8rem; max-width: 220px;">
+                            ${r.proceso_dormir ? `<div><strong>Conciliación:</strong> ${r.proceso_dormir}</div>` : ''}
+                            ${r.situaciones_dia ? `<div><strong>Situaciones:</strong> ${r.situaciones_dia}</div>` : ''}
+                            ${r.emociones_dia ? `<div><strong>Emociones:</strong> ${r.emociones_dia}</div>` : ''}
                         </td>
                     </tr>
                 `).join('');
             } else if (moduloClave === 'adherencia') {
+                detailHeaders = `<th>📅 Fecha</th><th>Medicamento</th><th>Dosis / Prescripción</th><th>Estado Toma</th><th>Hora Real</th><th>Notas</th>`;
                 detailTableRows = recs.map(r => `
                     <tr style="border-bottom: 1px solid var(--border-color);">
-                        <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                        <td style="padding: 0.5rem;"><strong>${r.nombre_medicamento}</strong></td>
-                        <td style="padding: 0.5rem;">${r.dosis || '-'} (${r.hora_prescrita || '-'})</td>
-                        <td style="padding: 0.5rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
-                        <td style="padding: 0.5rem;">${r.hora_tomado || '-'}</td>
+                        <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                        <td style="padding: 0.6rem;"><strong>💊 ${r.nombre_medicamento}</strong></td>
+                        <td style="padding: 0.6rem;">${r.dosis || '-'} (${r.hora_prescrita || '-'})</td>
+                        <td style="padding: 0.6rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
+                        <td style="padding: 0.6rem;">${r.hora_tomado || '-'}</td>
+                        <td style="padding: 0.6rem;">${r.notas || '-'}</td>
                     </tr>
                 `).join('');
             } else if (moduloClave === 'activacion') {
+                detailHeaders = `<th>📅 Fecha</th><th>Categoría</th><th>Actividad</th><th>Estado</th><th>Notas</th>`;
                 detailTableRows = recs.map(r => {
                     let catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Disfrute/Placer' : '🏠 Cotidiana');
                     return `
                         <tr style="border-bottom: 1px solid var(--border-color);">
-                            <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                            <td style="padding: 0.5rem;">${catLabel}</td>
-                            <td style="padding: 0.5rem;">${r.nombre_actividad}</td>
-                            <td style="padding: 0.5rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
+                            <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                            <td style="padding: 0.6rem;">${catLabel}</td>
+                            <td style="padding: 0.6rem;"><strong>${r.nombre_actividad}</strong></td>
+                            <td style="padding: 0.6rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
+                            <td style="padding: 0.6rem;">${r.notas || '-'}</td>
                         </tr>
                     `;
                 }).join('');
             } else if (moduloClave === 'ansiedad') {
+                detailHeaders = `<th>📅 Fecha</th><th>Nivel Ansiedad</th><th>Síntomas Registrados</th><th>Situación Desencadenante</th>`;
                 detailTableRows = recs.map(r => {
                     let sints = [];
                     try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
                     return `
                         <tr style="border-bottom: 1px solid var(--border-color);">
-                            <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                            <td style="padding: 0.5rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span></td>
-                            <td style="padding: 0.5rem; max-width: 250px;">${sints.join(', ') || 'Sin síntomas marcados'}</td>
-                            <td style="padding: 0.5rem;">${r.situacion_desencadenante || '-'}</td>
+                            <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                            <td style="padding: 0.6rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span></td>
+                            <td style="padding: 0.6rem; max-width: 250px;">${sints.length > 0 ? sints.map(s => `<span class="badge" style="background:#f3f4f6; color:#374151; margin:2px;">${s}</span>`).join(' ') : 'Sin síntomas marcados'}</td>
+                            <td style="padding: 0.6rem;">${r.situacion_desencadenante || '-'}</td>
                         </tr>
                     `;
                 }).join('');
             }
 
-            let detailHeaders = '';
-            if (moduloClave === 'sobriedad') {
-                detailHeaders = `<th>Fecha</th><th>Estado</th><th>Disparador Emocional</th><th>Notas</th>`;
-            } else if (moduloClave === 'sueno') {
-                detailHeaders = `<th>Fecha</th><th>Horario</th><th>Descansó</th><th>Despertares</th><th>Síntomas Día</th>`;
-            } else if (moduloClave === 'adherencia') {
-                detailHeaders = `<th>Fecha</th><th>Medicamento</th><th>Dosis / Prescripción</th><th>Tomado</th><th>Hora Real</th>`;
-            } else if (moduloClave === 'activacion') {
-                detailHeaders = `<th>Fecha</th><th>Categoría</th><th>Actividad</th><th>Estado</th>`;
-            } else if (moduloClave === 'ansiedad') {
-                detailHeaders = `<th>Fecha</th><th>Nivel Ansiedad</th><th>Síntomas Registrados</th><th>Situación / Desencadenante</th>`;
-            }
-
-            // Desplegar automáticamente si es el objetivo o el primero
-            const isExpanded = targetPatientId ? (p.id == targetPatientId) : (idx === 0);
+            // Desplegar siempre abierto el historial por consultante
+            const isExpanded = true;
 
             html += `
-                <div class="card" style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: white;">
-                    <div onclick="toggleTtrPatientDetails(${p.id})" style="padding: 1rem; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; gap: 0.5rem; border-bottom: 1px solid var(--border-color);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="card" style="border: 1.5px solid var(--border-color); border-radius: 8px; overflow: hidden; background: white; margin-bottom: 1rem;">
+                    <div style="padding: 1rem; background: var(--bg-light); display: flex; flex-direction: column; gap: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                             <div>
                                 <h4 style="margin: 0; color: var(--text-dark); font-family: var(--font-title); font-size: 1.05rem;">
-                                    👤 ${p.name} <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: normal;">(${p.cedula ? 'Cédula: ' + p.cedula : 'Cédula no cargada'})</span>
+                                    👤 ${p.name} <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: normal;">(${p.cedula ? 'Cédula: ' + p.cedula : 'Sin Cédula'})</span>
                                 </h4>
                             </div>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); toggleTtrPatientDetails(${p.id});" style="font-weight: 600;">
-                                <span id="ttr-patient-icon-${p.id}">${isExpanded ? '🔼' : '🔽'}</span> Ver Registros (${recs.length})
-                            </button>
+                            <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700;">
+                                Total Registros: ${recs.length}
+                            </span>
                         </div>
                         <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-top: 0.25rem;">
                             ${summaryBadgesHtml}
                         </div>
                     </div>
-                    <div id="ttr-patient-body-${p.id}" class="ttr-patient-body ${isExpanded ? '' : 'hide'}" style="padding: 0.75rem; display: ${isExpanded ? 'block' : 'none'};">
-                        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.83rem;">
+                    <div id="ttr-patient-body-${p.id}" style="padding: 0.75rem; display: block; overflow-x: auto;">
+                        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
                             <thead>
-                                <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                                <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: #f9fafb;">
                                     ${detailHeaders}
                                 </tr>
                             </thead>
