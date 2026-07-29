@@ -10449,30 +10449,30 @@ async function checkWhatsAppQRStatus() {
     if (!badge || !loadingBox || !qrBox || !connectedBox) return;
 
     try {
-        let data = null;
-        // Intento 1: Llamada directa al microservicio en Render desde el navegador del usuario (salta el proxy de PythonAnywhere)
+        let statusData = null;
+        // Intento 1: Verificar el ESTADO de conexión primero
         try {
-            const res = await fetch(`${RENDER_WA_URL}/qr`, { mode: 'cors' });
-            if (res.ok) {
-                data = await res.json();
+            const resStatus = await fetch(`${RENDER_WA_URL}/status`, { mode: 'cors' });
+            if (resStatus.ok) {
+                statusData = await resStatus.json();
             }
         } catch (directErr) {
-            console.warn("Llamada directa a Render desde el navegador dio error o timeout:", directErr);
+            console.warn("Llamada directa /status a Render falló, intentando via backend Flask:", directErr);
         }
 
-        // Intento 2: Si la llamada directa falló, intentar via backend Flask
-        if (!data) {
+        if (!statusData) {
             try {
-                const res = await fetch('/api/whatsapp/qr');
-                if (res.ok) {
-                    data = await res.json();
+                const resStatus = await fetch('/api/whatsapp/status');
+                if (resStatus.ok) {
+                    statusData = await resStatus.json();
                 }
             } catch (backendErr) {
-                console.warn("Llamada a backend Flask dio error:", backendErr);
+                console.warn("Llamada a /api/whatsapp/status dio error:", backendErr);
             }
         }
 
-        if (data && data.status === 'connected') {
+        // Si la cuenta YA ESTÁ CONECTADA, mostramos el panel verde y NO solicitamos un nuevo QR
+        if (statusData && statusData.status === 'connected') {
             badge.className = 'badge badge-success';
             badge.style.background = '#10b981';
             badge.style.color = '#ffffff';
@@ -10481,13 +10481,49 @@ async function checkWhatsAppQRStatus() {
             loadingBox.classList.add('hide');
             qrBox.classList.add('hide');
             connectedBox.classList.remove('hide');
-            if (connectedPhone) connectedPhone.textContent = data.phone || 'Cuenta vinculada';
+            if (connectedPhone) connectedPhone.textContent = statusData.phone || 'Cuenta vinculada';
 
             if (waPollInterval) {
                 clearInterval(waPollInterval);
                 waPollInterval = null;
             }
-        } else if (data && (data.qr || data.status === 'qr_ready')) {
+            return;
+        }
+
+        // Si NO está conectada, procedemos a solicitar el código QR
+        let qrData = null;
+        try {
+            const resQr = await fetch(`${RENDER_WA_URL}/qr`, { mode: 'cors' });
+            if (resQr.ok) {
+                qrData = await resQr.json();
+            }
+        } catch (directErr) {}
+
+        if (!qrData) {
+            try {
+                const resQr = await fetch('/api/whatsapp/qr');
+                if (resQr.ok) {
+                    qrData = await resQr.json();
+                }
+            } catch (backendErr) {}
+        }
+
+        if (qrData && qrData.status === 'connected') {
+            badge.className = 'badge badge-success';
+            badge.style.background = '#10b981';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Conectado ✅';
+            
+            loadingBox.classList.add('hide');
+            qrBox.classList.add('hide');
+            connectedBox.classList.remove('hide');
+            if (connectedPhone) connectedPhone.textContent = qrData.phone || 'Cuenta vinculada';
+
+            if (waPollInterval) {
+                clearInterval(waPollInterval);
+                waPollInterval = null;
+            }
+        } else if (qrData && (qrData.qr || qrData.status === 'qr_ready')) {
             badge.className = 'badge badge-warning';
             badge.style.background = '#f59e0b';
             badge.style.color = '#ffffff';
@@ -10496,8 +10532,8 @@ async function checkWhatsAppQRStatus() {
             loadingBox.classList.add('hide');
             connectedBox.classList.add('hide');
             qrBox.classList.remove('hide');
-            if (qrImage && data.qr) {
-                qrImage.src = data.qr;
+            if (qrImage && qrData.qr) {
+                qrImage.src = qrData.qr;
             }
 
             if (!waPollInterval) {
