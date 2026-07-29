@@ -3783,8 +3783,8 @@ def patient_pizarra():
             
             cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
             pac = cursor.fetchone()
-            pac_nombre = f"{pac['nombres']} {pac['apellidos']}"
-            psicologo_id = pac['psicologo_id'] or 1
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip() if pac else "Consultante"
+            psicologo_id = (pac['psicologo_id'] if pac and pac['psicologo_id'] else 1)
             
             titulo_notif = "Registro de Estado de Ánimo" if estado_animo else "Actualización de Pizarra"
             mensaje_notif = f"{pac_nombre} registró su estado de ánimo: {emoji_animo} {estado_animo}." if estado_animo else f"{pac_nombre} escribió una reflexión en su pizarra terapéutica."
@@ -4516,7 +4516,7 @@ def admin_pizarra_reply():
         if row:
             patient_id = row['paciente_id']
             cursor.execute("""
-                INSERT INTO notificaciones (patient_id, tipo, titulo, mensaje, fecha, leida, link)
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
                 VALUES (?, ?, ?, ?, ?, 0, ?)
             """, (patient_id, 'pizarra', '💬 Tu Psicólogo/a respondió en tu Pizarra Terapéutica', f'Tu psicólogo/a ha respondido a tu apunte: "{respuesta[:60]}..."', fecha_actual, 'pizarra-terapeutica'))
             

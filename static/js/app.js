@@ -2041,7 +2041,12 @@ async function handleSaveMoodCheckin() {
         });
         const data = await res.json();
         if (res.ok) {
-            statusMsg.textContent = '¡Estado de ánimo registrado con éxito!';
+            statusMsg.textContent = data.success || '¡Estado de ánimo registrado con éxito!';
+            statusMsg.style.background = 'rgba(16, 185, 129, 0.15)';
+            statusMsg.style.color = '#059669';
+            statusMsg.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            statusMsg.style.padding = '0.6rem 0.85rem';
+            statusMsg.style.borderRadius = '8px';
             statusMsg.className = 'status-msg success-msg';
             statusMsg.classList.remove('hide');
             if (commentInput) commentInput.value = '';
@@ -2058,11 +2063,21 @@ async function handleSaveMoodCheckin() {
             loadPatientPizarraHistory();
         } else {
             statusMsg.textContent = data.error || 'Error al guardar el estado de ánimo.';
+            statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+            statusMsg.style.color = '#dc2626';
+            statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            statusMsg.style.padding = '0.6rem 0.85rem';
+            statusMsg.style.borderRadius = '8px';
             statusMsg.className = 'status-msg error-msg';
             statusMsg.classList.remove('hide');
         }
     } catch (err) {
-        statusMsg.textContent = 'Error de conexión al registrar el estado de ánimo.';
+        statusMsg.textContent = `Error al registrar estado de ánimo: ${err.message || 'Error de conexión'}`;
+        statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusMsg.style.color = '#dc2626';
+        statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+        statusMsg.style.padding = '0.6rem 0.85rem';
+        statusMsg.style.borderRadius = '8px';
         statusMsg.className = 'status-msg error-msg';
         statusMsg.classList.remove('hide');
     }
@@ -10550,7 +10565,8 @@ function switchSettingsTab(tabName) {
         fcmBtn.style.display = '';
     }
 
-    const tabs = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'contrasena', 'terminos', 'soporte'];
+    if (tabName === 'contrasena') tabName = 'password';
+    const tabs = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
     tabs.forEach(t => {
         const btn = document.getElementById(`set-tab-${t}`);
         const card = document.getElementById(`set-card-${t}`);
