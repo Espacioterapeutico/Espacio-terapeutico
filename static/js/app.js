@@ -10630,17 +10630,21 @@ async function loadTherapistToolsCatalog() {
                 `;
             } else {
                 patientsHtml = patients.map(p => {
+                    const inlineContainerId = `inline-history-acc-${p.patient_id}-${toolType}`;
                     return `
-                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
-                            <div style="flex: 1; min-width: 220px;">
-                                <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
-                                <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
+                        <div style="display: flex; flex-direction: column; width: 100%;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
+                                <div style="flex: 1; min-width: 220px;">
+                                    <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-primary btn-sm btn-view-history" onclick="toggleInlinePatientHistory(${p.patient_id}, '${toolType}', '${inlineContainerId}')" style="font-weight: 600; padding: 0.35rem 0.75rem;">
+                                        📋 Ver Historial
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <button type="button" class="btn btn-primary btn-sm btn-view-history" data-patient-id="${p.patient_id}" data-tool="${toolType}" style="font-weight: 600; padding: 0.35rem 0.75rem;">
-                                    📋 Ver Historial
-                                </button>
-                            </div>
+                            <div id="${inlineContainerId}" class="inline-patient-history hide" style="display: none; margin-top: 0.5rem; width: 100%;"></div>
                         </div>
                     `;
                 }).join('<div style="height: 0.5rem;"></div>');
@@ -10680,20 +10684,14 @@ async function loadTherapistToolsCatalog() {
 }
 
 // ==========================================
-// FUNCIONES E INTERACCIONES DE REPORTES TERAPÉUTICOS
+// ESTADO Y RENDERIZADO DE HISTORIAL DESPLEGABLE CON PAGINACIÓN (5 REGISTROS POR PÁGINA)
 // ==========================================
 
-function openPatientToolHistoryModal(patientId, toolType) {
-    console.log('📋 Abriendo historial para paciente:', patientId, 'herramienta:', toolType);
-    const namesMap = {
-        'sueno': 'Registro de Higiene del Sueño',
-        'ansiedad': 'Diario de Ansiedad & Síntomas',
-        'sobriedad': 'Registro de Consumo',
-        'consumo': 'Registro de Consumo',
-        'adherencia': 'Adherencia al Tratamiento (Medicación)',
-        'medicacion': 'Adherencia al Tratamiento (Medicación)',
-        'activacion': 'Activación Conductual'
-    };
+const patientHistoryState = {};
+
+async function toggleInlinePatientHistory(patientId, toolKey, containerId) {
+    console.log('[DEBUG] toggleInlinePatientHistory called:', patientId, toolKey, containerId);
+    
     const claveMap = {
         'sueno': 'sueno',
         'ansiedad': 'ansiedad',
@@ -10703,9 +10701,195 @@ function openPatientToolHistoryModal(patientId, toolType) {
         'medicacion': 'adherencia',
         'activacion': 'activacion'
     };
-    const clave = claveMap[toolType] || toolType;
-    const nombre = namesMap[toolType] || toolType;
-    openTherapistModuleReport(clave, nombre, patientId);
+    const normKey = claveMap[toolKey] || toolKey;
+    const container = document.getElementById(containerId);
+
+    // Alternar si ya está desplegado con contenido
+    if (container && container.style.display !== 'none' && container.childElementCount > 0) {
+        container.style.display = 'none';
+        container.classList.add('hide');
+        return;
+    }
+
+    if (container) {
+        container.style.setProperty('display', 'block', 'important');
+        container.classList.remove('hide');
+        container.innerHTML = '<div style="padding: 0.75rem; color: var(--text-muted); font-size: 0.85rem; text-align: center;">⌛ Cargando registros de la herramienta...</div>';
+    }
+
+    try {
+        const res = await fetch(`/api/therapist/modules/report/${normKey}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al cargar historial');
+
+        const patientRecords = (data || []).filter(r => r.paciente_id == patientId);
+
+        if (patientRecords.length === 0) {
+            if (container) {
+                container.innerHTML = '<div style="padding: 0.85rem; background: #fff; border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-muted); font-size: 0.85rem; text-align: center;">📭 El consultante aún no ha registrado datos en esta herramienta.</div>';
+            }
+            return;
+        }
+
+        const stateKey = `${patientId}_${normKey}_${containerId}`;
+        patientHistoryState[stateKey] = {
+            records: patientRecords,
+            page: 1,
+            clave: normKey,
+            containerId: containerId
+        };
+
+        renderPaginatedHistoryTable(stateKey);
+
+    } catch (err) {
+        if (container) {
+            container.innerHTML = `<div style="padding: 0.75rem; color: var(--color-danger); font-size: 0.85rem;">⚠️ Error: ${err.message}</div>`;
+        }
+    }
+}
+
+function renderPaginatedHistoryTable(stateKey) {
+    const state = patientHistoryState[stateKey];
+    if (!state || !state.records) return;
+
+    const pageSize = 5;
+    const totalRecords = state.records.length;
+    const totalPages = Math.ceil(totalRecords / pageSize);
+    const currentPage = Math.max(1, Math.min(state.page || 1, totalPages));
+    state.page = currentPage;
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalRecords);
+    const pageRecords = state.records.slice(startIndex, endIndex);
+
+    const moduloClave = state.clave;
+    let detailHeaders = '';
+    let detailTableRows = '';
+
+    if (moduloClave === 'sobriedad') {
+        detailHeaders = `<th>📅 Fecha</th><th>Estado</th><th>Craving (1-10)</th><th>Disparador Emocional</th><th>Notas</th>`;
+        detailTableRows = pageRecords.map(r => `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                <td style="padding: 0.6rem;">${r.sobrio ? '🟢 Libre de consumo' : '⚠️ Consumo / Recaída'}</td>
+                <td style="padding: 0.6rem;">${r.nivel_ansiedad !== null && r.nivel_ansiedad !== undefined ? `<span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span>` : '-'}</td>
+                <td style="padding: 0.6rem;">${r.disparador_emocional || '-'}</td>
+                <td style="padding: 0.6rem;">${r.notas || '-'}</td>
+            </tr>
+        `).join('');
+    } else if (moduloClave === 'sueno') {
+        detailHeaders = `<th>📅 Fecha</th><th>Horario Sueño</th><th>¿Descansó?</th><th>Despertares</th><th>Síntomas Día</th><th>Detalles Día & Conciliación</th>`;
+        detailTableRows = pageRecords.map(r => `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                <td style="padding: 0.6rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
+                <td style="padding: 0.6rem;">${r.senti_descanso ? '🟢 Reparador' : '🔴 No reparador'}</td>
+                <td style="padding: 0.6rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1} veces)` : 'No'}</td>
+                <td style="padding: 0.6rem;">
+                    ${r.somnolencia_dia ? '🥱 Somnolencia ' : ''}${r.pesadez_dia ? '🪨 Pesadez ' : ''}${r.agotamiento_dia ? '🔋 Agotamiento' : ''}
+                </td>
+                <td style="padding: 0.6rem; font-size: 0.8rem; max-width: 220px;">
+                    ${r.proceso_dormir ? `<div><strong>Conciliación:</strong> ${r.proceso_dormir}</div>` : ''}
+                    ${r.situaciones_dia ? `<div><strong>Situaciones:</strong> ${r.situaciones_dia}</div>` : ''}
+                    ${r.emociones_dia ? `<div><strong>Emociones:</strong> ${r.emociones_dia}</div>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    } else if (moduloClave === 'adherencia') {
+        detailHeaders = `<th>📅 Fecha</th><th>Medicamento</th><th>Dosis / Prescripción</th><th>Estado Toma</th><th>Hora Real</th><th>Notas</th>`;
+        detailTableRows = pageRecords.map(r => `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                <td style="padding: 0.6rem;"><strong>💊 ${r.nombre_medicamento}</strong></td>
+                <td style="padding: 0.6rem;">${r.dosis || '-'} (${r.hora_prescrita || '-'})</td>
+                <td style="padding: 0.6rem;">${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}</td>
+                <td style="padding: 0.6rem;">${r.hora_tomado || '-'}</td>
+                <td style="padding: 0.6rem;">${r.notas || '-'}</td>
+            </tr>
+        `).join('');
+    } else if (moduloClave === 'activacion') {
+        detailHeaders = `<th>📅 Fecha</th><th>Categoría</th><th>Actividad</th><th>Estado</th><th>Notas</th>`;
+        detailTableRows = pageRecords.map(r => {
+            let catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Disfrute/Placer' : '🏠 Cotidiana');
+            return `
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                    <td style="padding: 0.6rem;">${catLabel}</td>
+                    <td style="padding: 0.6rem;"><strong>${r.nombre_actividad}</strong></td>
+                    <td style="padding: 0.6rem;">${r.completada ? '🟢 Completada' : '⚪ Pendiente'}</td>
+                    <td style="padding: 0.6rem;">${r.notas || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    } else if (moduloClave === 'ansiedad') {
+        detailHeaders = `<th>📅 Fecha</th><th>Nivel Ansiedad</th><th>Síntomas Registrados</th><th>Situación Desencadenante</th>`;
+        detailTableRows = pageRecords.map(r => {
+            let sints = [];
+            try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
+            return `
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                    <td style="padding: 0.6rem;"><span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span></td>
+                    <td style="padding: 0.6rem; max-width: 250px;">${sints.length > 0 ? sints.map(s => `<span class="badge" style="background:#f3f4f6; color:#374151; margin:2px;">${s}</span>`).join(' ') : 'Sin síntomas marcados'}</td>
+                    <td style="padding: 0.6rem;">${r.situacion_desencadenante || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    const paginationControls = totalPages > 1 ? `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: #f9fafb; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePatientHistoryPage('${stateKey}', ${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                ◀️ Anterior
+            </button>
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">
+                Página ${currentPage} de ${totalPages} (${totalRecords} registros en total)
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePatientHistoryPage('${stateKey}', ${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
+                Siguiente ▶️
+            </button>
+        </div>
+    ` : `
+        <div style="text-align: right; padding: 0.4rem 0.85rem; font-size: 0.78rem; color: var(--text-muted); background: #f9fafb; border-top: 1px solid var(--border-color);">
+            Mostrando ${totalRecords} registro(s)
+        </div>
+    `;
+
+    const tableHtml = `
+        <div style="overflow-x: auto; border: 1.5px solid var(--border-color); border-radius: 8px; background: white; margin-top: 0.5rem; box-shadow: var(--shadow-sm);">
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 0;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: #f3f4f6;">
+                        ${detailHeaders}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${detailTableRows}
+                </tbody>
+            </table>
+            ${paginationControls}
+        </div>
+    `;
+
+    const container = document.getElementById(state.containerId);
+    if (container) container.innerHTML = tableHtml;
+}
+
+function changePatientHistoryPage(stateKey, newPage) {
+    if (patientHistoryState[stateKey]) {
+        patientHistoryState[stateKey].page = newPage;
+        renderPaginatedHistoryTable(stateKey);
+    }
+}
+
+function openPatientToolHistoryModal(patientId, toolType) {
+    const inlineId = `inline-history-acc-${patientId}-${toolType}`;
+    const el = document.getElementById(inlineId);
+    if (el) {
+        toggleInlinePatientHistory(patientId, toolType, inlineId);
+    } else {
+        openTherapistModuleReport(toolType, '', patientId);
+    }
 }
 
 function openSleepReportModal(targetPatientId) {
@@ -10841,25 +11025,29 @@ async function selectPatientForTherapistTools(id, name, code) {
                 const btnText = toolButtonLabels[m.clave] || `📊 Ver Registro de ${m.nombre}`;
                 const safeName = (name || '').replace(/'/g, "");
                 const safeModName = (m.nombre || '').replace(/'/g, "");
+                const inlineId = `inline-history-sel-${id}-${m.clave}`;
                 const actBtn = (m.clave === 'activacion') ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${safeName}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : '';
                 return `
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
-                    <div>
-                        <strong style="font-size: 0.92rem; color: var(--text-dark);">${m.nombre}</strong>
-                        <span style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-                            ${m.activo ? '🟢 Activo en portal del paciente' : '🔴 Desactivado'}
-                        </span>
+                <div style="display: flex; flex-direction: column; width: 100%;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            <strong style="font-size: 0.92rem; color: var(--text-dark);">${m.nombre}</strong>
+                            <span style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                                ${m.activo ? '🟢 Activo en portal del paciente' : '🔴 Desactivado'}
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-sm btn-info" onclick="toggleInlinePatientHistory(${id}, '${m.clave}', '${inlineId}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
+                            ${actBtn}
+                            <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
+                                ${m.activo ? ' Desactivar' : ' Activar'}
+                            </button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                        <button type="button" class="btn btn-sm btn-info" onclick="openTherapistModuleReport('${m.clave}', '${safeModName}', ${id})" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
-                        ${actBtn}
-                        <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
-                            ${m.activo ? ' Desactivar' : ' Activar'}
-                        </button>
-                    </div>
+                    <div id="${inlineId}" class="inline-patient-history hide" style="display: none; margin-top: 0.5rem; width: 100%;"></div>
                 </div>
                 `;
-            }).join('');
+            }).join('<div style="height: 0.5rem;"></div>');
         }
     } catch (err) {
         if (list) list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
