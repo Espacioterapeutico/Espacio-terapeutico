@@ -2122,9 +2122,10 @@ body.is-patient .main-content {
 /* Equal-Sized Mood Buttons Styling */
 #mood-selector-grid {
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 0.65rem !important;
     margin-bottom: 1rem !important;
+    width: 100% !important;
 }
 
 .mood-item-btn {
@@ -2132,26 +2133,29 @@ body.is-patient .main-content {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    height: 90px !important;
-    padding: 0.5rem 0.25rem !important;
+    height: 95px !important;
+    min-height: 95px !important;
+    max-height: 95px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0.5rem 0.2rem !important;
     border: 1.5px solid var(--border-color) !important;
     background: white !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-    width: 100% !important;
     box-sizing: border-box !important;
 }
 
 .mood-item-btn span:first-child {
     font-size: 2.2rem !important;
     line-height: 1 !important;
-    display: inline-block !important;
+    display: block !important;
 }
 
 .mood-item-btn span:last-child {
-    font-size: 0.75rem !important;
+    font-size: 0.73rem !important;
     font-weight: 700 !important;
     margin-top: 0.35rem !important;
     color: var(--text-dark) !important;
@@ -2160,6 +2164,7 @@ body.is-patient .main-content {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     width: 100% !important;
+    display: block !important;
 }
 
 
