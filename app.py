@@ -303,8 +303,12 @@ def normalize_time_str(t_str):
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
+        db = g._database = sqlite3.connect(DATABASE, timeout=30.0)
         db.row_factory = sqlite3.Row
+        try:
+            db.execute("PRAGMA journal_mode=WAL;")
+        except:
+            pass
     return db
 
 @app.teardown_appcontext
@@ -314,7 +318,11 @@ def close_connection(exception):
         db.close()
 
 def init_db():
-    db = sqlite3.connect(DATABASE)
+    db = sqlite3.connect(DATABASE, timeout=30.0)
+    try:
+        db.execute("PRAGMA journal_mode=WAL;")
+    except:
+        pass
     cursor = db.cursor()
     # Verificar si la tabla principal 'usuarios' existe en sqlite_master
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
