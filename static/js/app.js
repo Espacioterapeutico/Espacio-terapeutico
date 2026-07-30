@@ -13154,8 +13154,8 @@ async function renderManualConfirmationsView() {
     `;
 
     try {
-        const res = await fetch('/api/appointments');
-        if (!res.ok) throw new Error("Error al obtener las citas.");
+        const res = await fetch('/api/agenda');
+        if (!res.ok) throw new Error("Error al obtener las citas de la agenda.");
         const appointments = await res.json();
 
         const todayStr = new Date().toISOString().split('T')[0];
@@ -13187,7 +13187,7 @@ async function renderManualConfirmationsView() {
             return dtA.localeCompare(dtB);
         });
 
-        const totalPendientes = appointments.filter(a => (a.estado || '').toLowerCase() === 'programada' || (a.estado || '').toLowerCase() === 'pendiente').length;
+        const totalPendientes = appointments.filter(a => (a.estado || '').toLowerCase() === 'programada' || (a.estado || '').toLowerCase() === 'pendiente' || !a.estado).length;
         const totalConfirmadas = appointments.filter(a => (a.estado || '').toLowerCase() === 'confirmada').length;
 
         if (statPendientes) statPendientes.textContent = totalPendientes;
@@ -13207,7 +13207,8 @@ async function renderManualConfirmationsView() {
         listContainer.innerHTML = filtered.map(appt => {
             const isConfirmed = (appt.estado || '').toLowerCase() === 'confirmada';
             const isOnline = (appt.modalidad || '').toLowerCase() === 'online';
-            const phone = appt.paciente_telefono || appt.telefono || '';
+            const patientName = `${appt.nombres || ''} ${appt.apellidos || ''}`.trim() || appt.paciente_nombre || 'Consultante';
+            const phone = appt.paciente_telefono || appt.telefono || appt.cedula || '';
             const formattedDate = appt.fecha ? appt.fecha.split('-').reverse().join('/') : '';
 
             return `
@@ -13216,7 +13217,7 @@ async function renderManualConfirmationsView() {
                         <div>
                             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                 <h3 style="margin: 0; font-family: var(--font-title); font-weight: 700; font-size: 1.1rem; color: var(--text-dark);">
-                                    👤 ${appt.paciente_nombre || appt.paciente_nombres || 'Consultante'}
+                                    👤 ${patientName}
                                 </h3>
                                 <span class="badge ${isConfirmed ? 'badge-success' : 'badge-warning'}" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.55rem; background: ${isConfirmed ? '#10b981' : '#f59e0b'}; color: white;">
                                     ${isConfirmed ? '✅ Confirmada' : '⏳ Pendiente'}
@@ -13295,7 +13296,7 @@ async function quickMarkApptStatus(apptId, newStatus) {
     if (!confirm(`¿Deseas cambiar el estado de esta cita a "${newStatus}"?`)) return;
 
     try {
-        const res = await fetch(`/api/appointments/${apptId}`, {
+        const res = await fetch(`/api/agenda/${apptId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ estado: newStatus })
