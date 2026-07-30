@@ -4722,8 +4722,19 @@ function toggleControlUsoField(status) {
 // ==========================================
 
 const COUNTRY_TIMEZONE_MAP = {
+    'PORTUGAL': 'Europe/Lisbon',
     'ESPAÑA': 'Europe/Madrid',
     'SPAIN': 'Europe/Madrid',
+    'ALEMANIA': 'Europe/Berlin',
+    'GERMANY': 'Europe/Berlin',
+    'FRANCIA': 'Europe/Paris',
+    'FRANCE': 'Europe/Paris',
+    'ITALIA': 'Europe/Rome',
+    'ITALY': 'Europe/Rome',
+    'REINO UNIDO': 'Europe/London',
+    'UK': 'Europe/London',
+    'SUIZA': 'Europe/Zurich',
+    'SWITZERLAND': 'Europe/Zurich',
     'COLOMBIA': 'America/Bogota',
     'PERU': 'America/Lima',
     'PERÚ': 'America/Lima',
@@ -4737,6 +4748,8 @@ const COUNTRY_TIMEZONE_MAP = {
     'EEUU': 'America/New_York',
     'ESTADOS UNIDOS': 'America/New_York',
     'USA': 'America/New_York',
+    'CANADÁ': 'America/Toronto',
+    'CANADA': 'America/Toronto',
     'MEXICO': 'America/Mexico_City',
     'MÉXICO': 'America/Mexico_City',
     'PANAMA': 'America/Panama',
@@ -4744,7 +4757,15 @@ const COUNTRY_TIMEZONE_MAP = {
     'COSTA RICA': 'America/Costa_Rica',
     'URUGUAY': 'America/Montevideo',
     'PARAGUAY': 'America/Asuncion',
-    'BOLIVIA': 'America/La_Paz'
+    'BOLIVIA': 'America/La_Paz',
+    'BRASIL': 'America/Sao_Paulo',
+    'BRAZIL': 'America/Sao_Paulo',
+    'GUATEMALA': 'America/Guatemala',
+    'HONDURAS': 'America/Tegucigalpa',
+    'EL SALVADOR': 'America/El_Salvador',
+    'NICARAGUA': 'America/Managua',
+    'PUERTO RICO': 'America/Puerto_Rico',
+    'CUBA': 'America/Havana'
 };
 
 function toggleEventTimezoneOptions() {
