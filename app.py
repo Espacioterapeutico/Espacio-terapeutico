@@ -2346,65 +2346,68 @@ def register_admin():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-    
-    if not username or not password:
-        return jsonify({'error': 'Usuario y contraseña son requeridos.'}), 400
+    try:
+        data = request.json or {}
+        username = data.get('username')
+        password = data.get('password')
         
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("SELECT * FROM usuarios WHERE LOWER(username) = ?", (username.lower(),))
-    user = cursor.fetchone()
-    
-    if user and check_password_hash(user['password_hash'], password):
-        import datetime
-        u_dict = dict(user)
+        if not username or not password:
+            return jsonify({'error': 'Usuario y contraseña son requeridos.'}), 400
+            
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT * FROM usuarios WHERE LOWER(username) = ?", (username.lower(),))
+        user = cursor.fetchone()
         
-        # Verificar vencimiento de prueba gratis de 3 días para psicólogos no pagados
-        if user['role'] == 'psicologo' and u_dict.get('suscripcion_paga', 0) != 1:
-            expiry_str = u_dict.get('fecha_expiracion_prueba')
-            if expiry_str:
-                try:
-                    expiry_dt = datetime.datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
-                    if datetime.datetime.now() > expiry_dt:
-                        cursor.execute("UPDATE usuarios SET activo = 0 WHERE id = ?", (user['id'],))
-                        db.commit()
-                        return jsonify({'error': 'Tu periodo de prueba gratis ha vencido. Contacta al administrador para activar tu suscripción.'}), 403
-                except Exception:
-                    pass
-                    
-        session.permanent = True
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['role'] = user['role']
-        session['activo'] = user['activo']
-        u_dict = dict(user)
-        return jsonify({
-            'success': 'Inicio de sesión correcto.',
-            'username': username,
-            'nombres': u_dict.get('nombres') or '',
-            'apellidos': u_dict.get('apellidos') or '',
-            'role': user['role'],
-            'activo': user['activo'],
-            'aviso_pago': u_dict.get('aviso_pago', 0),
-            'user_id': user['id'],
-            'primer_inicio': u_dict.get('primer_inicio', 1) if u_dict.get('primer_inicio') is not None else 1,
-            'suscripcion_paga': u_dict.get('suscripcion_paga', 0),
-            'fecha_expiracion_prueba': u_dict.get('fecha_expiracion_prueba', ''),
-            'bloqueos': {
-                'registro': u_dict.get('bloqueo_registro', 0),
-                'evoluciones': u_dict.get('bloqueo_evoluciones', 0),
-                'finanzas': u_dict.get('bloqueo_finanzas', 0),
-                'agenda': u_dict.get('bloqueo_agenda', 0),
-                'mensajes': u_dict.get('bloqueo_mensajes', 0),
-                'pizarra': u_dict.get('bloqueo_pizarra', 0),
-                'herramientas': u_dict.get('bloqueo_herramientas', 0)
-            }
-        })
-    
-    return jsonify({'error': 'Credenciales inválidas.'}), 401
+        if user and check_password_hash(user['password_hash'], password):
+            import datetime
+            u_dict = dict(user)
+            
+            # Verificar vencimiento de prueba gratis de 3 días para psicólogos no pagados
+            if user['role'] == 'psicologo' and u_dict.get('suscripcion_paga', 0) != 1:
+                expiry_str = u_dict.get('fecha_expiracion_prueba')
+                if expiry_str:
+                    try:
+                        expiry_dt = datetime.datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+                        if datetime.datetime.now() > expiry_dt:
+                            cursor.execute("UPDATE usuarios SET activo = 0 WHERE id = ?", (user['id'],))
+                            db.commit()
+                            return jsonify({'error': 'Tu periodo de prueba gratis ha vencido. Contacta al administrador para activar tu suscripción.'}), 403
+                    except Exception:
+                        pass
+                        
+            session.permanent = True
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['role'] = user['role']
+            session['activo'] = user['activo']
+            u_dict = dict(user)
+            return jsonify({
+                'success': 'Inicio de sesión correcto.',
+                'username': username,
+                'nombres': u_dict.get('nombres') or '',
+                'apellidos': u_dict.get('apellidos') or '',
+                'role': user['role'],
+                'activo': user['activo'],
+                'aviso_pago': u_dict.get('aviso_pago', 0),
+                'user_id': user['id'],
+                'primer_inicio': u_dict.get('primer_inicio', 1) if u_dict.get('primer_inicio') is not None else 1,
+                'suscripcion_paga': u_dict.get('suscripcion_paga', 0),
+                'fecha_expiracion_prueba': u_dict.get('fecha_expiracion_prueba', ''),
+                'bloqueos': {
+                    'registro': u_dict.get('bloqueo_registro', 0),
+                    'evoluciones': u_dict.get('bloqueo_evoluciones', 0),
+                    'finanzas': u_dict.get('bloqueo_finanzas', 0),
+                    'agenda': u_dict.get('bloqueo_agenda', 0),
+                    'mensajes': u_dict.get('bloqueo_mensajes', 0),
+                    'pizarra': u_dict.get('bloqueo_pizarra', 0),
+                    'herramientas': u_dict.get('bloqueo_herramientas', 0)
+                }
+            })
+        
+        return jsonify({'error': 'Credenciales inválidas.'}), 401
+    except Exception as e:
+        return jsonify({'error': f'Error en el servidor al iniciar sesión: {str(e)}'}), 500
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -8566,6 +8569,11 @@ def add_header(r):
     r.headers["Pragma"] = "no-cache"
     r.headers["Expires"] = "0"
     return r
+
+@app.context_processor
+def inject_asset_version():
+    import time
+    return {'asset_v': int(time.time())}
 
 @app.route('/')
 def index():

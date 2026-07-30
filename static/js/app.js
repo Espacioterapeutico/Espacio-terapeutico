@@ -654,34 +654,40 @@ async function handleAuthSubmit(e) {
     const username = document.getElementById('auth-username').value;
     const password = document.getElementById('auth-password').value;
     const errorMsg = document.getElementById('auth-error-msg');
-    
+    const submitBtn = e.target ? e.target.querySelector('button[type="submit"]') : document.querySelector('#auth-form button[type="submit"]');
+    const origText = submitBtn ? submitBtn.textContent : '';
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Iniciando sesión...';
+    }
     errorMsg.classList.add('hide');
     
-    if (authFormMode === 'register') {
-        try {
-            const res = await fetch('/api/register-admin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert("Usuario administrador creado con éxito. Inicia sesión a continuación.");
-                document.getElementById('auth-username').value = '';
-                document.getElementById('auth-password').value = '';
-                authFormMode = 'login';
-                checkAdminExists();
-            } else {
-                errorMsg.textContent = data.error || 'Error al registrar administrador.';
+    try {
+        if (authFormMode === 'register') {
+            try {
+                const res = await fetch('/api/register-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("Usuario administrador creado con éxito. Inicia sesión a continuación.");
+                    document.getElementById('auth-username').value = '';
+                    document.getElementById('auth-password').value = '';
+                    authFormMode = 'login';
+                    checkAdminExists();
+                } else {
+                    errorMsg.textContent = data.error || 'Error al registrar administrador.';
+                    errorMsg.classList.remove('hide');
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Error de conexión con el servidor.';
                 errorMsg.classList.remove('hide');
             }
-        } catch (err) {
-            errorMsg.textContent = 'Error de conexión con el servidor.';
-            errorMsg.classList.remove('hide');
-        }
-    } else {
-        // Modo Login: Identificación Automática de Rol
-        try {
+        } else {
+            // Modo Login: Identificación Automática de Rol
             let dataAdmin = null;
             let dataPatient = null;
             let networkError = false;
@@ -699,7 +705,7 @@ async function handleAuthSubmit(e) {
                     return;
                 }
             } catch (errAdmin) {
-                console.warn("Fallo conexión login admin:", errAdmin);
+                console.warn("Fallo conexión login admin:", errAdmin);
                 networkError = true;
             }
             
@@ -740,10 +746,14 @@ async function handleAuthSubmit(e) {
             }
             errorMsg.textContent = finalError;
             errorMsg.classList.remove('hide');
-            
-        } catch (err) {
-            errorMsg.textContent = 'Error de conexión con el servidor.';
-            errorMsg.classList.remove('hide');
+        }
+    } catch (err) {
+        errorMsg.textContent = 'Error de conexión con el servidor.';
+        errorMsg.classList.remove('hide');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = origText;
         }
     }
 }
