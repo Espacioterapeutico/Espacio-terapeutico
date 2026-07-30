@@ -939,10 +939,13 @@ def ensure_db_initialized():
     global _db_initialized_flag
     if not _db_initialized_flag:
         _db_initialized_flag = True
-        try:
-            init_db()
-        except Exception as _db_err:
-            print(f"Advertencia al inicializar BD: {_db_err}")
+        import threading
+        def _async_init():
+            try:
+                init_db()
+            except Exception as _db_err:
+                print(f"Advertencia al inicializar BD: {_db_err}")
+        threading.Thread(target=_async_init, daemon=True).start()
 
 FIREBASE_DB_URL = "https://espacio-terapeutico-default-rtdb.firebaseio.com"
 
