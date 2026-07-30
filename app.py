@@ -8971,6 +8971,27 @@ def format_whatsapp_message(template_str, patient, cita, psicologo):
     msg = msg.replace('{nombre_psicologo}', psic_nom)
     return msg
 
+@app.route('/api/whatsapp/sync-session', methods=['GET', 'POST'])
+def sync_whatsapp_session():
+    import json
+    db = get_db()
+    cursor = db.cursor()
+    if request.method == 'POST':
+        data = request.json or {}
+        session_json = json.dumps(data)
+        cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('wa_auth_session', ?)", (session_json,))
+        db.commit()
+        return jsonify({'status': 'saved'})
+    else:
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'wa_auth_session'")
+        row = cursor.fetchone()
+        if row and row['valor']:
+            try:
+                return jsonify(json.loads(row['valor']))
+            except:
+                return jsonify({})
+        return jsonify({})
+
 @app.route('/api/whatsapp/send-reminder/<int:cita_id>', methods=['POST'])
 @login_required
 def send_manual_whatsapp_reminder(cita_id):
@@ -8993,10 +9014,13 @@ def send_manual_whatsapp_reminder(cita_id):
     if not phone or not phone.strip():
         return jsonify({'error': 'El paciente no tiene un número de teléfono registrado.'}), 400
 
-    cursor.execute("SELECT nombres, apellidos, template_recordatorio FROM usuarios WHERE id = ?", (user_id,))
+    cursor.execute("SELECT nombres, apellidos FROM usuarios WHERE id = ?", (user_id,))
     psicologo = cursor.fetchone()
 
-    template = psicologo['template_recordatorio'] if psicologo and psicologo['template_recordatorio'] else None
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_recordatorio'")
+    cfg_row = cursor.fetchone()
+    template = cfg_row['valor'] if cfg_row and cfg_row['valor'] else None
+
     cita_dict = {
         'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
         'fecha': cita['fecha'],
@@ -9026,6 +9050,11 @@ def cron_send_whatsapp_reminders():
     db = get_db()
     cursor = db.cursor()
 
+    cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio')")
+    cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
+    tmpl_conf_default = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para solicitar la confirmación de tu cita agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¿Nos confirmas tu asistencia por favor?"
+    tmpl_rec_default = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
+
     enviados_confirmaciones = []
     enviados_recordatorios = []
     errores = []
@@ -9033,7 +9062,7 @@ def cron_send_whatsapp_reminders():
     # 1. ENVIAR CONFIRMACIONES ANTICIPADAS (Citas de Mañana)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_confirmacion
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         JOIN usuarios u ON p.psicologo_id = u.id
@@ -9052,8 +9081,7 @@ def cron_send_whatsapp_reminders():
             'hora': cita['hora'],
             'modalidad': cita['tipo_consulta'] or 'Presencial'
         }
-        tmpl = cita['template_confirmacion'] or "Hola {nombre}, te escribimos para solicitar la confirmación de tu cita agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¿Nos confirmas tu asistencia por favor?"
-        mensaje_texto = format_whatsapp_message(tmpl, cita_dict, cita_dict, psicologo_data)
+        mensaje_texto = format_whatsapp_message(tmpl_conf_default, cita_dict, cita_dict, psicologo_data)
 
         try:
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
@@ -9068,7 +9096,7 @@ def cron_send_whatsapp_reminders():
     # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_recordatorio
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         JOIN usuarios u ON p.psicologo_id = u.id
@@ -9087,8 +9115,7 @@ def cron_send_whatsapp_reminders():
             'hora': cita['hora'],
             'modalidad': cita['tipo_consulta'] or 'Presencial'
         }
-        tmpl = cita['template_recordatorio'] or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
-        mensaje_texto = format_whatsapp_message(tmpl, cita_dict, cita_dict, psicologo_data)
+        mensaje_texto = format_whatsapp_message(tmpl_rec_default, cita_dict, cita_dict, psicologo_data)
 
         try:
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)

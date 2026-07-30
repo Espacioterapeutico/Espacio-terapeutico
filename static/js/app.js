@@ -10750,6 +10750,15 @@ function switchSettingsTab(tabName) {
         }
     });
     if (tabName === 'whatsapp') {
+        const userRole = (window.currentUser && (window.currentUser.rol || window.currentUser.role)) || sessionStorage.getItem('userRole') || sessionStorage.getItem('user_role');
+        const mcToggleCard = document.getElementById('card-toggle-manual-confirmations-module');
+        if (mcToggleCard) {
+            if (userRole === 'superadmin' || userRole === 'admin') {
+                mcToggleCard.classList.remove('hide');
+            } else {
+                mcToggleCard.classList.add('hide');
+            }
+        }
         checkWhatsAppQRStatus();
     } else if (tabName === 'firebase') {
         if (typeof loadFirebaseSettings === 'function') {

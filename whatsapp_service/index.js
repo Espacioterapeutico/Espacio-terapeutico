@@ -25,8 +25,53 @@ let currentQR = null;
 let connectionStatus = 'disconnected'; // 'disconnected' | 'qr_ready' | 'connecting' | 'connected'
 let connectedPhone = null;
 
+async function backupAuthSession() {
+    try {
+        if (!fs.existsSync(AUTH_DIR)) return;
+        const files = fs.readdirSync(AUTH_DIR);
+        const sessionData = {};
+        for (const file of files) {
+            if (file.endsWith('.json')) {
+                const filePath = path.join(AUTH_DIR, file);
+                sessionData[file] = fs.readFileSync(filePath, 'utf8');
+            }
+        }
+        if (Object.keys(sessionData).length > 0) {
+            const syncUrl = FLASK_WEBHOOK_URL.replace(/\/webhook$/, '/sync-session');
+            await axios.post(syncUrl, sessionData, { timeout: 8000 }).catch(() => {});
+        }
+    } catch (e) {
+        console.error("Error realizando backup de sesión de WA:", e.message);
+    }
+}
+
+async function restoreAuthSession() {
+    try {
+        if (!fs.existsSync(AUTH_DIR)) {
+            fs.mkdirSync(AUTH_DIR, { recursive: true });
+        }
+        const existingFiles = fs.readdirSync(AUTH_DIR);
+        if (existingFiles.length === 0) {
+            console.log("Intentando restaurar credenciales de sesión desde Flask backend...");
+            const syncUrl = FLASK_WEBHOOK_URL.replace(/\/webhook$/, '/sync-session');
+            const res = await axios.get(syncUrl, { timeout: 8000 }).catch(() => null);
+            if (res && res.data && typeof res.data === 'object' && Object.keys(res.data).length > 0) {
+                for (const [fileName, fileContent] of Object.entries(res.data)) {
+                    if (fileName.endsWith('.json') && typeof fileContent === 'string') {
+                        fs.writeFileSync(path.join(AUTH_DIR, fileName), fileContent, 'utf8');
+                    }
+                }
+                console.log("✅ Sesión de WhatsApp restaurada con éxito desde backend.");
+            }
+        }
+    } catch (e) {
+        console.error("Error restaurando credenciales de sesión de WA:", e.message);
+    }
+}
+
 async function connectToWhatsApp() {
     try {
+        await restoreAuthSession();
         const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
         const { version } = await fetchLatestBaileysVersion();
 
@@ -37,7 +82,10 @@ async function connectToWhatsApp() {
             browser: ['Mi Consultorio', 'Chrome', '1.0.0']
         });
 
-        sock.ev.on('creds.update', saveCreds);
+        sock.ev.on('creds.update', async () => {
+            await saveCreds();
+            backupAuthSession();
+        });
 
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
@@ -57,6 +105,7 @@ async function connectToWhatsApp() {
                 currentQR = null;
                 connectedPhone = sock.user ? sock.user.id.split(':')[0] : 'Conectado';
                 console.log('✅ WhatsApp Web Conectado Exitosamente:', connectedPhone);
+                backupAuthSession();
             }
 
             if (connection === 'close') {
