@@ -40,7 +40,8 @@ app = Flask(
 )
 app.secret_key = os.environ.get('SECRET_KEY', 'espacio_terapeutico_secret_key_2026_prod_fixed')
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_SECURE'] = True if os.environ.get('FLASK_ENV') != 'development' else False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, 'clinica.db')
@@ -8714,6 +8715,23 @@ try {{
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT COUNT(*) FROM pacientes")
+        total_p = cursor.fetchone()[0]
+        return jsonify({
+            'status': 'ok',
+            'database': 'connected',
+            'total_pacientes': total_p,
+            'schema_version': CURRENT_SCHEMA_VER,
+            'timestamp': datetime.datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'details': str(e)}), 500
 
 if __name__ == '__main__':
     # Cerrar la pantalla de carga nativa si está disponible
