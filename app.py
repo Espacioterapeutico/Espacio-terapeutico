@@ -305,10 +305,6 @@ def get_db():
     if db is None:
         db = g._database = sqlite3.connect(DATABASE, timeout=30.0)
         db.row_factory = sqlite3.Row
-        try:
-            db.execute("PRAGMA journal_mode=WAL;")
-        except:
-            pass
     return db
 
 @app.teardown_appcontext
