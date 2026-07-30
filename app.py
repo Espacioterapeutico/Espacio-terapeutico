@@ -7354,20 +7354,32 @@ def clear_all_data():
 @app.route('/api/agenda/<int:event_id>', methods=['PUT'])
 @login_required
 def update_agenda_event(event_id):
-    data = request.json
+    data = request.json or {}
     db = get_db()
     cursor = db.cursor()
-    
-    fecha = data.get('fecha')
-    hora = data.get('hora')
-    tipo_consulta = data.get('tipo_consulta')
-    estado_pago = data.get('estado_pago')
     
     try:
         cursor.execute("SELECT * FROM agenda_finanzas WHERE id = ?", (event_id,))
         local_event = cursor.fetchone()
         if not local_event:
             return jsonify({'error': 'Evento no encontrado.'}), 404
+
+        fecha = data.get('fecha') or local_event['fecha']
+        hora = data.get('hora') or local_event['hora']
+        tipo_consulta = data.get('tipo_consulta') or local_event['tipo_consulta']
+        estado_pago = data.get('estado_pago') or local_event['estado_pago']
+        monto = data.get('monto') if 'monto' in data and data.get('monto') is not None else local_event['monto']
+        moneda = data.get('moneda') if 'moneda' in data and data.get('moneda') is not None else local_event['moneda']
+        
+        if 'confirmada' in data:
+            confirmada = int(data.get('confirmada'))
+        elif data.get('estado') == 'Confirmada':
+            confirmada = 1
+        elif data.get('estado') == 'Cancelada':
+            confirmada = 0
+            estado_pago = 'Cancelada'
+        else:
+            confirmada = local_event['confirmada']
             
         google_event_id = local_event['google_event_id']
         paciente_id = local_event['paciente_id']

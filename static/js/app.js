@@ -13168,8 +13168,10 @@ async function renderManualConfirmationsView() {
         next7DaysObj.setDate(next7DaysObj.getDate() + 7);
         const next7DaysStr = next7DaysObj.toISOString().split('T')[0];
 
+        const isApptConfirmed = (a) => (a.confirmada === 1 || a.confirmada === '1' || (a.estado || '').toLowerCase() === 'confirmada' || (a.estado_pago || '').toLowerCase() === 'confirmada');
+
         let filtered = appointments.filter(a => {
-            const status = (a.estado || '').toLowerCase();
+            const status = (a.estado || a.estado_pago || '').toLowerCase();
             return status !== 'cancelada' && status !== 'realizada' && status !== 'completada';
         });
 
@@ -13187,8 +13189,8 @@ async function renderManualConfirmationsView() {
             return dtA.localeCompare(dtB);
         });
 
-        const totalPendientes = appointments.filter(a => (a.estado || '').toLowerCase() === 'programada' || (a.estado || '').toLowerCase() === 'pendiente' || !a.estado).length;
-        const totalConfirmadas = appointments.filter(a => (a.estado || '').toLowerCase() === 'confirmada').length;
+        const totalPendientes = appointments.filter(a => !isApptConfirmed(a) && (a.estado_pago || '').toLowerCase() !== 'cancelada').length;
+        const totalConfirmadas = appointments.filter(a => isApptConfirmed(a)).length;
 
         if (statPendientes) statPendientes.textContent = totalPendientes;
         if (statConfirmadas) statConfirmadas.textContent = totalConfirmadas;
@@ -13205,8 +13207,8 @@ async function renderManualConfirmationsView() {
         }
 
         listContainer.innerHTML = filtered.map(appt => {
-            const isConfirmed = (appt.estado || '').toLowerCase() === 'confirmada';
-            const isOnline = (appt.modalidad || '').toLowerCase() === 'online';
+            const isConfirmed = isApptConfirmed(appt);
+            const isOnline = (appt.modalidad || appt.tipo_consulta || '').toLowerCase() === 'online';
             const patientName = `${appt.nombres || ''} ${appt.apellidos || ''}`.trim() || appt.paciente_nombre || 'Consultante';
             const phone = appt.paciente_telefono || appt.telefono || appt.cedula || '';
             const formattedDate = appt.fecha ? appt.fecha.split('-').reverse().join('/') : '';
@@ -13296,15 +13298,23 @@ async function quickMarkApptStatus(apptId, newStatus) {
     if (!confirm(`¿Deseas cambiar el estado de esta cita a "${newStatus}"?`)) return;
 
     try {
+        const payload = {
+            estado: newStatus,
+            confirmada: newStatus === 'Confirmada' ? 1 : 0
+        };
+        if (newStatus === 'Cancelada') {
+            payload.estado_pago = 'Cancelada';
+        }
         const res = await fetch(`/api/agenda/${apptId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ estado: newStatus })
+            body: JSON.stringify(payload)
         });
         if (res.ok) {
             renderManualConfirmationsView();
         } else {
-            alert("Error al actualizar el estado de la cita.");
+            const errData = await res.json().catch(() => ({}));
+            alert("Error al actualizar el estado de la cita: " + (errData.error || "Desconocido"));
         }
     } catch (err) {
         alert("Error de conexión al actualizar la cita.");
