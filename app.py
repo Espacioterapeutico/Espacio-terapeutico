@@ -313,10 +313,13 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+CURRENT_SCHEMA_VER = "12"
+
 def init_db():
     db = sqlite3.connect(DATABASE, timeout=30.0)
     cursor = db.cursor()
-    # Verificar si la tabla principal 'usuarios' existe en sqlite_master
+    
+    # Verificar si la tabla principal 'usuarios' existe
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
     exists = cursor.fetchone()
     
@@ -324,6 +327,18 @@ def init_db():
         with open(SCHEMA_FILE, 'r', encoding='utf-8') as f:
             db.executescript(f.read())
         db.commit()
+    else:
+        # Si ya existe usuarios y la versión de esquema está actualizada, saltar migraciones pesadas
+        try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='configuracion'")
+            if cursor.fetchone():
+                cursor.execute("SELECT valor FROM configuracion WHERE clave = 'schema_version'")
+                ver_row = cursor.fetchone()
+                if ver_row and ver_row[0] == CURRENT_SCHEMA_VER:
+                    db.close()
+                    return
+        except Exception:
+            pass
     # Migración automática de sesiones si la tabla existe
     cursor.execute("PRAGMA table_info(sesiones)")
     columns = [row[1] for row in cursor.fetchall()]
@@ -894,13 +909,18 @@ def init_db():
             situacion TEXT NOT NULL,
             pensamiento TEXT NOT NULL,
             emocion_sensacion TEXT,
-            intensidad_emocion INTEGER DEFAULT 5,
             conducta TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
         )
     """)
-
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS configuracion (
+            clave TEXT PRIMARY KEY,
+            valor TEXT
+        )
+    """)
+    cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('schema_version', ?)", (CURRENT_SCHEMA_VER,))
     db.commit()
         
     db.close()
