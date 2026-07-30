@@ -504,6 +504,8 @@ function switchView(viewId) {
         loadPizarraVisual();
     } else if (viewId === 'therapist-tools') {
         loadTherapistToolsCatalog();
+    } else if (viewId === 'manual-confirmations') {
+        renderManualConfirmationsView();
     }
 }
 
@@ -13143,6 +13145,237 @@ window.submitPatientFoodIntakeLog = submitPatientFoodIntakeLog;
 window.loadPatientFoodIntakeHistory = loadPatientFoodIntakeHistory;
 window.submitPatientCognitiveRecordLog = submitPatientCognitiveRecordLog;
 window.loadPatientCognitiveRecordHistory = loadPatientCognitiveRecordHistory;
+
+// ==========================================
+// MÓDULO: CENTRO DE CONFIRMACIONES Y RECORDATORIOS (1-CLIC WA.ME)
+// ==========================================
+
+let currentMcFilterRange = 'hoy';
+
+function filterManualConfirmations(range) {
+    currentMcFilterRange = range || 'hoy';
+    
+    const ranges = ['hoy', 'manana', 'semana', 'todas'];
+    ranges.forEach(r => {
+        const btn = document.getElementById(`mc-filter-${r}`);
+        if (btn) {
+            if (r === currentMcFilterRange) {
+                btn.className = 'btn btn-primary btn-sm';
+                btn.style.fontWeight = '700';
+            } else {
+                btn.className = 'btn btn-secondary btn-sm';
+                btn.style.fontWeight = '600';
+            }
+        }
+    });
+
+    renderManualConfirmationsView();
+}
+window.filterManualConfirmations = filterManualConfirmations;
+
+async function renderManualConfirmationsView() {
+    const listContainer = document.getElementById('manual-confirmations-list');
+    const statPendientes = document.getElementById('mc-stat-pendientes');
+    const statConfirmadas = document.getElementById('mc-stat-confirmadas');
+
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `
+        <div style="text-align: center; padding: 2rem; background: white; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+            <div style="width: 32px; height: 32px; border: 3px solid #bfdbfe; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 0.75rem auto;"></div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600; margin: 0;">Obteniendo consultas de la agenda...</p>
+        </div>
+    `;
+
+    try {
+        const res = await fetch('/api/appointments');
+        if (!res.ok) throw new Error("Error al obtener las citas.");
+        const appointments = await res.json();
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        const tomorrowObj = new Date();
+        tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+        const tomorrowStr = tomorrowObj.toISOString().split('T')[0];
+
+        const next7DaysObj = new Date();
+        next7DaysObj.setDate(next7DaysObj.getDate() + 7);
+        const next7DaysStr = next7DaysObj.toISOString().split('T')[0];
+
+        let filtered = appointments.filter(a => {
+            const status = (a.estado || '').toLowerCase();
+            return status !== 'cancelada' && status !== 'realizada' && status !== 'completada';
+        });
+
+        if (currentMcFilterRange === 'hoy') {
+            filtered = filtered.filter(a => a.fecha === todayStr);
+        } else if (currentMcFilterRange === 'manana') {
+            filtered = filtered.filter(a => a.fecha === tomorrowStr);
+        } else if (currentMcFilterRange === 'semana') {
+            filtered = filtered.filter(a => a.fecha >= todayStr && a.fecha <= next7DaysStr);
+        }
+
+        filtered.sort((a, b) => {
+            const dtA = `${a.fecha}T${a.hora || '00:00'}`;
+            const dtB = `${b.fecha}T${b.hora || '00:00'}`;
+            return dtA.localeCompare(dtB);
+        });
+
+        const totalPendientes = appointments.filter(a => (a.estado || '').toLowerCase() === 'programada' || (a.estado || '').toLowerCase() === 'pendiente').length;
+        const totalConfirmadas = appointments.filter(a => (a.estado || '').toLowerCase() === 'confirmada').length;
+
+        if (statPendientes) statPendientes.textContent = totalPendientes;
+        if (statConfirmadas) statConfirmadas.textContent = totalConfirmadas;
+
+        if (filtered.length === 0) {
+            listContainer.innerHTML = `
+                <div style="text-align: center; padding: 2.5rem 1.5rem; background: white; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+                    <h3 style="font-family: var(--font-title); font-weight: 700; color: var(--text-dark); margin: 0 0 0.35rem 0;">¡No hay citas pendientes para este filtro!</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Todas tus consultas para este rango están confirmadas o no hay citas agendadas.</p>
+                </div>
+            `;
+            return;
+        }
+
+        listContainer.innerHTML = filtered.map(appt => {
+            const isConfirmed = (appt.estado || '').toLowerCase() === 'confirmada';
+            const isOnline = (appt.modalidad || '').toLowerCase() === 'online';
+            const phone = appt.paciente_telefono || appt.telefono || '';
+            const formattedDate = appt.fecha ? appt.fecha.split('-').reverse().join('/') : '';
+
+            return `
+                <div style="background: white; border: 1.5px solid ${isConfirmed ? '#a7f3d0' : '#bfdbfe'}; border-radius: var(--radius-md); padding: 1.15rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <h3 style="margin: 0; font-family: var(--font-title); font-weight: 700; font-size: 1.1rem; color: var(--text-dark);">
+                                    👤 ${appt.paciente_nombre || appt.paciente_nombres || 'Consultante'}
+                                </h3>
+                                <span class="badge ${isConfirmed ? 'badge-success' : 'badge-warning'}" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.55rem; background: ${isConfirmed ? '#10b981' : '#f59e0b'}; color: white;">
+                                    ${isConfirmed ? '✅ Confirmada' : '⏳ Pendiente'}
+                                </span>
+                                <span class="badge" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.55rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                                    ${isOnline ? '💻 Online' : '🏥 Presencial'}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <span>📅 Fecha: <strong>${formattedDate}</strong></span>
+                                <span>⏰ Hora: <strong>${appt.hora || 'Por acordar'}</strong></span>
+                                <span>📞 WhatsApp: <strong>${phone || 'No registrado'}</strong></span>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 0.35rem;">
+                            ${!isConfirmed ? `
+                                <button type="button" class="btn btn-sm btn-success" onclick="quickMarkApptStatus(${appt.id}, 'Confirmada')" style="background: #10b981; border: none; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.65rem;">
+                                    ✅ Marcar Confirmada
+                                </button>
+                            ` : ''}
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="quickMarkApptStatus(${appt.id}, 'Cancelada')" style="border: 1px solid #fca5a5; color: #dc2626; font-size: 0.78rem; padding: 0.35rem 0.65rem; background: white;">
+                                ❌ Cancelar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Enlaces Directos 1-Clic WhatsApp -->
+                    <div style="background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Acciones WhatsApp (1-Clic):</span>
+                        
+                        <button type="button" class="btn btn-sm btn-primary" onclick="sendWhatsappTemplateFromMc(${appt.id}, 'confirmacion')" style="background: #2563eb; border-color: #2563eb; font-weight: 700; font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+                            📱 Enviar Confirmación
+                        </button>
+                        
+                        <button type="button" class="btn btn-sm btn-primary" onclick="sendWhatsappTemplateFromMc(${appt.id}, 'recordatorio')" style="background: #059669; border-color: #059669; font-weight: 700; font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+                            📱 Enviar Recordatorio
+                        </button>
+
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="sendWhatsappTemplateFromMc(${appt.id}, 'cierre')" style="font-weight: 600; font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+                            📱 Enviar Mensaje de Cierre
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error("Error cargando confirmaciones manuales:", err);
+        listContainer.innerHTML = `
+            <div class="text-center py-6" style="background: white; border-radius: var(--radius-md); border: 1.5px solid #fca5a5; padding: 1.5rem;">
+                <p style="color: #dc2626; font-weight: 700; margin: 0;">Error al cargar las citas para el Centro de Confirmaciones.</p>
+            </div>
+        `;
+    }
+}
+window.renderManualConfirmationsView = renderManualConfirmationsView;
+
+async function sendWhatsappTemplateFromMc(apptId, type) {
+    try {
+        const res = await fetch(`/api/admin/message-templates/render?appointment_id=${apptId}&template_type=${type}`);
+        const data = await res.json();
+        
+        if (res.ok && data.wa_url) {
+            window.open(data.wa_url, '_blank');
+        } else {
+            alert(data.error || "No se pudo generar el enlace de WhatsApp para esta cita.");
+        }
+    } catch (err) {
+        console.error("Error abriendo enlace WhatsApp:", err);
+        alert("Error de conexión al generar el mensaje.");
+    }
+}
+window.sendWhatsappTemplateFromMc = sendWhatsappTemplateFromMc;
+
+async function quickMarkApptStatus(apptId, newStatus) {
+    if (!confirm(`¿Deseas cambiar el estado de esta cita a "${newStatus}"?`)) return;
+
+    try {
+        const res = await fetch(`/api/appointments/${apptId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: newStatus })
+        });
+        if (res.ok) {
+            renderManualConfirmationsView();
+        } else {
+            alert("Error al actualizar el estado de la cita.");
+        }
+    } catch (err) {
+        alert("Error de conexión al actualizar la cita.");
+    }
+}
+window.quickMarkApptStatus = quickMarkApptStatus;
+
+function toggleManualConfirmationsModule(enabled) {
+    const navItem = document.getElementById('nav-item-manual-confirmations');
+    const lblToggle = document.getElementById('lbl-toggle-manual-confirmations');
+    const chkToggle = document.getElementById('toggle-manual-confirmations-module');
+
+    if (navItem) {
+        if (enabled) {
+            navItem.classList.remove('hide');
+        } else {
+            navItem.classList.add('hide');
+        }
+    }
+
+    if (lblToggle) {
+        lblToggle.textContent = enabled ? 'Módulo Activado ✅' : 'Módulo Desactivado 🚫';
+    }
+
+    if (chkToggle) {
+        chkToggle.checked = !!enabled;
+    }
+
+    localStorage.setItem('module_manual_confirmations_enabled', enabled ? '1' : '0');
+}
+window.toggleManualConfirmationsModule = toggleManualConfirmationsModule;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pref = localStorage.getItem('module_manual_confirmations_enabled');
+    if (pref === '0') {
+        toggleManualConfirmationsModule(false);
+    }
+});
 
 
 
