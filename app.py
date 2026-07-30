@@ -52,46 +52,53 @@ SCOPES = ['https://www.googleapis.com/auth/calendar']
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 import base64
-try:
-    from cryptography.fernet import Fernet
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+_fernet_cipher_cache = None
 
-    MASTER_KEY_SECRET = os.environ.get('SECRET_KEY', 'espacio_terapeutico_master_key_2026')
-    _kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=b'espacio_terapeutico_salt',
-        iterations=100000,
-    )
-    FERNET_KEY = base64.urlsafe_b64encode(_kdf.derive(MASTER_KEY_SECRET.encode()))
-    fernet_cipher = Fernet(FERNET_KEY)
-    CRYPTOGRAPHY_AVAILABLE = True
-except Exception as e:
-    CRYPTOGRAPHY_AVAILABLE = False
-    fernet_cipher = None
+def get_fernet_cipher():
+    global _fernet_cipher_cache
+    if _fernet_cipher_cache is None:
+        try:
+            import base64
+            from cryptography.fernet import Fernet
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+            master_key = os.environ.get('SECRET_KEY', 'espacio_terapeutico_master_key_2026')
+            kdf = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=b'espacio_terapeutico_salt',
+                iterations=100000,
+            )
+            fernet_key = base64.urlsafe_b64encode(kdf.derive(master_key.encode()))
+            _fernet_cipher_cache = Fernet(fernet_key)
+        except Exception as e:
+            print(f"Error initializing Fernet: {e}")
+            _fernet_cipher_cache = False
+    return _fernet_cipher_cache if _fernet_cipher_cache else None
 
 def encrypt_clinical_text(text):
-    if not text or not fernet_cipher:
+    cipher = get_fernet_cipher()
+    if not text or not cipher:
         return text or ""
     text_str = str(text)
     if text_str.startswith("enc:"):
         return text_str
     try:
-        encrypted_bytes = fernet_cipher.encrypt(text_str.encode('utf-8'))
+        encrypted_bytes = cipher.encrypt(text_str.encode('utf-8'))
         return f"enc:{encrypted_bytes.decode('utf-8')}"
     except Exception as e:
         print(f"Error encrypting: {e}")
         return text_str
 
 def decrypt_clinical_text(cipher_text):
-    if not cipher_text or not isinstance(cipher_text, str) or not fernet_cipher:
+    cipher = get_fernet_cipher()
+    if not cipher_text or not isinstance(cipher_text, str) or not cipher:
         return cipher_text
     current = cipher_text
     while isinstance(current, str) and current.startswith("enc:"):
         try:
             raw_cipher = current[4:].encode('utf-8')
-            decrypted_bytes = fernet_cipher.decrypt(raw_cipher)
+            decrypted_bytes = cipher.decrypt(raw_cipher)
             current = decrypted_bytes.decode('utf-8')
         except Exception as e:
             print(f"Error decrypting: {e}")
@@ -925,11 +932,17 @@ def init_db():
         
     db.close()
 
-# Auto-inicializar base de datos al arrancar el módulo (para WSGI)
-try:
-    init_db()
-except Exception as _db_err:
-    print(f"Advertencia al inicializar BD: {_db_err}")
+_db_initialized_flag = False
+
+@app.before_request
+def ensure_db_initialized():
+    global _db_initialized_flag
+    if not _db_initialized_flag:
+        _db_initialized_flag = True
+        try:
+            init_db()
+        except Exception as _db_err:
+            print(f"Advertencia al inicializar BD: {_db_err}")
 
 FIREBASE_DB_URL = "https://espacio-terapeutico-default-rtdb.firebaseio.com"
 
