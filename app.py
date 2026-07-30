@@ -503,6 +503,10 @@ def init_db():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN fecha_pago TEXT")
         if 'confirmada' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmada INTEGER DEFAULT 0")
+        if 'confirmacion_enviada_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
+        if 'recordatorio_enviado_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
         db.commit()
         
     # Crear tabla de tarifas por país
@@ -8963,10 +8967,10 @@ def send_manual_whatsapp_reminder(cita_id):
     cursor = db.cursor()
 
     cursor.execute("""
-        SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
-        FROM citas c
-        JOIN pacientes p ON c.paciente_id = p.id
-        WHERE c.id = ? AND p.psicologo_id = ?
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        WHERE af.id = ? AND p.psicologo_id = ?
     """, (cita_id, user_id))
     cita = cursor.fetchone()
 
@@ -8981,12 +8985,18 @@ def send_manual_whatsapp_reminder(cita_id):
     psicologo = cursor.fetchone()
 
     template = psicologo['template_recordatorio'] if psicologo and psicologo['template_recordatorio'] else None
-    mensaje_texto = format_whatsapp_message(template, cita, cita, psicologo)
+    cita_dict = {
+        'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
+        'fecha': cita['fecha'],
+        'hora': cita['hora'],
+        'modalidad': cita['tipo_consulta'] or 'Presencial'
+    }
+    mensaje_texto = format_whatsapp_message(template, cita_dict, cita_dict, psicologo)
 
     try:
         r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
         if r and r.status_code == 200:
-            cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita_id,))
+            cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita_id,))
             db.commit()
             return jsonify({'success': f'Recordatorio de WhatsApp enviado con éxito a {phone}.', 'phone': phone})
         else:
@@ -9010,12 +9020,12 @@ def cron_send_whatsapp_reminders():
 
     # 1. ENVIAR CONFIRMACIONES ANTICIPADAS (Citas de Mañana)
     cursor.execute("""
-        SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_confirmacion
-        FROM citas c
-        JOIN pacientes p ON c.paciente_id = p.id
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
         JOIN usuarios u ON p.psicologo_id = u.id
-        WHERE c.fecha = ? AND c.estado IN ('Agendada', 'Pendiente') AND COALESCE(c.confirmacion_enviada_wa, 0) = 0
+        WHERE af.fecha = ? AND (af.confirmada = 0 OR af.estado_pago != 'Cancelada') AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
     """, (tomorrow_str,))
     citas_confirmar = cursor.fetchall()
 
@@ -9024,13 +9034,19 @@ def cron_send_whatsapp_reminders():
         if not phone or not phone.strip():
             continue
         psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+        cita_dict = {
+            'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
+            'fecha': cita['fecha'],
+            'hora': cita['hora'],
+            'modalidad': cita['tipo_consulta'] or 'Presencial'
+        }
         tmpl = cita['template_confirmacion'] or "Hola {nombre}, te escribimos para solicitar la confirmación de tu cita agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¿Nos confirmas tu asistencia por favor?"
-        mensaje_texto = format_whatsapp_message(tmpl, cita, cita, psicologo_data)
+        mensaje_texto = format_whatsapp_message(tmpl, cita_dict, cita_dict, psicologo_data)
 
         try:
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
             if r and r.status_code == 200:
-                cursor.execute("UPDATE citas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
+                cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
                 enviados_confirmaciones.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'confirmacion'})
             else:
                 errores.append({'cita_id': cita['id'], 'error': r.text if r else 'Timeout de microservicio'})
@@ -9039,12 +9055,12 @@ def cron_send_whatsapp_reminders():
 
     # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy)
     cursor.execute("""
-        SELECT c.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.template_recordatorio
-        FROM citas c
-        JOIN pacientes p ON c.paciente_id = p.id
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
         JOIN usuarios u ON p.psicologo_id = u.id
-        WHERE c.fecha = ? AND c.estado IN ('Agendada', 'Pendiente', 'Confirmada') AND COALESCE(c.recordatorio_enviado_wa, 0) = 0
+        WHERE af.fecha = ? AND (af.confirmada = 1 OR af.estado_pago != 'Cancelada') AND COALESCE(af.recordatorio_enviado_wa, 0) = 0
     """, (today_str,))
     citas_recordar = cursor.fetchall()
 
@@ -9053,13 +9069,19 @@ def cron_send_whatsapp_reminders():
         if not phone or not phone.strip():
             continue
         psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+        cita_dict = {
+            'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
+            'fecha': cita['fecha'],
+            'hora': cita['hora'],
+            'modalidad': cita['tipo_consulta'] or 'Presencial'
+        }
         tmpl = cita['template_recordatorio'] or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
-        mensaje_texto = format_whatsapp_message(tmpl, cita, cita, psicologo_data)
+        mensaje_texto = format_whatsapp_message(tmpl, cita_dict, cita_dict, psicologo_data)
 
         try:
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
             if r and r.status_code == 200:
-                cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
+                cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
                 enviados_recordatorios.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'recordatorio'})
             else:
                 errores.append({'cita_id': cita['id'], 'error': r.text if r else 'Timeout de microservicio'})
