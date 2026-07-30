@@ -11183,18 +11183,16 @@ const therapistPreviewTemplates = [
                         <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">3. Pensamiento Automático (B: ¿Qué pasa por mi mente?):</label>
                         <input type="text" value="'Están molestos conmigo o cometí un error en mi informe.'" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; color: #b91c1c; font-weight: 700;">
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                        <div>
-                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 700;">Emoción o Sensación:</span>
-                            <input type="text" value="Ansiedad y opresión en el pecho" disabled style="width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
-                        </div>
-                        <div>
-                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 700;">Conducta (¿Qué hice?):</span>
-                            <input type="text" value="Revisé el correo obsesivamente" disabled style="width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
-                        </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">4. Emoción o Sensación:</label>
+                        <input type="text" value="Ansiedad y opresión en el pecho" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
                     </div>
                     <div>
-                        <label style="font-size: 0.82rem; font-weight: 700; color: #047857;">4. Pensamiento Alternativo Racional (CBT):</label>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">5. Conducta (¿Qué hice?):</label>
+                        <input type="text" value="Revisé el correo obsesivamente" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #047857;">6. Pensamiento Alternativo Racional (CBT):</label>
                         <input type="text" value="'Es muy probable que estén ocupados en una reunión. Mi informe está correcto.'" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1.5px solid #10b981; background: white; color: #047857; font-weight: 700;">
                     </div>
                     <button type="button" disabled class="btn btn-primary btn-sm" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #475569; border-color: #475569; margin-top: 0.25rem;">💾 Guardar Registro Cognitivo (Simulación)</button>
