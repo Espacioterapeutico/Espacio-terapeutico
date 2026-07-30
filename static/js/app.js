@@ -10628,66 +10628,29 @@ async function checkWhatsAppQRStatus() {
     if (!badge || !loadingBox || !qrBox || !connectedBox) return;
 
     try {
-        let statusData = null;
-        // Intento 1: Consultar estado via backend Flask
-        try {
-            const resStatus = await fetchWithTimeout('/api/whatsapp/status', { timeout: 35000 });
-            if (resStatus.ok) {
-                statusData = await resStatus.json();
-            }
-        } catch (backendErr) {
-            console.warn("Consulta Flask /api/whatsapp/status dio timeout, intentando directo:", backendErr);
-        }
-
-        // Intento 2: Si el backend tardó, intentar llamado directo a Render
-        if (!statusData) {
-            try {
-                const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 30000 });
-                if (resStatus.ok) {
-                    statusData = await resStatus.json();
-                }
-            } catch (directErr) {
-                console.warn("Llamada directa /status a Render falló:", directErr);
-            }
-        }
-
-        // Si la cuenta YA ESTÁ CONECTADA, mostramos el panel verde y NO solicitamos un nuevo QR
-        if (statusData && statusData.status === 'connected') {
-            badge.className = 'badge badge-success';
-            badge.style.background = '#10b981';
-            badge.style.color = '#ffffff';
-            badge.textContent = 'Conectado ✅';
-            
-            loadingBox.classList.add('hide');
-            qrBox.classList.add('hide');
-            connectedBox.classList.remove('hide');
-            if (connectedPhone) connectedPhone.textContent = statusData.phone || 'Cuenta vinculada';
-
-            if (waPollInterval) {
-                clearInterval(waPollInterval);
-                waPollInterval = null;
-            }
-            return;
-        }
-
-        // Si NO está conectada, procedemos a solicitar el código QR
         let qrData = null;
-        try {
-            const resQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 35000 });
-            if (resQr.ok) {
-                qrData = await resQr.json();
-            }
-        } catch (backendErr) {}
 
+        // Intento 1: Consulta directa a Railway (Cero latencia e independiente del servidor Flask)
+        try {
+            const resDirectQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 10000 });
+            if (resDirectQr.ok) {
+                qrData = await resDirectQr.json();
+            }
+        } catch (e1) {
+            console.warn("Consulta directa a Railway falló, intentando vía backend Flask:", e1);
+        }
+
+        // Intento 2: Backend Flask en PythonAnywhere
         if (!qrData) {
             try {
-                const resQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 30000 });
-                if (resQr.ok) {
-                    qrData = await resQr.json();
+                const resBackendQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 12000 });
+                if (resBackendQr.ok) {
+                    qrData = await resBackendQr.json();
                 }
-            } catch (directErr) {}
+            } catch (e2) {}
         }
 
+        // Si la cuenta YA ESTÁ CONECTADA
         if (qrData && qrData.status === 'connected') {
             badge.className = 'badge badge-success';
             badge.style.background = '#10b981';
@@ -10703,7 +10666,10 @@ async function checkWhatsAppQRStatus() {
                 clearInterval(waPollInterval);
                 waPollInterval = null;
             }
-        } else if (qrData && (qrData.qr || qrData.status === 'qr_ready')) {
+            return;
+        } 
+        // Si hay un Código QR listo para escanear
+        else if (qrData && (qrData.qr || qrData.status === 'qr_ready')) {
             badge.className = 'badge badge-warning';
             badge.style.background = '#f59e0b';
             badge.style.color = '#ffffff';
@@ -10719,33 +10685,24 @@ async function checkWhatsAppQRStatus() {
             if (!waPollInterval) {
                 waPollInterval = setInterval(checkWhatsAppQRStatus, 4000);
             }
-        } else {
-            badge.className = 'badge badge-secondary';
-            badge.style.background = '#6b7280';
-            badge.style.color = '#ffffff';
-            badge.textContent = 'Desconectado ❌';
+            return;
+        }
 
-            loadingBox.classList.remove('hide');
-            loadingBox.innerHTML = `
-                <div style="padding: 0.5rem; color: var(--text-dark);">
-                    <p style="font-weight: 600; margin-bottom: 0.3rem;">⌛ Verificando o generando código QR...</p>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Si el servidor estaba inactivo, tarda unos 20-30 segundos en responder por primera vez. Presiona <strong>Actualizar Estado</strong> si tarda en cargar.</p>
-                </div>
-            `;
-            qrBox.classList.add('hide');
-            connectedBox.classList.add('hide');
+        // Estado inicial de espera
+        badge.className = 'badge badge-secondary';
+        badge.style.background = '#6b7280';
+        badge.style.color = '#ffffff';
+        badge.textContent = 'Verificando... ⌛';
 
-            if (!waPollInterval) {
-                waPollInterval = setInterval(checkWhatsAppQRStatus, 4000);
-            }
+        loadingBox.classList.remove('hide');
+        qrBox.classList.add('hide');
+        connectedBox.classList.add('hide');
+
+        if (!waPollInterval) {
+            waPollInterval = setInterval(checkWhatsAppQRStatus, 4000);
         }
     } catch (err) {
         console.error("Error al obtener estado de WhatsApp QR:", err);
-        if (badge) {
-            badge.className = 'badge badge-danger';
-            badge.style.background = '#ef4444';
-            badge.textContent = 'Servicio offline ⚠️';
-        }
     }
 }
 
