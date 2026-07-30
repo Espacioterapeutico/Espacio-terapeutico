@@ -943,11 +943,54 @@ def ensure_db_initialized():
         def _async_init():
             try:
                 init_db()
+                restore_patients_from_firebase()
             except Exception as _db_err:
                 print(f"Advertencia al inicializar BD: {_db_err}")
         threading.Thread(target=_async_init, daemon=True).start()
 
 FIREBASE_DB_URL = "https://espacio-terapeutico-default-rtdb.firebaseio.com"
+
+def restore_patients_from_firebase():
+    """Restaura automáticamente consultantes desde Firebase Realtime Database a SQLite si faltan registros."""
+    try:
+        import urllib.request
+        import json
+        req = urllib.request.Request(f"{FIREBASE_DB_URL}/pacientes.json")
+        with urllib.request.urlopen(req, timeout=4.0) as resp:
+            fb_data = json.loads(resp.read().decode('utf-8'))
+        if not fb_data or not isinstance(fb_data, dict):
+            return
+            
+        conn = sqlite3.connect(DATABASE, timeout=30.0)
+        c = conn.cursor()
+        for pid_str, pinfo in fb_data.items():
+            if pid_str == 'undefined' or not isinstance(pinfo, dict):
+                continue
+            try:
+                pid = int(pid_str)
+            except:
+                continue
+            
+            perfil = pinfo.get('perfil', {})
+            if not perfil:
+                continue
+                
+            nombres = perfil.get('nombres', '')
+            apellidos = perfil.get('apellidos', '')
+            cedula = perfil.get('cedula', '')
+            username = perfil.get('username', '')
+            metodos = perfil.get('metodos_pago', '')
+            
+            c.execute("SELECT id FROM pacientes WHERE id = ?", (pid,))
+            if not c.fetchone():
+                c.execute("""
+                    INSERT INTO pacientes (id, nombres, apellidos, cedula, username, metodos_pago, psicologo_id, fecha_registro)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                """, (pid, nombres, apellidos, cedula, username, metodos))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error restaurando consultantes desde Firebase: {e}")
 
 def create_auto_cancellation_session(db, paciente_id, agenda_id, fecha, modalidad, estado, resumen_motivo):
     """
