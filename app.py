@@ -9089,9 +9089,15 @@ def cron_send_whatsapp_reminders():
                 cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
                 enviados_confirmaciones.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'confirmacion'})
             else:
-                errores.append({'cita_id': cita['id'], 'error': r.text if r else 'Timeout de microservicio'})
+                err_msg = 'Timeout de microservicio'
+                if r:
+                    try:
+                        err_msg = r.json().get('error', r.text)
+                    except:
+                        err_msg = r.text
+                errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': err_msg})
         except Exception as e:
-            errores.append({'cita_id': cita['id'], 'error': str(e)})
+            errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': str(e)})
 
     # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy)
     cursor.execute("""
@@ -9123,9 +9129,15 @@ def cron_send_whatsapp_reminders():
                 cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
                 enviados_recordatorios.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'recordatorio'})
             else:
-                errores.append({'cita_id': cita['id'], 'error': r.text if r else 'Timeout de microservicio'})
+                err_msg = 'Timeout de microservicio'
+                if r:
+                    try:
+                        err_msg = r.json().get('error', r.text)
+                    except:
+                        err_msg = r.text
+                errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': err_msg})
         except Exception as e:
-            errores.append({'cita_id': cita['id'], 'error': str(e)})
+            errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': str(e)})
 
     db.commit()
     return jsonify({

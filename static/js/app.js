@@ -10803,8 +10803,11 @@ async function triggerManualCronReminders() {
             const totalErr = (data.detalles && data.detalles.errores) ? data.detalles.errores.length : 0;
             
             let msg = `✅ Proceso de WhatsApp completado:\n• Confirmaciones enviadas: ${totalConfirm}\n• Recordatorios enviados: ${totalRemind}`;
-            if (totalErr > 0) {
-                msg += `\n⚠️ Hubo ${totalErr} error(es) de envío.`;
+            if (totalErr > 0 && data.detalles && data.detalles.errores) {
+                msg += `\n\n⚠️ ${totalErr} paciente(s) omitido(s) por número incompleto o sin código de país:`;
+                data.detalles.errores.forEach(errItem => {
+                    msg += `\n• ${errItem.paciente || 'Paciente'}: ${errItem.error || 'Número inválido'}`;
+                });
             }
             alert(msg);
         } else {

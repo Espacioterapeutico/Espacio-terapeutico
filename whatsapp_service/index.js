@@ -199,7 +199,14 @@ app.post('/send', async (req, res) => {
         let cleanPhone = phone.toString().replace(/\D/g, '');
         if (cleanPhone.startsWith('04') && cleanPhone.length === 11) {
             cleanPhone = '58' + cleanPhone.substring(1);
+        } else if (cleanPhone.startsWith('4') && cleanPhone.length === 10) {
+            cleanPhone = '58' + cleanPhone;
         }
+
+        if (cleanPhone.length < 10) {
+            return res.status(400).json({ error: `El número '${phone}' es inválido (requiere código de país o min. 10 dígitos)` });
+        }
+
         if (!cleanPhone.endsWith('@s.whatsapp.net')) {
             cleanPhone = `${cleanPhone}@s.whatsapp.net`;
         }
