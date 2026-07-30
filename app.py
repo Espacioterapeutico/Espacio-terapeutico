@@ -315,10 +315,6 @@ def close_connection(exception):
 
 def init_db():
     db = sqlite3.connect(DATABASE, timeout=30.0)
-    try:
-        db.execute("PRAGMA journal_mode=WAL;")
-    except:
-        pass
     cursor = db.cursor()
     # Verificar si la tabla principal 'usuarios' existe en sqlite_master
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
