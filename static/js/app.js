@@ -879,6 +879,15 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         sessionStorage.removeItem('user_id');
     }
     
+    const mcToggleCard = document.getElementById('card-toggle-manual-confirmations-module');
+    if (mcToggleCard) {
+        if (role === 'superadmin' || role === 'admin') {
+            mcToggleCard.classList.remove('hide');
+        } else {
+            mcToggleCard.classList.add('hide');
+        }
+    }
+
     if (role === 'superadmin') {
         if (nameEl) nameEl.textContent = `Admin: ${fullPersonName}`;
         if (roleEl) roleEl.textContent = `Superadministrador`;
