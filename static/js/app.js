@@ -13222,7 +13222,7 @@ async function renderManualConfirmationsView() {
             const isConfirmed = isApptConfirmed(appt);
             const isOnline = (appt.modalidad || appt.tipo_consulta || '').toLowerCase() === 'online';
             const patientName = `${appt.nombres || ''} ${appt.apellidos || ''}`.trim() || appt.paciente_nombre || 'Consultante';
-            const phone = appt.paciente_telefono || appt.telefono || appt.cedula || '';
+            const phone = appt.paciente_telefono || appt.telefono || '';
             const formattedDate = appt.fecha ? appt.fecha.split('-').reverse().join('/') : '';
 
             return `

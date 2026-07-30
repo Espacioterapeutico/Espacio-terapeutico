@@ -6936,7 +6936,7 @@ def get_agenda():
     psic_id = get_psicologo_id_filter()
     if psic_id is not None:
         cursor.execute("""
-            SELECT af.*, p.nombres, p.apellidos, p.cedula,
+            SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,
                    (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
@@ -6947,7 +6947,7 @@ def get_agenda():
         """, (psic_id,))
     else:
         cursor.execute("""
-            SELECT af.*, p.nombres, p.apellidos, p.cedula,
+            SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,
                    (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
