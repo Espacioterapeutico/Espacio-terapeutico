@@ -10618,9 +10618,9 @@ async function checkWhatsAppQRStatus() {
 
     try {
         let statusData = null;
-        // Intento 1: Consultar estado via backend Flask (más rápido y sin problemas de CORS)
+        // Intento 1: Consultar estado via backend Flask
         try {
-            const resStatus = await fetchWithTimeout('/api/whatsapp/status', { timeout: 4500 });
+            const resStatus = await fetchWithTimeout('/api/whatsapp/status', { timeout: 35000 });
             if (resStatus.ok) {
                 statusData = await resStatus.json();
             }
@@ -10631,7 +10631,7 @@ async function checkWhatsAppQRStatus() {
         // Intento 2: Si el backend tardó, intentar llamado directo a Render
         if (!statusData) {
             try {
-                const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 3500 });
+                const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 30000 });
                 if (resStatus.ok) {
                     statusData = await resStatus.json();
                 }
@@ -10662,7 +10662,7 @@ async function checkWhatsAppQRStatus() {
         // Si NO está conectada, procedemos a solicitar el código QR
         let qrData = null;
         try {
-            const resQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 6000 });
+            const resQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 35000 });
             if (resQr.ok) {
                 qrData = await resQr.json();
             }
@@ -10670,7 +10670,7 @@ async function checkWhatsAppQRStatus() {
 
         if (!qrData) {
             try {
-                const resQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 5000 });
+                const resQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 30000 });
                 if (resQr.ok) {
                     qrData = await resQr.json();
                 }
