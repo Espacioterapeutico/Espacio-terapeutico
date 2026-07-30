@@ -1411,22 +1411,22 @@ def sync_patient_to_firebase(patient_id):
         
         # 1. Guardar en /usuarios_pacientes/<username> para inicio de sesión rápido
         username_key = patient_data["username"].replace(".", "_").replace("$", "_").replace("[", "_").replace("]", "_").replace("#", "_").lower()
-        requests.put(f"{FIREBASE_DB_URL}/usuarios_pacientes/{username_key}.json", json=patient_data)
+        requests.put(f"{FIREBASE_DB_URL}/usuarios_pacientes/{username_key}.json", json=patient_data, timeout=3.0)
         
         # 2. Guardar perfil completo en /pacientes/<id>/perfil
-        requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/perfil.json", json=patient_data)
+        requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/perfil.json", json=patient_data, timeout=3.0)
         
         # 3. Guardar resumen financiero en /pacientes/<id>/finanzas
         requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/finanzas.json", json={
             "prepagadas": prepagadas,
             "deuda": deudas
-        })
+        }, timeout=3.0)
         
         # 4. Guardar seguimiento clínico compartido en /pacientes/<id>/compartido
-        requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/compartido.json", json=compartido)
+        requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/compartido.json", json=compartido, timeout=3.0)
         
         # 5. Guardar próxima cita en /pacientes/<id>/proxima_cita
-        requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/proxima_cita.json", json=proxima_cita)
+        requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/proxima_cita.json", json=proxima_cita, timeout=3.0)
         
         return True
     except Exception as e:
@@ -1451,9 +1451,9 @@ def delete_patient_from_firebase(patient_id, u_key=None):
 
             if key_to_delete:
                 clean_key = key_to_delete.replace(".", "_").replace("$", "_").replace("[", "_").replace("]", "_").replace("#", "_").lower()
-                requests.delete(f"{FIREBASE_DB_URL}/usuarios_pacientes/{clean_key}.json")
+                requests.delete(f"{FIREBASE_DB_URL}/usuarios_pacientes/{clean_key}.json", timeout=3.0)
             
-            requests.delete(f"{FIREBASE_DB_URL}/pacientes/{patient_id}.json")
+            requests.delete(f"{FIREBASE_DB_URL}/pacientes/{patient_id}.json", timeout=3.0)
         except Exception as e:
             print(f"Error deleting patient {patient_id} from Firebase: {e}")
 
@@ -8830,7 +8830,7 @@ def generate_default_slug_for_user(u):
 # ==========================================
 WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'https://espacio-terapeutico-production.up.railway.app')
 
-def make_wa_http_request(method, endpoint, json_data=None, timeout=15):
+def make_wa_http_request(method, endpoint, json_data=None, timeout=5):
     import requests
     url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/{endpoint.lstrip('/')}"
     try:
@@ -8850,7 +8850,7 @@ def make_wa_http_request(method, endpoint, json_data=None, timeout=15):
 @login_required
 def get_whatsapp_status():
     try:
-        r = make_wa_http_request('GET', '/status', timeout=10)
+        r = make_wa_http_request('GET', '/status', timeout=3)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'error': 'Microservicio de WhatsApp no disponible', 'details': str(e)})
