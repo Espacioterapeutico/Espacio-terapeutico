@@ -5,7 +5,7 @@ import sqlite3
 import datetime
 import shutil
 import json
-from flask import Flask, request, jsonify, session, send_file, redirect, url_for, g, render_template, render_template_string
+from flask import Flask, request, jsonify, session, send_file, redirect, url_for, g, render_template, render_template_string, Response
 from werkzeug.security import generate_password_hash, check_password_hash
 try:
     import docx
@@ -5928,7 +5928,7 @@ def create_session():
         }
         import requests
         try:
-            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=firebase_payload)
+            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=firebase_payload, timeout=2.0)
         except Exception as fe:
             print("Error al notificar al paciente en Firebase:", fe)
 
@@ -6118,7 +6118,7 @@ def update_session_detail(session_id):
         }
         import requests
         try:
-            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=firebase_payload)
+            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=firebase_payload, timeout=2.0)
         except Exception as fe:
             print("Error al notificar actualización al paciente en Firebase:", fe)
 
