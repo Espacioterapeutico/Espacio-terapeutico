@@ -625,7 +625,10 @@ function hideLoadingScreen() {
 
 async function checkSession() {
     try {
-        const res = await fetch('/api/check-session');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch('/api/check-session', { signal: controller.signal });
+        clearTimeout(timeoutId);
         const data = await res.json();
         
         if (data.logged_in) {
