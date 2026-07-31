@@ -821,7 +821,21 @@ function getInitials(nombres, apellidos, username) {
 }
 window.getInitials = getInitials;
 
+function purgeClientCacheOnLogin() {
+    try {
+        sessionStorage.clear();
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => {
+                    caches.delete(name);
+                });
+            });
+        }
+    } catch(e) {}
+}
+
 function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba, nombres, apellidos) {
+    purgeClientCacheOnLogin();
     document.body.classList.remove('is-patient');
     document.getElementById('auth-screen').classList.add('hide');
 

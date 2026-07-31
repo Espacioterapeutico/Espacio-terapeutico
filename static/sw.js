@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-consultorio-v73';
+const CACHE_NAME = 'mi-consultorio-v74';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/logo.png',
@@ -33,8 +33,21 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // APIs & JS/CSS: Always Network-First to prevent stale UI bugs
-  if (url.pathname.startsWith('/api/') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname === '/') {
+  // APIs: Strictly Network-Only (no-store) to prevent stale data bugs
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).catch(() => {
+        return new Response(JSON.stringify({ error: 'Conexión offline.' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
+    return;
+  }
+
+  // JS/CSS/Root: Always Network-First
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname === '/') {
     event.respondWith(
       fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200 && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css'))) {
