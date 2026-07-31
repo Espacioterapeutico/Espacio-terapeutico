@@ -43,6 +43,12 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = bool(os.environ.get('PYTHONANYWHERE_DOMAIN') or os.environ.get('PREFERRED_URL_SCHEME') == 'https')
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
+
+@app.after_request
+def add_static_cache_headers(response):
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, 'clinica.db')
 SCHEMA_FILE = get_resource_path('schema.sql')
