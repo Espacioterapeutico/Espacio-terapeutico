@@ -986,9 +986,9 @@ def restore_patients_from_firebase():
             row = c.fetchone()
             if not row:
                 c.execute("""
-                    INSERT INTO pacientes (id, nombres, apellidos, cedula, username, metodos_pago, psicologo_id, fecha_registro)
-                    VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-                """, (pid, nombres, apellidos, cedula, username, metodos))
+                    INSERT INTO pacientes (id, nombres, apellidos, cedula, username, psicologo_id, fecha_registro)
+                    VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                """, (pid, nombres, apellidos, cedula, username))
             else:
                 c.execute("""
                     UPDATE pacientes SET 
