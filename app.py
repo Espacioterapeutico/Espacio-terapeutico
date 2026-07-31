@@ -427,18 +427,14 @@ def init_db():
     """)
     db.commit()
         
-    # Migración automática de usuarios (slug)
-    cursor.execute("PRAGMA table_info(usuarios)")
-    cols_usr = [row[1] for row in cursor.fetchall()]
-    if 'slug' not in cols_usr:
-        cursor.execute("ALTER TABLE usuarios ADD COLUMN slug TEXT")
-    try:
-        cursor.execute("ALTER TABLE usuarios ADD COLUMN primer_inicio INTEGER DEFAULT 1")
-        cursor.execute("ALTER TABLE usuarios ADD COLUMN fecha_registro TEXT")
-        cursor.execute("ALTER TABLE usuarios ADD COLUMN fecha_expiracion_prueba TEXT")
-        cursor.execute("ALTER TABLE usuarios ADD COLUMN suscripcion_paga INTEGER DEFAULT 0")
-    except:
-        pass
+    # Migración de columnas en pacientes
+    cursor.execute("PRAGMA table_info(pacientes)")
+    cols_pac = [row[1] for row in cursor.fetchall()]
+    if 'metodos_pago' not in cols_pac:
+        try:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN metodos_pago TEXT DEFAULT '[]'")
+        except:
+            pass
     db.commit()
 
     cursor.execute("SELECT id, nombres, apellidos, username FROM usuarios WHERE slug IS NULL OR slug = ''")
