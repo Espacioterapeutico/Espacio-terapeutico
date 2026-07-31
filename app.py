@@ -40,8 +40,8 @@ app = Flask(
 )
 app.secret_key = os.environ.get('SECRET_KEY', 'espacio_terapeutico_secret_key_2026_prod_fixed')
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = True if os.environ.get('FLASK_ENV') != 'development' else False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = bool(os.environ.get('PYTHONANYWHERE_DOMAIN') or os.environ.get('PREFERRED_URL_SCHEME') == 'https')
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, 'clinica.db')

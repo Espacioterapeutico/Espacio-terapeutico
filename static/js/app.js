@@ -183,11 +183,6 @@ function saveNotifiedKeys() {
     } catch(e) {}
 }
 
-function openNotificationGuideModal() {
-    openModal('notification-guide-modal');
-}
-window.openNotificationGuideModal = openNotificationGuideModal;
-
 function showOnboardingTutorialIfNeeded() {
     if (localStorage.getItem('tutorial_notificaciones_visto') !== 'true') {
         localStorage.setItem('tutorial_notificaciones_visto', 'true');
@@ -8360,20 +8355,6 @@ async function loadSuperadminData() {
         });
     } catch (err) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al cargar datos.</td></tr>';
-    }
-}
-
-async function toggleTherapistSubscription(userId) {
-    if (!confirm("¿Estás seguro de cambiar el estado de Suscripción Paga de este psicólogo?")) return;
-    try {
-        const res = await fetch(`/api/superadmin/therapists/${userId}/toggle-subscription`, { method: 'POST' });
-        if (res.ok) {
-            loadSuperadminData();
-        } else {
-            alert("Error al cambiar estado de suscripción.");
-        }
-    } catch (err) {
-        alert("Error de conexión.");
     }
 }
 
