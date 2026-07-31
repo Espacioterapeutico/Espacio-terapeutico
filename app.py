@@ -39,9 +39,10 @@ app = Flask(
     template_folder=get_resource_path('templates')
 )
 app.secret_key = os.environ.get('SECRET_KEY', 'espacio_terapeutico_secret_key_2026_prod_fixed')
+IS_PA = os.path.exists('/home/Espacioterapeutico') or 'PYTHONANYWHERE_SITE' in os.environ
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = bool(os.environ.get('PYTHONANYWHERE_DOMAIN') or os.environ.get('PREFERRED_URL_SCHEME') == 'https')
+app.config['SESSION_COOKIE_SECURE'] = True if IS_PA else False
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
 
 @app.after_request
