@@ -952,12 +952,12 @@ def ensure_db_initialized():
 FIREBASE_DB_URL = "https://espacio-terapeutico-default-rtdb.firebaseio.com"
 
 def restore_patients_from_firebase():
-    """Restaura automáticamente consultantes desde Firebase Realtime Database a SQLite si faltan registros."""
+    """Restaura y sincroniza consultantes desde Firebase Realtime Database a SQLite."""
     try:
         import urllib.request
         import json
         req = urllib.request.Request(f"{FIREBASE_DB_URL}/pacientes.json")
-        with urllib.request.urlopen(req, timeout=4.0) as resp:
+        with urllib.request.urlopen(req, timeout=5.0) as resp:
             fb_data = json.loads(resp.read().decode('utf-8'))
         if not fb_data or not isinstance(fb_data, dict):
             return
@@ -983,11 +983,21 @@ def restore_patients_from_firebase():
             metodos = perfil.get('metodos_pago', '')
             
             c.execute("SELECT id FROM pacientes WHERE id = ?", (pid,))
-            if not c.fetchone():
+            row = c.fetchone()
+            if not row:
                 c.execute("""
                     INSERT INTO pacientes (id, nombres, apellidos, cedula, username, metodos_pago, psicologo_id, fecha_registro)
                     VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
                 """, (pid, nombres, apellidos, cedula, username, metodos))
+            else:
+                c.execute("""
+                    UPDATE pacientes SET 
+                        psicologo_id = COALESCE(psicologo_id, 1),
+                        nombres = CASE WHEN ? != '' THEN ? ELSE nombres END,
+                        apellidos = CASE WHEN ? != '' THEN ? ELSE apellidos END,
+                        username = CASE WHEN ? != '' THEN ? ELSE username END
+                    WHERE id = ?
+                """, (nombres, nombres, apellidos, apellidos, username, username, pid))
         conn.commit()
         conn.close()
     except Exception as e:
@@ -4279,11 +4289,14 @@ def get_patient_portal_data_dict(patient_id):
 
 @app.route('/api/push/public-key', methods=['GET'])
 def get_push_public_key():
-    db = get_db()
-    cursor = db.cursor()
-    vapid_keys = get_vapid_keys(cursor)
-    db.commit()
-    return jsonify({'public_key': vapid_keys['vapid_public_key']})
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        vapid_keys = get_vapid_keys(cursor)
+        return jsonify({'public_key': vapid_keys.get('vapid_public_key', '')})
+    except Exception as e:
+        print(f"Error fetching public key: {e}")
+        return jsonify({'public_key': ''})
 
 @app.route('/api/push/subscribe', methods=['POST'])
 def subscribe_push():
