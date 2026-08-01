@@ -2661,9 +2661,19 @@ def patient_login():
         
     is_default = False
     if not patient['password_hash']:
+        pwd_lower = (password or '').strip().lower()
+        ced_lower = (patient['cedula'] or '').strip().lower()
+        usr_lower = (patient['username'] or '').strip().lower()
         clean_pwd = clean_digits_only(password)
         clean_ced = clean_digits_only(patient['cedula'])
-        is_default = (password == patient['cedula']) or (clean_pwd != '' and clean_pwd == clean_ced)
+        clean_usr = clean_digits_only(patient['username'])
+        
+        is_default = (
+            pwd_lower == ced_lower or 
+            pwd_lower == usr_lower or 
+            (clean_pwd != '' and clean_pwd == clean_ced) or 
+            (clean_pwd != '' and clean_pwd == clean_usr)
+        )
     else:
         is_default = check_password_hash(patient['password_hash'], password)
         
