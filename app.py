@@ -1529,31 +1529,27 @@ def sync_patient_to_firebase(patient_id):
         return False
 
 def delete_patient_from_firebase(patient_id, u_key=None):
-    """Elimina los datos del paciente de Firebase Realtime Database para mantener todo sincronizado."""
-    def _async_delete():
-        try:
-            import requests
-            key_to_delete = u_key
-            if not key_to_delete:
-                conn = sqlite3.connect('clinica.db')
-                conn.row_factory = sqlite3.Row
-                c = conn.cursor()
-                c.execute("SELECT username, cedula FROM pacientes WHERE id = ?", (patient_id,))
-                p = c.fetchone()
-                conn.close()
-                if p:
-                    key_to_delete = (p['username'] or p['cedula'] or '').strip()
+    """Elimina síncronamente los datos del paciente de Firebase Realtime Database para evitar reapariciones."""
+    try:
+        import requests
+        key_to_delete = u_key
+        if not key_to_delete:
+            conn = sqlite3.connect('clinica.db')
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute("SELECT username, cedula FROM pacientes WHERE id = ?", (patient_id,))
+            p = c.fetchone()
+            conn.close()
+            if p:
+                key_to_delete = (p['username'] or p['cedula'] or '').strip()
 
-            if key_to_delete:
-                clean_key = key_to_delete.replace(".", "_").replace("$", "_").replace("[", "_").replace("]", "_").replace("#", "_").lower()
-                requests.delete(f"{FIREBASE_DB_URL}/usuarios_pacientes/{clean_key}.json", timeout=3.0)
-            
-            requests.delete(f"{FIREBASE_DB_URL}/pacientes/{patient_id}.json", timeout=3.0)
-        except Exception as e:
-            print(f"Error deleting patient {patient_id} from Firebase: {e}")
-
-    import threading
-    threading.Thread(target=_async_delete).start()
+        if key_to_delete:
+            clean_key = key_to_delete.replace(".", "_").replace("$", "_").replace("[", "_").replace("]", "_").replace("#", "_").lower()
+            requests.delete(f"{FIREBASE_DB_URL}/usuarios_pacientes/{clean_key}.json", timeout=4.0)
+        
+        requests.delete(f"{FIREBASE_DB_URL}/pacientes/{patient_id}.json", timeout=4.0)
+    except Exception as e:
+        print(f"Error deleting patient {patient_id} from Firebase: {e}")
 
 def sync_all_psychologist_patients_to_firebase(psych_id):
     """Vuelve a sincronizar todos los pacientes de un psicólogo en Firebase (útil al cambiar métodos de pago)."""
