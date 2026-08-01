@@ -5471,8 +5471,8 @@ def get_patient_summary(patient_id):
         SELECT 
             SUM(CASE WHEN estado_pago IN ('Paga', 'Cancelada sin aviso - Paga') THEN cantidad_sesiones ELSE 0 END) as pagas,
             SUM(CASE WHEN estado_pago IN ('Pendiente', 'Cancelada sin aviso') THEN cantidad_sesiones ELSE 0 END) as pendientes,
-            SUM(CASE WHEN estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida' THEN cantidad_sesiones ELSE 0 END) as prepagadas_no_consumidas,
-            SUM(CASE WHEN estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'Consumida' THEN cantidad_sesiones ELSE 0 END) as prepagadas_consumidas
+            SUM(CASE WHEN estado_pago = 'Prepagada' AND control_uso = 'No consumida' THEN cantidad_sesiones ELSE 0 END) as prepagadas_no_consumidas,
+            SUM(CASE WHEN (estado_pago = 'Prepagada' AND control_uso = 'Consumida') OR (estado_pago = 'Paga' AND control_uso = 'Consumida') THEN cantidad_sesiones ELSE 0 END) as prepagadas_consumidas
         FROM agenda_finanzas 
         WHERE paciente_id = ?
     """, (patient_id,))
@@ -5562,7 +5562,7 @@ def adjust_patient_prepay_balance(patient_id):
 
     cursor.execute("""
         SELECT SUM(cantidad_sesiones) FROM agenda_finanzas 
-        WHERE paciente_id = ? AND (estado_pago = 'Prepagada' OR estado_pago = 'Paga' OR estado_pago = 'ConsumirPrepago') AND control_uso = 'No consumida'
+        WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
     """, (patient_id,))
     actual_sum = cursor.fetchone()[0] or 0
 
@@ -5573,7 +5573,7 @@ def adjust_patient_prepay_balance(patient_id):
         diff = actual_sum - nueva_cantidad
         cursor.execute("""
             SELECT id, cantidad_sesiones, control_uso FROM agenda_finanzas
-            WHERE paciente_id = ? AND (estado_pago = 'Prepagada' OR estado_pago = 'Paga' OR estado_pago = 'ConsumirPrepago') AND control_uso = 'No consumida'
+            WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
             ORDER BY id ASC
         """, (patient_id,))
         rows = cursor.fetchall()
