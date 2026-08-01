@@ -13374,6 +13374,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+async function forceSyncWithFirebase() {
+    const btn = document.getElementById('sync-firebase-btn');
+    const origText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '🔄 Sincronizando...';
+    }
+    if (typeof showToast === 'function') {
+        showToast('Iniciando sincronización con la nube...', 'info');
+    }
+    try {
+        const res = await fetch('/api/sync/force-firebase', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (typeof showToast === 'function') {
+                showToast(`✅ ${data.success} (${data.total_pacientes} consultantes)`, 'success');
+            } else {
+                alert(`✅ ${data.success}`);
+            }
+            if (typeof loadDashboardData === 'function') loadDashboardData();
+            if (typeof loadPatientsData === 'function') loadPatientsData();
+            if (typeof loadAgendaData === 'function') loadAgendaData();
+        } else {
+            const err = data.error || 'No se pudo completar la sincronización.';
+            if (typeof showToast === 'function') {
+                showToast('⚠️ ' + err, 'warning');
+            } else {
+                alert('⚠️ ' + err);
+            }
+        }
+    } catch (err) {
+        if (typeof showToast === 'function') {
+            showToast('❌ Error de conexión al sincronizar con la nube.', 'error');
+        } else {
+            alert('❌ Error de conexión al sincronizar.');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+        }
+    }
+}
+window.forceSyncWithFirebase = forceSyncWithFirebase;
+
 
 
 

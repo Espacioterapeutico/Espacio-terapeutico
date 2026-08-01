@@ -8732,6 +8732,29 @@ try {{
     response.headers['Expires'] = '0'
     return response
 
+@app.route('/api/sync/force-firebase', methods=['POST', 'GET'])
+def force_sync_firebase():
+    try:
+        restore_patients_from_firebase()
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT COUNT(*) FROM pacientes")
+        total_p = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM agenda_finanzas")
+        total_a = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM sesiones")
+        total_s = cursor.fetchone()[0]
+        return jsonify({
+            'success': 'Base de datos sincronizada exitosamente con Firebase.',
+            'total_pacientes': total_p,
+            'total_citas': total_a,
+            'total_evoluciones': total_s,
+            'timestamp': datetime.datetime.now().isoformat()
+        })
+    except Exception as e:
+        print(f"Error en sincronización forzada Firebase: {e}")
+        return jsonify({'error': f'Error al sincronizar: {str(e)}'}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
