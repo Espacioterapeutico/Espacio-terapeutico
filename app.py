@@ -4707,12 +4707,12 @@ def admin_notifications():
             cursor.execute("""
                 SELECT id, tipo, titulo, mensaje, fecha, leida, link
                 FROM notificaciones
-                WHERE user_id = ? AND leida = 0
+                WHERE (user_id = ? OR user_id IS NULL OR user_id = 1 OR user_id = 0) AND leida = 0
                 ORDER BY fecha DESC, id DESC LIMIT 25
             """, (psic_id,))
             rows = cursor.fetchall()
             
-            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE user_id = ? AND leida = 0", (psic_id,))
+            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE (user_id = ? OR user_id IS NULL OR user_id = 1 OR user_id = 0) AND leida = 0", (psic_id,))
             unread_count = cursor.fetchone()[0] or 0
         else:
             cursor.execute("""
@@ -4752,13 +4752,10 @@ def admin_notifications_mark_read():
     psic_id = get_psicologo_id_filter()
     try:
         if notification_id:
-            if psic_id is not None:
-                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ? AND user_id = ?", (notification_id, psic_id))
-            else:
-                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ?", (notification_id,))
+            cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ?", (notification_id,))
         else:
             if psic_id is not None:
-                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE user_id = ?", (psic_id,))
+                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE user_id = ? OR user_id IS NULL OR user_id = 1 OR user_id = 0", (psic_id,))
             else:
                 cursor.execute("UPDATE notificaciones SET leida = 1")
         db.commit()
@@ -5610,6 +5607,10 @@ def adjust_patient_prepay_balance(patient_id):
             """, (patient_id, now_date, diff))
 
     db.commit()
+    try:
+        sync_patient_to_firebase(patient_id)
+    except Exception as s_err:
+        print(f"Error sincronizando prepago a Firebase: {s_err}")
     return jsonify({'success': True, 'nueva_cantidad': nueva_cantidad, 'message': f'Saldo de consultas prepagadas ajustado exitosamente a {nueva_cantidad}.'})
 
 @app.route('/api/patients/<int:patient_id>/print', methods=['GET'])
