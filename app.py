@@ -989,24 +989,40 @@ def restore_patients_from_firebase():
             apellidos = perfil.get('apellidos', '')
             cedula = perfil.get('cedula', '')
             username = perfil.get('username', '')
-            metodos = perfil.get('metodos_pago', '')
+            password_hash = perfil.get('password_hash', None)
+            p1 = perfil.get('pregunta_seguridad_1', None)
+            r1 = perfil.get('respuesta_seguridad_1_hash', None)
+            p2 = perfil.get('pregunta_seguridad_2', None)
+            r2 = perfil.get('respuesta_seguridad_2_hash', None)
+            telefono = perfil.get('telefono', None)
+            email = perfil.get('email', None)
             
             c.execute("SELECT id FROM pacientes WHERE id = ?", (pid,))
             row = c.fetchone()
             if not row:
                 c.execute("""
-                    INSERT INTO pacientes (id, nombres, apellidos, cedula, username, psicologo_id, fecha_registro)
-                    VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-                """, (pid, nombres, apellidos, cedula, username))
+                    INSERT INTO pacientes (
+                        id, nombres, apellidos, cedula, username, password_hash,
+                        pregunta_seguridad_1, respuesta_seguridad_1_hash,
+                        pregunta_seguridad_2, respuesta_seguridad_2_hash,
+                        telefono, email, psicologo_id, fecha_registro
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                """, (pid, nombres, apellidos, cedula, username, password_hash, p1, r1, p2, r2, telefono, email))
             else:
                 c.execute("""
                     UPDATE pacientes SET 
                         psicologo_id = COALESCE(psicologo_id, 1),
                         nombres = CASE WHEN ? != '' THEN ? ELSE nombres END,
                         apellidos = CASE WHEN ? != '' THEN ? ELSE apellidos END,
-                        username = CASE WHEN ? != '' THEN ? ELSE username END
+                        username = CASE WHEN ? != '' THEN ? ELSE username END,
+                        password_hash = COALESCE(password_hash, ?),
+                        pregunta_seguridad_1 = COALESCE(pregunta_seguridad_1, ?),
+                        respuesta_seguridad_1_hash = COALESCE(respuesta_seguridad_1_hash, ?),
+                        pregunta_seguridad_2 = COALESCE(pregunta_seguridad_2, ?),
+                        respuesta_seguridad_2_hash = COALESCE(respuesta_seguridad_2_hash, ?)
                     WHERE id = ?
-                """, (nombres, nombres, apellidos, apellidos, username, username, pid))
+                """, (nombres, nombres, apellidos, apellidos, username, username, password_hash, p1, r1, p2, r2, pid))
         conn.commit()
         conn.close()
     except Exception as e:
@@ -2759,8 +2775,10 @@ def patient_setup_first_login():
         session['patient_username'] = username
         session['role'] = 'paciente'
         
-        import threading
-        threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        try:
+            sync_patient_to_firebase(patient_id)
+        except Exception as _sync_err:
+            print(f"Error en sync_patient_to_firebase: {_sync_err}")
         
         return jsonify({'success': 'Perfil e historia clínica configurados con éxito. Sesión iniciada.'})
     except Exception as e:

@@ -2099,7 +2099,7 @@ async function handleSaveMoodCheckin() {
             selectedMoodState = { mood: '', emoji: '' };
             document.getElementById('mood-comment-section')?.classList.add('hide');
 
-            loadPatientPizarraHistory();
+            loadPizarraHistory();
         } else {
             statusMsg.textContent = data.error || 'Error al guardar el estado de ánimo.';
             statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
