@@ -13379,17 +13379,17 @@ async function forceSyncWithFirebase() {
     const origText = btn ? btn.innerHTML : '';
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '🔄 Sincronizando...';
+        btn.innerHTML = '💾 Guardando...';
     }
     if (typeof showToast === 'function') {
-        showToast('Iniciando sincronización con la nube...', 'info');
+        showToast('Guardando y respaldando datos en la nube...', 'info');
     }
     try {
         const res = await fetch('/api/sync/force-firebase', { method: 'POST' });
         const data = await res.json();
         if (res.ok && data.success) {
             if (typeof showToast === 'function') {
-                showToast(`✅ ${data.success} (${data.total_pacientes} consultantes)`, 'success');
+                showToast(`✅ ${data.success} (${data.total_pacientes} consultantes, ${data.total_citas} citas, ${data.total_evoluciones} evoluciones)`, 'success');
             } else {
                 alert(`✅ ${data.success}`);
             }

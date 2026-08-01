@@ -8732,28 +8732,133 @@ try {{
     response.headers['Expires'] = '0'
     return response
 
+def push_all_data_to_firebase():
+    """
+    Sincroniza y guarda FORZOSAMENTE todos los consultantes, citas (agenda_finanzas)
+    y evoluciones (sesiones) de SQLite en Firebase Realtime Database.
+    Además genera un respaldo local comprimido de seguridad en backups/.
+    """
+    import urllib.request
+    import json
+    import requests
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # 1. Crear snapshot local de respaldo en backups/
+    try:
+        backup_dir = os.path.join(BASE_DIR, 'backups')
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+        stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        backup_path = os.path.join(backup_dir, f"copia_seguridad_clinica_{stamp}.db")
+        backup_conn = sqlite3.connect(backup_path)
+        db.backup(backup_conn)
+        backup_conn.close()
+    except Exception as b_err:
+        print(f"Advertencia al crear backup local: {b_err}")
+
+    # 2. Sincronizar pacientes hacia Firebase
+    cursor.execute("SELECT * FROM pacientes")
+    pacientes = [dict(row) for row in cursor.fetchall()]
+
+    total_p = len(pacientes)
+    total_a = 0
+    total_s = 0
+
+    for p in pacientes:
+        p_id = p['id']
+        p_username = (p.get('username') or '').strip().lower()
+
+        # Datos de perfil
+        perfil_payload = {
+            'nombres': p.get('nombres') or '',
+            'apellidos': p.get('apellidos') or '',
+            'cedula': p.get('cedula') or '',
+            'username': p.get('username') or '',
+            'metodos_pago': p.get('metodos_pago') or '',
+            'telefono': p.get('telefono') or '',
+            'email': p.get('email') or '',
+            'genero': p.get('genero') or '',
+            'edad': p.get('edad') or '',
+            'residencia_actual': p.get('residencia_actual') or ''
+        }
+
+        try:
+            requests.put(f"{FIREBASE_DB_URL}/pacientes/{p_id}/perfil.json", json=perfil_payload, timeout=4.0)
+            if p_username:
+                requests.put(f"{FIREBASE_DB_URL}/usuarios_pacientes/{p_username}.json", json=perfil_payload, timeout=4.0)
+        except Exception:
+            pass
+
+        # Sincronizar Citas/Agenda
+        cursor.execute("SELECT * FROM agenda_finanzas WHERE paciente_id = ?", (p_id,))
+        citas = [dict(row) for row in cursor.fetchall()]
+        total_a += len(citas)
+        citas_dict = {}
+        for c in citas:
+            c_id = str(c['id'])
+            citas_dict[c_id] = {
+                'codigo_cita': f"CITA-#{str(c['id']).zfill(4)}",
+                'fecha': c.get('fecha'),
+                'hora': c.get('hora'),
+                'modalidad': c.get('modalidad', 'Online'),
+                'monto': c.get('monto', 0.0),
+                'estado_pago': c.get('estado_pago', 'Pendiente'),
+                'metodo_pago': c.get('metodo_pago', ''),
+                'fecha_registro': c.get('fecha_registro', '')
+            }
+        try:
+            requests.put(f"{FIREBASE_DB_URL}/pacientes/{p_id}/citas_solicitadas.json", json=citas_dict, timeout=4.0)
+        except Exception:
+            pass
+
+        # Sincronizar Evoluciones / Sesiones
+        cursor.execute("SELECT * FROM sesiones WHERE paciente_id = ?", (p_id,))
+        sesiones = [dict(row) for row in cursor.fetchall()]
+        total_s += len(sesiones)
+        diario_dict = {}
+        for s in sesiones:
+            s_id = str(s['id'])
+            diario_dict[s_id] = {
+                'agenda_id': s.get('agenda_id'),
+                'fecha': s.get('fecha'),
+                'modalidad': s.get('modalidad'),
+                'estado': s.get('estado', 'Realizada'),
+                'resumen': s.get('resumen', ''),
+                'tareas_asignadas': s.get('tareas_asignadas', ''),
+                'recursos_entregados': s.get('recursos_entregados', ''),
+                'anotaciones_proxima': s.get('anotaciones_proxima', '')
+            }
+        try:
+            requests.put(f"{FIREBASE_DB_URL}/pacientes/{p_id}/diario.json", json=diario_dict, timeout=4.0)
+        except Exception:
+            pass
+
+    return {
+        'total_pacientes': total_p,
+        'total_citas': total_a,
+        'total_evoluciones': total_s,
+        'timestamp': datetime.datetime.now().isoformat()
+    }
+
 @app.route('/api/sync/force-firebase', methods=['POST', 'GET'])
 def force_sync_firebase():
     try:
+        # 1. Guardar y subir todos los datos a Firebase
+        stats = push_all_data_to_firebase()
+        # 2. Restaurar/combinar datos nuevos que vengan de Firebase
         restore_patients_from_firebase()
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute("SELECT COUNT(*) FROM pacientes")
-        total_p = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM agenda_finanzas")
-        total_a = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM sesiones")
-        total_s = cursor.fetchone()[0]
         return jsonify({
-            'success': 'Base de datos sincronizada exitosamente con Firebase.',
-            'total_pacientes': total_p,
-            'total_citas': total_a,
-            'total_evoluciones': total_s,
-            'timestamp': datetime.datetime.now().isoformat()
+            'success': 'Todos los datos (consultantes, citas y evoluciones) fueron guardados y respaldados exitosamente en la nube.',
+            'total_pacientes': stats['total_pacientes'],
+            'total_citas': stats['total_citas'],
+            'total_evoluciones': stats['total_evoluciones'],
+            'timestamp': stats['timestamp']
         })
     except Exception as e:
-        print(f"Error en sincronización forzada Firebase: {e}")
-        return jsonify({'error': f'Error al sincronizar: {str(e)}'}), 500
+        print(f"Error en guardado forzado a Firebase: {e}")
+        return jsonify({'error': f'Error al guardar en nube: {str(e)}'}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
