@@ -7039,7 +7039,7 @@ def get_agenda():
                    (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
-            LEFT JOIN sesiones s ON s.agenda_id = af.id
+            LEFT JOIN sesiones s ON (s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha))
             WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
               AND p.psicologo_id = ?
             ORDER BY af.fecha ASC, af.hora ASC
@@ -7050,7 +7050,7 @@ def get_agenda():
                    (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
-            LEFT JOIN sesiones s ON s.agenda_id = af.id
+            LEFT JOIN sesiones s ON (s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha))
             WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
             ORDER BY af.fecha ASC, af.hora ASC
         """)
