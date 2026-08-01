@@ -2502,10 +2502,45 @@ def login():
     except Exception as e:
         return jsonify({'error': f'Error en el servidor al iniciar sesión: {str(e)}'}), 500
 
+def create_automatic_backup():
+    try:
+        backup_dir = os.path.join(BASE_DIR, 'backups')
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+        stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        backup_path = os.path.join(backup_dir, f"copia_seguridad_clinica_{stamp}.db")
+        db = get_db()
+        backup_conn = sqlite3.connect(backup_path)
+        db.backup(backup_conn)
+        backup_conn.close()
+        
+        # Limpieza inteligente: mantener solo los últimos 30 respaldos automáticos
+        import glob
+        b_files = sorted(glob.glob(os.path.join(backup_dir, "copia_seguridad_clinica_*.db")))
+        if len(b_files) > 30:
+            for old_f in b_files[:-30]:
+                try:
+                    os.remove(old_f)
+                except Exception:
+                    pass
+        return backup_path
+    except Exception as e:
+        print(f"Error creando backup automático: {e}")
+        return None
+
 @app.route('/api/logout', methods=['POST'])
 def logout():
+    try:
+        create_automatic_backup()
+    except Exception:
+        pass
     session.clear()
-    return jsonify({'success': 'Sesión cerrada.'})
+    return jsonify({'success': 'Sesión cerrada y copia de seguridad creada automáticamente.'})
+
+@app.route('/api/sync/auto-backup', methods=['POST', 'GET'])
+def auto_backup():
+    path = create_automatic_backup()
+    return jsonify({'success': True, 'backup': path})
 
 @app.route('/api/check-username-role', methods=['GET'])
 def check_username_role():

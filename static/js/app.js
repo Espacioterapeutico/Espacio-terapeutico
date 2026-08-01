@@ -13419,6 +13419,17 @@ async function forceSyncWithFirebase() {
 }
 window.forceSyncWithFirebase = forceSyncWithFirebase;
 
+// Disparar backup automático local en segundo plano al cerrar pestaña o ventana
+window.addEventListener('beforeunload', () => {
+    try {
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/sync/auto-backup');
+        } else {
+            fetch('/api/sync/auto-backup', { method: 'POST', keepalive: true }).catch(() => {});
+        }
+    } catch(e) {}
+});
+
 
 
 
