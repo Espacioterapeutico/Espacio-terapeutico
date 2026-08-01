@@ -737,9 +737,9 @@ async function handleAuthSubmit(e) {
             
             // Si ambos respondieron pero con fallo de credenciales
             let finalError = 'Usuario o contraseña incorrectos.';
-            if (dataAdmin && dataAdmin.error && dataAdmin.error !== 'Credenciales inválidas.') {
+            if (dataAdmin && dataAdmin.error && dataAdmin.error !== 'Credenciales inválidas.' && dataAdmin.error !== 'Usuario no registrado.') {
                 finalError = dataAdmin.error;
-            } else if (dataPatient && dataPatient.error && dataPatient.error !== 'Credenciales inválidas.') {
+            } else if (dataPatient && dataPatient.error && dataPatient.error !== 'Credenciales inválidas.' && dataPatient.error !== 'Usuario no registrado.') {
                 finalError = dataPatient.error;
             }
             errorMsg.textContent = finalError;
