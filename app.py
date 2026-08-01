@@ -6632,10 +6632,15 @@ def get_monthly_balance():
             return False
         d = db_mod.strip().lower()
         p = profile_mod.strip().lower()
-        if d == p or d in p or p in d:
+        if d == p:
             return True
-        d_words = set(d.split())
-        p_words = set(p.split())
+        ignore_words = {'horario', 'modalidad', 'consulta', 'atencion', 'servicio'}
+        d_words = set(d.split()) - ignore_words
+        p_words = set(p.split()) - ignore_words
+        if not d_words or not p_words:
+            return d == p or d in p or p in d
+        if d_words == p_words:
+            return True
         if d_words & p_words:
             return True
         return False
