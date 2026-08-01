@@ -5998,23 +5998,33 @@ def create_session():
                         WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
                         ORDER BY fecha ASC, id ASC LIMIT 1
                     """, (patient_id,))
-                    pkg = cursor.fetchone()
                     if not pkg:
-                        db.rollback()
-                        return jsonify({'error': 'El consultante no tiene sesiones prepagadas disponibles.'}), 400
-                        
-                    pkg_id = pkg['id']
-                    pkg_cant = pkg['cantidad_sesiones']
-                    if pkg_cant > 1:
-                        cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg_cant - 1, pkg_id))
+                        fee_val, fee_curr = get_appointment_fee(cursor, patient_id, None, modalidad)
+                        if fee_val > 0:
+                            cursor.execute("""
+                                UPDATE agenda_finanzas 
+                                SET estado_pago = 'Pendiente', monto = ?, moneda = ?, metodo_pago = NULL, referencia = 'Sin saldo prepago'
+                                WHERE id = ?
+                            """, (fee_val, fee_curr or moneda, agenda_id))
+                        else:
+                            cursor.execute("""
+                                UPDATE agenda_finanzas 
+                                SET estado_pago = 'Paga', monto = 0.0, moneda = ?, metodo_pago = 'Exonerado', referencia = 'Sin saldo prepago'
+                                WHERE id = ?
+                            """, (moneda, agenda_id))
                     else:
-                        cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg_id,))
-                        
-                    cursor.execute("""
-                        UPDATE agenda_finanzas 
-                        SET estado_pago = 'Paga', monto = 0.0, moneda = ?, metodo_pago = 'Descontado de Prepago', referencia = 'Prepago'
-                        WHERE id = ?
-                    """, (moneda, agenda_id))
+                        pkg_id = pkg['id']
+                        pkg_cant = pkg['cantidad_sesiones']
+                        if pkg_cant > 1:
+                            cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg_cant - 1, pkg_id))
+                        else:
+                            cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg_id,))
+                            
+                        cursor.execute("""
+                            UPDATE agenda_finanzas 
+                            SET estado_pago = 'Paga', monto = 0.0, moneda = ?, metodo_pago = 'Descontado de Prepago', referencia = 'Prepago'
+                            WHERE id = ?
+                        """, (moneda, agenda_id))
                 elif tipo_liquidacion == 'Vincular paquete fraccionado':
                     cursor.execute("""
                         UPDATE agenda_finanzas 
