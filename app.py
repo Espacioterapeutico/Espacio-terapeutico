@@ -25,6 +25,12 @@ try:
 except ImportError:
     GOOGLE_CALENDAR_AVAILABLE = False
 
+VET_TZ = datetime.timezone(datetime.timedelta(hours=-4))
+
+def get_now_vet():
+    """Retorna datetime actual ajustado a la zona horaria de Venezuela (GMT-4)."""
+    return datetime.datetime.now(VET_TZ)
+
 def get_resource_path(relative_path):
     """ Obtener ruta absoluta del recurso, funciona para dev, WSGI y PyInstaller """
     try:
@@ -6436,7 +6442,7 @@ def get_patients_rates_list():
 @app.route('/api/finance/balance', methods=['GET'])
 @login_required
 def get_monthly_balance():
-    now = datetime.datetime.now()
+    now = get_now_vet()
     month = request.args.get('month', now.strftime('%m'))
     year = request.args.get('year', now.strftime('%Y'))
     
@@ -6726,7 +6732,7 @@ def export_finance_csv():
         year = request.args.get('year')
         
         if not month or not year:
-            now = datetime.now()
+            now = get_now_vet()
             month = f"{now.month:02d}"
             year = str(now.year)
         else:
@@ -6812,7 +6818,7 @@ def get_admin_consultation_history():
         year = request.args.get('year')
         
         if not month or not year:
-            now = datetime.now()
+            now = get_now_vet()
             month = f"{now.month:02d}"
             year = str(now.year)
         else:
