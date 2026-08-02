@@ -46,8 +46,501 @@
         }, 1200);
     </script>
 
+    <!-- PORTAL WEB PRINCIPAL / LANDING PAGE PÚBLICA -->
+    <style>
+    .public-landing-container {
+        font-family: var(--font-body, 'Inter', sans-serif);
+        color: var(--text-dark, #1e293b);
+        background: #f8fafc;
+        min-height: 100vh;
+    }
+    .pub-navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    }
+    .pub-navbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .pub-logo {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    .pub-brand-name {
+        font-family: var(--font-title, 'Outfit', sans-serif);
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--primary-color, #702e5e);
+    }
+    .pub-navbar-links {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    .pub-navbar-links a {
+        text-decoration: none;
+        color: #475569;
+        font-weight: 600;
+        font-size: 0.92rem;
+        transition: color 0.2s ease;
+    }
+    .pub-navbar-links a:hover {
+        color: var(--primary-color, #702e5e);
+    }
+    .pub-link-highlight {
+        color: #0284c7 !important;
+        font-weight: 700 !important;
+    }
+    .pub-btn-login {
+        background: linear-gradient(135deg, #702e5e 0%, #a95993 100%);
+        color: white;
+        border: none;
+        padding: 0.55rem 1.35rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(112, 46, 94, 0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .pub-btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(112, 46, 94, 0.35);
+    }
+    .pub-hero-banner {
+        background: linear-gradient(135deg, #3d1e3f 0%, #1a0b1c 100%);
+        color: white;
+        padding: 5rem 2rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .pub-hero-content {
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 2;
+    }
+    .pub-badge-pill {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(8px);
+        padding: 0.4rem 1.1rem;
+        border-radius: 30px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        margin-bottom: 1.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .pub-hero-content h1 {
+        font-family: var(--font-title, 'Outfit', sans-serif);
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        line-height: 1.15;
+    }
+    .pub-hero-content p {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 2rem;
+        font-weight: 400;
+    }
+    .pub-hero-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .pub-btn-primary {
+        background: white;
+        color: #702e5e;
+        padding: 0.85rem 2rem;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 700;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        transition: all 0.2s ease;
+    }
+    .pub-btn-primary:hover {
+        transform: translateY(-2px);
+        background: #f8fafc;
+    }
+    .pub-btn-outline {
+        background: transparent;
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        padding: 0.85rem 2rem;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 700;
+        transition: all 0.2s ease;
+    }
+    .pub-btn-outline:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: white;
+    }
+    .pub-section {
+        padding: 4.5rem 2rem;
+    }
+    .pub-bg-soft {
+        background: #f1f5f9;
+    }
+    .pub-container {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+    .pub-section-title {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    .pub-section-title h2 {
+        font-family: var(--font-title, 'Outfit', sans-serif);
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.5rem;
+    }
+    .pub-subtitle {
+        color: #64748b;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+    .pub-line {
+        width: 60px;
+        height: 4px;
+        background: #702e5e;
+        margin: 0 auto;
+        border-radius: 2px;
+    }
+    .pub-card-highlight {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        font-size: 1.1rem;
+        line-height: 1.7;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+    }
+    .pub-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    @media (max-width: 768px) {
+        .pub-grid-2 { grid-template-columns: 1fr; }
+        .pub-navbar-links { display: none; }
+        .pub-hero-content h1 { font-size: 2.1rem; }
+    }
+    .pub-info-box {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+    }
+    .pub-icon-bubble {
+        width: 50px;
+        height: 50px;
+        background: #fdf2f8;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .pub-info-box h3 {
+        font-family: var(--font-title, 'Outfit', sans-serif);
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.75rem;
+    }
+    .pub-info-box p {
+        color: #475569;
+        line-height: 1.6;
+    }
+    .pub-therapists-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+    .pub-therapist-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1.75rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .pub-therapist-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+    }
+    .pub-therapist-avatar-box {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin-bottom: 1rem;
+        border: 3px solid #fbcfe8;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+    }
+    .pub-therapist-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .pub-therapist-name {
+        font-family: var(--font-title, 'Outfit', sans-serif);
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.25rem;
+    }
+    .pub-therapist-title {
+        font-size: 0.88rem;
+        color: #702e5e;
+        font-weight: 600;
+        margin-bottom: 0.85rem;
+    }
+    .pub-therapist-mods {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: 1.25rem;
+    }
+    .pub-mod-badge {
+        background: #f1f5f9;
+        color: #334155;
+        padding: 0.25rem 0.65rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .pub-therapist-actions {
+        display: flex;
+        gap: 0.5rem;
+        width: 100%;
+        margin-top: auto;
+    }
+    .pub-btn-wa {
+        background: #25d366;
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 0.6rem 0.85rem;
+        border-radius: 10px;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        transition: background 0.2s ease;
+    }
+    .pub-btn-wa:hover {
+        background: #1da851;
+    }
+    .pub-btn-profile {
+        background: #702e5e;
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 0.6rem 0.85rem;
+        border-radius: 10px;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s ease;
+    }
+    .pub-btn-profile:hover {
+        background: #542246;
+    }
+    .pub-saas-banner {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        color: white;
+    }
+    .pub-saas-card {
+        text-align: center;
+        max-width: 750px;
+        margin: 0 auto;
+    }
+    .pub-saas-card h2 {
+        font-family: var(--font-title, 'Outfit', sans-serif);
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    .pub-saas-card p {
+        color: #cbd5e1;
+        margin-bottom: 2rem;
+        font-size: 1.05rem;
+        line-height: 1.6;
+    }
+    .pub-btn-accent {
+        background: #38bdf8;
+        color: #0f172a;
+        padding: 0.85rem 2.25rem;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 800;
+        display: inline-block;
+        box-shadow: 0 6px 20px rgba(56, 189, 248, 0.3);
+        transition: transform 0.2s ease;
+    }
+    .pub-btn-accent:hover {
+        transform: translateY(-2px);
+    }
+    .pub-footer {
+        background: #090d16;
+        color: #94a3b8;
+        padding: 2.5rem 2rem;
+        border-top: 1px solid #1e293b;
+    }
+    .pub-footer-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .pub-footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+    .pub-footer-brand img {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+    }
+    .pub-footer-brand span {
+        font-weight: 700;
+        color: white;
+    }
+    </style>
+
+    <div id="public-landing-screen" class="public-landing-container">
+        <!-- BARRA DE NAVEGACIÓN SUPERIOR (NAVBAR) -->
+        <nav class="pub-navbar">
+            <div class="pub-navbar-brand">
+                <img src="/static/logo.png" alt="Espacio Terapéutico" class="pub-logo">
+                <span class="pub-brand-name">Espacio Terapéutico</span>
+            </div>
+            <div class="pub-navbar-links">
+                <a href="#section-quienes">¿Quiénes Somos?</a>
+                <a href="#section-mision">Misión y Visión</a>
+                <a href="#section-directorio">Psicólogos</a>
+                <a href="/para-psicologos" class="pub-link-highlight">Suscripción Psicólogos</a>
+                <button class="pub-btn-login" onclick="openAuthModal()">Iniciar Sesión</button>
+            </div>
+        </nav>
+
+        <!-- HERO BANNER BIENVENIDA -->
+        <section class="pub-hero-banner">
+            <div class="pub-hero-content">
+                <span class="pub-badge-pill">Red Profesional de Salud Mental</span>
+                <h1 id="landing-render-hero-title">Espacio Terapéutico</h1>
+                <p id="landing-render-hero-subtitle">Tu portal seguro de atención psicológica clínica y acompañamiento humano 24/7</p>
+                <div class="pub-hero-buttons">
+                    <a href="#section-directorio" class="pub-btn-primary">Agendar Consulta</a>
+                    <a href="/para-psicologos" class="pub-btn-outline">¿Eres Psicólogo? Únete</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: ¿QUIÉNES SOMOS? -->
+        <section id="section-quienes" class="pub-section">
+            <div class="pub-container">
+                <div class="pub-section-title">
+                    <h2>¿Quiénes Somos?</h2>
+                    <div class="pub-line"></div>
+                </div>
+                <div class="pub-card-highlight">
+                    <p id="landing-render-quienes">Somos una red de profesionales de la psicología enfocados en brindar acompañamiento terapéutico humano, ético y accesible...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: MISIÓN Y VISIÓN -->
+        <section id="section-mision" class="pub-section pub-bg-soft">
+            <div class="pub-container">
+                <div class="pub-grid-2">
+                    <div class="pub-info-box">
+                        <div class="pub-icon-bubble">🎯</div>
+                        <h3>Misión</h3>
+                        <p id="landing-render-mision">Promover el bienestar emocional y la salud mental ofreciendo espacios terapéuticos seguros, accesibles y profesionales...</p>
+                    </div>
+                    <div class="pub-info-box">
+                        <div class="pub-icon-bubble">👁️</div>
+                        <h3>Visión</h3>
+                        <p id="landing-render-vision">Consolidarnos como la red de salud mental de referencia en habla hispana...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: DIRECTORIO DE PSICÓLOGOS -->
+        <section id="section-directorio" class="pub-section">
+            <div class="pub-container">
+                <div class="pub-section-title">
+                    <h2>Directorio de Psicólogos</h2>
+                    <p class="pub-subtitle">Conoce a nuestro equipo de profesionales calificados, sus modalidades de consulta y agenda tu cita en vivo</p>
+                    <div class="pub-line"></div>
+                </div>
+                <div id="pub-therapists-container" class="pub-therapists-grid">
+                    <!-- Renderizado dinámicamente desde JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: CAPTACIÓN DE PSICÓLOGOS (SaaS) -->
+        <section class="pub-section pub-saas-banner">
+            <div class="pub-container">
+                <div class="pub-saas-card">
+                    <h2>¿Eres Psicólogo y deseas tu propia plataforma?</h2>
+                    <p>Únete a Espacio Terapéutico y obtén tu agenda automatizada 24/7, historias clínicas cifradas, gestión financiera multimoneda y tu enlace personalizado.</p>
+                    <a href="/para-psicologos" class="pub-btn-accent">Ver Beneficios y Suscribirme</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- PIE DE PÁGINA (FOOTER) -->
+        <footer class="pub-footer">
+            <div class="pub-container pub-footer-inner">
+                <div class="pub-footer-brand">
+                    <img src="/static/logo.png" alt="Logo">
+                    <span>Espacio Terapéutico</span>
+                </div>
+                <p id="landing-render-footer">Espacio Terapéutico — Todos los derechos reservados.</p>
+            </div>
+        </footer>
+    </div>
+
     <!-- PANTALLA DE LOGUEO / REGISTRO INICIAL (Bloqueo de seguridad) -->
-    <div id="auth-screen" class="auth-container">
+    <div id="auth-screen" class="auth-container hide">
         <div class="auth-card">
             <div class="auth-header">
                 <div class="logo-circle" style="overflow: hidden;">

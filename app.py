@@ -8920,7 +8920,12 @@ def inject_asset_version():
     return {'asset_v': int(time.time())}
 
 @app.route('/')
+@app.route('/inicio')
 def index():
+    return send_file(get_resource_path('templates/index.html'))
+
+@app.route('/login')
+def login_route():
     return send_file(get_resource_path('templates/index.html'))
 
 @app.route('/manifest.json')
