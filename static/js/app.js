@@ -14085,26 +14085,45 @@ async function loadDedicatedTherapistProfile(slug) {
             }
         }
 
-        // 4. Botones de Redes Sociales al Final (WhatsApp e Instagram destacados)
+        // 4. Sección de Contacto (Botón WhatsApp wa.me, Botón Instagram link, Correo copiar/pegar)
         const contactList = document.getElementById('pub-profile-contact-list');
         if (contactList) {
-            let cHtml = '<div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; justify-content: center;">';
+            let cHtml = '<div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: flex-start; margin-top: 0.5rem;">';
             
             if (t.whatsapp_publico) {
                 const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
-                const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, me gustaría consultar información sobre tus consultas.`);
-                cHtml += `<div><strong>💬 WhatsApp de Atención Directa:</strong> <a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" style="color: #25d366; font-weight: 700; text-decoration: none;">${t.whatsapp_publico} (Enviar Mensaje)</a></div>`;
+                const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, me gustaría consultar información sobre tus servicios y disponibilidad.`);
+                cHtml += `<a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" style="background: #25d366; color: white; padding: 0.85rem 1.6rem; border-radius: 30px; text-decoration: none; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.35); font-size: 1rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
+                    💬 Escribir por WhatsApp (${t.whatsapp_publico})
+                </a>`;
             }
-            if (t.email_publico) {
-                cHtml += `<div><strong>✉️ Correo Electrónico:</strong> <a href="mailto:${t.email_publico}" style="color: #702e5e; font-weight: 600;">${t.email_publico}</a></div>`;
-            }
+            
             if (t.redes_sociales && t.redes_sociales.instagram) {
-                cHtml += `<div><strong>📷 Instagram:</strong> <span style="font-weight: 600; color: #e1306c;">${t.redes_sociales.instagram}</span></div>`;
+                let igUser = t.redes_sociales.instagram.replace('@', '').trim();
+                let igLink = igUser.startsWith('http') ? igUser : `https://instagram.com/${igUser}`;
+                cHtml += `<a href="${igLink}" target="_blank" style="background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; padding: 0.85rem 1.6rem; border-radius: 30px; text-decoration: none; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(225, 48, 108, 0.35); font-size: 1rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
+                    📷 Abrir Instagram (@${igUser})
+                </a>`;
             }
+
+            if (t.email_publico) {
+                cHtml += `<div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 0.75rem 1.4rem; border-radius: 30px; font-weight: 700; color: #702e5e; display: inline-flex; align-items: center; gap: 8px; font-size: 0.98rem;">
+                    ✉️ Correo: <span style="user-select: all; color: #475569; font-weight: 600;">${t.email_publico}</span>
+                    <button type="button" onclick="navigator.clipboard.writeText('${t.email_publico}'); alert('¡Correo copiado al portapapeles!');" style="background: #702e5e; color: white; border: none; padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; font-weight: 700; margin-left: 6px;">Copiar</button>
+                </div>`;
+            }
+
             if (t.redes_sociales && t.redes_sociales.linkedin) {
-                cHtml += `<div><strong>🔗 LinkedIn:</strong> <a href="${t.redes_sociales.linkedin}" target="_blank" style="color: #0a66c2; font-weight: 600;">${t.redes_sociales.linkedin}</a></div>`;
+                cHtml += `<a href="${t.redes_sociales.linkedin}" target="_blank" style="background: #0a66c2; color: white; padding: 0.85rem 1.5rem; border-radius: 30px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+                    🔗 LinkedIn
+                </a>`;
             }
-            if (!cHtml) cHtml = '<p class="text-muted">El profesional no ha agregado información adicional de contacto directo.</p>';
+
+            cHtml += '</div>';
+
+            if (!t.whatsapp_publico && (!t.redes_sociales || !t.redes_sociales.instagram) && !t.email_publico) {
+                cHtml = '<p class="text-muted">El profesional no ha agregado información de contacto directo.</p>';
+            }
             contactList.innerHTML = cHtml;
         }
 
