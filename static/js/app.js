@@ -14044,7 +14044,6 @@ async function loadDedicatedTherapistProfile(slug) {
                 const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Plataformas / Detalles: <strong>${mData.online_detalle}</strong></p>` : '';
                 mHtml += `<div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
                     <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #702e5e; font-size: 1.1rem;">🌐 ${titleText}</div>
-                    <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Sesiones dinámicas y privadas por videollamada desde la comodidad de tu hogar o lugar preferido.</p>
                     ${det}
                 </div>`;
             }
@@ -14054,7 +14053,6 @@ async function loadDedicatedTherapistProfile(slug) {
                 const det = addressVal ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Ubicación / Consultorio: <strong>${addressVal}</strong></p>` : '';
                 mHtml += `<div style="background: #f0fdf4; border: 1.5px solid #86efac; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
                     <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 1.1rem;">🏢 ${titleText}</div>
-                    <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Atención cálida, confidencial y personalizada en espacio físico especialmente acondicionado.</p>
                     ${det}
                 </div>`;
             }
@@ -14064,7 +14062,6 @@ async function loadDedicatedTherapistProfile(slug) {
                 const det = zonesVal ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Zonas de Cobertura: <strong>${zonesVal}</strong></p>` : '';
                 mHtml += `<div style="background: #f0f9ff; border: 1.5px solid #93c5fd; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
                     <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e40af; font-size: 1.1rem;">🚗 ${titleText}</div>
-                    <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Visita profesional directa en tu domicilio u oficina según disponibilidad y zonas coordinadas.</p>
                     ${det}
                 </div>`;
             }
@@ -14080,20 +14077,14 @@ async function loadDedicatedTherapistProfile(slug) {
         if (regBtn) {
             regBtn.onclick = (e) => {
                 e.preventDefault();
-                window.location.href = `/registro/${t.id || cleanSlug}`;
+                window.location.href = `/registro/${cleanSlug}`;
             };
         }
 
-        const waBtn = document.getElementById('pub-profile-wa-btn');
-        if (waBtn) {
-            if (t.whatsapp_publico) {
-                const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
-                const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, te escribo desde tu página de Espacio Terapéutico para consultar disponibilidad de citas.`);
-                waBtn.href = `https://wa.me/${cleanWa}?text=${waMsg}`;
-                waBtn.style.display = 'inline-flex';
-            } else {
-                waBtn.style.display = 'none';
-            }
+        const agendarBtn = document.getElementById('pub-profile-wa-btn');
+        if (agendarBtn) {
+            agendarBtn.href = `/agendar/${cleanSlug}`;
+            agendarBtn.style.display = 'inline-flex';
         }
 
         // 4. Sección de Contacto (Solo logos de WhatsApp e Instagram, e ícono de sobre para correo sin "copiar")
