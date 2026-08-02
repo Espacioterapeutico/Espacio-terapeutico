@@ -13599,7 +13599,7 @@ async function loadLandingPageContent() {
 }
 
 function renderTherapistsGrid(therapists) {
-    const grid = document.getElementById('pub-therapists-container');
+    const grid = document.getElementById('pub-therapists-container') || document.getElementById('landing-therapists-grid');
     if (!grid) return;
     
     if (!therapists || therapists.length === 0) {
