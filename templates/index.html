@@ -443,6 +443,38 @@
         font-weight: 700;
         color: white;
     }
+    .pub-hero-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        align-items: center;
+    }
+    .pub-hero-text h1 {
+        font-family: var(--font-title, 'Outfit', sans-serif);
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+    .pub-hero-text p {
+        font-size: 1.1rem;
+        color: #fbcfe8;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+    }
+    .pub-hero-image {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .pub-hero-logo {
+        max-width: 240px !important;
+        width: 100% !important;
+        height: auto !important;
+        border-radius: 50%;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        border: 4px solid #fbcfe8;
+    }
     .hide {
         display: none !important;
     }
@@ -467,7 +499,7 @@
         </nav>
 
         <!-- BANNER DE ENCABEZADO (HERO) -->
-        <section class="pub-hero">
+        <section class="pub-hero" style="background: linear-gradient(135deg, #3d1e3f 0%, #1a0b1c 100%); color: white; padding: 4.5rem 1.5rem;">
             <div class="pub-container pub-hero-grid">
                 <div class="pub-hero-text">
                     <h1 id="landing-render-hero-title">Tu Salud Mental en Manos de Profesionales Calificados</h1>
@@ -478,7 +510,7 @@
                     </div>
                 </div>
                 <div class="pub-hero-image">
-                    <img src="/static/logo.png" alt="Espacio Terapéutico Ilustración" class="pub-hero-logo">
+                    <img src="/static/logo.png" alt="Espacio Terapéutico Ilustración" class="pub-hero-logo" style="max-width: 240px; width: 100%; height: auto; border-radius: 50%; border: 4px solid #fbcfe8; box-shadow: 0 12px 30px rgba(0,0,0,0.25);">
                 </div>
             </div>
         </section>
