@@ -9809,6 +9809,13 @@ def send_manual_whatsapp_reminder(cita_id):
 
 @app.route('/api/whatsapp/cron-send-reminders', methods=['GET', 'POST'])
 def cron_send_whatsapp_reminders():
+    # Protección básica: requiere ?key=clave o header X-Cron-Key
+    import os
+    CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
+    provided = request.args.get('key') or request.headers.get('X-Cron-Key', '')
+    if provided != CRON_SECRET:
+        return jsonify({'error': 'No autorizado'}), 401
+
     from datetime import datetime, timedelta
     today_str = datetime.now().strftime('%Y-%m-%d')
     tomorrow_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
