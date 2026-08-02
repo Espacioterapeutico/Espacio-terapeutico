@@ -1931,12 +1931,15 @@ def get_active_psychologists():
 
 def get_psychologist_by_id_or_slug(cursor, identifier):
     cursor.execute("SELECT * FROM usuarios ORDER BY id ASC")
-    rows = cursor.fetchall()
-    if not rows:
+    raw_rows = cursor.fetchall()
+    if not raw_rows:
         return None
 
+    # Convertir sqlite3.Row a dict seguro en Python
+    rows = [dict(r) for r in raw_rows]
+
     # Filtrar usuarios que sean psicólogos, admin o superadmin
-    users = [u for u in rows if (u['role'] or '').lower() in ('psicologo', 'superadmin', 'admin', 'psicologo_admin') or u.get('es_psicologo')]
+    users = [u for u in rows if str(u.get('role', '')).lower() in ('psicologo', 'superadmin', 'admin', 'psicologo_admin') or u.get('es_psicologo')]
     if not users:
         users = rows  # Fallback a cualquier usuario disponible
 
@@ -1950,24 +1953,24 @@ def get_psychologist_by_id_or_slug(cursor, identifier):
     # 1. Si es ID numérico
     if clean_id.isdigit():
         for u in users:
-            if u['id'] == int(clean_id):
+            if u.get('id') == int(clean_id):
                 return u
 
     # 2. Coincidencia exacta por slug, username, o id limpio
     for u in users:
-        u_slug = (u['slug'] or '').strip().lower()
-        u_uname = (u['username'] or '').strip().lower()
+        u_slug = str(u.get('slug') or '').strip().lower()
+        u_uname = str(u.get('username') or '').strip().lower()
         if u_slug in (ident_str, with_prefix, clean_id) or u_uname in (ident_str, clean_id):
             return u
 
     # 3. Coincidencia por nombre o apellido
     for u in users:
-        u_nom = (u['nombres'] or '').strip().lower()
-        u_ape = (u['apellidos'] or '').strip().lower()
+        u_nom = str(u.get('nombres') or '').strip().lower()
+        u_ape = str(u.get('apellidos') or '').strip().lower()
         full_name = f"{u_nom} {u_ape}".strip()
         combo_name = f"{u_nom}{u_ape}".strip()
-        u_slug = (u['slug'] or '').strip().lower()
-        u_uname = (u['username'] or '').strip().lower()
+        u_slug = str(u.get('slug') or '').strip().lower()
+        u_uname = str(u.get('username') or '').strip().lower()
         
         if (clean_id and clean_id in full_name) or (clean_id and clean_id in combo_name) or (clean_id and clean_id in u_slug) or (clean_id and clean_id in u_uname):
             return u
@@ -5369,6 +5372,8 @@ def get_public_therapist_profile(slug):
     if not psych:
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
 
+    psych = dict(psych) if not isinstance(psych, dict) else psych
+
     modalidades_raw = psych.get('modalidades_json')
     modalidades_data = {}
     modalidades_list = []
@@ -5393,7 +5398,8 @@ def get_public_therapist_profile(slug):
         modalidades_data = {'online': True, 'presencial': True}
 
     try:
-        redes = json.loads(psych['redes_sociales_json']) if psych.get('redes_sociales_json') else {}
+        redes_raw = psych.get('redes_sociales_json')
+        redes = json.loads(redes_raw) if redes_raw else {}
     except Exception:
         redes = {}
         
@@ -5401,10 +5407,10 @@ def get_public_therapist_profile(slug):
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
     
     resp = jsonify({
-        'id': psych['id'],
-        'nombres': psych['nombres'] or '',
-        'apellidos': psych['apellidos'] or '',
-        'nombre_completo': f"Psic. {psych['nombres'] or ''} {psych['apellidos'] or ''}".strip(),
+        'id': psych.get('id'),
+        'nombres': psych.get('nombres') or '',
+        'apellidos': psych.get('apellidos') or '',
+        'nombre_completo': f"Psic. {psych.get('nombres') or ''} {psych.get('apellidos') or ''}".strip(),
         'slug': clean_slug,
         'nomenclatura': psych.get('nomenclatura') or psych.get('estudios') or 'Psicólogo Clínico',
         'descripcion_biografia': psych.get('descripcion_biografia') or '',

@@ -13661,7 +13661,7 @@ function renderTherapistsGrid(therapists) {
                 </div>
                 <div class="pub-therapist-actions">
                     ${whatsappBtnHtml}
-                    <a href="${t.url_perfil}" class="pub-btn-profile">Ver Perfil</a>
+                    <a href="${t.url_perfil}" onclick="event.preventDefault(); history.pushState(null, '', '${t.url_perfil}'); loadDedicatedTherapistProfile('${t.url_perfil}');" class="pub-btn-profile">Ver Perfil</a>
                 </div>
             </div>
         `;
@@ -13984,8 +13984,14 @@ async function loadDedicatedTherapistProfile(slug) {
     const authScreen = document.getElementById('auth-screen');
     const profScreen = document.getElementById('public-therapist-profile-screen');
     
-    if (pubLanding) pubLanding.classList.add('hide');
-    if (authScreen) authScreen.classList.add('hide');
+    if (pubLanding) {
+        pubLanding.classList.add('hide');
+        pubLanding.style.display = 'none';
+    }
+    if (authScreen) {
+        authScreen.classList.add('hide');
+        authScreen.style.display = 'none';
+    }
     if (profScreen) {
         profScreen.classList.remove('hide');
         profScreen.style.display = 'block';
@@ -14126,6 +14132,9 @@ function initLandingRouteHandling() {
     }
 
     if (path.startsWith('/psic.') || path.startsWith('/agendar/') || path.startsWith('/registro/')) {
+        if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
+        if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
+        if (profScreen) { profScreen.classList.remove('hide'); profScreen.style.display = 'block'; }
         loadDedicatedTherapistProfile(path);
     } else if (path.includes('/login')) {
         if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
