@@ -439,6 +439,7 @@
                     <div class="sub-nav-tabs mt-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
                         <button type="button" id="sa-tab-therapists" class="btn btn-sm btn-primary" onclick="switchSuperadminTab('therapists')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Psicólogos y Suscripciones</button>
                         <button type="button" id="sa-tab-support" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('support')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Mensajes de Soporte</button>
+                        <button type="button" id="sa-tab-landing" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('landing')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">🌐 Editar Portada Web</button>
                     </div>
 
                     <!-- Contenedor: Terapeutas -->
@@ -496,6 +497,45 @@
                                             <!-- Dinámico -->
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor: Editar Portada Web -->
+                    <div id="sa-card-landing" class="superadmin-tab-content hide">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>🌐 Editar Textos e Información de la Portada Web Principal</h3>
+                                <p class="text-secondary text-sm">Modifica los contenidos públicos que ven los visitantes al ingresar a www.espacioterapeutico.net</p>
+                            </div>
+                            <div class="card-body" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                                <div class="form-group">
+                                    <label for="sa-landing-hero-title" style="font-weight: 700;">Título Principal del Banner</label>
+                                    <input type="text" id="sa-landing-hero-title" class="form-control" placeholder="Ej: Espacio Terapéutico">
+                                </div>
+                                <div class="form-group">
+                                    <label for="sa-landing-hero-subtitle" style="font-weight: 700;">Subtítulo de Bienvenida</label>
+                                    <input type="text" id="sa-landing-hero-subtitle" class="form-control" placeholder="Ej: Red Profesional de Salud Mental">
+                                </div>
+                                <div class="form-group">
+                                    <label for="sa-landing-quienes-somos" style="font-weight: 700;">Sección: ¿Quiénes Somos?</label>
+                                    <textarea id="sa-landing-quienes-somos" class="form-control" rows="4" placeholder="Redacta la historia y presentación institucional..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sa-landing-mision" style="font-weight: 700;">Sección: Misión</label>
+                                    <textarea id="sa-landing-mision" class="form-control" rows="3" placeholder="Redacta la misión..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sa-landing-vision" style="font-weight: 700;">Sección: Visión</label>
+                                    <textarea id="sa-landing-vision" class="form-control" rows="3" placeholder="Redacta la visión..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sa-landing-footer-text" style="font-weight: 700;">Texto del Pie de Página (Footer)</label>
+                                    <input type="text" id="sa-landing-footer-text" class="form-control" placeholder="Ej: Espacio Terapéutico — Todos los derechos reservados.">
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                                    <button class="btn btn-primary" onclick="saveLandingPageContent()" style="font-weight: 700; padding: 0.75rem 2rem;">💾 Guardar Cambios de Portada Web</button>
                                 </div>
                             </div>
                         </div>
@@ -1003,7 +1043,8 @@
 
                     <!-- Menú de Sub-módulos (Pestañas de Ajustes) -->
                     <div class="sub-nav-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                        <button type="button" id="set-tab-backup" class="btn btn-sm btn-primary" onclick="switchSettingsTab('backup')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Copia de Seguridad</button>
+                        <button type="button" id="set-tab-perfil" class="btn btn-sm btn-primary" onclick="switchSettingsTab('perfil')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">👤 Perfil Público & Modalidades</button>
+                        <button type="button" id="set-tab-backup" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('backup')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Copia de Seguridad</button>
                         <button type="button" id="set-tab-google" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('google')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Google Calendar</button>
                         <button type="button" id="set-tab-whatsapp" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('whatsapp')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Whatsapp</button>
                         <button type="button" id="set-tab-horarios" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('horarios')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Horarios de Atención</button>
@@ -1016,7 +1057,68 @@
                     </div>
 
                     <!-- Contenedores de cada Pestaña -->
-                    <div id="set-card-backup" class="settings-tab-content">
+                    <!-- Contenedor: Perfil Público & Modalidades -->
+                    <div id="set-card-perfil" class="settings-tab-content">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>👤 Mi Perfil Público & Modalidades de Atención</h3>
+                                <p class="text-secondary text-sm">Personaliza la información que verán tus pacientes en tu página pública (/psic.tunombre) y en el directorio institucional.</p>
+                            </div>
+                            <div class="card-body" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                                <div class="form-group">
+                                    <label for="prof-nomenclatura" style="font-weight: 700;">Título / Nomenclatura Profesional *</label>
+                                    <input type="text" id="prof-nomenclatura" class="form-control" placeholder="Ej: Psicólogo Clínico - Especialista en Ansiedad y Parejas">
+                                </div>
+                                <div class="form-group">
+                                    <label for="prof-biografia" style="font-weight: 700;">Biografía / Presentación Profesional</label>
+                                    <textarea id="prof-biografia" class="form-control" rows="4" placeholder="Escribe una breve presentación para tus consultantes..."></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight: 700; margin-bottom: 0.5rem; display: block;">Modalidades de Atención Ofrecidas *</label>
+                                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600;">
+                                            <input type="checkbox" id="mod-online" value="Online" checked> 🌐 Online
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600;">
+                                            <input type="checkbox" id="mod-presencial" value="Presencial" checked> 🏢 Presencial
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600;">
+                                            <input type="checkbox" id="mod-domicilio" value="Domicilio"> 🚗 A Domicilio
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label for="prof-whatsapp" style="font-weight: 700;">WhatsApp Público de Contacto</label>
+                                        <input type="text" id="prof-whatsapp" class="form-control" placeholder="Ej: +584121234567">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prof-email" style="font-weight: 700;">Correo Electrónico Público</label>
+                                        <input type="email" id="prof-email" class="form-control" placeholder="Ej: consulta@paulomora.com">
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label for="prof-instagram" style="font-weight: 700;">Instagram (@usuario)</label>
+                                        <input type="text" id="prof-instagram" class="form-control" placeholder="Ej: @psic.paulomora">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prof-linkedin" style="font-weight: 700;">LinkedIn (URL perfil)</label>
+                                        <input type="text" id="prof-linkedin" class="form-control" placeholder="Ej: https://linkedin.com/in/...">
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                                    <button class="btn btn-primary" onclick="savePublicProfileSettings()" style="font-weight: 700; padding: 0.75rem 2rem;">💾 Guardar Mi Perfil Público</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="set-card-backup" class="settings-tab-content hide">
                         <!-- Respaldos locales -->
                         <div class="card">
                             <div class="card-header">

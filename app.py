@@ -418,10 +418,20 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_pizarra INTEGER DEFAULT 0")
         if 'bloqueo_herramientas' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 0")
-        if 'aviso_pago' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN aviso_pago INTEGER DEFAULT 0")
         if 'terminos_condiciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
+        if 'nomenclatura' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN nomenclatura TEXT DEFAULT 'Psicólogo Clínico'")
+        if 'descripcion_biografia' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN descripcion_biografia TEXT DEFAULT ''")
+        if 'modalidades_json' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN modalidades_json TEXT DEFAULT '[\"Online\", \"Presencial\"]'")
+        if 'whatsapp_publico' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN whatsapp_publico TEXT DEFAULT ''")
+        if 'email_publico' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN email_publico TEXT DEFAULT ''")
+        if 'redes_sociales_json' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN redes_sociales_json TEXT DEFAULT '{}'")
         db.commit()
         
     cursor.execute("""
@@ -948,6 +958,17 @@ def init_db():
         """)
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
         cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
+
+        def_landing_defaults = [
+            ('landing_hero_title', 'Espacio Terapéutico'),
+            ('landing_hero_subtitle', 'Red Profesional de Salud Mental y Gestión Clínica Integrada'),
+            ('landing_quienes_somos', 'Somos una red de profesionales de la psicología enfocados en brindar acompañamiento terapéutico humano, ético y accesible. Nuestra plataforma integra tecnología avanzada para garantizar privacidad, agendamiento en vivo 24/7 y seguimiento personalizado en cada etapa del proceso.'),
+            ('landing_mision', 'Promover el bienestar emocional y la salud mental ofreciendo espacios terapéuticos seguros, accesibles y profesionales, apoyados en herramientas clínicas digitales de vanguardia.'),
+            ('landing_vision', 'Consolidarnos como la red de salud mental de referencia, conectando a consultantes con terapeutas altamente calificados a través de un ecosistema clínico seguro, transparente y accesible.'),
+            ('landing_footer_text', 'Espacio Terapéutico — Todos los derechos reservados.')
+        ]
+        for key_d, val_d in def_landing_defaults:
+            cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES (?, ?)", (key_d, val_d))
     except Exception as _patch_err:
         print(f"Aviso en parche de datos automático: {_patch_err}")
 
@@ -5136,6 +5157,137 @@ def admin_profile_slug():
             'fast_booking_url': f"/agendar/{new_slug}",
             'registration_url': f"/registro/{new_slug}"
         })
+
+@app.route('/api/public/landing-content', methods=['GET'])
+def get_public_landing_content():
+    """Obtiene el contenido editable de la portada principal y el directorio público de psicólogos."""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # 1. Textos institucionales editables por el Superadmin
+    cursor.execute("SELECT clave, valor FROM configuracion WHERE clave LIKE 'landing_%'")
+    cfg_rows = cursor.fetchall()
+    content = {r['clave']: r['valor'] for r in cfg_rows}
+    
+    # 2. Directorio de psicólogos activos
+    cursor.execute("""
+        SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo, foto_documento,
+               nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json
+        FROM usuarios 
+        WHERE activo = 1 AND (role IS NULL OR role = 'psicologo' OR role = 'admin' OR role = 'superadmin')
+        ORDER BY id ASC
+    """)
+    therapists_rows = cursor.fetchall()
+    therapists = []
+    for t in therapists_rows:
+        slug = generate_default_slug_for_user(t)
+        modalidades = json.loads(t['modalidades_json']) if t['modalidades_json'] else ["Online", "Presencial"]
+        redes = json.loads(t['redes_sociales_json']) if t['redes_sociales_json'] else {}
+        therapists.append({
+            'id': t['id'],
+            'nombres': t['nombres'] or 'Psicólogo',
+            'apellidos': t['apellidos'] or '',
+            'nombre_completo': f"Psic. {t['nombres'] or ''} {t['apellidos'] or ''}".strip(),
+            'slug': slug,
+            'nomenclatura': t['nomenclatura'] or t['estudios'] or 'Psicólogo Clínico',
+            'descripcion': t['descripcion_biografia'] or '',
+            'foto': t['foto_titulo'] or '/static/logo.png',
+            'modalidades': modalidades,
+            'whatsapp': t['whatsapp_publico'] or '',
+            'email': t['email_publico'] or '',
+            'redes': redes,
+            'url_perfil': f"/psic.{slug.replace('psic.', '') if slug.startswith('psic.') else slug}",
+            'url_agendar': f"/agendar/{slug}",
+            'url_registro': f"/registro/{slug}"
+        })
+        
+    return jsonify({
+        'content': content,
+        'therapists': therapists
+    })
+
+@app.route('/api/admin/landing-content', methods=['POST'])
+@login_required
+def update_admin_landing_content():
+    """Permite al Superadmin actualizar los textos dinámicos de la portada web."""
+    if session.get('role') != 'superadmin' and session.get('user_id') != 1:
+        return jsonify({'error': 'No tienes permisos para modificar la portada web.'}), 403
+        
+    data = request.json or {}
+    db = get_db()
+    cursor = db.cursor()
+    
+    allowed_keys = [
+        'landing_hero_title', 'landing_hero_subtitle',
+        'landing_quienes_somos', 'landing_mision', 'landing_vision',
+        'landing_footer_text'
+    ]
+    
+    try:
+        for k in allowed_keys:
+            if k in data:
+                cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", (k, str(data[k])))
+        db.commit()
+        return jsonify({'success': 'Contenidos de la portada web actualizados exitosamente.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al actualizar contenidos: {str(e)}'}), 500
+
+@app.route('/api/admin/profile-public', methods=['GET', 'POST'])
+@login_required
+def admin_profile_public():
+    """Permite a cada psicólogo personalizar su perfil público (foto, biografía, modalidades, WhatsApp, redes)."""
+    db = get_db()
+    cursor = db.cursor()
+    user_id = session['user_id']
+    
+    if request.method == 'GET':
+        cursor.execute("""
+            SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo,
+                   nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json
+            FROM usuarios WHERE id = ?
+        """, (user_id,))
+        u = cursor.fetchone()
+        if not u:
+            return jsonify({'error': 'Usuario no encontrado.'}), 404
+            
+        modalidades = json.loads(u['modalidades_json']) if u['modalidades_json'] else ["Online", "Presencial"]
+        redes = json.loads(u['redes_sociales_json']) if u['redes_sociales_json'] else {}
+        
+        return jsonify({
+            'nomenclatura': u['nomenclatura'] or u['estudios'] or 'Psicólogo Clínico',
+            'descripcion_biografia': u['descripcion_biografia'] or '',
+            'modalidades': modalidades,
+            'whatsapp_publico': u['whatsapp_publico'] or '',
+            'email_publico': u['email_publico'] or '',
+            'redes_sociales': redes,
+            'foto': u['foto_titulo'] or '/static/logo.png'
+        })
+    else:
+        data = request.json or {}
+        nomenclatura = data.get('nomenclatura', '').strip()
+        descripcion = data.get('descripcion_biografia', '').strip()
+        modalidades = data.get('modalidades', ["Online", "Presencial"])
+        whatsapp = data.get('whatsapp_publico', '').strip()
+        email = data.get('email_publico', '').strip()
+        redes = data.get('redes_sociales', {})
+        foto = data.get('foto', '')
+        
+        try:
+            cursor.execute("""
+                UPDATE usuarios SET 
+                    nomenclatura = ?,
+                    descripcion_biografia = ?,
+                    modalidades_json = ?,
+                    whatsapp_publico = ?,
+                    email_publico = ?,
+                    redes_sociales_json = ?,
+                    foto_titulo = CASE WHEN ? != '' THEN ? ELSE foto_titulo END
+                WHERE id = ?
+            """, (nomenclatura, descripcion, json.dumps(modalidades), whatsapp, email, json.dumps(redes), foto, foto, user_id))
+            db.commit()
+            return jsonify({'success': 'Perfil público actualizado con éxito.'})
+        except Exception as e:
+            return jsonify({'error': f'Error al actualizar perfil: {str(e)}'}), 500
 
 @app.route('/api/admin/rates', methods=['POST'])
 @login_required

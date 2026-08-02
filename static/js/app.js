@@ -8906,27 +8906,18 @@ function switchSuperadminTab(tabId) {
     
     const tabTherapists = document.getElementById('sa-tab-therapists');
     const tabSupport = document.getElementById('sa-tab-support');
+    const tabLanding = document.getElementById('sa-tab-landing');
+    
+    if (tabTherapists) tabTherapists.className = (tabId === 'therapists') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (tabSupport) tabSupport.className = (tabId === 'support') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (tabLanding) tabLanding.className = (tabId === 'landing') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     
     if (tabId === 'therapists') {
-        if (tabTherapists) {
-            tabTherapists.classList.remove('btn-secondary');
-            tabTherapists.classList.add('btn-primary');
-        }
-        if (tabSupport) {
-            tabSupport.classList.remove('btn-primary');
-            tabSupport.classList.add('btn-secondary');
-        }
         loadSuperadminData();
-    } else {
-        if (tabTherapists) {
-            tabTherapists.classList.remove('btn-primary');
-            tabTherapists.classList.add('btn-secondary');
-        }
-        if (tabSupport) {
-            tabSupport.classList.remove('btn-secondary');
-            tabSupport.classList.add('btn-primary');
-        }
+    } else if (tabId === 'support') {
         loadSupportTickets();
+    } else if (tabId === 'landing') {
+        loadLandingPageContentForAdmin();
     }
 }
 
@@ -10744,7 +10735,7 @@ function switchSettingsTab(tabName) {
     }
 
     if (tabName === 'contrasena') tabName = 'password';
-    const tabs = ['backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
+    const tabs = ['perfil', 'backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
     tabs.forEach(t => {
         const btn = document.getElementById(`set-tab-${t}`);
         const card = document.getElementById(`set-card-${t}`);
@@ -10757,7 +10748,11 @@ function switchSettingsTab(tabName) {
             }
         }
     });
-    if (tabName === 'whatsapp') {
+    if (tabName === 'perfil') {
+        if (typeof loadPublicProfileSettings === 'function') {
+            loadPublicProfileSettings();
+        }
+    } else if (tabName === 'whatsapp') {
         const userRole = (window.currentUser && (window.currentUser.rol || window.currentUser.role)) || sessionStorage.getItem('userRole') || sessionStorage.getItem('user_role');
         const mcToggleCard = document.getElementById('card-toggle-manual-confirmations-module');
         if (mcToggleCard) {
@@ -13428,6 +13423,210 @@ window.addEventListener('beforeunload', () => {
             fetch('/api/sync/auto-backup', { method: 'POST', keepalive: true }).catch(() => {});
         }
     } catch(e) {}
+});
+
+// ==========================================
+// MÓDULO DE PORTADA WEB Y DIRECTORIO PÚBLICO
+// ==========================================
+function openAuthModal() {
+    const authScreen = document.getElementById('auth-screen');
+    if (authScreen) {
+        authScreen.classList.remove('hide');
+        authScreen.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+async function loadLandingPageContent() {
+    try {
+        const res = await fetch('/api/public/landing-content');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const content = data.content || {};
+        const therapists = data.therapists || [];
+        
+        // 1. Inyectar textos institucionales en la portada
+        const elHeroTitle = document.getElementById('landing-render-hero-title');
+        const elHeroSubtitle = document.getElementById('landing-render-hero-subtitle');
+        const elQuienes = document.getElementById('landing-render-quienes');
+        const elMision = document.getElementById('landing-render-mision');
+        const elVision = document.getElementById('landing-render-vision');
+        const elFooter = document.getElementById('landing-render-footer');
+        
+        if (elHeroTitle && content.landing_hero_title) elHeroTitle.textContent = content.landing_hero_title;
+        if (elHeroSubtitle && content.landing_hero_subtitle) elHeroSubtitle.textContent = content.landing_hero_subtitle;
+        if (elQuienes && content.landing_quienes_somos) elQuienes.textContent = content.landing_quienes_somos;
+        if (elMision && content.landing_mision) elMision.textContent = content.landing_mision;
+        if (elVision && content.landing_vision) elVision.textContent = content.landing_vision;
+        if (elFooter && content.landing_footer_text) elFooter.textContent = content.landing_footer_text;
+        
+        // 2. Renderizar tarjetas de psicólogos en el directorio
+        renderTherapistsGrid(therapists);
+    } catch(err) {
+        console.error("Error cargando contenidos de la portada:", err);
+    }
+}
+
+function renderTherapistsGrid(therapists) {
+    const grid = document.getElementById('pub-therapists-container');
+    if (!grid) return;
+    
+    if (!therapists || therapists.length === 0) {
+        grid.innerHTML = `<div class="text-center py-6 text-muted" style="grid-column: 1 / -1;"><p>Cargando directorio de profesionales...</p></div>`;
+        return;
+    }
+    
+    grid.innerHTML = therapists.map(t => {
+        const fotoUrl = t.foto || '/static/logo.png';
+        const modalidadesBadges = (t.modalidades || ["Online", "Presencial"]).map(m => {
+            let icon = "🌐";
+            if (m === "Presencial") icon = "🏢";
+            if (m === "Domicilio") icon = "🚗";
+            return `<span class="pub-mod-badge">${icon} ${m}</span>`;
+        }).join(" ");
+        
+        let whatsappBtnHtml = '';
+        if (t.whatsapp) {
+            const cleanWa = t.whatsapp.replace(/[^0-9]/g, '');
+            const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, te escribo desde la plataforma Espacio Terapéutico para consultar información sobre tus consultas.`);
+            whatsappBtnHtml = `
+                <a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" class="pub-btn-wa" title="Escribir por WhatsApp">
+                    💬 WhatsApp
+                </a>
+            `;
+        }
+        
+        return `
+            <div class="pub-therapist-card">
+                <div class="pub-therapist-avatar-box">
+                    <img src="${fotoUrl}" alt="${t.nombre_completo}" class="pub-therapist-img" onerror="this.src='/static/logo.png'">
+                </div>
+                <div class="pub-therapist-info">
+                    <h3 class="pub-therapist-name">${t.nombre_completo}</h3>
+                    <p class="pub-therapist-title">${t.nomenclatura || 'Psicólogo Clínico'}</p>
+                    <div class="pub-therapist-mods">
+                        ${modalidadesBadges}
+                    </div>
+                </div>
+                <div class="pub-therapist-actions">
+                    ${whatsappBtnHtml}
+                    <a href="${t.url_perfil}" class="pub-btn-profile">Ver Perfil</a>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+async function loadLandingPageContentForAdmin() {
+    try {
+        const res = await fetch('/api/public/landing-content');
+        if (!res.ok) return;
+        const data = await res.json();
+        const content = data.content || {};
+        
+        if (document.getElementById('sa-landing-hero-title')) document.getElementById('sa-landing-hero-title').value = content.landing_hero_title || '';
+        if (document.getElementById('sa-landing-hero-subtitle')) document.getElementById('sa-landing-hero-subtitle').value = content.landing_hero_subtitle || '';
+        if (document.getElementById('sa-landing-quienes-somos')) document.getElementById('sa-landing-quienes-somos').value = content.landing_quienes_somos || '';
+        if (document.getElementById('sa-landing-mision')) document.getElementById('sa-landing-mision').value = content.landing_mision || '';
+        if (document.getElementById('sa-landing-vision')) document.getElementById('sa-landing-vision').value = content.landing_vision || '';
+        if (document.getElementById('sa-landing-footer-text')) document.getElementById('sa-landing-footer-text').value = content.landing_footer_text || '';
+    } catch(e) {
+        console.error("Error al cargar datos de portada para admin:", e);
+    }
+}
+
+async function saveLandingPageContent() {
+    const payload = {
+        landing_hero_title: document.getElementById('sa-landing-hero-title').value,
+        landing_hero_subtitle: document.getElementById('sa-landing-hero-subtitle').value,
+        landing_quienes_somos: document.getElementById('sa-landing-quienes-somos').value,
+        landing_mision: document.getElementById('sa-landing-mision').value,
+        landing_vision: document.getElementById('sa-landing-vision').value,
+        landing_footer_text: document.getElementById('sa-landing-footer-text').value
+    };
+    
+    try {
+        const res = await fetch('/api/admin/landing-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Contenidos actualizados correctamente.");
+            loadLandingPageContent();
+        } else {
+            alert(data.error || "Error al guardar contenidos.");
+        }
+    } catch(e) {
+        alert("Error de conexión al guardar contenidos.");
+    }
+}
+
+async function loadPublicProfileSettings() {
+    try {
+        const res = await fetch('/api/admin/profile-public');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (document.getElementById('prof-nomenclatura')) document.getElementById('prof-nomenclatura').value = data.nomenclatura || '';
+        if (document.getElementById('prof-biografia')) document.getElementById('prof-biografia').value = data.descripcion_biografia || '';
+        if (document.getElementById('prof-whatsapp')) document.getElementById('prof-whatsapp').value = data.whatsapp_publico || '';
+        if (document.getElementById('prof-email')) document.getElementById('prof-email').value = data.email_publico || '';
+        
+        const redes = data.redes_sociales || {};
+        if (document.getElementById('prof-instagram')) document.getElementById('prof-instagram').value = redes.instagram || '';
+        if (document.getElementById('prof-linkedin')) document.getElementById('prof-linkedin').value = redes.linkedin || '';
+        
+        const mods = data.modalidades || ["Online", "Presencial"];
+        if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = mods.includes("Online");
+        if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = mods.includes("Presencial");
+        if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = mods.includes("Domicilio");
+    } catch(e) {
+        console.error("Error al cargar perfil público de psicólogo:", e);
+    }
+}
+
+async function savePublicProfileSettings() {
+    const modalidades = [];
+    if (document.getElementById('mod-online') && document.getElementById('mod-online').checked) modalidades.push("Online");
+    if (document.getElementById('mod-presencial') && document.getElementById('mod-presencial').checked) modalidades.push("Presencial");
+    if (document.getElementById('mod-domicilio') && document.getElementById('mod-domicilio').checked) modalidades.push("Domicilio");
+    
+    const redes = {
+        instagram: document.getElementById('prof-instagram') ? document.getElementById('prof-instagram').value.trim() : '',
+        linkedin: document.getElementById('prof-linkedin') ? document.getElementById('prof-linkedin').value.trim() : ''
+    };
+    
+    const payload = {
+        nomenclatura: document.getElementById('prof-nomenclatura').value.trim(),
+        descripcion_biografia: document.getElementById('prof-biografia').value.trim(),
+        modalidades: modalidades,
+        whatsapp_publico: document.getElementById('prof-whatsapp').value.trim(),
+        email_publico: document.getElementById('prof-email').value.trim(),
+        redes_sociales: redes
+    };
+    
+    try {
+        const res = await fetch('/api/admin/profile-public', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Perfil público actualizado con éxito.");
+            loadLandingPageContent();
+        } else {
+            alert(data.error || "Error al actualizar perfil público.");
+        }
+    } catch(e) {
+        alert("Error de conexión al guardar perfil público.");
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadLandingPageContent();
 });
 
 
