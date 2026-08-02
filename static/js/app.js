@@ -13799,6 +13799,24 @@ function toggleModalityDetailsUI() {
     if (boxDomicilio) boxDomicilio.style.display = (chkDomicilio && chkDomicilio.checked) ? 'block' : 'none';
 }
 
+function copyInputValue(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input || !input.value) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(() => {
+            alert("¡Enlace copiado al portapapeles con éxito!");
+        }).catch(() => {
+            input.select();
+            document.execCommand('copy');
+            alert("¡Enlace copiado al portapapeles con éxito!");
+        });
+    } else {
+        input.select();
+        document.execCommand('copy');
+        alert("¡Enlace copiado al portapapeles con éxito!");
+    }
+}
+
 async function loadPublicProfileSettings() {
     try {
         const res = await fetch('/api/admin/profile-public');
@@ -13818,14 +13836,16 @@ async function loadPublicProfileSettings() {
         if (document.getElementById('prof-linkedin')) document.getElementById('prof-linkedin').value = redes.linkedin || '';
 
         const baseUrl = `${window.location.protocol}//${window.location.host}`;
-        const slug = data.slug || (window.sessionUser ? `psic.${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : '');
-        if (slug) {
-            const cleanSlug = slug.replace(/^psic\./, '');
-            const fullProfileUrl = `${baseUrl}/psic.${cleanSlug}`;
-            const fullRegisterUrl = `${baseUrl}/registro/psic.${cleanSlug}`;
+        const cleanSlug = data.clean_slug || (data.slug ? data.slug.replace(/^psic\./, '') : (window.sessionUser ? `${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : ''));
+        if (cleanSlug) {
+            const fullProfileUrl = data.full_profile_url ? `${baseUrl}${data.full_profile_url}` : `${baseUrl}/psic.${cleanSlug}`;
+            const fullRegisterUrl = data.registration_url ? `${baseUrl}${data.registration_url}` : `${baseUrl}/registro/psic.${cleanSlug}`;
+            const fullBookingUrl = data.fast_booking_url ? `${baseUrl}${data.fast_booking_url}` : `${baseUrl}/agendar/psic.${cleanSlug}`;
+            
             if (document.getElementById('prof-link-perfil')) document.getElementById('prof-link-perfil').value = fullProfileUrl;
             if (document.getElementById('prof-link-perfil-btn')) document.getElementById('prof-link-perfil-btn').href = fullProfileUrl;
             if (document.getElementById('prof-link-registro')) document.getElementById('prof-link-registro').value = fullRegisterUrl;
+            if (document.getElementById('prof-link-agendar')) document.getElementById('prof-link-agendar').value = fullBookingUrl;
         }
         
         const mods = data.modalidades_data || data.modalidades || ["Online", "Presencial"];

@@ -5415,7 +5415,15 @@ def admin_profile_public():
         modalidades = json.loads(u['modalidades_json']) if u['modalidades_json'] else ["Online", "Presencial"]
         redes = json.loads(u['redes_sociales_json']) if u['redes_sociales_json'] else {}
         
+        slug = u['slug'] or generate_default_slug_for_user(u)
+        clean_slug = slug.replace('psic.', '') if slug.startswith('psic.') else slug
+
         return jsonify({
+            'slug': slug,
+            'clean_slug': clean_slug,
+            'full_profile_url': f"/psic.{clean_slug}",
+            'registration_url': f"/registro/psic.{clean_slug}",
+            'fast_booking_url': f"/agendar/psic.{clean_slug}",
             'nomenclatura': u['nomenclatura'] or u['estudios'] or 'Psicólogo Clínico',
             'descripcion_biografia': u['descripcion_biografia'] or '',
             'modalidades': modalidades,
