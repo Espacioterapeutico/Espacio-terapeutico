@@ -916,31 +916,21 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
     }
 
-    if (role === 'superadmin') {
-        if (nameEl) nameEl.textContent = `Admin: ${fullPersonName}`;
-        if (roleEl) roleEl.textContent = `Superadministrador`;
-        document.querySelectorAll('.nav-item').forEach(link => {
-            const v = link.getAttribute('data-view');
-            if (v !== 'superadmin-dashboard' && v !== 'settings') {
-                link.classList.add('hide');
-            } else {
-                link.classList.remove('hide');
-            }
-        });
-        switchView('superadmin-dashboard');
-        loadSuperadminData();
-        return;
-    }
-    
+    const isSuperadminUser = (role === 'superadmin' || role === 'admin' || (username && username.toLowerCase() === 'pamoraro') || userId === 1);
+
     const formattedTitle = fullPersonName.toLowerCase().startsWith('psic') ? fullPersonName : `Psic. ${fullPersonName}`;
-    if (nameEl) nameEl.textContent = formattedTitle;
-    if (roleEl) roleEl.textContent = `Terapeuta`;
-    
-    const saTab = document.querySelector('[data-view="superadmin-dashboard"]');
-    if (saTab) saTab.classList.add('hide');
-    
+    if (nameEl) nameEl.textContent = isSuperadminUser ? `Admin: ${formattedTitle}` : formattedTitle;
+    if (roleEl) roleEl.textContent = isSuperadminUser ? `Superadministrador` : `Terapeuta`;
+
     document.querySelectorAll('.nav-item').forEach(link => {
-        if (link.getAttribute('data-view') !== 'superadmin-dashboard') {
+        const v = link.getAttribute('data-view');
+        if (v === 'superadmin-dashboard') {
+            if (isSuperadminUser) {
+                link.classList.remove('hide');
+            } else {
+                link.classList.add('hide');
+            }
+        } else {
             link.classList.remove('hide');
         }
     });

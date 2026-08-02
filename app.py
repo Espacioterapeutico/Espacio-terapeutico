@@ -2251,6 +2251,13 @@ def ensure_usuarios_columns(db=None):
             cursor.execute(f"ALTER TABLE usuarios ADD COLUMN {col_name} {col_type}")
         except Exception:
             pass
+    try:
+        # El usuario de sistema 'admin' se oculta por defecto del directorio público
+        cursor.execute("UPDATE usuarios SET mostrar_en_directorio = 0 WHERE LOWER(username) IN ('admin', 'superadmin') AND (nombres LIKE '%Administrador%' OR nombres = '')")
+        # Asegurar permisos de superadmin para Paulo
+        cursor.execute("UPDATE usuarios SET role = 'superadmin' WHERE LOWER(username) = 'pamoraro' OR id = 1")
+    except Exception:
+        pass
     db.commit()
     if close_at_end:
         db.close()
@@ -5278,7 +5285,7 @@ def get_public_landing_content():
     cfg_rows = cursor.fetchall()
     content = {r['clave']: r['valor'] for r in cfg_rows}
     
-    # 2. Directorio de psicólogos activos
+    # 2. Directorio de psicólogos activos (excluye cuenta de sistema 'admin')
     cursor.execute("""
         SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo, foto_documento,
                nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json
@@ -5286,6 +5293,7 @@ def get_public_landing_content():
         WHERE (COALESCE(activo, 1) = 1) 
           AND (COALESCE(mostrar_en_directorio, 1) = 1) 
           AND (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin' OR role = 'superadmin')
+          AND LOWER(username) NOT IN ('admin', 'superadmin')
         ORDER BY id ASC
     """)
     therapists_rows = cursor.fetchall()
