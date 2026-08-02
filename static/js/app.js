@@ -8372,6 +8372,7 @@ async function loadSuperadminData() {
                 trialBadge = '<span class="badge" style="background:#6b7280; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">Sin Prueba</span>';
             }
 
+            tr.setAttribute('data-therapist-id', p.id);
             tr.innerHTML = `
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-weight: 600;">${p.username}</td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">${p.nombres} ${p.apellidos}</td>
@@ -8380,19 +8381,22 @@ async function loadSuperadminData() {
                 </td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-size: 0.8rem;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_registro === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'registro', this.checked)"> Bloquear Registro</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'evoluciones', this.checked)"> Bloquear Evoluciones</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_finanzas === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'finanzas', this.checked)"> Bloquear Finanzas</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_agenda === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'agenda', this.checked)"> Bloquear Agenda</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_mensajes === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'mensajes', this.checked)"> Bloquear Recordatorios</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_pizarra === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'pizarra', this.checked)"> Bloquear Pizarra</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_herramientas === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'herramientas', this.checked)"> Bloquear Herramientas</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-evoluciones" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''}> Bloquear Evoluciones</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-finanzas" ${p.bloqueo_finanzas === 1 ? 'checked' : ''}> Bloquear Finanzas</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-agenda" ${p.bloqueo_agenda === 1 ? 'checked' : ''}> Bloquear Agenda</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-mensajes" ${p.bloqueo_mensajes === 1 ? 'checked' : ''}> Bloquear Recordatorios</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #047857; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.35rem; margin-top: 0.25rem;">
-                            <input type="checkbox" ${p.mostrar_en_directorio === 1 ? 'checked' : ''} onchange="toggleTherapistDirectorio(${p.id})"> 🌐 Mostrar en Directorio Público
+                            <input type="checkbox" class="chk-mostrar-directorio" ${p.mostrar_en_directorio === 1 ? 'checked' : ''}> 🌐 Mostrar en Directorio Público
                         </label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.25rem; margin-top: 0.15rem;">
-                            <input type="checkbox" ${p.aviso_pago === 1 ? 'checked' : ''} onchange="toggleTherapistAvisoPago(${p.id})"> Activar Aviso de Pago (No Solvente)
+                            <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> Activar Aviso de Pago (No Solvente)
                         </label>
+                        <button type="button" class="btn btn-sm btn-success" style="grid-column: 1 / 3; margin-top: 0.4rem; padding: 5px 12px; font-weight: 700; background-color: #10b981; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);" onclick="saveTherapistRowSettings(${p.id})">
+                            💾 Guardar Cambios
+                        </button>
                     </div>
                 </td>
                 <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); text-align: center;">
@@ -8418,6 +8422,76 @@ async function loadSuperadminData() {
     } catch (err) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al cargar datos.</td></tr>';
     }
+}
+
+async function saveTherapistRowSettings(userId) {
+    const row = document.querySelector(`tr[data-therapist-id="${userId}"]`);
+    if (!row) return;
+    
+    const payload = {
+        mostrar_en_directorio: row.querySelector('.chk-mostrar-directorio')?.checked ? 1 : 0,
+        aviso_pago: row.querySelector('.chk-aviso-pago')?.checked ? 1 : 0,
+        bloqueo_registro: row.querySelector('.chk-bloqueo-registro')?.checked ? 1 : 0,
+        bloqueo_evoluciones: row.querySelector('.chk-bloqueo-evoluciones')?.checked ? 1 : 0,
+        bloqueo_finanzas: row.querySelector('.chk-bloqueo-finanzas')?.checked ? 1 : 0,
+        bloqueo_agenda: row.querySelector('.chk-bloqueo-agenda')?.checked ? 1 : 0,
+        bloqueo_mensajes: row.querySelector('.chk-bloqueo-mensajes')?.checked ? 1 : 0,
+        bloqueo_pizarra: row.querySelector('.chk-bloqueo-pizarra')?.checked ? 1 : 0,
+        bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0
+    };
+    
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/save-settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + (data.success || "Cambios guardados correctamente."));
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudieron guardar los cambios."));
+        }
+    } catch (err) {
+        alert("Error de conexión al guardar los cambios.");
+    }
+}
+
+async function saveAllTherapistsSettings() {
+    const rows = document.querySelectorAll('tr[data-therapist-id]');
+    if (rows.length === 0) {
+        alert("No hay psicólogos para guardar.");
+        return;
+    }
+    
+    let successCount = 0;
+    for (const row of rows) {
+        const userId = row.getAttribute('data-therapist-id');
+        const payload = {
+            mostrar_en_directorio: row.querySelector('.chk-mostrar-directorio')?.checked ? 1 : 0,
+            aviso_pago: row.querySelector('.chk-aviso-pago')?.checked ? 1 : 0,
+            bloqueo_registro: row.querySelector('.chk-bloqueo-registro')?.checked ? 1 : 0,
+            bloqueo_evoluciones: row.querySelector('.chk-bloqueo-evoluciones')?.checked ? 1 : 0,
+            bloqueo_finanzas: row.querySelector('.chk-bloqueo-finanzas')?.checked ? 1 : 0,
+            bloqueo_agenda: row.querySelector('.chk-bloqueo-agenda')?.checked ? 1 : 0,
+            bloqueo_mensajes: row.querySelector('.chk-bloqueo-mensajes')?.checked ? 1 : 0,
+            bloqueo_pizarra: row.querySelector('.chk-bloqueo-pizarra')?.checked ? 1 : 0,
+            bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0
+        };
+        
+        try {
+            const res = await fetch(`/api/superadmin/therapists/${userId}/save-settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) successCount++;
+        } catch (e) {}
+    }
+    
+    alert(`✅ ¡Todos los cambios fueron guardados con éxito en la base de datos! (${successCount} psicólogos actualizados)`);
+    loadSuperadminData();
 }
 
 async function toggleTherapistActive(userId) {

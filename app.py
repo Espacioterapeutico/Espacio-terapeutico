@@ -2373,6 +2373,38 @@ def superadmin_toggle_subscription(user_id):
     db.commit()
     return jsonify({'success': 'Estado de suscripción paga actualizado.', 'suscripcion_paga': new_status})
 
+@app.route('/api/superadmin/therapists/<int:user_id>/save-settings', methods=['POST'])
+@login_required
+def superadmin_save_therapist_settings(user_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+        
+    data = request.json or {}
+    db = get_db()
+    ensure_usuarios_columns(db)
+    cursor = db.cursor()
+    
+    mostrar_en_directorio = 1 if data.get('mostrar_en_directorio') else 0
+    aviso_pago = 1 if data.get('aviso_pago') else 0
+    bloqueo_registro = 1 if data.get('bloqueo_registro') else 0
+    bloqueo_evoluciones = 1 if data.get('bloqueo_evoluciones') else 0
+    bloqueo_finanzas = 1 if data.get('bloqueo_finanzas') else 0
+    bloqueo_agenda = 1 if data.get('bloqueo_agenda') else 0
+    bloqueo_mensajes = 1 if data.get('bloqueo_mensajes') else 0
+    bloqueo_pizarra = 1 if data.get('bloqueo_pizarra') else 0
+    bloqueo_herramientas = 1 if data.get('bloqueo_herramientas') else 0
+    
+    cursor.execute("""
+        UPDATE usuarios 
+        SET mostrar_en_directorio = ?, aviso_pago = ?,
+            bloqueo_registro = ?, bloqueo_evoluciones = ?, bloqueo_finanzas = ?,
+            bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?
+        WHERE id = ?
+    """, (mostrar_en_directorio, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas,
+          bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, user_id))
+    db.commit()
+    return jsonify({'success': '¡Cambios guardados con éxito en la base de datos!'})
+
 @app.route('/api/superadmin/therapists/<int:user_id>/toggle-feature', methods=['POST'])
 @login_required
 def superadmin_toggle_feature(user_id):
