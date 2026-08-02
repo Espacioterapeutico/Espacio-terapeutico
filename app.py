@@ -334,7 +334,7 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-CURRENT_SCHEMA_VER = "12"
+CURRENT_SCHEMA_VER = "13"
 
 def init_db():
     db = sqlite3.connect(DATABASE, timeout=30.0)
@@ -937,6 +937,20 @@ def init_db():
             valor TEXT
         )
     """)
+    
+    # Parche automático de migración y normalización de datos para bases de datos viejas o restauradas
+    try:
+        cursor.execute("""
+            UPDATE agenda_finanzas 
+            SET control_uso = 'Consumida' 
+            WHERE estado_pago = 'Paga' 
+              AND (tipo_consulta IS NULL OR (tipo_consulta NOT LIKE '%Prepago%' AND tipo_consulta NOT LIKE '%Paquete%'))
+        """)
+        cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
+        cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
+    except Exception as _patch_err:
+        print(f"Aviso en parche de datos automático: {_patch_err}")
+
     cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('schema_version', ?)", (CURRENT_SCHEMA_VER,))
     db.commit()
         
@@ -966,7 +980,7 @@ def restore_patients_from_firebase():
         import urllib.request
         import json
         req = urllib.request.Request(f"{FIREBASE_DB_URL}/pacientes.json")
-        with urllib.request.urlopen(req, timeout=5.0) as resp:
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
             fb_data = json.loads(resp.read().decode('utf-8'))
         if not fb_data or not isinstance(fb_data, dict):
             return
