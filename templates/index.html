@@ -543,6 +543,59 @@
         </footer>
     </div>
 
+    <!-- PÁGINA PÚBLICA DEDICADA DE PERFIL DEL PSICÓLOGO (/psic.tunombre) -->
+    <div id="public-therapist-profile-screen" class="public-landing-container hide">
+        <nav class="pub-navbar">
+            <div class="pub-navbar-brand">
+                <img src="/static/logo.png" alt="Espacio Terapéutico" class="pub-logo">
+                <a href="/" class="pub-brand-name" style="text-decoration: none;">Espacio Terapéutico</a>
+            </div>
+            <div class="pub-navbar-right" style="display: flex; align-items: center; gap: 1rem;">
+                <a href="/" style="text-decoration: none; font-weight: 600; color: #475569;" class="pub-desktop-links">Inicio</a>
+                <button class="pub-btn-login" onclick="openAuthModal()">Iniciar Sesión</button>
+            </div>
+        </nav>
+
+        <section style="background: linear-gradient(135deg, #3d1e3f 0%, #1a0b1c 100%); color: white; padding: 4.5rem 1.5rem; text-align: center;">
+            <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
+                <div style="width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 4px solid #fbcfe8; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-bottom: 1.25rem;">
+                    <img id="pub-profile-img" src="/static/logo.png" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <h1 id="pub-profile-name" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 2.3rem; font-weight: 800; margin-bottom: 0.35rem;">Psic. Cargar Perfil...</h1>
+                <p id="pub-profile-nomenclatura" style="font-size: 1.1rem; color: #fbcfe8; font-weight: 600; margin-bottom: 1.25rem;">Psicólogo Clínico</p>
+
+                <div id="pub-profile-mods" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.75rem;">
+                    <!-- Badges modalidades -->
+                </div>
+
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+                    <button type="button" class="pub-btn-primary" onclick="openRegisterModal(event)" style="font-size: 1rem; padding: 0.9rem 2.2rem; cursor: pointer; border: none;">📝 Registrarme en su Consulta</button>
+                    <a id="pub-profile-wa-btn" href="#" target="_blank" class="pub-btn-outline" style="font-size: 1rem; padding: 0.9rem 2.2rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">💬 Agendar Vía WhatsApp</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="pub-section">
+            <div class="pub-container" style="max-width: 850px;">
+                <div class="pub-card-highlight" style="margin-bottom: 2rem;">
+                    <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.3rem; color: #702e5e; margin-bottom: 0.75rem; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.4rem; display: inline-block;">Presentación Profesional & Biografía</h3>
+                    <p id="pub-profile-bio" style="font-size: 1.05rem; line-height: 1.7; color: #334155; white-space: pre-wrap;">Cargando información profesional...</p>
+                </div>
+
+                <div class="pub-card-highlight">
+                    <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.3rem; color: #702e5e; margin-bottom: 1rem; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.4rem; display: inline-block;">Contacto Directo & Redes Sociales</h3>
+                    <div id="pub-profile-contact-list" style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 1rem;">
+                        <!-- Detalles de contacto -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="pub-footer" style="text-align: center;">
+            <p>© Espacio Terapéutico — Todos los derechos reservados.</p>
+        </footer>
+    </div>
+
     <!-- PANTALLA DE LOGUEO / REGISTRO INICIAL (Bloqueo de seguridad) -->
     <div id="auth-screen" class="auth-container hide" style="display: none;">
         <div class="auth-card">

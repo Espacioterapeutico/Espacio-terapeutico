@@ -5327,6 +5327,40 @@ def get_public_landing_content():
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return resp
 
+@app.route('/api/public/therapist/<path:slug>', methods=['GET'])
+def get_public_therapist_profile(slug):
+    db = get_db()
+    ensure_usuarios_columns(db)
+    cursor = db.cursor()
+    psych = get_psychologist_by_id_or_slug(cursor, slug)
+    if not psych:
+        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+
+    modalidades = json.loads(psych['modalidades_json']) if psych.get('modalidades_json') else ["Online", "Presencial"]
+    redes = json.loads(psych['redes_sociales_json']) if psych.get('redes_sociales_json') else {}
+    
+    clean_slug = psych.get('slug') or generate_default_slug_for_user(psych)
+    foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
+    
+    resp = jsonify({
+        'id': psych['id'],
+        'nombres': psych['nombres'] or '',
+        'apellidos': psych['apellidos'] or '',
+        'nombre_completo': f"Psic. {psych['nombres'] or ''} {psych['apellidos'] or ''}".strip(),
+        'slug': clean_slug,
+        'nomenclatura': psych.get('nomenclatura') or psych.get('estudios') or 'Psicólogo Clínico',
+        'descripcion_biografia': psych.get('descripcion_biografia') or '',
+        'foto': foto_url,
+        'modalidades': modalidades,
+        'whatsapp_publico': psych.get('whatsapp_publico') or '',
+        'email_publico': psych.get('email_publico') or '',
+        'redes_sociales': redes,
+        'url_agendar': f"/agendar/{clean_slug}",
+        'url_registro': f"/registro/{clean_slug}"
+    })
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return resp
+
 @app.route('/api/admin/landing-content', methods=['POST'])
 @login_required
 def update_admin_landing_content():
@@ -9042,11 +9076,12 @@ def inject_asset_version():
 
 @app.route('/')
 @app.route('/inicio')
-def index():
-    return send_file(get_resource_path('templates/index.html'))
-
 @app.route('/login')
-def login_route():
+@app.route('/para-psicologos')
+@app.route('/psic.<path:slug>')
+@app.route('/agendar/<path:slug>')
+@app.route('/registro/<path:slug>')
+def index(slug=None):
     return send_file(get_resource_path('templates/index.html'))
 
 @app.route('/manifest.json')

@@ -13948,32 +13948,114 @@ function previewPublicProfileLive() {
     openModal('modal-preview-public-profile');
 }
 
+async function loadDedicatedTherapistProfile(slug) {
+    const pubLanding = document.getElementById('public-landing-screen');
+    const authScreen = document.getElementById('auth-screen');
+    const profScreen = document.getElementById('public-therapist-profile-screen');
+
+    if (pubLanding) pubLanding.classList.add('hide');
+    if (authScreen) {
+        authScreen.style.display = 'none';
+        authScreen.classList.add('hide');
+    }
+    if (profScreen) profScreen.classList.remove('hide');
+
+    try {
+        const cleanSlug = slug.replace('/psic.', '').replace('psic.', '').replace('/agendar/', '').replace('/registro/', '');
+        const res = await fetch(`/api/public/therapist/${cleanSlug}`);
+        if (!res.ok) {
+            if (profScreen) {
+                document.getElementById('pub-profile-name').textContent = "Psicólogo no encontrado";
+                document.getElementById('pub-profile-bio').textContent = "El perfil solicitado no existe o no se encuentra activo actualmente.";
+            }
+            return;
+        }
+        const t = await res.json();
+
+        if (document.getElementById('pub-profile-img')) document.getElementById('pub-profile-img').src = t.foto || '/static/logo.png';
+        if (document.getElementById('pub-profile-name')) document.getElementById('pub-profile-name').textContent = t.nombre_completo;
+        if (document.getElementById('pub-profile-nomenclatura')) document.getElementById('pub-profile-nomenclatura').textContent = t.nomenclatura || 'Psicólogo Clínico';
+        if (document.getElementById('pub-profile-bio')) document.getElementById('pub-profile-bio').textContent = t.descripcion_biografia || 'Bienvenido a mi espacio terapéutico profesional.';
+
+        const modsBox = document.getElementById('pub-profile-mods');
+        if (modsBox) {
+            const list = Array.isArray(t.modalidades) ? t.modalidades : ["Online", "Presencial"];
+            modsBox.innerHTML = list.map(m => {
+                let icon = "🌐";
+                if (m === "Presencial") icon = "🏢";
+                if (m === "Domicilio") icon = "🚗";
+                return `<span class="pub-mod-badge" style="background: rgba(255,255,255,0.18); color: #fff; padding: 5px 14px; border-radius: 20px; font-weight: 600; border: 1px solid rgba(255,255,255,0.3);">${icon} ${m}</span>`;
+            }).join(" ");
+        }
+
+        const waBtn = document.getElementById('pub-profile-wa-btn');
+        if (waBtn) {
+            if (t.whatsapp_publico) {
+                const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
+                const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, te escribo desde tu página de Espacio Terapéutico para consultar disponibilidad de citas.`);
+                waBtn.href = `https://wa.me/${cleanWa}?text=${waMsg}`;
+                waBtn.style.display = 'inline-flex';
+            } else {
+                waBtn.style.display = 'none';
+            }
+        }
+
+        const contactList = document.getElementById('pub-profile-contact-list');
+        if (contactList) {
+            let cHtml = '';
+            if (t.whatsapp_publico) {
+                const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
+                const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, me gustaría consultar información sobre tus consultas.`);
+                cHtml += `<div><strong>💬 WhatsApp de Atención Directa:</strong> <a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" style="color: #25d366; font-weight: 700; text-decoration: none;">${t.whatsapp_publico} (Enviar Mensaje)</a></div>`;
+            }
+            if (t.email_publico) {
+                cHtml += `<div><strong>✉️ Correo Electrónico:</strong> <a href="mailto:${t.email_publico}" style="color: #702e5e; font-weight: 600;">${t.email_publico}</a></div>`;
+            }
+            if (t.redes_sociales && t.redes_sociales.instagram) {
+                cHtml += `<div><strong>📷 Instagram:</strong> <span style="font-weight: 600; color: #e1306c;">${t.redes_sociales.instagram}</span></div>`;
+            }
+            if (t.redes_sociales && t.redes_sociales.linkedin) {
+                cHtml += `<div><strong>🔗 LinkedIn:</strong> <a href="${t.redes_sociales.linkedin}" target="_blank" style="color: #0a66c2; font-weight: 600;">${t.redes_sociales.linkedin}</a></div>`;
+            }
+            if (!cHtml) cHtml = '<p class="text-muted">El profesional no ha agregado información adicional de contacto directo.</p>';
+            contactList.innerHTML = cHtml;
+        }
+
+    } catch(e) {
+        console.error("Error al cargar perfil de psicólogo:", e);
+    }
+}
+
 function initLandingRouteHandling() {
     const path = window.location.pathname.toLowerCase();
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
+    const profScreen = document.getElementById('public-therapist-profile-screen');
     const appLayout = document.getElementById('app-layout');
     
     // Si la sesión ya está activa y el app-layout está visible, la portada pública DEBE mantenerse oculta
     if (appLayout && !appLayout.classList.contains('hide')) {
         if (pubLanding) pubLanding.classList.add('hide');
+        if (profScreen) profScreen.classList.add('hide');
         if (authScreen) {
             authScreen.style.display = 'none';
             authScreen.classList.add('hide');
         }
         return;
     }
-    
-    // Si la ruta es específicamente /login, mostrar la pantalla de logueo directa
-    if (path.includes('/login')) {
+
+    if (path.startsWith('/psic.') || path.startsWith('/agendar/') || path.startsWith('/registro/')) {
+        loadDedicatedTherapistProfile(path);
+    } else if (path.includes('/login')) {
         if (pubLanding) pubLanding.classList.add('hide');
+        if (profScreen) profScreen.classList.add('hide');
         if (authScreen) {
             authScreen.style.display = 'flex';
             authScreen.classList.remove('hide');
         }
     } else {
-        // En / o /inicio, mostrar la portada principal institucional
         if (pubLanding) pubLanding.classList.remove('hide');
+        if (profScreen) profScreen.classList.add('hide');
         if (authScreen) {
             authScreen.style.display = 'none';
             authScreen.classList.add('hide');
