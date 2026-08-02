@@ -9717,13 +9717,27 @@ def format_whatsapp_message(template_str, patient, cita, psicologo):
     if not template_str:
         template_str = "Hola {nombre}, te recordamos tu cita agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¿Nos confirmas tu asistencia por favor?"
     
-    pat_nombres = patient.get('nombres', '') if isinstance(patient, dict) or hasattr(patient, 'get') else patient['nombres']
-    pat_name = pat_nombres.strip().split()[0] if pat_nombres else "Consultante"
+    # Extraer primer nombre — soporta tanto clave 'nombres' como 'nombre' (nombre completo)
+    if isinstance(patient, dict) or hasattr(patient, 'get'):
+        pat_nombres = patient.get('nombres', '') or patient.get('nombre', '')
+    else:
+        try:
+            pat_nombres = patient['nombres']
+        except:
+            pat_nombres = ''
+    pat_name = pat_nombres.strip().split()[0] if pat_nombres and pat_nombres.strip() else "Consultante"
     
-    c_fecha = cita.get('fecha', '') if isinstance(cita, dict) or hasattr(cita, 'get') else cita['fecha']
-    c_hora = cita.get('hora', '') if isinstance(cita, dict) or hasattr(cita, 'get') else cita['hora']
-    c_tipo = cita.get('tipo_consulta', 'Online') if isinstance(cita, dict) or hasattr(cita, 'get') else cita['tipo_consulta']
-    c_link = cita.get('link_conexion', '') if isinstance(cita, dict) or hasattr(cita, 'get') else (cita['link_conexion'] if 'link_conexion' in cita.keys() else '')
+    # Extraer datos de la cita — soporta dict con clave 'modalidad' o 'tipo_consulta'
+    if isinstance(cita, dict) or hasattr(cita, 'get'):
+        c_fecha = cita.get('fecha', '')
+        c_hora = cita.get('hora', '')
+        c_tipo = cita.get('modalidad', '') or cita.get('tipo_consulta', 'Online')
+        c_link = cita.get('link_conexion', '')
+    else:
+        c_fecha = cita['fecha']
+        c_hora = cita['hora']
+        c_tipo = cita['tipo_consulta'] if 'tipo_consulta' in cita.keys() else 'Online'
+        c_link = cita['link_conexion'] if 'link_conexion' in cita.keys() else ''
     
     psic_nom = f"Psic. {psicologo['nombres']} {psicologo['apellidos']}" if psicologo else "Tu Terapeuta"
     
@@ -9736,6 +9750,7 @@ def format_whatsapp_message(template_str, patient, cita, psicologo):
     msg = msg.replace('{psicologo}', psic_nom)
     msg = msg.replace('{nombre_psicologo}', psic_nom)
     return msg
+
 
 @app.route('/api/whatsapp/sync-session', methods=['GET', 'POST'])
 def sync_whatsapp_session():
