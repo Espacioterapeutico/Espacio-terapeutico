@@ -5201,16 +5201,18 @@ def get_public_landing_content():
             'url_registro': f"/registro/{slug}"
         })
         
-    return jsonify({
+    resp = jsonify({
         'content': content,
         'therapists': therapists
     })
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return resp
 
 @app.route('/api/admin/landing-content', methods=['POST'])
 @login_required
 def update_admin_landing_content():
     """Permite al Superadmin actualizar los textos dinámicos de la portada web."""
-    if session.get('role') != 'superadmin' and session.get('user_id') != 1:
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'No tienes permisos para modificar la portada web.'}), 403
         
     data = request.json or {}

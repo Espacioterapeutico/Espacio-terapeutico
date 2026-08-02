@@ -837,7 +837,13 @@ function purgeClientCacheOnLogin() {
 function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba, nombres, apellidos) {
     purgeClientCacheOnLogin();
     document.body.classList.remove('is-patient');
-    document.getElementById('auth-screen').classList.add('hide');
+    const authScr = document.getElementById('auth-screen');
+    const pubLanding = document.getElementById('public-landing-screen');
+    if (authScr) {
+        authScr.style.display = 'none';
+        authScr.classList.add('hide');
+    }
+    if (pubLanding) pubLanding.classList.add('hide');
 
     // Actualizar avatar e iniciales del psicólogo en la barra superior
     const avatarEl = document.getElementById('header-user-avatar') || document.querySelector('.user-avatar');
@@ -1018,7 +1024,13 @@ function showPatientLayout(username, patientId) {
     sessionStorage.setItem('role', 'paciente');
     
     document.body.classList.add('is-patient');
-    document.getElementById('auth-screen').classList.add('hide');
+    const authScr = document.getElementById('auth-screen');
+    const pubLanding = document.getElementById('public-landing-screen');
+    if (authScr) {
+        authScr.style.display = 'none';
+        authScr.classList.add('hide');
+    }
+    if (pubLanding) pubLanding.classList.add('hide');
     document.getElementById('sidebar').classList.add('hide');
     document.getElementById('app-layout').classList.remove('hide');
     document.getElementById('patient-header').classList.remove('hide');
@@ -1090,7 +1102,26 @@ function showAuthScreen() {
     document.getElementById('patient-menu').classList.add('hide');
     document.getElementById('patient-menu-overlay').classList.add('hide');
     document.getElementById('sidebar').classList.remove('hide'); // Restaurar estado inicial
-    document.getElementById('auth-screen').classList.remove('hide');
+    
+    const path = window.location.pathname.toLowerCase();
+    const pubLanding = document.getElementById('public-landing-screen');
+    const authScreen = document.getElementById('auth-screen');
+    
+    if (path.includes('/login')) {
+        if (pubLanding) pubLanding.classList.add('hide');
+        if (authScreen) {
+            authScreen.style.display = 'flex';
+            authScreen.classList.remove('hide');
+        }
+    } else {
+        if (pubLanding) pubLanding.classList.remove('hide');
+        if (authScreen) {
+            authScreen.style.display = 'none';
+            authScreen.classList.add('hide');
+        }
+        loadLandingPageContent();
+    }
+    
     document.getElementById('auth-username').value = '';
     document.getElementById('auth-password').value = '';
     checkAdminExists();
@@ -13652,6 +13683,17 @@ function initLandingRouteHandling() {
     const path = window.location.pathname.toLowerCase();
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
+    const appLayout = document.getElementById('app-layout');
+    
+    // Si la sesión ya está activa y el app-layout está visible, la portada pública DEBE mantenerse oculta
+    if (appLayout && !appLayout.classList.contains('hide')) {
+        if (pubLanding) pubLanding.classList.add('hide');
+        if (authScreen) {
+            authScreen.style.display = 'none';
+            authScreen.classList.add('hide');
+        }
+        return;
+    }
     
     // Si la ruta es específicamente /login, mostrar la pantalla de logueo directa
     if (path.includes('/login')) {
