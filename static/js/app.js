@@ -14083,8 +14083,51 @@ async function loadDedicatedTherapistProfile(slug) {
 
         const agendarBtn = document.getElementById('pub-profile-wa-btn');
         if (agendarBtn) {
-            agendarBtn.href = `/agendar/${cleanSlug}`;
+            agendarBtn.href = '#';
             agendarBtn.style.display = 'inline-flex';
+            agendarBtn.onclick = async (e) => {
+                e.preventDefault();
+                // Ocultar el perfil y mostrar directamente la pantalla de agenda rápida
+                const pubLanding = document.getElementById('public-landing-screen');
+                const profScreen = document.getElementById('public-therapist-profile-screen');
+                const authScreen = document.getElementById('auth-screen');
+                const fastScreen = document.getElementById('fast-booking-screen');
+
+                if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
+                if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
+                if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
+                if (fastScreen) { fastScreen.classList.remove('hide'); fastScreen.style.display = 'flex'; }
+
+                window.scrollTo({ top: 0, behavior: 'instant' });
+                fastBookingTherapistId = cleanSlug;
+
+                // Nombre del terapeuta
+                const titleEl = document.getElementById('fast-booking-therapist-name');
+                if (titleEl) titleEl.textContent = t.nombre_completo || `Psic. ${cleanSlug}`;
+
+                // Cargar modalidades
+                try {
+                    const mRes = await fetch(`/api/psychologists/${cleanSlug}/modalities`);
+                    if (mRes.ok) {
+                        const modalities = await mRes.json();
+                        const selectElement = document.getElementById('fast-modalidad');
+                        if (selectElement) {
+                            selectElement.innerHTML = '';
+                            modalities.forEach(m => {
+                                const opt = document.createElement('option');
+                                opt.value = m;
+                                opt.textContent = m;
+                                selectElement.appendChild(opt);
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error al cargar modalidades para agenda rápida:', e);
+                }
+
+                initFastTimeZoneSelector();
+                renderFastCalendar();
+            };
         }
 
         // 4. Sección de Contacto (Solo logos de WhatsApp e Instagram, e ícono de sobre para correo sin "copiar")
