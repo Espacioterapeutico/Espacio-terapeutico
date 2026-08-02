@@ -958,10 +958,7 @@ def init_db():
         """)
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
         cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
-        try:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN mostrar_en_directorio INTEGER DEFAULT 1")
-        except Exception:
-            pass
+        ensure_usuarios_columns(db)
 
         def_landing_defaults = [
             ('landing_hero_title', 'Espacio Terapéutico'),
@@ -2234,14 +2231,39 @@ def check_is_superadmin():
         pass
     return False
 
+def ensure_usuarios_columns(db=None):
+    close_at_end = False
+    if db is None:
+        db = get_db()
+        close_at_end = True
+    cursor = db.cursor()
+    columns = [
+        ('mostrar_en_directorio', 'INTEGER DEFAULT 1'),
+        ('nomenclatura', 'TEXT'),
+        ('descripcion_biografia', 'TEXT'),
+        ('modalidades_json', 'TEXT'),
+        ('whatsapp_publico', 'TEXT'),
+        ('email_publico', 'TEXT'),
+        ('redes_sociales_json', 'TEXT')
+    ]
+    for col_name, col_type in columns:
+        try:
+            cursor.execute(f"ALTER TABLE usuarios ADD COLUMN {col_name} {col_type}")
+        except Exception:
+            pass
+    db.commit()
+    if close_at_end:
+        db.close()
+
 @app.route('/api/superadmin/therapists', methods=['GET'])
 @login_required
 def superadmin_get_therapists():
     if not check_is_superadmin():
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
+    db = get_db()
+    ensure_usuarios_columns(db)
     try:
-        db = get_db()
         cursor = db.cursor()
         cursor.execute("""
             SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, 
@@ -5216,6 +5238,7 @@ def admin_profile_slug():
 def get_public_landing_content():
     """Obtiene el contenido editable de la portada principal y el directorio público de psicólogos."""
     db = get_db()
+    ensure_usuarios_columns(db)
     cursor = db.cursor()
     
     # 1. Textos institucionales editables por el Superadmin
