@@ -5998,6 +5998,7 @@ def create_session():
                         WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
                         ORDER BY fecha ASC, id ASC LIMIT 1
                     """, (patient_id,))
+                    pkg = cursor.fetchone()
                     if not pkg:
                         fee_val, fee_curr = get_appointment_fee(cursor, patient_id, None, modalidad)
                         if fee_val > 0:
