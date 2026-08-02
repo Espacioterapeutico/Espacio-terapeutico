@@ -13609,12 +13609,32 @@ function renderTherapistsGrid(therapists) {
     
     grid.innerHTML = therapists.map(t => {
         const fotoUrl = t.foto || '/static/logo.png';
-        const modalidadesBadges = (t.modalidades || ["Online", "Presencial"]).map(m => {
-            let icon = "🌐";
-            if (m === "Presencial") icon = "🏢";
-            if (m === "Domicilio") icon = "🚗";
-            return `<span class="pub-mod-badge">${icon} ${m}</span>`;
-        }).join(" ");
+        let modalidadesBadges = '';
+        const modsData = t.modalidades_data || t.modalidades;
+        if (modsData && typeof modsData === 'object' && !Array.isArray(modsData)) {
+            const badgesArr = [];
+            if (modsData.online) {
+                const titleAttr = modsData.online_detalle ? `title="Plataformas: ${modsData.online_detalle}"` : '';
+                badgesArr.push(`<span class="pub-mod-badge" ${titleAttr}>🌐 Online</span>`);
+            }
+            if (modsData.presencial) {
+                const titleAttr = modsData.presencial_detalle ? `title="Dirección: ${modsData.presencial_detalle}"` : '';
+                badgesArr.push(`<span class="pub-mod-badge" ${titleAttr}>🏢 Presencial</span>`);
+            }
+            if (modsData.domicilio) {
+                const titleAttr = modsData.domicilio_detalle ? `title="Cobertura: ${modsData.domicilio_detalle}"` : '';
+                badgesArr.push(`<span class="pub-mod-badge" ${titleAttr}>🚗 A Domicilio</span>`);
+            }
+            modalidadesBadges = badgesArr.join(" ");
+        } else {
+            const list = Array.isArray(modsData) ? modsData : ["Online", "Presencial"];
+            modalidadesBadges = list.map(m => {
+                let icon = "🌐";
+                if (m === "Presencial") icon = "🏢";
+                if (m === "Domicilio") icon = "🚗";
+                return `<span class="pub-mod-badge">${icon} ${m}</span>`;
+            }).join(" ");
+        }
         
         let whatsappBtnHtml = '';
         if (t.whatsapp) {
@@ -13717,6 +13737,20 @@ function removePublicProfilePhoto() {
     if (fileInput) fileInput.value = '';
 }
 
+function toggleModalityDetailsUI() {
+    const chkOnline = document.getElementById('mod-online');
+    const boxOnline = document.getElementById('box-mod-online-details');
+    if (boxOnline) boxOnline.style.display = (chkOnline && chkOnline.checked) ? 'block' : 'none';
+
+    const chkPresencial = document.getElementById('mod-presencial');
+    const boxPresencial = document.getElementById('box-mod-presencial-details');
+    if (boxPresencial) boxPresencial.style.display = (chkPresencial && chkPresencial.checked) ? 'block' : 'none';
+
+    const chkDomicilio = document.getElementById('mod-domicilio');
+    const boxDomicilio = document.getElementById('box-mod-domicilio-details');
+    if (boxDomicilio) boxDomicilio.style.display = (chkDomicilio && chkDomicilio.checked) ? 'block' : 'none';
+}
+
 async function loadPublicProfileSettings() {
     try {
         const res = await fetch('/api/admin/profile-public');
@@ -13735,10 +13769,23 @@ async function loadPublicProfileSettings() {
         if (document.getElementById('prof-instagram')) document.getElementById('prof-instagram').value = redes.instagram || '';
         if (document.getElementById('prof-linkedin')) document.getElementById('prof-linkedin').value = redes.linkedin || '';
         
-        const mods = data.modalidades || ["Online", "Presencial"];
-        if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = mods.includes("Online");
-        if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = mods.includes("Presencial");
-        if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = mods.includes("Domicilio");
+        const mods = data.modalidades_data || data.modalidades || ["Online", "Presencial"];
+        if (mods && typeof mods === 'object' && !Array.isArray(mods)) {
+            if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = !!mods.online;
+            if (document.getElementById('mod-online-detalle')) document.getElementById('mod-online-detalle').value = mods.online_detalle || '';
+            
+            if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = !!mods.presencial;
+            if (document.getElementById('mod-presencial-detalle')) document.getElementById('mod-presencial-detalle').value = mods.presencial_detalle || '';
+            
+            if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = !!mods.domicilio;
+            if (document.getElementById('mod-domicilio-detalle')) document.getElementById('mod-domicilio-detalle').value = mods.domicilio_detalle || '';
+        } else {
+            const list = Array.isArray(mods) ? mods : ["Online", "Presencial"];
+            if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = list.includes("Online");
+            if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = list.includes("Presencial");
+            if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = list.includes("Domicilio");
+        }
+        toggleModalityDetailsUI();
     } catch(e) {
         console.error("Error al cargar perfil público de psicólogo:", e);
     }
@@ -13750,6 +13797,15 @@ async function savePublicProfileSettings() {
     if (document.getElementById('mod-presencial') && document.getElementById('mod-presencial').checked) modalidades.push("Presencial");
     if (document.getElementById('mod-domicilio') && document.getElementById('mod-domicilio').checked) modalidades.push("Domicilio");
     
+    const modalidades_data = {
+        online: document.getElementById('mod-online')?.checked || false,
+        online_detalle: document.getElementById('mod-online-detalle')?.value.trim() || '',
+        presencial: document.getElementById('mod-presencial')?.checked || false,
+        presencial_detalle: document.getElementById('mod-presencial-detalle')?.value.trim() || '',
+        domicilio: document.getElementById('mod-domicilio')?.checked || false,
+        domicilio_detalle: document.getElementById('mod-domicilio-detalle')?.value.trim() || ''
+    };
+
     const redes = {
         instagram: document.getElementById('prof-instagram') ? document.getElementById('prof-instagram').value.trim() : '',
         linkedin: document.getElementById('prof-linkedin') ? document.getElementById('prof-linkedin').value.trim() : ''
@@ -13763,6 +13819,7 @@ async function savePublicProfileSettings() {
         nomenclatura: document.getElementById('prof-nomenclatura').value.trim(),
         descripcion_biografia: document.getElementById('prof-biografia').value.trim(),
         modalidades: modalidades,
+        modalidades_data: modalidades_data,
         whatsapp_publico: document.getElementById('prof-whatsapp').value.trim(),
         email_publico: document.getElementById('prof-email').value.trim(),
         redes_sociales: redes
