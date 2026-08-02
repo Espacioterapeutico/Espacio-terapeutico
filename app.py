@@ -2215,7 +2215,7 @@ def fast_booking_book():
 @app.route('/api/superadmin/therapists', methods=['GET'])
 @login_required
 def superadmin_get_therapists():
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     db = get_db()
@@ -2234,7 +2234,7 @@ def superadmin_get_therapists():
 @app.route('/api/superadmin/create-psychologist', methods=['POST'])
 @login_required
 def superadmin_create_psychologist():
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     data = request.json
@@ -2279,7 +2279,7 @@ def superadmin_create_psychologist():
 @app.route('/api/superadmin/therapists/<int:user_id>/toggle-active', methods=['POST'])
 @login_required
 def superadmin_toggle_active(user_id):
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     db = get_db()
@@ -2305,7 +2305,7 @@ def superadmin_toggle_active(user_id):
 @app.route('/api/superadmin/therapists/<int:user_id>/toggle-subscription', methods=['POST'])
 @login_required
 def superadmin_toggle_subscription(user_id):
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     db = get_db()
@@ -2323,7 +2323,7 @@ def superadmin_toggle_subscription(user_id):
 @app.route('/api/superadmin/therapists/<int:user_id>/toggle-feature', methods=['POST'])
 @login_required
 def superadmin_toggle_feature(user_id):
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     data = request.json or {}
@@ -2347,7 +2347,7 @@ def superadmin_toggle_feature(user_id):
 @app.route('/api/superadmin/therapists/<int:user_id>/toggle-aviso-pago', methods=['POST'])
 @login_required
 def superadmin_toggle_aviso_pago(user_id):
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     db = get_db()
@@ -2365,7 +2365,7 @@ def superadmin_toggle_aviso_pago(user_id):
 @app.route('/api/superadmin/therapists/<int:user_id>/toggle-directorio', methods=['POST'])
 @login_required
 def superadmin_toggle_directorio(user_id):
-    if session.get('role') != 'superadmin' and session.get('role') != 'admin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado.'}), 403
         
     db = get_db()
@@ -2383,7 +2383,7 @@ def superadmin_toggle_directorio(user_id):
 @app.route('/api/superadmin/therapists/<int:user_id>/update-documents', methods=['POST'])
 @login_required
 def superadmin_update_therapist_documents(user_id):
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     data = request.json or {}
@@ -2446,7 +2446,7 @@ def send_support_ticket():
 @app.route('/api/superadmin/support', methods=['GET'])
 @login_required
 def superadmin_get_support_tickets():
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado.'}), 403
         
     db = get_db()
@@ -2458,7 +2458,7 @@ def superadmin_get_support_tickets():
 @app.route('/api/superadmin/support/<int:ticket_id>/mark-read', methods=['POST'])
 @login_required
 def superadmin_mark_ticket_read(ticket_id):
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado.'}), 403
         
     db = get_db()
@@ -2470,7 +2470,7 @@ def superadmin_mark_ticket_read(ticket_id):
 @app.route('/api/superadmin/support/<int:ticket_id>', methods=['DELETE'])
 @login_required
 def superadmin_delete_ticket(ticket_id):
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado.'}), 403
         
     db = get_db()
@@ -9286,7 +9286,7 @@ def complete_onboarding():
 @app.route('/api/superadmin/therapists/<int:user_id>', methods=['DELETE'])
 @login_required
 def superadmin_delete_therapist(user_id):
-    if session.get('role') != 'superadmin':
+    if session.get('role') not in ('superadmin', 'admin') and session.get('user_id') != 1:
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     db = get_db()
