@@ -242,8 +242,12 @@
     }
     @media (max-width: 768px) {
         .pub-grid-2 { grid-template-columns: 1fr; }
-        .pub-navbar-links { display: none; }
+        .pub-desktop-links { display: none !important; }
         .pub-hero-content h1 { font-size: 2.1rem; }
+        .pub-navbar { padding: 0.65rem 1rem; }
+        .pub-brand-name { font-size: 1.05rem; }
+        .pub-logo { width: 34px; height: 34px; }
+        .pub-btn-login { padding: 0.45rem 0.95rem; font-size: 0.8rem; }
     }
     .pub-info-box {
         background: white;
@@ -449,11 +453,13 @@
                 <img src="/static/logo.png" alt="Espacio Terapéutico" class="pub-logo">
                 <span class="pub-brand-name">Espacio Terapéutico</span>
             </div>
-            <div class="pub-navbar-links">
-                <a href="#section-quienes">¿Quiénes Somos?</a>
-                <a href="#section-mision">Misión y Visión</a>
-                <a href="#section-directorio">Psicólogos</a>
-                <a href="/para-psicologos" class="pub-link-highlight">Suscripción Psicólogos</a>
+            <div class="pub-navbar-right" style="display: flex; align-items: center; gap: 1rem;">
+                <div class="pub-navbar-links pub-desktop-links">
+                    <a href="#section-quienes">¿Quiénes Somos?</a>
+                    <a href="#section-mision">Misión y Visión</a>
+                    <a href="#section-directorio">Psicólogos</a>
+                    <a href="/para-psicologos" class="pub-link-highlight">Suscripción Psicólogos</a>
+                </div>
                 <button class="pub-btn-login" onclick="openAuthModal()">Iniciar Sesión</button>
             </div>
         </nav>
