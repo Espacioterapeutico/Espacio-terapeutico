@@ -1940,13 +1940,29 @@ def get_psychologist_by_id_or_slug(cursor, identifier):
         if r:
             return r
 
-    cursor.execute("SELECT * FROM usuarios WHERE LOWER(slug) = ? OR LOWER(username) = ?", (ident_str, ident_str))
+    clean_id = ident_str.replace("psic.", "").replace("psic-", "").strip().lower()
+    with_prefix = f"psic.{clean_id}"
+
+    # 1. Coincidencia exacta por slug (con o sin prefijo), username o id limpio
+    cursor.execute("""
+        SELECT * FROM usuarios 
+        WHERE LOWER(slug) = ? 
+           OR LOWER(slug) = ? 
+           OR LOWER(username) = ? 
+           OR LOWER(username) = ?
+    """, (ident_str, with_prefix, ident_str, clean_id))
     r = cursor.fetchone()
     if r:
         return r
 
-    clean_id = ident_str.replace("psic.", "").replace("psic-", "").strip()
-    cursor.execute("SELECT * FROM usuarios WHERE LOWER(slug) LIKE ? OR LOWER(username) LIKE ?", (f"%{clean_id}%", f"%{clean_id}%"))
+    # 2. Coincidencia por similitud en slug, username, o nombres + apellidos
+    cursor.execute("""
+        SELECT * FROM usuarios 
+        WHERE LOWER(slug) LIKE ? 
+           OR LOWER(username) LIKE ? 
+           OR (LOWER(nombres) || ' ' || LOWER(apellidos)) LIKE ?
+           OR (LOWER(nombres) || LOWER(apellidos)) LIKE ?
+    """, (f"%{clean_id}%", f"%{clean_id}%", f"%{clean_id}%", f"%{clean_id}%"))
     return cursor.fetchone()
 
 @app.route('/agendar/<identifier>', methods=['GET'])

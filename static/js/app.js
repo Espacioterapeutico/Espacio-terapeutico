@@ -13984,12 +13984,19 @@ async function loadDedicatedTherapistProfile(slug) {
     const authScreen = document.getElementById('auth-screen');
     const profScreen = document.getElementById('public-therapist-profile-screen');
 
-    if (pubLanding) pubLanding.classList.add('hide');
+    if (pubLanding) {
+        pubLanding.classList.add('hide');
+        pubLanding.style.display = 'none';
+    }
     if (authScreen) {
         authScreen.style.display = 'none';
         authScreen.classList.add('hide');
     }
-    if (profScreen) profScreen.classList.remove('hide');
+    if (profScreen) {
+        profScreen.classList.remove('hide');
+        profScreen.style.display = 'block';
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' });
 
     try {
         const cleanSlug = slug.replace('/psic.', '').replace('psic.', '').replace('/agendar/', '').replace('/registro/', '');
@@ -14078,15 +14085,15 @@ function initLandingRouteHandling() {
     if (path.startsWith('/psic.') || path.startsWith('/agendar/') || path.startsWith('/registro/')) {
         loadDedicatedTherapistProfile(path);
     } else if (path.includes('/login')) {
-        if (pubLanding) pubLanding.classList.add('hide');
-        if (profScreen) profScreen.classList.add('hide');
+        if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
+        if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
         if (authScreen) {
             authScreen.style.display = 'flex';
             authScreen.classList.remove('hide');
         }
     } else {
-        if (pubLanding) pubLanding.classList.remove('hide');
-        if (profScreen) profScreen.classList.add('hide');
+        if (pubLanding) { pubLanding.classList.remove('hide'); pubLanding.style.display = 'block'; }
+        if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
         if (authScreen) {
             authScreen.style.display = 'none';
             authScreen.classList.add('hide');

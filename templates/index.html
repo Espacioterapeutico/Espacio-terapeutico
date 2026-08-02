@@ -438,11 +438,12 @@
     .pub-footer-brand img {
         width: 32px;
         height: 32px;
-        border-radius: 50%;
-    }
-    .pub-footer-brand span {
+        .pub-footer-brand span {
         font-weight: 700;
         color: white;
+    }
+    .hide {
+        display: none !important;
     }
     </style>
 
@@ -458,75 +459,86 @@
                     <a href="#section-quienes">¿Quiénes Somos?</a>
                     <a href="#section-mision">Misión y Visión</a>
                     <a href="#section-directorio">Psicólogos</a>
-                    <a href="/para-psicologos" class="pub-link-highlight">Suscripción Psicólogos</a>
+                    <a href="#section-suscripcion">Suscripción</a>
                 </div>
                 <button class="pub-btn-login" onclick="openAuthModal()">Iniciar Sesión</button>
             </div>
         </nav>
 
-        <!-- HERO BANNER BIENVENIDA -->
-        <section class="pub-hero-banner">
-            <div class="pub-hero-content">
-                <span class="pub-badge-pill">Red Profesional de Salud Mental</span>
-                <h1 id="landing-render-hero-title">Espacio Terapéutico</h1>
-                <p id="landing-render-hero-subtitle">Tu portal seguro de atención psicológica clínica y acompañamiento humano 24/7</p>
-                <div class="pub-hero-buttons">
-                    <a href="#section-directorio" class="pub-btn-primary">Agendar Consulta</a>
-                    <a href="/para-psicologos" class="pub-btn-outline">¿Eres Psicólogo? Únete</a>
+        <!-- BANNER DE ENCABEZADO (HERO) -->
+        <section class="pub-hero">
+            <div class="pub-container pub-hero-grid">
+                <div class="pub-hero-text">
+                    <h1 id="landing-render-hero-title">Tu Salud Mental en Manos de Profesionales Calificados</h1>
+                    <p id="landing-render-hero-subtitle">Conecta con psicólogos colegiados, gestiona tu bienestar y accede a terapia presencial u online de forma rápida, segura y confidencial.</p>
+                    <div class="pub-hero-buttons">
+                        <a href="#section-directorio" class="pub-btn-primary">Explorar Psicólogos</a>
+                        <button class="pub-btn-outline" onclick="openAuthModal()">Iniciar Sesión</button>
+                    </div>
+                </div>
+                <div class="pub-hero-image">
+                    <img src="/static/logo.png" alt="Espacio Terapéutico Ilustración" class="pub-hero-logo">
                 </div>
             </div>
         </section>
 
-        <!-- SECCIÓN: ¿QUIÉNES SOMOS? -->
+        <!-- SECCIÓN 1: ¿QUIÉNES SOMOS? -->
         <section id="section-quienes" class="pub-section">
             <div class="pub-container">
-                <div class="pub-section-title">
-                    <h2>¿Quiénes Somos?</h2>
-                    <div class="pub-line"></div>
-                </div>
                 <div class="pub-card-highlight">
-                    <p id="landing-render-quienes">Somos una red de profesionales de la psicología enfocados en brindar acompañamiento terapéutico humano, ético y accesible...</p>
+                    <h2 class="pub-section-title">¿Quiénes Somos?</h2>
+                    <div class="pub-divider"></div>
+                    <p id="landing-render-quienes" class="pub-text-body">
+                        Espacio Terapéutico es una plataforma integral diseñada para conectar a las personas con profesionales de la salud mental rigurosamente certificados. Ofrecemos un entorno seguro, confidencial y tecnológicamente avanzado tanto para consultantes como para terapeutas.
+                    </p>
                 </div>
             </div>
         </section>
 
-        <!-- SECCIÓN: MISIÓN Y VISIÓN -->
+        <!-- SECCIÓN 2: MISIÓN Y VISIÓN -->
         <section id="section-mision" class="pub-section pub-bg-soft">
             <div class="pub-container">
                 <div class="pub-grid-2">
-                    <div class="pub-info-box">
+                    <div class="pub-card">
+                        <div class="pub-icon-circle">🎯</div>
                         <h3>Misión</h3>
-                        <p id="landing-render-mision">Promover el bienestar emocional y la salud mental ofreciendo espacios terapéuticos seguros, accesibles y profesionales...</p>
+                        <p id="landing-render-mision">Facilitar el acceso a servicios de psicología de alta calidad, proporcionando a los profesionales herramientas modernas de gestión clínica y garantizando a los pacientes una atención ética, accesible y efectiva.</p>
                     </div>
-                    <div class="pub-info-box">
+                    <div class="pub-card">
+                        <div class="pub-icon-circle">👁️</div>
                         <h3>Visión</h3>
-                        <p id="landing-render-vision">Consolidarnos como la red de salud mental de referencia en habla hispana...</p>
+                        <p id="landing-render-vision">Ser la red de referencia y el ecosistema tecnológico líder en atención terapéutica y gestión psicológica en Latinoamérica, promoviendo el bienestar mental integral de la sociedad.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- SECCIÓN: DIRECTORIO DE PSICÓLOGOS -->
+        <!-- SECCIÓN 3: DIRECTORIO DE PSICÓLOGOS -->
         <section id="section-directorio" class="pub-section">
             <div class="pub-container">
-                <div class="pub-section-title">
+                <div class="pub-section-header">
                     <h2>Directorio de Psicólogos</h2>
-                    <p class="pub-subtitle">Conoce a nuestro equipo de profesionales calificados, sus modalidades de consulta y agenda tu cita en vivo</p>
-                    <div class="pub-line"></div>
+                    <p>Conoce a nuestro equipo de profesionales calificados, sus modalidades de consulta y agenda tu cita en vivo</p>
+                    <div class="pub-divider"></div>
                 </div>
-                <div id="pub-therapists-container" class="pub-therapists-grid">
-                    <!-- Renderizado dinámicamente desde JS -->
+
+                <!-- Grid dinámico de tarjetas de psicólogos -->
+                <div id="landing-therapists-grid" class="pub-therapists-grid">
+                    <div class="pub-loading-state">Cargando directorio de profesionales...</div>
                 </div>
             </div>
         </section>
 
-        <!-- SECCIÓN: CAPTACIÓN DE PSICÓLOGOS (SaaS) -->
-        <section class="pub-section pub-saas-banner">
-            <div class="pub-container">
-                <div class="pub-saas-card">
-                    <h2>¿Eres Psicólogo y deseas tu propia plataforma?</h2>
-                    <p>Únete a Espacio Terapéutico y obtén tu agenda automatizada 24/7, historias clínicas cifradas, gestión financiera multimoneda y tu enlace personalizado.</p>
-                    <a href="/para-psicologos" class="pub-btn-accent">Ver Beneficios y Suscribirme</a>
+        <!-- SECCIÓN 4: SUSCRIPCIÓN PARA PSICÓLOGOS (SAAS) -->
+        <section id="section-suscripcion" class="pub-section pub-bg-dark">
+            <div class="pub-container text-center" style="max-width: 800px;">
+                <h2 style="color: white; font-size: 2.2rem; margin-bottom: 1rem;">¿Eres Psicólogo Profesional?</h2>
+                <p style="color: #cbd5e1; font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">
+                    Únete a Espacio Terapéutico. Gestiona tus pacientes, expediente clínico digital, agenda interactiva, recibos y cobros automáticos desde una plataforma hecha para tu práctica profesional.
+                </p>
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <button class="pub-btn-primary" onclick="openAuthModal()">Comenzar Prueba Gratis (1 Mes)</button>
+                    <button class="pub-btn-outline" onclick="openAuthModal()" style="border-color: white; color: white;">Conocer Planes de Suscripción</button>
                 </div>
             </div>
         </section>
@@ -544,14 +556,14 @@
     </div>
 
     <!-- PÁGINA PÚBLICA DEDICADA DE PERFIL DEL PSICÓLOGO (/psic.tunombre) -->
-    <div id="public-therapist-profile-screen" class="public-landing-container hide">
+    <div id="public-therapist-profile-screen" class="public-landing-container hide" style="display: none;">
         <nav class="pub-navbar">
             <div class="pub-navbar-brand">
                 <img src="/static/logo.png" alt="Espacio Terapéutico" class="pub-logo">
                 <a href="/" class="pub-brand-name" style="text-decoration: none;">Espacio Terapéutico</a>
             </div>
             <div class="pub-navbar-right" style="display: flex; align-items: center; gap: 1rem;">
-                <a href="/" style="text-decoration: none; font-weight: 600; color: #475569;" class="pub-desktop-links">Inicio</a>
+                <a href="/" style="text-decoration: none; font-weight: 700; color: #702e5e; padding: 0.55rem 1.25rem; background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 25px;">🏠 Volver al Inicio</a>
                 <button class="pub-btn-login" onclick="openAuthModal()">Iniciar Sesión</button>
             </div>
         </nav>
@@ -587,6 +599,12 @@
                     <div id="pub-profile-contact-list" style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 1rem;">
                         <!-- Detalles de contacto -->
                     </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 2.5rem; margin-bottom: 1rem;">
+                    <a href="/" style="display: inline-flex; align-items: center; gap: 8px; font-size: 1.05rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 2px solid #f0abfc; padding: 0.85rem 2.2rem; border-radius: 30px; text-decoration: none; box-shadow: 0 4px 15px rgba(112, 46, 94, 0.1);">
+                        ⬅️ Volver a Espacio Terapéutico (Inicio)
+                    </a>
                 </div>
             </div>
         </section>
