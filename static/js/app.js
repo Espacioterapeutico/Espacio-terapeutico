@@ -14093,16 +14093,16 @@ async function loadDedicatedTherapistProfile(slug) {
             if (t.whatsapp_publico) {
                 const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
                 const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, me gustaría consultar información sobre tus servicios y disponibilidad.`);
-                cHtml += `<a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" title="WhatsApp (${t.whatsapp_publico})" style="background: #25d366; color: white; width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.5rem; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                    💬
+                cHtml += `<a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" title="WhatsApp (${t.whatsapp_publico})" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    <img src="/static/logo_whatsapp.png" alt="WhatsApp" style="width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(37, 211, 102, 0.4));">
                 </a>`;
             }
             
             if (t.redes_sociales && t.redes_sociales.instagram) {
                 let igUser = t.redes_sociales.instagram.replace('@', '').trim();
                 let igLink = igUser.startsWith('http') ? igUser : `https://instagram.com/${igUser}`;
-                cHtml += `<a href="${igLink}" target="_blank" title="Instagram (@${igUser})" style="background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.4rem; box-shadow: 0 4px 14px rgba(225, 48, 108, 0.4); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                    📷
+                cHtml += `<a href="${igLink}" target="_blank" title="Instagram (@${igUser})" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    <img src="/static/logo_instagram.png" alt="Instagram" style="width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(225, 48, 108, 0.4));">
                 </a>`;
             }
 
