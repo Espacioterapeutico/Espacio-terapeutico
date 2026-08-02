@@ -1655,8 +1655,9 @@
                                     </div>
                                 </div>
 
-                                <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
-                                    <button class="btn btn-primary" onclick="savePublicProfileSettings()" style="font-weight: 700; padding: 0.75rem 2rem;">💾 Guardar Mi Perfil Público</button>
+                                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="previewPublicProfileLive()" style="font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 25px; cursor: pointer; border: 1px solid #702e5e; color: #702e5e;">👁️ Vista Previa de Mi Perfil</button>
+                                    <button type="button" class="btn btn-primary" onclick="savePublicProfileSettings()" style="font-weight: 700; padding: 0.75rem 2rem; border-radius: 25px; cursor: pointer;">💾 Guardar Mi Perfil Público</button>
                                 </div>
                             </div>
                         </div>
@@ -5250,6 +5251,43 @@
             <div class="modal-footer" style="background: white; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">💡 Vista previa interactiva de simulación.</span>
                 <button type="button" class="btn btn-secondary" onclick="closeModal('modal-tool-patient-preview')">Cerrar Previsualización</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE VISTA PRELIMINAR DEL PERFIL DEL PSICÓLOGO -->
+    <div id="modal-preview-public-profile" class="modal hide">
+        <div class="modal-content" style="max-width: 650px; border-radius: 20px; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+                <h3 style="margin: 0; font-family: var(--font-title, 'Outfit', sans-serif); color: #702e5e; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                    👁️ Vista Previa: Perfil Público Profesional
+                </h3>
+                <button type="button" class="close-btn" onclick="closeModal('modal-preview-public-profile')" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; align-items: center; text-align: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
+                <div style="width: 110px; height: 110px; border-radius: 50%; overflow: hidden; margin-bottom: 1rem; border: 3px solid #fbcfe8; box-shadow: 0 6px 15px rgba(0,0,0,0.08);">
+                    <img id="prev-modal-img" src="/static/logo.png" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <h2 id="prev-modal-name" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem;">Psic. Nombre Apellido</h2>
+                <p id="prev-modal-nomenclatura" style="font-size: 0.95rem; color: #702e5e; font-weight: 600; margin-bottom: 1rem;">Psicólogo Clínico</p>
+
+                <div id="prev-modal-mods" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.25rem;">
+                    <!-- Badges de modalidades -->
+                </div>
+
+                <div style="background: #f8fafc; padding: 1.25rem; border-radius: 12px; text-align: left; width: 100%; margin-bottom: 1.25rem; border: 1px solid #e2e8f0;">
+                    <h4 style="font-size: 0.85rem; color: #475569; font-weight: 700; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">Biografía & Presentación</h4>
+                    <p id="prev-modal-bio" style="color: #334155; font-size: 0.92rem; line-height: 1.6; margin: 0; white-space: pre-wrap;">Breve presentación profesional...</p>
+                </div>
+
+                <div id="prev-modal-contact-details" style="display: flex; flex-direction: column; gap: 0.4rem; text-align: left; width: 100%; background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px dashed #cbd5e1; font-size: 0.88rem;">
+                    <!-- WhatsApp, Email, Redes -->
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 1.25rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-preview-public-profile')" style="border-radius: 20px; font-weight: 600;">Cerrar Vista Previa</button>
             </div>
         </div>
     </div>

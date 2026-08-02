@@ -13715,19 +13715,67 @@ async function saveLandingPageContent() {
     }
 }
 
-function previewPublicProfilePhoto(event) {
+function compressAndOptimizeImage(file, maxDimension = 1000, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxDimension) {
+                        height = Math.round((height * maxDimension) / width);
+                        width = maxDimension;
+                    }
+                } else {
+                    if (height > maxDimension) {
+                        width = Math.round((width * maxDimension) / height);
+                        height = maxDimension;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(dataUrl);
+            };
+            img.onerror = function(err) {
+                reject(err);
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function(err) {
+            reject(err);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function previewPublicProfilePhoto(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-        alert("La imagen seleccionada es demasiado grande. Por favor selecciona una imagen menor a 5MB.");
-        return;
+    
+    const preview = document.getElementById('set-perfil-preview-img');
+    if (preview) preview.style.opacity = '0.5';
+    
+    try {
+        // Redimensiona y comprime automáticamente CUALQUIER imagen (incluso de 10MB o 20MB)
+        const compressedBase64 = await compressAndOptimizeImage(file, 1000, 0.85);
+        if (preview) {
+            preview.src = compressedBase64;
+            preview.style.opacity = '1';
+        }
+    } catch(err) {
+        alert("No se pudo procesar la imagen seleccionada. Intenta con otra fotografía.");
+        if (preview) preview.style.opacity = '1';
     }
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const preview = document.getElementById('set-perfil-preview-img');
-        if (preview) preview.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
 }
 
 function removePublicProfilePhoto() {
@@ -13841,6 +13889,63 @@ async function savePublicProfileSettings() {
     } catch(e) {
         alert("Error de conexión al guardar perfil público.");
     }
+}
+
+function previewPublicProfileLive() {
+    const previewImg = document.getElementById('set-perfil-preview-img');
+    const fotoSrc = previewImg ? previewImg.src : '/static/logo.png';
+    const nomenclatura = document.getElementById('prof-nomenclatura') ? document.getElementById('prof-nomenclatura').value.trim() : 'Psicólogo Clínico';
+    const biografia = document.getElementById('prof-biografia') ? document.getElementById('prof-biografia').value.trim() : '';
+    const whatsapp = document.getElementById('prof-whatsapp') ? document.getElementById('prof-whatsapp').value.trim() : '';
+    const email = document.getElementById('prof-email') ? document.getElementById('prof-email').value.trim() : '';
+    const instagram = document.getElementById('prof-instagram') ? document.getElementById('prof-instagram').value.trim() : '';
+    const linkedin = document.getElementById('prof-linkedin') ? document.getElementById('prof-linkedin').value.trim() : '';
+
+    const chkOnline = document.getElementById('mod-online')?.checked;
+    const onlineDetalle = document.getElementById('mod-online-detalle')?.value.trim();
+    const chkPresencial = document.getElementById('mod-presencial')?.checked;
+    const presencialDetalle = document.getElementById('mod-presencial-detalle')?.value.trim();
+    const chkDomicilio = document.getElementById('mod-domicilio')?.checked;
+    const domicilioDetalle = document.getElementById('mod-domicilio-detalle')?.value.trim();
+
+    if (document.getElementById('prev-modal-img')) document.getElementById('prev-modal-img').src = fotoSrc;
+    if (document.getElementById('prev-modal-name')) {
+        let uName = 'Tu Nombre';
+        if (window.sessionUser) {
+            uName = `${sessionUser.nombres || ''} ${sessionUser.apellidos || ''}`.trim() || sessionUser.username || 'Tu Nombre';
+        }
+        document.getElementById('prev-modal-name').textContent = uName.toLowerCase().startsWith('psic') ? uName : `Psic. ${uName}`;
+    }
+    if (document.getElementById('prev-modal-nomenclatura')) document.getElementById('prev-modal-nomenclatura').textContent = nomenclatura || 'Psicólogo Clínico';
+    if (document.getElementById('prev-modal-bio')) document.getElementById('prev-modal-bio').textContent = biografia || 'Escribe aquí tu presentación profesional para que tus consultantes puedan conocerte mejor.';
+
+    const modsBox = document.getElementById('prev-modal-mods');
+    if (modsBox) {
+        let badgesHtml = '';
+        if (chkOnline) {
+            badgesHtml += `<span class="pub-mod-badge" style="background:#e0f2fe; color:#0369a1; padding:4px 12px; border-radius:12px; font-weight:600; font-size:0.85rem;">🌐 Online ${onlineDetalle ? `(${onlineDetalle})` : ''}</span> `;
+        }
+        if (chkPresencial) {
+            badgesHtml += `<span class="pub-mod-badge" style="background:#fce7f3; color:#be185d; padding:4px 12px; border-radius:12px; font-weight:600; font-size:0.85rem;">🏢 Presencial ${presencialDetalle ? `(${presencialDetalle})` : ''}</span> `;
+        }
+        if (chkDomicilio) {
+            badgesHtml += `<span class="pub-mod-badge" style="background:#fef3c7; color:#b45309; padding:4px 12px; border-radius:12px; font-weight:600; font-size:0.85rem;">🚗 A Domicilio ${domicilioDetalle ? `(${domicilioDetalle})` : ''}</span> `;
+        }
+        modsBox.innerHTML = badgesHtml || '<span class="text-muted text-sm">Sin modalidades activadas</span>';
+    }
+
+    const contactBox = document.getElementById('prev-modal-contact-details');
+    if (contactBox) {
+        let cHtml = '';
+        if (whatsapp) cHtml += `<div><strong>💬 WhatsApp de Contacto:</strong> ${whatsapp}</div>`;
+        if (email) cHtml += `<div><strong>✉️ Correo Público:</strong> ${email}</div>`;
+        if (instagram) cHtml += `<div><strong>📷 Instagram:</strong> ${instagram}</div>`;
+        if (linkedin) cHtml += `<div><strong>🔗 LinkedIn:</strong> ${linkedin}</div>`;
+        if (!cHtml) cHtml = '<div class="text-muted text-sm">No has especificado datos de contacto públicos aún.</div>';
+        contactBox.innerHTML = cHtml;
+    }
+
+    openModal('modal-preview-public-profile');
 }
 
 function initLandingRouteHandling() {
