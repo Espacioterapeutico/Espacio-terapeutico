@@ -14085,37 +14085,36 @@ async function loadDedicatedTherapistProfile(slug) {
             }
         }
 
-        // 4. Sección de Contacto (Botón WhatsApp wa.me, Botón Instagram link, Correo copiar/pegar)
+        // 4. Sección de Contacto (Solo logos de WhatsApp e Instagram, e ícono de sobre para correo sin "copiar")
         const contactList = document.getElementById('pub-profile-contact-list');
         if (contactList) {
-            let cHtml = '<div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: flex-start; margin-top: 0.5rem;">';
+            let cHtml = '<div style="display: flex; gap: 1.2rem; flex-wrap: wrap; align-items: center; justify-content: flex-start; margin-top: 0.5rem;">';
             
             if (t.whatsapp_publico) {
                 const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
                 const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, me gustaría consultar información sobre tus servicios y disponibilidad.`);
-                cHtml += `<a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" style="background: #25d366; color: white; padding: 0.85rem 1.6rem; border-radius: 30px; text-decoration: none; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.35); font-size: 1rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
-                    💬 Escribir por WhatsApp (${t.whatsapp_publico})
+                cHtml += `<a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" title="WhatsApp (${t.whatsapp_publico})" style="background: #25d366; color: white; width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.5rem; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    💬
                 </a>`;
             }
             
             if (t.redes_sociales && t.redes_sociales.instagram) {
                 let igUser = t.redes_sociales.instagram.replace('@', '').trim();
                 let igLink = igUser.startsWith('http') ? igUser : `https://instagram.com/${igUser}`;
-                cHtml += `<a href="${igLink}" target="_blank" style="background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; padding: 0.85rem 1.6rem; border-radius: 30px; text-decoration: none; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(225, 48, 108, 0.35); font-size: 1rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
-                    📷 Abrir Instagram (@${igUser})
+                cHtml += `<a href="${igLink}" target="_blank" title="Instagram (@${igUser})" style="background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.4rem; box-shadow: 0 4px 14px rgba(225, 48, 108, 0.4); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    📷
                 </a>`;
             }
 
             if (t.email_publico) {
-                cHtml += `<div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 0.75rem 1.4rem; border-radius: 30px; font-weight: 700; color: #702e5e; display: inline-flex; align-items: center; gap: 8px; font-size: 0.98rem;">
-                    ✉️ Correo: <span style="user-select: all; color: #475569; font-weight: 600;">${t.email_publico}</span>
-                    <button type="button" onclick="navigator.clipboard.writeText('${t.email_publico}'); alert('¡Correo copiado al portapapeles!');" style="background: #702e5e; color: white; border: none; padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; font-weight: 700; margin-left: 6px;">Copiar</button>
-                </div>`;
+                cHtml += `<a href="mailto:${t.email_publico}" title="Enviar correo a ${t.email_publico}" style="display: inline-flex; align-items: center; gap: 8px; color: #334155; font-weight: 600; font-size: 1rem; text-decoration: none; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 0.7rem 1.4rem; border-radius: 30px; transition: background 0.2s;" onmouseover="this.style.background='#fae8ff'" onmouseout="this.style.background='#fdf4ff'">
+                    ✉️ <span>${t.email_publico}</span>
+                </a>`;
             }
 
             if (t.redes_sociales && t.redes_sociales.linkedin) {
-                cHtml += `<a href="${t.redes_sociales.linkedin}" target="_blank" style="background: #0a66c2; color: white; padding: 0.85rem 1.5rem; border-radius: 30px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem;">
-                    🔗 LinkedIn
+                cHtml += `<a href="${t.redes_sociales.linkedin}" target="_blank" title="LinkedIn" style="background: #0a66c2; color: white; width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.35rem; box-shadow: 0 4px 14px rgba(10, 102, 194, 0.4); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    🔗
                 </a>`;
             }
 
