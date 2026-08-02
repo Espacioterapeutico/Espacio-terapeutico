@@ -5369,16 +5369,34 @@ def get_public_therapist_profile(slug):
     if not psych:
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
 
-    try:
-        modalidades = json.loads(psych['modalidades_json']) if psych.get('modalidades_json') else ["Online", "Presencial"]
-    except Exception:
-        modalidades = ["Online", "Presencial"]
+    modalidades_raw = psych.get('modalidades_json')
+    modalidades_data = {}
+    modalidades_list = []
+    
+    if modalidades_raw:
+        try:
+            parsed = json.loads(modalidades_raw)
+            if isinstance(parsed, dict):
+                modalidades_data = parsed
+                if parsed.get('online'): modalidades_list.append("Online")
+                if parsed.get('presencial'): modalidades_list.append("Presencial")
+                if parsed.get('domicilio'): modalidades_list.append("Domicilio")
+            elif isinstance(parsed, list):
+                modalidades_list = parsed
+                for m in parsed:
+                    modalidades_data[str(m).lower()] = True
+        except Exception:
+            modalidades_list = ["Online", "Presencial"]
+            modalidades_data = {'online': True, 'presencial': True}
+    else:
+        modalidades_list = ["Online", "Presencial"]
+        modalidades_data = {'online': True, 'presencial': True}
 
     try:
         redes = json.loads(psych['redes_sociales_json']) if psych.get('redes_sociales_json') else {}
     except Exception:
         redes = {}
-    
+        
     clean_slug = psych.get('slug') or generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
     
@@ -5391,7 +5409,8 @@ def get_public_therapist_profile(slug):
         'nomenclatura': psych.get('nomenclatura') or psych.get('estudios') or 'Psicólogo Clínico',
         'descripcion_biografia': psych.get('descripcion_biografia') or '',
         'foto': foto_url,
-        'modalidades': modalidades,
+        'modalidades': modalidades_list,
+        'modalidades_data': modalidades_data,
         'whatsapp_publico': psych.get('whatsapp_publico') or '',
         'email_publico': psych.get('email_publico') or '',
         'redes_sociales': redes,

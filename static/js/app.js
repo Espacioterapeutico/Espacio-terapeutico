@@ -13983,15 +13983,9 @@ async function loadDedicatedTherapistProfile(slug) {
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
     const profScreen = document.getElementById('public-therapist-profile-screen');
-
-    if (pubLanding) {
-        pubLanding.classList.add('hide');
-        pubLanding.style.display = 'none';
-    }
-    if (authScreen) {
-        authScreen.style.display = 'none';
-        authScreen.classList.add('hide');
-    }
+    
+    if (pubLanding) pubLanding.classList.add('hide');
+    if (authScreen) authScreen.classList.add('hide');
     if (profScreen) {
         profScreen.classList.remove('hide');
         profScreen.style.display = 'block';
@@ -13999,7 +13993,7 @@ async function loadDedicatedTherapistProfile(slug) {
     window.scrollTo({ top: 0, behavior: 'instant' });
 
     try {
-        const cleanSlug = slug.replace('/psic.', '').replace('psic.', '').replace('/agendar/', '').replace('/registro/', '');
+        const cleanSlug = slug.replace('/psic.', '').replace('psic.', '').replace('/agendar/', '').replace('/registro/', '').replace('/', '');
         const res = await fetch(`/api/public/therapist/${cleanSlug}`);
         if (!res.ok) {
             if (profScreen) {
@@ -14015,6 +14009,7 @@ async function loadDedicatedTherapistProfile(slug) {
         if (document.getElementById('pub-profile-nomenclatura')) document.getElementById('pub-profile-nomenclatura').textContent = t.nomenclatura || 'Psicólogo Clínico';
         if (document.getElementById('pub-profile-bio')) document.getElementById('pub-profile-bio').textContent = t.descripcion_biografia || 'Bienvenido a mi espacio terapéutico profesional.';
 
+        // 1. Badges de modalidades en el banner principal
         const modsBox = document.getElementById('pub-profile-mods');
         if (modsBox) {
             const list = Array.isArray(t.modalidades) ? t.modalidades : ["Online", "Presencial"];
@@ -14022,8 +14017,54 @@ async function loadDedicatedTherapistProfile(slug) {
                 let icon = "🌐";
                 if (m === "Presencial") icon = "🏢";
                 if (m === "Domicilio") icon = "🚗";
-                return `<span class="pub-mod-badge" style="background: rgba(255,255,255,0.18); color: #fff; padding: 5px 14px; border-radius: 20px; font-weight: 600; border: 1px solid rgba(255,255,255,0.3);">${icon} ${m}</span>`;
+                return `<span class="pub-mod-badge" style="background: rgba(255,255,255,0.18); color: #fff; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">${icon} ${m}</span>`;
             }).join(" ");
+        }
+
+        // 2. Sección detallada de Modalidades y sus Descripciones
+        const modsDetailBox = document.getElementById('pub-profile-mods-detail');
+        if (modsDetailBox) {
+            const mData = t.modalidades_data || {};
+            let mHtml = '';
+            
+            if (mData.online || (Array.isArray(t.modalidades) && t.modalidades.includes("Online"))) {
+                const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Plataformas / Modalidad: <strong>${mData.online_detalle}</strong></p>` : '';
+                mHtml += `<div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #702e5e; font-size: 1.1rem;">🌐 Atención Online / Teleterapia</div>
+                    <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Sesiones dinámicas y privadas por videollamada desde la comodidad de tu hogar o lugar preferido.</p>
+                    ${det}
+                </div>`;
+            }
+            if (mData.presencial || (Array.isArray(t.modalidades) && t.modalidades.includes("Presencial"))) {
+                const det = mData.presencial_direccion ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Ubicación / Consultorio: <strong>${mData.presencial_direccion}</strong></p>` : '';
+                mHtml += `<div style="background: #f0fdf4; border: 1.5px solid #86efac; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 1.1rem;">🏢 Consulta Presencial en Consultorio</div>
+                    <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Atención cálida, confidencial y personalizada en espacio físico especialmente acondicionado.</p>
+                    ${det}
+                </div>`;
+            }
+            if (mData.domicilio || (Array.isArray(t.modalidades) && t.modalidades.includes("Domicilio"))) {
+                const det = mData.domicilio_zonas ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Zonas de Cobertura: <strong>${mData.domicilio_zonas}</strong></p>` : '';
+                mHtml += `<div style="background: #f0f9ff; border: 1.5px solid #93c5fd; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e40af; font-size: 1.1rem;">🚗 Atención a Domicilio</div>
+                    <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Visita profesional directa en tu domicilio u oficina según disponibilidad y zonas coordinadas.</p>
+                    ${det}
+                </div>`;
+            }
+            
+            if (!mHtml) {
+                mHtml = '<p class="text-muted">Modalidades de consulta a convenir con el profesional.</p>';
+            }
+            modsDetailBox.innerHTML = mHtml;
+        }
+
+        // 3. Botones de Registro y Agenda
+        const regBtn = document.getElementById('pub-profile-reg-btn');
+        if (regBtn) {
+            regBtn.onclick = (e) => {
+                e.preventDefault();
+                window.location.href = `/registro/${t.id || cleanSlug}`;
+            };
         }
 
         const waBtn = document.getElementById('pub-profile-wa-btn');
@@ -14038,9 +14079,11 @@ async function loadDedicatedTherapistProfile(slug) {
             }
         }
 
+        // 4. Botones de Redes Sociales al Final (WhatsApp e Instagram destacados)
         const contactList = document.getElementById('pub-profile-contact-list');
         if (contactList) {
-            let cHtml = '';
+            let cHtml = '<div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; justify-content: center;">';
+            
             if (t.whatsapp_publico) {
                 const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
                 const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, me gustaría consultar información sobre tus consultas.`);
