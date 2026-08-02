@@ -13433,6 +13433,7 @@ function openAuthModal() {
     const authScreen = document.getElementById('auth-screen');
     if (pubLanding) pubLanding.classList.add('hide');
     if (authScreen) {
+        authScreen.style.display = 'flex';
         authScreen.classList.remove('hide');
         authScreen.scrollIntoView({ behavior: 'smooth' });
     }
@@ -13635,11 +13636,17 @@ function initLandingRouteHandling() {
     // Si la ruta es específicamente /login, mostrar la pantalla de logueo directa
     if (path.includes('/login')) {
         if (pubLanding) pubLanding.classList.add('hide');
-        if (authScreen) authScreen.classList.remove('hide');
+        if (authScreen) {
+            authScreen.style.display = 'flex';
+            authScreen.classList.remove('hide');
+        }
     } else {
         // En / o /inicio, mostrar la portada principal institucional
         if (pubLanding) pubLanding.classList.remove('hide');
-        if (authScreen) authScreen.classList.add('hide');
+        if (authScreen) {
+            authScreen.style.display = 'none';
+            authScreen.classList.add('hide');
+        }
         loadLandingPageContent();
     }
 }
