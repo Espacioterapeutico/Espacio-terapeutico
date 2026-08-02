@@ -498,19 +498,14 @@
             </div>
         </nav>
 
-        <!-- BANNER DE ENCABEZADO (HERO) -->
-        <section class="pub-hero" style="background: linear-gradient(135deg, #3d1e3f 0%, #1a0b1c 100%); color: white; padding: 4.5rem 1.5rem;">
-            <div class="pub-container pub-hero-grid">
-                <div class="pub-hero-text">
-                    <h1 id="landing-render-hero-title">Tu Salud Mental en Manos de Profesionales Calificados</h1>
-                    <p id="landing-render-hero-subtitle">Conecta con psicólogos colegiados, gestiona tu bienestar y accede a terapia presencial u online de forma rápida, segura y confidencial.</p>
-                    <div class="pub-hero-buttons">
-                        <a href="#section-directorio" class="pub-btn-primary">Explorar Psicólogos</a>
-                        <button class="pub-btn-outline" onclick="openAuthModal()">Iniciar Sesión</button>
-                    </div>
-                </div>
-                <div class="pub-hero-image">
-                    <img src="/static/logo.png" alt="Espacio Terapéutico Ilustración" class="pub-hero-logo" style="max-width: 240px; width: 100%; height: auto; border-radius: 50%; border: 4px solid #fbcfe8; box-shadow: 0 12px 30px rgba(0,0,0,0.25);">
+        <!-- BANNER DE ENCABEZADO (HERO CENTRADO) -->
+        <section class="pub-hero" style="background: linear-gradient(135deg, #3d1e3f 0%, #1a0b1c 100%); color: white; padding: 5.5rem 1.5rem; text-align: center;">
+            <div class="pub-container" style="max-width: 850px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
+                <h1 id="landing-render-hero-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 2.75rem; font-weight: 800; margin-bottom: 1.25rem; line-height: 1.2; text-shadow: 0 4px 15px rgba(0,0,0,0.3);">Tu Salud Mental en Manos de Profesionales Calificados</h1>
+                <p id="landing-render-hero-subtitle" style="font-size: 1.15rem; color: #fbcfe8; line-height: 1.7; max-width: 720px; margin: 0 auto 2.25rem auto;">Conecta con psicólogos colegiados, gestiona tu bienestar y accede a terapia presencial u online de forma rápida, segura y confidencial.</p>
+                <div class="pub-hero-buttons" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <a href="#section-directorio" class="pub-btn-primary" style="font-size: 1.05rem; padding: 0.95rem 2.4rem;">Explorar Psicólogos</a>
+                    <button class="pub-btn-outline" onclick="openAuthModal()" style="font-size: 1.05rem; padding: 0.95rem 2.4rem;">Iniciar Sesión</button>
                 </div>
             </div>
         </section>
