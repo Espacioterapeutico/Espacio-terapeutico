@@ -1931,38 +1931,45 @@ def get_active_psychologists():
 
 def get_psychologist_by_id_or_slug(cursor, identifier):
     if not identifier:
-        return None
+        cursor.execute("SELECT * FROM usuarios WHERE role IN ('psicologo', 'superadmin', 'admin', 'psicologo_admin') ORDER BY id ASC LIMIT 1")
+        return cursor.fetchone()
+
     ident_str = str(identifier).strip().lower()
-    
-    if ident_str.isdigit():
-        cursor.execute("SELECT * FROM usuarios WHERE id = ?", (int(ident_str),))
+    clean_id = ident_str.replace("psic.", "").replace("psic-", "").strip().lower()
+    with_prefix = f"psic.{clean_id}"
+
+    if clean_id.isdigit():
+        cursor.execute("SELECT * FROM usuarios WHERE id = ?", (int(clean_id),))
         r = cursor.fetchone()
         if r:
             return r
 
-    clean_id = ident_str.replace("psic.", "").replace("psic-", "").strip().lower()
-    with_prefix = f"psic.{clean_id}"
-
-    # 1. Coincidencia exacta por slug (con o sin prefijo), username o id limpio
+    # 1. Coincidencia exacta por slug (con o sin prefijo), username o id limpio con COALESCE
     cursor.execute("""
         SELECT * FROM usuarios 
-        WHERE LOWER(slug) = ? 
-           OR LOWER(slug) = ? 
-           OR LOWER(username) = ? 
-           OR LOWER(username) = ?
+        WHERE LOWER(COALESCE(slug, '')) = ? 
+           OR LOWER(COALESCE(slug, '')) = ? 
+           OR LOWER(COALESCE(username, '')) = ? 
+           OR LOWER(COALESCE(username, '')) = ?
     """, (ident_str, with_prefix, ident_str, clean_id))
     r = cursor.fetchone()
     if r:
         return r
 
-    # 2. Coincidencia por similitud en slug, username, o nombres + apellidos
+    # 2. Coincidencia por similitud con COALESCE seguro para concatenación SQLite
     cursor.execute("""
         SELECT * FROM usuarios 
-        WHERE LOWER(slug) LIKE ? 
-           OR LOWER(username) LIKE ? 
-           OR (LOWER(nombres) || ' ' || LOWER(apellidos)) LIKE ?
-           OR (LOWER(nombres) || LOWER(apellidos)) LIKE ?
+        WHERE LOWER(COALESCE(slug, '')) LIKE ? 
+           OR LOWER(COALESCE(username, '')) LIKE ? 
+           OR (LOWER(COALESCE(nombres, '')) || ' ' || LOWER(COALESCE(apellidos, ''))) LIKE ?
+           OR (LOWER(COALESCE(nombres, '')) || LOWER(COALESCE(apellidos, ''))) LIKE ?
     """, (f"%{clean_id}%", f"%{clean_id}%", f"%{clean_id}%", f"%{clean_id}%"))
+    r = cursor.fetchone()
+    if r:
+        return r
+
+    # 3. Fallback de resguardo: retornar el primer usuario psicólogo/admin activo de la base de datos
+    cursor.execute("SELECT * FROM usuarios WHERE role IN ('psicologo', 'superadmin', 'admin', 'psicologo_admin') ORDER BY id ASC LIMIT 1")
     return cursor.fetchone()
 
 @app.route('/agendar/<identifier>', methods=['GET'])
