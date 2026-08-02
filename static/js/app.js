@@ -13816,6 +13816,17 @@ async function loadPublicProfileSettings() {
         const redes = data.redes_sociales || {};
         if (document.getElementById('prof-instagram')) document.getElementById('prof-instagram').value = redes.instagram || '';
         if (document.getElementById('prof-linkedin')) document.getElementById('prof-linkedin').value = redes.linkedin || '';
+
+        const baseUrl = `${window.location.protocol}//${window.location.host}`;
+        const slug = data.slug || (window.sessionUser ? `psic.${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : '');
+        if (slug) {
+            const cleanSlug = slug.replace(/^psic\./, '');
+            const fullProfileUrl = `${baseUrl}/psic.${cleanSlug}`;
+            const fullRegisterUrl = `${baseUrl}/registro/psic.${cleanSlug}`;
+            if (document.getElementById('prof-link-perfil')) document.getElementById('prof-link-perfil').value = fullProfileUrl;
+            if (document.getElementById('prof-link-perfil-btn')) document.getElementById('prof-link-perfil-btn').href = fullProfileUrl;
+            if (document.getElementById('prof-link-registro')) document.getElementById('prof-link-registro').value = fullRegisterUrl;
+        }
         
         const mods = data.modalidades_data || data.modalidades || ["Online", "Presencial"];
         if (mods && typeof mods === 'object' && !Array.isArray(mods)) {
