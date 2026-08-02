@@ -8311,12 +8311,18 @@ async function loadSuperadminData() {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Cargando psicólogos...</td></tr>';
     
     try {
-        const res = await fetch('/api/superadmin/therapists');
+        const res = await fetch('/api/superadmin/therapists?_t=' + Date.now());
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error de autorización.</td></tr>';
+            console.error("Error al cargar psicólogos superadmin:", res.status, data);
+            if (res.status === 401) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">⚠️ Tu sesión expiró. Por favor haz clic en <b>[Cerrar Sesión]</b> en el menú lateral e ingresa de nuevo para actualizar tus permisos de administrador.</td></tr>';
+            } else {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">⚠️ ${data.error || 'Error al cargar la lista de psicólogos.'}</td></tr>`;
+            }
             return;
         }
-        const list = await res.json();
+        const list = Array.isArray(data) ? data : [];
         tbody.innerHTML = '';
         
         if (list.length === 0) {

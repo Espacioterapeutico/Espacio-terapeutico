@@ -2240,18 +2240,27 @@ def superadmin_get_therapists():
     if not check_is_superadmin():
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("""
-        SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga,
-               bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, aviso_pago,
-               COALESCE(mostrar_en_directorio, 1) as mostrar_en_directorio
-        FROM usuarios
-        WHERE role = 'psicologo'
-        ORDER BY id DESC
-    """)
-    rows = cursor.fetchall()
-    return jsonify([dict(r) for r in rows])
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("""
+            SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, 
+                   COALESCE(activo, 1) as activo, fecha_registro, fecha_expiracion_prueba, COALESCE(suscripcion_paga, 0) as suscripcion_paga,
+                   COALESCE(bloqueo_registro, 0) as bloqueo_registro, COALESCE(bloqueo_evoluciones, 0) as bloqueo_evoluciones, 
+                   COALESCE(bloqueo_finanzas, 0) as bloqueo_finanzas, COALESCE(bloqueo_agenda, 0) as bloqueo_agenda, 
+                   COALESCE(bloqueo_mensajes, 0) as bloqueo_mensajes, COALESCE(bloqueo_pizarra, 0) as bloqueo_pizarra, 
+                   COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, COALESCE(aviso_pago, 0) as aviso_pago,
+                   COALESCE(mostrar_en_directorio, 1) as mostrar_en_directorio
+            FROM usuarios
+            WHERE (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin')
+              AND id != ?
+            ORDER BY id DESC
+        """, (session.get('user_id'),))
+        rows = cursor.fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        print(f"Error en superadmin_get_therapists: {e}")
+        return jsonify({'error': f'Error al obtener lista de psicólogos: {str(e)}'}), 500
 
 @app.route('/api/superadmin/create-psychologist', methods=['POST'])
 @login_required
