@@ -9825,7 +9825,7 @@ def cron_send_whatsapp_reminders():
 
     cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio')")
     cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
-    tmpl_conf_default = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para solicitar la confirmación de tu cita agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¿Nos confirmas tu asistencia por favor?"
+    tmpl_conf_default = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
     tmpl_rec_default = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
 
     enviados_confirmaciones = []
