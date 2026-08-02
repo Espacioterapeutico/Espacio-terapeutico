@@ -8381,7 +8381,10 @@ async function loadSuperadminData() {
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_mensajes === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'mensajes', this.checked)"> Bloquear Recordatorios</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_pizarra === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'pizarra', this.checked)"> Bloquear Pizarra</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" ${p.bloqueo_herramientas === 1 ? 'checked' : ''} onchange="toggleTherapistFeature(${p.id}, 'herramientas', this.checked)"> Bloquear Herramientas</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.35rem; margin-top: 0.25rem;">
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #047857; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.35rem; margin-top: 0.25rem;">
+                            <input type="checkbox" ${p.mostrar_en_directorio === 1 ? 'checked' : ''} onchange="toggleTherapistDirectorio(${p.id})"> 🌐 Mostrar en Directorio Público
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.25rem; margin-top: 0.15rem;">
                             <input type="checkbox" ${p.aviso_pago === 1 ? 'checked' : ''} onchange="toggleTherapistAvisoPago(${p.id})"> Activar Aviso de Pago (No Solvente)
                         </label>
                     </div>
@@ -8391,11 +8394,16 @@ async function loadSuperadminData() {
                         <div style="margin-bottom: 0.2rem;">
                             ${trialBadge}
                         </div>
-                        <div style="display: flex; gap: 0.35rem;">
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: center;">
                             <button class="btn btn-sm" style="padding: 2px 8px; font-size: 0.75rem; ${subBtnStyle}" onclick="toggleTherapistSubscription(${p.id})">${subBtnText}</button>
                             <button class="btn btn-sm ${buttonClass}" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleTherapistActive(${p.id})">${buttonText}</button>
                         </div>
-                        <button type="button" class="btn btn-sm" style="padding: 3px 8px; font-size: 0.75rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-top: 0.2rem;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">🗑️ Eliminar</button>
+                        <div style="display: flex; gap: 0.35rem; margin-top: 0.2rem;">
+                            <button type="button" class="btn btn-sm ${p.mostrar_en_directorio === 1 ? 'btn-outline-success' : 'btn-outline-secondary'}" style="padding: 2px 6px; font-size: 0.7rem; font-weight: 700;" onclick="toggleTherapistDirectorio(${p.id})">
+                                ${p.mostrar_en_directorio === 1 ? '🌐 En Directorio' : '🚫 Oculto'}
+                            </button>
+                            <button type="button" class="btn btn-sm" style="padding: 2px 6px; font-size: 0.7rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">🗑️ Eliminar</button>
+                        </div>
                     </div>
                 </td>
             `;
@@ -8420,13 +8428,12 @@ async function toggleTherapistActive(userId) {
     }
 }
 
-async function toggleTherapistFeature(userId, feature, isChecked) {
-    const status = isChecked ? 1 : 0;
+async function toggleTherapistFeature(userId, feature, checked) {
     try {
         const res = await fetch(`/api/superadmin/therapists/${userId}/toggle-feature`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ feature, status })
+            body: JSON.stringify({ feature, status: checked ? 1 : 0 })
         });
         if (!res.ok) {
             alert("Error al cambiar estado de función.");

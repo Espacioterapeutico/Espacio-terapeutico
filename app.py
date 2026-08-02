@@ -958,6 +958,10 @@ def init_db():
         """)
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
         cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
+        try:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN mostrar_en_directorio INTEGER DEFAULT 1")
+        except Exception:
+            pass
 
         def_landing_defaults = [
             ('landing_hero_title', 'Espacio Terapéutico'),
@@ -2218,7 +2222,8 @@ def superadmin_get_therapists():
     cursor = db.cursor()
     cursor.execute("""
         SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga,
-               bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, aviso_pago
+               bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas, bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, aviso_pago,
+               COALESCE(mostrar_en_directorio, 1) as mostrar_en_directorio
         FROM usuarios
         WHERE role = 'psicologo'
         ORDER BY id DESC
@@ -2356,6 +2361,24 @@ def superadmin_toggle_aviso_pago(user_id):
     cursor.execute("UPDATE usuarios SET aviso_pago = ? WHERE id = ?", (new_status, user_id))
     db.commit()
     return jsonify({'success': True, 'aviso_pago': new_status})
+
+@app.route('/api/superadmin/therapists/<int:user_id>/toggle-directorio', methods=['POST'])
+@login_required
+def superadmin_toggle_directorio(user_id):
+    if session.get('role') != 'superadmin' and session.get('role') != 'admin':
+        return jsonify({'error': 'Acceso denegado.'}), 403
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT COALESCE(mostrar_en_directorio, 1) as mostrar_en_directorio FROM usuarios WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+        
+    new_val = 0 if row['mostrar_en_directorio'] == 1 else 1
+    cursor.execute("UPDATE usuarios SET mostrar_en_directorio = ? WHERE id = ?", (new_val, user_id))
+    db.commit()
+    return jsonify({'success': 'Visibilidad en directorio actualizada.', 'mostrar_en_directorio': new_val})
 
 @app.route('/api/superadmin/therapists/<int:user_id>/update-documents', methods=['POST'])
 @login_required
@@ -5174,7 +5197,9 @@ def get_public_landing_content():
         SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo, foto_documento,
                nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json
         FROM usuarios 
-        WHERE (COALESCE(activo, 1) = 1) AND (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin' OR role = 'superadmin')
+        WHERE (COALESCE(activo, 1) = 1) 
+          AND (COALESCE(mostrar_en_directorio, 1) = 1) 
+          AND (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin' OR role = 'superadmin')
         ORDER BY id ASC
     """)
     therapists_rows = cursor.fetchall()
