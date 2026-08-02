@@ -13492,7 +13492,7 @@ function closeAuthModal(e) {
 
 async function loadLandingPageContent() {
     try {
-        const res = await fetch('/api/public/landing-content');
+        const res = await fetch('/api/public/landing-content?_t=' + Date.now());
         if (!res.ok) return;
         const data = await res.json();
         
@@ -13573,7 +13573,7 @@ function renderTherapistsGrid(therapists) {
 
 async function loadLandingPageContentForAdmin() {
     try {
-        const res = await fetch('/api/public/landing-content');
+        const res = await fetch('/api/public/landing-content?_t=' + Date.now());
         if (!res.ok) return;
         const data = await res.json();
         const content = data.content || {};
@@ -13609,6 +13609,7 @@ async function saveLandingPageContent() {
         if (res.ok) {
             alert(data.success || "Contenidos actualizados correctamente.");
             loadLandingPageContent();
+            loadLandingPageContentForAdmin();
         } else {
             alert(data.error || "Error al guardar contenidos.");
         }
