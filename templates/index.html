@@ -1711,11 +1711,17 @@
                                         <!-- MODALIDAD ONLINE -->
                                         <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem;">
                                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
-                                                <input type="checkbox" id="mod-online" value="Online" checked onchange="toggleModalityDetailsUI()"> 🌐 Modalidad Online (Teleconsulta)
+                                                <input type="checkbox" id="mod-online" value="Online" checked onchange="toggleModalityDetailsUI()"> 🌐 Modalidad Online / Teleconsulta
                                             </label>
-                                            <div id="box-mod-online-details" style="margin-top: 0.5rem; padding-left: 1.6rem;">
-                                                <input type="text" id="mod-online-detalle" class="form-control" placeholder="Ej: Google Meet, Zoom, WhatsApp Video (Enlace directo enviado al agendar)" style="font-size: 0.88rem;">
-                                                <small style="color: #64748b; margin-top: 0.2rem; display: block;">Especifica las plataformas virtuales que utilizas para tus sesiones.</small>
+                                            <div id="box-mod-online-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                                <div>
+                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
+                                                    <input type="text" id="mod-online-titulo" class="form-control" placeholder="Ej: Consulta Online, Teleterapia, etc." value="Consulta Online" style="font-size: 0.88rem;">
+                                                </div>
+                                                <div>
+                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Plataformas / Detalles:</label>
+                                                    <input type="text" id="mod-online-detalle" class="form-control" placeholder="Ej: Google Meet, Zoom, WhatsApp Video" style="font-size: 0.88rem;">
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1724,9 +1730,15 @@
                                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
                                                 <input type="checkbox" id="mod-presencial" value="Presencial" checked onchange="toggleModalityDetailsUI()"> 🏢 Modalidad Presencial (Consultorio)
                                             </label>
-                                            <div id="box-mod-presencial-details" style="margin-top: 0.5rem; padding-left: 1.6rem;">
-                                                <input type="text" id="mod-presencial-detalle" class="form-control" placeholder="Ej: Av. Francisco de Miranda, Centro Profesional Altamira, Piso 4, Consultorio 42, Caracas" style="font-size: 0.88rem;">
-                                                <small style="color: #64748b; margin-top: 0.2rem; display: block;">Escribe la dirección exacta o ubicación física de tu consultorio.</small>
+                                            <div id="box-mod-presencial-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                                <div>
+                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
+                                                    <input type="text" id="mod-presencial-titulo" class="form-control" placeholder="Ej: Consulta Presencial en Consultorio" value="Consulta Presencial" style="font-size: 0.88rem;">
+                                                </div>
+                                                <div>
+                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Ubicación / Dirección exacta:</label>
+                                                    <input type="text" id="mod-presencial-detalle" class="form-control" placeholder="Ej: Av. Francisco de Miranda, Centro Profesional Altamira..." style="font-size: 0.88rem;">
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1735,9 +1747,15 @@
                                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
                                                 <input type="checkbox" id="mod-domicilio" value="Domicilio" onchange="toggleModalityDetailsUI()"> 🚗 Modalidad A Domicilio
                                             </label>
-                                            <div id="box-mod-domicilio-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: none;">
-                                                <input type="text" id="mod-domicilio-detalle" class="form-control" placeholder="Ej: Atención disponible en el Municipio Chacao, Baruta y El Hatillo" style="font-size: 0.88rem;">
-                                                <small style="color: #64748b; margin-top: 0.2rem; display: block;">Indica las zonas geográficas o municipios con cobertura a domicilio.</small>
+                                            <div id="box-mod-domicilio-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: none; flex-direction: column; gap: 0.5rem;">
+                                                <div>
+                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
+                                                    <input type="text" id="mod-domicilio-titulo" class="form-control" placeholder="Ej: Atención a Domicilio, Visita Residencial" value="Atención a Domicilio" style="font-size: 0.88rem;">
+                                                </div>
+                                                <div>
+                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Zonas de cobertura:</label>
+                                                    <input type="text" id="mod-domicilio-detalle" class="form-control" placeholder="Ej: Municipio Chacao, Baruta y El Hatillo" style="font-size: 0.88rem;">
+                                                </div>
                                             </div>
                                         </div>
 

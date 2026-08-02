@@ -5470,7 +5470,37 @@ def admin_profile_public():
         if not u:
             return jsonify({'error': 'Usuario no encontrado.'}), 404
             
-        modalidades = json.loads(u['modalidades_json']) if u['modalidades_json'] else ["Online", "Presencial"]
+        modalidades_raw = u['modalidades_json']
+        modalidades_data = {}
+        modalidades_list = []
+        if modalidades_raw:
+            try:
+                parsed = json.loads(modalidades_raw)
+                if isinstance(parsed, dict):
+                    modalidades_data = parsed
+                    if parsed.get('online'): modalidades_list.append("Online")
+                    if parsed.get('presencial'): modalidades_list.append("Presencial")
+                    if parsed.get('domicilio'): modalidades_list.append("Domicilio")
+                elif isinstance(parsed, list):
+                    modalidades_list = parsed
+                    modalidades_data = {
+                        'online': 'Online' in parsed,
+                        'online_titulo': 'Consulta Online',
+                        'online_detalle': '',
+                        'presencial': 'Presencial' in parsed,
+                        'presencial_titulo': 'Consulta Presencial',
+                        'presencial_detalle': '',
+                        'domicilio': 'Domicilio' in parsed,
+                        'domicilio_titulo': 'Atención a Domicilio',
+                        'domicilio_detalle': ''
+                    }
+            except Exception:
+                modalidades_list = ["Online", "Presencial"]
+                modalidades_data = {'online': True, 'online_titulo': 'Consulta Online', 'presencial': True, 'presencial_titulo': 'Consulta Presencial'}
+        else:
+            modalidades_list = ["Online", "Presencial"]
+            modalidades_data = {'online': True, 'online_titulo': 'Consulta Online', 'presencial': True, 'presencial_titulo': 'Consulta Presencial'}
+
         redes = json.loads(u['redes_sociales_json']) if u['redes_sociales_json'] else {}
         
         slug = u['slug'] or generate_default_slug_for_user(u)
@@ -5484,7 +5514,8 @@ def admin_profile_public():
             'fast_booking_url': f"/agendar/psic.{clean_slug}",
             'nomenclatura': u['nomenclatura'] or u['estudios'] or 'Psicólogo Clínico',
             'descripcion_biografia': u['descripcion_biografia'] or '',
-            'modalidades': modalidades,
+            'modalidades': modalidades_list,
+            'modalidades_data': modalidades_data,
             'whatsapp_publico': u['whatsapp_publico'] or '',
             'email_publico': u['email_publico'] or '',
             'redes_sociales': redes,
@@ -5494,7 +5525,11 @@ def admin_profile_public():
         data = request.json or {}
         nomenclatura = data.get('nomenclatura', '').strip()
         descripcion = data.get('descripcion_biografia', '').strip()
-        modalidades = data.get('modalidades', ["Online", "Presencial"])
+        
+        mods_data = data.get('modalidades_data')
+        if not mods_data:
+            mods_data = data.get('modalidades', ["Online", "Presencial"])
+
         whatsapp = data.get('whatsapp_publico', '').strip()
         email = data.get('email_publico', '').strip()
         redes = data.get('redes_sociales', {})
@@ -5511,7 +5546,7 @@ def admin_profile_public():
                     redes_sociales_json = ?,
                     foto_titulo = CASE WHEN ? != '' THEN ? ELSE foto_titulo END
                 WHERE id = ?
-            """, (nomenclatura, descripcion, json.dumps(modalidades), whatsapp, email, json.dumps(redes), foto, foto, user_id))
+            """, (nomenclatura, descripcion, json.dumps(mods_data), whatsapp, email, json.dumps(redes), foto, foto, user_id))
             db.commit()
             return jsonify({'success': 'Perfil público actualizado con éxito.'})
         except Exception as e:

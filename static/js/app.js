@@ -13851,13 +13851,16 @@ async function loadPublicProfileSettings() {
         const mods = data.modalidades_data || data.modalidades || ["Online", "Presencial"];
         if (mods && typeof mods === 'object' && !Array.isArray(mods)) {
             if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = !!mods.online;
+            if (document.getElementById('mod-online-titulo')) document.getElementById('mod-online-titulo').value = mods.online_titulo || 'Consulta Online';
             if (document.getElementById('mod-online-detalle')) document.getElementById('mod-online-detalle').value = mods.online_detalle || '';
             
             if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = !!mods.presencial;
-            if (document.getElementById('mod-presencial-detalle')) document.getElementById('mod-presencial-detalle').value = mods.presencial_detalle || '';
+            if (document.getElementById('mod-presencial-titulo')) document.getElementById('mod-presencial-titulo').value = mods.presencial_titulo || 'Consulta Presencial';
+            if (document.getElementById('mod-presencial-detalle')) document.getElementById('mod-presencial-detalle').value = mods.presencial_detalle || mods.presencial_direccion || '';
             
             if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = !!mods.domicilio;
-            if (document.getElementById('mod-domicilio-detalle')) document.getElementById('mod-domicilio-detalle').value = mods.domicilio_detalle || '';
+            if (document.getElementById('mod-domicilio-titulo')) document.getElementById('mod-domicilio-titulo').value = mods.domicilio_titulo || 'Atención a Domicilio';
+            if (document.getElementById('mod-domicilio-detalle')) document.getElementById('mod-domicilio-detalle').value = mods.domicilio_detalle || mods.domicilio_zonas || '';
         } else {
             const list = Array.isArray(mods) ? mods : ["Online", "Presencial"];
             if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = list.includes("Online");
@@ -13878,10 +13881,13 @@ async function savePublicProfileSettings() {
     
     const modalidades_data = {
         online: document.getElementById('mod-online')?.checked || false,
+        online_titulo: document.getElementById('mod-online-titulo')?.value.trim() || 'Consulta Online',
         online_detalle: document.getElementById('mod-online-detalle')?.value.trim() || '',
         presencial: document.getElementById('mod-presencial')?.checked || false,
+        presencial_titulo: document.getElementById('mod-presencial-titulo')?.value.trim() || 'Consulta Presencial',
         presencial_detalle: document.getElementById('mod-presencial-detalle')?.value.trim() || '',
         domicilio: document.getElementById('mod-domicilio')?.checked || false,
+        domicilio_titulo: document.getElementById('mod-domicilio-titulo')?.value.trim() || 'Atención a Domicilio',
         domicilio_detalle: document.getElementById('mod-domicilio-detalle')?.value.trim() || ''
     };
 
@@ -14034,25 +14040,30 @@ async function loadDedicatedTherapistProfile(slug) {
             let mHtml = '';
             
             if (mData.online || (Array.isArray(t.modalidades) && t.modalidades.includes("Online"))) {
-                const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Plataformas / Modalidad: <strong>${mData.online_detalle}</strong></p>` : '';
+                const titleText = mData.online_titulo || "Consulta Online";
+                const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Plataformas / Detalles: <strong>${mData.online_detalle}</strong></p>` : '';
                 mHtml += `<div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #702e5e; font-size: 1.1rem;">🌐 Atención Online / Teleterapia</div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #702e5e; font-size: 1.1rem;">🌐 ${titleText}</div>
                     <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Sesiones dinámicas y privadas por videollamada desde la comodidad de tu hogar o lugar preferido.</p>
                     ${det}
                 </div>`;
             }
             if (mData.presencial || (Array.isArray(t.modalidades) && t.modalidades.includes("Presencial"))) {
-                const det = mData.presencial_direccion ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Ubicación / Consultorio: <strong>${mData.presencial_direccion}</strong></p>` : '';
+                const titleText = mData.presencial_titulo || "Consulta Presencial";
+                const addressVal = mData.presencial_detalle || mData.presencial_direccion;
+                const det = addressVal ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Ubicación / Consultorio: <strong>${addressVal}</strong></p>` : '';
                 mHtml += `<div style="background: #f0fdf4; border: 1.5px solid #86efac; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 1.1rem;">🏢 Consulta Presencial en Consultorio</div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 1.1rem;">🏢 ${titleText}</div>
                     <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Atención cálida, confidencial y personalizada en espacio físico especialmente acondicionado.</p>
                     ${det}
                 </div>`;
             }
             if (mData.domicilio || (Array.isArray(t.modalidades) && t.modalidades.includes("Domicilio"))) {
-                const det = mData.domicilio_zonas ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Zonas de Cobertura: <strong>${mData.domicilio_zonas}</strong></p>` : '';
+                const titleText = mData.domicilio_titulo || "Atención a Domicilio";
+                const zonesVal = mData.domicilio_detalle || mData.domicilio_zonas;
+                const det = zonesVal ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Zonas de Cobertura: <strong>${zonesVal}</strong></p>` : '';
                 mHtml += `<div style="background: #f0f9ff; border: 1.5px solid #93c5fd; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e40af; font-size: 1.1rem;">🚗 Atención a Domicilio</div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e40af; font-size: 1.1rem;">🚗 ${titleText}</div>
                     <p style="color: #334155; font-size: 0.98rem; margin: 0.4rem 0 0 0;">Visita profesional directa en tu domicilio u oficina según disponibilidad y zonas coordinadas.</p>
                     ${det}
                 </div>`;
