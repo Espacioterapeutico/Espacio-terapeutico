@@ -1930,47 +1930,50 @@ def get_active_psychologists():
     return jsonify([{'id': r['id'], 'nombres': r['nombres'], 'apellidos': r['apellidos']} for r in rows])
 
 def get_psychologist_by_id_or_slug(cursor, identifier):
+    cursor.execute("SELECT * FROM usuarios ORDER BY id ASC")
+    rows = cursor.fetchall()
+    if not rows:
+        return None
+
+    # Filtrar usuarios que sean psicólogos, admin o superadmin
+    users = [u for u in rows if (u['role'] or '').lower() in ('psicologo', 'superadmin', 'admin', 'psicologo_admin') or u.get('es_psicologo')]
+    if not users:
+        users = rows  # Fallback a cualquier usuario disponible
+
     if not identifier:
-        cursor.execute("SELECT * FROM usuarios WHERE role IN ('psicologo', 'superadmin', 'admin', 'psicologo_admin') ORDER BY id ASC LIMIT 1")
-        return cursor.fetchone()
+        return users[0]
 
     ident_str = str(identifier).strip().lower()
-    clean_id = ident_str.replace("psic.", "").replace("psic-", "").strip().lower()
+    clean_id = ident_str.replace("psic.", "").replace("psic-", "").replace("/", "").strip().lower()
     with_prefix = f"psic.{clean_id}"
 
+    # 1. Si es ID numérico
     if clean_id.isdigit():
-        cursor.execute("SELECT * FROM usuarios WHERE id = ?", (int(clean_id),))
-        r = cursor.fetchone()
-        if r:
-            return r
+        for u in users:
+            if u['id'] == int(clean_id):
+                return u
 
-    # 1. Coincidencia exacta por slug (con o sin prefijo), username o id limpio con COALESCE
-    cursor.execute("""
-        SELECT * FROM usuarios 
-        WHERE LOWER(COALESCE(slug, '')) = ? 
-           OR LOWER(COALESCE(slug, '')) = ? 
-           OR LOWER(COALESCE(username, '')) = ? 
-           OR LOWER(COALESCE(username, '')) = ?
-    """, (ident_str, with_prefix, ident_str, clean_id))
-    r = cursor.fetchone()
-    if r:
-        return r
+    # 2. Coincidencia exacta por slug, username, o id limpio
+    for u in users:
+        u_slug = (u['slug'] or '').strip().lower()
+        u_uname = (u['username'] or '').strip().lower()
+        if u_slug in (ident_str, with_prefix, clean_id) or u_uname in (ident_str, clean_id):
+            return u
 
-    # 2. Coincidencia por similitud con COALESCE seguro para concatenación SQLite
-    cursor.execute("""
-        SELECT * FROM usuarios 
-        WHERE LOWER(COALESCE(slug, '')) LIKE ? 
-           OR LOWER(COALESCE(username, '')) LIKE ? 
-           OR (LOWER(COALESCE(nombres, '')) || ' ' || LOWER(COALESCE(apellidos, ''))) LIKE ?
-           OR (LOWER(COALESCE(nombres, '')) || LOWER(COALESCE(apellidos, ''))) LIKE ?
-    """, (f"%{clean_id}%", f"%{clean_id}%", f"%{clean_id}%", f"%{clean_id}%"))
-    r = cursor.fetchone()
-    if r:
-        return r
+    # 3. Coincidencia por nombre o apellido
+    for u in users:
+        u_nom = (u['nombres'] or '').strip().lower()
+        u_ape = (u['apellidos'] or '').strip().lower()
+        full_name = f"{u_nom} {u_ape}".strip()
+        combo_name = f"{u_nom}{u_ape}".strip()
+        u_slug = (u['slug'] or '').strip().lower()
+        u_uname = (u['username'] or '').strip().lower()
+        
+        if (clean_id and clean_id in full_name) or (clean_id and clean_id in combo_name) or (clean_id and clean_id in u_slug) or (clean_id and clean_id in u_uname):
+            return u
 
-    # 3. Fallback de resguardo: retornar el primer usuario psicólogo/admin activo de la base de datos
-    cursor.execute("SELECT * FROM usuarios WHERE role IN ('psicologo', 'superadmin', 'admin', 'psicologo_admin') ORDER BY id ASC LIMIT 1")
-    return cursor.fetchone()
+    # 4. Fallback absoluto: retornar el primer usuario disponible
+    return users[0]
 
 @app.route('/agendar/<identifier>', methods=['GET'])
 def vanity_fast_booking(identifier):
@@ -5366,8 +5369,15 @@ def get_public_therapist_profile(slug):
     if not psych:
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
 
-    modalidades = json.loads(psych['modalidades_json']) if psych.get('modalidades_json') else ["Online", "Presencial"]
-    redes = json.loads(psych['redes_sociales_json']) if psych.get('redes_sociales_json') else {}
+    try:
+        modalidades = json.loads(psych['modalidades_json']) if psych.get('modalidades_json') else ["Online", "Presencial"]
+    except Exception:
+        modalidades = ["Online", "Presencial"]
+
+    try:
+        redes = json.loads(psych['redes_sociales_json']) if psych.get('redes_sociales_json') else {}
+    except Exception:
+        redes = {}
     
     clean_slug = psych.get('slug') or generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
