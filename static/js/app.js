@@ -13437,6 +13437,26 @@ function openAuthModal() {
         authScreen.classList.remove('hide');
         authScreen.scrollIntoView({ behavior: 'smooth' });
     }
+    if (!window.location.pathname.includes('/login')) {
+        window.history.pushState({ auth: true }, '', '/login');
+    }
+}
+
+function closeAuthModal(e) {
+    if (e) e.preventDefault();
+    const pubLanding = document.getElementById('public-landing-screen');
+    const authScreen = document.getElementById('auth-screen');
+    if (authScreen) {
+        authScreen.style.display = 'none';
+        authScreen.classList.add('hide');
+    }
+    if (pubLanding) {
+        pubLanding.classList.remove('hide');
+        pubLanding.scrollIntoView({ behavior: 'smooth' });
+    }
+    if (window.location.pathname.includes('/login')) {
+        window.history.pushState({}, '', '/');
+    }
 }
 
 async function loadLandingPageContent() {
@@ -13652,6 +13672,10 @@ function initLandingRouteHandling() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initLandingRouteHandling();
+});
+
+window.addEventListener('popstate', () => {
     initLandingRouteHandling();
 });
 
