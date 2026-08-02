@@ -2326,10 +2326,17 @@ def superadmin_create_psychologist():
         now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
 
+        clean_name = f"psic.{(nombres or '').strip()}{(apellidos or '').strip()}".lower().replace(" ", "")
+        if not clean_name or clean_name == "psic.":
+            clean_slug = f"psic.{username.lower()}"
+        else:
+            import unicodedata, re
+            clean_slug = re.sub(r'[^a-z0-9\.]', '', unicodedata.normalize('NFD', clean_name))
+
         cursor.execute("""
-            INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0)
-        """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str))
+            INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?)
+        """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug))
         db.commit()
         return jsonify({'success': 'Psicólogo registrado con éxito (Modo Prueba 1 Mes / 30 Días activo).'})
     except Exception as e:
