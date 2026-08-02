@@ -13695,12 +13695,37 @@ async function saveLandingPageContent() {
     }
 }
 
+function previewPublicProfilePhoto(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+        alert("La imagen seleccionada es demasiado grande. Por favor selecciona una imagen menor a 5MB.");
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('set-perfil-preview-img');
+        if (preview) preview.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removePublicProfilePhoto() {
+    const preview = document.getElementById('set-perfil-preview-img');
+    const fileInput = document.getElementById('set-perfil-file-input');
+    if (preview) preview.src = '/static/logo.png';
+    if (fileInput) fileInput.value = '';
+}
+
 async function loadPublicProfileSettings() {
     try {
         const res = await fetch('/api/admin/profile-public');
         if (!res.ok) return;
         const data = await res.json();
         
+        if (data.foto && document.getElementById('set-perfil-preview-img')) {
+            document.getElementById('set-perfil-preview-img').src = data.foto;
+        }
         if (document.getElementById('prof-nomenclatura')) document.getElementById('prof-nomenclatura').value = data.nomenclatura || '';
         if (document.getElementById('prof-biografia')) document.getElementById('prof-biografia').value = data.descripcion_biografia || '';
         if (document.getElementById('prof-whatsapp')) document.getElementById('prof-whatsapp').value = data.whatsapp_publico || '';
@@ -13729,8 +13754,12 @@ async function savePublicProfileSettings() {
         instagram: document.getElementById('prof-instagram') ? document.getElementById('prof-instagram').value.trim() : '',
         linkedin: document.getElementById('prof-linkedin') ? document.getElementById('prof-linkedin').value.trim() : ''
     };
+
+    const previewImg = document.getElementById('set-perfil-preview-img');
+    const fotoSrc = previewImg ? previewImg.src : '';
     
     const payload = {
+        foto: fotoSrc,
         nomenclatura: document.getElementById('prof-nomenclatura').value.trim(),
         descripcion_biografia: document.getElementById('prof-biografia').value.trim(),
         modalidades: modalidades,
@@ -13747,7 +13776,7 @@ async function savePublicProfileSettings() {
         });
         const data = await res.json();
         if (res.ok) {
-            alert(data.success || "Perfil público actualizado con éxito.");
+            alert(data.success || "¡Perfil público actualizado con éxito!");
             loadLandingPageContent();
         } else {
             alert(data.error || "Error al actualizar perfil público.");

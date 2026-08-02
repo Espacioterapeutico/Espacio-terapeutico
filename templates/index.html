@@ -1566,6 +1566,24 @@
                                 <p class="text-secondary text-sm">Personaliza la información que verán tus pacientes en tu página pública (/psic.tunombre) y en el directorio institucional.</p>
                             </div>
                             <div class="card-body" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                                <!-- FOTO DE PERFIL PROFESIONAL -->
+                                <div class="form-group" style="background: #f8fafc; padding: 1.25rem; border-radius: 12px; border: 1px dashed #cbd5e1; text-align: center;">
+                                    <label style="font-weight: 700; display: block; margin-bottom: 0.75rem; color: #334155; font-size: 1rem;">📷 Foto de Perfil Profesional</label>
+                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+                                        <div style="width: 110px; height: 110px; border-radius: 50%; overflow: hidden; border: 3px solid #702e5e; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background-color: #ffffff; position: relative;">
+                                            <img id="set-perfil-preview-img" src="/static/logo.png" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                            <label class="btn btn-sm" style="cursor: pointer; padding: 0.5rem 1.25rem; font-weight: 700; background-color: #702e5e; color: #ffffff; border: none; border-radius: 20px; box-shadow: 0 2px 8px rgba(112,46,94,0.2);">
+                                                Subir Foto de Perfil
+                                                <input type="file" id="set-perfil-file-input" accept="image/*" style="display: none;" onchange="previewPublicProfilePhoto(event)">
+                                            </label>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-size: 0.8rem; padding: 0.45rem 0.9rem;" onclick="removePublicProfilePhoto()">Quitar Foto</button>
+                                        </div>
+                                        <small style="color: #64748b; font-size: 0.82rem;">Esta fotografía aparecerá en tu tarjeta del directorio institucional y en tu perfil público de agendamiento.</small>
+                                    </div>
+                                </div>
+
                                 <div class="form-group">
                                     <label for="prof-nomenclatura" style="font-weight: 700;">Título / Nomenclatura Profesional *</label>
                                     <input type="text" id="prof-nomenclatura" class="form-control" placeholder="Ej: Psicólogo Clínico - Especialista en Ansiedad y Parejas">
