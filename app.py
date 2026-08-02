@@ -5174,7 +5174,7 @@ def get_public_landing_content():
         SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo, foto_documento,
                nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json
         FROM usuarios 
-        WHERE activo = 1 AND (role IS NULL OR role = 'psicologo' OR role = 'admin' OR role = 'superadmin')
+        WHERE (COALESCE(activo, 1) = 1) AND (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin' OR role = 'superadmin')
         ORDER BY id ASC
     """)
     therapists_rows = cursor.fetchall()

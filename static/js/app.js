@@ -13475,7 +13475,7 @@ function renderTherapistsGrid(therapists) {
     if (!grid) return;
     
     if (!therapists || therapists.length === 0) {
-        grid.innerHTML = `<div class="text-center py-6 text-muted" style="grid-column: 1 / -1;"><p>Cargando directorio de profesionales...</p></div>`;
+        grid.innerHTML = `<div class="text-center py-6 text-muted" style="grid-column: 1 / -1; padding: 2rem;"><p>No hay profesionales disponibles en este momento.</p></div>`;
         return;
     }
     
