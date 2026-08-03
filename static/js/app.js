@@ -446,6 +446,12 @@ function switchView(viewId) {
         m.style.display = 'none';
     });
 
+    const fastBookingScr = document.getElementById('fast-booking-screen');
+    if (fastBookingScr) {
+        fastBookingScr.classList.add('hide');
+        fastBookingScr.style.display = 'none';
+    }
+
     // Ocultar todas las vistas
     document.querySelectorAll('.app-view').forEach(view => {
         view.classList.add('hide');
@@ -841,11 +847,16 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     document.body.classList.remove('is-patient');
     const authScr = document.getElementById('auth-screen');
     const pubLanding = document.getElementById('public-landing-screen');
+    const fastBookingScr = document.getElementById('fast-booking-screen');
     if (authScr) {
         authScr.style.display = 'none';
         authScr.classList.add('hide');
     }
     if (pubLanding) pubLanding.classList.add('hide');
+    if (fastBookingScr) {
+        fastBookingScr.style.display = 'none';
+        fastBookingScr.classList.add('hide');
+    }
 
     // Actualizar avatar e iniciales del psicólogo en la barra superior
     const avatarEl = document.getElementById('header-user-avatar') || document.querySelector('.user-avatar');
@@ -14242,6 +14253,22 @@ function initLandingRouteHandling() {
 document.addEventListener('DOMContentLoaded', () => {
     initLandingRouteHandling();
 });
+
+function closeFastBookingScreen() {
+    const fastScreen = document.getElementById('fast-booking-screen');
+    if (fastScreen) {
+        fastScreen.classList.add('hide');
+        fastScreen.style.display = 'none';
+    }
+    const path = window.location.pathname.toLowerCase();
+    if (!path.includes('/login') && !path.startsWith('/psic.') && !path.startsWith('/agendar/')) {
+        const pubLanding = document.getElementById('public-landing-screen');
+        if (pubLanding) {
+            pubLanding.classList.remove('hide');
+            pubLanding.style.display = 'block';
+        }
+    }
+}
 
 window.addEventListener('popstate', () => {
     initLandingRouteHandling();
