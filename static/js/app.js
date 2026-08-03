@@ -441,7 +441,7 @@ function switchView(viewId) {
     }
 
     // Ocultar cualquier modal abierto al cambiar de vista
-    document.querySelectorAll('.modal-overlay').forEach(m => {
+    document.querySelectorAll('.modal, .modal-overlay').forEach(m => {
         m.classList.add('hide');
         m.style.display = 'none';
     });
@@ -13578,6 +13578,11 @@ function openSubscriptionModal() {
 }
 
 function openAuthModal() {
+    const subModal = document.getElementById('subscription-info-modal');
+    if (subModal) {
+        subModal.classList.add('hide');
+        subModal.style.display = 'none';
+    }
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
     if (pubLanding) pubLanding.classList.add('hide');
