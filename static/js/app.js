@@ -501,6 +501,8 @@ function switchView(viewId) {
         loadTherapistToolsCatalog();
     } else if (viewId === 'manual-confirmations') {
         renderManualConfirmationsView();
+    } else if (viewId === 'superadmin-dashboard') {
+        loadSuperadminData();
     }
 }
 
