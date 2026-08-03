@@ -54,7 +54,12 @@ async function restoreAuthSession() {
         if (existingFiles.length === 0) {
             console.log("Intentando restaurar credenciales de sesión desde Flask backend...");
             const syncUrl = FLASK_WEBHOOK_URL.replace(/\/webhook$/, '/sync-session');
-            const res = await axios.get(syncUrl, { timeout: 8000 }).catch(() => null);
+            let res = null;
+            for (let i = 0; i < 3; i++) {
+                res = await axios.get(syncUrl, { timeout: 8000 }).catch(() => null);
+                if (res && res.data && typeof res.data === 'object' && Object.keys(res.data).length > 0) break;
+                await new Promise(r => setTimeout(r, 2000));
+            }
             if (res && res.data && typeof res.data === 'object' && Object.keys(res.data).length > 0) {
                 for (const [fileName, fileContent] of Object.entries(res.data)) {
                     if (fileName.endsWith('.json') && typeof fileContent === 'string') {
@@ -110,17 +115,18 @@ async function connectToWhatsApp() {
 
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-                console.log(`⚠️ Conexión cerrada. Razón: ${lastDisconnect?.error}. Reconectando: ${shouldReconnect}`);
+                // Solo borrar sesión si el usuario cerró sesión explícitamente desde WhatsApp en su teléfono (401 / LoggedOut)
+                const isExplicitLogout = statusCode === DisconnectReason.loggedOut;
+                console.log(`⚠️ Conexión cerrada. Razón: ${lastDisconnect?.error}. Reconectando: ${!isExplicitLogout}`);
                 
                 connectionStatus = 'disconnected';
                 connectedPhone = null;
                 currentQR = null;
 
-                if (shouldReconnect) {
-                    setTimeout(connectToWhatsApp, 3000);
+                if (!isExplicitLogout) {
+                    setTimeout(connectToWhatsApp, 5000);
                 } else {
-                    console.log('Sesión cerrada por el usuario. Limpiando credenciales...');
+                    console.log('Sesión cerrada explícitamente desde el teléfono. Limpiando credenciales...');
                     if (fs.existsSync(AUTH_DIR)) {
                         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
                     }
