@@ -9832,29 +9832,47 @@ def cron_send_whatsapp_reminders():
         return jsonify({'error': 'No autorizado'}), 401
 
     from datetime import datetime, timedelta
-    today_str = datetime.now().strftime('%Y-%m-%d')
-    tomorrow_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_local = datetime.now(tz)
+    except Exception:
+        # Fallback a UTC - 4 horas (hora Venezuela)
+        now_local = datetime.utcnow() - timedelta(hours=4)
+
+    today_str = now_local.strftime('%Y-%m-%d')
+    tomorrow_str = (now_local + timedelta(days=1)).strftime('%Y-%m-%d')
     
     db = get_db()
     cursor = db.cursor()
 
+    # Actualizar o asegurar plantilla con SI/NO si la existente es muy antigua o genérica
     cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio')")
     cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
-    tmpl_conf_default = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+    
+    tmpl_conf_default = "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+    
+    # Si la plantilla guardada en BD no tiene 'SI' o 'NO', la actualizamos para garantizar la instrucción
+    msg_conf_db = cfg_rows.get('msg_confirmacion', '')
+    if not msg_conf_db or ('SI' not in msg_conf_db and 'Sí' not in msg_conf_db and 'si' not in msg_conf_db):
+        cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('msg_confirmacion', ?)", (tmpl_conf_default,))
+        db.commit()
+        msg_conf_db = tmpl_conf_default
+
     tmpl_rec_default = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
 
     enviados_confirmaciones = []
     enviados_recordatorios = []
     errores = []
 
-    # 1. ENVIAR CONFIRMACIONES ANTICIPADAS (Citas de Mañana)
+    # 1. ENVIAR CONFIRMACIONES ANTICIPADAS (Citas de Mañana no confirmadas)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         JOIN usuarios u ON p.psicologo_id = u.id
-        WHERE af.fecha = ? AND (af.confirmada = 0 OR af.estado_pago != 'Cancelada') AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
+        WHERE af.fecha = ? AND af.confirmada = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
     """, (tomorrow_str,))
     citas_confirmar = cursor.fetchall()
 
@@ -9869,7 +9887,7 @@ def cron_send_whatsapp_reminders():
             'hora': cita['hora'],
             'modalidad': cita['tipo_consulta'] or 'Presencial'
         }
-        mensaje_texto = format_whatsapp_message(tmpl_conf_default, cita_dict, cita_dict, psicologo_data)
+        mensaje_texto = format_whatsapp_message(msg_conf_db, cita_dict, cita_dict, psicologo_data)
 
         try:
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
@@ -9887,14 +9905,14 @@ def cron_send_whatsapp_reminders():
         except Exception as e:
             errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': str(e)})
 
-    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy)
+    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy SOLO SI ESTÁN CONFIRMADAS)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         JOIN usuarios u ON p.psicologo_id = u.id
-        WHERE af.fecha = ? AND (af.confirmada = 1 OR af.estado_pago != 'Cancelada') AND COALESCE(af.recordatorio_enviado_wa, 0) = 0
+        WHERE af.fecha = ? AND af.confirmada = 1 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0
     """, (today_str,))
     citas_recordar = cursor.fetchall()
 
