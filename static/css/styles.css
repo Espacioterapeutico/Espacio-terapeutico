@@ -226,6 +226,9 @@ h1, h2, h3, h4, h5, h6 {
 .auth-header h1 {
     font-size: 1.8rem;
     margin-bottom: 0.35rem;
+    color: #f3e8ff;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
 .auth-header p {
