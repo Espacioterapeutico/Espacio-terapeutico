@@ -9713,6 +9713,66 @@ def whatsapp_webhook():
 
     return jsonify({'status': 'text_received_no_action', 'message': 'Mensaje recibido pero no coincide con confirmación o cancelación.'})
 
+def get_time_in_patient_timezone(hora_str, pat_pais):
+    """
+    Convierte la hora de la cita (agendada en hora local de Venezuela / America/Caracas)
+    a la hora local del país de residencia del paciente.
+    """
+    if not hora_str or not isinstance(hora_str, str) or ':' not in hora_str:
+        return hora_str
+        
+    COUNTRY_TIMEZONES = {
+        'venezuela': ('America/Caracas', 'Vzla'),
+        'chile': ('America/Santiago', 'Chile'),
+        'argentina': ('America/Argentina/Buenos_Aires', 'Arg'),
+        'colombia': ('America/Bogota', 'Col'),
+        'peru': ('America/Lima', 'Perú'),
+        'perú': ('America/Lima', 'Perú'),
+        'ecuador': ('America/Guayaquil', 'Ecuador'),
+        'méxico': ('America/Mexico_City', 'Méx'),
+        'mexico': ('America/Mexico_City', 'Méx'),
+        'españa': ('Europe/Madrid', 'Esp'),
+        'espana': ('Europe/Madrid', 'Esp'),
+        'estados unidos': ('America/New_York', 'EST'),
+        'eeuu': ('America/New_York', 'EST'),
+        'usa': ('America/New_York', 'EST'),
+        'panama': ('America/Panama', 'Panamá'),
+        'panamá': ('America/Panama', 'Panamá'),
+        'uruguay': ('America/Montevideo', 'Uruguay'),
+        'costa rica': ('America/Costa_Rica', 'CR'),
+        'república dominicana': ('America/Santo_Domingo', 'RD'),
+        'dominicana': ('America/Santo_Domingo', 'RD'),
+    }
+
+    pais_clean = (pat_pais or '').strip().lower()
+    tz_info = COUNTRY_TIMEZONES.get(pais_clean)
+    
+    if not tz_info:
+        # Si el país no está registrado o es Venezuela, mantener la hora original
+        return hora_str
+
+    try:
+        from datetime import datetime
+        import zoneinfo
+        
+        parts = hora_str.strip().split(':')
+        hh, mm = int(parts[0]), int(parts[1][:2])
+        
+        # Hora agendada en hora base (Venezuela America/Caracas)
+        now = datetime.now()
+        base_tz = zoneinfo.ZoneInfo("America/Caracas")
+        target_tz = zoneinfo.ZoneInfo(tz_info[0])
+        
+        dt_base = datetime(now.year, now.month, now.day, hh, mm, tzinfo=base_tz)
+        dt_target = dt_base.astimezone(target_tz)
+        
+        time_converted = dt_target.strftime('%H:%M')
+        return f"{time_converted} (Hora {tz_info[1]})"
+    except Exception as e:
+        print("Error convirtiendo zona horaria de paciente:", e)
+        return hora_str
+
+
 def format_whatsapp_message(template_str, patient, cita, psicologo):
     if not template_str:
         template_str = "Hola {nombre}, te recordamos tu cita agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¿Nos confirmas tu asistencia por favor?"
@@ -9720,11 +9780,15 @@ def format_whatsapp_message(template_str, patient, cita, psicologo):
     # Extraer primer nombre — soporta tanto clave 'nombres' como 'nombre' (nombre completo)
     if isinstance(patient, dict) or hasattr(patient, 'get'):
         pat_nombres = patient.get('nombres', '') or patient.get('nombre', '')
+        pat_pais = patient.get('pais', '')
     else:
         try:
             pat_nombres = patient['nombres']
+            pat_pais = patient['pais'] if 'pais' in patient.keys() else ''
         except:
             pat_nombres = ''
+            pat_pais = ''
+            
     pat_name = pat_nombres.strip().split()[0] if pat_nombres and pat_nombres.strip() else "Consultante"
     
     # Extraer datos de la cita — soporta dict con clave 'modalidad' o 'tipo_consulta'
@@ -9739,12 +9803,15 @@ def format_whatsapp_message(template_str, patient, cita, psicologo):
         c_tipo = cita['tipo_consulta'] if 'tipo_consulta' in cita.keys() else 'Online'
         c_link = cita['link_conexion'] if 'link_conexion' in cita.keys() else ''
     
+    # Convertir hora a la zona horaria del paciente si aplica
+    c_hora_paciente = get_time_in_patient_timezone(c_hora, pat_pais)
+    
     psic_nom = f"Psic. {psicologo['nombres']} {psicologo['apellidos']}" if psicologo else "Tu Terapeuta"
     
     msg = template_str.replace('{nombre}', pat_name)
     msg = msg.replace('{nombre_paciente}', pat_name)
     msg = msg.replace('{fecha}', c_fecha)
-    msg = msg.replace('{hora}', c_hora)
+    msg = msg.replace('{hora}', c_hora_paciente)
     msg = msg.replace('{modalidad}', c_tipo)
     msg = msg.replace('{link_conexion}', c_link or "Consultorio Presencial")
     msg = msg.replace('{psicologo}', psic_nom)
@@ -9781,7 +9848,7 @@ def send_manual_whatsapp_reminder(cita_id):
     cursor = db.cursor()
 
     cursor.execute("""
-        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         WHERE af.id = ? AND p.psicologo_id = ?
@@ -9867,7 +9934,7 @@ def cron_send_whatsapp_reminders():
 
     # 1. ENVIAR CONFIRMACIONES ANTICIPADAS (Citas de Mañana no confirmadas)
     cursor.execute("""
-        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
@@ -9887,7 +9954,12 @@ def cron_send_whatsapp_reminders():
             'hora': cita['hora'],
             'modalidad': cita['tipo_consulta'] or 'Presencial'
         }
-        mensaje_texto = format_whatsapp_message(msg_conf_db, cita_dict, cita_dict, psicologo_data)
+        patient_dict = {
+            'nombres': cita['pat_nombres'],
+            'apellidos': cita['pat_apellidos'],
+            'pais': cita['pat_pais'] or ''
+        }
+        mensaje_texto = format_whatsapp_message(msg_conf_db, patient_dict, cita_dict, psicologo_data)
 
         try:
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
@@ -9907,7 +9979,7 @@ def cron_send_whatsapp_reminders():
 
     # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy SOLO SI ESTÁN CONFIRMADAS)
     cursor.execute("""
-        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.psicologo_id,
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
@@ -9927,7 +9999,12 @@ def cron_send_whatsapp_reminders():
             'hora': cita['hora'],
             'modalidad': cita['tipo_consulta'] or 'Presencial'
         }
-        mensaje_texto = format_whatsapp_message(tmpl_rec_default, cita_dict, cita_dict, psicologo_data)
+        patient_dict = {
+            'nombres': cita['pat_nombres'],
+            'apellidos': cita['pat_apellidos'],
+            'pais': cita['pat_pais'] or ''
+        }
+        mensaje_texto = format_whatsapp_message(tmpl_rec_default, patient_dict, cita_dict, psicologo_data)
 
         try:
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
