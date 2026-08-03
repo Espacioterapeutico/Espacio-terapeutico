@@ -10724,7 +10724,7 @@ async function fetchWithTimeout(resource, options = {}) {
     }
 }
 
-async function checkWhatsAppQRStatus() {
+async function checkWhatsAppQRStatus(forceGenerate = false) {
     const badge = document.getElementById('wa-connection-status-badge');
     const loadingBox = document.getElementById('wa-qr-loading');
     const qrBox = document.getElementById('wa-qr-box');
@@ -10737,14 +10737,27 @@ async function checkWhatsAppQRStatus() {
     try {
         let qrData = null;
 
-        // Intento 1: Consulta directa a Railway (Cero latencia e independiente del servidor Flask)
+        // Primero consultamos el estado /status de Railway para ver si YA está conectado sin forzar QR
         try {
-            const resDirectQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 10000 });
-            if (resDirectQr.ok) {
-                qrData = await resDirectQr.json();
+            const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 8000 });
+            if (resStatus.ok) {
+                const st = await resStatus.json();
+                if (st && st.status === 'connected') {
+                    qrData = st;
+                }
             }
-        } catch (e1) {
-            console.warn("Consulta directa a Railway falló, intentando vía backend Flask:", e1);
+        } catch (e0) {}
+
+        // Intento 1: Consulta directa a Railway /qr
+        if (!qrData) {
+            try {
+                const resDirectQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 10000 });
+                if (resDirectQr.ok) {
+                    qrData = await resDirectQr.json();
+                }
+            } catch (e1) {
+                console.warn("Consulta directa a Railway falló, intentando vía backend Flask:", e1);
+            }
         }
 
         // Intento 2: Backend Flask en PythonAnywhere
@@ -10790,7 +10803,7 @@ async function checkWhatsAppQRStatus() {
             }
 
             if (!waPollInterval) {
-                waPollInterval = setInterval(checkWhatsAppQRStatus, 4000);
+                waPollInterval = setInterval(() => checkWhatsAppQRStatus(false), 4000);
             }
             return;
         }
@@ -10806,7 +10819,7 @@ async function checkWhatsAppQRStatus() {
         connectedBox.classList.add('hide');
 
         if (!waPollInterval) {
-            waPollInterval = setInterval(checkWhatsAppQRStatus, 4000);
+            waPollInterval = setInterval(() => checkWhatsAppQRStatus(false), 4000);
         }
     } catch (err) {
         console.error("Error al obtener estado de WhatsApp QR:", err);
