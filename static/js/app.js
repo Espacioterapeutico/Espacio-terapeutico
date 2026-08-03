@@ -13569,6 +13569,14 @@ window.addEventListener('beforeunload', () => {
 // ==========================================
 // MÓDULO DE PORTADA WEB Y DIRECTORIO PÚBLICO
 // ==========================================
+function openSubscriptionModal() {
+    const modal = document.getElementById('subscription-info-modal');
+    if (modal) {
+        modal.classList.remove('hide');
+        modal.style.display = 'flex';
+    }
+}
+
 function openAuthModal() {
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');

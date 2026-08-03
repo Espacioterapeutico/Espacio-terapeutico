@@ -560,16 +560,124 @@
         </section>
 
         <!-- SECCIÓN 4: SUSCRIPCIÓN PARA PSICÓLOGOS (SAAS) -->
-        <section id="section-suscripcion" class="pub-section pub-bg-dark">
-            <div class="pub-container text-center" style="max-width: 800px; margin: 0 auto; text-align: center;">
-                <h2 style="color: white; font-size: 2.2rem; margin-bottom: 1rem;">¿Eres Psicólogo Profesional?</h2>
-                <p style="color: #fbcfe8; font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">
-                    Únete a Espacio Terapéutico. Gestiona tus pacientes, expediente clínico digital, agenda interactiva, recibos y cobros automáticos desde una plataforma hecha para tu práctica profesional.
+        <section id="section-suscripcion" class="pub-section pub-bg-dark" style="padding: 5rem 1.5rem; background: linear-gradient(135deg, #2a122c 0%, #150817 100%);">
+            <div class="pub-container text-center" style="max-width: 1050px; margin: 0 auto;">
+                <h2 style="color: white; font-size: 2.3rem; font-weight: 800; margin-bottom: 0.75rem; font-family: var(--font-title);">Planes de Suscripción para Psicólogos</h2>
+                <p style="color: #fbcfe8; font-size: 1.1rem; line-height: 1.6; max-width: 750px; margin: 0 auto 3rem auto;">
+                    Potencia tu consulta privada con una suite clínica completa: agenda interactiva, recordatorios por WhatsApp, expedientes confidenciales y cobranza automatizada.
                 </p>
-                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <button class="pub-btn-primary" onclick="openAuthModal()">Comenzar Prueba Gratis (1 Mes)</button>
-                    <button class="pub-btn-outline" onclick="openAuthModal()" style="border-color: white; color: white;">Conocer Planes de Suscripción</button>
+
+                <!-- GRID DE PLANES -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 2rem; margin-bottom: 3.5rem; text-align: left;">
+                    
+                    <!-- PLAN PRUEBA (0$) -->
+                    <div style="background: rgba(255, 255, 255, 0.05); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 16px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; backdrop-filter: blur(10px);">
+                        <div>
+                            <div style="display: inline-block; background: rgba(236, 72, 153, 0.2); color: #f472b6; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 1rem;">
+                                🎁 Periodo de Prueba
+                            </div>
+                            <h3 style="color: white; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem;">Plan Prueba Gratis</h3>
+                            <div style="display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 1.25rem;">
+                                <span style="font-size: 2.8rem; font-weight: 800; color: white;">$0</span>
+                                <span style="color: #cbd5e1; font-weight: 600;">/ 1er Mes</span>
+                            </div>
+                            <p style="color: #e2e8f0; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem;">
+                                Accede gratis y sin compromiso durante tu primer mes para probar todas las herramientas profesionales del sistema.
+                            </p>
+                            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #f1f5f9; font-size: 0.92rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span><strong>1 Mes Completo sin costo</strong></span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Gestión de Expedientes e Historias Clínicas</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Agenda Multimodal (Presencial y Online)</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Integración con WhatsApp y Recordatorios</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Perfil Público en Directorio Oficial</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Portal del Paciente e Historial Financiero</span></li>
+                            </ul>
+                        </div>
+                        <button class="pub-btn-primary" onclick="openAuthModal()" style="width: 100%; text-align: center; padding: 0.85rem;">Crear Perfil y Probar Gratis</button>
+                    </div>
+
+                    <!-- PLAN PROFESIONAL (15$) -->
+                    <div style="background: linear-gradient(145deg, rgba(169, 89, 147, 0.25) 0%, rgba(61, 30, 63, 0.4) 100%); border: 2px solid #a95993; border-radius: 16px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 12px 30px rgba(169, 89, 147, 0.3);">
+                        <div style="position: absolute; top: -14px; right: 20px; background: #a95993; color: white; font-size: 0.75rem; font-weight: 800; padding: 0.3rem 0.85rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            ⭐ Más Popular
+                        </div>
+                        <div>
+                            <div style="display: inline-block; background: rgba(168, 85, 247, 0.25); color: #c084fc; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 1rem;">
+                                🚀 Acceso Ilimitado
+                            </div>
+                            <h3 style="color: white; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem;">Plan Profesional</h3>
+                            <div style="display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 1.25rem;">
+                                <span style="font-size: 2.8rem; font-weight: 800; color: white;">$15</span>
+                                <span style="color: #cbd5e1; font-weight: 600;">/ mes</span>
+                            </div>
+                            <p style="color: #e2e8f0; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem;">
+                                La suite tecnológica definitiva para psicólogos que desean automatizar su consulta sin límites.
+                            </p>
+                            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #f1f5f9; font-size: 0.92rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span><strong>Consultantes e Historias Clínicas Ilimitadas</strong></span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Pizarra Terapéutica y Plan Visual de Tratamiento</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Herramientas de Test y Evaluaciones Psicométricas</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Configuración de Aranceles Multimoneda por País</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Generación de Recibos de Pago y Reportes PDF</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Soporte Técnico Prioritario Directo</span></li>
+                            </ul>
+                        </div>
+                        <button class="pub-btn-primary" onclick="openSubscriptionModal()" style="width: 100%; text-align: center; padding: 0.85rem; background: linear-gradient(135deg, #a95993 0%, #863d73 100%);">Ver Métodos de Pago y Suscribir</button>
+                    </div>
+
                 </div>
+
+                <!-- MÉTODOS DE PAGO Y VERIFICACIÓN -->
+                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2rem; text-align: left; margin-bottom: 2rem;">
+                    <h3 style="color: white; font-size: 1.35rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                        💳 Métodos de Pago Aceptados
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: rgba(255,255,255,0.05); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                            <span style="color: #60a5fa; font-weight: 700; font-size: 0.95rem; display: block;">🟣 Zinli</span>
+                            <span style="color: #94a3b8; font-size: 0.82rem;">Pagos digitales en USD ($)</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                            <span style="color: #f59e0b; font-weight: 700; font-size: 0.95rem; display: block;">🟡 Binance Pay</span>
+                            <span style="color: #94a3b8; font-size: 0.82rem;">USDT / Criptomonedas</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                            <span style="color: #34d399; font-weight: 700; font-size: 0.95rem; display: block;">🟢 Banco Amiga ($)</span>
+                            <span style="color: #94a3b8; font-size: 0.82rem;">Depósito o Transferencia USD</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                            <span style="color: #ec4899; font-weight: 700; font-size: 0.95rem; display: block;">💵 Efectivo / Pago Móvil</span>
+                            <span style="color: #94a3b8; font-size: 0.82rem;">Acuerdo directo en Bs / USD</span>
+                        </div>
+                    </div>
+
+                    <!-- AVISO DE VERIFICACIÓN DE PERFIL -->
+                    <div style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.25rem;">
+                        <h4 style="color: #fbbf24; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 6px;">
+                            🛡️ Proceso de Verificación y Aprobación de Cuenta
+                        </h4>
+                        <p style="color: #fef3c7; font-size: 0.88rem; line-height: 1.5; margin: 0;">
+                            Una vez completado el registro de tu perfil profesional, tu cuenta entra en un breve periodo de revisión por el equipo de administración para validar tus credenciales. La activación completa de tu perfil se procesará inmediatamente tras la verificación.
+                        </p>
+                    </div>
+
+                    <!-- CONTACTO OFICIAL -->
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div>
+                            <span style="color: white; font-weight: 700; font-size: 0.95rem; display: block;">¿Tienes dudas sobre la suscripción o soporte?</span>
+                            <span style="color: #cbd5e1; font-size: 0.88rem;">Contáctanos directamente por nuestro canal oficial de atención:</span>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                            <a href="mailto:espacioterapeuticoapp@gmail.com" style="background: rgba(255,255,255,0.1); color: white; text-decoration: none; padding: 0.5rem 0.9rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                                ✉️ espacioterapeuticoapp@gmail.com
+                            </a>
+                            <a href="https://wa.me/584245926114" target="_blank" style="background: #25d366; color: white; text-decoration: none; padding: 0.5rem 0.9rem; border-radius: 8px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                💬 WhatsApp: +58 424-5926114
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </section>
 
@@ -4336,6 +4444,63 @@
                         <button type="submit" class="btn btn-primary">Guardar en Agenda</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL INFORMATIVO DE SUSCRIPCIONES Y MÉTODOS DE PAGO -->
+    <div id="subscription-info-modal" class="modal hide">
+        <div class="modal-content modal-md" style="max-width: 580px; border-radius: var(--radius-lg); padding: 0; overflow: hidden;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #3d1e3f 0%, #1a0b1c 100%); color: white; padding: 1.25rem 1.5rem;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700; color: white;">⭐ Suscripción Profesional ($15 / mes)</h3>
+                <button class="btn-close-modal white-close" onclick="closeModal('subscription-info-modal')" style="color: white; opacity: 0.8;">✕</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem; max-height: 80vh; overflow-y: auto;">
+                <p style="font-size: 0.92rem; color: var(--text-dark); line-height: 1.5; margin-bottom: 1.25rem;">
+                    Para suscribirte al <strong>Plan Profesional ($15/mes)</strong> o solicitar asistencia con tu pago, disponemos de los siguientes métodos de transferencia:
+                </p>
+
+                <!-- DETALLE MÉTODOS DE PAGO -->
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem 1rem;">
+                        <span style="font-weight: 700; color: #2563eb; font-size: 0.92rem; display: block;">🟣 Zinli (USD $)</span>
+                        <span style="font-size: 0.85rem; color: #475569; font-weight: 600;">Correo o ID de envío: <code>espacioterapeuticoapp@gmail.com</code></span>
+                    </div>
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem 1rem;">
+                        <span style="font-weight: 700; color: #d97706; font-size: 0.92rem; display: block;">🟡 Binance Pay (USDT)</span>
+                        <span style="font-size: 0.85rem; color: #475569; font-weight: 600;">Pay ID / Correo: <code>espacioterapeuticoapp@gmail.com</code></span>
+                    </div>
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem 1rem;">
+                        <span style="font-weight: 700; color: #059669; font-size: 0.92rem; display: block;">🟢 Banco Amiga ($ Depósito / Transferencia USD)</span>
+                        <span style="font-size: 0.85rem; color: #475569; font-weight: 600;">Solicita los datos bancarios exactos a nuestro soporte.</span>
+                    </div>
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem 1rem;">
+                        <span style="font-weight: 700; color: #db2777; font-size: 0.92rem; display: block;">💵 Pago Móvil / Efectivo (Bs / USD)</span>
+                        <span style="font-size: 0.85rem; color: #475569; font-weight: 600;">Tasa del día acordada con soporte oficial.</span>
+                    </div>
+                </div>
+
+                <!-- NOTA DE REVISIÓN Y APROBACIÓN DE CUENTA -->
+                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
+                    <h4 style="color: #b45309; font-size: 0.9rem; font-weight: 700; margin-bottom: 0.25rem;">📌 Nota importante de Aprobación</h4>
+                    <p style="color: #78350f; font-size: 0.85rem; line-height: 1.4; margin: 0;">
+                        Tras crear tu cuenta y/o enviar el comprobante de pago, el equipo de administración verificará tu perfil. Recibirás respuesta inmediata para la activación del servicio.
+                    </p>
+                </div>
+
+                <!-- CONTACTO RÁPIDO -->
+                <div style="background: #f1f5f9; border-radius: 10px; padding: 1rem; text-align: center;">
+                    <span style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem;">Reporta tu pago o solicita ayuda directamente:</span>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="https://wa.me/584245926114" target="_blank" class="btn" style="background: #25d366; color: white; text-decoration: none; font-weight: 700; font-size: 0.85rem; padding: 0.55rem 1rem; border-radius: 8px;">
+                            💬 Contactar por WhatsApp (+58 424-5926114)
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('subscription-info-modal')">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="closeModal('subscription-info-modal'); openAuthModal();">Registrarme / Iniciar Sesión</button>
             </div>
         </div>
     </div>
