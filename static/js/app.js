@@ -10724,9 +10724,10 @@ async function fetchWithTimeout(resource, options = {}) {
     }
 }
 
-async function checkWhatsAppQRStatus(forceGenerate = false) {
+async function checkWhatsAppQRStatus(wantQR = false) {
     const badge = document.getElementById('wa-connection-status-badge');
     const loadingBox = document.getElementById('wa-qr-loading');
+    const disconnectedBox = document.getElementById('wa-disconnected-box');
     const qrBox = document.getElementById('wa-qr-box');
     const qrImage = document.getElementById('wa-qr-image');
     const connectedBox = document.getElementById('wa-connected-box');
@@ -10737,7 +10738,7 @@ async function checkWhatsAppQRStatus(forceGenerate = false) {
     try {
         let qrData = null;
 
-        // Primero consultamos el estado /status de Railway para ver si YA está conectado sin forzar QR
+        // 1. Siempre consultamos /status primero para verificar si ya está conectado
         try {
             const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 8000 });
             if (resStatus.ok) {
@@ -10748,29 +10749,22 @@ async function checkWhatsAppQRStatus(forceGenerate = false) {
             }
         } catch (e0) {}
 
-        // Intento 1: Consulta directa a Railway /qr
-        if (!qrData) {
+        // 2. Si se solicitó explícitamente generar un QR o estamos esperando un QR
+        if (!qrData && wantQR) {
             try {
                 const resDirectQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 10000 });
                 if (resDirectQr.ok) {
                     qrData = await resDirectQr.json();
                 }
             } catch (e1) {
-                console.warn("Consulta directa a Railway falló, intentando vía backend Flask:", e1);
+                try {
+                    const resBackendQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 12000 });
+                    if (resBackendQr.ok) qrData = await resBackendQr.json();
+                } catch (e2) {}
             }
         }
 
-        // Intento 2: Backend Flask en PythonAnywhere
-        if (!qrData) {
-            try {
-                const resBackendQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 12000 });
-                if (resBackendQr.ok) {
-                    qrData = await resBackendQr.json();
-                }
-            } catch (e2) {}
-        }
-
-        // Si la cuenta YA ESTÁ CONECTADA
+        // --- MANEJO DE ESTADOS ---
         if (qrData && qrData.status === 'connected') {
             badge.className = 'badge badge-success';
             badge.style.background = '#10b981';
@@ -10779,6 +10773,7 @@ async function checkWhatsAppQRStatus(forceGenerate = false) {
             
             loadingBox.classList.add('hide');
             qrBox.classList.add('hide');
+            if (disconnectedBox) disconnectedBox.classList.add('hide');
             connectedBox.classList.remove('hide');
             if (connectedPhone) connectedPhone.textContent = qrData.phone || 'Cuenta vinculada';
 
@@ -10788,7 +10783,6 @@ async function checkWhatsAppQRStatus(forceGenerate = false) {
             }
             return;
         } 
-        // Si hay un Código QR listo para escanear
         else if (qrData && (qrData.qr || qrData.status === 'qr_ready')) {
             badge.className = 'badge badge-warning';
             badge.style.background = '#f59e0b';
@@ -10797,34 +10791,47 @@ async function checkWhatsAppQRStatus(forceGenerate = false) {
 
             loadingBox.classList.add('hide');
             connectedBox.classList.add('hide');
+            if (disconnectedBox) disconnectedBox.classList.add('hide');
             qrBox.classList.remove('hide');
             if (qrImage && qrData.qr) {
                 qrImage.src = qrData.qr;
             }
 
             if (!waPollInterval) {
-                waPollInterval = setInterval(() => checkWhatsAppQRStatus(false), 4000);
+                waPollInterval = setInterval(() => checkWhatsAppQRStatus(true), 4000);
             }
             return;
         }
 
-        // Estado inicial de espera
+        // Estado Desconectado / Sin pedir QR
         badge.className = 'badge badge-secondary';
         badge.style.background = '#6b7280';
         badge.style.color = '#ffffff';
-        badge.textContent = 'Verificando... ⌛';
+        badge.textContent = 'Desconectado ⚪';
 
-        loadingBox.classList.remove('hide');
+        loadingBox.classList.add('hide');
         qrBox.classList.add('hide');
         connectedBox.classList.add('hide');
+        if (disconnectedBox) disconnectedBox.classList.remove('hide');
 
-        if (!waPollInterval) {
-            waPollInterval = setInterval(() => checkWhatsAppQRStatus(false), 4000);
+        if (waPollInterval) {
+            clearInterval(waPollInterval);
+            waPollInterval = null;
         }
     } catch (err) {
-        console.error("Error al obtener estado de WhatsApp QR:", err);
+        console.error("Error al obtener estado de WhatsApp:", err);
     }
 }
+
+async function requestNewWhatsAppQR() {
+    const loadingBox = document.getElementById('wa-qr-loading');
+    const disconnectedBox = document.getElementById('wa-disconnected-box');
+    if (loadingBox) loadingBox.classList.remove('hide');
+    if (disconnectedBox) disconnectedBox.classList.add('hide');
+    
+    await checkWhatsAppQRStatus(true);
+}
+window.requestNewWhatsAppQR = requestNewWhatsAppQR;
 
 
 async function handleLogoutWhatsApp() {

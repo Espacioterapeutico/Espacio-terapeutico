@@ -1948,8 +1948,14 @@
                                 </p>
                                 
                                 <div id="wa-qr-container" style="text-align: center; padding: 1.25rem; background: var(--bg-light); border-radius: var(--radius-md); border: 1.5px dashed var(--border-color); margin-bottom: 1rem;">
-                                    <div id="wa-qr-loading" style="font-size: 0.9rem; color: var(--text-secondary);">
-                                        Obteniendo código QR...
+                                    <div id="wa-qr-loading" class="hide" style="font-size: 0.9rem; color: var(--text-secondary);">
+                                        ⌛ Generando código QR de vinculación...
+                                    </div>
+                                    <div id="wa-disconnected-box" class="hide">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📱</div>
+                                        <h4 style="color: var(--text-secondary); font-weight: 600;">Sin dispositivo vinculado</h4>
+                                        <p style="font-size: 0.85rem; color: var(--text-secondary);" class="mb-3">Haz clic en el botón de abajo para generar un nuevo código QR cuando desees vincular tu cuenta.</p>
+                                        <button type="button" class="btn btn-success btn-sm" onclick="requestNewWhatsAppQR()" style="background: #10b981; border: none; font-weight: 600; padding: 0.5rem 1rem;">📱 Generar Código QR de Vinculación</button>
                                     </div>
                                     <div id="wa-qr-box" class="hide">
                                         <img id="wa-qr-image" src="" alt="Código QR de WhatsApp" style="max-width: 240px; width: 100%; border: 4px solid white; border-radius: 8px; box-shadow: var(--shadow-sm);" />
@@ -1967,7 +1973,7 @@
                                 </div>
                                 <div style="display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
                                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="triggerManualCronReminders()" style="border: 1.5px solid var(--primary-color); font-weight: 600;">🚀 Ejecutar Recordatorios Ahora</button>
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="checkWhatsAppQRStatus()">🔄 Actualizar Estado / Generar Nuevo QR</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="checkWhatsAppQRStatus(false)">🔄 Verificar Estado</button>
                                 </div>
                             </div>
                         </div>
