@@ -10919,7 +10919,7 @@ window.sendManualWhatsAppReminder = sendManualWhatsAppReminder;
 async function triggerManualCronReminders() {
     if (!confirm('¿Deseas procesar y enviar los recordatorios de WhatsApp pendientes ahora?')) return;
     try {
-        const res = await fetch('/api/whatsapp/cron-send-reminders', { method: 'POST' });
+        const res = await fetch('/api/whatsapp/cron-send-reminders?key=espacioterapeutico_cron_2024', { method: 'POST' });
         const data = await res.json();
         if (res.ok) {
             const totalConfirm = data.confirmaciones_enviadas || 0;
