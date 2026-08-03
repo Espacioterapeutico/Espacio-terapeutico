@@ -243,6 +243,16 @@ app.post('/logout', async (req, res) => {
     }
 });
 
+// Manejadores de fallos no capturados para evitar que el contenedor de Railway colapse (Deploy Crashed)
+process.on('uncaughtException', (err) => {
+    console.error('❌ Error no capturado en proceso WhatsApp:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Promesa rechazada no manejada:', reason);
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Microservicio WhatsApp Mi Consultorio corriendo en el puerto ${PORT}`);
+    connectToWhatsApp();
 });
