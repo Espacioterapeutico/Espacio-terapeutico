@@ -196,13 +196,39 @@ app.get('/qr', (req, res) => {
 app.post('/force-qr', async (req, res) => {
     try {
         console.log("⚠️ Petición manual para forzar generación de nuevo Código QR...");
+        
+        // 1. Cerrar completamente el socket de Baileys para liberar los archivos
         if (sock) {
+            try { sock.ev.removeAllListeners(); } catch(e) {}
+            try { sock.ws.close(); } catch(e) {}
             try { await sock.logout(); } catch(e) {}
+            try { sock.end(); } catch(e) {}
+            sock = null;
         }
-        if (fs.existsSync(AUTH_DIR)) {
-            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+
+        // 2. Esperar a que los file handles se liberen
+        await new Promise(r => setTimeout(r, 1000));
+
+        // 3. Borrar carpeta de credenciales (con retry si está bloqueada)
+        for (let i = 0; i < 3; i++) {
+            try {
+                if (fs.existsSync(AUTH_DIR)) {
+                    // Intentar borrar archivos individuales primero
+                    const files = fs.readdirSync(AUTH_DIR);
+                    for (const f of files) {
+                        try { fs.unlinkSync(path.join(AUTH_DIR, f)); } catch(e) {}
+                    }
+                    // Luego intentar borrar la carpeta
+                    try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch(e) {}
+                }
+                break;
+            } catch(e) {
+                console.log(`Intento ${i+1}/3 de limpiar auth_info falló: ${e.message}`);
+                await new Promise(r => setTimeout(r, 500));
+            }
         }
-        // También notificamos al backend para borrar la copia guardada
+
+        // 4. Notificar al backend para borrar la copia guardada en SQLite
         try {
             const syncUrl = FLASK_WEBHOOK_URL.replace(/\/webhook$/, '/sync-session');
             await axios.delete(syncUrl, { timeout: 4000 }).catch(() => {});
@@ -211,9 +237,13 @@ app.post('/force-qr', async (req, res) => {
         connectionStatus = 'disconnected';
         connectedPhone = null;
         currentQR = null;
+
+        // 5. Reconectar Baileys (sin restaurar sesión vieja)
         connectToWhatsApp(true);
+
         res.json({ success: true, message: 'Reiniciando motor de WhatsApp para generar nuevo QR...' });
     } catch(err) {
+        console.error("Error en /force-qr:", err);
         res.status(500).json({ error: err.message });
     }
 });
