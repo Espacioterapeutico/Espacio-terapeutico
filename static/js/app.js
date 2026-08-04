@@ -10935,10 +10935,30 @@ async function checkWhatsAppQRStatus(wantQR = false) {
 async function requestNewWhatsAppQR() {
     const loadingBox = document.getElementById('wa-qr-loading');
     const disconnectedBox = document.getElementById('wa-disconnected-box');
+    const badge = document.getElementById('wa-connection-status-badge');
+
+    if (badge) {
+        badge.className = 'badge badge-warning';
+        badge.style.background = '#f59e0b';
+        badge.style.color = '#ffffff';
+        badge.textContent = 'Generando QR ⏳';
+    }
     if (loadingBox) loadingBox.classList.remove('hide');
     if (disconnectedBox) disconnectedBox.classList.add('hide');
     
-    await checkWhatsAppQRStatus(true);
+    // Intentar obtener el QR hasta 6 veces con intervalo de 2.5s (espera a que Baileys genere la imagen QR)
+    for (let attempts = 0; attempts < 6; attempts++) {
+        await checkWhatsAppQRStatus(true);
+        const qrImage = document.getElementById('wa-qr-image');
+        const qrBox = document.getElementById('wa-qr-box');
+        const connectedBox = document.getElementById('wa-connected-box');
+
+        // Si ya obtuvimos el QR o se conectó, detenemos el reintento inicial
+        if ((qrBox && !qrBox.classList.contains('hide')) || (connectedBox && !connectedBox.classList.contains('hide'))) {
+            break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2500));
+    }
 }
 window.requestNewWhatsAppQR = requestNewWhatsAppQR;
 
