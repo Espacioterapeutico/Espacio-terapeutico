@@ -10817,6 +10817,10 @@ async function fetchWithTimeout(resource, options = {}) {
     }
 }
 
+// Flag global: evita que checkWhatsAppQRStatus resetee la UI a "Desconectado"
+// mientras estamos esperando activamente un QR nuevo tras llamar a /force-qr
+let _waWaitingForQR = false;
+
 async function checkWhatsAppQRStatus(wantQR = false) {
     const badge = document.getElementById('wa-connection-status-badge');
     const loadingBox = document.getElementById('wa-qr-loading');
@@ -10831,7 +10835,7 @@ async function checkWhatsAppQRStatus(wantQR = false) {
     try {
         let qrData = null;
 
-        // 1. Siempre consultamos /status primero para verificar si ya está conectado o conectándose
+        // 1. Consultar /status (Railway directo)
         try {
             const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 8000 });
             if (resStatus.ok) {
@@ -10842,23 +10846,30 @@ async function checkWhatsAppQRStatus(wantQR = false) {
             }
         } catch (e0) {}
 
-        // 2. Si se solicitó explícitamente generar un QR o estamos esperando un QR
+        // 2. Si se quiere QR y no hay datos todavía, consultar /qr
         if (!qrData && wantQR) {
             try {
                 const resDirectQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 10000 });
                 if (resDirectQr.ok) {
-                    qrData = await resDirectQr.json();
+                    const d = await resDirectQr.json();
+                    if (d && (d.qr || d.status === 'qr_ready' || d.status === 'connected')) qrData = d;
                 }
-            } catch (e1) {
+            } catch (e1) {}
+            // Fallback: proxy Flask
+            if (!qrData) {
                 try {
                     const resBackendQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 12000 });
-                    if (resBackendQr.ok) qrData = await resBackendQr.json();
+                    if (resBackendQr.ok) {
+                        const d = await resBackendQr.json();
+                        if (d && (d.qr || d.status === 'qr_ready' || d.status === 'connected')) qrData = d;
+                    }
                 } catch (e2) {}
             }
         }
 
         // --- MANEJO DE ESTADOS ---
         if (qrData && qrData.status === 'connected') {
+            _waWaitingForQR = false;
             badge.className = 'badge badge-success';
             badge.style.background = '#10b981';
             badge.style.color = '#ffffff';
@@ -10893,6 +10904,7 @@ async function checkWhatsAppQRStatus(wantQR = false) {
             return;
         } 
         else if (qrData && (qrData.qr || qrData.status === 'qr_ready')) {
+            _waWaitingForQR = false;
             badge.className = 'badge badge-warning';
             badge.style.background = '#f59e0b';
             badge.style.color = '#ffffff';
@@ -10912,7 +10924,13 @@ async function checkWhatsAppQRStatus(wantQR = false) {
             return;
         }
 
-        // Estado Desconectado / Sin pedir QR
+        // ⚠️ GUARD: Si estamos esperando activamente un QR, NO resetear la UI a "Desconectado"
+        if (_waWaitingForQR) {
+            console.log('⏳ Esperando QR de Railway... ignorando status disconnected transitorio');
+            return;
+        }
+
+        // Estado Desconectado / Sin pedir QR (caso normal, no estamos esperando)
         badge.className = 'badge badge-secondary';
         badge.style.background = '#6b7280';
         badge.style.color = '#ffffff';
@@ -10942,7 +10960,11 @@ async function requestNewWhatsAppQR() {
 
     const origText = btn ? btn.innerHTML : '📱 Generar Código QR de Vinculación';
 
+    // Activar el guard ANTES de todo para que checkWhatsAppQRStatus no resetee la UI
+    _waWaitingForQR = true;
+
     try {
+        // UI inmediata
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '⌛ Generando QR...';
@@ -10956,27 +10978,43 @@ async function requestNewWhatsAppQR() {
         if (loadingBox) loadingBox.classList.remove('hide');
         if (disconnectedBox) disconnectedBox.classList.add('hide');
 
-        // 1. Invocar POST a /force-qr para limpiar cualquier estado colgado y obligar a Baileys a emitir un QR fresco
+        // 1. Pedir a Railway que reinicie Baileys y genere un QR nuevo
         try {
             await fetch(`${RENDER_WA_URL}/force-qr`, { method: 'POST', mode: 'cors' }).catch(() => {});
         } catch(e) {
             await fetch('/api/whatsapp/force-qr', { method: 'POST' }).catch(() => {});
         }
 
-        // 2. Reintentar consultar /status y /qr de Railway y de Flask
-        for (let attempts = 0; attempts < 8; attempts++) {
+        // 2. Esperar 3 segundos iniciales para dar tiempo a Baileys de arrancar
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // 3. Polling: consultar /status y /qr hasta que aparezca el QR o se conecte
+        for (let attempts = 0; attempts < 10; attempts++) {
             await checkWhatsAppQRStatus(true);
 
             const isQrVisible = qrBox && !qrBox.classList.contains('hide');
             const isConnectedVisible = connectedBox && !connectedBox.classList.contains('hide');
 
             if (isQrVisible || isConnectedVisible) {
-                break;
+                return; // Éxito
             }
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
+
+        // Si después de todos los intentos no apareció el QR
+        _waWaitingForQR = false;
+        if (badge) {
+            badge.className = 'badge badge-danger';
+            badge.style.background = '#ef4444';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Sin respuesta del servidor ❌';
+        }
+        if (loadingBox) loadingBox.classList.add('hide');
+        if (disconnectedBox) disconnectedBox.classList.remove('hide');
+
     } catch (err) {
         console.error("Error al solicitar código QR:", err);
+        _waWaitingForQR = false;
         if (badge) {
             badge.className = 'badge badge-danger';
             badge.style.background = '#ef4444';
