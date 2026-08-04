@@ -10840,13 +10840,15 @@ async function checkWhatsAppQRStatus(wantQR = false) {
             const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 8000 });
             if (resStatus.ok) {
                 const st = await resStatus.json();
-                if (st && (st.status === 'connected' || st.status === 'connecting' || st.status === 'qr_ready')) {
+                // Solo aceptar como qrData si es 'connected' o 'connecting'
+                // Si es 'qr_ready', necesitamos ir a /qr para obtener la imagen real
+                if (st && (st.status === 'connected' || st.status === 'connecting')) {
                     qrData = st;
                 }
             }
         } catch (e0) {}
 
-        // 2. Si se quiere QR y no hay datos todavía, consultar /qr
+        // 2. Si no tenemos datos completos o queremos QR, consultar /qr para obtener la imagen base64
         if (!qrData && wantQR) {
             try {
                 const resDirectQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 10000 });
