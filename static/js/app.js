@@ -1119,6 +1119,22 @@ function showPatientLayout(username, patientId) {
     clearAllNotificationIntervals();
     loadPatientNotifications(patientId);
     patientNotificationIntervalId = setInterval(() => loadPatientNotifications(patientId), 30000);
+
+    // Sincronizar automáticamente la zona horaria del paciente (para recordatorios a las 8:00 PM local)
+    try {
+        if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+            const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const userOffset = new Date().getTimezoneOffset();
+            if (userTz) {
+                fetch('/api/patient/update-timezone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timezone: userTz, utc_offset: userOffset })
+                }).catch(() => {});
+            }
+        }
+    } catch(e) {}
+
     hideLoadingScreen();
 }
 

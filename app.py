@@ -506,6 +506,10 @@ def init_db():
             cursor.execute("ALTER TABLE pacientes ADD COLUMN terminos_aceptados INTEGER DEFAULT 0")
         if 'fecha_aceptacion_terminos' not in cols_pac:
             cursor.execute("ALTER TABLE pacientes ADD COLUMN fecha_aceptacion_terminos TEXT")
+        if 'zona_horaria' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN zona_horaria TEXT DEFAULT 'America/Caracas'")
+        if 'utc_offset' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN utc_offset INTEGER DEFAULT 240")
         
         # Asegurar que todos los consultantes antiguos tengan terminos_aceptados = 0 y psicologo_id por defecto si son NULL
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
@@ -1413,6 +1417,105 @@ def auto_check_patient_birthdays(db):
     except Exception as e:
         print("Error en auto_check_patient_birthdays:", e)
 
+def send_hourly_patient_tool_reminders(db=None):
+    """
+    Revisa la hora local (8:00 PM / 20:00) de cada paciente que tenga herramientas
+    terapéuticas activas en modulos_terapeuticos_paciente y les envía el recordatorio diario.
+    """
+    if db is None:
+        db = get_db()
+    cursor = db.cursor()
+
+    TOOL_NAME_MAP = {
+        'sobriedad': 'Registro de Sobriedad / Consumo',
+        'sueno': 'Registro de Sueño',
+        'ansiedad': 'Registro de Ansiedad',
+        'medicamentos': 'Adherencia a Medicamentos',
+        'actividades': 'Registro de Actividades',
+        'cognitivos': 'Registro de Pensamientos Cognitivos',
+        'ingesta': 'Registro de Ingesta Alimentaria'
+    }
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    today_str = now_utc.strftime("%Y-%m-%d")
+
+    try:
+        cursor.execute("""
+            SELECT DISTINCT p.id, p.nombres, p.apellidos, p.cedula, p.username, p.zona_horaria, p.utc_offset
+            FROM pacientes p
+            JOIN modulos_terapeuticos_paciente mt ON p.id = mt.paciente_id
+            WHERE mt.activo = 1
+        """)
+        patients_with_tools = cursor.fetchall()
+    except Exception:
+        return 0
+
+    reminders_sent = 0
+
+    for p in patients_with_tools:
+        p_id = p['id']
+        offset_min = p['utc_offset'] if (p['utc_offset'] is not None) else 240
+        
+        # Calcular hora local del paciente a partir de UTC
+        patient_local = now_utc - datetime.timedelta(minutes=offset_min)
+        current_hour = patient_local.hour
+
+        # Verificar si en el reloj local del paciente son las 8:00 PM (hora 20)
+        if current_hour == 20:
+            unique_link = f"/#herramientas-paciente?daily_reminder={p_id}_{today_str}"
+            cursor.execute("SELECT id FROM notificaciones WHERE link = ?", (unique_link,))
+            if cursor.fetchone():
+                continue # Ya enviado hoy
+
+            cursor.execute("SELECT modulo_clave FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND activo = 1", (p_id,))
+            active_modules = [r['modulo_clave'] for r in cursor.fetchall()]
+            
+            tool_names = [TOOL_NAME_MAP.get(m, m) for m in active_modules if m in TOOL_NAME_MAP]
+            if not tool_names:
+                continue
+
+            if len(tool_names) == 1:
+                tools_str = tool_names[0]
+            elif len(tool_names) == 2:
+                tools_str = f"{tool_names[0]} y {tool_names[1]}"
+            else:
+                tools_str = ", ".join(tool_names[:-1]) + f" y {tool_names[-1]}"
+
+            first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
+
+            notif_title = "🧠 Recordatorio Terapéutico Diario"
+            notif_body = f"{first_name}, recuerda actualizar tu estatus de {tools_str}"
+            now_str = patient_local.strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (0, 'herramienta_paciente', ?, ?, ?, 0, ?)
+            """, (notif_title, notif_body, now_str, unique_link))
+            db.commit()
+
+            try:
+                if FIREBASE_DB_URL:
+                    fb_payload = {
+                        'titulo': notif_title,
+                        'mensaje': notif_body,
+                        'fecha': now_str,
+                        'leida': False,
+                        'tipo': 'herramienta_paciente',
+                        'link': '/#herramientas-paciente'
+                    }
+                    requests.post(f"{FIREBASE_DB_URL}/pacientes/{p_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+            except Exception:
+                pass
+
+            try:
+                send_fcm_notification(patient_id=p_id, title=notif_title, body=notif_body, url="/#herramientas-paciente")
+            except Exception:
+                pass
+
+            reminders_sent += 1
+
+    return reminders_sent
+
 @app.before_request
 def before_request_cleanup():
     # Evitar ejecutar en llamadas de archivos estáticos
@@ -1423,6 +1526,7 @@ def before_request_cleanup():
     auto_send_appointment_reminders(db)
     auto_send_confirmation_requests(db)
     auto_check_patient_birthdays(db)
+    send_hourly_patient_tool_reminders(db)
 
 def auto_settle_patient_debts(db, patient_id):
     if not patient_id:
@@ -2772,6 +2876,14 @@ def auto_backup():
     path = create_automatic_backup()
     return jsonify({'success': True, 'backup': path})
 
+@app.route('/api/cron/hourly-tool-reminders', methods=['GET', 'POST'])
+def cron_hourly_tool_reminders():
+    try:
+        count = send_hourly_patient_tool_reminders()
+        return jsonify({'success': True, 'reminders_sent': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/check-username-role', methods=['GET'])
 def check_username_role():
     username = request.args.get('username', '').strip()
@@ -2855,6 +2967,25 @@ def patient_login_required(f):
             return jsonify({'error': 'No autorizado. Debe iniciar sesión como paciente.'}), 401
         return f(*args, **kwargs)
     return decorated_function
+
+@app.route('/api/patient/update-timezone', methods=['POST'])
+@patient_login_required
+def update_patient_timezone():
+    data = request.json or {}
+    tz_name = data.get('timezone', 'America/Caracas').strip()
+    offset_min = data.get('utc_offset', 240)
+    try:
+        offset_min = int(offset_min)
+    except Exception:
+        offset_min = 240
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        UPDATE pacientes SET zona_horaria = ?, utc_offset = ? WHERE id = ?
+    """, (tz_name, offset_min, session['patient_id']))
+    db.commit()
+    return jsonify({'success': 'Zona horaria de paciente actualizada.'})
 
 # Endpoints de autenticación y seguridad de pacientes (PWA)
 @app.route('/api/patient/login', methods=['POST'])
