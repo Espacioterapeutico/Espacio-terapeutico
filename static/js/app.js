@@ -10092,15 +10092,24 @@ async function openQuickPayModal() {
     const modal = document.getElementById('quick-pay-modal');
     if (!modal) return;
 
-    // Reset
-    document.getElementById('qp-paciente').value = '';
-    document.getElementById('qp-concepto').value = '';
-    document.getElementById('qp-debt-info').classList.add('hide');
-    document.getElementById('qp-package-info').classList.add('hide');
-    document.getElementById('qp-payment-fields').classList.add('hide');
-    document.getElementById('qp-footer').style.display = 'none';
-    document.getElementById('qp-status-msg').classList.add('hide');
-    document.getElementById('qp-fecha').value = new Date().toISOString().split('T')[0];
+    // Safely reset fields
+    const qpPac = document.getElementById('qp-paciente');
+    const qpCon = document.getElementById('qp-concepto');
+    const qpDebt = document.getElementById('qp-debt-info');
+    const qpPkg = document.getElementById('qp-package-info');
+    const qpPay = document.getElementById('qp-payment-fields');
+    const qpFoot = document.getElementById('qp-footer');
+    const qpStat = document.getElementById('qp-status-msg');
+    const qpFec = document.getElementById('qp-fecha');
+
+    if (qpPac) qpPac.value = '';
+    if (qpCon) qpCon.value = '';
+    if (qpDebt) qpDebt.classList.add('hide');
+    if (qpPkg) qpPkg.classList.add('hide');
+    if (qpPay) qpPay.classList.add('hide');
+    if (qpFoot) qpFoot.style.display = 'none';
+    if (qpStat) qpStat.classList.add('hide');
+    if (qpFec) qpFec.value = new Date().toISOString().split('T')[0];
     _qpCurrentProfile = null;
 
     // Cargar lista de pacientes
@@ -10108,25 +10117,31 @@ async function openQuickPayModal() {
         const res = await fetch('/api/patients');
         const data = await res.json();
         _qpPatients = Array.isArray(data) ? data : [];
-        const sel = document.getElementById('qp-paciente');
-        sel.innerHTML = '<option value="">— Selecciona un consultante —</option>';
-        _qpPatients.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = `${p.nombres} ${p.apellidos}`;
-            sel.appendChild(opt);
-        });
+        if (qpPac) {
+            qpPac.innerHTML = '<option value="">— Selecciona un consultante —</option>';
+            _qpPatients.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.nombres} ${p.apellidos}`;
+                qpPac.appendChild(opt);
+            });
+        }
     } catch(e) {
         console.error('Error cargando pacientes:', e);
     }
 
     modal.classList.remove('hide');
+    modal.style.display = 'flex';
+    modal.style.zIndex = '3000';
 }
 window.openQuickPayModal = openQuickPayModal;
 
 function closeQuickPayModal() {
     const modal = document.getElementById('quick-pay-modal');
-    if (modal) modal.classList.add('hide');
+    if (modal) {
+        modal.classList.add('hide');
+        modal.style.display = 'none';
+    }
 }
 window.closeQuickPayModal = closeQuickPayModal;
 
