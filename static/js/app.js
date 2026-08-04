@@ -798,14 +798,21 @@ async function execLogout(withBackup = false) {
 
     if (withBackup) {
         try {
-            // Descargar copia de seguridad .db al dispositivo local del psicólogo
-            const link = document.createElement('a');
-            link.href = '/api/backup';
-            link.download = `copia_seguridad_clinica_${new Date().toISOString().split('T')[0]}.db`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            await new Promise(r => setTimeout(r, 1000));
+            // Obtener archivo .db completo como Blob antes de cerrar sesión para garantizar la descarga
+            const res = await fetch('/api/backup');
+            if (res.ok) {
+                const blob = await res.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `copia_seguridad_clinica_${new Date().toISOString().split('T')[0]}.db`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+            } else {
+                console.error("Error obteniendo respaldo de la API:", res.statusText);
+            }
         } catch(e) {
             console.error("Error descargando respaldo:", e);
         }
