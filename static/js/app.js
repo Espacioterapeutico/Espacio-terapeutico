@@ -767,20 +767,31 @@ async function handleAuthSubmit(e) {
 function handleLogout() {
     const modal = document.getElementById('logout-confirm-modal');
     if (modal) {
-        modal.classList.remove('hide');
-        modal.style.display = 'flex';
+        if (typeof openModal === 'function') {
+            openModal('logout-confirm-modal');
+        } else {
+            modal.classList.remove('hide');
+            modal.style.setProperty('display', 'flex', 'important');
+        }
     } else {
         execLogout(false);
     }
 }
+window.handleLogout = handleLogout;
 
 function closeLogoutModal() {
     const modal = document.getElementById('logout-confirm-modal');
     if (modal) {
-        modal.classList.add('hide');
-        modal.style.display = 'none';
+        if (typeof closeModal === 'function') {
+            closeModal('logout-confirm-modal');
+        } else {
+            modal.classList.add('hide');
+            modal.style.removeProperty('display');
+            modal.style.display = 'none';
+        }
     }
 }
+window.closeLogoutModal = closeLogoutModal;
 
 async function execLogout(withBackup = false) {
     closeLogoutModal();
@@ -807,10 +818,13 @@ async function execLogout(withBackup = false) {
     } finally {
         sessionStorage.clear();
         localStorage.clear();
-        clearAllNotificationIntervals();
+        if (typeof clearAllNotificationIntervals === 'function') {
+            clearAllNotificationIntervals();
+        }
         window.location.href = '/login';
     }
 }
+window.execLogout = execLogout;
 
 function isFeatureBlocked(feature) {
     const blocksStr = sessionStorage.getItem('bloqueos');
