@@ -9850,12 +9850,16 @@ def format_whatsapp_message(template_str, patient, cita, psicologo):
     return msg
 
 
-@app.route('/api/whatsapp/sync-session', methods=['GET', 'POST'])
+@app.route('/api/whatsapp/sync-session', methods=['GET', 'POST', 'DELETE'])
 def sync_whatsapp_session():
     import json
     db = get_db()
     cursor = db.cursor()
-    if request.method == 'POST':
+    if request.method == 'DELETE':
+        cursor.execute("DELETE FROM configuracion WHERE clave = 'wa_auth_session'")
+        db.commit()
+        return jsonify({'status': 'cleared'})
+    elif request.method == 'POST':
         data = request.json or {}
         session_json = json.dumps(data)
         cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('wa_auth_session', ?)", (session_json,))

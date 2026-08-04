@@ -74,9 +74,11 @@ async function restoreAuthSession() {
     }
 }
 
-async function connectToWhatsApp() {
+async function connectToWhatsApp(forceNew = false) {
     try {
-        await restoreAuthSession();
+        if (!forceNew) {
+            await restoreAuthSession();
+        }
         const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
         const { version } = await fetchLatestBaileysVersion();
 
@@ -124,7 +126,7 @@ async function connectToWhatsApp() {
                 currentQR = null;
 
                 if (!isExplicitLogout) {
-                    setTimeout(connectToWhatsApp, 5000);
+                    setTimeout(() => connectToWhatsApp(false), 5000);
                 } else {
                     console.log('Sesión cerrada explícitamente desde el teléfono. Limpiando credenciales...');
                     if (fs.existsSync(AUTH_DIR)) {
@@ -200,10 +202,16 @@ app.post('/force-qr', async (req, res) => {
         if (fs.existsSync(AUTH_DIR)) {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
         }
+        // También notificamos al backend para borrar la copia guardada
+        try {
+            const syncUrl = FLASK_WEBHOOK_URL.replace(/\/webhook$/, '/sync-session');
+            await axios.delete(syncUrl, { timeout: 4000 }).catch(() => {});
+        } catch(e) {}
+
         connectionStatus = 'disconnected';
         connectedPhone = null;
         currentQR = null;
-        connectToWhatsApp();
+        connectToWhatsApp(true);
         res.json({ success: true, message: 'Reiniciando motor de WhatsApp para generar nuevo QR...' });
     } catch(err) {
         res.status(500).json({ error: err.message });
