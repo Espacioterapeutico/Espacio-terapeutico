@@ -5617,6 +5617,32 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIRMACIÓN DE CERRAR SESIÓN CON RESPALDO -->
+    <div id="logout-confirm-modal" class="modal hide" role="dialog" aria-modal="true" style="z-index: 3500;">
+        <div class="modal-content" style="max-width: 460px; border-radius: 16px; padding: 1.75rem; text-align: center;">
+            <div style="width: 56px; height: 56px; background: rgba(112, 46, 94, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; color: #702e5e;">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); color: #0f172a; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">
+                ¿Deseas cerrar la sesión?
+            </h3>
+            <p style="color: #64748b; font-size: 0.92rem; line-height: 1.5; margin-bottom: 1.5rem;">
+                Puedes descargar una copia de seguridad local de tus datos antes de salir para mayor tranquilidad.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+                <button type="button" class="btn btn-primary" onclick="execLogout(true)" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 10px; font-weight: 700; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    💾 Sí, guardar copia de seguridad y cerrar
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="execLogout(false)" style="border-radius: 10px; font-weight: 600; padding: 0.65rem 1rem; border: 1px solid #cbd5e1;">
+                    🚪 Sí, cerrar sesión sin respaldar
+                </button>
+                <button type="button" class="btn" onclick="closeLogoutModal()" style="background: transparent; color: #64748b; font-weight: 600; border: none; margin-top: 0.25rem;">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
     <script src="/static/js/app.js?v={{ asset_v or '89' }}"></script>
 </body>

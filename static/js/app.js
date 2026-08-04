@@ -764,8 +764,42 @@ async function handleAuthSubmit(e) {
     }
 }
 
-async function handleLogout() {
-    if (!confirm("¿Está seguro de que desea cerrar la sesión por seguridad?")) return;
+function handleLogout() {
+    const modal = document.getElementById('logout-confirm-modal');
+    if (modal) {
+        modal.classList.remove('hide');
+        modal.style.display = 'flex';
+    } else {
+        execLogout(false);
+    }
+}
+
+function closeLogoutModal() {
+    const modal = document.getElementById('logout-confirm-modal');
+    if (modal) {
+        modal.classList.add('hide');
+        modal.style.display = 'none';
+    }
+}
+
+async function execLogout(withBackup = false) {
+    closeLogoutModal();
+
+    if (withBackup) {
+        try {
+            // Descargar copia de seguridad .db al dispositivo local del psicólogo
+            const link = document.createElement('a');
+            link.href = '/api/backup';
+            link.download = `copia_seguridad_clinica_${new Date().toISOString().split('T')[0]}.db`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            await new Promise(r => setTimeout(r, 1000));
+        } catch(e) {
+            console.error("Error descargando respaldo:", e);
+        }
+    }
+
     try {
         await fetch('/api/logout', { method: 'POST' });
     } catch (err) {
