@@ -10831,12 +10831,12 @@ async function checkWhatsAppQRStatus(wantQR = false) {
     try {
         let qrData = null;
 
-        // 1. Siempre consultamos /status primero para verificar si ya está conectado
+        // 1. Siempre consultamos /status primero para verificar si ya está conectado o conectándose
         try {
             const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 8000 });
             if (resStatus.ok) {
                 const st = await resStatus.json();
-                if (st && st.status === 'connected') {
+                if (st && (st.status === 'connected' || st.status === 'connecting' || st.status === 'qr_ready')) {
                     qrData = st;
                 }
             }
@@ -10873,6 +10873,22 @@ async function checkWhatsAppQRStatus(wantQR = false) {
             if (waPollInterval) {
                 clearInterval(waPollInterval);
                 waPollInterval = null;
+            }
+            return;
+        }
+        else if (qrData && qrData.status === 'connecting') {
+            badge.className = 'badge badge-info';
+            badge.style.background = '#3b82f6';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Conectando 🔄';
+
+            loadingBox.classList.remove('hide');
+            qrBox.classList.add('hide');
+            connectedBox.classList.add('hide');
+            if (disconnectedBox) disconnectedBox.classList.add('hide');
+
+            if (!waPollInterval) {
+                waPollInterval = setInterval(() => checkWhatsAppQRStatus(false), 3000);
             }
             return;
         } 
