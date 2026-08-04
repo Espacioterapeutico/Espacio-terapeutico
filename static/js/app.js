@@ -1063,6 +1063,9 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     loadNotifications();
     notificationIntervalId = setInterval(loadNotifications, 30000);
     loadMessageTemplates();
+    if (typeof loadPublicProfileSettings === 'function') {
+        setTimeout(loadPublicProfileSettings, 300);
+    }
     hideLoadingScreen();
 }
 
@@ -14060,57 +14063,70 @@ function copyInputValue(inputId) {
     }
 }
 
+function populateProfileUI(data) {
+    if (!data) return;
+    if (data.foto && document.getElementById('set-perfil-preview-img')) {
+        document.getElementById('set-perfil-preview-img').src = data.foto;
+    }
+    if (document.getElementById('prof-nomenclatura')) document.getElementById('prof-nomenclatura').value = data.nomenclatura || '';
+    if (document.getElementById('prof-biografia')) document.getElementById('prof-biografia').value = data.descripcion_biografia || '';
+    if (document.getElementById('prof-whatsapp')) document.getElementById('prof-whatsapp').value = data.whatsapp_publico || '';
+    if (document.getElementById('prof-email')) document.getElementById('prof-email').value = data.email_publico || '';
+    
+    const redes = data.redes_sociales || {};
+    if (document.getElementById('prof-instagram')) document.getElementById('prof-instagram').value = redes.instagram || '';
+    if (document.getElementById('prof-linkedin')) document.getElementById('prof-linkedin').value = redes.linkedin || '';
+
+    const baseUrl = `${window.location.protocol}//${window.location.host}`;
+    const cleanSlug = data.clean_slug || (data.slug ? data.slug.replace(/^psic\./, '') : (window.sessionUser ? `${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : ''));
+    if (cleanSlug) {
+        const fullProfileUrl = data.full_profile_url ? `${baseUrl}${data.full_profile_url}` : `${baseUrl}/psic.${cleanSlug}`;
+        const fullRegisterUrl = data.registration_url ? `${baseUrl}${data.registration_url}` : `${baseUrl}/registro/psic.${cleanSlug}`;
+        const fullBookingUrl = data.fast_booking_url ? `${baseUrl}${data.fast_booking_url}` : `${baseUrl}/agendar/psic.${cleanSlug}`;
+        
+        if (document.getElementById('prof-link-perfil')) document.getElementById('prof-link-perfil').value = fullProfileUrl;
+        if (document.getElementById('prof-link-perfil-btn')) document.getElementById('prof-link-perfil-btn').href = fullProfileUrl;
+        if (document.getElementById('prof-link-registro')) document.getElementById('prof-link-registro').value = fullRegisterUrl;
+        if (document.getElementById('prof-link-agendar')) document.getElementById('prof-link-agendar').value = fullBookingUrl;
+    }
+    
+    const mods = data.modalidades_data || data.modalidades || ["Online", "Presencial"];
+    if (mods && typeof mods === 'object' && !Array.isArray(mods)) {
+        if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = !!mods.online;
+        if (document.getElementById('mod-online-titulo')) document.getElementById('mod-online-titulo').value = mods.online_titulo || 'Consulta Online';
+        if (document.getElementById('mod-online-detalle')) document.getElementById('mod-online-detalle').value = mods.online_detalle || '';
+        
+        if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = !!mods.presencial;
+        if (document.getElementById('mod-presencial-titulo')) document.getElementById('mod-presencial-titulo').value = mods.presencial_titulo || 'Consulta Presencial';
+        if (document.getElementById('mod-presencial-detalle')) document.getElementById('mod-presencial-detalle').value = mods.presencial_detalle || mods.presencial_direccion || '';
+        
+        if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = !!mods.domicilio;
+        if (document.getElementById('mod-domicilio-titulo')) document.getElementById('mod-domicilio-titulo').value = mods.domicilio_titulo || 'Atención a Domicilio';
+        if (document.getElementById('mod-domicilio-detalle')) document.getElementById('mod-domicilio-detalle').value = mods.domicilio_detalle || mods.domicilio_zonas || '';
+    } else {
+        const list = Array.isArray(mods) ? mods : ["Online", "Presencial"];
+        if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = list.includes("Online");
+        if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = list.includes("Presencial");
+        if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = list.includes("Domicilio");
+    }
+    toggleModalityDetailsUI();
+}
+
 async function loadPublicProfileSettings() {
+    // Renderizado instantáneo desde memoria/sessionStorage (0 ms de retraso visual)
+    try {
+        const cached = sessionStorage.getItem('cache_profile_public');
+        if (cached) {
+            populateProfileUI(JSON.parse(cached));
+        }
+    } catch(e) {}
+
     try {
         const res = await fetch('/api/admin/profile-public');
         if (!res.ok) return;
         const data = await res.json();
-        
-        if (data.foto && document.getElementById('set-perfil-preview-img')) {
-            document.getElementById('set-perfil-preview-img').src = data.foto;
-        }
-        if (document.getElementById('prof-nomenclatura')) document.getElementById('prof-nomenclatura').value = data.nomenclatura || '';
-        if (document.getElementById('prof-biografia')) document.getElementById('prof-biografia').value = data.descripcion_biografia || '';
-        if (document.getElementById('prof-whatsapp')) document.getElementById('prof-whatsapp').value = data.whatsapp_publico || '';
-        if (document.getElementById('prof-email')) document.getElementById('prof-email').value = data.email_publico || '';
-        
-        const redes = data.redes_sociales || {};
-        if (document.getElementById('prof-instagram')) document.getElementById('prof-instagram').value = redes.instagram || '';
-        if (document.getElementById('prof-linkedin')) document.getElementById('prof-linkedin').value = redes.linkedin || '';
-
-        const baseUrl = `${window.location.protocol}//${window.location.host}`;
-        const cleanSlug = data.clean_slug || (data.slug ? data.slug.replace(/^psic\./, '') : (window.sessionUser ? `${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : ''));
-        if (cleanSlug) {
-            const fullProfileUrl = data.full_profile_url ? `${baseUrl}${data.full_profile_url}` : `${baseUrl}/psic.${cleanSlug}`;
-            const fullRegisterUrl = data.registration_url ? `${baseUrl}${data.registration_url}` : `${baseUrl}/registro/psic.${cleanSlug}`;
-            const fullBookingUrl = data.fast_booking_url ? `${baseUrl}${data.fast_booking_url}` : `${baseUrl}/agendar/psic.${cleanSlug}`;
-            
-            if (document.getElementById('prof-link-perfil')) document.getElementById('prof-link-perfil').value = fullProfileUrl;
-            if (document.getElementById('prof-link-perfil-btn')) document.getElementById('prof-link-perfil-btn').href = fullProfileUrl;
-            if (document.getElementById('prof-link-registro')) document.getElementById('prof-link-registro').value = fullRegisterUrl;
-            if (document.getElementById('prof-link-agendar')) document.getElementById('prof-link-agendar').value = fullBookingUrl;
-        }
-        
-        const mods = data.modalidades_data || data.modalidades || ["Online", "Presencial"];
-        if (mods && typeof mods === 'object' && !Array.isArray(mods)) {
-            if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = !!mods.online;
-            if (document.getElementById('mod-online-titulo')) document.getElementById('mod-online-titulo').value = mods.online_titulo || 'Consulta Online';
-            if (document.getElementById('mod-online-detalle')) document.getElementById('mod-online-detalle').value = mods.online_detalle || '';
-            
-            if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = !!mods.presencial;
-            if (document.getElementById('mod-presencial-titulo')) document.getElementById('mod-presencial-titulo').value = mods.presencial_titulo || 'Consulta Presencial';
-            if (document.getElementById('mod-presencial-detalle')) document.getElementById('mod-presencial-detalle').value = mods.presencial_detalle || mods.presencial_direccion || '';
-            
-            if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = !!mods.domicilio;
-            if (document.getElementById('mod-domicilio-titulo')) document.getElementById('mod-domicilio-titulo').value = mods.domicilio_titulo || 'Atención a Domicilio';
-            if (document.getElementById('mod-domicilio-detalle')) document.getElementById('mod-domicilio-detalle').value = mods.domicilio_detalle || mods.domicilio_zonas || '';
-        } else {
-            const list = Array.isArray(mods) ? mods : ["Online", "Presencial"];
-            if (document.getElementById('mod-online')) document.getElementById('mod-online').checked = list.includes("Online");
-            if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = list.includes("Presencial");
-            if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = list.includes("Domicilio");
-        }
-        toggleModalityDetailsUI();
+        sessionStorage.setItem('cache_profile_public', JSON.stringify(data));
+        populateProfileUI(data);
     } catch(e) {
         console.error("Error al cargar perfil público de psicólogo:", e);
     }
@@ -14161,6 +14177,8 @@ async function savePublicProfileSettings() {
         });
         const data = await res.json();
         if (res.ok) {
+            sessionStorage.removeItem('cache_profile_public');
+            await loadPublicProfileSettings();
             alert(data.success || "¡Perfil público actualizado con éxito!");
             loadLandingPageContent();
         } else {
