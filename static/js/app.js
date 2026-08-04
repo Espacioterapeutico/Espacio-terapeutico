@@ -808,7 +808,7 @@ async function execLogout(withBackup = false) {
         sessionStorage.clear();
         localStorage.clear();
         clearAllNotificationIntervals();
-        showAuthScreen();
+        window.location.href = '/login';
     }
 }
 

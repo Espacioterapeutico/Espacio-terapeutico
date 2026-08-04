@@ -1044,7 +1044,7 @@
                     </div>
                     <span id="pat-menu-terms-badge" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 12px; background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);">⚠️ Pendiente</span>
                 </a>
-                <a href="#" class="pat-menu-item logout-btn" onclick="handleLogout(); togglePatientMenu();" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: #f87171 !important; text-decoration: none; font-weight: 500; margin-top: 1.5rem; border: 1.5px solid rgba(220, 38, 38, 0.2); transition: all var(--transition-fast);">
+                <a href="#" class="pat-menu-item logout-btn" onclick="event.preventDefault(); handleLogout(); togglePatientMenu();" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: #f87171 !important; text-decoration: none; font-weight: 500; margin-top: 1.5rem; border: 1.5px solid rgba(220, 38, 38, 0.2); transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #f87171;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     <span>Cerrar Sesión</span>
                 </a>
