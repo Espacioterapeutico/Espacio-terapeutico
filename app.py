@@ -2754,13 +2754,17 @@ def create_automatic_backup():
         print(f"Error creando backup automático: {e}")
         return None
 
-@app.route('/api/logout', methods=['POST'])
+@app.route('/logout', methods=['GET', 'POST'])
+@app.route('/api/logout', methods=['GET', 'POST'])
 def logout():
     try:
         create_automatic_backup()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error en backup de logout: {e}")
     session.clear()
+    session.modified = True
+    if request.method == 'GET':
+        return redirect('/login')
     return jsonify({'success': 'Sesión cerrada y copia de seguridad creada automáticamente.'})
 
 @app.route('/api/sync/auto-backup', methods=['POST', 'GET'])
@@ -9212,7 +9216,7 @@ def inject_asset_version():
 @app.route('/agendar/<path:slug>')
 @app.route('/registro/<path:slug>')
 def index(slug=None):
-    return send_file(get_resource_path('templates/index.html'))
+    return render_template('index.html')
 
 @app.route('/manifest.json')
 def serve_manifest():
