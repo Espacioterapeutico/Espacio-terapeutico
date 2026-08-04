@@ -764,17 +764,18 @@ async function handleAuthSubmit(e) {
     }
 }
 
-function handleLogout() {
-    const modal = document.getElementById('logout-confirm-modal');
-    if (modal) {
-        if (typeof openModal === 'function') {
-            openModal('logout-confirm-modal');
-        } else {
-            modal.classList.remove('hide');
-            modal.style.setProperty('display', 'flex', 'important');
+async function handleLogout() {
+    try {
+        await fetch('/api/logout', { method: 'POST' });
+    } catch (err) {
+        console.warn("Error enviando petición de logout:", err);
+    } finally {
+        sessionStorage.clear();
+        localStorage.clear();
+        if (typeof clearAllNotificationIntervals === 'function') {
+            clearAllNotificationIntervals();
         }
-    } else {
-        execLogout(false);
+        window.location.href = '/logout';
     }
 }
 window.handleLogout = handleLogout;
@@ -818,18 +819,7 @@ async function execLogout(withBackup = false) {
         }
     }
 
-    try {
-        await fetch('/api/logout', { method: 'POST' });
-    } catch (err) {
-        console.warn("Error enviando petición de logout:", err);
-    } finally {
-        sessionStorage.clear();
-        localStorage.clear();
-        if (typeof clearAllNotificationIntervals === 'function') {
-            clearAllNotificationIntervals();
-        }
-        window.location.href = '/login';
-    }
+    await handleLogout();
 }
 window.execLogout = execLogout;
 

@@ -966,10 +966,10 @@
                 <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.6rem; font-weight: 500;">
                     Versión 2.2.0
                 </div>
-                <button type="button" class="btn btn-secondary btn-block logout-btn" onclick="handleLogout()">
+                <a href="/logout" class="btn btn-secondary btn-block logout-btn" onclick="handleLogout(); return false;" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none;">
                     <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     <span>Cerrar Sesión</span>
-                </button>
+                </a>
             </div>
         </aside>
 
@@ -1044,7 +1044,7 @@
                     </div>
                     <span id="pat-menu-terms-badge" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 12px; background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);">⚠️ Pendiente</span>
                 </a>
-                <a href="#" class="pat-menu-item logout-btn" onclick="event.preventDefault(); handleLogout(); togglePatientMenu();" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: #f87171 !important; text-decoration: none; font-weight: 500; margin-top: 1.5rem; border: 1.5px solid rgba(220, 38, 38, 0.2); transition: all var(--transition-fast);">
+                <a href="/logout" class="pat-menu-item logout-btn" onclick="handleLogout(); return false;" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: #f87171 !important; text-decoration: none; font-weight: 500; margin-top: 1.5rem; border: 1.5px solid rgba(220, 38, 38, 0.2); transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #f87171;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     <span>Cerrar Sesión</span>
                 </a>
@@ -1110,13 +1110,13 @@
                 <div id="header-trial-badge" class="badge hide" style="margin-right: 0.75rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 5px 12px; border-radius: 999px; font-weight: 700; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3);">
                     <span id="trial-badge-text">⏳ Prueba Gratis (3 días)</span>
                 </div>
-                <div class="user-badge" style="margin-right: 0.5rem; cursor: pointer;" onclick="handleLogout()" title="Cerrar Sesión">
+                <a href="/logout" class="user-badge" onclick="handleLogout(); return false;" title="Cerrar Sesión" style="margin-right: 0.5rem; cursor: pointer; text-decoration: none; color: inherit;">
                     <span id="header-user-avatar" class="user-avatar">PM</span>
                     <div class="user-info">
                         <span id="header-user-name" class="user-name">Psic. Paulo Mora</span>
                         <span id="header-user-role" class="user-role">Terapeuta</span>
                     </div>
-                </div>
+                </a>
 
                 <div class="notifications-container" style="position: relative; margin-right: 0.5rem;">
                     <button class="notifications-bell-btn" onclick="toggleNotificationsDropdown()" style="background: none; border: none; cursor: pointer; color: var(--text-muted); position: relative; padding: 0.5rem; display: flex; align-items: center; justify-content: center; transition: color 0.2s;">
@@ -3463,7 +3463,7 @@
                             </div>
                             <div class="card-body">
                                 <p class="text-secondary mb-4">Tu cuenta está asociada a tu ficha clínica. Si deseas corregir tu nombre, cédula o teléfono, por favor solicítalo directamente a tu terapeuta en la próxima sesión.</p>
-                                <button type="button" onclick="handleLogout()" class="btn btn-secondary btn-block" style="width: 100%;">Cerrar Sesión</button>
+                                <a href="/logout" onclick="handleLogout(); return false;" class="btn btn-secondary btn-block" style="width: 100%; text-decoration: none; text-align: center; display: block;">Cerrar Sesión</a>
                             </div>
                         </div>
                     </div>
