@@ -191,6 +191,25 @@ app.get('/qr', (req, res) => {
     });
 });
 
+app.post('/force-qr', async (req, res) => {
+    try {
+        console.log("⚠️ Petición manual para forzar generación de nuevo Código QR...");
+        if (sock) {
+            try { await sock.logout(); } catch(e) {}
+        }
+        if (fs.existsSync(AUTH_DIR)) {
+            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+        }
+        connectionStatus = 'disconnected';
+        connectedPhone = null;
+        currentQR = null;
+        connectToWhatsApp();
+        res.json({ success: true, message: 'Reiniciando motor de WhatsApp para generar nuevo QR...' });
+    } catch(err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/send', async (req, res) => {
     const { phone, text } = req.body || {};
     if (!phone || !text) {

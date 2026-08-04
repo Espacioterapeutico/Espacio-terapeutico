@@ -10956,8 +10956,15 @@ async function requestNewWhatsAppQR() {
         if (loadingBox) loadingBox.classList.remove('hide');
         if (disconnectedBox) disconnectedBox.classList.add('hide');
 
-        // Reintentar consultar /status y /qr de Railway y de Flask
-        for (let attempts = 0; attempts < 6; attempts++) {
+        // 1. Invocar POST a /force-qr para limpiar cualquier estado colgado y obligar a Baileys a emitir un QR fresco
+        try {
+            await fetch(`${RENDER_WA_URL}/force-qr`, { method: 'POST', mode: 'cors' }).catch(() => {});
+        } catch(e) {
+            await fetch('/api/whatsapp/force-qr', { method: 'POST' }).catch(() => {});
+        }
+
+        // 2. Reintentar consultar /status y /qr de Railway y de Flask
+        for (let attempts = 0; attempts < 8; attempts++) {
             await checkWhatsAppQRStatus(true);
 
             const isQrVisible = qrBox && !qrBox.classList.contains('hide');

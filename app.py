@@ -9640,6 +9640,15 @@ def get_whatsapp_qr():
     except Exception as e:
         return jsonify({'status': 'disconnected', 'qr': None, 'error': str(e)})
 
+@app.route('/api/whatsapp/force-qr', methods=['POST'])
+@login_required
+def force_whatsapp_qr():
+    try:
+        r = make_wa_http_request('POST', '/force-qr', timeout=10)
+        return jsonify(r.json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/whatsapp/send', methods=['POST'])
 @login_required
 def send_whatsapp_message():
