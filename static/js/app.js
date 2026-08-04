@@ -10093,22 +10093,33 @@ async function openQuickPayModal() {
     if (!modal) return;
 
     // Safely reset fields
-    const qpPac = document.getElementById('qp-paciente');
-    const qpCon = document.getElementById('qp-concepto');
+    const qpPac  = document.getElementById('qp-paciente');
+    const qpCon  = document.getElementById('qp-concepto');
+    const qpMon  = document.getElementById('qp-monto');
+    const qpCur  = document.getElementById('qp-moneda');
+    const qpMet  = document.getElementById('qp-metodo');
+    const qpRef  = document.getElementById('qp-referencia');
+    const qpFec  = document.getElementById('qp-fecha');
     const qpDebt = document.getElementById('qp-debt-info');
-    const qpPkg = document.getElementById('qp-package-info');
-    const qpPay = document.getElementById('qp-payment-fields');
+    const qpPkg  = document.getElementById('qp-package-info');
+    const qpPay  = document.getElementById('qp-payment-fields');
     const qpFoot = document.getElementById('qp-footer');
     const qpStat = document.getElementById('qp-status-msg');
-    const qpFec = document.getElementById('qp-fecha');
 
     if (qpPac) qpPac.value = '';
     if (qpCon) qpCon.value = '';
+    if (qpMon) qpMon.value = '';
+    if (qpCur) qpCur.value = 'USD';
+    if (qpMet) qpMet.value = 'Efectivo';
+    if (qpRef) qpRef.value = '';
     if (qpDebt) qpDebt.classList.add('hide');
     if (qpPkg) qpPkg.classList.add('hide');
     if (qpPay) qpPay.classList.add('hide');
     if (qpFoot) qpFoot.style.display = 'none';
-    if (qpStat) qpStat.classList.add('hide');
+    if (qpStat) {
+        qpStat.classList.add('hide');
+        qpStat.textContent = '';
+    }
     if (qpFec) qpFec.value = new Date().toISOString().split('T')[0];
     _qpCurrentProfile = null;
 
@@ -10142,6 +10153,26 @@ function closeQuickPayModal() {
         modal.classList.add('hide');
         modal.style.display = 'none';
     }
+    // Clean form values on close
+    const qpPac  = document.getElementById('qp-paciente');
+    const qpCon  = document.getElementById('qp-concepto');
+    const qpMon  = document.getElementById('qp-monto');
+    const qpRef  = document.getElementById('qp-referencia');
+    const qpPay  = document.getElementById('qp-payment-fields');
+    const qpFoot = document.getElementById('qp-footer');
+    const qpStat = document.getElementById('qp-status-msg');
+
+    if (qpPac) qpPac.value = '';
+    if (qpCon) qpCon.value = '';
+    if (qpMon) qpMon.value = '';
+    if (qpRef) qpRef.value = '';
+    if (qpPay) qpPay.classList.add('hide');
+    if (qpFoot) qpFoot.style.display = 'none';
+    if (qpStat) {
+        qpStat.classList.add('hide');
+        qpStat.textContent = '';
+    }
+    _qpCurrentProfile = null;
 }
 window.closeQuickPayModal = closeQuickPayModal;
 
