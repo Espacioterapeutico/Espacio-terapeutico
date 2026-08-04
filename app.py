@@ -1059,6 +1059,21 @@ def restore_patients_from_firebase():
                         respuesta_seguridad_2_hash = COALESCE(respuesta_seguridad_2_hash, ?)
                     WHERE id = ?
                 """, (nombres, nombres, apellidos, apellidos, username, username, password_hash, p1, r1, p2, r2, pid))
+            # Reconciliar citas completadas desde Firebase si se restauró una base de datos antigua
+            citas_completadas = pinfo.get('citas_completadas', [])
+            if isinstance(citas_completadas, list) and len(citas_completadas) > 0:
+                for ag_id in citas_completadas:
+                    if isinstance(ag_id, int):
+                        c.execute("SELECT id FROM sesiones WHERE agenda_id = ?", (ag_id,))
+                        if not c.fetchone():
+                            c.execute("SELECT paciente_id, fecha, modalidad FROM agenda_finanzas WHERE id = ?", (ag_id,))
+                            ag_row = c.fetchone()
+                            if ag_row:
+                                c.execute("""
+                                    INSERT INTO sesiones (paciente_id, agenda_id, fecha, modalidad, resumen, estado)
+                                    VALUES (?, ?, ?, ?, 'Sesión realizada (Reconciliada automáticamente desde respaldo Firebase)', 'Realizada')
+                                """, (ag_row[0], ag_id, ag_row[1], ag_row[2] or 'Online'))
+
         conn.commit()
         conn.close()
     except Exception as e:
@@ -1575,6 +1590,11 @@ def sync_patient_to_firebase(patient_id):
         # 5. Guardar próxima cita en /pacientes/<id>/proxima_cita
         requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/proxima_cita.json", json=proxima_cita, timeout=3.0)
         
+        # 6. Sincronizar mapa ligero de IDs de citas evolucionadas/completadas para conciliar en restauraciones de respaldos
+        cursor.execute("SELECT DISTINCT agenda_id FROM sesiones WHERE paciente_id = ? AND agenda_id IS NOT NULL", (patient_id,))
+        completed_agenda_ids = [row[0] for row in cursor.fetchall()]
+        requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/citas_completadas.json", json=completed_agenda_ids, timeout=3.0)
+
         return True
     except Exception as e:
         print(f"Error syncing to Firebase: {e}")
