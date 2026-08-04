@@ -14344,8 +14344,8 @@ async function loadDedicatedTherapistProfile(slug) {
             }
 
             if (t.email_publico) {
-                cHtml += `<a href="mailto:${t.email_publico}" title="Enviar correo a ${t.email_publico}" style="display: inline-flex; align-items: center; gap: 8px; color: #334155; font-weight: 600; font-size: 1rem; text-decoration: none; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 0.7rem 1.4rem; border-radius: 30px; transition: background 0.2s;" onmouseover="this.style.background='#fae8ff'" onmouseout="this.style.background='#fdf4ff'">
-                    ✉️ <span>${t.email_publico}</span>
+                cHtml += `<a href="mailto:${t.email_publico}" title="Enviar correo a ${t.email_publico}" style="display: inline-flex; align-items: center; gap: 8px; color: #702e5e; font-weight: 600; font-size: 0.9rem; text-decoration: none; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 0.6rem 1.1rem; border-radius: 30px; max-width: 100%; word-break: break-word; overflow-wrap: anywhere; box-sizing: border-box; transition: background 0.2s;" onmouseover="this.style.background='#fae8ff'" onmouseout="this.style.background='#fdf4ff'">
+                    ✉️ <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 30px);">${t.email_publico}</span>
                 </a>`;
             }
 
