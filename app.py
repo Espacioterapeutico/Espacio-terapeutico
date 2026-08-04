@@ -990,6 +990,8 @@ def ensure_db_initialized():
             try:
                 init_db()
                 restore_patients_from_firebase()
+                # Sincronizar automáticamente los IDs de las sesiones ya existentes hacia Firebase
+                sync_all_psychologist_patients_to_firebase(1)
             except Exception as _db_err:
                 print(f"Advertencia al inicializar BD: {_db_err}")
         threading.Thread(target=_async_init, daemon=True).start()
