@@ -10933,31 +10933,54 @@ async function checkWhatsAppQRStatus(wantQR = false) {
 }
 
 async function requestNewWhatsAppQR() {
+    const btn = document.getElementById('btn-generate-wa-qr');
     const loadingBox = document.getElementById('wa-qr-loading');
     const disconnectedBox = document.getElementById('wa-disconnected-box');
     const badge = document.getElementById('wa-connection-status-badge');
+    const qrBox = document.getElementById('wa-qr-box');
+    const connectedBox = document.getElementById('wa-connected-box');
 
-    if (badge) {
-        badge.className = 'badge badge-warning';
-        badge.style.background = '#f59e0b';
-        badge.style.color = '#ffffff';
-        badge.textContent = 'Generando QR ⏳';
-    }
-    if (loadingBox) loadingBox.classList.remove('hide');
-    if (disconnectedBox) disconnectedBox.classList.add('hide');
-    
-    // Intentar obtener el QR hasta 6 veces con intervalo de 2.5s (espera a que Baileys genere la imagen QR)
-    for (let attempts = 0; attempts < 6; attempts++) {
-        await checkWhatsAppQRStatus(true);
-        const qrImage = document.getElementById('wa-qr-image');
-        const qrBox = document.getElementById('wa-qr-box');
-        const connectedBox = document.getElementById('wa-connected-box');
+    const origText = btn ? btn.innerHTML : '📱 Generar Código QR de Vinculación';
 
-        // Si ya obtuvimos el QR o se conectó, detenemos el reintento inicial
-        if ((qrBox && !qrBox.classList.contains('hide')) || (connectedBox && !connectedBox.classList.contains('hide'))) {
-            break;
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⌛ Generando QR...';
         }
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        if (badge) {
+            badge.className = 'badge badge-warning';
+            badge.style.background = '#f59e0b';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Generando QR ⏳';
+        }
+        if (loadingBox) loadingBox.classList.remove('hide');
+        if (disconnectedBox) disconnectedBox.classList.add('hide');
+
+        // Reintentar consultar /status y /qr de Railway y de Flask
+        for (let attempts = 0; attempts < 6; attempts++) {
+            await checkWhatsAppQRStatus(true);
+
+            const isQrVisible = qrBox && !qrBox.classList.contains('hide');
+            const isConnectedVisible = connectedBox && !connectedBox.classList.contains('hide');
+
+            if (isQrVisible || isConnectedVisible) {
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    } catch (err) {
+        console.error("Error al solicitar código QR:", err);
+        if (badge) {
+            badge.className = 'badge badge-danger';
+            badge.style.background = '#ef4444';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Error de Conexión ❌';
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+        }
     }
 }
 window.requestNewWhatsAppQR = requestNewWhatsAppQR;
