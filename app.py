@@ -10416,6 +10416,29 @@ def get_whatsapp_queue_status():
     db = get_db()
     cursor = db.cursor()
 
+    # Garantizar creación automática de columnas en SQLite
+    try:
+        cursor.execute("PRAGMA table_info(agenda_finanzas)")
+        cols_fin = [r[1] for r in cursor.fetchall()]
+        if 'reagendamiento_enviado_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
+        if 'confirmacion_enviada_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
+        if 'recordatorio_enviado_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+
+        cursor.execute("PRAGMA table_info(citas)")
+        cols_citas = [r[1] for r in cursor.fetchall()]
+        if 'reagendamiento_enviado_wa' not in cols_citas:
+            cursor.execute("ALTER TABLE citas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
+        if 'confirmacion_enviada_wa' not in cols_citas:
+            cursor.execute("ALTER TABLE citas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
+        if 'recordatorio_enviado_wa' not in cols_citas:
+            cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+        db.commit()
+    except Exception as ex_col:
+        print("Aviso al migrar columnas de cola de WhatsApp:", ex_col)
+
     from datetime import datetime, timedelta
     try:
         import zoneinfo
@@ -10427,86 +10450,89 @@ def get_whatsapp_queue_status():
     today_str = now_local.strftime('%Y-%m-%d')
     yesterday_str = (now_local - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    cursor.execute("""
-        SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
-               COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
-               COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
-               COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
-               COALESCE(c.estado, 'Agendada') as estado_cita,
-               p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
-        FROM agenda_finanzas af
-        JOIN pacientes p ON af.paciente_id = p.id
-        LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
-        WHERE p.psicologo_id = ? AND af.fecha >= ?
-        ORDER BY af.fecha ASC, af.hora ASC
-        LIMIT 50
-    """, (user_id, yesterday_str))
-    
-    rows = cursor.fetchall()
     queue = []
+    try:
+        cursor.execute("""
+            SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
+                   COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
+                   COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
+                   COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                   COALESCE(c.estado, 'Agendada') as estado_cita,
+                   p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
+            WHERE p.psicologo_id = ? AND af.fecha >= ?
+            ORDER BY af.fecha ASC, af.hora ASC
+            LIMIT 50
+        """, (user_id, yesterday_str))
+        
+        rows = cursor.fetchall()
 
-    for r in rows:
-        fecha_cita = r['fecha']
-        hora_cita = r['hora']
-        pat_name = f"{r['pat_nombres']} {r['pat_apellidos']}"
-        phone = r['pat_telefono'] or ''
-        estado_c = r['estado_cita']
-        is_confirmada = (r['confirmada'] == 1 or estado_c == 'Confirmada')
-        is_cancelada = (estado_c == 'Cancelada')
+        for r in rows:
+            fecha_cita = r['fecha']
+            hora_cita = r['hora']
+            pat_name = f"{r['pat_nombres']} {r['pat_apellidos']}"
+            phone = r['pat_telefono'] or ''
+            estado_c = r['estado_cita']
+            is_confirmada = (r['confirmada'] == 1 or estado_c == 'Confirmada')
+            is_cancelada = (estado_c == 'Cancelada')
 
-        if fecha_cita > today_str:
-            if r['confirmacion_enviada'] == 1:
+            if fecha_cita > today_str:
+                if r['confirmacion_enviada'] == 1:
+                    if is_confirmada:
+                        pipeline_status = 'confirmado'
+                        pipeline_label = '✅ Confirmado por Paciente'
+                    elif is_cancelada:
+                        pipeline_status = 'cancelado'
+                        pipeline_label = '❌ Cancelado por Paciente'
+                    else:
+                        pipeline_status = 'enviado_conf'
+                        pipeline_label = '🚀 Confirmación Enviada (Esperando Respuesta)'
+                else:
+                    pipeline_status = 'esperando_fecha'
+                    pipeline_label = '⏳ Esperando Fecha (Programado)'
+            elif fecha_cita == today_str:
                 if is_confirmada:
-                    pipeline_status = 'confirmado'
-                    pipeline_label = '✅ Confirmado por Paciente'
+                    if r['recordatorio_enviado'] == 1:
+                        pipeline_status = 'enviado_rec'
+                        pipeline_label = '🚀 Recordatorio Enviado Hoy'
+                    else:
+                        pipeline_status = 'en_cola'
+                        pipeline_label = '📥 En Cola (Listo para Recordatorio Hoy)'
                 elif is_cancelada:
                     pipeline_status = 'cancelado'
                     pipeline_label = '❌ Cancelado por Paciente'
                 else:
-                    pipeline_status = 'enviado_conf'
-                    pipeline_label = '🚀 Confirmación Enviada (Esperando Respuesta)'
-            else:
-                pipeline_status = 'esperando_fecha'
-                pipeline_label = '⏳ Esperando Fecha (Programado)'
-        elif fecha_cita == today_str:
-            if is_confirmada:
-                if r['recordatorio_enviado'] == 1:
-                    pipeline_status = 'enviado_rec'
-                    pipeline_label = '🚀 Recordatorio Enviado Hoy'
-                else:
-                    pipeline_status = 'en_cola'
-                    pipeline_label = '📥 En Cola (Listo para Recordatorio Hoy)'
-            elif is_cancelada:
-                pipeline_status = 'cancelado'
-                pipeline_label = '❌ Cancelado por Paciente'
+                    if r['reagendamiento_enviado'] == 1:
+                        pipeline_status = 'reagendar_enviado'
+                        pipeline_label = '🔄 Reagendamiento Enviado'
+                    else:
+                        pipeline_status = 'en_cola_reagendar'
+                        pipeline_label = '📥 En Cola (Reagendamiento Fin de Día)'
             else:
                 if r['reagendamiento_enviado'] == 1:
                     pipeline_status = 'reagendar_enviado'
                     pipeline_label = '🔄 Reagendamiento Enviado'
+                elif is_confirmada:
+                    pipeline_status = 'completada'
+                    pipeline_label = '✅ Cita Realizada'
                 else:
-                    pipeline_status = 'en_cola_reagendar'
-                    pipeline_label = '📥 En Cola (Reagendamiento Fin de Día)'
-        else:
-            if r['reagendamiento_enviado'] == 1:
-                pipeline_status = 'reagendar_enviado'
-                pipeline_label = '🔄 Reagendamiento Enviado'
-            elif is_confirmada:
-                pipeline_status = 'completada'
-                pipeline_label = '✅ Cita Realizada'
-            else:
-                pipeline_status = 'pendiente_reagendar'
-                pipeline_label = '📥 Pendiente Reagendar'
+                    pipeline_status = 'pendiente_reagendar'
+                    pipeline_label = '📥 Pendiente Reagendar'
 
-        queue.append({
-            'cita_id': r['id'],
-            'paciente_nombre': pat_name,
-            'telefono': phone,
-            'fecha': fecha_cita,
-            'hora': hora_cita,
-            'tipo_consulta': r['tipo_consulta'] or 'Presencial',
-            'pipeline_status': pipeline_status,
-            'pipeline_label': pipeline_label
-        })
+            queue.append({
+                'cita_id': r['id'],
+                'paciente_nombre': pat_name,
+                'telefono': phone,
+                'fecha': fecha_cita,
+                'hora': hora_cita,
+                'tipo_consulta': r['tipo_consulta'] or 'Presencial',
+                'pipeline_status': pipeline_status,
+                'pipeline_label': pipeline_label
+            })
+    except Exception as e_q:
+        print("Error en consulta de cola de WhatsApp:", e_q)
 
     return jsonify({'queue': queue})
 
