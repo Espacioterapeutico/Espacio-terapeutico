@@ -2419,6 +2419,15 @@ def ensure_usuarios_columns(db=None):
     cursor = db.cursor()
     columns = [
         ('mostrar_en_directorio', 'INTEGER DEFAULT 1'),
+        ('aviso_pago', 'INTEGER DEFAULT 0'),
+        ('bloqueo_registro', 'INTEGER DEFAULT 0'),
+        ('bloqueo_evoluciones', 'INTEGER DEFAULT 0'),
+        ('bloqueo_finanzas', 'INTEGER DEFAULT 0'),
+        ('bloqueo_agenda', 'INTEGER DEFAULT 0'),
+        ('bloqueo_mensajes', 'INTEGER DEFAULT 0'),
+        ('bloqueo_pizarra', 'INTEGER DEFAULT 0'),
+        ('bloqueo_herramientas', 'INTEGER DEFAULT 0'),
+        ('bloqueo_confirmaciones', 'INTEGER DEFAULT 0'),
         ('nomenclatura', 'TEXT'),
         ('descripcion_biografia', 'TEXT'),
         ('modalidades_json', 'TEXT'),
