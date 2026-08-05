@@ -657,8 +657,8 @@ async function checkSession() {
 
 async function handleAuthSubmit(e) {
     e.preventDefault();
-    const username = document.getElementById('auth-username').value;
-    const password = document.getElementById('auth-password').value;
+    const username = (document.getElementById('auth-username')?.value || '').trim();
+    const password = (document.getElementById('auth-password')?.value || '').trim();
     const errorMsg = document.getElementById('auth-error-msg');
     const submitBtn = e.target ? e.target.querySelector('button[type="submit"]') : document.querySelector('#auth-form button[type="submit"]');
     const origText = submitBtn ? submitBtn.textContent : '';

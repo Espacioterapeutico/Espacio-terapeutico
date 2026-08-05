@@ -2771,8 +2771,8 @@ def register_admin():
 def login():
     try:
         data = request.json or {}
-        username = data.get('username')
-        password = data.get('password')
+        username = (data.get('username') or '').strip()
+        password = (data.get('password') or '').strip()
         
         if not username or not password:
             return jsonify({'error': 'Usuario y contraseña son requeridos.'}), 400
