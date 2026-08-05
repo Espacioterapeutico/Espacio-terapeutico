@@ -9452,6 +9452,7 @@ async function submitCreatePsychologist(e) {
     const username = document.getElementById('sa-psic-username').value;
     const password = document.getElementById('sa-psic-password').value;
     const estudios = document.getElementById('sa-psic-estudios').value;
+    const cedula = document.getElementById('sa-psic-cedula')?.value || '';
     const federacion = document.getElementById('sa-psic-federacion').value;
     
     const fotoTituloInput = document.getElementById('sa-psic-foto-titulo');
@@ -9467,7 +9468,7 @@ async function submitCreatePsychologist(e) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                nombres, apellidos, username, password, estudios, federacion,
+                nombres, apellidos, username, password, estudios, cedula, federacion,
                 foto_titulo, foto_documento
             })
         });
@@ -10981,6 +10982,16 @@ async function checkWhatsAppQRStatus(wantQR = false) {
         }
 
         // --- MANEJO DE ESTADOS ---
+        if (qrData && qrData.status === 'connected') {
+            const currentUserId = parseInt(sessionStorage.getItem('user_id') || (window.currentUser && window.currentUser.id) || 0);
+            const currentUsername = (sessionStorage.getItem('username') || (window.currentUser && window.currentUser.username) || '').toLowerCase();
+
+            const isOwner = (currentUserId === 1 || currentUsername === 'pamoraro' || currentUsername === 'admin');
+            if (!isOwner && (qrData.phone === '584245926114' || !qrData.phone)) {
+                qrData = { status: 'disconnected' };
+            }
+        }
+
         if (qrData && qrData.status === 'connected') {
             _waWaitingForQR = false;
             badge.className = 'badge badge-success';

@@ -2428,6 +2428,7 @@ def ensure_usuarios_columns(db=None):
         ('bloqueo_pizarra', 'INTEGER DEFAULT 0'),
         ('bloqueo_herramientas', 'INTEGER DEFAULT 0'),
         ('bloqueo_confirmaciones', 'INTEGER DEFAULT 0'),
+        ('cedula', 'TEXT DEFAULT \'\''),
         ('nomenclatura', 'TEXT'),
         ('descripcion_biografia', 'TEXT'),
         ('modalidades_json', 'TEXT'),
@@ -2527,6 +2528,7 @@ def superadmin_create_psychologist():
     username = data.get('username')
     password = data.get('password')
     estudios = data.get('estudios')
+    cedula = data.get('cedula', '')
     federacion = data.get('federacion')
     foto_titulo = data.get('foto_titulo', '')
     foto_documento = data.get('foto_documento', '')
@@ -2535,6 +2537,7 @@ def superadmin_create_psychologist():
         return jsonify({'error': 'Todos los campos requeridos deben ser completados.'}), 400
         
     db = get_db()
+    ensure_usuarios_columns(db)
     cursor = db.cursor()
     
     cursor.execute("SELECT id FROM usuarios WHERE LOWER(username) = ?", (username.lower(),))
@@ -2558,9 +2561,9 @@ def superadmin_create_psychologist():
             clean_slug = re.sub(r'[^a-z0-9\.]', '', unicodedata.normalize('NFD', clean_name))
 
         cursor.execute("""
-            INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?)
-        """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug))
+            INSERT INTO usuarios (username, password_hash, nombres, apellidos, cedula, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?)
+        """, (username, password_hash, nombres, apellidos, cedula, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug))
         db.commit()
         return jsonify({'success': 'Psicólogo registrado con éxito (Modo Prueba 1 Mes / 30 Días activo).'})
     except Exception as e:
