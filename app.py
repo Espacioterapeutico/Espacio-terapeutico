@@ -1010,6 +1010,8 @@ def init_db():
         ]
         for key_d, val_d in def_landing_defaults:
             cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES (?, ?)", (key_d, val_d))
+        
+        ensure_demo_user(db)
     except Exception as _patch_err:
         print(f"Aviso en parche de datos automático: {_patch_err}")
 
@@ -1017,6 +1019,123 @@ def init_db():
     db.commit()
         
     db.close()
+
+def ensure_demo_user(db):
+    try:
+        cursor = db.cursor()
+        cursor.execute("SELECT id FROM usuarios WHERE username = 'psicologa.valeria'")
+        row = cursor.fetchone()
+        if row:
+            return
+        
+        from werkzeug.security import generate_password_hash
+        from datetime import datetime, timedelta
+        
+        psychologist_username = "psicologa.valeria"
+        psychologist_pass = "Prueba2026!"
+        psychologist_pass_hash = generate_password_hash(psychologist_pass)
+
+        disponibilidad_json = json.dumps({
+            "Lunes": ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00"],
+            "Miércoles": ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00"],
+            "Viernes": ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00"]
+        }, ensure_ascii=False)
+
+        visual_cfg_json = json.dumps({
+            "dias_laborables": ["Lunes", "Miércoles", "Viernes"],
+            "hora_inicio": "08:00",
+            "hora_fin": "17:00",
+            "duracion_sesion": 50,
+            "descanso": 10
+        }, ensure_ascii=False)
+
+        metodos_pago_json = json.dumps([
+            {"tipo": "Pago Móvil", "banco": "Banco de Venezuela (0102)", "cedula": "V-18492019", "telefono": "0414-1234567"},
+            {"tipo": "Zelle", "email": "valeria.mendoza.psico@gmail.com", "titular": "Valeria Mendoza"}
+        ], ensure_ascii=False)
+
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        expiry_str = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d %H:%M:%S")
+        avatar_rel_url = "/static/uploads/psicologo_prueba_avatar.jpg"
+
+        cursor.execute("""
+            INSERT INTO usuarios (
+                username, password_hash, nombres, apellidos, estudios, federacion,
+                foto_titulo, role, activo, fecha_registro, fecha_expiracion_prueba,
+                suscripcion_paga, slug, disponibilidad_horarios, configuracion_horarios_visual, metodos_pago
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 1, 'psicologa-valeria-mendoza', ?, ?, ?)
+        """, (
+            psychologist_username,
+            psychologist_pass_hash,
+            "Valeria Sofía",
+            "Mendoza Rivas",
+            "Psicóloga Clínica - Especialista en Terapia Cognitivo-Conductual (TCC), Manejo de Ansiedad y Regulación Emocional",
+            "FPV-18492",
+            avatar_rel_url,
+            now_str,
+            expiry_str,
+            disponibilidad_json,
+            visual_cfg_json,
+            metodos_pago_json
+        ))
+        psych_id = cursor.lastrowid
+
+        patient_username = "camila.perez"
+        patient_pass = "Paciente2026!"
+        patient_pass_hash = generate_password_hash(patient_pass)
+
+        cursor.execute("""
+            INSERT INTO pacientes (
+                nombres, apellidos, cedula, pronombre, genero, edad, lugar_nacimiento, fecha_nacimiento,
+                residencia_actual, con_quien_reside, nivel_academico, ocupacion, estado_civil, telefono, email,
+                antecedentes_medicos_familiares, antecedentes_medicos_personales, antecedentes_psicologicos_familiares,
+                antecedentes_psicologicos_personales, asistencia_previa_psicologo, motivo_consulta, expectativas,
+                farmacologia, contacto_emergencia_nombre, contacto_emergencia_parentesco, diagnostico,
+                username, password_hash, fecha_registro, psicologo_id
+            ) VALUES (
+                'Camila Andrea', 'Pérez Castillo', 'V-24891023', 'Ella', 'Femenino', 26, 'Caracas', '1999-11-14',
+                'Caracas, Venezuela', 'Pareja', 'Licenciatura', 'Diseñadora Gráfica Freelance', 'En relación', '0424-9876543', 'camila.perez.prueba@gmail.com',
+                'Hipertensión arterial en rama materna.', 'Sin patologías crónicas. Cuadros migrañosos ocasionales.', 'Madre con antecedentes de ansiedad y somatización.',
+                'Estrés académico moderado en 2022 durante entrega de tesis.', 'Sí, 4 sesiones en 2022 por orientación vocacional.', 'Siento episodios de angustia intensa y síntomas físicos de ansiedad (taquicardia, opresión en el pecho) ante entregas de proyectos bajo presión con clientes. Dificultad para conciliar el sueño por pensamientos rumiantes sobre el rendimiento.', 'Aprender técnicas efectivas de autorregulación emocional, reestructurar pensamientos de autoexigencia y mejorar la calidad del descanso.',
+                'Ninguna en la actualidad.', 'Carlos Eduardo Pérez', 'Hermano', 'Trastorno de Ansiedad Generalizada (TAG) leve con rasgos de perfeccionismo disfuncional (CIE-10: F41.1)',
+                ?, ?, ?, ?
+            )
+        """, (patient_username, patient_pass_hash, now_str, psych_id))
+        patient_id = cursor.lastrowid
+
+        past_date = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+        cursor.execute("""
+            INSERT INTO sesiones (
+                paciente_id, fecha, modalidad, estado, resumen, tareas_asignadas,
+                recursos_entregados, anotaciones_proxima, compromisos_psicologo, diagnostico
+            ) VALUES (?, ?, 'Online', 'Realizada', ?, ?, ?, ?, ?, ?)
+        """, (
+            patient_id,
+            past_date,
+            "Evaluación inicial y psicoeducación sobre la curva de ansiedad. La consultante expresa elevada autoexigencia ante plazos de entrega. Se aplicó escala HAD-A (puntaje 11/21 - Ansiedad Leve/Moderada). Se identifican pensamientos automáticos distorsionados de tipo 'todo o nada'.",
+            "1) Registro diario de pensamientos automáticos en el módulo cognitivo. 2) Respiración diafragmática 4-7-8 durante 5 minutos antes de dormir.",
+            "Guía PDF en Higiene del Sueño y Plantilla de Reestructuración Cognitiva.",
+            "Revisar registros de ansiedad y sueño, profundizar en creencias nucleares de perfeccionismo.",
+            "Enviar recordatorio de la guía de sueño por la plataforma.",
+            "Trastorno de Ansiedad Generalizada (TAG) leve (F41.1)"
+        ))
+
+        next_date = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
+        cursor.execute("""
+            INSERT INTO agenda_finanzas (
+                paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago, confirmada, metodo_pago
+            ) VALUES (?, ?, '10:00 AM', 'Terapia Individual Online', 35.00, 'USD', 'Pagado', 1, 'Zelle')
+        """, (patient_id, next_date))
+
+        for tool_clave in ['sueno', 'ansiedad', 'pantalla']:
+            cursor.execute("""
+                INSERT INTO modulos_terapeuticos_paciente (paciente_id, modulo_clave, activo, fecha_asignacion)
+                VALUES (?, ?, 1, ?)
+            """, (patient_id, tool_clave, now_str))
+
+        db.commit()
+    except Exception as _demo_err:
+        print(f"Aviso en ensure_demo_user: {_demo_err}")
 
 _db_initialized_flag = False
 
