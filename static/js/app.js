@@ -407,9 +407,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // CONTROL DE NAVEGACIÓN Y MENÚ
 // ==========================================
 function switchView(viewId) {
-    const role = (currentUser && currentUser.role) || sessionStorage.getItem('user_role') || '';
-    const username = (currentUser && currentUser.username) || sessionStorage.getItem('username') || '';
-    const userId = parseInt((currentUser && currentUser.id) || sessionStorage.getItem('user_id') || 0);
+    const role = (window.currentUser && window.currentUser.role) || sessionStorage.getItem('user_role') || '';
+    const username = (window.currentUser && window.currentUser.username) || sessionStorage.getItem('username') || '';
+    const userId = parseInt((window.currentUser && window.currentUser.id) || sessionStorage.getItem('user_id') || 0);
 
     const cleanUser = (username || '').toString().toLowerCase();
     const cleanRole = (role || '').toString().toLowerCase();
@@ -972,6 +972,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
     }
     
+    window.currentUser = { username, role, id: userId };
     if (role) sessionStorage.setItem('user_role', role);
     if (username) sessionStorage.setItem('username', username);
     if (userId) {
@@ -1104,7 +1105,11 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         sessionStorage.removeItem('bloqueos');
     }
     
-    switchView('dashboard');
+    if (isPureSuperadmin) {
+        switchView('superadmin-dashboard');
+    } else {
+        switchView('dashboard');
+    }
     clearAllNotificationIntervals();
     loadNotifications();
     notificationIntervalId = setInterval(loadNotifications, 30000);
