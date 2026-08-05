@@ -5663,6 +5663,24 @@
         </div>
     </div>
 
+    <!-- MODAL DE PREVISUALIZACIÓN DE HERRAMIENTA TERAPÉUTICA (VISTA PACIENTE FLOTANTE) -->
+    <div id="therapist-tool-preview-modal" class="modal hide" style="z-index: 10006; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); background: rgba(15, 23, 42, 0.75);">
+        <div class="modal-content" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding: 1rem 1.25rem;">
+                <h3 id="ttp-modal-title" style="margin: 0; font-size: 1.1rem; color: var(--primary-color); font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    👁️ Previsualización de Herramienta
+                </h3>
+                <button type="button" class="btn-close-modal" onclick="closeModal('therapist-tool-preview-modal')" style="background: none; border: none; font-size: 1.35rem; cursor: pointer; color: var(--text-muted); line-height: 1;">✕</button>
+            </div>
+            <div id="ttp-modal-body" class="modal-body" style="padding: 1.25rem;">
+                <p class="text-muted">Cargando previsualización...</p>
+            </div>
+            <div class="modal-footer" style="padding: 0.85rem 1.25rem; border-top: 1.5px solid var(--border-color); display: flex; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('therapist-tool-preview-modal')">Cerrar Previsualización</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL DE VISTA PREVIA Y DESCARGA DE DOCUMENTOS PARA SUPERADMIN -->
     <div id="doc-preview-modal" class="modal hide" style="z-index: 10005;">
         <div class="modal-content" style="max-width: 680px; width: 95%;">

@@ -11787,6 +11787,51 @@ const therapistPreviewTemplates = [
     }
 ];
 
+function openToolPreviewModal(clave, nombre) {
+    console.log('[DEBUG] openToolPreviewModal called:', clave, nombre);
+    
+    const claveMap = {
+        'sueno': 'sueno',
+        'ansiedad': 'ansiedad',
+        'sobriedad': 'sobriedad',
+        'consumo': 'sobriedad',
+        'adherencia': 'adherencia',
+        'medicacion': 'adherencia',
+        'activacion': 'activacion',
+        'ingesta': 'ingesta',
+        'cognitivo': 'cognitivo',
+        'pantalla': 'pantalla'
+    };
+    const normClave = claveMap[clave] || clave;
+    const tmplObj = therapistPreviewTemplates.find(t => t.clave === normClave || t.clave === clave);
+    
+    const titleEl = document.getElementById('ttp-modal-title');
+    const bodyEl = document.getElementById('ttp-modal-body');
+    const modalEl = document.getElementById('therapist-tool-preview-modal');
+
+    const displayName = nombre || tmplObj?.titulo || 'Herramienta Terapéutica';
+
+    if (titleEl) {
+        titleEl.innerHTML = `👁️ Previsualización: ${displayName}`;
+    }
+
+    if (bodyEl) {
+        if (tmplObj && tmplObj.html) {
+            bodyEl.innerHTML = tmplObj.html;
+        } else {
+            bodyEl.innerHTML = `<div class="text-center py-4 text-muted"><h4>📱 Vista Previa del Consultante</h4><p>Formulario predeterminado activado para la herramienta <strong>${displayName}</strong>.</p></div>`;
+        }
+    }
+
+    if (modalEl) {
+        modalEl.classList.remove('hide');
+        modalEl.style.setProperty('display', 'flex', 'important');
+        document.body.style.overflow = 'hidden';
+    }
+}
+window.openToolPreviewModal = openToolPreviewModal;
+window.toggleToolPreview = openToolPreviewModal;
+
 function renderTherapistPreviewTemplates() {
     const container = document.getElementById('tt-preview-templates-container');
     if (!container) return;
