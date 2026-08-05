@@ -11824,9 +11824,14 @@ function openToolPreviewModal(clave, nombre) {
     }
 
     if (modalEl) {
-        modalEl.classList.remove('hide');
+        if (typeof openModal === 'function') {
+            openModal(modalEl.id);
+        } else {
+            modalEl.classList.remove('hide');
+        }
         modalEl.style.display = 'flex';
         modalEl.style.setProperty('display', 'flex', 'important');
+        modalEl.style.setProperty('z-index', '99999', 'important');
         document.body.style.overflow = 'hidden';
     }
 }
