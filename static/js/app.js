@@ -13878,6 +13878,11 @@ window.addEventListener('beforeunload', () => {
 // MÓDULO DE PORTADA WEB Y DIRECTORIO PÚBLICO
 // ==========================================
 function openSubscriptionModal() {
+    const sec = document.getElementById('landing-payment-methods-section');
+    if (sec && sec.offsetParent !== null) {
+        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
     const modal = document.getElementById('subscription-info-modal');
     if (modal) {
         modal.classList.remove('hide');
