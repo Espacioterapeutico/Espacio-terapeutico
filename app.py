@@ -5852,16 +5852,16 @@ def admin_rates():
 def get_psicologo_id_filter():
     """
     Retorna el ID del psicólogo para filtrar consultas.
-    Si el rol es superadmin o admin, retorna None (sin filtro global).
+    Si la cuenta es superadmin puro (admin / AG), retorna -1 para garantizar que no tenga acceso a ningún paciente.
     De lo contrario, retorna session['user_id'] (o 1 por defecto).
     """
     role = session.get('role')
     user_id = session.get('user_id')
-    if role in ['admin', 'superadmin']:
-        req_id = request.args.get('psicologo_id')
-        if req_id and req_id.isdigit():
-            return int(req_id)
-        return None
+    username = session.get('username', '')
+    
+    if (role in ['admin', 'superadmin']) and (username.lower() != 'pamoraro' and user_id != 1):
+        return -1
+        
     return user_id if user_id else 1
 
 @app.route('/api/pacientes/buscar_cedula/<cedula>', methods=['GET'])
