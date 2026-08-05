@@ -7044,7 +7044,7 @@ async function fetchRecoveryQuestions() {
     }
     
     try {
-        const res = await fetch('/api/patient/recovery-questions', {
+        const res = await fetch('/api/auth/get-security-questions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username })
@@ -7086,7 +7086,7 @@ async function submitPasswordReset() {
     }
     
     try {
-        const res = await fetch('/api/patient/reset-password', {
+        const res = await fetch('/api/auth/reset-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

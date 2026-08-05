@@ -432,6 +432,14 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN email_publico TEXT DEFAULT ''")
         if 'redes_sociales_json' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN redes_sociales_json TEXT DEFAULT '{}'")
+        if 'pregunta_seguridad_1' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN pregunta_seguridad_1 TEXT")
+        if 'respuesta_seguridad_1_hash' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN respuesta_seguridad_1_hash TEXT")
+        if 'pregunta_seguridad_2' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN pregunta_seguridad_2 TEXT")
+        if 'respuesta_seguridad_2_hash' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN respuesta_seguridad_2_hash TEXT")
         db.commit()
         
     cursor.execute("""
@@ -465,12 +473,12 @@ def init_db():
         if not raw_n or raw_n == "psic.":
             raw_n = f"psic.{u_user}".lower()
         cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (raw_n, u_id))
-    # Sincronización de clave para Pamoraro si estaba en 123456
+    # Sincronización de clave para Pamoraro si no coincide con Psicodrama.26
     try:
         cursor.execute("SELECT id, password_hash FROM usuarios WHERE LOWER(username) = 'pamoraro'")
         pam_u = cursor.fetchone()
         if pam_u and pam_u['password_hash']:
-            if check_password_hash(pam_u['password_hash'], '123456'):
+            if not check_password_hash(pam_u['password_hash'], 'Psicodrama.26'):
                 cursor.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (generate_password_hash('Psicodrama.26'), pam_u['id']))
                 db.commit()
     except Exception:
@@ -3135,63 +3143,147 @@ def patient_setup_first_login():
     except Exception as e:
         return jsonify({'error': f'Error al configurar perfil: {str(e)}'}), 500
 
-@app.route('/api/patient/recovery-questions', methods=['POST'])
-def patient_recovery_questions():
-    data = request.json
-    username = data.get('username')
+@app.route('/api/auth/get-security-questions', methods=['POST'])
+def get_security_questions():
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
     
     if not username:
         return jsonify({'error': 'Usuario es requerido.'}), 400
         
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT pregunta_seguridad_1, pregunta_seguridad_2 FROM pacientes WHERE LOWER(username) = ? OR cedula = ?", (username.lower(), username))
-    patient = cursor.fetchone()
-    
-    if not patient or not patient['pregunta_seguridad_1'] or not patient['pregunta_seguridad_2']:
-        return jsonify({'error': 'El usuario no tiene configuradas preguntas de seguridad o no existe.'}), 404
-        
-    return jsonify({
-        'pregunta_1': patient['pregunta_seguridad_1'],
-        'pregunta_2': patient['pregunta_seguridad_2']
-    })
 
-@app.route('/api/patient/reset-password', methods=['POST'])
-def patient_reset_password():
-    data = request.json
-    username = data.get('username')
-    respuesta_1 = data.get('respuesta_1')
-    respuesta_2 = data.get('respuesta_2')
-    new_password = data.get('new_password')
+    # 1. Buscar en usuarios (psicólogos/admin)
+    cursor.execute("""
+        SELECT pregunta_seguridad_1, pregunta_seguridad_2 
+        FROM usuarios 
+        WHERE LOWER(username) = ?
+    """, (username.lower(),))
+    user_row = cursor.fetchone()
+
+    if user_row and user_row['pregunta_seguridad_1'] and user_row['pregunta_seguridad_2']:
+        return jsonify({
+            'found': True,
+            'pregunta_1': user_row['pregunta_seguridad_1'],
+            'pregunta_2': user_row['pregunta_seguridad_2']
+        })
+
+    # 2. Buscar en pacientes
+    cursor.execute("""
+        SELECT pregunta_seguridad_1, pregunta_seguridad_2 
+        FROM pacientes 
+        WHERE LOWER(username) = ? OR cedula = ?
+    """, (username.lower(), username))
+    patient_row = cursor.fetchone()
+
+    if patient_row and patient_row['pregunta_seguridad_1'] and patient_row['pregunta_seguridad_2']:
+        return jsonify({
+            'found': True,
+            'pregunta_1': patient_row['pregunta_seguridad_1'],
+            'pregunta_2': patient_row['pregunta_seguridad_2']
+        })
+
+    return jsonify({'error': 'El usuario no tiene configuradas preguntas de seguridad o no existe.'}), 404
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def auth_reset_password():
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    respuesta_1 = (data.get('respuesta_1') or '').strip().lower()
+    respuesta_2 = (data.get('respuesta_2') or '').strip().lower()
+    new_password = (data.get('new_password') or '').strip()
     
     if not username or not respuesta_1 or not respuesta_2 or not new_password:
         return jsonify({'error': 'Todos los campos son obligatorios.'}), 400
-        
+
+    if len(new_password) < 6:
+        return jsonify({'error': 'La nueva contraseña debe tener al menos 6 caracteres.'}), 400
+
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT id, respuesta_seguridad_1_hash, respuesta_seguridad_2_hash FROM pacientes WHERE LOWER(username) = ? OR cedula = ?", (username.lower(), username))
-    patient = cursor.fetchone()
-    
-    if not patient:
-        return jsonify({'error': 'El usuario no existe.'}), 404
-        
-    match_1 = check_password_hash(patient['respuesta_seguridad_1_hash'], respuesta_1.strip().lower())
-    match_2 = check_password_hash(patient['respuesta_seguridad_2_hash'], respuesta_2.strip().lower())
-    
-    if not match_1 or not match_2:
-        return jsonify({'error': 'Respuestas a preguntas de seguridad incorrectas.'}), 401
-        
-    password_hash = generate_password_hash(new_password)
-    try:
-        cursor.execute("UPDATE pacientes SET password_hash = ? WHERE id = ?", (password_hash, patient['id']))
-        db.commit()
-        
-        import threading
-        threading.Thread(target=sync_patient_to_firebase, args=(patient['id'],)).start()
-        
-        return jsonify({'success': 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.'})
-    except Exception as e:
-        return jsonify({'error': f'Error al actualizar contraseña: {str(e)}'}), 500
+
+    # 1. Intentar en usuarios (psicólogos/admin)
+    cursor.execute("""
+        SELECT id, respuesta_seguridad_1_hash, respuesta_seguridad_2_hash 
+        FROM usuarios 
+        WHERE LOWER(username) = ?
+    """, (username.lower(),))
+    user_row = cursor.fetchone()
+
+    if user_row and user_row['respuesta_seguridad_1_hash'] and user_row['respuesta_seguridad_2_hash']:
+        match_1 = check_password_hash(user_row['respuesta_seguridad_1_hash'], respuesta_1)
+        match_2 = check_password_hash(user_row['respuesta_seguridad_2_hash'], respuesta_2)
+        if match_1 and match_2:
+            new_hash = generate_password_hash(new_password)
+            cursor.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (new_hash, user_row['id']))
+            db.commit()
+            return jsonify({'success': 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.'})
+        else:
+            return jsonify({'error': 'Respuestas a preguntas de seguridad incorrectas.'}), 401
+
+    # 2. Intentar en pacientes
+    cursor.execute("""
+        SELECT id, respuesta_seguridad_1_hash, respuesta_seguridad_2_hash 
+        FROM pacientes 
+        WHERE LOWER(username) = ? OR cedula = ?
+    """, (username.lower(), username))
+    patient_row = cursor.fetchone()
+
+    if patient_row and patient_row['respuesta_seguridad_1_hash'] and patient_row['respuesta_seguridad_2_hash']:
+        match_1 = check_password_hash(patient_row['respuesta_seguridad_1_hash'], respuesta_1)
+        match_2 = check_password_hash(patient_row['respuesta_seguridad_2_hash'], respuesta_2)
+        if match_1 and match_2:
+            new_hash = generate_password_hash(new_password)
+            cursor.execute("UPDATE pacientes SET password_hash = ? WHERE id = ?", (new_hash, patient_row['id']))
+            db.commit()
+            try:
+                import threading
+                threading.Thread(target=sync_patient_to_firebase, args=(patient_row['id'],)).start()
+            except Exception:
+                pass
+            return jsonify({'success': 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.'})
+        else:
+            return jsonify({'error': 'Respuestas a preguntas de seguridad incorrectas.'}), 401
+
+    return jsonify({'error': 'El usuario no existe o no tiene preguntas de seguridad configuradas.'}), 404
+
+@app.route('/api/admin/security-questions', methods=['GET', 'POST'])
+@login_required
+def admin_security_questions():
+    db = get_db()
+    cursor = db.cursor()
+    user_id = session['user_id']
+
+    if request.method == 'GET':
+        cursor.execute("SELECT pregunta_seguridad_1, pregunta_seguridad_2 FROM usuarios WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        return jsonify({
+            'pregunta_seguridad_1': row['pregunta_seguridad_1'] if row else None,
+            'pregunta_seguridad_2': row['pregunta_seguridad_2'] if row else None
+        })
+
+    data = request.json or {}
+    p1 = (data.get('pregunta_seguridad_1') or '').strip()
+    r1 = (data.get('respuesta_seguridad_1') or '').strip().lower()
+    p2 = (data.get('pregunta_seguridad_2') or '').strip()
+    r2 = (data.get('respuesta_seguridad_2') or '').strip().lower()
+
+    if not p1 or not r1 or not p2 or not r2:
+        return jsonify({'error': 'Las dos preguntas y respuestas son obligatorias.'}), 400
+
+    r1_hash = generate_password_hash(r1)
+    r2_hash = generate_password_hash(r2)
+
+    cursor.execute("""
+        UPDATE usuarios 
+        SET pregunta_seguridad_1 = ?, respuesta_seguridad_1_hash = ?,
+            pregunta_seguridad_2 = ?, respuesta_seguridad_2_hash = ?
+        WHERE id = ?
+    """, (p1, r1_hash, p2, r2_hash, user_id))
+    db.commit()
+
+    return jsonify({'success': 'Preguntas de seguridad de terapeuta guardadas con éxito.'})
 
 @app.route('/api/patient/change-password', methods=['POST'])
 @patient_login_required
