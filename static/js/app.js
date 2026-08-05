@@ -11788,75 +11788,80 @@ const therapistPreviewTemplates = [
 ];
 
 function openToolPreviewModal(clave, nombre) {
-    console.log('[DEBUG] openToolPreviewModal executing for:', clave, nombre);
+    console.log('[PREVIEW] openToolPreviewModal called with clave:', clave);
     
+    // Normalize clave to match template keys
     const claveMap = {
-        'sueno': 'sueno',
-        'ansiedad': 'ansiedad',
-        'sobriedad': 'sobriedad',
-        'consumo': 'sobriedad',
-        'adherencia': 'adherencia',
-        'medicacion': 'adherencia',
-        'activacion': 'activacion',
-        'ingesta': 'ingesta',
-        'cognitivo': 'cognitivo',
+        'sueno': 'sueno', 'ansiedad': 'ansiedad', 'sobriedad': 'sobriedad',
+        'consumo': 'sobriedad', 'adherencia': 'adherencia', 'medicacion': 'adherencia',
+        'activacion': 'activacion', 'ingesta': 'ingesta', 'cognitivo': 'cognitivo',
         'pantalla': 'pantalla'
     };
     const normClave = claveMap[clave] || clave;
     const tmplObj = therapistPreviewTemplates.find(t => t.clave === normClave || t.clave === clave);
 
+    // Derive display name from template or parameter
+    let displayName = nombre;
+    if (displayName) {
+        try { displayName = decodeURIComponent(displayName); } catch(e){}
+    }
+    if (!displayName) displayName = tmplObj?.titulo || clave;
+
+    // Get or create the modal
     let modalEl = document.getElementById('therapist-tool-preview-modal');
-    if (!modalEl) {
+    
+    // Always recreate inner content to avoid stale state
+    if (modalEl) {
+        // Remove any stale inline display:none from previous closeModal
+        modalEl.style.removeProperty('display');
+        modalEl.classList.remove('hide');
+    } else {
+        // Create modal from scratch if it doesn't exist
         modalEl = document.createElement('div');
         modalEl.id = 'therapist-tool-preview-modal';
-        modalEl.className = 'modal hide';
-        modalEl.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100000; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); background: rgba(15, 23, 42, 0.8); display: flex; align-items: center; justify-content: center; padding: 1rem;';
-        modalEl.innerHTML = `
-            <div class="modal-content card" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; background: white; border-radius: 16px; border: 1.5px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); margin: auto;">
-                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding: 1rem 1.25rem;">
-                    <h3 id="ttp-modal-title" style="margin: 0; font-size: 1.1rem; color: var(--primary-color); font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                        👁️ Previsualización de Herramienta
-                    </h3>
-                    <button type="button" class="btn-close-modal" onclick="closeModal('therapist-tool-preview-modal')" style="background: none; border: none; font-size: 1.35rem; cursor: pointer; color: var(--text-muted); line-height: 1;">✕</button>
-                </div>
-                <div id="ttp-modal-body" class="card-body" style="padding: 1.25rem;">
-                    <p class="text-muted">Cargando previsualización...</p>
-                </div>
-                <div class="card-footer" style="padding: 0.85rem 1.25rem; border-top: 1.5px solid var(--border-color); display: flex; justify-content: flex-end;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('therapist-tool-preview-modal')">Cerrar Previsualización</button>
-                </div>
-            </div>
-        `;
         document.body.appendChild(modalEl);
     }
 
-    const titleEl = document.getElementById('ttp-modal-title');
-    const bodyEl = document.getElementById('ttp-modal-body');
+    // Set all styles and content directly
+    modalEl.className = 'modal';
+    modalEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:100000;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:rgba(15,23,42,0.8);display:flex!important;align-items:center;justify-content:center;padding:1rem;';
 
-    let displayName = nombre;
-    if (!displayName || displayName.includes('%')) {
-        try { displayName = decodeURIComponent(displayName); } catch(e){}
-    }
-    if (!displayName) displayName = tmplObj?.titulo || 'Herramienta Terapéutica';
+    const previewHtml = (tmplObj && tmplObj.html) 
+        ? tmplObj.html 
+        : `<div class="text-center py-4 text-muted"><h4>📱 Vista Previa</h4><p>Formulario para <strong>${displayName}</strong>.</p></div>`;
 
-    if (titleEl) {
-        titleEl.innerHTML = `👁️ Previsualización: ${displayName}`;
-    }
+    modalEl.innerHTML = `
+        <div style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto;background:white;border-radius:16px;border:1.5px solid var(--border-color);box-shadow:0 20px 25px -5px rgba(0,0,0,0.3);margin:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid var(--border-color);padding:1rem 1.25rem;">
+                <h3 style="margin:0;font-size:1.1rem;color:var(--primary-color);font-weight:700;">👁️ ${displayName}</h3>
+                <button type="button" onclick="closeToolPreviewModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);line-height:1;padding:0.25rem;">✕</button>
+            </div>
+            <div style="padding:1.25rem;">
+                ${previewHtml}
+            </div>
+            <div style="padding:0.85rem 1.25rem;border-top:1.5px solid var(--border-color);display:flex;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeToolPreviewModal()">Cerrar Previsualización</button>
+            </div>
+        </div>
+    `;
 
-    if (bodyEl) {
-        if (tmplObj && tmplObj.html) {
-            bodyEl.innerHTML = tmplObj.html;
-        } else {
-            bodyEl.innerHTML = `<div class="text-center py-4 text-muted"><h4>📱 Vista Previa del Consultante</h4><p>Formulario activado para la herramienta <strong>${displayName}</strong>.</p></div>`;
-        }
-    }
-
-    modalEl.classList.remove('hide');
-    modalEl.style.setProperty('display', 'flex', 'important');
     document.body.style.overflow = 'hidden';
+    console.log('[PREVIEW] Modal should now be visible');
 }
+
+function closeToolPreviewModal() {
+    const modalEl = document.getElementById('therapist-tool-preview-modal');
+    if (modalEl) {
+        modalEl.style.cssText = 'display:none!important;';
+        modalEl.classList.add('hide');
+        modalEl.innerHTML = '';
+    }
+    document.body.style.overflow = '';
+}
+
 window.openToolPreviewModal = openToolPreviewModal;
 window.toggleToolPreview = openToolPreviewModal;
+window.closeToolPreviewModal = closeToolPreviewModal;
 
 function renderTherapistPreviewTemplates() {
     const container = document.getElementById('tt-preview-templates-container');
@@ -12002,29 +12007,28 @@ function renderTherapistToolsCatalog() {
 
         return `
         <div class="card accordion-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm);">
-            <!-- CABECERA: Línea 1 (Ícono + Nombre Completo + Flecha + Previsualizar) / Línea 2 (Pacientes Activos) -->
+            <!-- CABECERA ACORDEÓN: Solo Ícono + Nombre + Flecha -->
             <div class="accordion-tool-header" data-target="${targetId}" style="padding: 0.55rem 0.85rem; background: white; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; user-select: none; transition: background 0.2s;">
-                <!-- LÍNEA 1: Ícono + Nombre Completo + Botón Previsualizar y Flecha -->
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
                         <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
                         <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; line-height: 1.2; word-break: break-word;">${m.nombre}</h4>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
-                        <button type="button" class="btn btn-sm btn-outline-primary btn-preview-tool-btn" data-clave="${m.clave}" data-nombre="${encodeURIComponent(m.nombre)}" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 600;">👁️ Previsualizar</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #f9fafb;">
-                            <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #f9fafb;">
+                        <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
+                    </button>
                 </div>
-                <!-- LÍNEA 2: Número de pacientes activos -->
                 <div style="margin-left: 1.75rem; line-height: 1;">
                     <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.72rem; padding: 0.12rem 0.4rem;">
                         ${activeCount} Paciente(s) Activos
                     </span>
                 </div>
             </div>
-            <!-- CONTENEDOR DE PREVISUALIZACIÓN INLINE -->
+            <!-- BARRA INDEPENDIENTE: Botón Previsualizar (FUERA del accordion-header) -->
+            <div style="padding: 0.35rem 0.85rem; border-top: 1px solid #f3e8ff; background: #faf5ff; display: flex; justify-content: flex-end;">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openToolPreviewModal('${m.clave}')" style="padding: 0.2rem 0.65rem; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; position: relative; z-index: 10;">👁️ Previsualizar Formulario</button>
+            </div>
+            <!-- CONTENEDOR DE PREVISUALIZACIÓN INLINE (legacy, oculto) -->
             <div id="inline-tool-preview-${m.clave}" class="inline-tool-preview hide" style="display: none; padding: 0.85rem 1rem; border-top: 1.5px solid #d8b4fe; background: #faf5ff;"></div>
             <!-- CUERPO DESPLEGABLE: Descripción + Lista de Consultantes -->
             <div id="${targetId}" class="accordion-tool-body hide" style="display: none; padding: 0.85rem 1rem; border-top: 1.5px solid var(--border-color); background: #fafafa;">
