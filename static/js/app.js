@@ -8006,7 +8006,7 @@ function toggleRegisterFields() {
         commonFields.classList.remove('hide');
         psicologoFields.classList.remove('hide');
         pacienteFields.classList.add('hide');
-        document.getElementById('reg-security-questions-fields').classList.add('hide');
+        document.getElementById('reg-security-questions-fields').classList.remove('hide');
     } else if (role === 'paciente') {
         commonFields.classList.remove('hide');
         psicologoFields.classList.add('hide');
@@ -8100,6 +8100,12 @@ async function submitRegister(e) {
             tipo_usuario, nombres, apellidos, username, password, cedula, telefono, email
         };
         
+        // Adjuntar preguntas de seguridad para todos los roles
+        payload.pregunta_seguridad_1 = getVal('reg-pregunta-1');
+        payload.respuesta_seguridad_1 = getVal('reg-respuesta-1');
+        payload.pregunta_seguridad_2 = getVal('reg-pregunta-2');
+        payload.respuesta_seguridad_2 = getVal('reg-respuesta-2');
+        
         if (tipo_usuario === 'psicologo') {
             payload.estudios = getVal('reg-estudios');
             payload.federacion = getVal('reg-federacion');
@@ -8113,11 +8119,6 @@ async function submitRegister(e) {
                 return;
             }
         } else if (tipo_usuario === 'paciente') {
-            payload.pregunta_seguridad_1 = getVal('reg-pregunta-1');
-            payload.respuesta_seguridad_1 = getVal('reg-respuesta-1');
-            payload.pregunta_seguridad_2 = getVal('reg-pregunta-2');
-            payload.respuesta_seguridad_2 = getVal('reg-respuesta-2');
-            
             if (isPreRegisteredPatient) {
                 if (!payload.respuesta_seguridad_1 || !payload.respuesta_seguridad_2) {
                     const msg = "Por favor, completa las respuestas de seguridad para activar tu cuenta.";
