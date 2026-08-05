@@ -407,6 +407,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // CONTROL DE NAVEGACIÓN Y MENÚ
 // ==========================================
 function switchView(viewId) {
+    const role = sessionStorage.getItem('user_role') || (currentUser && currentUser.role);
+    const username = sessionStorage.getItem('username') || (currentUser && currentUser.username) || '';
+    const userId = parseInt(sessionStorage.getItem('user_id') || (currentUser && currentUser.id) || 0);
+
+    const isPureSuperadmin = (role === 'superadmin' || role === 'admin') && (username.toLowerCase() !== 'pamoraro') && userId !== 1;
+
+    if (isPureSuperadmin && (viewId === 'dashboard' || ['agenda', 'confirmations', 'manual-confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'patient-details'].includes(viewId))) {
+        viewId = 'superadmin-dashboard';
+    }
+
     const isPending = sessionStorage.getItem('cuenta_pendiente_aprobacion') === '1';
     const restrictedViews = ['agenda', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance'];
     if (isPending && restrictedViews.includes(viewId)) {
@@ -981,6 +991,21 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     if (nameEl) nameEl.textContent = isPureSuperadmin ? fullPersonName : (isSuperadminUser ? `Admin: ${formattedTitle}` : formattedTitle);
     if (roleEl) roleEl.textContent = isSuperadminUser ? `Superadministrador` : `Terapeuta`;
 
+    // Ocultar buscador de consultantes, boton guardar nube y campana de notificaciones para Admin puro
+    const searchContainer = document.querySelector('.search-container');
+    const notifContainer = document.querySelector('.notifications-container');
+    const syncCloudBtn = document.getElementById('sync-firebase-btn');
+
+    if (isPureSuperadmin) {
+        if (searchContainer) searchContainer.style.display = 'none';
+        if (notifContainer) notifContainer.style.display = 'none';
+        if (syncCloudBtn) syncCloudBtn.style.display = 'none';
+    } else {
+        if (searchContainer) searchContainer.style.display = '';
+        if (notifContainer) notifContainer.style.display = '';
+        if (syncCloudBtn) syncCloudBtn.style.display = '';
+    }
+
     document.querySelectorAll('.nav-item').forEach(link => {
         const v = link.getAttribute('data-view');
         if (v === 'superadmin-dashboard') {
@@ -990,7 +1015,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
                 link.classList.add('hide');
             }
         } else if (isPureSuperadmin) {
-            const clinicalViews = ['dashboard', 'agenda', 'confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'patient-details'];
+            const clinicalViews = ['dashboard', 'agenda', 'confirmations', 'manual-confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'patient-details'];
             if (clinicalViews.includes(v)) {
                 link.classList.add('hide');
             } else {
