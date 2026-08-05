@@ -11632,6 +11632,13 @@ const therapistPreviewTemplates = [
                                 </div>
                                 <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Nivel de logro o dominio: <strong>9 / 10</strong></span>
                             </div>
+                            <div style="padding: 0.65rem 0.85rem; background: white; border-radius: 6px; border: 1.5px solid #e9d5ff;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                    <strong style="font-size: 0.88rem; color: var(--text-dark);">🚿 Higiene personal y cuidado diario</strong>
+                                    <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 700; font-size: 0.75rem;">📌 Necesaria</span>
+                                </div>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Cumplimiento y hábito: <strong>10 / 10 ✅</strong></span>
+                            </div>
                         </div>
                     </div>
                     <div>
