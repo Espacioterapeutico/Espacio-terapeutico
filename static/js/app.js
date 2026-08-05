@@ -974,10 +974,11 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
     }
 
-    const isSuperadminUser = (role === 'superadmin' || role === 'admin' || (username && username.toLowerCase() === 'pamoraro') || userId === 1);
+    const isPureSuperadmin = (role === 'superadmin' || role === 'admin') && (username && username.toLowerCase() !== 'pamoraro') && userId !== 1;
+    const isSuperadminUser = isPureSuperadmin || (username && username.toLowerCase() === 'pamoraro') || userId === 1;
 
     const formattedTitle = fullPersonName.toLowerCase().startsWith('psic') ? fullPersonName : `Psic. ${fullPersonName}`;
-    if (nameEl) nameEl.textContent = isSuperadminUser ? `Admin: ${formattedTitle}` : formattedTitle;
+    if (nameEl) nameEl.textContent = isPureSuperadmin ? fullPersonName : (isSuperadminUser ? `Admin: ${formattedTitle}` : formattedTitle);
     if (roleEl) roleEl.textContent = isSuperadminUser ? `Superadministrador` : `Terapeuta`;
 
     document.querySelectorAll('.nav-item').forEach(link => {
@@ -988,10 +989,21 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
             } else {
                 link.classList.add('hide');
             }
+        } else if (isPureSuperadmin) {
+            const clinicalViews = ['dashboard', 'agenda', 'confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'patient-details'];
+            if (clinicalViews.includes(v)) {
+                link.classList.add('hide');
+            } else {
+                link.classList.remove('hide');
+            }
         } else {
             link.classList.remove('hide');
         }
     });
+    
+    if (isPureSuperadmin && typeof switchView === 'function') {
+        switchView('superadmin-dashboard');
+    }
     
     if (activo === 0 && role === 'psicologo') {
         sessionStorage.setItem('cuenta_pendiente_aprobacion', '1');
