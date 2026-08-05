@@ -11788,6 +11788,7 @@ const therapistPreviewTemplates = [
 ];
 
 function openToolPreviewModal(clave, nombre) {
+    alert('DEBUG: openToolPreviewModal fue llamada con clave = ' + clave);
     console.log('[PREVIEW] openToolPreviewModal called with clave:', clave);
     
     // Normalize clave to match template keys
