@@ -1101,6 +1101,10 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
             const link = document.querySelector('[data-view="therapist-tools"]');
             if (link) link.classList.add('hide');
         }
+        if (bloqueos.confirmaciones === 1) {
+            const link = document.querySelector('[data-view="manual-confirmations"]');
+            if (link) link.classList.add('hide');
+        }
     } else {
         sessionStorage.removeItem('bloqueos');
     }
@@ -8525,6 +8529,7 @@ async function loadSuperadminData() {
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-mensajes" ${p.bloqueo_mensajes === 1 ? 'checked' : ''}> Bloquear Recordatorios</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas</label>
+                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear C. Confirmaciones</label>
                         <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #047857; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.35rem; margin-top: 0.25rem;">
                             <input type="checkbox" class="chk-mostrar-directorio" ${p.mostrar_en_directorio === 1 ? 'checked' : ''}> 🌐 Mostrar en Directorio Público
                         </label>
@@ -8574,7 +8579,8 @@ async function saveTherapistRowSettings(userId) {
         bloqueo_agenda: row.querySelector('.chk-bloqueo-agenda')?.checked ? 1 : 0,
         bloqueo_mensajes: row.querySelector('.chk-bloqueo-mensajes')?.checked ? 1 : 0,
         bloqueo_pizarra: row.querySelector('.chk-bloqueo-pizarra')?.checked ? 1 : 0,
-        bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0
+        bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0,
+        bloqueo_confirmaciones: row.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0
     };
     
     try {
@@ -8614,7 +8620,8 @@ async function saveAllTherapistsSettings() {
             bloqueo_agenda: row.querySelector('.chk-bloqueo-agenda')?.checked ? 1 : 0,
             bloqueo_mensajes: row.querySelector('.chk-bloqueo-mensajes')?.checked ? 1 : 0,
             bloqueo_pizarra: row.querySelector('.chk-bloqueo-pizarra')?.checked ? 1 : 0,
-            bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0
+            bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0,
+            bloqueo_confirmaciones: row.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0
         };
         
         try {

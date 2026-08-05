@@ -418,6 +418,8 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_pizarra INTEGER DEFAULT 0")
         if 'bloqueo_herramientas' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 0")
+        if 'bloqueo_confirmaciones' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_confirmaciones INTEGER DEFAULT 0")
         if 'terminos_condiciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
         if 'nomenclatura' not in cols_usr:
@@ -2456,7 +2458,7 @@ def superadmin_get_therapists():
                    COALESCE(bloqueo_registro, 0) as bloqueo_registro, COALESCE(bloqueo_evoluciones, 0) as bloqueo_evoluciones, 
                    COALESCE(bloqueo_finanzas, 0) as bloqueo_finanzas, COALESCE(bloqueo_agenda, 0) as bloqueo_agenda, 
                    COALESCE(bloqueo_mensajes, 0) as bloqueo_mensajes, COALESCE(bloqueo_pizarra, 0) as bloqueo_pizarra, 
-                   COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, COALESCE(aviso_pago, 0) as aviso_pago,
+                   COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, COALESCE(bloqueo_confirmaciones, 0) as bloqueo_confirmaciones, COALESCE(aviso_pago, 0) as aviso_pago,
                    COALESCE(mostrar_en_directorio, 1) as mostrar_en_directorio
             FROM usuarios
             WHERE (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin')
@@ -2620,15 +2622,16 @@ def superadmin_save_therapist_settings(user_id):
     bloqueo_mensajes = 1 if data.get('bloqueo_mensajes') else 0
     bloqueo_pizarra = 1 if data.get('bloqueo_pizarra') else 0
     bloqueo_herramientas = 1 if data.get('bloqueo_herramientas') else 0
+    bloqueo_confirmaciones = 1 if data.get('bloqueo_confirmaciones') else 0
     
     cursor.execute("""
         UPDATE usuarios 
         SET mostrar_en_directorio = ?, aviso_pago = ?,
             bloqueo_registro = ?, bloqueo_evoluciones = ?, bloqueo_finanzas = ?,
-            bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?
+            bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?, bloqueo_confirmaciones = ?
         WHERE id = ?
     """, (mostrar_en_directorio, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas,
-          bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, user_id))
+          bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, bloqueo_confirmaciones, user_id))
     db.commit()
     return jsonify({'success': '¡Cambios guardados con éxito en la base de datos!'})
 
@@ -2882,7 +2885,8 @@ def login():
                     'agenda': u_dict.get('bloqueo_agenda', 0),
                     'mensajes': u_dict.get('bloqueo_mensajes', 0),
                     'pizarra': u_dict.get('bloqueo_pizarra', 0),
-                    'herramientas': u_dict.get('bloqueo_herramientas', 0)
+                    'herramientas': u_dict.get('bloqueo_herramientas', 0),
+                    'confirmaciones': u_dict.get('bloqueo_confirmaciones', 0)
                 }
             })
         
@@ -3004,7 +3008,8 @@ def check_session():
                 'agenda': r_dict.get('bloqueo_agenda', 0),
                 'mensajes': r_dict.get('bloqueo_mensajes', 0),
                 'pizarra': r_dict.get('bloqueo_pizarra', 0),
-                'herramientas': r_dict.get('bloqueo_herramientas', 0)
+                'herramientas': r_dict.get('bloqueo_herramientas', 0),
+                'confirmaciones': r_dict.get('bloqueo_confirmaciones', 0)
             }
         })
     elif 'patient_id' in session:
