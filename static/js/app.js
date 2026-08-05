@@ -14129,9 +14129,12 @@ function populateProfileUI(data) {
 }
 
 async function loadPublicProfileSettings() {
+    const currentUserId = sessionStorage.getItem('user_id') || 'anon';
+    const cacheKey = `cache_profile_public_${currentUserId}`;
+
     // Renderizado instantáneo desde memoria/sessionStorage (0 ms de retraso visual)
     try {
-        const cached = sessionStorage.getItem('cache_profile_public');
+        const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
             populateProfileUI(JSON.parse(cached));
         }
@@ -14141,7 +14144,7 @@ async function loadPublicProfileSettings() {
         const res = await fetch('/api/admin/profile-public');
         if (!res.ok) return;
         const data = await res.json();
-        sessionStorage.setItem('cache_profile_public', JSON.stringify(data));
+        sessionStorage.setItem(cacheKey, JSON.stringify(data));
         populateProfileUI(data);
     } catch(e) {
         console.error("Error al cargar perfil público de psicólogo:", e);
@@ -14193,6 +14196,8 @@ async function savePublicProfileSettings() {
         });
         const data = await res.json();
         if (res.ok) {
+            const currentUserId = sessionStorage.getItem('user_id') || 'anon';
+            sessionStorage.removeItem(`cache_profile_public_${currentUserId}`);
             sessionStorage.removeItem('cache_profile_public');
             await loadPublicProfileSettings();
             alert(data.success || "¡Perfil público actualizado con éxito!");
