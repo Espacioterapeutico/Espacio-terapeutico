@@ -8386,6 +8386,24 @@ function formatPatientLocation(p) {
 
 
 async function loadSuperadminData() {
+    // Cargar estadísticas del dashboard de superadmin
+    try {
+        const statsRes = await fetch('/api/superadmin/stats?_t=' + Date.now());
+        if (statsRes.ok) {
+            const stats = await statsRes.json();
+            const elPac = document.getElementById('sa-stat-total-pacientes');
+            if (elPac) elPac.textContent = stats.total_pacientes || 0;
+            const elPsic = document.getElementById('sa-stat-total-psicologos');
+            if (elPsic) elPsic.textContent = stats.total_psicologos || 0;
+            const elAct = document.getElementById('sa-stat-psicologos-activos');
+            if (elAct) elAct.textContent = stats.psicologos_activos || 0;
+            const elDeud = document.getElementById('sa-stat-psicologos-deudores');
+            if (elDeud) elDeud.textContent = stats.psicologos_deudores || 0;
+        }
+    } catch (errStats) {
+        console.error("Error al cargar estadísticas superadmin:", errStats);
+    }
+
     const tbody = document.getElementById('superadmin-therapists-body');
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Cargando psicólogos...</td></tr>';

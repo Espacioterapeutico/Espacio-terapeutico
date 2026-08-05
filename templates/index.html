@@ -1151,6 +1151,46 @@
                         <span class="text-secondary">Control de Psicólogos y Licencias</span>
                     </div>
                     
+                    <!-- Tarjetas de Métricas de Superadministración -->
+                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; margin-bottom: 1.5rem;">
+                        <div class="stat-card">
+                            <div class="stat-icon-wrapper purple">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label">N° Pacientes Registrados</span>
+                                <h3 id="sa-stat-total-pacientes" class="stat-number">0</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-wrapper blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label">N° Psicólogos Registrados</span>
+                                <h3 id="sa-stat-total-psicologos" class="stat-number">0</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-wrapper green">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label">N° Psicólogos Activos</span>
+                                <h3 id="sa-stat-psicologos-activos" class="stat-number">0</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-wrapper red">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label">N° Deudores (Suscripción)</span>
+                                <h3 id="sa-stat-psicologos-deudores" class="stat-number">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Menú de Sub-módulos Superadmin -->
                     <div class="sub-nav-tabs mt-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
                         <button type="button" id="sa-tab-therapists" class="btn btn-sm btn-primary" onclick="switchSuperadminTab('therapists')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Psicólogos y Suscripciones</button>

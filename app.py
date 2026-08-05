@@ -2469,6 +2469,41 @@ def superadmin_get_therapists():
         print(f"Error en superadmin_get_therapists: {e}")
         return jsonify({'error': f'Error al obtener lista de psicólogos: {str(e)}'}), 500
 
+@app.route('/api/superadmin/stats', methods=['GET'])
+@login_required
+def superadmin_get_stats():
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+        
+    db = get_db()
+    cursor = db.cursor()
+    
+    try:
+        cursor.execute("SELECT COUNT(id) FROM pacientes")
+        total_pacientes = cursor.fetchone()[0] or 0
+        
+        cursor.execute("SELECT COUNT(id) FROM usuarios WHERE role = 'psicologo' OR role IS NULL OR role = ''")
+        total_psicologos = cursor.fetchone()[0] or 0
+        
+        cursor.execute("SELECT COUNT(id) FROM usuarios WHERE (role = 'psicologo' OR role IS NULL OR role = '') AND COALESCE(activo, 1) = 1")
+        psicologos_activos = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT COUNT(id) FROM usuarios 
+            WHERE (role = 'psicologo' OR role IS NULL OR role = '') 
+              AND (COALESCE(suscripcion_paga, 0) = 0 OR COALESCE(activo, 1) = 0)
+        """)
+        psicologos_deudores = cursor.fetchone()[0] or 0
+        
+        return jsonify({
+            'total_pacientes': total_pacientes,
+            'total_psicologos': total_psicologos,
+            'psicologos_activos': psicologos_activos,
+            'psicologos_deudores': psicologos_deudores
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/superadmin/create-psychologist', methods=['POST'])
 @login_required
 def superadmin_create_psychologist():
