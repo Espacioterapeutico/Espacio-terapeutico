@@ -8370,14 +8370,15 @@ def update_agenda_event(event_id):
                 except Exception as ge:
                     print("Error al actualizar evento de Google Calendar:", ge)
                     
-        confirmada = data.get('confirmada') if 'confirmada' in data else local_event['confirmada']
+        monto = data.get('monto') if ('monto' in data and data.get('monto') is not None) else (local_event['monto'] if (local_event and local_event['monto'] is not None) else 0.0)
+        moneda = data.get('moneda') if ('moneda' in data and data.get('moneda') is not None) else (local_event['moneda'] if (local_event and local_event['moneda']) else 'USD')
         
         cursor.execute("""
             UPDATE agenda_finanzas SET 
                 fecha = ?, hora = ?, tipo_consulta = ?, estado_pago = ?, monto = ?, moneda = ?, confirmada = ?
             WHERE id = ?
         """, (
-            fecha, hora, tipo_consulta, estado_pago, data.get('monto'), data.get('moneda'), confirmada, event_id
+            fecha, hora, tipo_consulta, estado_pago, monto, moneda, confirmada, event_id
         ))
         cursor.execute("SELECT paciente_id FROM agenda_finanzas WHERE id = ?", (event_id,))
         row = cursor.fetchone()
