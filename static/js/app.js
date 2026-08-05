@@ -11985,7 +11985,7 @@ function renderTherapistToolsCatalog() {
                         <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; line-height: 1.2; word-break: break-word;">${m.nombre}</h4>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
-                        <button type="button" id="btn-preview-tool-${m.clave}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); toggleToolPreview('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}')" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 600;">👁️ Previsualizar</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-preview-tool-btn" data-clave="${m.clave}" data-nombre="${m.nombre.replace(/"/g, '&quot;')}" onclick="event.preventDefault(); event.stopPropagation(); openToolPreviewModal('${m.clave}', '${m.nombre.replace(/'/g, "\\'")}')" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 600;">👁️ Previsualizar</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #f9fafb;">
                             <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
                         </button>
@@ -12381,6 +12381,15 @@ function openBehavioralReportModal(targetPatientId) {
 
 // A. Control del Acordeón Desplegable
 document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-preview-tool-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const btn = e.target.closest('.btn-preview-tool-btn');
+        const clave = btn.getAttribute('data-clave');
+        const nombre = btn.getAttribute('data-nombre');
+        openToolPreviewModal(clave, nombre);
+        return;
+    }
     const accordionHeader = e.target.closest('.accordion-tool-header');
     if (accordionHeader) {
         e.preventDefault();
