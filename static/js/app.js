@@ -11788,77 +11788,57 @@ const therapistPreviewTemplates = [
 ];
 
 function openToolPreviewModal(clave, nombre) {
-    alert('DEBUG: openToolPreviewModal fue llamada con clave = ' + clave);
     console.log('[PREVIEW] openToolPreviewModal called with clave:', clave);
     
-    // Normalize clave to match template keys
     const claveMap = {
-        'sueno': 'sueno', 'ansiedad': 'ansiedad', 'sobriedad': 'sobriedad',
-        'consumo': 'sobriedad', 'adherencia': 'adherencia', 'medicacion': 'adherencia',
-        'activacion': 'activacion', 'ingesta': 'ingesta', 'cognitivo': 'cognitivo',
+        'sueno': 'sueno',
+        'ansiedad': 'ansiedad',
+        'sobriedad': 'sobriedad',
+        'consumo': 'sobriedad',
+        'adherencia': 'adherencia',
+        'medicacion': 'adherencia',
+        'activacion': 'activacion',
+        'ingesta': 'ingesta',
+        'cognitivo': 'cognitivo',
         'pantalla': 'pantalla'
     };
     const normClave = claveMap[clave] || clave;
     const tmplObj = therapistPreviewTemplates.find(t => t.clave === normClave || t.clave === clave);
 
-    // Derive display name from template or parameter
-    let displayName = nombre;
-    if (displayName) {
-        try { displayName = decodeURIComponent(displayName); } catch(e){}
-    }
-    if (!displayName) displayName = tmplObj?.titulo || clave;
+    const modalEl = document.getElementById('modal-tool-patient-preview') || document.getElementById('therapist-tool-preview-modal');
+    const titleEl = document.getElementById('tpp-modal-title') || document.getElementById('ttp-modal-title');
+    const bodyEl = document.getElementById('tpp-modal-body') || document.getElementById('ttp-modal-body');
 
-    // Get or create the modal
-    let modalEl = document.getElementById('therapist-tool-preview-modal');
-    
-    // Always recreate inner content to avoid stale state
+    const displayName = nombre || tmplObj?.titulo || 'Herramienta Terapéutica';
+
+    if (titleEl) {
+        titleEl.innerHTML = `👁️ Previsualización: ${displayName}`;
+    }
+
+    if (bodyEl) {
+        if (tmplObj && tmplObj.html) {
+            bodyEl.innerHTML = tmplObj.html;
+        } else {
+            bodyEl.innerHTML = `<div class="text-center py-4 text-muted"><h4>📱 Vista Previa del Consultante</h4><p>Formulario para <strong>${displayName}</strong>.</p></div>`;
+        }
+    }
+
     if (modalEl) {
-        // Remove any stale inline display:none from previous closeModal
-        modalEl.style.removeProperty('display');
         modalEl.classList.remove('hide');
-    } else {
-        // Create modal from scratch if it doesn't exist
-        modalEl = document.createElement('div');
-        modalEl.id = 'therapist-tool-preview-modal';
-        document.body.appendChild(modalEl);
+        modalEl.style.display = 'flex';
+        modalEl.style.setProperty('display', 'flex', 'important');
+        document.body.style.overflow = 'hidden';
     }
-
-    // Set all styles and content directly
-    modalEl.className = 'modal';
-    modalEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:100000;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:rgba(15,23,42,0.8);display:flex!important;align-items:center;justify-content:center;padding:1rem;';
-
-    const previewHtml = (tmplObj && tmplObj.html) 
-        ? tmplObj.html 
-        : `<div class="text-center py-4 text-muted"><h4>📱 Vista Previa</h4><p>Formulario para <strong>${displayName}</strong>.</p></div>`;
-
-    modalEl.innerHTML = `
-        <div style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto;background:white;border-radius:16px;border:1.5px solid var(--border-color);box-shadow:0 20px 25px -5px rgba(0,0,0,0.3);margin:auto;">
-            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid var(--border-color);padding:1rem 1.25rem;">
-                <h3 style="margin:0;font-size:1.1rem;color:var(--primary-color);font-weight:700;">👁️ ${displayName}</h3>
-                <button type="button" onclick="closeToolPreviewModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);line-height:1;padding:0.25rem;">✕</button>
-            </div>
-            <div style="padding:1.25rem;">
-                ${previewHtml}
-            </div>
-            <div style="padding:0.85rem 1.25rem;border-top:1.5px solid var(--border-color);display:flex;justify-content:flex-end;">
-                <button type="button" class="btn btn-secondary" onclick="closeToolPreviewModal()">Cerrar Previsualización</button>
-            </div>
-        </div>
-    `;
-
-    document.body.style.overflow = 'hidden';
-    console.log('[PREVIEW] Modal should now be visible');
 }
 
 function closeToolPreviewModal() {
-    const modalEl = document.getElementById('therapist-tool-preview-modal');
-    if (modalEl) {
-        modalEl.style.cssText = 'display:none!important;';
-        modalEl.classList.add('hide');
-        modalEl.innerHTML = '';
-    }
-    document.body.style.overflow = '';
+    closeModal('modal-tool-patient-preview');
+    closeModal('therapist-tool-preview-modal');
 }
+
+window.openToolPreviewModal = openToolPreviewModal;
+window.toggleToolPreview = openToolPreviewModal;
+window.closeToolPreviewModal = closeToolPreviewModal;
 
 window.openToolPreviewModal = openToolPreviewModal;
 window.toggleToolPreview = openToolPreviewModal;
