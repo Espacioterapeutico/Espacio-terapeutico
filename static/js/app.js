@@ -407,11 +407,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // CONTROL DE NAVEGACIÓN Y MENÚ
 // ==========================================
 function switchView(viewId) {
-    const role = sessionStorage.getItem('user_role') || (currentUser && currentUser.role);
-    const username = sessionStorage.getItem('username') || (currentUser && currentUser.username) || '';
-    const userId = parseInt(sessionStorage.getItem('user_id') || (currentUser && currentUser.id) || 0);
+    const role = (currentUser && currentUser.role) || sessionStorage.getItem('user_role') || '';
+    const username = (currentUser && currentUser.username) || sessionStorage.getItem('username') || '';
+    const userId = parseInt((currentUser && currentUser.id) || sessionStorage.getItem('user_id') || 0);
 
-    const isPureSuperadmin = (role === 'superadmin' || role === 'admin') && (username.toLowerCase() !== 'pamoraro') && userId !== 1;
+    const cleanUser = (username || '').toString().toLowerCase();
+    const cleanRole = (role || '').toString().toLowerCase();
+
+    const isPureSuperadmin = (cleanRole === 'superadmin' || cleanRole === 'admin') && (cleanUser !== 'pamoraro') && (userId !== 1);
 
     if (isPureSuperadmin && (viewId === 'dashboard' || ['agenda', 'confirmations', 'manual-confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'patient-details'].includes(viewId))) {
         viewId = 'superadmin-dashboard';
@@ -969,23 +972,29 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
     }
     
+    if (role) sessionStorage.setItem('user_role', role);
+    if (username) sessionStorage.setItem('username', username);
     if (userId) {
         sessionStorage.setItem('user_id', userId);
     } else {
         sessionStorage.removeItem('user_id');
     }
-    
+
+    const cleanUser = (username || '').toString().toLowerCase();
+    const cleanRole = (role || '').toString().toLowerCase();
+    const cleanId = parseInt(userId || 0);
+
     const mcToggleCard = document.getElementById('card-toggle-manual-confirmations-module');
     if (mcToggleCard) {
-        if (role === 'superadmin' || role === 'admin') {
+        if (cleanRole === 'superadmin' || cleanRole === 'admin') {
             mcToggleCard.classList.remove('hide');
         } else {
             mcToggleCard.classList.add('hide');
         }
     }
 
-    const isPureSuperadmin = (role === 'superadmin' || role === 'admin') && (username && username.toLowerCase() !== 'pamoraro') && userId !== 1;
-    const isSuperadminUser = isPureSuperadmin || (username && username.toLowerCase() === 'pamoraro') || userId === 1;
+    const isPureSuperadmin = (cleanRole === 'superadmin' || cleanRole === 'admin') && (cleanUser !== 'pamoraro') && (cleanId !== 1);
+    const isSuperadminUser = isPureSuperadmin || (cleanUser === 'pamoraro') || (cleanId === 1);
 
     const formattedTitle = fullPersonName.toLowerCase().startsWith('psic') ? fullPersonName : `Psic. ${fullPersonName}`;
     if (nameEl) nameEl.textContent = isPureSuperadmin ? fullPersonName : (isSuperadminUser ? `Admin: ${formattedTitle}` : formattedTitle);
