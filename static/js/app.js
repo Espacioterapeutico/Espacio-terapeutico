@@ -9426,12 +9426,16 @@ function openCreatePsychologistModal() {
         const err = document.getElementById('sa-psic-error');
         if (err) err.classList.add('hide');
         modal.classList.remove('hide');
+        modal.style.display = 'flex';
     }
 }
 
 function closeCreatePsychologistModal() {
     const modal = document.getElementById('modal-create-psychologist');
-    if (modal) modal.classList.add('hide');
+    if (modal) {
+        modal.classList.add('hide');
+        modal.style.display = 'none';
+    }
 }
 
 async function submitCreatePsychologist(e) {
