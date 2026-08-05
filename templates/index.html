@@ -2125,29 +2125,64 @@
                             </div>
                         </div>
 
-                        <!-- Automatización de Mensajes (WhatsApp / Email) -->
+                        <!-- Automatización y Monitoreo de Mensajes (WhatsApp) -->
                         <div class="card">
-                            <div class="card-header">
-                                <h3>Plantillas de Mensajes (WhatsApp/Email)</h3>
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                <h3>Automatización de Mensajes y Monitoreo</h3>
+                                <div style="display: flex; gap: 0.35rem; background: var(--border-color); padding: 3px; border-radius: 8px;">
+                                    <button type="button" id="wa-tab-btn-templates" class="btn btn-sm btn-primary" onclick="switchWaSubTab('templates')" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem;">📝 Plantillas de Mensajes</button>
+                                    <button type="button" id="wa-tab-btn-monitoring" class="btn btn-sm btn-secondary" onclick="switchWaSubTab('monitoring')" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem;">📊 Monitoreo de Tareas & Cola</button>
+                                </div>
                             </div>
                             <div class="card-body">
-                                <p class="text-secondary mb-4" style="font-size: 0.85rem; line-height: 1.4;">Personaliza los mensajes que se enviarán a tus pacientes. El sistema rellenará automáticamente las variables <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{modalidad}</code> y <code>{link_conexion}</code>.</p>
-                                
-                                <form id="settings-messages-form" onsubmit="handleSaveMessageTemplates(event)">
-                                    <div class="form-group mb-3">
-                                        <label for="template-confirmacion" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Confirmación (Previo al día)</label>
-                                        <textarea id="template-confirmacion" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                <!-- PESTAÑA 1: PLANTILLAS -->
+                                <div id="wa-subtab-templates">
+                                    <p class="text-secondary mb-4" style="font-size: 0.85rem; line-height: 1.4;">Personaliza los mensajes que se enviarán automáticamente a tus pacientes. El sistema rellenará las variables <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{modalidad}</code> y <code>{link_conexion}</code>.</p>
+                                    
+                                    <form id="settings-messages-form" onsubmit="handleSaveMessageTemplates(event)">
+                                        <div class="form-group mb-3">
+                                            <label for="template-confirmacion" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: var(--primary-color);">Fase 1: Confirmación (1 día previo)</label>
+                                            <textarea id="template-confirmacion" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label for="template-recordatorio" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #10b981;">Fase 2: Recordatorio del Día (Mismo día)</label>
+                                            <textarea id="template-recordatorio" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label for="template-reagendamiento" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #d97706;">Fase 3: Reagendamiento (Fin de Día / No asistidas)</label>
+                                            <textarea id="template-reagendamiento" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                        </div>
+                                        <div class="form-group mb-4">
+                                            <label for="template-cierre" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #64748b;">Mensaje de Cierre / Nota Post-sesión</label>
+                                            <textarea id="template-cierre" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Guardar Plantillas de Mensaje</button>
+                                    </form>
+                                </div>
+
+                                <!-- PESTAÑA 2: MONITOREO Y COLA EN TIEMPO REAL -->
+                                <div id="wa-subtab-monitoring" class="hide">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                                        <p class="text-secondary" style="font-size: 0.85rem; margin: 0;">Supervisa en tiempo real la cola de mensajes programados y el estado de entrega a cada paciente.</p>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="loadWhatsAppMonitoringQueue()" style="font-weight: 600;">🔄 Actualizar Estado</button>
                                     </div>
-                                    <div class="form-group mb-3">
-                                        <label for="template-recordatorio" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Recordatorio (Mismo día)</label>
-                                        <textarea id="template-recordatorio" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                    
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1.5px solid var(--border-color); border-radius: 8px;">
+                                        <table class="table" style="width: 100%; margin: 0; font-size: 0.85rem;">
+                                            <thead style="background: var(--bg-color, #f8fafc); position: sticky; top: 0; z-index: 2;">
+                                                <tr>
+                                                    <th>Paciente</th>
+                                                    <th>Fecha / Hora Cita</th>
+                                                    <th>Modalidad</th>
+                                                    <th>Estado de Mensaje / Pipeline</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="wa-monitoring-queue-tbody">
+                                                <tr><td colspan="4" class="text-center py-4">Cargando cola de mensajes...</td></tr>
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div class="form-group mb-4">
-                                        <label for="template-cierre" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Cierre (Post-sesión)</label>
-                                        <textarea id="template-cierre" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Guardar Plantillas de Mensaje</button>
-                                </form>
+                                </div>
                             </div>
                         </div>
                     </div>

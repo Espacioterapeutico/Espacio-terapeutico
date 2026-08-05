@@ -7174,10 +7174,12 @@ async function loadMessageTemplates() {
         
         const c = document.getElementById('template-confirmacion');
         const r = document.getElementById('template-recordatorio');
+        const rg = document.getElementById('template-reagendamiento');
         const ci = document.getElementById('template-cierre');
         
         if (c) c.value = data.msg_confirmacion || "";
         if (r) r.value = data.msg_recordatorio || "";
+        if (rg) rg.value = data.msg_reagendamiento || "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!";
         if (ci) ci.value = data.msg_cierre || "";
     } catch (err) {
         console.error("Error al cargar plantillas de mensaje:", err);
@@ -7188,6 +7190,7 @@ async function handleSaveMessageTemplates(e) {
     e.preventDefault();
     const msgConfirmacion = document.getElementById('template-confirmacion').value;
     const msgRecordatorio = document.getElementById('template-recordatorio').value;
+    const msgReagendamiento = document.getElementById('template-reagendamiento')?.value || '';
     const msgCierre = document.getElementById('template-cierre').value;
     
     try {
@@ -7197,6 +7200,7 @@ async function handleSaveMessageTemplates(e) {
             body: JSON.stringify({
                 msg_confirmacion: msgConfirmacion,
                 msg_recordatorio: msgRecordatorio,
+                msg_reagendamiento: msgReagendamiento,
                 msg_cierre: msgCierre
             })
         });
@@ -7209,6 +7213,91 @@ async function handleSaveMessageTemplates(e) {
     } catch (err) {
         console.error("Error al guardar plantillas:", err);
         alert("Error de conexión.");
+    }
+}
+
+function switchWaSubTab(tabName) {
+    const btnTmpl = document.getElementById('wa-tab-btn-templates');
+    const btnMon = document.getElementById('wa-tab-btn-monitoring');
+    const secTmpl = document.getElementById('wa-subtab-templates');
+    const secMon = document.getElementById('wa-subtab-monitoring');
+
+    if (tabName === 'monitoring') {
+        if (btnTmpl) btnTmpl.className = 'btn btn-sm btn-secondary';
+        if (btnMon) btnMon.className = 'btn btn-sm btn-primary';
+        if (secTmpl) secTmpl.classList.add('hide');
+        if (secMon) secMon.classList.remove('hide');
+        loadWhatsAppMonitoringQueue();
+    } else {
+        if (btnTmpl) btnTmpl.className = 'btn btn-sm btn-primary';
+        if (btnMon) btnMon.className = 'btn btn-sm btn-secondary';
+        if (secTmpl) secTmpl.classList.remove('hide');
+        if (secMon) secMon.classList.add('hide');
+    }
+}
+
+async function loadWhatsAppMonitoringQueue() {
+    const tbody = document.getElementById('wa-monitoring-queue-tbody');
+    if (!tbody) return;
+
+    try {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color: var(--text-secondary);">🔄 Consultando cola de mensajes...</td></tr>';
+        const res = await fetch('/api/whatsapp/queue-status');
+        if (!res.ok) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Error al consultar la cola de mensajes.</td></tr>';
+            return;
+        }
+        const data = await res.json();
+        const queue = data.queue || [];
+
+        if (queue.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color: var(--text-secondary);">No hay citas próximas registradas en la cola de mensajes.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = queue.map(item => {
+            let badgeBg = '#64748b';
+            let badgeColor = '#ffffff';
+
+            if (item.pipeline_status === 'confirmado') {
+                badgeBg = '#10b981';
+            } else if (item.pipeline_status === 'cancelado') {
+                badgeBg = '#ef4444';
+            } else if (item.pipeline_status === 'en_cola') {
+                badgeBg = '#3b82f6';
+            } else if (item.pipeline_status === 'enviado_conf' || item.pipeline_status === 'enviado_rec') {
+                badgeBg = '#059669';
+            } else if (item.pipeline_status === 'esperando_fecha') {
+                badgeBg = '#8b5cf6';
+            } else if (item.pipeline_status.includes('reagendar')) {
+                badgeBg = '#f59e0b';
+            }
+
+            return `
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="font-weight: 700; padding: 0.65rem;">
+                        ${item.paciente_nombre}
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 400;">📱 ${item.telefono || 'Sin teléfono'}</div>
+                    </td>
+                    <td style="padding: 0.65rem;">
+                        <div style="font-weight: 600;">📅 ${item.fecha}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary);">🕒 ${item.hora}</div>
+                    </td>
+                    <td style="padding: 0.65rem;">
+                        <span class="badge" style="background: var(--bg-hover); color: var(--text-dark); border: 1px solid var(--border-color);">${item.tipo_consulta}</span>
+                    </td>
+                    <td style="padding: 0.65rem;">
+                        <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 600; padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.8rem; display: inline-block;">
+                            ${item.pipeline_label}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error al cargar monitoreo de WhatsApp:", err);
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Error de conexión al cargar monitoreo.</td></tr>';
     }
 }
 

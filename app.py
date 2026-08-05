@@ -571,6 +571,8 @@ def init_db():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
         if 'recordatorio_enviado_wa' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+        if 'reagendamiento_enviado_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
         db.commit()
         
     # Crear tabla de tarifas por país
@@ -607,6 +609,8 @@ def init_db():
             cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
         if 'confirmacion_enviada_wa' not in cols_citas:
             cursor.execute("ALTER TABLE citas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
+        if 'reagendamiento_enviado_wa' not in cols_citas:
+            cursor.execute("ALTER TABLE citas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
         db.commit()
         
     # Sincronización automática de sesiones huérfanas sin fila de finanzas
@@ -5301,7 +5305,7 @@ def admin_message_templates():
     
     if request.method == 'GET':
         templates = {}
-        for key in ['msg_confirmacion', 'msg_recordatorio', 'msg_cierre']:
+        for key in ['msg_confirmacion', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre']:
             cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (key,))
             row = cursor.fetchone()
             templates[key] = row['valor'] if row else ""
@@ -5309,7 +5313,7 @@ def admin_message_templates():
         
     data = request.json
     try:
-        for key in ['msg_confirmacion', 'msg_recordatorio', 'msg_cierre']:
+        for key in ['msg_confirmacion', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre']:
             if key in data:
                 cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", (key, data[key]))
         db.commit()
@@ -9969,12 +9973,12 @@ def whatsapp_webhook():
     cursor = db.cursor()
 
     clean_digits = ''.join(filter(str.isdigit, raw_phone))
-    phone_search = clean_digits[-8:] if len(clean_digits) >= 8 else clean_digits
+    phone_search = clean_digits[-7:] if len(clean_digits) >= 7 else clean_digits
 
     cursor.execute("""
         SELECT id, nombres, apellidos, psicologo_id 
         FROM pacientes 
-        WHERE REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', '') LIKE '%' || ? || '%'
+        WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
     """, (phone_search,))
     patient = cursor.fetchone()
 
@@ -9984,10 +9988,10 @@ def whatsapp_webhook():
     patient_id = patient['id']
     patient_name = f"{patient['nombres']} {patient['apellidos']}"
     psic_id = patient['psicologo_id']
-    text_lower = text.lower()
+    text_lower = text.lower().strip()
 
-    confirm_words = ['si', 'sí', 'confirmo', 'confirmar', 'confirmado', 'confirmada', 'asistire', 'asistiré', 'ok', 'listo']
-    cancel_words = ['no', 'cancelo', 'cancelar', 'cancelado', 'cancelada', 'imposible', 'no podre', 'no podré', 'no asisto']
+    confirm_words = ['si', 'sí', 'confirmo', 'confirmar', 'confirmado', 'confirmada', 'asistire', 'asistiré', 'ok', 'listo', '1', 's', 'voy', 'asisto', 'seguro', 'perfecto', 'excelente', '👍', 'correcto']
+    cancel_words = ['no', 'cancelo', 'cancelar', 'cancelado', 'cancelada', 'imposible', 'no podre', 'no podré', 'no asisto', '2']
 
     from datetime import datetime
     today_str = datetime.now().strftime('%Y-%m-%d')
@@ -10008,6 +10012,7 @@ def whatsapp_webhook():
 
     if any(w in text_lower for w in confirm_words):
         cursor.execute("UPDATE citas SET estado = 'Confirmada' WHERE id = ?", (cita_id,))
+        cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE paciente_id = ? AND fecha = ?", (patient_id, cita_fecha))
         notif_msg = f"📱 WhatsApp: {patient_name} CONFIRMÓ su cita del {cita_fecha}."
         cursor.execute("""
             INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
@@ -10018,6 +10023,7 @@ def whatsapp_webhook():
 
     elif any(w in text_lower for w in cancel_words):
         cursor.execute("UPDATE citas SET estado = 'Cancelada' WHERE id = ?", (cita_id,))
+        cursor.execute("UPDATE agenda_finanzas SET confirmada = 0 WHERE paciente_id = ? AND fecha = ?", (patient_id, cita_fecha))
         notif_msg = f"⚠️ WhatsApp: {patient_name} CANCELÓ su cita del {cita_fecha}."
         cursor.execute("""
             INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
@@ -10296,14 +10302,15 @@ def cron_send_whatsapp_reminders():
         except Exception as e:
             errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': str(e)})
 
-    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy SOLO SI ESTÁN CONFIRMADAS)
+    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy CONFIRMADAS en Citas O Finanzas)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         JOIN usuarios u ON p.psicologo_id = u.id
-        WHERE af.fecha = ? AND af.confirmada = 1 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0
+        LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
+        WHERE af.fecha = ? AND (af.confirmada = 1 OR c.estado = 'Confirmada') AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0
     """, (today_str,))
     citas_recordar = cursor.fetchall()
 
@@ -10329,6 +10336,7 @@ def cron_send_whatsapp_reminders():
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
             if r and r.status_code == 200:
                 cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
+                cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE paciente_id = ? AND fecha = ?", (cita['paciente_id'], cita['fecha']))
                 enviados_recordatorios.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'recordatorio'})
             else:
                 err_msg = 'Timeout de microservicio'
@@ -10341,18 +10349,166 @@ def cron_send_whatsapp_reminders():
         except Exception as e:
             errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': str(e)})
 
+    # 3. ENVIAR MENSAJES DE REAGENDAMIENTO DE FIN DE DÍA (Citas de Hoy o Ayer no confirmadas / canceladas)
+    tmpl_reag_default = cfg_rows.get('msg_reagendamiento') or "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!"
+    enviados_reagendamientos = []
+
+    cursor.execute("""
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        JOIN usuarios u ON p.psicologo_id = u.id
+        LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
+        WHERE (af.fecha = ? OR af.fecha = ?) 
+          AND COALESCE(af.confirmada, 0) = 0 
+          AND COALESCE(c.estado, '') != 'Confirmada' 
+          AND COALESCE(af.reagendamiento_enviado_wa, 0) = 0
+    """, (today_str, (now_local - timedelta(days=1)).strftime('%Y-%m-%d')))
+    citas_reagendar = cursor.fetchall()
+
+    for cita in citas_reagendar:
+        phone = cita['pat_telefono']
+        if not phone or not phone.strip():
+            continue
+        psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+        cita_dict = {
+            'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
+            'fecha': cita['fecha'],
+            'hora': cita['hora'],
+            'modalidad': cita['tipo_consulta'] or 'Presencial'
+        }
+        patient_dict = {
+            'nombres': cita['pat_nombres'],
+            'apellidos': cita['pat_apellidos'],
+            'pais': cita['pat_pais'] or ''
+        }
+        mensaje_texto = format_whatsapp_message(tmpl_reag_default, patient_dict, cita_dict, psicologo_data)
+
+        try:
+            r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
+            if r and r.status_code == 200:
+                cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado_wa = 1 WHERE id = ?", (cita['id'],))
+                cursor.execute("UPDATE citas SET reagendamiento_enviado_wa = 1 WHERE paciente_id = ? AND fecha = ?", (cita['paciente_id'], cita['fecha']))
+                enviados_reagendamientos.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'reagendamiento'})
+        except Exception as e:
+            pass
+
     db.commit()
     return jsonify({
         'status': 'success',
         'confirmaciones_enviadas': len(enviados_confirmaciones),
         'recordatorios_enviados': len(enviados_recordatorios),
-        'total_procesados': len(enviados_confirmaciones) + len(enviados_recordatorios),
+        'reagendamientos_enviados': len(enviados_reagendamientos),
+        'total_procesados': len(enviados_confirmaciones) + len(enviados_recordatorios) + len(enviados_reagendamientos),
         'detalles': {
             'confirmaciones': enviados_confirmaciones,
             'recordatorios': enviados_recordatorios,
+            'reagendamientos': enviados_reagendamientos,
             'errores': errores
         }
     })
+
+@app.route('/api/whatsapp/queue-status', methods=['GET'])
+@login_required
+def get_whatsapp_queue_status():
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+
+    from datetime import datetime, timedelta
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_local = datetime.now(tz)
+    except Exception:
+        now_local = datetime.utcnow() - timedelta(hours=4)
+
+    today_str = now_local.strftime('%Y-%m-%d')
+    yesterday_str = (now_local - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    cursor.execute("""
+        SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
+               COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
+               COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
+               COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+               COALESCE(c.estado, 'Agendada') as estado_cita,
+               p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
+        WHERE p.psicologo_id = ? AND af.fecha >= ?
+        ORDER BY af.fecha ASC, af.hora ASC
+        LIMIT 50
+    """, (user_id, yesterday_str))
+    
+    rows = cursor.fetchall()
+    queue = []
+
+    for r in rows:
+        fecha_cita = r['fecha']
+        hora_cita = r['hora']
+        pat_name = f"{r['pat_nombres']} {r['pat_apellidos']}"
+        phone = r['pat_telefono'] or ''
+        estado_c = r['estado_cita']
+        is_confirmada = (r['confirmada'] == 1 or estado_c == 'Confirmada')
+        is_cancelada = (estado_c == 'Cancelada')
+
+        if fecha_cita > today_str:
+            if r['confirmacion_enviada'] == 1:
+                if is_confirmada:
+                    pipeline_status = 'confirmado'
+                    pipeline_label = '✅ Confirmado por Paciente'
+                elif is_cancelada:
+                    pipeline_status = 'cancelado'
+                    pipeline_label = '❌ Cancelado por Paciente'
+                else:
+                    pipeline_status = 'enviado_conf'
+                    pipeline_label = '🚀 Confirmación Enviada (Esperando Respuesta)'
+            else:
+                pipeline_status = 'esperando_fecha'
+                pipeline_label = '⏳ Esperando Fecha (Programado)'
+        elif fecha_cita == today_str:
+            if is_confirmada:
+                if r['recordatorio_enviado'] == 1:
+                    pipeline_status = 'enviado_rec'
+                    pipeline_label = '🚀 Recordatorio Enviado Hoy'
+                else:
+                    pipeline_status = 'en_cola'
+                    pipeline_label = '📥 En Cola (Listo para Recordatorio Hoy)'
+            elif is_cancelada:
+                pipeline_status = 'cancelado'
+                pipeline_label = '❌ Cancelado por Paciente'
+            else:
+                if r['reagendamiento_enviado'] == 1:
+                    pipeline_status = 'reagendar_enviado'
+                    pipeline_label = '🔄 Reagendamiento Enviado'
+                else:
+                    pipeline_status = 'en_cola_reagendar'
+                    pipeline_label = '📥 En Cola (Reagendamiento Fin de Día)'
+        else:
+            if r['reagendamiento_enviado'] == 1:
+                pipeline_status = 'reagendar_enviado'
+                pipeline_label = '🔄 Reagendamiento Enviado'
+            elif is_confirmada:
+                pipeline_status = 'completada'
+                pipeline_label = '✅ Cita Realizada'
+            else:
+                pipeline_status = 'pendiente_reagendar'
+                pipeline_label = '📥 Pendiente Reagendar'
+
+        queue.append({
+            'cita_id': r['id'],
+            'paciente_nombre': pat_name,
+            'telefono': phone,
+            'fecha': fecha_cita,
+            'hora': hora_cita,
+            'tipo_consulta': r['tipo_consulta'] or 'Presencial',
+            'pipeline_status': pipeline_status,
+            'pipeline_label': pipeline_label
+        })
+
+    return jsonify({'queue': queue})
 
 # --- SCHEDULER DE WHATSAPP EN SEGUNDO PLANO (AUTOMÁTICO) ---
 _wa_cron_thread_started = False
