@@ -8712,24 +8712,14 @@ def get_calendar_service(user_id=None):
             user_id = None
             
     if not user_id:
-        try:
-            cursor.execute("SELECT id FROM usuarios ORDER BY id ASC LIMIT 1")
-            row = cursor.fetchone()
-            if row:
-                user_id = row[0]
-        except Exception as e:
-            print("Error al obtener primer usuario para Google Calendar:", e)
+        return None
             
-    token_key = f'google_token_{user_id}' if user_id else 'google_token'
+    token_key = f'google_token_{user_id}'
     cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (token_key,))
     row = cursor.fetchone()
     
-    # Si no tiene token específico, intentar con el token global anterior 'google_token'
     if not row:
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'google_token'")
-        row = cursor.fetchone()
-        if not row:
-            return None
+        return None
         
     try:
         # El token está guardado como JSON
