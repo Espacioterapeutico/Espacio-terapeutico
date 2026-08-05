@@ -465,8 +465,16 @@ def init_db():
         if not raw_n or raw_n == "psic.":
             raw_n = f"psic.{u_user}".lower()
         cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (raw_n, u_id))
-    db.commit()
-
+    # Sincronización de clave para Pamoraro si estaba en 123456
+    try:
+        cursor.execute("SELECT id, password_hash FROM usuarios WHERE LOWER(username) = 'pamoraro'")
+        pam_u = cursor.fetchone()
+        if pam_u and pam_u['password_hash']:
+            if check_password_hash(pam_u['password_hash'], '123456'):
+                cursor.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (generate_password_hash('Psicodrama.26'), pam_u['id']))
+                db.commit()
+    except Exception:
+        pass
 
     # Migración automática de pacientes
     cursor.execute("PRAGMA table_info(pacientes)")
