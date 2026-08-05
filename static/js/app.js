@@ -11805,11 +11805,30 @@ function openToolPreviewModal(clave, nombre) {
     const normClave = claveMap[clave] || clave;
     const tmplObj = therapistPreviewTemplates.find(t => t.clave === normClave || t.clave === clave);
 
+    const displayName = nombre || tmplObj?.titulo || 'Herramienta Terapéutica';
+
+    // A. Despliegue Inline en la Tarjeta del Módulo
+    const inlineContainer = document.getElementById(`inline-tool-preview-${normClave}`) || document.getElementById(`inline-tool-preview-${clave}`);
+    if (inlineContainer) {
+        const isHidden = inlineContainer.classList.contains('hide') || inlineContainer.style.display === 'none';
+        if (isHidden) {
+            if (tmplObj && tmplObj.html) {
+                inlineContainer.innerHTML = tmplObj.html;
+            } else {
+                inlineContainer.innerHTML = `<div class="text-center py-3 text-muted"><h4>📱 Vista Previa</h4><p>Formulario para <strong>${displayName}</strong>.</p></div>`;
+            }
+            inlineContainer.classList.remove('hide');
+            inlineContainer.style.display = 'block';
+        } else {
+            inlineContainer.classList.add('hide');
+            inlineContainer.style.display = 'none';
+        }
+    }
+
+    // B. Ventana Modal Flotante Sobrepuesta
     const modalEl = document.getElementById('modal-tool-patient-preview') || document.getElementById('therapist-tool-preview-modal');
     const titleEl = document.getElementById('tpp-modal-title') || document.getElementById('ttp-modal-title');
     const bodyEl = document.getElementById('tpp-modal-body') || document.getElementById('ttp-modal-body');
-
-    const displayName = nombre || tmplObj?.titulo || 'Herramienta Terapéutica';
 
     if (titleEl) {
         titleEl.innerHTML = `👁️ Previsualización: ${displayName}`;
