@@ -669,6 +669,20 @@ def init_db():
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registro_consumo_pantalla (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            dispositivos TEXT,
+            tiempo_uso TEXT,
+            aplicaciones TEXT,
+            tipo_contenido TEXT,
+            estado_emocional_posterior TEXT,
+            interferencia_actividad TEXT,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
     cursor.execute("PRAGMA table_info(pizarra_terapeutica)")
     cols_piz = [row[1] for row in cursor.fetchall()]
     if cols_piz:
@@ -10685,6 +10699,12 @@ def get_therapist_modules_catalog():
             'nombre': 'Registro Cognitivo',
             'descripcion': 'Reestructuración cognitiva TCC: registro de situación desencadenante, pensamientos automáticos, emoción/sensación (0-10) y conducta realizada.',
             'icono': '🧠'
+        },
+        {
+            'clave': 'pantalla',
+            'nombre': 'Tracker de Consumo de Pantalla',
+            'descripcion': 'Cuestionario interactivo por chips para monitoreo de tiempo de uso, dispositivos, aplicaciones, contenido, impacto emocional e interferencia.',
+            'icono': '📱'
         }
     ]
     
@@ -10901,6 +10921,14 @@ def get_therapist_module_report(modulo_clave):
                 JOIN pacientes p ON rcog.paciente_id = p.id
                 WHERE p.psicologo_id = ?
                 ORDER BY rcog.fecha DESC LIMIT 100
+            """, (user_id,))
+        elif modulo_clave == 'pantalla':
+            cursor.execute("""
+                SELECT cp.*, p.nombres, p.apellidos, p.cedula
+                FROM registro_consumo_pantalla cp
+                JOIN pacientes p ON cp.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY cp.fecha_registro DESC LIMIT 100
             """, (user_id,))
         else:
             return jsonify({'error': 'Módulo desconocido'}), 400

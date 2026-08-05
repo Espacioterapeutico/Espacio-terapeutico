@@ -1030,6 +1030,10 @@
                     <span style="font-size: 1.2rem;">🧠</span>
                     <span>Registro Cognitivo</span>
                 </a>
+                <a href="#" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-consumo-pantalla" data-mod-key="pantalla" onclick="selectPatientMenuItem('patient-consumo-pantalla')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
+                    <span style="font-size: 1.2rem;">📱</span>
+                    <span>Tracker de Pantalla</span>
+                </a>
                 <a href="#" class="pat-menu-item" data-pat-view="patient-support" onclick="selectPatientMenuItem('patient-support')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     <span>Soporte Técnico</span>
@@ -3060,6 +3064,128 @@
                         <div class="card-body">
                             <div id="patient-cognitivo-history-list" class="table-responsive">
                                 <p class="text-muted">Cargando historial cognitivo...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA PORTAL PACIENTE: TRACKER DE CONSUMO DE PANTALLA -->
+                <section id="view-patient-consumo-pantalla" class="app-view hide">
+                    <div class="view-header-row">
+                        <h2>📱 Tracker de Consumo de Pantalla</h2>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
+                    </div>
+
+                    <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #7e22ce 0%, #581c87 100%); color: white; border-radius: var(--radius-md) var(--radius-md) 0 0;">
+                            <h3 style="color: white; margin: 0; display: flex; align-items: center; gap: 8px;">📱 Registro Diario de Consumo Digital</h3>
+                        </div>
+                        <div class="card-body" style="padding: 1.5rem;">
+                            <p class="text-secondary mb-4" style="font-size: 0.88rem; line-height: 1.5;">
+                                Selecciona las opciones aplicables con toques rápidos para registrar tu tiempo de pantalla y su impacto.
+                            </p>
+                            <form id="form-consumo-pantalla" onsubmit="submitPatientConsumoPantalla(event)">
+                                <!-- 1. DISPOSITIVOS (CHIPS MULTISELECT) -->
+                                <div class="form-group mb-4">
+                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
+                                        1. Dispositivos Utilizados *
+                                    </label>
+                                    <div id="cp-chips-dispositivos" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        <button type="button" class="chip-btn" data-value="telefono">📱 Teléfono / Smartphone</button>
+                                        <button type="button" class="chip-btn" data-value="computadora">💻 Computadora / Laptop</button>
+                                        <button type="button" class="chip-btn" data-value="televisor">📺 Televisor / Smart TV</button>
+                                        <button type="button" class="chip-btn" data-value="consola">🎮 Consola de Juegos</button>
+                                        <button type="button" class="chip-btn" data-value="tablet">📟 Tablet</button>
+                                    </div>
+                                </div>
+
+                                <!-- 2. TIEMPO DE USO (SINGLE SELECT CHIPS) -->
+                                <div class="form-group mb-4">
+                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
+                                        2. Tiempo Estimado de Uso *
+                                    </label>
+                                    <div id="cp-chips-tiempo" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        <button type="button" class="chip-btn single-select" data-value="menos_1_hora">⏱️ Menos de 1 hora</button>
+                                        <button type="button" class="chip-btn single-select" data-value="1_2_horas">⏱️ 1 a 2 horas</button>
+                                        <button type="button" class="chip-btn single-select" data-value="3_4_horas">⏱️ 3 a 4 horas</button>
+                                        <button type="button" class="chip-btn single-select" data-value="mas_5_horas">⚠️ Más de 5 horas</button>
+                                    </div>
+                                </div>
+
+                                <!-- 3. APLICACIONES PRINCIPALES (CHIPS MULTISELECT) -->
+                                <div class="form-group mb-4">
+                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
+                                        3. Aplicaciones Principales Usadas *
+                                    </label>
+                                    <div id="cp-chips-aplicaciones" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        <button type="button" class="chip-btn" data-value="instagram">📸 Instagram</button>
+                                        <button type="button" class="chip-btn" data-value="tiktok">🎵 TikTok</button>
+                                        <button type="button" class="chip-btn" data-value="youtube">▶️ YouTube</button>
+                                        <button type="button" class="chip-btn" data-value="whatsapp">💬 WhatsApp / Mensajería</button>
+                                        <button type="button" class="chip-btn" data-value="videojuegos">🎮 Videojuegos</button>
+                                        <button type="button" class="chip-btn" data-value="noticias">🌐 Navegador / Noticias</button>
+                                        <button type="button" class="chip-btn" data-value="streaming">🎬 Netflix / Streaming</button>
+                                    </div>
+                                </div>
+
+                                <!-- 4. TIPO DE CONTENIDO VISTO (CHIPS MULTISELECT) -->
+                                <div class="form-group mb-4">
+                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
+                                        4. Tipo de Contenido Consumido *
+                                    </label>
+                                    <div id="cp-chips-contenido" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        <button type="button" class="chip-btn" data-value="reels">🎬 Reels / Shorts / Videos Cortos</button>
+                                        <button type="button" class="chip-btn" data-value="noticias">📰 Noticias / Actualidad</button>
+                                        <button type="button" class="chip-btn" data-value="streams">🎮 Gameplays / Streams</button>
+                                        <button type="button" class="chip-btn" data-value="chat">💬 Mensajes y Chat</button>
+                                        <button type="button" class="chip-btn" data-value="series">🍿 Películas / Series</button>
+                                        <button type="button" class="chip-btn" data-value="educativo">📚 Educación / Trabajo</button>
+                                    </div>
+                                </div>
+
+                                <!-- 5. ESTADO EMOCIONAL POSTERIOR (SINGLE SELECT CHIPS) -->
+                                <div class="form-group mb-4">
+                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
+                                        5. Estado Emocional Posterior *
+                                    </label>
+                                    <div id="cp-chips-emocional" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        <button type="button" class="chip-btn single-select" data-value="ansioso">😰 Ansioso / Inquieto</button>
+                                        <button type="button" class="chip-btn single-select" data-value="apatia">😔 Apatía / Desanimado</button>
+                                        <button type="button" class="chip-btn single-select" data-value="culpable">😞 Culpable / Frustrado</button>
+                                        <button type="button" class="chip-btn single-select" data-value="agotado">🤯 Agotado Mentalmente</button>
+                                        <button type="button" class="chip-btn single-select" data-value="tranquilo">😌 Tranquilo / Satisfecho</button>
+                                    </div>
+                                </div>
+
+                                <!-- 6. INTERFERENCIA EN ACTIVIDADES (SINGLE SELECT CHIPS) -->
+                                <div class="form-group mb-4">
+                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
+                                        6. Interferencia con tus Actividades *
+                                    </label>
+                                    <div id="cp-chips-interferencia" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        <button type="button" class="chip-btn single-select" data-value="sueno">😴 Sueño / Insomnio</button>
+                                        <button type="button" class="chip-btn single-select" data-value="estudio_trabajo">📚 Estudio / Trabajo</button>
+                                        <button type="button" class="chip-btn single-select" data-value="relaciones">🤝 Relaciones / Familia</button>
+                                        <button type="button" class="chip-btn single-select" data-value="ejercicio">🧘 Cuidado Personal / Ejercicio</button>
+                                        <button type="button" class="chip-btn single-select" data-value="ninguna">🟢 Ninguna Interferencia</button>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; padding: 0.85rem; font-weight: 700; font-size: 1rem; background: linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%); border: none;">
+                                    📱 Registrar Consumo de Pantalla
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL DEL PACIENTE -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Historial de Registros de Consumo de Pantalla</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="patient-consumo-pantalla-history" class="table-responsive">
+                                <p class="text-muted">Cargando registros...</p>
                             </div>
                         </div>
                     </div>

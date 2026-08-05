@@ -1612,6 +1612,9 @@ function switchPatientView(viewName) {
         } else if (viewName === 'patient-cognitivo') {
             setDefaultToolDates();
             loadPatientCognitiveRecordHistory();
+        } else if (viewName === 'patient-consumo-pantalla') {
+            initChipContainers();
+            loadPatientConsumoPantallaHistory();
         }
     }
 }
@@ -11741,6 +11744,46 @@ const therapistPreviewTemplates = [
                 </div>
             </div>
         `
+    },
+    {
+        clave: 'pantalla',
+        titulo: '📱 Tracker de Consumo de Pantalla & Hábitos Digitales',
+        descripcion: 'Formulario interactivo basado en chips para registrar tiempo de pantalla, dispositivos, aplicaciones, contenido y su impacto emocional.',
+        html: `
+            <div style="background: white; border: 1.5px solid #c084fc; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #6b21a8; font-size: 1.05rem;">
+                        📱 Tracker de Consumo Digital (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #faf5ff; color: #7e22ce; font-weight: 700; border: 1px solid #c084fc; padding: 0.25rem 0.6rem;">
+                        Formulario por Chips
+                    </span>
+                </div>
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #f3e8ff; box-sizing: border-box;">
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">1. Dispositivos:</label>
+                        <input type="text" value="📱 Smartphone, 💻 Computadora" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1.5px solid #c084fc; background: white; font-weight: 700; color: #6b21a8;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">2. Tiempo de Uso:</label>
+                        <input type="text" value="⚠️ 3 a 4 horas" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; font-weight: 700; color: #d97706;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">3. Apps Principales &amp; Contenido:</label>
+                        <input type="text" value="📸 Instagram, 🎵 TikTok (Reels / Shorts)" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">4. Estado Emocional Posterior:</label>
+                        <input type="text" value="😰 Ansioso / Agotado mentalmente" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1.5px solid #ef4444; background: white; color: #b91c1c; font-weight: 700;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">5. Interferencia:</label>
+                        <input type="text" value="😴 Sueño / Insomnio" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-block" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #7e22ce; border-color: #6b21a8; margin-top: 0.25rem;">📱 Registrar Consumo de Pantalla (Simulación)</button>
+                </div>
+            </div>
+        `
     }
 ];
 
@@ -11797,7 +11840,8 @@ const toolButtonLabels = {
     'consumo': '📊 Ver Registro de Consumo',
     'adherencia': '📊 Ver Registro de Tratamiento',
     'medicacion': '📊 Ver Registro de Tratamiento',
-    'activacion': '📊 Ver Registro de Activación Conductual'
+    'activacion': '📊 Ver Registro de Activación Conductual',
+    'pantalla': '📱 Ver Tracker de Pantalla'
 };
 
 const claveToToolMap = {
@@ -11807,7 +11851,8 @@ const claveToToolMap = {
     'consumo': 'consumo',
     'adherencia': 'medicacion',
     'medicacion': 'medicacion',
-    'activacion': 'activacion'
+    'activacion': 'activacion',
+    'pantalla': 'pantalla'
 };
 
 let therapistToolsPatientsCatalog = [];
@@ -12471,7 +12516,8 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
         'ansiedad': 'Diario de Ansiedad',
         'sobriedad': 'Registro de Consumo',
         'adherencia': 'Adherencia al Tratamiento',
-        'activacion': 'Activación Conductual'
+        'activacion': 'Activación Conductual',
+        'pantalla': 'Tracker de Consumo de Pantalla'
     };
     const titleText = moduloNombre || namesMap[moduloClave] || moduloClave;
     const titleEl = document.getElementById('ttr-modal-title');
@@ -12597,6 +12643,15 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                 summaryBadgesHtml = `
                     <span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800; padding:0.4rem 0.6rem;">⚡ Promedio Ansiedad: ${avgAns} / 10</span>
                     ${maxF > 0 ? `<span class="badge" style="background:#fef2f2; color:#991b1b; font-weight:700; padding:0.4rem 0.6rem;">⚠️ Síntoma frecuente: ${topSymptom}</span>` : ''}
+                `;
+            } else if (moduloClave === 'pantalla') {
+                const totalLogs = recs.length;
+                const highUsage = recs.filter(r => r.tiempo_uso === 'mas_5_horas' || r.tiempo_uso === '3_4_horas').length;
+                const ansiosos = recs.filter(r => r.estado_emocional_posterior === 'ansioso' || r.estado_emocional_posterior === 'culpable' || r.estado_emocional_posterior === 'agotado').length;
+                summaryBadgesHtml = `
+                    <span class="badge" style="background:#faf5ff; color:#7e22ce; font-weight:700; padding:0.4rem 0.6rem;">📱 Registros Totales: ${totalLogs}</span>
+                    <span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700; padding:0.4rem 0.6rem;">⚠️ Uso Elevado (&gt;3h): ${highUsage}</span>
+                    <span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:700; padding:0.4rem 0.6rem;">😰 Malestar Posterior: ${ansiosos}</span>
                 `;
             }
 
@@ -13247,6 +13302,181 @@ window.loadPatientAdherenceChecklist = loadPatientAdherenceChecklist;
 window.submitPatientAdherenceLog = submitPatientAdherenceLog;
 window.loadPatientAdherenceHistory = loadPatientAdherenceHistory;
 window.openPatientAdherenceView = openPatientAdherenceView;
+
+// ==========================================
+// MÓDULO: TRACKER DE CONSUMO DE PANTALLA
+// ==========================================
+function initChipContainers() {
+    document.querySelectorAll('.chip-container').forEach(container => {
+        container.querySelectorAll('.chip-btn').forEach(btn => {
+            if (btn.dataset.initialized) return;
+            btn.dataset.initialized = 'true';
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (btn.classList.contains('single-select')) {
+                    container.querySelectorAll('.chip-btn').forEach(sibling => {
+                        if (sibling !== btn) sibling.classList.remove('active');
+                    });
+                    btn.classList.toggle('active');
+                } else {
+                    btn.classList.toggle('active');
+                }
+            });
+        });
+    });
+}
+
+function getSelectedChips(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return [];
+    const activeBtns = container.querySelectorAll('.chip-btn.active');
+    return Array.from(activeBtns).map(btn => btn.getAttribute('data-value'));
+}
+
+function getSelectedSingleChip(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return '';
+    const activeBtn = container.querySelector('.chip-btn.active');
+    return activeBtn ? activeBtn.getAttribute('data-value') : '';
+}
+
+async function submitPatientConsumoPantalla(e) {
+    if (e) e.preventDefault();
+    
+    const dispositivos = getSelectedChips('cp-chips-dispositivos');
+    const tiempo_uso = getSelectedSingleChip('cp-chips-tiempo');
+    const aplicaciones = getSelectedChips('cp-chips-aplicaciones');
+    const tipo_contenido = getSelectedChips('cp-chips-contenido');
+    const estado_emocional_posterior = getSelectedSingleChip('cp-chips-emocional');
+    const interferencia_actividad = getSelectedSingleChip('cp-chips-interferencia');
+
+    if (dispositivos.length === 0 || !tiempo_uso || aplicaciones.length === 0) {
+        alert("Por favor selecciona al menos un dispositivo, el tiempo estimado y una aplicación.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/herramientas/consumo-pantalla', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                dispositivos,
+                tiempo_uso,
+                aplicaciones,
+                tipo_contenido,
+                estado_emocional_posterior,
+                interferencia_actividad
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "¡Registro de consumo de pantalla guardado con éxito!");
+            document.querySelectorAll('#view-patient-consumo-pantalla .chip-btn').forEach(btn => btn.classList.remove('active'));
+            loadPatientConsumoPantallaHistory();
+        } else {
+            alert(data.error || "Error al guardar el registro.");
+        }
+    } catch (err) {
+        console.error("Error al guardar consumo de pantalla:", err);
+        alert("Error de conexión al guardar el registro.");
+    }
+}
+
+async function loadPatientConsumoPantallaHistory() {
+    const container = document.getElementById('patient-consumo-pantalla-history');
+    if (!container) return;
+
+    try {
+        container.innerHTML = '<p class="text-muted py-3 text-center">Cargando registros...</p>';
+        const patientId = sessionStorage.getItem('patient_id') || '0';
+        const res = await fetch(`/api/herramientas/consumo-pantalla/${patientId}`);
+        if (!res.ok) {
+            container.innerHTML = '<p class="text-muted py-3 text-center">No se pudieron obtener los registros.</p>';
+            return;
+        }
+        const data = await res.json();
+        const recs = data.registros || [];
+
+        if (recs.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-4">No tienes registros de consumo de pantalla aún.</p>';
+            return;
+        }
+
+        const tUsoMap = {
+            'menos_1_hora': '⏱️ <1 hora',
+            '1_2_horas': '⏱️ 1-2 horas',
+            '3_4_horas': '⚠️ 3-4 horas',
+            'mas_5_horas': '🚨 >5 horas'
+        };
+
+        const emoMap = {
+            'ansioso': '😰 Ansioso / Inquieto',
+            'apatia': '😔 Apatía / Desanimado',
+            'culpable': '😞 Culpable / Frustrado',
+            'agotado': '🤯 Agotado Mentalmente',
+            'tranquilo': '😌 Tranquilo / Satisfecho'
+        };
+
+        const intMap = {
+            'sueno': '😴 Sueño / Insomnio',
+            'estudio_trabajo': '📚 Estudio / Trabajo',
+            'relaciones': '🤝 Relaciones / Familia',
+            'ejercicio': '🧘 Cuidado Personal / Ejercicio',
+            'ninguna': '🟢 Ninguna Interferencia'
+        };
+
+        container.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                        <th style="padding: 0.6rem;">Fecha / Hora</th>
+                        <th style="padding: 0.6rem;">Dispositivos</th>
+                        <th style="padding: 0.6rem;">Tiempo Uso</th>
+                        <th style="padding: 0.6rem;">Apps Utilizadas</th>
+                        <th style="padding: 0.6rem;">Contenido</th>
+                        <th style="padding: 0.6rem;">Estado Emocional</th>
+                        <th style="padding: 0.6rem;">Interferencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${recs.map(r => {
+                        const disp = Array.isArray(r.dispositivos) ? r.dispositivos.join(', ') : (r.dispositivos || '-');
+                        const apps = Array.isArray(r.aplicaciones) ? r.aplicaciones.join(', ') : (r.aplicaciones || '-');
+                        const cont = Array.isArray(r.tipo_contenido) ? r.tipo_contenido.join(', ') : (r.tipo_contenido || '-');
+                        const usoBadge = tUsoMap[r.tiempo_uso] || r.tiempo_uso || '-';
+                        const emoLabel = emoMap[r.estado_emocional_posterior] || r.estado_emocional_posterior || '-';
+                        const intLabel = intMap[r.interferencia_actividad] || r.interferencia_actividad || '-';
+
+                        let badgeColor = '#64748b';
+                        if (r.tiempo_uso === 'mas_5_horas') badgeColor = '#ef4444';
+                        else if (r.tiempo_uso === '3_4_horas') badgeColor = '#f59e0b';
+                        else if (r.tiempo_uso === '1_2_horas') badgeColor = '#3b82f6';
+                        else if (r.tiempo_uso === 'menos_1_hora') badgeColor = '#10b981';
+
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.6rem;"><strong>📅 ${r.fecha_registro || '-'}</strong></td>
+                                <td style="padding: 0.6rem;">${disp}</td>
+                                <td style="padding: 0.6rem;"><span class="badge" style="background: ${badgeColor}; color: white; font-weight: 700;">${usoBadge}</span></td>
+                                <td style="padding: 0.6rem;">${apps}</td>
+                                <td style="padding: 0.6rem;">${cont}</td>
+                                <td style="padding: 0.6rem;"><span class="badge" style="background: #faf5ff; color: #7e22ce; font-weight: 700; border: 1px solid #c084fc;">${emoLabel}</span></td>
+                                <td style="padding: 0.6rem;">${intLabel}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        console.error("Error cargando historial de pantalla:", err);
+        container.innerHTML = `<p class="text-danger py-3 text-center">Error al cargar historial: ${err.message}</p>`;
+    }
+}
+
+window.initChipContainers = initChipContainers;
+window.submitPatientConsumoPantalla = submitPatientConsumoPantalla;
+window.loadPatientConsumoPantallaHistory = loadPatientConsumoPantallaHistory;
 
 // ==========================================
 // MÓDULO PACIENTE Y PSICÓLOGO: ACTIVACIÓN CONDUCTUAL
