@@ -5389,22 +5389,27 @@ def admin_notifications():
             cursor.execute("""
                 SELECT id, tipo, titulo, mensaje, fecha, leida, link
                 FROM notificaciones
-                WHERE (user_id = ? OR user_id IS NULL OR user_id = 1 OR user_id = 0) AND leida = 0
+                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente')
+                  AND (user_id = ? OR (user_id IS NULL AND ? = 1)) AND leida = 0
                 ORDER BY fecha DESC, id DESC LIMIT 25
-            """, (psic_id,))
+            """, (psic_id, psic_id))
             rows = cursor.fetchall()
             
-            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE (user_id = ? OR user_id IS NULL OR user_id = 1 OR user_id = 0) AND leida = 0", (psic_id,))
+            cursor.execute("""
+                SELECT COUNT(id) FROM notificaciones 
+                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente')
+                  AND (user_id = ? OR (user_id IS NULL AND ? = 1)) AND leida = 0
+            """, (psic_id, psic_id))
             unread_count = cursor.fetchone()[0] or 0
         else:
             cursor.execute("""
                 SELECT id, tipo, titulo, mensaje, fecha, leida, link
                 FROM notificaciones
-                WHERE leida = 0
+                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND leida = 0
                 ORDER BY fecha DESC, id DESC LIMIT 25
             """)
             rows = cursor.fetchall()
-            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE leida = 0")
+            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND leida = 0")
             unread_count = cursor.fetchone()[0] or 0
         
         list_notif = [{
@@ -5437,9 +5442,13 @@ def admin_notifications_mark_read():
             cursor.execute("UPDATE notificaciones SET leida = 1 WHERE id = ?", (notification_id,))
         else:
             if psic_id is not None:
-                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE user_id = ? OR user_id IS NULL OR user_id = 1 OR user_id = 0", (psic_id,))
+                cursor.execute("""
+                    UPDATE notificaciones SET leida = 1 
+                    WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') 
+                      AND (user_id = ? OR (user_id IS NULL AND ? = 1))
+                """, (psic_id, psic_id))
             else:
-                cursor.execute("UPDATE notificaciones SET leida = 1")
+                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente')")
         db.commit()
         return jsonify({'success': 'Notificación marcada como leída.'})
     except Exception as e:
