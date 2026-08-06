@@ -10607,20 +10607,37 @@ def get_whatsapp_queue_status():
 
     queue = []
     try:
-        cursor.execute("""
-            SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
-                   COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
-                   COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
-                   COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
-                   COALESCE(c.estado, 'Agendada') as estado_cita,
-                   p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
-            FROM agenda_finanzas af
-            JOIN pacientes p ON af.paciente_id = p.id
-            LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
-            WHERE (p.psicologo_id = ? OR (p.psicologo_id IS NULL AND ? = 1)) AND af.fecha >= ?
-            ORDER BY af.fecha ASC, af.hora ASC
-            LIMIT 50
-        """, (psic_id, psic_id, yesterday_str))
+        is_super = check_is_superadmin()
+        if is_super or psic_id in (1, -1):
+            cursor.execute("""
+                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
+                       COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
+                       COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
+                       COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                       COALESCE(c.estado, 'Agendada') as estado_cita,
+                       p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+                FROM agenda_finanzas af
+                JOIN pacientes p ON af.paciente_id = p.id
+                LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
+                WHERE af.fecha >= ?
+                ORDER BY af.fecha ASC, af.hora ASC
+                LIMIT 50
+            """, (yesterday_str,))
+        else:
+            cursor.execute("""
+                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
+                       COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
+                       COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
+                       COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                       COALESCE(c.estado, 'Agendada') as estado_cita,
+                       p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+                FROM agenda_finanzas af
+                JOIN pacientes p ON af.paciente_id = p.id
+                LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
+                WHERE (p.psicologo_id = ? OR p.psicologo_id IS NULL) AND af.fecha >= ?
+                ORDER BY af.fecha ASC, af.hora ASC
+                LIMIT 50
+            """, (psic_id, yesterday_str))
         
         rows = cursor.fetchall()
 
