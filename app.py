@@ -10664,48 +10664,71 @@ def get_whatsapp_queue_status():
             is_confirmada = (r['confirmada'] == 1 or estado_c == 'Confirmada')
             is_cancelada = (estado_c == 'Cancelada')
 
-            if fecha_cita > today_str:
+            tomorrow_str = (now_local + timedelta(days=1)).strftime('%Y-%m-%d')
+
+            if fecha_cita == tomorrow_str:
                 if r['confirmacion_enviada'] == 1:
                     if is_confirmada:
                         pipeline_status = 'confirmado'
                         pipeline_label = '✅ Confirmado por Paciente'
+                        priority = 4
                     elif is_cancelada:
                         pipeline_status = 'cancelado'
                         pipeline_label = '❌ Cancelado por Paciente'
+                        priority = 5
                     else:
                         pipeline_status = 'enviado_conf'
                         pipeline_label = '🚀 Confirmación Enviada (Esperando Respuesta)'
+                        priority = 3
+                else:
+                    pipeline_status = 'en_cola_conf'
+                    pipeline_label = '📥 En Cola (Confirmación 24h)'
+                    priority = 1
+            elif fecha_cita > tomorrow_str:
+                if r['confirmacion_enviada'] == 1:
+                    pipeline_status = 'enviado_conf'
+                    pipeline_label = '🚀 Confirmación Enviada'
+                    priority = 3
                 else:
                     pipeline_status = 'esperando_fecha'
-                    pipeline_label = '⏳ Esperando Fecha (Programado)'
+                    pipeline_label = '⏳ Programado en Cola'
+                    priority = 2
             elif fecha_cita == today_str:
                 if is_confirmada:
                     if r['recordatorio_enviado'] == 1:
                         pipeline_status = 'enviado_rec'
                         pipeline_label = '🚀 Recordatorio Enviado Hoy'
+                        priority = 4
                     else:
                         pipeline_status = 'en_cola'
-                        pipeline_label = '📥 En Cola (Listo para Recordatorio Hoy)'
+                        pipeline_label = '📥 En Cola (Recordatorio Hoy)'
+                        priority = 1
                 elif is_cancelada:
                     pipeline_status = 'cancelado'
                     pipeline_label = '❌ Cancelado por Paciente'
+                    priority = 5
                 else:
                     if r['reagendamiento_enviado'] == 1:
                         pipeline_status = 'reagendar_enviado'
                         pipeline_label = '🔄 Reagendamiento Enviado'
+                        priority = 4
                     else:
                         pipeline_status = 'en_cola_reagendar'
                         pipeline_label = '📥 En Cola (Reagendamiento Fin de Día)'
+                        priority = 1
             else:
                 if r['reagendamiento_enviado'] == 1:
                     pipeline_status = 'reagendar_enviado'
                     pipeline_label = '🔄 Reagendamiento Enviado'
+                    priority = 4
                 elif is_confirmada:
                     pipeline_status = 'completada'
                     pipeline_label = '✅ Cita Realizada'
+                    priority = 5
                 else:
                     pipeline_status = 'pendiente_reagendar'
                     pipeline_label = '📥 Pendiente Reagendar'
+                    priority = 4
 
             queue.append({
                 'cita_id': r['id'],
@@ -10715,8 +10738,12 @@ def get_whatsapp_queue_status():
                 'hora': hora_cita,
                 'tipo_consulta': r['tipo_consulta'] or 'Presencial',
                 'pipeline_status': pipeline_status,
-                'pipeline_label': pipeline_label
+                'pipeline_label': pipeline_label,
+                'priority': priority
             })
+
+        # Ordenar cola: Primero los pendientes/en cola (prioridad 1 y 2), al final los enviados y realizados
+        queue.sort(key=lambda x: (x['priority'], x['fecha'], x['hora']))
     except Exception as e_q:
         import traceback
         print("Error en consulta de cola de WhatsApp:", e_q)

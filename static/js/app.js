@@ -7239,6 +7239,10 @@ function switchWaSubTab(tabName) {
     }
 }
 
+let currentWaQueuePage = 1;
+const WA_QUEUE_PER_PAGE = 5;
+let currentWaQueueData = [];
+
 async function loadWhatsAppMonitoringQueue() {
     const tbody = document.getElementById('wa-monitoring-queue-tbody');
     if (!tbody) return;
@@ -7251,57 +7255,118 @@ async function loadWhatsAppMonitoringQueue() {
             return;
         }
         const data = await res.json();
-        const queue = data.queue || [];
+        currentWaQueueData = data.queue || [];
+        currentWaQueuePage = 1;
 
-        if (queue.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color: var(--text-secondary);">No hay citas próximas registradas en la cola de mensajes.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = queue.map(item => {
-            let badgeBg = '#64748b';
-            let badgeColor = '#ffffff';
-
-            if (item.pipeline_status === 'confirmado') {
-                badgeBg = '#10b981';
-            } else if (item.pipeline_status === 'cancelado') {
-                badgeBg = '#ef4444';
-            } else if (item.pipeline_status === 'en_cola') {
-                badgeBg = '#3b82f6';
-            } else if (item.pipeline_status === 'enviado_conf' || item.pipeline_status === 'enviado_rec') {
-                badgeBg = '#059669';
-            } else if (item.pipeline_status === 'esperando_fecha') {
-                badgeBg = '#8b5cf6';
-            } else if (item.pipeline_status.includes('reagendar')) {
-                badgeBg = '#f59e0b';
-            }
-
-            return `
-                <tr style="border-bottom: 1px solid var(--border-color);">
-                    <td style="font-weight: 700; padding: 0.65rem;">
-                        ${item.paciente_nombre}
-                        <div style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 400;">📱 ${item.telefono || 'Sin teléfono'}</div>
-                    </td>
-                    <td style="padding: 0.65rem;">
-                        <div style="font-weight: 600;">📅 ${item.fecha}</div>
-                        <div style="font-size: 0.78rem; color: var(--text-secondary);">🕒 ${item.hora}</div>
-                    </td>
-                    <td style="padding: 0.65rem;">
-                        <span class="badge" style="background: var(--bg-hover); color: var(--text-dark); border: 1px solid var(--border-color);">${item.tipo_consulta}</span>
-                    </td>
-                    <td style="padding: 0.65rem;">
-                        <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 600; padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.8rem; display: inline-block;">
-                            ${item.pipeline_label}
-                        </span>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
+        renderWaQueueTablePage();
     } catch (err) {
         console.error("Error al cargar monitoreo de WhatsApp:", err);
         tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Error de conexión al cargar monitoreo.</td></tr>';
     }
+}
+
+function renderWaQueueTablePage() {
+    const tbody = document.getElementById('wa-monitoring-queue-tbody');
+    if (!tbody) return;
+
+    if (currentWaQueueData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color: var(--text-secondary);">No hay citas próximas registradas en la cola de mensajes.</td></tr>';
+        removeWaQueuePaginationControls();
+        return;
+    }
+
+    const totalPages = Math.ceil(currentWaQueueData.length / WA_QUEUE_PER_PAGE);
+    if (currentWaQueuePage < 1) currentWaQueuePage = 1;
+    if (currentWaQueuePage > totalPages) currentWaQueuePage = totalPages;
+
+    const startIdx = (currentWaQueuePage - 1) * WA_QUEUE_PER_PAGE;
+    const pageItems = currentWaQueueData.slice(startIdx, startIdx + WA_QUEUE_PER_PAGE);
+
+    tbody.innerHTML = pageItems.map(item => {
+        let badgeBg = '#64748b';
+        let badgeColor = '#ffffff';
+
+        if (item.pipeline_status === 'confirmado') {
+            badgeBg = '#10b981';
+        } else if (item.pipeline_status === 'cancelado') {
+            badgeBg = '#ef4444';
+        } else if (item.pipeline_status.includes('en_cola')) {
+            badgeBg = '#2563eb';
+        } else if (item.pipeline_status === 'enviado_conf' || item.pipeline_status === 'enviado_rec') {
+            badgeBg = '#059669';
+        } else if (item.pipeline_status === 'esperando_fecha') {
+            badgeBg = '#8b5cf6';
+        } else if (item.pipeline_status.includes('reagendar')) {
+            badgeBg = '#f59e0b';
+        } else if (item.pipeline_status === 'completada') {
+            badgeBg = '#475569';
+        }
+
+        return `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="font-weight: 700; padding: 0.65rem;">
+                    ${item.paciente_nombre}
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 400;">📱 ${item.telefono || 'Sin teléfono'}</div>
+                </td>
+                <td style="padding: 0.65rem;">
+                    <div style="font-weight: 600;">📅 ${item.fecha}</div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary);">🕒 ${item.hora}</div>
+                </td>
+                <td style="padding: 0.65rem;">
+                    <span class="badge" style="background: var(--bg-hover); color: var(--text-dark); border: 1px solid var(--border-color);">${item.tipo_consulta}</span>
+                </td>
+                <td style="padding: 0.65rem;">
+                    <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 600; padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.8rem; display: inline-block;">
+                        ${item.pipeline_label}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    renderWaQueuePaginationControls(totalPages);
+}
+
+function renderWaQueuePaginationControls(totalPages) {
+    let container = document.getElementById('wa-queue-pagination');
+    const tbody = document.getElementById('wa-monitoring-queue-tbody');
+    if (!tbody) return;
+
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'wa-queue-pagination';
+        container.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--border-color); font-size: 0.85rem;';
+        tbody.closest('table').parentNode.appendChild(container);
+    }
+
+    if (totalPages <= 1) {
+        container.innerHTML = `<span style="color: var(--text-secondary);">Mostrando ${currentWaQueueData.length} registros</span>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <span style="color: var(--text-secondary); font-weight: 500;">
+            Página ${currentWaQueuePage} de ${totalPages} (${currentWaQueueData.length} registros en total)
+        </span>
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-sm btn-secondary" ${currentWaQueuePage === 1 ? 'disabled' : ''} onclick="changeWaQueuePage(-1)">
+                ◀ Anterior
+            </button>
+            <button class="btn btn-sm btn-secondary" ${currentWaQueuePage === totalPages ? 'disabled' : ''} onclick="changeWaQueuePage(1)">
+                Siguiente ▶
+            </button>
+        </div>
+    `;
+}
+
+function removeWaQueuePaginationControls() {
+    const container = document.getElementById('wa-queue-pagination');
+    if (container) container.remove();
+}
+
+function changeWaQueuePage(delta) {
+    currentWaQueuePage += delta;
+    renderWaQueueTablePage();
 }
 
 async function sendWhatsappTemplate(type) {
