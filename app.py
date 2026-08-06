@@ -11679,6 +11679,65 @@ def get_patient_cognitive_record_history():
     return jsonify(rows)
 
 
+# --- ENDPOINTS CONSUMO DE PANTALLA ---
+
+@app.route('/api/patient/screen-time/log', methods=['POST'])
+@patient_login_required
+def log_patient_screen_time():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    dispositivos = (data.get('dispositivos') or '').strip()
+    tiempo_uso = (data.get('tiempo_uso') or '').strip()
+    aplicaciones = (data.get('aplicaciones') or '').strip()
+    tipo_contenido = (data.get('tipo_contenido') or '').strip()
+    estado_emocional = (data.get('estado_emocional_posterior') or '').strip()
+    interferencia = (data.get('interferencia_actividad') or '').strip()
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO registro_consumo_pantalla (
+            paciente_id, dispositivos, tiempo_uso, aplicaciones, tipo_contenido,
+            estado_emocional_posterior, interferencia_actividad
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (patient_id, dispositivos, tiempo_uso, aplicaciones, tipo_contenido, estado_emocional, interferencia))
+    db.commit()
+
+    # Notificar al psicólogo asignado
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            notif_title = "📱 Tracker de Consumo de Pantalla"
+            notif_msg = f"El consultante {pac_nombre} registró su monitoreo diario de uso de pantalla."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+            except Exception:
+                pass
+    except Exception as _ne:
+        print("Error al notificar registro de pantalla:", _ne)
+
+    return jsonify({'success': True, 'message': 'Registro de tiempo de pantalla guardado exitosamente.'})
+
+@app.route('/api/patient/screen-time/history', methods=['GET'])
+@patient_login_required
+def get_patient_screen_time_history():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM registro_consumo_pantalla WHERE paciente_id = ? ORDER BY fecha_registro DESC LIMIT 50", (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+
 
 
 
