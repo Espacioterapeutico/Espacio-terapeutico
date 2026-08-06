@@ -11002,7 +11002,7 @@ async function toggleTherapistSubscription(userId) {
     }
 }
 
-const RENDER_WA_URL = 'https://espacio-terapeutico-production.up.railway.app';
+const RENDER_WA_URL = 'https://espacio-terapeutico.onrender.com';
 
 async function fetchWithTimeout(resource, options = {}) {
     const { timeout = 4000 } = options;
