@@ -10607,13 +10607,8 @@ def get_whatsapp_queue_status():
 
     queue = []
     try:
-        # Verificar si la tabla citas existe para el LEFT JOIN opcional
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='citas'")
         has_citas_table = cursor.fetchone() is not None
-
-        is_super = check_is_superadmin()
-        use_all = is_super or psic_id in (1, -1)
-
         if has_citas_table:
             join_clause = "LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha"
             estado_col = "COALESCE(c.estado, 'Agendada') as estado_cita"
@@ -10621,7 +10616,8 @@ def get_whatsapp_queue_status():
             join_clause = ""
             estado_col = "'Agendada' as estado_cita"
 
-        if use_all:
+        user_id = session.get('user_id', 1)
+        if user_id == 1:
             sql = f"""
                 SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
@@ -10632,7 +10628,7 @@ def get_whatsapp_queue_status():
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
                 {join_clause}
-                WHERE af.fecha >= ?
+                WHERE (p.psicologo_id = 1 OR p.psicologo_id IS NULL) AND af.fecha >= ?
                 ORDER BY af.fecha ASC, af.hora ASC
                 LIMIT 50
             """
@@ -10648,11 +10644,11 @@ def get_whatsapp_queue_status():
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
                 {join_clause}
-                WHERE (p.psicologo_id = ? OR p.psicologo_id IS NULL) AND af.fecha >= ?
+                WHERE p.psicologo_id = ? AND af.fecha >= ?
                 ORDER BY af.fecha ASC, af.hora ASC
                 LIMIT 50
             """
-            cursor.execute(sql, (psic_id, yesterday_str))
+            cursor.execute(sql, (user_id, yesterday_str))
         
         rows = cursor.fetchall()
 
