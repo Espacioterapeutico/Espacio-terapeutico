@@ -10423,6 +10423,7 @@ def cron_send_whatsapp_reminders():
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
         WHERE af.fecha = ? AND af.confirmada = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
+          AND (p.psicologo_id = 1 OR p.psicologo_id IS NULL)
     """, (tomorrow_str,))
     citas_confirmar = cursor.fetchall()
 
@@ -10469,6 +10470,7 @@ def cron_send_whatsapp_reminders():
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
         LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
         WHERE af.fecha = ? AND (af.confirmada = 1 OR c.estado = 'Confirmada') AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0
+          AND (p.psicologo_id = 1 OR p.psicologo_id IS NULL)
     """, (today_str,))
     citas_recordar = cursor.fetchall()
 
@@ -10522,6 +10524,7 @@ def cron_send_whatsapp_reminders():
           AND COALESCE(af.confirmada, 0) = 0 
           AND COALESCE(c.estado, '') != 'Confirmada' 
           AND COALESCE(af.reagendamiento_enviado_wa, 0) = 0
+          AND (p.psicologo_id = 1 OR p.psicologo_id IS NULL)
     """, (today_str, (now_local - timedelta(days=1)).strftime('%Y-%m-%d')))
     citas_reagendar = cursor.fetchall()
 
