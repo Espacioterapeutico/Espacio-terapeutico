@@ -32,5 +32,5 @@ while True:
         except Exception as err:
             print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Error en {url}: {err}", flush=True)
     
-    # Chequear cada 15 minutos (900 segundos)
-    time.sleep(900)
+    # Chequear automáticamente cada 3 minutos (180 segundos)
+    time.sleep(180)
