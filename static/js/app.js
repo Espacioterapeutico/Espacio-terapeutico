@@ -11140,16 +11140,6 @@ async function checkWhatsAppQRStatus(wantQR = false) {
 
         // --- MANEJO DE ESTADOS ---
         if (qrData && qrData.status === 'connected') {
-            const currentUserId = parseInt(sessionStorage.getItem('user_id') || (window.currentUser && window.currentUser.id) || 0);
-            const currentUsername = (sessionStorage.getItem('username') || (window.currentUser && window.currentUser.username) || '').toLowerCase();
-
-            const isOwner = (currentUserId === 1 || currentUsername === 'pamoraro' || currentUsername === 'admin');
-            if (!isOwner && (qrData.phone === '584245926114' || !qrData.phone)) {
-                qrData = { status: 'disconnected' };
-            }
-        }
-
-        if (qrData && qrData.status === 'connected') {
             _waWaitingForQR = false;
             badge.className = 'badge badge-success';
             badge.style.background = '#10b981';

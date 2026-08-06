@@ -76,6 +76,13 @@ async function restoreAuthSession() {
 
 async function connectToWhatsApp(forceNew = false) {
     try {
+        if (sock) {
+            try { sock.ev.removeAllListeners(); } catch(e) {}
+            try { sock.ws.close(); } catch(e) {}
+            try { sock.end(); } catch(e) {}
+            sock = null;
+        }
+
         if (!forceNew) {
             await restoreAuthSession();
         }
@@ -110,7 +117,8 @@ async function connectToWhatsApp(forceNew = false) {
             if (connection === 'open') {
                 connectionStatus = 'connected';
                 currentQR = null;
-                connectedPhone = sock.user ? sock.user.id.split(':')[0] : 'Conectado';
+                const rawId = sock.user ? (sock.user.id || sock.user.jid || '') : '';
+                connectedPhone = rawId ? rawId.split(':')[0].replace(/@.*/, '') : 'Conectado';
                 console.log('✅ WhatsApp Web Conectado Exitosamente:', connectedPhone);
                 backupAuthSession();
             }
@@ -118,20 +126,23 @@ async function connectToWhatsApp(forceNew = false) {
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 // Solo borrar sesión si el usuario cerró sesión explícitamente desde WhatsApp en su teléfono (401 / LoggedOut)
-                const isExplicitLogout = statusCode === DisconnectReason.loggedOut;
-                console.log(`⚠️ Conexión cerrada. Razón: ${lastDisconnect?.error}. Reconectando: ${!isExplicitLogout}`);
+                const isExplicitLogout = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+                console.log(`⚠️ Conexión cerrada. Código: ${statusCode}. Razón: ${lastDisconnect?.error}. Reconectando: ${!isExplicitLogout}`);
                 
-                connectionStatus = 'disconnected';
-                connectedPhone = null;
-                currentQR = null;
-
-                if (!isExplicitLogout) {
-                    setTimeout(() => connectToWhatsApp(false), 5000);
-                } else {
+                if (isExplicitLogout) {
+                    connectionStatus = 'disconnected';
+                    connectedPhone = null;
+                    currentQR = null;
                     console.log('Sesión cerrada explícitamente desde el teléfono. Limpiando credenciales...');
                     if (fs.existsSync(AUTH_DIR)) {
-                        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                        try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch(e) {}
                     }
+                } else {
+                    // Tras escanear el QR, Baileys cierra el socket para reiniciar con llaves cifradas (código 515 restartRequired).
+                    // Mantenemos el estado en 'connecting' en lugar de 'disconnected' para que la UI no parpadee ni se reinicie.
+                    connectionStatus = 'connecting';
+                    currentQR = null;
+                    setTimeout(() => connectToWhatsApp(false), 1000);
                 }
             }
         });
@@ -172,9 +183,6 @@ async function connectToWhatsApp(forceNew = false) {
         connectionStatus = 'disconnected';
     }
 }
-
-// Iniciar cliente WhatsApp al arrancar
-connectToWhatsApp();
 
 // API Endpoints
 app.get('/status', (req, res) => {
