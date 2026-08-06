@@ -10415,13 +10415,13 @@ def cron_send_whatsapp_reminders():
     enviados_recordatorios = []
     errores = []
 
-    # 1. ENVIAR CONFIRMACIONES ANTICIPADAS (Citas de Mañana no confirmadas)
+    # 1. ENVIAR CONFIRMACIONES PARA MAÑANA (Citas no confirmadas de mañana)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+               COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
-        JOIN usuarios u ON p.psicologo_id = u.id
+        LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
         WHERE af.fecha = ? AND af.confirmada = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
     """, (tomorrow_str,))
     citas_confirmar = cursor.fetchall()
@@ -10463,10 +10463,10 @@ def cron_send_whatsapp_reminders():
     # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy CONFIRMADAS en Citas O Finanzas)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+               COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
-        JOIN usuarios u ON p.psicologo_id = u.id
+        LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
         LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
         WHERE af.fecha = ? AND (af.confirmada = 1 OR c.estado = 'Confirmada') AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0
     """, (today_str,))
@@ -10513,10 +10513,10 @@ def cron_send_whatsapp_reminders():
 
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+               COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
-        JOIN usuarios u ON p.psicologo_id = u.id
+        LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
         LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
         WHERE (af.fecha = ? OR af.fecha = ?) 
           AND COALESCE(af.confirmada, 0) = 0 
@@ -10553,13 +10553,10 @@ def cron_send_whatsapp_reminders():
             pass
 
     db.commit()
+
     return jsonify({
-        'status': 'success',
-        'confirmaciones_enviadas': len(enviados_confirmaciones),
-        'recordatorios_enviados': len(enviados_recordatorios),
-        'reagendamientos_enviados': len(enviados_reagendamientos),
-        'total_procesados': len(enviados_confirmaciones) + len(enviados_recordatorios) + len(enviados_reagendamientos),
-        'detalles': {
+        'success': True,
+        'summary': {
             'confirmaciones': enviados_confirmaciones,
             'recordatorios': enviados_recordatorios,
             'reagendamientos': enviados_reagendamientos,
@@ -10570,7 +10567,7 @@ def cron_send_whatsapp_reminders():
 @app.route('/api/whatsapp/queue-status', methods=['GET'])
 @login_required
 def get_whatsapp_queue_status():
-    user_id = session.get('user_id')
+    psic_id = get_psicologo_id_filter()
     db = get_db()
     cursor = db.cursor()
 
@@ -10620,10 +10617,10 @@ def get_whatsapp_queue_status():
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha
-            WHERE p.psicologo_id = ? AND af.fecha >= ?
+            WHERE (p.psicologo_id = ? OR (p.psicologo_id IS NULL AND ? = 1)) AND af.fecha >= ?
             ORDER BY af.fecha ASC, af.hora ASC
             LIMIT 50
-        """, (user_id, yesterday_str))
+        """, (psic_id, psic_id, yesterday_str))
         
         rows = cursor.fetchall()
 
