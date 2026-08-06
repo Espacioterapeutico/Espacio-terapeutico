@@ -334,12 +334,18 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-CURRENT_SCHEMA_VER = "13"
+CURRENT_SCHEMA_VER = "14"
 
 def init_db():
     db = sqlite3.connect(DATABASE, timeout=30.0)
     cursor = db.cursor()
     
+    # Always ensure demo user is seeded
+    try:
+        ensure_demo_user(db)
+    except Exception as _e:
+        print("Aviso al verificar usuario demo:", _e)
+
     # Verificar si la tabla principal 'usuarios' existe
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
     exists = cursor.fetchone()
@@ -2525,6 +2531,15 @@ def fast_booking_book():
     except Exception as e:
         db.rollback()
         return jsonify({'error': f'Error al agendar consulta: {str(e)}'}), 500
+
+@app.route('/api/superadmin/seed-demo-user', methods=['GET', 'POST'])
+def superadmin_seed_demo_user():
+    try:
+        db = get_db()
+        ensure_demo_user(db)
+        return jsonify({'success': True, 'message': 'Usuario demo psicologa.valeria y paciente camila.perez procesados con éxito.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 def check_is_superadmin():
     user_id = session.get('user_id')
