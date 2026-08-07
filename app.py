@@ -10374,12 +10374,13 @@ def send_manual_whatsapp_reminder(cita_id):
 
 @app.route('/api/whatsapp/cron-send-reminders', methods=['GET', 'POST'])
 def cron_send_whatsapp_reminders():
-    # Protección básica: requiere ?key=clave o header X-Cron-Key
     import os
+    from flask import has_request_context, jsonify
     CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
-    provided = request.args.get('key') or request.headers.get('X-Cron-Key', '')
-    if provided != CRON_SECRET:
-        return jsonify({'error': 'No autorizado'}), 401
+    if has_request_context():
+        provided = request.args.get('key') or request.headers.get('X-Cron-Key', '')
+        if provided != CRON_SECRET:
+            return jsonify({'error': 'No autorizado'}), 401
 
     from datetime import datetime, timedelta
     try:
@@ -10493,7 +10494,6 @@ def cron_send_whatsapp_reminders():
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
             if r and r.status_code == 200:
                 cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
-                cursor.execute("UPDATE citas SET recordatorio_enviado_wa = 1 WHERE paciente_id = ? AND fecha = ?", (cita['paciente_id'], cita['fecha']))
                 enviados_recordatorios.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'recordatorio'})
             else:
                 err_msg = 'Timeout de microservicio'
@@ -10544,7 +10544,6 @@ def cron_send_whatsapp_reminders():
             r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
             if r and r.status_code == 200:
                 cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado_wa = 1 WHERE id = ?", (cita['id'],))
-                cursor.execute("UPDATE citas SET reagendamiento_enviado_wa = 1 WHERE paciente_id = ? AND fecha = ?", (cita['paciente_id'], cita['fecha']))
                 enviados_reagendamientos.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'reagendamiento'})
         except Exception as e:
             pass
@@ -10784,7 +10783,7 @@ def start_whatsapp_cron_scheduler():
             except Exception as e:
                 print(f"[WARN] Error en scheduler background de WhatsApp: {e}")
             
-            time.sleep(600)  # Chequear cada 10 minutos (600s)
+            time.sleep(180)  # Chequear cada 3 minutos (180s)
 
     t = threading.Thread(target=_scheduler_loop, daemon=True)
     t.start()
