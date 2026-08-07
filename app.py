@@ -10155,9 +10155,9 @@ def whatsapp_webhook():
     today_str = datetime.now().strftime('%Y-%m-%d')
 
     cursor.execute("""
-        SELECT id, fecha, hora, estado 
-        FROM citas 
-        WHERE paciente_id = ? AND fecha >= ? AND estado IN ('Agendada', 'Pendiente')
+        SELECT id, fecha, hora, confirmada 
+        FROM agenda_finanzas 
+        WHERE paciente_id = ? AND fecha >= ? AND (confirmada = 0 OR confirmada IS NULL)
         ORDER BY fecha ASC, hora ASC LIMIT 1
     """, (patient_id, today_str))
     next_cita = cursor.fetchone()
@@ -10169,8 +10169,7 @@ def whatsapp_webhook():
     cita_fecha = next_cita['fecha']
 
     if any(w in text_lower for w in confirm_words):
-        cursor.execute("UPDATE citas SET estado = 'Confirmada' WHERE id = ?", (cita_id,))
-        cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE paciente_id = ? AND fecha = ?", (patient_id, cita_fecha))
+        cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (cita_id,))
         notif_msg = f"📱 WhatsApp: {patient_name} CONFIRMÓ su cita del {cita_fecha}."
         cursor.execute("""
             INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
@@ -10180,8 +10179,7 @@ def whatsapp_webhook():
         return jsonify({'status': 'confirmed', 'message': f'Cita #{cita_id} confirmada para {patient_name}'})
 
     elif any(w in text_lower for w in cancel_words):
-        cursor.execute("UPDATE citas SET estado = 'Cancelada' WHERE id = ?", (cita_id,))
-        cursor.execute("UPDATE agenda_finanzas SET confirmada = 0 WHERE paciente_id = ? AND fecha = ?", (patient_id, cita_fecha))
+        cursor.execute("UPDATE agenda_finanzas SET confirmada = 0, estado_pago = 'Cancelada' WHERE id = ?", (cita_id,))
         notif_msg = f"⚠️ WhatsApp: {patient_name} CANCELÓ su cita del {cita_fecha}."
         cursor.execute("""
             INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
