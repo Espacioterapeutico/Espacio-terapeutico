@@ -8983,46 +8983,47 @@ async function checkFastBookingQuery() {
             fastScreen.style.display = 'flex';
         }
         
+        const titleEl = document.getElementById('fast-booking-therapist-name');
+        
         try {
-            const res = await fetch(`/api/active-psychologists`);
-            if (res.ok) {
-                const psychologists = await res.json();
-                const cleanParam = String(fastBookingTherapistId).toLowerCase().replace(/^psic\./, '').replace(/^psic-/, '');
-                const matched = psychologists.find(p => 
-                    String(p.id) === String(fastBookingTherapistId) || 
-                    (p.slug && p.slug.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
-                    (p.slug && p.slug.toLowerCase().replace(/^psic\./, '').replace(/^psic-/, '') === cleanParam) ||
-                    (p.username && p.username.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
-                    (p.username && p.username.toLowerCase() === cleanParam)
-                );
-                const titleEl = document.getElementById('fast-booking-therapist-name');
-                if (titleEl) {
+            const pRes = await fetch(`/api/public/therapist/${encodeURIComponent(fastBookingTherapistId)}`);
+            if (pRes.ok) {
+                const pData = await pRes.json();
+                if (pData && (pData.nombre_completo || pData.nombres)) {
+                    if (titleEl) {
+                        const fullname = pData.nombre_completo || `Psic. ${pData.nombres} ${pData.apellidos}`;
+                        titleEl.textContent = fullname.startsWith('Psic.') ? fullname : `Psic. ${fullname}`;
+                    }
+                    if (pData.id) fastBookingTherapistId = pData.id;
+                }
+            }
+        } catch (e) {
+            console.error("Error al obtener perfil directo de terapeuta:", e);
+        }
+
+        if (titleEl && (titleEl.textContent === 'Cargando terapeuta...' || titleEl.textContent === '')) {
+            try {
+                const res = await fetch(`/api/active-psychologists`);
+                if (res.ok) {
+                    const psychologists = await res.json();
+                    const cleanParam = String(fastBookingTherapistId).toLowerCase().replace(/^psic\./, '').replace(/^psic-/, '');
+                    const matched = psychologists.find(p => 
+                        String(p.id) === String(fastBookingTherapistId) || 
+                        (p.slug && p.slug.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
+                        (p.slug && p.slug.toLowerCase().replace(/^psic\./, '').replace(/^psic-/, '') === cleanParam) ||
+                        (p.username && p.username.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
+                        (p.username && p.username.toLowerCase() === cleanParam)
+                    );
                     if (matched) {
                         titleEl.textContent = `Psic. ${matched.nombres} ${matched.apellidos}`;
                         fastBookingTherapistId = matched.id;
-                    } else if (psychologists.length > 0) {
-                        // Si no hay match explícito pero se pasó un ID o slug, buscar perfil específico por API
-                        try {
-                            const pRes = await fetch(`/api/public/therapist/${encodeURIComponent(fastBookingTherapistId)}`);
-                            if (pRes.ok) {
-                                const pData = await pRes.json();
-                                if (pData && pData.nombre_completo) {
-                                    titleEl.textContent = pData.nombre_completo.startsWith('Psic.') ? pData.nombre_completo : `Psic. ${pData.nombre_completo}`;
-                                    if (pData.id) fastBookingTherapistId = pData.id;
-                                }
-                            } else {
-                                titleEl.textContent = `Psic. ${psychologists[0].nombres} ${psychologists[0].apellidos}`;
-                            }
-                        } catch (e) {
-                            titleEl.textContent = `Psic. ${psychologists[0].nombres} ${psychologists[0].apellidos}`;
-                        }
                     } else {
                         titleEl.textContent = `Psic. Paulo Mora`;
                     }
                 }
+            } catch (e) {
+                titleEl.textContent = `Psic. Paulo Mora`;
             }
-        } catch (e) {
-            console.error("Error al obtener nombre de terapeuta para auto-agenda:", e);
         }
         
         // Cargar modalidades del terapeuta asignado para auto-agenda rápida

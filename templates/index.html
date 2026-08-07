@@ -798,7 +798,7 @@
     </div>
 
     <!-- VISTA EXCLUSIVA: AUTO-AGENDA RÁPIDA (PÚBLICA) -->
-    <div id="fast-booking-screen" class="auth-screen hide" style="background-color: var(--bg-light); display: flex; align-items: center; justify-content: center; padding: 1rem; position: relative;">
+    <div id="fast-booking-screen" class="auth-screen hide" style="background-color: var(--bg-light); display: flex; align-items: center; justify-content: center; padding: 1rem; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 99999; overflow-y: auto;">
         <div class="auth-card" style="max-width: 550px; width: 100%; max-height: 95vh; overflow-y: auto; padding: 1.75rem; position: relative;">
             <button type="button" onclick="closeFastBookingScreen()" style="position: absolute; top: 12px; right: 14px; background: rgba(0,0,0,0.05); border: none; font-size: 1.25rem; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.2s;" title="Cerrar">✕</button>
             <div class="auth-header" style="margin-bottom: 1.5rem;">
@@ -5866,6 +5866,6 @@
     </div>
 
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v={{ asset_v or '89' }}"></script>
+    <script src="/static/js/app.js?v={{ asset_v or '91' }}"></script>
 </body>
 </html>
