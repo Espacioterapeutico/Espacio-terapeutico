@@ -2289,11 +2289,7 @@ def get_psychologist_by_id_or_slug(cursor, identifier):
 
 @app.route('/agendar/<identifier>', methods=['GET'])
 def vanity_fast_booking(identifier):
-    db = get_db()
-    cursor = db.cursor()
-    psych = get_psychologist_by_id_or_slug(cursor, identifier)
-    psic_id = psych['id'] if psych else 1
-    return redirect(f"/?fast_booking={psic_id}")
+    return render_template('index.html')
 
 @app.route('/registro/<identifier>', methods=['GET'])
 def vanity_registration(identifier):

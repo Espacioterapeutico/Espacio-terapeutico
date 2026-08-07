@@ -8960,9 +8960,16 @@ let fastBookingTherapistId = null;
 
 async function checkFastBookingQuery() {
     const urlParams = new URLSearchParams(window.location.search);
+    const path = window.location.pathname.toLowerCase();
+    
+    let paramVal = null;
     if (urlParams.has('fast_booking')) {
-        const paramVal = urlParams.get('fast_booking');
-        if (!paramVal) return false;
+        paramVal = urlParams.get('fast_booking');
+    } else if (path.startsWith('/agendar/')) {
+        paramVal = path.replace('/agendar/', '').trim();
+    }
+    
+    if (paramVal) {
         fastBookingTherapistId = paramVal;
         
         const loginScreen = document.getElementById('auth-screen');
@@ -15067,7 +15074,7 @@ function initLandingRouteHandling() {
     const fastScreen = document.getElementById('fast-booking-screen');
     const appLayout = document.getElementById('app-layout');
     
-    if (urlParams.has('fast_booking')) {
+    if (urlParams.has('fast_booking') || path.startsWith('/agendar/')) {
         if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
         if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
         if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
@@ -15086,7 +15093,7 @@ function initLandingRouteHandling() {
         return;
     }
 
-    if (path.startsWith('/psic.') || path.startsWith('/agendar/') || path.startsWith('/registro/')) {
+    if (path.startsWith('/psic.') || path.startsWith('/registro/')) {
         if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
         if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
         if (profScreen) { profScreen.classList.remove('hide'); profScreen.style.display = 'block'; }
