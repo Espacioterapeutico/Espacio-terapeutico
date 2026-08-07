@@ -154,14 +154,13 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         cursor = db.cursor()
         tokens = []
         if user_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ? OR user_id IS NULL", (user_id,))
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
         elif patient_id:
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
         else:
-            cursor.execute("SELECT token FROM fcm_subscriptions")
-            tokens = [row['token'] for row in cursor.fetchall()]
+            return
 
         # Deduplicar manteniendo orden
         tokens = list(dict.fromkeys(tokens))
@@ -2215,13 +2214,24 @@ def get_active_psychologists():
     db = get_db()
     cursor = db.cursor()
     cursor.execute("""
-        SELECT id, nombres, apellidos
+        SELECT id, nombres, apellidos, username, slug, role, es_psicologo
         FROM usuarios
-        WHERE role = 'psicologo' AND activo = 1
-        ORDER BY nombres ASC, apellidos ASC
+        WHERE (role IN ('psicologo', 'admin', 'superadmin', 'psicologo_admin') OR es_psicologo = 1) AND activo = 1
+        ORDER BY id ASC
     """)
-    rows = cursor.fetchall()
-    return jsonify([{'id': r['id'], 'nombres': r['nombres'], 'apellidos': r['apellidos']} for r in rows])
+    raw_rows = cursor.fetchall()
+    result = []
+    for r in raw_rows:
+        r_dict = dict(r)
+        slug = r_dict.get('slug') or generate_default_slug_for_user(r_dict)
+        result.append({
+            'id': r_dict['id'],
+            'nombres': r_dict['nombres'],
+            'apellidos': r_dict['apellidos'],
+            'username': r_dict.get('username') or '',
+            'slug': slug
+        })
+    return jsonify(result)
 
 def get_psychologist_by_id_or_slug(cursor, identifier):
     cursor.execute("SELECT * FROM usuarios ORDER BY id ASC")
@@ -2229,13 +2239,10 @@ def get_psychologist_by_id_or_slug(cursor, identifier):
     if not raw_rows:
         return None
 
-    # Convertir sqlite3.Row a dict seguro en Python
     rows = [dict(r) for r in raw_rows]
-
-    # Filtrar usuarios que sean psicólogos, admin o superadmin
     users = [u for u in rows if str(u.get('role', '')).lower() in ('psicologo', 'superadmin', 'admin', 'psicologo_admin') or u.get('es_psicologo')]
     if not users:
-        users = rows  # Fallback a cualquier usuario disponible
+        users = rows
 
     if not identifier:
         return users[0]
@@ -2250,24 +2257,32 @@ def get_psychologist_by_id_or_slug(cursor, identifier):
             if u.get('id') == int(clean_id):
                 return u
 
-    # 2. Coincidencia exacta por slug, username, o id limpio
+    # 2. Coincidencia exacta por slug (almacenado o generado), username, o id limpio
     for u in users:
         u_slug = str(u.get('slug') or '').strip().lower()
         u_uname = str(u.get('username') or '').strip().lower()
-        if u_slug in (ident_str, with_prefix, clean_id) or u_uname in (ident_str, clean_id):
+        computed_slug = generate_default_slug_for_user(u).lower()
+        
+        if (u_slug and u_slug in (ident_str, with_prefix, clean_id)) or \
+           (u_uname and u_uname in (ident_str, clean_id)) or \
+           (computed_slug and computed_slug in (ident_str, with_prefix, clean_id)):
             return u
 
     # 3. Coincidencia por nombre o apellido
-    for u in users:
-        u_nom = str(u.get('nombres') or '').strip().lower()
-        u_ape = str(u.get('apellidos') or '').strip().lower()
-        full_name = f"{u_nom} {u_ape}".strip()
-        combo_name = f"{u_nom}{u_ape}".strip()
-        u_slug = str(u.get('slug') or '').strip().lower()
-        u_uname = str(u.get('username') or '').strip().lower()
-        
-        if (clean_id and clean_id in full_name) or (clean_id and clean_id in combo_name) or (clean_id and clean_id in u_slug) or (clean_id and clean_id in u_uname):
-            return u
+    if clean_id:
+        for u in users:
+            u_nom = str(u.get('nombres') or '').strip().lower()
+            u_ape = str(u.get('apellidos') or '').strip().lower()
+            full_name = f"{u_nom} {u_ape}".strip()
+            combo_name = f"{u_nom}{u_ape}".strip()
+            u_slug = str(u.get('slug') or '').strip().lower()
+            u_uname = str(u.get('username') or '').strip().lower()
+            computed_slug = generate_default_slug_for_user(u).lower()
+            
+            if clean_id in full_name or clean_id in combo_name or \
+               (u_slug and clean_id in u_slug) or (u_uname and clean_id in u_uname) or \
+               (computed_slug and clean_id in computed_slug):
+                return u
 
     # 4. Fallback absoluto: retornar el primer usuario disponible
     return users[0]
@@ -2598,6 +2613,16 @@ def ensure_usuarios_columns(db=None):
         cursor.execute("UPDATE usuarios SET mostrar_en_directorio = 0 WHERE LOWER(username) IN ('admin', 'superadmin') AND (nombres LIKE '%Administrador%' OR nombres = '')")
         # Asegurar permisos de superadmin para Paulo
         cursor.execute("UPDATE usuarios SET role = 'superadmin' WHERE LOWER(username) = 'pamoraro' OR id = 1")
+        
+        # Poblar slugs vacíos para usuarios existentes
+        cursor.execute("SELECT id, nombres, apellidos, username, slug FROM usuarios")
+        all_u = cursor.fetchall()
+        for u in all_u:
+            u_dict = dict(u)
+            if not u_dict.get('slug'):
+                def_slug = generate_default_slug_for_user(u_dict)
+                if def_slug:
+                    cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (def_slug, u_dict['id']))
     except Exception:
         pass
     db.commit()
