@@ -9679,7 +9679,54 @@ def inject_asset_version():
 @app.route('/agendar/<path:slug>')
 @app.route('/registro/<path:slug>')
 def index(slug=None):
-    return render_template('index.html')
+    path = request.path.strip('/')
+    db = get_db()
+    cursor = db.cursor()
+    
+    host_url = request.host_url.rstrip('/')
+    
+    # Meta tags por defecto para la portada principal de la plataforma
+    og_title = "Espacio Terapéutico | Consultorio Digital"
+    og_description = "Plataforma integral de gestión clínica y auto-agendamiento para psicólogos y profesionales de la salud mental."
+    og_image = f"{host_url}/static/logo.png"
+    og_url = request.url
+
+    # Identificar si la ruta corresponde a un psicólogo específico (agendar, perfil o registro)
+    identifier = None
+    if path.startswith('agendar/'):
+        identifier = path.replace('agendar/', '').strip()
+    elif path.startswith('psic.'):
+        identifier = path.strip()
+    elif path.startswith('registro/'):
+        identifier = path.replace('registro/', '').strip()
+    elif request.args.get('fast_booking'):
+        identifier = request.args.get('fast_booking').strip()
+
+    if identifier:
+        try:
+            psych = get_psychologist_by_id_or_slug(cursor, identifier)
+            if psych:
+                nom_comp = f"Psic. {psych.get('nombres') or ''} {psych.get('apellidos') or ''}".strip()
+                og_title = f"{nom_comp} | Reserva tu Cita en Espacio Terapéutico"
+                og_description = f"Agenda tu consulta psicológica online o presencial con {nom_comp} de forma rápida y segura."
+                
+                # Buscar foto de perfil / título del psicólogo
+                foto_usr = psych.get('foto_perfil') or psych.get('foto_titulo')
+                if foto_usr:
+                    if foto_usr.startswith('http://') or foto_usr.startswith('https://'):
+                        og_image = foto_usr
+                    elif foto_usr.startswith('/'):
+                        og_image = f"{host_url}{foto_usr}"
+                    elif not foto_usr.startswith('data:'):
+                        og_image = f"{host_url}/static/{foto_usr}"
+        except Exception:
+            pass
+
+    return render_template('index.html', 
+                           og_title=og_title, 
+                           og_description=og_description, 
+                           og_image=og_image, 
+                           og_url=og_url)
 
 @app.route('/manifest.json')
 def serve_manifest():

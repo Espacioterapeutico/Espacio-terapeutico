@@ -20,6 +20,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/static/logo.png">
+    
+    <!-- Dynamic Open Graph / WhatsApp / Facebook Link Preview Meta Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Espacio Terapéutico">
+    <meta property="og:title" content="{{ og_title or 'Espacio Terapéutico | Consultorio Digital' }}">
+    <meta property="og:description" content="{{ og_description or 'Plataforma integral de gestión clínica y auto-agendamiento para psicólogos y profesionales de la salud mental.' }}">
+    <meta property="og:image" content="{{ og_image or (request.host_url.rstrip('/') ~ '/static/logo.png') }}">
+    <meta property="og:url" content="{{ og_url or request.url }}">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ og_title or 'Espacio Terapéutico | Consultorio Digital' }}">
+    <meta name="twitter:description" content="{{ og_description or 'Plataforma integral de gestión clínica y auto-agendamiento para psicólogos y profesionales de la salud mental.' }}">
+    <meta name="twitter:image" content="{{ og_image or (request.host_url.rstrip('/') ~ '/static/logo.png') }}">
 </head>
 <body>
 
