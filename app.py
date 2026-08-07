@@ -10199,20 +10199,27 @@ def whatsapp_webhook():
     cursor = db.cursor()
 
     clean_digits = ''.join(filter(str.isdigit, raw_phone))
-    phone_search = clean_digits[-7:] if len(clean_digits) >= 7 else clean_digits
+    if not clean_digits:
+        return jsonify({'status': 'ignored', 'message': 'Número no válido'}), 400
+
+    phone_search_7 = clean_digits[-7:] if len(clean_digits) >= 7 else clean_digits
+    phone_search_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
 
     cursor.execute("""
-        SELECT id, nombres, apellidos, psicologo_id 
+        SELECT id, nombres, apellidos, telefono, psicologo_id 
         FROM pacientes 
         WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
-    """, (phone_search,))
+           OR REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
+           OR ? LIKE '%' || REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') || '%'
+        ORDER BY id DESC
+    """, (phone_search_7, phone_search_10, clean_digits))
     patient = cursor.fetchone()
 
     if not patient:
         return jsonify({'status': 'ignored', 'message': f'Teléfono {raw_phone} no asociado a ningún paciente.'})
 
     patient_id = patient['id']
-    patient_name = f"{patient['nombres']} {patient['apellidos']}"
+    patient_name = f"{patient['nombres']} {patient['apellidos']}".strip()
     psic_id = patient['psicologo_id']
     text_lower = text.lower().strip()
 
@@ -10223,9 +10230,9 @@ def whatsapp_webhook():
     today_str = datetime.now().strftime('%Y-%m-%d')
 
     cursor.execute("""
-        SELECT id, fecha, hora, confirmada 
+        SELECT id, fecha, hora, confirmada, tipo_consulta 
         FROM agenda_finanzas 
-        WHERE paciente_id = ? AND fecha >= ? AND (confirmada = 0 OR confirmada IS NULL)
+        WHERE paciente_id = ? AND fecha >= ? AND (estado_pago IS NULL OR estado_pago != 'Cancelada')
         ORDER BY fecha ASC, hora ASC LIMIT 1
     """, (patient_id, today_str))
     next_cita = cursor.fetchone()
@@ -10235,25 +10242,86 @@ def whatsapp_webhook():
 
     cita_id = next_cita['id']
     cita_fecha = next_cita['fecha']
+    cita_hora = next_cita['hora']
+
+    # Obtener la configuración del psicólogo asignado (horas de antelación y plantilla)
+    antelacion_horas = 24
+    plantilla_encuadre = (
+        "¡Gracias por confirmar tu sesión, *{paciente}*! 🌿\n\n"
+        "📍 *Detalles de tu cita:*\n"
+        "📅 *Fecha:* {fecha}\n"
+        "⏰ *Hora:* {hora}\n\n"
+        "💡 *Encuadre Terapéutico:*\n"
+        "• Recuerda habilitar un espacio tranquilo, cómodo y privado para ti.\n"
+        "• Realizar el pago correspondiente de la sesión.\n"
+        "• Conectarte o asistir puntualmente a la hora acordada.\n\n"
+        "⚠️ *Política de cancelación:* Si necesitas cancelar o reprogramar tu sesión, por favor avísanos con al menos *{horas_antelacion} horas* de anticipación."
+    )
+
+    try:
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
+        u_row = cursor.fetchone()
+        if u_row and u_row['configuracion_horarios_visual']:
+            import json
+            cfg_json = json.loads(u_row['configuracion_horarios_visual'])
+            antelacion_horas = cfg_json.get('limite_cancelacion_valor') or cfg_json.get('limite_cancelacion') or 24
+            if cfg_json.get('plantilla_encuadre'):
+                plantilla_encuadre = cfg_json.get('plantilla_encuadre')
+    except Exception as _cfg_err:
+        pass
 
     if any(w in text_lower for w in confirm_words):
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (cita_id,))
-        notif_msg = f"📱 WhatsApp: {patient_name} CONFIRMÓ su cita del {cita_fecha}."
+        notif_msg = f"📱 WhatsApp: {patient_name} CONFIRMÓ su cita del {cita_fecha} a las {cita_hora}."
         cursor.execute("""
             INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
             VALUES (?, 'whatsapp_confirmation', 'Cita Confirmada por WhatsApp', ?, ?, 0, '#agenda')
         """, (psic_id, notif_msg, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         db.commit()
+
+        # Generar mensaje de respuesta automática de Encuadre Terapéutico
+        try:
+            reply_text = plantilla_encuadre.format(
+                paciente=patient['nombres'],
+                fecha=cita_fecha,
+                hora=cita_hora,
+                horas_antelacion=antelacion_horas
+            )
+        except Exception:
+            reply_text = (
+                f"¡Gracias por confirmar tu sesión, *{patient['nombres']}*! 🌿\n\n"
+                f"📅 *Fecha:* {cita_fecha}\n"
+                f"⏰ *Hora:* {cita_hora}\n\n"
+                f"Recuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo. "
+                f"Si deseas cancelar o reprogramar, por favor avísanos con al menos *{antelacion_horas} horas* de anticipación."
+            )
+
+        # Despachar mensaje de confirmación por WhatsApp
+        try:
+            make_wa_http_request('POST', '/send', json_data={'phone': raw_phone, 'text': reply_text}, timeout=10)
+        except Exception as wa_err:
+            print(f"⚠️ No se pudo responder automáticamente por WhatsApp: {wa_err}")
+
         return jsonify({'status': 'confirmed', 'message': f'Cita #{cita_id} confirmada para {patient_name}'})
 
     elif any(w in text_lower for w in cancel_words):
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 0, estado_pago = 'Cancelada' WHERE id = ?", (cita_id,))
-        notif_msg = f"⚠️ WhatsApp: {patient_name} CANCELÓ su cita del {cita_fecha}."
+        notif_msg = f"⚠️ WhatsApp: {patient_name} CANCELÓ su cita del {cita_fecha} a las {cita_hora}."
         cursor.execute("""
             INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
             VALUES (?, 'whatsapp_cancellation', 'Cita Cancelada por WhatsApp', ?, ?, 0, '#agenda')
         """, (psic_id, notif_msg, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         db.commit()
+
+        cancel_reply = (
+            f"Entendido, *{patient['nombres']}*. Hemos registrado la cancelación de tu sesión programada para el {cita_fecha} a las {cita_hora}.\n\n"
+            f"Si deseas reprogramar en otro momento, no dudes en escribirnos por aquí o acceder a nuestro sitio web."
+        )
+        try:
+            make_wa_http_request('POST', '/send', json_data={'phone': raw_phone, 'text': cancel_reply}, timeout=10)
+        except Exception as wa_err:
+            print(f"⚠️ No se pudo enviar mensaje de cancelación por WhatsApp: {wa_err}")
+
         return jsonify({'status': 'cancelled', 'message': f'Cita #{cita_id} cancelada para {patient_name}'})
 
     return jsonify({'status': 'text_received_no_action', 'message': 'Mensaje recibido pero no coincide con confirmación o cancelación.'})
