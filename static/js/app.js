@@ -8966,10 +8966,22 @@ async function checkFastBookingQuery() {
         fastBookingTherapistId = paramVal;
         
         const loginScreen = document.getElementById('auth-screen');
-        if (loginScreen) loginScreen.classList.add('hide');
+        if (loginScreen) { loginScreen.classList.add('hide'); loginScreen.style.display = 'none'; }
         
+        const pubLanding = document.getElementById('public-landing-screen');
+        if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
+
+        const appLayout = document.getElementById('app-layout');
+        if (appLayout) { appLayout.classList.add('hide'); appLayout.style.display = 'none'; }
+
+        const profScreen = document.getElementById('public-therapist-profile-screen');
+        if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
+
         const fastScreen = document.getElementById('fast-booking-screen');
-        if (fastScreen) fastScreen.classList.remove('hide');
+        if (fastScreen) {
+            fastScreen.classList.remove('hide');
+            fastScreen.style.display = 'flex';
+        }
         
         try {
             const res = await fetch(`/api/active-psychologists`);
@@ -15047,11 +15059,21 @@ async function loadDedicatedTherapistProfile(slug) {
 
 function initLandingRouteHandling() {
     const path = window.location.pathname.toLowerCase();
+    const urlParams = new URLSearchParams(window.location.search);
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
     const profScreen = document.getElementById('public-therapist-profile-screen');
+    const fastScreen = document.getElementById('fast-booking-screen');
     const appLayout = document.getElementById('app-layout');
     
+    if (urlParams.has('fast_booking')) {
+        if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
+        if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
+        if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
+        if (fastScreen) { fastScreen.classList.remove('hide'); fastScreen.style.display = 'flex'; }
+        return;
+    }
+
     // Si la sesión ya está activa y el app-layout está visible, la portada pública DEBE mantenerse oculta
     if (appLayout && !appLayout.classList.contains('hide')) {
         if (pubLanding) pubLanding.classList.add('hide');
