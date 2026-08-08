@@ -12666,6 +12666,26 @@ function renderPaginatedHistoryTable(stateKey) {
                     <div style="font-size: 0.84rem; color: var(--text-dark);">
                         ❤️ <strong>Emoción/Sensación:</strong> ${r.emocion_sensacion || 'N/A'} | 🏃‍♂️ <strong>Conducta:</strong> ${r.conducta || 'N/A'}
                     </div>
+            `;
+        }).join('');
+    } else if (moduloClave === 'pantalla') {
+        cardsHtml = pageRecords.map(r => {
+            const horasText = (r.horas_pantalla !== null && r.horas_pantalla !== undefined) ? `${r.horas_pantalla} hrs` : (r.horas_uso || 'Sin registrar');
+            let appsList = r.aplicaciones || r.apps_usadas || 'Sin especificar';
+            let dispList = r.dispositivos || r.dispositivo || 'Smartphone / Laptop';
+            
+            return `
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha_registro || r.fecha || 'N/A'} - 📱 Consumo Digital</strong>
+                        <div><span class="badge" style="background:#eff6ff; color:#1d4ed8; font-weight:800;">⏱️ Uso: ${horasText}</span></div>
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark);">
+                        💻 <strong>Dispositivos / Apps:</strong> ${dispList} | ${appsList}
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #f9fafb; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #2563eb;">
+                        💭 <strong>Impacto Emocional / Notas:</strong> ${r.impacto_emocional || r.notas || r.observaciones || 'Sin observaciones'}
+                    </div>
                 </div>
             `;
         }).join('');

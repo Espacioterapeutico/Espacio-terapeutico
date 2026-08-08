@@ -11389,6 +11389,7 @@ def get_patient_modules(patient_id):
         {'clave': 'sueno', 'nombre': 'Higiene del Sueño', 'activo': active_map.get('sueno', 0)},
         {'clave': 'ansiedad', 'nombre': 'Diario de Ansiedad (Checklist)', 'activo': active_map.get('ansiedad', 0)},
         {'clave': 'sobriedad', 'nombre': 'Registro de Consumo (Días Consecutivos)', 'activo': active_map.get('sobriedad', 0)},
+        {'clave': 'pantalla', 'nombre': 'Registro de Consumo de Pantallas (Uso Digital)', 'activo': active_map.get('pantalla', 0)},
         {'clave': 'adherencia', 'nombre': 'Adherencia al Tratamiento (Medicación)', 'activo': active_map.get('adherencia', 0)},
         {'clave': 'activacion', 'nombre': 'Activación Conductual (Tareas Diarias)', 'activo': active_map.get('activacion', 0)},
         {'clave': 'ingesta', 'nombre': 'Ingesta de Alimentos y Apetito', 'activo': active_map.get('ingesta', 0)},
