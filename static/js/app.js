@@ -7250,11 +7250,15 @@ async function loadMessageTemplates() {
         const data = await res.json();
         
         const c = document.getElementById('template-confirmacion');
+        const cok = document.getElementById('template-confirmacion-ok');
+        const caok = document.getElementById('template-cancelacion-ok');
         const r = document.getElementById('template-recordatorio');
         const rg = document.getElementById('template-reagendamiento');
         const ci = document.getElementById('template-cierre');
         
         if (c) c.value = data.msg_confirmacion || "";
+        if (cok) cok.value = data.msg_confirmacion_ok || "¡Gracias por confirmar tu sesión, *{nombre}*! 🌿\n\n📅 *Fecha:* {fecha}\n⏰ *Hora:* {hora}\n\nRecuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo.";
+        if (caok) caok.value = data.msg_cancelacion_ok || "Entendido, *{nombre}*. Hemos registrado la cancelación de tu sesión del *{fecha}* a las *{hora}*.\n\nSi deseas reprogramar en otro momento, no dudes en escribirnos o agendar desde tu portal.";
         if (r) r.value = data.msg_recordatorio || "";
         if (rg) rg.value = data.msg_reagendamiento || "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!";
         if (ci) ci.value = data.msg_cierre || "";
@@ -7266,6 +7270,8 @@ async function loadMessageTemplates() {
 async function handleSaveMessageTemplates(e) {
     e.preventDefault();
     const msgConfirmacion = document.getElementById('template-confirmacion').value;
+    const msgConfirmacionOk = document.getElementById('template-confirmacion-ok')?.value || '';
+    const msgCancelacionOk = document.getElementById('template-cancelacion-ok')?.value || '';
     const msgRecordatorio = document.getElementById('template-recordatorio').value;
     const msgReagendamiento = document.getElementById('template-reagendamiento')?.value || '';
     const msgCierre = document.getElementById('template-cierre').value;
@@ -7276,6 +7282,8 @@ async function handleSaveMessageTemplates(e) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 msg_confirmacion: msgConfirmacion,
+                msg_confirmacion_ok: msgConfirmacionOk,
+                msg_cancelacion_ok: msgCancelacionOk,
                 msg_recordatorio: msgRecordatorio,
                 msg_reagendamiento: msgReagendamiento,
                 msg_cierre: msgCierre

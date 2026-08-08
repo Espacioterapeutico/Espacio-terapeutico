@@ -2163,6 +2163,14 @@
                                             <textarea id="template-confirmacion" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
                                         </div>
                                         <div class="form-group mb-3">
+                                            <label for="template-confirmacion-ok" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #059669;">Respuesta Automática cuando el Paciente Confirma (SÍ / ✅)</label>
+                                            <textarea id="template-confirmacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label for="template-cancelacion-ok" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #dc2626;">Respuesta Automática cuando el Paciente Cancela (NO / ❌)</label>
+                                            <textarea id="template-cancelacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                        </div>
+                                        <div class="form-group mb-3">
                                             <label for="template-recordatorio" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #10b981;">Fase 2: Recordatorio del Día (Mismo día)</label>
                                             <textarea id="template-recordatorio" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
                                         </div>
@@ -5951,6 +5959,6 @@
     </div>
 
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v={{ asset_v or '98' }}"></script>
+    <script src="/static/js/app.js?v={{ asset_v or '99' }}"></script>
 </body>
 </html>

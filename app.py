@@ -5515,9 +5515,11 @@ def admin_message_templates():
     db = get_db()
     cursor = db.cursor()
     
+    keys = ['msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre']
+    
     if request.method == 'GET':
         templates = {}
-        for key in ['msg_confirmacion', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre']:
+        for key in keys:
             cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (key,))
             row = cursor.fetchone()
             templates[key] = row['valor'] if row else ""
@@ -5525,7 +5527,7 @@ def admin_message_templates():
         
     data = request.json
     try:
-        for key in ['msg_confirmacion', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre']:
+        for key in keys:
             if key in data:
                 cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", (key, data[key]))
         db.commit()
@@ -10352,21 +10354,30 @@ def whatsapp_webhook():
         """, (psic_id, notif_msg, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         db.commit()
 
-        # Generar mensaje de respuesta automática de Encuadre Terapéutico
+        # Cargar plantilla personalizada de confirmación aceptada (msg_confirmacion_ok)
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_confirmacion_ok'")
+        cfg_ok = cursor.fetchone()
+        tmpl_ok = cfg_ok['valor'] if cfg_ok and cfg_ok['valor'] else None
+        
+        if not tmpl_ok:
+            tmpl_ok = plantilla_encuadre
+
+        psicologo_data = {'nombres': '', 'apellidos': ''}
+        cursor.execute("SELECT nombres, apellidos FROM usuarios WHERE id = ?", (psic_id,))
+        u_p = cursor.fetchone()
+        if u_p: psicologo_data = dict(u_p)
+
+        cita_dict = {'nombre': patient_name, 'fecha': cita_fecha, 'hora': cita_hora, 'modalidad': next_cita['tipo_consulta'] or 'Presencial'}
+        patient_dict = {'nombres': patient['nombres'], 'apellidos': patient['apellidos']}
+        
         try:
-            reply_text = plantilla_encuadre.format(
-                paciente=patient['nombres'],
-                fecha=cita_fecha,
-                hora=cita_hora,
-                horas_antelacion=antelacion_horas
-            )
+            reply_text = format_whatsapp_message(tmpl_ok, patient_dict, cita_dict, psicologo_data)
         except Exception:
             reply_text = (
                 f"¡Gracias por confirmar tu sesión, *{patient['nombres']}*! 🌿\n\n"
                 f"📅 *Fecha:* {cita_fecha}\n"
                 f"⏰ *Hora:* {cita_hora}\n\n"
-                f"Recuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo. "
-                f"Si deseas cancelar o reprogramar, por favor avísanos con al menos *{antelacion_horas} horas* de anticipación."
+                f"Recuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo."
             )
 
         # Despachar mensaje de confirmación por WhatsApp
@@ -10386,10 +10397,21 @@ def whatsapp_webhook():
         """, (psic_id, notif_msg, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         db.commit()
 
-        cancel_reply = (
-            f"Entendido, *{patient['nombres']}*. Hemos registrado la cancelación de tu sesión programada para el {cita_fecha} a las {cita_hora}.\n\n"
-            f"Si deseas reprogramar en otro momento, no dudes en escribirnos por aquí o acceder a nuestro sitio web."
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cancelacion_ok'")
+        cfg_cancel = cursor.fetchone()
+        tmpl_cancel = cfg_cancel['valor'] if cfg_cancel and cfg_cancel['valor'] else (
+            "Entendido, *{nombre}*. Hemos registrado la cancelación de tu sesión del *{fecha}* a las *{hora}*.\n\nSi deseas reprogramar en otro momento, no dudes en escribirnos o agendar desde tu portal."
         )
+
+        psicologo_data = {'nombres': '', 'apellidos': ''}
+        cursor.execute("SELECT nombres, apellidos FROM usuarios WHERE id = ?", (psic_id,))
+        u_p = cursor.fetchone()
+        if u_p: psicologo_data = dict(u_p)
+
+        cita_dict = {'nombre': patient_name, 'fecha': cita_fecha, 'hora': cita_hora, 'modalidad': next_cita['tipo_consulta'] or 'Presencial'}
+        patient_dict = {'nombres': patient['nombres'], 'apellidos': patient['apellidos']}
+        cancel_reply = format_whatsapp_message(tmpl_cancel, patient_dict, cita_dict, psicologo_data)
+
         try:
             make_wa_http_request('POST', '/send', json_data={'phone': raw_phone, 'text': cancel_reply}, timeout=10)
         except Exception as wa_err:
