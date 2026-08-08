@@ -5879,7 +5879,78 @@
         </div>
     </div>
 
+    <!-- MODAL MODERNO DE ACTIVACIÓN / RENOVACIÓN DE SUSCRIPCIÓN (SUPERADMIN) -->
+    <div id="modal-superadmin-set-expiration" class="modal hide" style="z-index: 3600;">
+        <div class="modal-content" style="max-width: 520px; border-radius: 20px; padding: 1.75rem; background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <div style="width: 42px; height: 42px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                        ⭐
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-family: var(--font-title, 'Outfit', sans-serif); color: #0f172a; font-size: 1.15rem; font-weight: 700;">
+                            Activar / Renovar Suscripción
+                        </h3>
+                        <span id="superadmin-exp-username" style="font-size: 0.82rem; color: #64748b; font-weight: 600;">Psicólogo: -</span>
+                    </div>
+                </div>
+                <button type="button" class="close-btn" onclick="closeModal('modal-superadmin-set-expiration')" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+
+            <!-- Presets de días -->
+            <div style="margin-bottom: 1.25rem;">
+                <label style="font-size: 0.85rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.5rem;">
+                    ⚡ Selecciona un período rápido:
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <button type="button" class="btn btn-outline-primary" style="padding: 0.6rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; text-align: center;" onclick="setSuperadminExpPreset(30)">
+                        📅 30 Días (1 Mes)
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" style="padding: 0.6rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; text-align: center;" onclick="setSuperadminExpPreset(60)">
+                        🚀 60 Días (2 Meses)
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" style="padding: 0.6rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; text-align: center;" onclick="setSuperadminExpPreset(90)">
+                        🌟 90 Días (3 Meses)
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" style="padding: 0.6rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; text-align: center;" onclick="setSuperadminExpPreset(365)">
+                        👑 1 Año (365 Días)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Personalizar Fechas -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1rem; margin-bottom: 1.25rem;">
+                <label style="font-size: 0.85rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.75rem;">
+                    ✏️ Personalizar Suscripción:
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 0.25rem;">Fecha de Inicio</label>
+                        <input type="date" id="superadmin-exp-start" class="form-control" style="font-size: 0.85rem; padding: 0.45rem; border-radius: 8px;" onchange="recalcSuperadminExpDays()">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 0.25rem;">Fecha de Fin / Expiración</label>
+                        <input type="date" id="superadmin-exp-end" class="form-control" style="font-size: 0.85rem; padding: 0.45rem; border-radius: 8px;" onchange="recalcSuperadminExpDays()">
+                    </div>
+                </div>
+                <div id="superadmin-exp-days-info" style="font-size: 0.82rem; font-weight: 700; color: #047857; text-align: center; background: #ecfdf5; padding: 0.4rem; border-radius: 8px; border: 1px solid #a7f3d0;">
+                    Disponibles: 30 días restantes
+                </div>
+            </div>
+
+            <!-- Botones Aceptar y Cancelar -->
+            <div style="display: flex; gap: 0.65rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-superadmin-set-expiration')" style="border-radius: 10px; font-weight: 600; padding: 0.65rem 1.1rem;">
+                    ❌ Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="saveSuperadminExpModal()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; border-radius: 10px; font-weight: 700; padding: 0.65rem 1.25rem; color: white;">
+                    ✅ Aceptar y Activar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v={{ asset_v or '97' }}"></script>
+    <script src="/static/js/app.js?v={{ asset_v or '98' }}"></script>
 </body>
 </html>

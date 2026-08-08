@@ -3953,7 +3953,7 @@ let _upcomingEventsCache = [];
 let _upcomingCurrentIndex = 0;
 
 async function renderUpcomingConsultationPage(idx) {
-    const nextConsultation = document.getElementById('dashboard-next-consultation');
+    const nextConsultation = document.getElementById('next-consultation-content') || document.getElementById('dashboard-next-consultation');
     if (!nextConsultation) return;
 
     if (!_upcomingEventsCache || _upcomingEventsCache.length === 0) {
@@ -11183,38 +11183,109 @@ async function toggleTherapistSubscription(userId) {
     }
 }
 
-async function openSuperadminExpirationModal(userId, userName, currentExp, isPaid) {
-    const choice = prompt(
-        `Configurar Fecha de Renovación/Expiración para ${userName}:\n\n` +
-        `Elige una opción:\n` +
-        `1: +30 días (1 Mes)\n` +
-        `2: +90 días (3 Meses)\n` +
-        `3: +365 días (1 Año)\n\n` +
-        `O escribe la fecha directamente (formato YYYY-MM-DD):`,
-        "1"
-    );
+let _currentSuperadminExpUserId = null;
+let _currentSuperadminExpUserName = '';
 
-    if (!choice) return;
+function openSuperadminExpirationModal(userId, userName, currentExp, isPaid) {
+    _currentSuperadminExpUserId = userId;
+    _currentSuperadminExpUserName = userName;
 
-    let targetDate = new Date();
-    const clean = choice.trim();
-    if (clean === "1") {
-        targetDate.setDate(targetDate.getDate() + 30);
-    } else if (clean === "2") {
-        targetDate.setDate(targetDate.getDate() + 90);
-    } else if (clean === "3") {
-        targetDate.setDate(targetDate.getDate() + 365);
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
-        targetDate = new Date(`${clean}T23:59:59`);
+    const modal = document.getElementById('modal-superadmin-set-expiration');
+    const userEl = document.getElementById('superadmin-exp-username');
+    const startInput = document.getElementById('superadmin-exp-start');
+    const endInput = document.getElementById('superadmin-exp-end');
+
+    if (userEl) userEl.textContent = `Psicólogo: ${userName}`;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    if (startInput) startInput.value = todayStr;
+
+    let defaultEnd = new Date(today);
+    if (currentExp && !isNaN(new Date(currentExp))) {
+        const parsed = new Date(currentExp);
+        if (parsed > today) {
+            defaultEnd = parsed;
+        } else {
+            defaultEnd.setDate(defaultEnd.getDate() + 30);
+        }
     } else {
-        alert("Formato u opción no válida. Introduce 1, 2, 3 o YYYY-MM-DD.");
+        defaultEnd.setDate(defaultEnd.getDate() + 30);
+    }
+
+    if (endInput) endInput.value = defaultEnd.toISOString().split('T')[0];
+
+    recalcSuperadminExpDays();
+
+    if (typeof openModal === 'function') {
+        openModal('modal-superadmin-set-expiration');
+    } else if (modal) {
+        modal.classList.remove('hide');
+    }
+}
+window.openSuperadminExpirationModal = openSuperadminExpirationModal;
+
+function setSuperadminExpPreset(days) {
+    const startInput = document.getElementById('superadmin-exp-start');
+    const endInput = document.getElementById('superadmin-exp-end');
+
+    let startDate = startInput && startInput.value ? new Date(startInput.value) : new Date();
+    if (isNaN(startDate.getTime())) startDate = new Date();
+
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + days);
+
+    if (endInput) endInput.value = endDate.toISOString().split('T')[0];
+    recalcSuperadminExpDays();
+}
+window.setSuperadminExpPreset = setSuperadminExpPreset;
+
+function recalcSuperadminExpDays() {
+    const startInput = document.getElementById('superadmin-exp-start');
+    const endInput = document.getElementById('superadmin-exp-end');
+    const infoEl = document.getElementById('superadmin-exp-days-info');
+    if (!infoEl) return;
+
+    if (!startInput || !endInput || !startInput.value || !endInput.value) {
+        infoEl.textContent = "Por favor selecciona las fechas de inicio y fin.";
+        infoEl.style.color = "#b91c1c";
+        infoEl.style.background = "#fef2f2";
+        infoEl.style.borderColor = "#fca5a5";
         return;
     }
 
-    const expStr = targetDate.toISOString().split('T')[0];
+    const start = new Date(startInput.value);
+    const end = new Date(endInput.value);
+    const diffMs = end - start;
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+        infoEl.textContent = "⚠️ La fecha de fin debe ser posterior a la fecha de inicio.";
+        infoEl.style.color = "#b91c1c";
+        infoEl.style.background = "#fef2f2";
+        infoEl.style.borderColor = "#fca5a5";
+    } else {
+        infoEl.textContent = `⭐ Período Total: ${diffDays} Días Activos de Suscripción`;
+        infoEl.style.color = "#047857";
+        infoEl.style.background = "#ecfdf5";
+        infoEl.style.borderColor = "#a7f3d0";
+    }
+}
+window.recalcSuperadminExpDays = recalcSuperadminExpDays;
+
+async function saveSuperadminExpModal() {
+    if (!_currentSuperadminExpUserId) return;
+
+    const endInput = document.getElementById('superadmin-exp-end');
+    const expStr = endInput ? endInput.value : '';
+
+    if (!expStr) {
+        alert("Por favor selecciona una fecha de fin / expiración válida.");
+        return;
+    }
 
     try {
-        const res = await fetch(`/api/superadmin/therapists/${userId}/set-expiration`, {
+        const res = await fetch(`/api/superadmin/therapists/${_currentSuperadminExpUserId}/set-expiration`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -11224,16 +11295,22 @@ async function openSuperadminExpirationModal(userId, userName, currentExp, isPai
         });
         const data = await res.json();
         if (res.ok) {
-            alert(`✅ Expiración/Renovación actualizada para ${userName} al ${expStr}.`);
+            alert(`✅ Suscripción activada/renovada para ${_currentSuperadminExpUserName} hasta el ${expStr}.`);
+            if (typeof closeModal === 'function') {
+                closeModal('modal-superadmin-set-expiration');
+            } else {
+                const modal = document.getElementById('modal-superadmin-set-expiration');
+                if (modal) modal.classList.add('hide');
+            }
             loadSuperadminData();
         } else {
             alert("Error: " + (data.error || "No se pudo actualizar la fecha."));
         }
     } catch(err) {
-        alert("Error al guardar la nueva fecha de expiración.");
+        alert("Error al guardar la suscripción.");
     }
 }
-window.openSuperadminExpirationModal = openSuperadminExpirationModal;
+window.saveSuperadminExpModal = saveSuperadminExpModal;
 
 const RENDER_WA_URL = 'https://espacio-terapeutico-whatsapp.onrender.com';
 
