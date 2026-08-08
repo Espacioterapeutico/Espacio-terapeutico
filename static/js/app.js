@@ -11105,7 +11105,7 @@ async function toggleTherapistSubscription(userId) {
     }
 }
 
-const RENDER_WA_URL = 'https://espacio-terapeutico.onrender.com';
+const RENDER_WA_URL = 'https://espacio-terapeutico-whatsapp.onrender.com';
 
 async function fetchWithTimeout(resource, options = {}) {
     const { timeout = 4000 } = options;
