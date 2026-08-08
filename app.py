@@ -1365,13 +1365,16 @@ def auto_send_appointment_reminders(db):
     """
     Envia notificaciones automaticas de recordatorio de citas del dia
     tanto al psicologo como al paciente (Firebase + SQLite).
+    No se ejecutan fuera del horario laboral (10:00 PM a 7:59 AM).
     """
+    from datetime import datetime
+    now_dt = datetime.now()
+    if now_dt.hour < 8 or now_dt.hour >= 22:
+        return
+
     cursor = db.cursor()
     try:
-        from datetime import datetime
         import requests
-        
-        now_dt = datetime.now()
         today_str = now_dt.strftime("%Y-%m-%d")
         
         # Buscar citas agendadas para el día de hoy no canceladas
@@ -1436,13 +1439,16 @@ def auto_send_confirmation_requests(db):
     """
     Notifica al paciente cuando su cita entra dentro de la ventana de horas
     configurada por el psicólogo (alerta_confirmacion, ej: 24h antes) y aún no está confirmada.
+    No se ejecutan fuera del horario laboral (10:00 PM a 7:59 AM).
     """
+    from datetime import datetime
+    now_dt = datetime.now()
+    if now_dt.hour < 8 or now_dt.hour >= 22:
+        return
+
     cursor = db.cursor()
     try:
-        from datetime import datetime
         import requests, json
-
-        now_dt = datetime.now()
         now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         today_str = now_dt.strftime("%Y-%m-%d")
 
@@ -10589,6 +10595,16 @@ def cron_send_whatsapp_reminders():
     except Exception:
         # Fallback a UTC - 4 horas (hora Venezuela)
         now_local = datetime.utcnow() - timedelta(hours=4)
+
+    current_hour = now_local.hour
+    # Delimitar horario de envíos automáticos: NO enviar entre las 10:00 PM (22:00) y las 7:59 AM (07:59)
+    if current_hour < 8 or current_hour >= 22:
+        return jsonify({
+            'status': 'skipped',
+            'message': f'Filtro de horario laboral activo (10:00 PM - 7:59 AM). Hora actual: {current_hour:02d}:00. Los envíos automáticos están pausados hasta las 8:00 AM.',
+            'confirmaciones_enviadas': 0,
+            'recordatorios_enviados': 0
+        })
 
     today_str = now_local.strftime('%Y-%m-%d')
     tomorrow_str = (now_local + timedelta(days=1)).strftime('%Y-%m-%d')
