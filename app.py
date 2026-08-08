@@ -10931,7 +10931,7 @@ def cron_send_whatsapp_reminders():
     cursor = db.cursor()
 
     # Actualizar o asegurar plantilla con SI/NO si la existente es muy antigua o genérica
-    cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio')")
+    cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo')")
     cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
     
     tmpl_conf_default = "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
