@@ -7290,6 +7290,7 @@ async function loadMessageTemplates() {
         const r = document.getElementById('template-recordatorio');
         const rg = document.getElementById('template-reagendamiento');
         const ci = document.getElementById('template-cierre');
+        const swReag = document.getElementById('auto-reagendamiento-switch');
         
         if (c) c.value = data.msg_confirmacion || "";
         if (cok) cok.value = data.msg_confirmacion_ok || "¡Gracias por confirmar tu sesión, *{nombre}*! 🌿\n\n📅 *Fecha:* {fecha}\n⏰ *Hora:* {hora}\n\nRecuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo.";
@@ -7297,6 +7298,7 @@ async function loadMessageTemplates() {
         if (r) r.value = data.msg_recordatorio || "";
         if (rg) rg.value = data.msg_reagendamiento || "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!";
         if (ci) ci.value = data.msg_cierre || "";
+        if (swReag) swReag.checked = (data.auto_reagendamiento_activo === '1');
     } catch (err) {
         console.error("Error al cargar plantillas de mensaje:", err);
     }
@@ -7310,6 +7312,7 @@ async function handleSaveMessageTemplates(e) {
     const msgRecordatorio = document.getElementById('template-recordatorio').value;
     const msgReagendamiento = document.getElementById('template-reagendamiento')?.value || '';
     const msgCierre = document.getElementById('template-cierre').value;
+    const autoReagActivo = document.getElementById('auto-reagendamiento-switch')?.checked ? '1' : '0';
     
     try {
         const res = await fetch('/api/admin/message-templates', {
@@ -7321,7 +7324,8 @@ async function handleSaveMessageTemplates(e) {
                 msg_cancelacion_ok: msgCancelacionOk,
                 msg_recordatorio: msgRecordatorio,
                 msg_reagendamiento: msgReagendamiento,
-                msg_cierre: msgCierre
+                msg_cierre: msgCierre,
+                auto_reagendamiento_activo: autoReagActivo
             })
         });
         const data = await res.json();
