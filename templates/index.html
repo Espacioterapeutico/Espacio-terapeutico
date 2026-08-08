@@ -1171,7 +1171,7 @@
                     </div>
                     
                     <!-- Tarjetas de Métricas de Superadministración -->
-                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; margin-bottom: 1.5rem;">
+                    <div class="stats-grid sa-stats-grid" style="margin-top: 1rem; margin-bottom: 1.5rem;">
                         <div class="stat-card">
                             <div class="stat-icon-wrapper purple">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
@@ -1995,6 +1995,14 @@
                                 <button onclick="downloadBackup()" class="btn btn-primary btn-block mb-3" style="width:100%;">
                                     Generar Copia de Seguridad (.db)
                                 </button>
+                                
+                                <div class="word-export-section mt-4 mb-4" style="background: rgba(169, 89, 147, 0.06); padding: 1.25rem; border-radius: var(--radius-md); border: 1.5px solid var(--primary-color);">
+                                    <h4 style="font-weight: 700; color: var(--primary-color); margin-bottom: 0.5rem;">📦 Exportación Completa de Expedientes (.ZIP con Word por Paciente)</h4>
+                                    <p class="text-secondary mb-3" style="font-size: 0.88rem; line-height: 1.4;">Descarga un paquete comprimido conteniendo un documento Word (.docx) individual para cada paciente con toda su información personal, historias clínicas, evoluciones y registros completos de herramientas terapéuticas.</p>
+                                    <button type="button" onclick="downloadPatientsWordZip()" class="btn btn-primary btn-block" style="width:100%; background: linear-gradient(135deg, #7c3aed, #5b21b6); font-weight: 700; padding: 0.75rem; border: none; cursor: pointer; border-radius: var(--radius-sm);">
+                                        📑 Exportar Expedientes Completos en Word (.ZIP)
+                                    </button>
+                                </div>
                                 
                                 <div class="restore-section mt-6">
                                     <h4 class="mb-2">Restaurar Copia de Seguridad</h4>
@@ -5960,6 +5968,6 @@
     </div>
 
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v={{ asset_v or '100' }}"></script>
+    <script src="/static/js/app.js?v={{ asset_v or '101' }}"></script>
 </body>
 </html>

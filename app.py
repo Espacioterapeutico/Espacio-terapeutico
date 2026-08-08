@@ -2668,20 +2668,31 @@ def superadmin_get_stats():
     cursor = db.cursor()
     
     try:
+        import datetime
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         cursor.execute("SELECT COUNT(id) FROM pacientes")
         total_pacientes = cursor.fetchone()[0] or 0
         
-        cursor.execute("SELECT COUNT(id) FROM usuarios WHERE role = 'psicologo' OR role IS NULL OR role = ''")
+        cursor.execute("SELECT COUNT(id) FROM usuarios WHERE role = 'psicologo'")
         total_psicologos = cursor.fetchone()[0] or 0
         
-        cursor.execute("SELECT COUNT(id) FROM usuarios WHERE (role = 'psicologo' OR role IS NULL OR role = '') AND COALESCE(activo, 1) = 1")
+        cursor.execute("""
+            SELECT COUNT(id) FROM usuarios 
+            WHERE role = 'psicologo' 
+              AND COALESCE(activo, 1) = 1 
+              AND (COALESCE(suscripcion_paga, 0) = 1 OR (fecha_expiracion_prueba IS NOT NULL AND fecha_expiracion_prueba > ?))
+        """, (now_str,))
         psicologos_activos = cursor.fetchone()[0] or 0
         
         cursor.execute("""
             SELECT COUNT(id) FROM usuarios 
-            WHERE (role = 'psicologo' OR role IS NULL OR role = '') 
-              AND (COALESCE(suscripcion_paga, 0) = 0 OR COALESCE(activo, 1) = 0)
-        """)
+            WHERE role = 'psicologo' 
+              AND (
+                COALESCE(activo, 1) = 0 
+                OR (COALESCE(suscripcion_paga, 0) = 0 AND (fecha_expiracion_prueba IS NULL OR fecha_expiracion_prueba <= ?))
+              )
+        """, (now_str,))
         psicologos_deudores = cursor.fetchone()[0] or 0
         
         return jsonify({
