@@ -11142,38 +11142,26 @@ async function checkWhatsAppQRStatus(wantQR = false) {
     try {
         let qrData = null;
 
-        // 1. Consultar /status (Railway directo)
+        // 1. Consultar estado a través del proxy del backend (Flask inyecta la sesión del psicólogo actual)
         try {
-            const resStatus = await fetchWithTimeout(`${RENDER_WA_URL}/status`, { mode: 'cors', timeout: 8000 });
+            const resStatus = await fetchWithTimeout('/api/whatsapp/status', { timeout: 8000 });
             if (resStatus.ok) {
                 const st = await resStatus.json();
-                // Solo aceptar como qrData si es 'connected' o 'connecting'
-                // Si es 'qr_ready', necesitamos ir a /qr para obtener la imagen real
                 if (st && (st.status === 'connected' || st.status === 'connecting')) {
                     qrData = st;
                 }
             }
         } catch (e0) {}
 
-        // 2. Si no tenemos datos completos o queremos QR, consultar /qr para obtener la imagen base64
-        if (!qrData && wantQR) {
+        // 2. Consultar código QR específico del psicólogo logueado
+        if (!qrData || wantQR || (qrData && qrData.status === 'qr_ready')) {
             try {
-                const resDirectQr = await fetchWithTimeout(`${RENDER_WA_URL}/qr`, { mode: 'cors', timeout: 10000 });
-                if (resDirectQr.ok) {
-                    const d = await resDirectQr.json();
+                const resBackendQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 12000 });
+                if (resBackendQr.ok) {
+                    const d = await resBackendQr.json();
                     if (d && (d.qr || d.status === 'qr_ready' || d.status === 'connected')) qrData = d;
                 }
-            } catch (e1) {}
-            // Fallback: proxy Flask
-            if (!qrData) {
-                try {
-                    const resBackendQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 12000 });
-                    if (resBackendQr.ok) {
-                        const d = await resBackendQr.json();
-                        if (d && (d.qr || d.status === 'qr_ready' || d.status === 'connected')) qrData = d;
-                    }
-                } catch (e2) {}
-            }
+            } catch (e2) {}
         }
 
         // --- MANEJO DE ESTADOS ---
@@ -11188,95 +11176,88 @@ async function checkWhatsAppQRStatus(wantQR = false) {
             qrBox.classList.add('hide');
             if (disconnectedBox) disconnectedBox.classList.add('hide');
             connectedBox.classList.remove('hide');
-            if (connectedPhone) connectedPhone.textContent = qrData.phone || 'Cuenta vinculada';
-
+            if (connectedPhone) connectedPhone.textContent = qrData.phone || 'Conectado';
+            
             if (waPollInterval) {
                 clearInterval(waPollInterval);
                 waPollInterval = null;
             }
-            return;
-        }
-        else if (qrData && qrData.status === 'connecting') {
-            badge.className = 'badge badge-info';
-            badge.style.background = '#3b82f6';
+        } else if (qrData && (qrData.status === 'qr_ready' || qrData.qr)) {
+            badge.className = 'badge badge-warning';
+            badge.style.background = '#f59e0b';
             badge.style.color = '#ffffff';
-            badge.textContent = 'Conectando 🔄';
-
+            badge.textContent = 'Escanear QR 📱';
+            
+            loadingBox.classList.add('hide');
+            if (disconnectedBox) disconnectedBox.classList.add('hide');
+            connectedBox.classList.add('hide');
+            qrBox.classList.remove('hide');
+            
+            if (qrData.qr) {
+                qrImage.src = qrData.qr;
+            }
+            
+            if (!waPollInterval && _waWaitingForQR) {
+                waPollInterval = setInterval(() => checkWhatsAppQRStatus(false), 3000);
+            }
+        } else if (qrData && qrData.status === 'connecting') {
+            badge.className = 'badge badge-warning';
+            badge.style.background = '#f59e0b';
+            badge.style.color = '#ffffff';
+            badge.textContent = 'Conectando... ⏳';
+            
             loadingBox.classList.remove('hide');
             qrBox.classList.add('hide');
             connectedBox.classList.add('hide');
             if (disconnectedBox) disconnectedBox.classList.add('hide');
 
-            if (!waPollInterval) {
+            if (!waPollInterval && _waWaitingForQR) {
                 waPollInterval = setInterval(() => checkWhatsAppQRStatus(false), 3000);
             }
-            return;
-        } 
-        else if (qrData && (qrData.qr || qrData.status === 'qr_ready')) {
-            _waWaitingForQR = false;
-            badge.className = 'badge badge-warning';
-            badge.style.background = '#f59e0b';
-            badge.style.color = '#ffffff';
-            badge.textContent = 'Escanear QR 📷';
-
-            loadingBox.classList.add('hide');
-            connectedBox.classList.add('hide');
-            if (disconnectedBox) disconnectedBox.classList.add('hide');
-            qrBox.classList.remove('hide');
-            if (qrImage && qrData.qr) {
-                qrImage.src = qrData.qr;
+        } else {
+            if (!_waWaitingForQR) {
+                badge.className = 'badge badge-secondary';
+                badge.style.background = '#6b7280';
+                badge.style.color = '#ffffff';
+                badge.textContent = 'Desconectado ❌';
+                
+                loadingBox.classList.add('hide');
+                qrBox.classList.add('hide');
+                connectedBox.classList.add('hide');
+                if (disconnectedBox) disconnectedBox.classList.remove('hide');
+                
+                if (waPollInterval) {
+                    clearInterval(waPollInterval);
+                    waPollInterval = null;
+                }
             }
-
-            if (!waPollInterval) {
-                waPollInterval = setInterval(() => checkWhatsAppQRStatus(true), 4000);
-            }
-            return;
-        }
-
-        // ⚠️ GUARD: Si estamos esperando activamente un QR, NO resetear la UI a "Desconectado"
-        if (_waWaitingForQR) {
-            console.log('⏳ Esperando QR de Railway... ignorando status disconnected transitorio');
-            return;
-        }
-
-        // Estado Desconectado / Sin pedir QR (caso normal, no estamos esperando)
-        badge.className = 'badge badge-secondary';
-        badge.style.background = '#6b7280';
-        badge.style.color = '#ffffff';
-        badge.textContent = 'Desconectado ⚪';
-
-        loadingBox.classList.add('hide');
-        qrBox.classList.add('hide');
-        connectedBox.classList.add('hide');
-        if (disconnectedBox) disconnectedBox.classList.remove('hide');
-
-        if (waPollInterval) {
-            clearInterval(waPollInterval);
-            waPollInterval = null;
         }
     } catch (err) {
-        console.error("Error al obtener estado de WhatsApp:", err);
+        console.error('Error al verificar estado de WhatsApp:', err);
     }
 }
+window.checkWhatsAppQRStatus = checkWhatsAppQRStatus;
 
 async function requestNewWhatsAppQR() {
     const btn = document.getElementById('btn-generate-wa-qr');
+    const badge = document.getElementById('wa-connection-status-badge');
     const loadingBox = document.getElementById('wa-qr-loading');
     const disconnectedBox = document.getElementById('wa-disconnected-box');
-    const badge = document.getElementById('wa-connection-status-badge');
     const qrBox = document.getElementById('wa-qr-box');
     const connectedBox = document.getElementById('wa-connected-box');
 
-    const origText = btn ? btn.innerHTML : '📱 Generar Código QR de Vinculación';
-
-    // Activar el guard ANTES de todo para que checkWhatsAppQRStatus no resetee la UI
-    _waWaitingForQR = true;
+    let origText = '';
+    if (btn) {
+        origText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⌛ Generando QR...';
+    }
 
     try {
-        // UI inmediata
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '⌛ Generando QR...';
+        _waWaitingForQR = true;
+        if (waPollInterval) {
+            clearInterval(waPollInterval);
+            waPollInterval = null;
         }
         if (badge) {
             badge.className = 'badge badge-warning';
@@ -11287,17 +11268,13 @@ async function requestNewWhatsAppQR() {
         if (loadingBox) loadingBox.classList.remove('hide');
         if (disconnectedBox) disconnectedBox.classList.add('hide');
 
-        // 1. Pedir a Railway que reinicie Baileys y genere un QR nuevo
-        try {
-            await fetch(`${RENDER_WA_URL}/force-qr`, { method: 'POST', mode: 'cors' }).catch(() => {});
-        } catch(e) {
-            await fetch('/api/whatsapp/force-qr', { method: 'POST' }).catch(() => {});
-        }
+        // 1. Pedir al backend que regenere el QR para el psicólogo logueado
+        await fetch('/api/whatsapp/force-qr', { method: 'POST' }).catch(() => {});
 
         // 2. Esperar 3 segundos iniciales para dar tiempo a Baileys de arrancar
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // 3. Polling: consultar /status y /qr hasta que aparezca el QR o se conecte
+        // 3. Polling: consultar estado a través del backend
         for (let attempts = 0; attempts < 10; attempts++) {
             await checkWhatsAppQRStatus(true);
 
@@ -11343,11 +11320,7 @@ window.requestNewWhatsAppQR = requestNewWhatsAppQR;
 async function handleLogoutWhatsApp() {
     if (!confirm('¿Deseas desconectar tu cuenta de WhatsApp Web? Tendrás que escanear el QR nuevamente.')) return;
     try {
-        try {
-            await fetch(`${RENDER_WA_URL}/logout`, { method: 'POST' });
-        } catch (e) {
-            await fetch('/api/whatsapp/logout', { method: 'POST' });
-        }
+        await fetch('/api/whatsapp/logout', { method: 'POST' });
         alert('Sesión de WhatsApp cerrada.');
         checkWhatsAppQRStatus();
     } catch (err) {

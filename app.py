@@ -10120,27 +10120,46 @@ def generate_default_slug_for_user(u):
 # ==========================================
 WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'https://espacio-terapeutico.onrender.com')
 
-def make_wa_http_request(method, endpoint, json_data=None, timeout=5):
+def make_wa_http_request(method, endpoint, json_data=None, timeout=5, user_id=None):
     import requests
     url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/{endpoint.lstrip('/')}"
+    
+    if not user_id:
+        try:
+            from flask import session
+            user_id = session.get('user_id')
+        except RuntimeError:
+            user_id = 1
+            
+    if not user_id:
+        user_id = 1
+
+    headers = {'X-User-ID': str(user_id)}
+    params = {'user_id': str(user_id)}
+    
+    if json_data is not None and isinstance(json_data, dict):
+        if 'user_id' not in json_data:
+            json_data['user_id'] = user_id
+
     try:
         s = requests.Session()
         s.trust_env = False
         if method.upper() == 'GET':
-            return s.get(url, timeout=timeout)
+            return s.get(url, params=params, headers=headers, timeout=timeout)
         else:
-            return s.post(url, json=json_data, timeout=timeout)
+            return s.post(url, json=json_data, params=params, headers=headers, timeout=timeout)
     except Exception:
         if method.upper() == 'GET':
-            return requests.get(url, timeout=timeout)
+            return requests.get(url, params=params, headers=headers, timeout=timeout)
         else:
-            return requests.post(url, json=json_data, timeout=timeout)
+            return requests.post(url, json=json_data, params=params, headers=headers, timeout=timeout)
 
 @app.route('/api/whatsapp/status', methods=['GET'])
 @login_required
 def get_whatsapp_status():
     try:
-        r = make_wa_http_request('GET', '/status', timeout=3)
+        user_id = session.get('user_id')
+        r = make_wa_http_request('GET', '/status', timeout=3, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'error': 'Microservicio de WhatsApp no disponible', 'details': str(e)})
@@ -10149,7 +10168,8 @@ def get_whatsapp_status():
 @login_required
 def get_whatsapp_qr():
     try:
-        r = make_wa_http_request('GET', '/qr', timeout=12)
+        user_id = session.get('user_id')
+        r = make_wa_http_request('GET', '/qr', timeout=12, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'qr': None, 'error': str(e)})
@@ -10158,7 +10178,8 @@ def get_whatsapp_qr():
 @login_required
 def force_whatsapp_qr():
     try:
-        r = make_wa_http_request('POST', '/force-qr', timeout=10)
+        user_id = session.get('user_id')
+        r = make_wa_http_request('POST', '/force-qr', timeout=10, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -10169,10 +10190,11 @@ def send_whatsapp_message():
     data = request.json or {}
     phone = data.get('phone')
     text = data.get('text')
+    user_id = session.get('user_id')
     if not phone or not text:
         return jsonify({'error': 'Teléfono y texto son requeridos'}), 400
     try:
-        r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': text}, timeout=15)
+        r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': text, 'user_id': user_id}, timeout=15, user_id=user_id)
         return jsonify(r.json()), r.status_code
     except Exception as e:
         return jsonify({'error': f'Error al comunicarse con el microservicio WhatsApp: {str(e)}'}), 500
@@ -10181,7 +10203,8 @@ def send_whatsapp_message():
 @login_required
 def logout_whatsapp():
     try:
-        r = make_wa_http_request('POST', '/logout', timeout=10)
+        user_id = session.get('user_id')
+        r = make_wa_http_request('POST', '/logout', timeout=10, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -10189,6 +10212,7 @@ def logout_whatsapp():
 @app.route('/api/whatsapp/webhook', methods=['POST'])
 def whatsapp_webhook():
     data = request.json or {}
+    raw_user_id = data.get('user_id')
     raw_phone = str(data.get('phone', '')).strip()
     text = str(data.get('text', '')).strip()
     
@@ -10205,15 +10229,30 @@ def whatsapp_webhook():
     phone_search_7 = clean_digits[-7:] if len(clean_digits) >= 7 else clean_digits
     phone_search_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
 
-    cursor.execute("""
-        SELECT id, nombres, apellidos, telefono, psicologo_id 
-        FROM pacientes 
-        WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
-           OR REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
-           OR ? LIKE '%' || REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') || '%'
-        ORDER BY id DESC
-    """, (phone_search_7, phone_search_10, clean_digits))
-    patient = cursor.fetchone()
+    patient = None
+    if raw_user_id:
+        cursor.execute("""
+            SELECT id, nombres, apellidos, telefono, psicologo_id 
+            FROM pacientes 
+            WHERE psicologo_id = ? AND (
+               REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
+               OR REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
+               OR ? LIKE '%' || REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') || '%'
+            )
+            ORDER BY id DESC
+        """, (raw_user_id, phone_search_7, phone_search_10, clean_digits))
+        patient = cursor.fetchone()
+
+    if not patient:
+        cursor.execute("""
+            SELECT id, nombres, apellidos, telefono, psicologo_id 
+            FROM pacientes 
+            WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
+               OR REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') LIKE '%' || ? || '%'
+               OR ? LIKE '%' || REPLACE(REPLACE(REPLACE(REPLACE(telefono, ' ', ''), '-', ''), '+', ''), '(', '') || '%'
+            ORDER BY id DESC
+        """, (phone_search_7, phone_search_10, clean_digits))
+        patient = cursor.fetchone()
 
     if not patient:
         return jsonify({'status': 'ignored', 'message': f'Teléfono {raw_phone} no asociado a ningún paciente.'})
