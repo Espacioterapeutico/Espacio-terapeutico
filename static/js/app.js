@@ -3900,56 +3900,15 @@ async function loadAgendaCompact() {
         const _nowDate = new Date();
         const todayStr = `${_nowDate.getFullYear()}-${String(_nowDate.getMonth() + 1).padStart(2, '0')}-${String(_nowDate.getDate()).padStart(2, '0')}`;
         
-        // Buscar la próxima cita agendada desde hoy en adelante (no evolucionada)
-        let upcomingEvents = events.filter(e => e.fecha >= todayStr && e.estado_pago !== 'Prepagada' && !e.has_session);
+        // Buscar las próximas citas agendadas desde hoy en adelante (no canceladas y no evolucionadas)
+        let upcomingEvents = events.filter(e => e.fecha >= todayStr && e.estado_pago !== 'Cancelada' && e.estado_pago !== 'Prepagada' && !e.has_session);
         upcomingEvents.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
         
-        // 1. Mostrar Siguiente Consulta
-        if (upcomingEvents.length > 0) {
-            const nextE = upcomingEvents[0];
-            const isToday = nextE.fecha === todayStr;
-            const fechaText = isToday ? `Hoy a las <strong>${nextE.hora}</strong>` : `El <strong>${nextE.fecha}</strong> a las <strong>${nextE.hora}</strong>`;
-            
-            let lastSes = null;
-            try {
-                const summaryRes = await fetch(`/api/patients/${nextE.paciente_id}/summary`);
-                if (summaryRes.ok) {
-                    const summary = await summaryRes.json();
-                    lastSes = summary.last_session;
-                }
-            } catch(e) {}
-            
-            const btnEvolucionar = !nextE.has_session 
-                ? `<button class="btn btn-primary btn-sm" onclick="openRegisterSessionFromEvent(${nextE.id})">Evolucionar</button>` 
-                : '';
-            
-            nextConsultation.innerHTML = `
-                <div class="next-patient-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 0.5rem;">
-                    <div>
-                        <h4 class="next-patient-title" style="margin: 0; font-size:1.05rem;">${nextE.nombres} ${nextE.apellidos}</h4>
-                        <p class="text-secondary" style="margin: 0.25rem 0 0 0; font-size:0.85rem;">${fechaText} | Modalidad: <strong>${nextE.tipo_consulta}</strong></p>
-                    </div>
-                    <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-                        ${btnEvolucionar}
-                        <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${nextE.paciente_id})">Ver Ficha</button>
-                    </div>
-                </div>
-                <div class="recap-box" style="margin-top: 0.85rem; padding: 0.75rem; background: rgba(0,0,0,0.02); border-radius: var(--radius-sm);">
-                    <h5 style="margin: 0 0 0.4rem 0; font-size: 0.85rem; color: var(--primary-color);">Recapitulación de Sesión Anterior:</h5>
-                    ${lastSes ? `
-                        <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Fecha:</strong> ${lastSes.fecha}</p>
-                        <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Resumen:</strong> ${lastSes.resumen}</p>
-                        ${lastSes.tareas_asignadas ? `<p style="font-size:0.8rem; margin:0;"><strong>Tareas de paciente:</strong> ${lastSes.tareas_asignadas}</p>` : ''}
-                    ` : '<p class="text-secondary" style="font-size:0.8rem; margin:0;">No hay evoluciones previas registradas.</p>'}
-                </div>
-            `;
-        } else {
-            nextConsultation.innerHTML = `
-                <div class="empty-state">
-                    <p>No tienes citas agendadas registradas.</p>
-                </div>
-            `;
+        _upcomingEventsCache = upcomingEvents;
+        if (_upcomingCurrentIndex >= _upcomingEventsCache.length) {
+            _upcomingCurrentIndex = Math.max(0, _upcomingEventsCache.length - 1);
         }
+        await renderUpcomingConsultationPage(_upcomingCurrentIndex);
         
         // 2. Mostrar Evoluciones Clínicas Pendientes (Citas pasadas o de hoy que no tienen evolución cargada y no son prepagos de paquetes)
         const pendingEvolutions = events.filter(e => !e.has_session && e.estado_pago !== 'Prepagada' && e.fecha <= todayStr);
@@ -3989,6 +3948,121 @@ async function loadAgendaCompact() {
         listContainer.innerHTML = '<p class="text-danger">Error al cargar evoluciones pendientes.</p>';
     }
 }
+
+let _upcomingEventsCache = [];
+let _upcomingCurrentIndex = 0;
+
+async function renderUpcomingConsultationPage(idx) {
+    const nextConsultation = document.getElementById('dashboard-next-consultation');
+    if (!nextConsultation) return;
+
+    if (!_upcomingEventsCache || _upcomingEventsCache.length === 0) {
+        nextConsultation.innerHTML = `
+            <div class="empty-state">
+                <p>🎉 No hay más consultas agendadas.</p>
+            </div>
+        `;
+        return;
+    }
+
+    if (idx < 0) idx = 0;
+    if (idx >= _upcomingEventsCache.length) {
+        idx = _upcomingEventsCache.length - 1;
+    }
+    _upcomingCurrentIndex = idx;
+
+    const nextE = _upcomingEventsCache[_upcomingCurrentIndex];
+    const totalCount = _upcomingEventsCache.length;
+
+    const _nowDate = new Date();
+    const todayStr = `${_nowDate.getFullYear()}-${String(_nowDate.getMonth() + 1).padStart(2, '0')}-${String(_nowDate.getDate()).padStart(2, '0')}`;
+    const isToday = nextE.fecha === todayStr;
+    const fechaText = isToday ? `Hoy a las <strong>${nextE.hora}</strong>` : `El <strong>${nextE.fecha}</strong> a las <strong>${nextE.hora}</strong>`;
+    
+    const isConfirmed = nextE.confirmada === 1;
+    const confirmBadge = isConfirmed 
+        ? `<span class="badge" style="background:#10b981; color:#fff; padding:2px 6px; font-size:0.7rem; border-radius:4px; font-weight:700;">✓ Confirmada</span>` 
+        : `<span class="badge" style="background:#f59e0b; color:#fff; padding:2px 6px; font-size:0.7rem; border-radius:4px; font-weight:700;">⏳ Pendiente</span>`;
+
+    let lastSes = null;
+    try {
+        const summaryRes = await fetch(`/api/patients/${nextE.paciente_id}/summary`);
+        if (summaryRes.ok) {
+            const summary = await summaryRes.json();
+            lastSes = summary.last_session;
+        }
+    } catch(e) {}
+
+    const btnEvolucionar = !nextE.has_session 
+        ? `<button class="btn btn-primary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: var(--primary-color); border: none;" onclick="openRegisterSessionFromEvent(${nextE.id})">💜 Evolucionar</button>` 
+        : '';
+
+    const btnConfirmar = `<button class="btn btn-sm ${isConfirmed ? 'btn-outline-success' : 'btn-success'}" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; ${isConfirmed ? 'border: 1px solid #10b981; color: #047857; background: transparent;' : 'background: #10b981; color: white; border: none;'}" onclick="quickMarkApptStatusFromDashboard(${nextE.id}, 'Confirmada')">✅ Confirmar</button>`;
+
+    const btnCancelar = `<button class="btn btn-sm btn-warning" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #f59e0b; color: white; border: none;" onclick="quickMarkApptStatusFromDashboard(${nextE.id}, 'Cancelada')">🟡 Cancelar</button>`;
+
+    const btnEliminar = `<button class="btn btn-sm btn-danger" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #ef4444; color: white; border: none;" onclick="deleteAgendaEventFromDashboard(${nextE.id})">🗑️ Eliminar</button>`;
+
+    const paginationControls = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; background: var(--bg-light); padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color);">
+            <button type="button" class="btn btn-sm btn-secondary" style="padding: 2px 10px; font-size: 0.8rem; font-weight: 700;" ${idx === 0 ? 'disabled style="opacity:0.35; cursor:not-allowed;"' : ''} onclick="renderUpcomingConsultationPage(${idx - 1})">◀ Anterior</button>
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--primary-color);">Consulta ${idx + 1} de ${totalCount}</span>
+            <button type="button" class="btn btn-sm btn-secondary" style="padding: 2px 10px; font-size: 0.8rem; font-weight: 700;" ${idx === totalCount - 1 ? 'disabled style="opacity:0.35; cursor:not-allowed;"' : ''} onclick="renderUpcomingConsultationPage(${idx + 1})">Siguiente ▶</button>
+        </div>
+    `;
+
+    nextConsultation.innerHTML = `
+        ${paginationControls}
+        <div class="next-patient-card" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap: wrap; gap: 0.65rem;">
+            <div>
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <h4 class="next-patient-title" style="margin: 0; font-size:1.05rem;">${nextE.nombres} ${nextE.apellidos}</h4>
+                    ${confirmBadge}
+                </div>
+                <p class="text-secondary" style="margin: 0.25rem 0 0 0; font-size:0.85rem;">${fechaText} | Modalidad: <strong>${nextE.tipo_consulta}</strong></p>
+            </div>
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
+                ${btnEvolucionar}
+                <button class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem;" onclick="openSummaryModal(${nextE.paciente_id})">📄 Ver Ficha</button>
+                ${btnConfirmar}
+                ${btnCancelar}
+                ${btnEliminar}
+            </div>
+        </div>
+        <div class="recap-box" style="margin-top: 0.85rem; padding: 0.75rem; background: rgba(0,0,0,0.02); border-radius: var(--radius-sm);">
+            <h5 style="margin: 0 0 0.4rem 0; font-size: 0.85rem; color: var(--primary-color);">Recapitulación de Sesión Anterior:</h5>
+            ${lastSes ? `
+                <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Fecha:</strong> ${lastSes.fecha}</p>
+                <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Resumen:</strong> ${lastSes.resumen}</p>
+                ${lastSes.tareas_asignadas ? `<p style="font-size:0.8rem; margin:0;"><strong>Tareas de paciente:</strong> ${lastSes.tareas_asignadas}</p>` : ''}
+            ` : '<p class="text-secondary" style="font-size:0.8rem; margin:0;">No hay evoluciones previas registradas.</p>'}
+        </div>
+    `;
+}
+window.renderUpcomingConsultationPage = renderUpcomingConsultationPage;
+
+async function quickMarkApptStatusFromDashboard(citaId, status) {
+    await quickMarkApptStatus(citaId, status);
+    loadDashboardData();
+}
+window.quickMarkApptStatusFromDashboard = quickMarkApptStatusFromDashboard;
+
+async function deleteAgendaEventFromDashboard(citaId) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta cita de la agenda?')) return;
+    try {
+        const res = await fetch(`/api/agenda/events/${citaId}`, { method: 'DELETE' });
+        if (res.ok) {
+            alert('Cita eliminada con éxito.');
+            loadDashboardData();
+        } else {
+            const data = await res.json();
+            alert('Error: ' + (data.error || 'No se pudo eliminar la cita.'));
+        }
+    } catch(err) {
+        alert('Error de conexión al eliminar la cita.');
+    }
+}
+window.deleteAgendaEventFromDashboard = deleteAgendaEventFromDashboard;
 
 // ==========================================
 // CONTROL FINANCIERO Y BALANCE MULTIMONEDA
@@ -8644,23 +8718,26 @@ async function loadSuperadminData() {
             let subBtnText = p.suscripcion_paga === 1 ? '⭐ Suscripción Paga' : '🚀 Activar Suscripción';
             let subBtnStyle = p.suscripcion_paga === 1 ? 'background: #10b981; color: #fff;' : 'background: #6366f1; color: #fff; font-weight: 700;';
             
+            const expDate = p.fecha_expiracion_prueba ? new Date(p.fecha_expiracion_prueba) : null;
+            const regDate = p.fecha_registro ? new Date(p.fecha_registro) : null;
+            const diffHours = expDate ? (expDate - new Date()) / (1000 * 60 * 60) : 0;
+            const regStr = regDate && !isNaN(regDate) ? regDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+            const expStr = expDate && !isNaN(expDate) ? expDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+            const daysLeft = expDate ? Math.max(0, Math.ceil(diffHours / 24)) : 0;
+            const rangeText = regStr && expStr ? `${regStr} al ${expStr}` : (expStr ? `Vence: ${expStr}` : '');
+
             if (p.suscripcion_paga === 1) {
-                trialBadge = '<span class="badge" style="background:#10b981; color:#fff; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">✓ Suscripción Paga</span>';
+                trialBadge = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                    <span class="badge" style="background:#10b981; color:#fff; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⭐ Suscripción Paga (${daysLeft} días disponibles)</span>
+                    ${rangeText ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">📅 ${rangeText}</span>` : ''}
+                </div>`;
             } else if (p.fecha_expiracion_prueba) {
-                const expDate = new Date(p.fecha_expiracion_prueba);
-                const regDate = p.fecha_registro ? new Date(p.fecha_registro) : null;
-                const diffHours = (expDate - new Date()) / (1000 * 60 * 60);
-                const regStr = regDate && !isNaN(regDate) ? regDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
-                const expStr = expDate && !isNaN(expDate) ? expDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
-                
                 if (diffHours <= 0) {
                     trialBadge = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
                         <span class="badge" style="background:#ef4444; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⚠️ Prueba Expirada</span>
                         <span style="font-size:0.7rem; color:var(--text-muted);">Venció: ${expStr}</span>
                     </div>`;
                 } else {
-                    const daysLeft = Math.ceil(diffHours / 24);
-                    const rangeText = regStr ? `${regStr} al ${expStr}` : `Vence: ${expStr}`;
                     trialBadge = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
                         <span class="badge" style="background:#f59e0b; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⏳ Prueba (${daysLeft} días disponibles)</span>
                         <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">📅 ${rangeText}</span>
@@ -8707,7 +8784,8 @@ async function loadSuperadminData() {
                             <button class="btn btn-sm" style="padding: 2px 8px; font-size: 0.75rem; ${subBtnStyle}" onclick="toggleTherapistSubscription(${p.id})">${subBtnText}</button>
                             <button class="btn btn-sm ${buttonClass}" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleTherapistActive(${p.id})">${buttonText}</button>
                         </div>
-                        <div style="display: flex; gap: 0.35rem; margin-top: 0.2rem;">
+                        <div style="display: flex; gap: 0.35rem; margin-top: 0.2rem; flex-wrap: wrap; justify-content: center;">
+                            <button type="button" class="btn btn-sm btn-outline-primary" style="padding: 2px 6px; font-size: 0.7rem; font-weight: 700;" onclick="openSuperadminExpirationModal(${p.id}, \`${escName}\`, '${p.fecha_expiracion_prueba || ''}', ${p.suscripcion_paga || 0})">🚀 Activar/Renovar Plan</button>
                             <button type="button" class="btn btn-sm ${p.mostrar_en_directorio === 1 ? 'btn-outline-success' : 'btn-outline-secondary'}" style="padding: 2px 6px; font-size: 0.7rem; font-weight: 700;" onclick="toggleTherapistDirectorio(${p.id})">
                                 ${p.mostrar_en_directorio === 1 ? '🌐 En Directorio' : '🚫 Oculto'}
                             </button>
@@ -11104,6 +11182,58 @@ async function toggleTherapistSubscription(userId) {
         alert("Error de conexión al cambiar suscripción.");
     }
 }
+
+async function openSuperadminExpirationModal(userId, userName, currentExp, isPaid) {
+    const choice = prompt(
+        `Configurar Fecha de Renovación/Expiración para ${userName}:\n\n` +
+        `Elige una opción:\n` +
+        `1: +30 días (1 Mes)\n` +
+        `2: +90 días (3 Meses)\n` +
+        `3: +365 días (1 Año)\n\n` +
+        `O escribe la fecha directamente (formato YYYY-MM-DD):`,
+        "1"
+    );
+
+    if (!choice) return;
+
+    let targetDate = new Date();
+    const clean = choice.trim();
+    if (clean === "1") {
+        targetDate.setDate(targetDate.getDate() + 30);
+    } else if (clean === "2") {
+        targetDate.setDate(targetDate.getDate() + 90);
+    } else if (clean === "3") {
+        targetDate.setDate(targetDate.getDate() + 365);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+        targetDate = new Date(`${clean}T23:59:59`);
+    } else {
+        alert("Formato u opción no válida. Introduce 1, 2, 3 o YYYY-MM-DD.");
+        return;
+    }
+
+    const expStr = targetDate.toISOString().split('T')[0];
+
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/set-expiration`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fecha_expiracion: expStr,
+                suscripcion_paga: 1
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(`✅ Expiración/Renovación actualizada para ${userName} al ${expStr}.`);
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo actualizar la fecha."));
+        }
+    } catch(err) {
+        alert("Error al guardar la nueva fecha de expiración.");
+    }
+}
+window.openSuperadminExpirationModal = openSuperadminExpirationModal;
 
 const RENDER_WA_URL = 'https://espacio-terapeutico-whatsapp.onrender.com';
 

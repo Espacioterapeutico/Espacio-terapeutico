@@ -206,10 +206,6 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
             payload = {
                 "message": {
                     "token": token,
-                    "notification": {
-                        "title": title,
-                        "body": body
-                    },
                     "data": {
                         "url": url,
                         "title": title,
@@ -226,7 +222,7 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                             "icon": icon_url,
                             "badge": badge_url,
                             "tag": tag_id,
-                            "renotify": True,
+                            "renotify": False,
                             "vibrate": [200, 100, 200]
                         },
                         "fcm_options": {
@@ -2786,6 +2782,36 @@ def superadmin_toggle_subscription(user_id):
     cursor.execute("UPDATE usuarios SET suscripcion_paga = ? WHERE id = ?", (new_status, user_id))
     db.commit()
     return jsonify({'success': 'Estado de suscripción paga actualizado.', 'suscripcion_paga': new_status})
+
+@app.route('/api/superadmin/therapists/<int:user_id>/set-expiration', methods=['POST'])
+@login_required
+def superadmin_set_therapist_expiration(user_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+        
+    data = request.json or {}
+    fecha_exp = data.get('fecha_expiracion')
+    suscripcion_paga = 1 if data.get('suscripcion_paga') else 0
+    
+    if not fecha_exp:
+        return jsonify({'error': 'Fecha de expiración/renovación es requerida.'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM usuarios WHERE id = ?", (user_id,))
+    if not cursor.fetchone():
+        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+        
+    if len(str(fecha_exp)) == 10:
+        fecha_exp = f"{fecha_exp} 23:59:59"
+        
+    cursor.execute("""
+        UPDATE usuarios 
+        SET fecha_expiracion_prueba = ?, suscripcion_paga = ? 
+        WHERE id = ?
+    """, (fecha_exp, suscripcion_paga, user_id))
+    db.commit()
+    return jsonify({'success': 'Fecha de expiración / renovación actualizada con éxito.'})
 
 @app.route('/api/superadmin/therapists/<int:user_id>/save-settings', methods=['POST'])
 @login_required
