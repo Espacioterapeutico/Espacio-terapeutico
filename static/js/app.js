@@ -6514,11 +6514,46 @@ async function loadNotifiedPayments() {
                     </div>
                 </td>
                 <td>
-                    <button class="btn btn-primary btn-sm" onclick="openVerifyPaymentModal(${p.paciente_id}, ${p.id}, ${p.monto}, '${p.moneda}', '${p.metodo}', '${p.referencia}', '${p.fecha}')">Verificar</button>
+                    <div style="display: flex; gap: 0.35rem; align-items: center;">
+                        <button class="btn btn-primary btn-sm" onclick="openVerifyPaymentModal(${p.paciente_id}, ${p.id}, ${p.monto}, '${p.moneda}', '${p.metodo}', '${p.referencia}', '${p.fecha}')">Verificar</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteNotifiedPayment(${p.id})" title="Eliminar reporte duplicado">🗑️ Eliminar</button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
         });
+
+async function deleteNotifiedPayment(paymentId) {
+    if (!confirm("¿Estás seguro de eliminar este reporte de pago duplicado/inválido?")) return;
+    try {
+        const res = await fetch(`/api/admin/payments/delete/${paymentId}`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Reporte de pago eliminado con éxito.");
+            loadNotifiedPayments();
+        } else {
+            alert(data.error || "No se pudo eliminar el reporte de pago.");
+        }
+    } catch(err) {
+        alert("Error de conexión al eliminar reporte de pago.");
+    }
+}
+window.deleteNotifiedPayment = deleteNotifiedPayment;
+
+async function deleteNotifiedPaymentFromModal(e) {
+    if (e) e.preventDefault();
+    const notificationKey = document.getElementById('v-notification-key').value;
+    if (!notificationKey) return;
+    await deleteNotifiedPayment(notificationKey);
+    closeModal('verify-payment-modal');
+}
+window.deleteNotifiedPaymentFromModal = deleteNotifiedPaymentFromModal;
+
+function downloadPatientsWordZip() {
+    alert("🚀 Generando expedientes clínicos en Word (.docx) para todos tus consultantes...\nEsto descargará un archivo .ZIP comprimido.");
+    window.location.href = '/api/admin/backup/export-patients-word-zip';
+}
+window.downloadPatientsWordZip = downloadPatientsWordZip;
         
         const badge = document.getElementById('fin-verificaciones-badge');
         if (badge) {

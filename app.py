@@ -4582,19 +4582,25 @@ def patient_add_payment_report():
         from datetime import datetime
         fecha_registro = datetime.now().isoformat()
         
-        payment_payload = {
-            'monto': monto,
-            'moneda': moneda,
-            'metodo': metodo,
-            'referencia': referencia,
-            'fecha': fecha,
-            'estado': 'Pendiente de verificación',
-            'fecha_registro': fecha_registro
-        }
-        
         db = get_db()
         cursor = db.cursor()
         
+        # Anti-duplicados: Evitar registros repetidos si se presiona varias veces o por reintentos de red
+        if referencia and str(referencia).strip():
+            cursor.execute("""
+                SELECT id FROM pagos_notificados 
+                WHERE paciente_id = ? AND referencia = ? AND estado = 'Pendiente de verificación'
+            """, (patient_id, str(referencia).strip()))
+            if cursor.fetchone():
+                return jsonify({'success': 'El reporte de pago ya fue registrado anteriormente.', 'duplicate': True})
+        else:
+            cursor.execute("""
+                SELECT id FROM pagos_notificados 
+                WHERE paciente_id = ? AND monto = ? AND moneda = ? AND fecha = ? AND estado = 'Pendiente de verificación'
+            """, (patient_id, monto, moneda, fecha))
+            if cursor.fetchone():
+                return jsonify({'success': 'El reporte de pago ya fue registrado anteriormente.', 'duplicate': True})
+
         cursor.execute("""
             INSERT INTO pagos_notificados (paciente_id, monto, moneda, metodo, referencia, fecha, estado, fecha_registro)
             VALUES (?, ?, ?, ?, ?, ?, 'Pendiente de verificación', ?)
@@ -5293,6 +5299,18 @@ def reject_admin_payment(payment_id):
         return jsonify({'success': 'Pago rechazado localmente con éxito.'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/payments/delete/<int:payment_id>', methods=['POST', 'DELETE'])
+@login_required
+def delete_admin_payment_notified(payment_id):
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("DELETE FROM pagos_notificados WHERE id = ?", (payment_id,))
+        db.commit()
+        return jsonify({'success': 'Notificación de pago eliminada correctamente.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al eliminar notificación de pago: {str(e)}'}), 500
 
 @app.route('/api/patient/payments/notified', methods=['GET'])
 @patient_login_required
@@ -9487,6 +9505,271 @@ def create_backup():
         )
     except Exception as e:
         return jsonify({'error': f'Error al descargar copia de seguridad: {str(e)}'}), 500
+
+@app.route('/api/admin/backup/export-patients-word-zip', methods=['GET'])
+@login_required
+def export_patients_word_zip():
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT nombres, apellidos FROM usuarios WHERE id = ?", (user_id,))
+    psych = cursor.fetchone()
+    psych_name = f"Psic. {psych['nombres']} {psych['apellidos']}" if psych else "Espacio Terapéutico"
+
+    cursor.execute("""
+        SELECT * FROM pacientes 
+        WHERE (psicologo_id = ? OR psicologo_id IS NULL OR ? = 1)
+        ORDER BY apellidos ASC, nombres ASC
+    """, (user_id, user_id))
+    patients = cursor.fetchall()
+
+    if not patients:
+        return jsonify({'error': 'No se encontraron pacientes para exportar.'}), 404
+
+    import io, zipfile, docx, re
+    from docx.shared import Inches, Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    def set_cell_bg(cell, hex_color):
+        tcPr = cell._tc.get_or_add_tcPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), hex_color)
+        tcPr.append(shd)
+
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for p_row in patients:
+            p = dict(p_row)
+            patient_id = p['id']
+
+            cursor.execute("SELECT * FROM sesiones WHERE paciente_id = ? ORDER BY fecha ASC", (patient_id,))
+            sessions_list = [dict(s) for s in cursor.fetchall()]
+
+            cursor.execute("SELECT * FROM agenda_finanzas WHERE paciente_id = ? ORDER BY fecha ASC", (patient_id,))
+            agenda_list = [dict(a) for a in cursor.fetchall()]
+
+            tools_data = {}
+            tool_tables = [
+                ('registros_ansiedad', 'Registro de Ansiedad'),
+                ('registros_sueno', 'Registro de Sueño'),
+                ('registros_sobriedad', 'Registro de Sobriedad / Consumo'),
+                ('adherencia_registros', 'Adherencia a Medicamentos'),
+                ('activacion_registros', 'Registro de Actividades'),
+                ('registros_cognitivos', 'Pensamientos Cognitivos TCC'),
+                ('registros_ingesta', 'Registro de Ingesta Alimentaria')
+            ]
+            for tool_table, tool_name in tool_tables:
+                try:
+                    cursor.execute(f"SELECT * FROM {tool_table} WHERE paciente_id = ? ORDER BY id DESC LIMIT 50", (patient_id,))
+                    t_rows = [dict(r) for r in cursor.fetchall()]
+                    if t_rows:
+                        cleaned = [{k: v for k, v in r.items() if k not in ('id', 'paciente_id')} for r in t_rows]
+                        tools_data[tool_name] = cleaned
+                except Exception:
+                    pass
+
+            doc = docx.Document()
+
+            for section in doc.sections:
+                section.top_margin = Inches(0.8)
+                section.bottom_margin = Inches(0.8)
+                section.left_margin = Inches(0.8)
+                section.right_margin = Inches(0.8)
+
+            p_title = doc.add_paragraph()
+            p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run_title = p_title.add_run("EXPEDIENTE CLÍNICO Y TERAPÉUTICO")
+            run_title.font.name = 'Calibri'
+            run_title.font.size = Pt(22)
+            run_title.font.bold = True
+            run_title.font.color.rgb = RGBColor(91, 33, 182)
+
+            p_sub = doc.add_paragraph()
+            p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run_sub = p_sub.add_run(f"Plataforma Espacio Terapéutico • Terapeuta: {psych_name}\nConsultante: {p.get('nombres', '')} {p.get('apellidos', '')}")
+            run_sub.font.name = 'Calibri'
+            run_sub.font.size = Pt(10)
+            run_sub.font.italic = True
+            run_sub.font.color.rgb = RGBColor(100, 116, 139)
+
+            doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+            h1 = doc.add_heading(level=1)
+            r1 = h1.add_run("1. Ficha General del Consultante")
+            r1.font.name = 'Calibri'
+            r1.font.color.rgb = RGBColor(91, 33, 182)
+
+            table_p = doc.add_table(rows=0, cols=2)
+            table_p.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+            fields = [
+                ("Nombres y Apellidos:", f"{p.get('nombres', '')} {p.get('apellidos', '')}"),
+                ("Cédula / Documento:", str(p.get('cedula', 'N/A'))),
+                ("Fecha de Nacimiento:", str(p.get('fecha_nacimiento', 'N/A'))),
+                ("Teléfono / WhatsApp:", str(p.get('telefono', 'N/A'))),
+                ("Correo Electrónico:", str(p.get('email', 'N/A'))),
+                ("País / Ciudad:", f"{p.get('pais', 'N/A')} / {p.get('ciudad', 'N/A')}"),
+                ("Ocupación:", str(p.get('ocupacion', 'N/A'))),
+                ("Estado Civil:", str(p.get('estado_civil', 'N/A'))),
+                ("Contacto de Emergencia:", str(p.get('contacto_emergencia', 'N/A'))),
+                ("Diagnóstico / Motivo Inicial:", str(p.get('diagnostico', 'En evaluación'))),
+                ("Fecha de Registro:", str(p.get('fecha_registro', 'N/A'))),
+            ]
+
+            for label, val in fields:
+                row = table_p.add_row()
+                cell_lbl, cell_val = row.cells[0], row.cells[1]
+                cell_lbl.width = Inches(2.2)
+                cell_val.width = Inches(4.5)
+                set_cell_bg(cell_lbl, "F3E8FF")
+                set_cell_bg(cell_val, "FAF5FF")
+                
+                p_l = cell_lbl.paragraphs[0]
+                r_l = p_l.add_run(label)
+                r_l.bold = True
+                r_l.font.size = Pt(10)
+                r_l.font.name = 'Calibri'
+                
+                p_v = cell_val.paragraphs[0]
+                r_v = p_v.add_run(val or "N/A")
+                r_v.font.size = Pt(10)
+                r_v.font.name = 'Calibri'
+
+            doc.add_paragraph().paragraph_format.space_after = Pt(12)
+
+            h2 = doc.add_heading(level=1)
+            r2 = h2.add_run("2. Historia Clínica y Anamnesis")
+            r2.font.name = 'Calibri'
+            r2.font.color.rgb = RGBColor(91, 33, 182)
+
+            anamnesis_text = p.get('anamnesis') or p.get('historia_clinica') or "Sin historia clínica detallada registrada aún."
+            p_a = doc.add_paragraph()
+            r_a = p_a.add_run(anamnesis_text)
+            r_a.font.name = 'Calibri'
+            r_a.font.size = Pt(10.5)
+
+            doc.add_paragraph().paragraph_format.space_after = Pt(12)
+
+            h3 = doc.add_heading(level=1)
+            r3 = h3.add_run(f"3. Historial de Evoluciones Clínicas ({len(sessions_list)} Sesiones Registradas)")
+            r3.font.name = 'Calibri'
+            r3.font.color.rgb = RGBColor(91, 33, 182)
+
+            if not sessions_list:
+                p_nos = doc.add_paragraph()
+                r_nos = p_nos.add_run("No se encuentran notas de evolución registradas para este consultante.")
+                r_nos.font.italic = True
+                r_nos.font.color.rgb = RGBColor(148, 163, 184)
+            else:
+                for idx, s in enumerate(sessions_list, 1):
+                    h_s = doc.add_heading(level=2)
+                    r_hs = h_s.add_run(f"Sesión #{s.get('numero_sesion', idx)} — Fecha: {s.get('fecha', 'N/A')}")
+                    r_hs.font.name = 'Calibri'
+                    r_hs.font.size = Pt(12)
+                    r_hs.font.color.rgb = RGBColor(126, 34, 206)
+
+                    table_s = doc.add_table(rows=0, cols=2)
+                    table_s.alignment = WD_TABLE_ALIGNMENT.CENTER
+                    
+                    s_fields = [
+                        ("Modalidad / Cita:", f"{s.get('tipo_consulta', 'Sesión Individual')}"),
+                        ("Diagnóstico / Enfoque:", s.get('diagnostico', 'N/A')),
+                        ("Evolución Clínica:", s.get('resumen') or s.get('evolucion') or 'Sin resumen'),
+                        ("Objetivos Trabajados:", s.get('objetivos', 'N/A')),
+                        ("Tareas / Asignaciones:", s.get('tareas', 'N/A')),
+                        ("Observaciones:", s.get('observaciones', 'N/A')),
+                    ]
+
+                    for s_lbl, s_val in s_fields:
+                        if not s_val or s_val == 'N/A':
+                            continue
+                        row = table_s.add_row()
+                        c_lbl, c_val = row.cells[0], row.cells[1]
+                        c_lbl.width = Inches(2.0)
+                        c_val.width = Inches(4.7)
+                        set_cell_bg(c_lbl, "F1F5F9")
+                        set_cell_bg(c_val, "FFFFFF")
+
+                        p_sl = c_lbl.paragraphs[0]
+                        r_sl = p_sl.add_run(s_lbl)
+                        r_sl.bold = True
+                        r_sl.font.size = Pt(9.5)
+                        r_sl.font.name = 'Calibri'
+
+                        p_sv = c_val.paragraphs[0]
+                        r_sv = p_sv.add_run(str(s_val))
+                        r_sv.font.size = Pt(9.5)
+                        r_sv.font.name = 'Calibri'
+
+                    doc.add_paragraph().paragraph_format.space_after = Pt(8)
+
+            h4 = doc.add_heading(level=1)
+            r4 = h4.add_run("4. Registros en Herramientas Terapéuticas")
+            r4.font.name = 'Calibri'
+            r4.font.color.rgb = RGBColor(91, 33, 182)
+
+            has_tools = False
+            for tool_name, tool_rows in tools_data.items():
+                if not tool_rows:
+                    continue
+                has_tools = True
+                h_t = doc.add_heading(level=2)
+                r_ht = h_t.add_run(f"• {tool_name} ({len(tool_rows)} registros)")
+                r_ht.font.name = 'Calibri'
+                r_ht.font.size = Pt(11)
+                r_ht.font.color.rgb = RGBColor(16, 185, 129)
+
+                table_t = doc.add_table(rows=1, cols=len(tool_rows[0].keys()))
+                table_t.alignment = WD_TABLE_ALIGNMENT.CENTER
+                
+                hdr_cells = table_t.rows[0].cells
+                for col_idx, col_name in enumerate(tool_rows[0].keys()):
+                    set_cell_bg(hdr_cells[col_idx], "059669")
+                    p_h = hdr_cells[col_idx].paragraphs[0]
+                    r_h = p_h.add_run(col_name.replace('_', ' ').title())
+                    r_h.bold = True
+                    r_h.font.color.rgb = RGBColor(255, 255, 255)
+                    r_h.font.size = Pt(9)
+
+                for row_data in tool_rows[:50]:
+                    row_cells = table_t.add_row().cells
+                    for col_idx, col_val in enumerate(row_data.values()):
+                        set_cell_bg(row_cells[col_idx], "F0FDF4")
+                        p_c = row_cells[col_idx].paragraphs[0]
+                        r_c = p_c.add_run(str(col_val or ''))
+                        r_c.font.size = Pt(8.5)
+
+                doc.add_paragraph().paragraph_format.space_after = Pt(8)
+
+            if not has_tools:
+                p_not = doc.add_paragraph()
+                r_not = p_not.add_run("El consultante no registra entradas recientes en las herramientas terapéuticas interactivas.")
+                r_not.font.italic = True
+                r_not.font.color.rgb = RGBColor(148, 163, 184)
+
+            doc_stream = io.BytesIO()
+            doc.save(doc_stream)
+            doc_stream.seek(0)
+
+            raw_filename = f"Expediente_{p.get('cedula', 'ID')}_{p.get('nombres', '')}_{p.get('apellidos', '')}.docx"
+            safe_filename = re.sub(r'[\\/*?:"<>|]', '_', raw_filename).replace(' ', '_')
+            zip_file.writestr(safe_filename, doc_stream.getvalue())
+
+    zip_buffer.seek(0)
+    today_str = datetime.date.today().strftime('%Y-%m-%d')
+    return send_file(
+        zip_buffer,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=f'Expedientes_Pacientes_EspacioTerapeutico_{today_str}.zip'
+    )
 
 @app.route('/api/restore', methods=['POST'])
 @login_required

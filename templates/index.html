@@ -1992,7 +1992,7 @@
                             </div>
                             <div class="card-body">
                                 <p class="text-secondary mb-4">Descarga una copia completa de tu base de datos local `clinica.db`. Puedes guardarla en un Pendrive, Google Drive o disco externo.</p>
-                                <button onclick="downloadBackup()" class="btn btn-primary btn-block" style="width:100%;">
+                                <button onclick="downloadBackup()" class="btn btn-primary btn-block mb-3" style="width:100%;">
                                     Generar Copia de Seguridad (.db)
                                 </button>
                                 
@@ -4825,7 +4825,8 @@
                     </div>
                 </div>
                 <div style="border-top: 1px solid var(--border-color); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-secondary text-danger" onclick="rejectNotifiedPayment(event)" style="border: 1.5px solid rgba(239, 68, 68, 0.2); padding: 0.55rem 1rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; margin-right: auto; white-space: nowrap;">Volver a Solicitar Datos</button>
+                    <button type="button" class="btn btn-secondary text-danger" onclick="deleteNotifiedPaymentFromModal(event)" style="border: 1.5px solid rgba(239, 68, 68, 0.4); background: #fef2f2; color: #dc2626; padding: 0.55rem 0.9rem; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; white-space: nowrap; margin-right: auto;">🗑️ Eliminar Duplicado</button>
+                    <button type="button" class="btn btn-secondary text-danger" onclick="rejectNotifiedPayment(event)" style="border: 1.5px solid rgba(239, 68, 68, 0.2); padding: 0.55rem 1rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; white-space: nowrap;">Volver a Solicitar Datos</button>
                     <button type="button" class="btn btn-secondary" onclick="closeModal('verify-payment-modal')" style="padding: 0.55rem 1.2rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; border: 1.5px solid var(--border-color); white-space: nowrap;">Cancelar</button>
                     <button type="submit" class="btn btn-primary" style="padding: 0.55rem 1.2rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; border: none; white-space: nowrap;">Registrar y Confirmar</button>
                 </div>
