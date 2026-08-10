@@ -1118,6 +1118,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     loadNotifications();
     notificationIntervalId = setInterval(loadNotifications, 30000);
     loadMessageTemplates();
+    loadSMTPSettings();
     if (typeof loadPublicProfileSettings === 'function') {
         setTimeout(loadPublicProfileSettings, 300);
     }
@@ -7370,6 +7371,103 @@ async function handleSaveMessageTemplates(e) {
     } catch (err) {
         console.error("Error al guardar plantillas:", err);
         alert("Error de conexión.");
+    }
+}
+
+// --- Servidor de Correo SMTP (@espacioterapeutico.net) ---
+async function loadSMTPSettings() {
+    try {
+        const res = await fetch('/api/admin/smtp-settings');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const host = document.getElementById('smtp-host');
+        const port = document.getElementById('smtp-port');
+        const user = document.getElementById('smtp-user');
+        const pass = document.getElementById('smtp-password');
+        const fromEmail = document.getElementById('smtp-from-email');
+        const autoSwitch = document.getElementById('auto-welcome-email-switch');
+        
+        if (host) host.value = data.smtp_host || 'mail.privateemail.com';
+        if (port) port.value = data.smtp_port || '587';
+        if (user) user.value = data.smtp_user || '';
+        if (pass) pass.value = data.smtp_password || '';
+        if (fromEmail) fromEmail.value = data.smtp_from_email || '';
+        if (autoSwitch) autoSwitch.checked = (data.auto_welcome_email_active !== '0');
+    } catch (err) {
+        console.error("Error al cargar configuración SMTP:", err);
+    }
+}
+
+async function handleSaveSMTPSettings(e) {
+    e.preventDefault();
+    const host = document.getElementById('smtp-host').value;
+    const port = document.getElementById('smtp-port').value;
+    const user = document.getElementById('smtp-user').value;
+    const pass = document.getElementById('smtp-password').value;
+    const fromEmail = document.getElementById('smtp-from-email').value;
+    const autoSwitch = document.getElementById('auto-welcome-email-switch').checked ? '1' : '0';
+    
+    try {
+        const res = await fetch('/api/admin/smtp-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                smtp_host: host,
+                smtp_port: port,
+                smtp_user: user,
+                smtp_password: pass,
+                smtp_from_email: fromEmail,
+                auto_welcome_email_active: autoSwitch
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Configuración de servidor SMTP guardada exitosamente.");
+        } else {
+            alert(data.error || "Error al guardar la configuración SMTP.");
+        }
+    } catch (err) {
+        console.error("Error al guardar configuración SMTP:", err);
+        alert("Error de conexión al servidor.");
+    }
+}
+
+async function handleSendSMTPTest() {
+    const testEmail = prompt("Ingresa el correo electrónico de destino para enviar la prueba:", "paulomora@gmail.com");
+    if (!testEmail || !testEmail.includes('@')) return;
+    
+    const host = document.getElementById('smtp-host').value;
+    const port = document.getElementById('smtp-port').value;
+    const user = document.getElementById('smtp-user').value;
+    const pass = document.getElementById('smtp-password').value;
+    const fromEmail = document.getElementById('smtp-from-email').value;
+
+    try {
+        if (typeof showGlobalLoading === 'function') showGlobalLoading("Probando conexión SMTP saliente...");
+        const res = await fetch('/api/admin/smtp-test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                test_email: testEmail,
+                smtp_host: host,
+                smtp_port: port,
+                smtp_user: user,
+                smtp_password: pass,
+                smtp_from_email: fromEmail
+            })
+        });
+        if (typeof hideGlobalLoading === 'function') hideGlobalLoading();
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "¡Prueba SMTP exitosa!");
+        } else {
+            alert("❌ " + (data.error || "Error al conectar con el servidor SMTP. Revisa el host, puerto, usuario y clave."));
+        }
+    } catch (err) {
+        if (typeof hideGlobalLoading === 'function') hideGlobalLoading();
+        console.error("Error en prueba SMTP:", err);
+        alert("Error de conexión al probar SMTP.");
     }
 }
 

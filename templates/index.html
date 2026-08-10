@@ -2321,7 +2321,52 @@
                                 <button type="button" onclick="savePaymentMethods()" class="btn btn-primary btn-block" style="width:100%;">
                                     Guardar Métodos de Pago
                                 </button>
-                                <div id="set-pagos-status-msg" class="status-msg hide mt-2"></div>
+                        <!-- Configuración de Servidor de Correo (SMTP @espacioterapeutico.net) -->
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                <h3>✉️ Servidor de Correo Institucional (@espacioterapeutico.net)</h3>
+                                <span class="badge badge-success" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 20px;">SMTP Activo</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-secondary mb-3" style="font-size: 0.85rem; line-height: 1.5;">
+                                    Configura las credenciales SMTP de tu dominio <strong>@espacioterapeutico.net</strong> (Private Email de Namecheap, Google Workspace, Zoho Mail, Brevo, etc.) para que el sistema envíe automáticamente las credenciales de ingreso y las preguntas de seguridad a psicólogos y consultantes al registrarse.
+                                </p>
+                                
+                                <form id="smtp-settings-form" onsubmit="handleSaveSMTPSettings(event)">
+                                    <div class="form-row mb-3">
+                                        <div class="form-group col-8">
+                                            <label for="smtp-host" style="font-weight: 700;">Servidor SMTP (Host)</label>
+                                            <input type="text" id="smtp-host" class="form-control" placeholder="Ej. mail.privateemail.com" required>
+                                        </div>
+                                        <div class="form-group col-4">
+                                            <label for="smtp-port" style="font-weight: 700;">Puerto SMTP</label>
+                                            <input type="number" id="smtp-port" class="form-control" placeholder="587 o 465" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-row mb-3">
+                                        <div class="form-group col-6">
+                                            <label for="smtp-user" style="font-weight: 700;">Usuario / Correo Saliente</label>
+                                            <input type="email" id="smtp-user" class="form-control" placeholder="notificaciones@espacioterapeutico.net" required>
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label for="smtp-password" style="font-weight: 700;">Contraseña de Correo / SMTP</label>
+                                            <input type="password" id="smtp-password" class="form-control" placeholder="••••••••••••" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label for="smtp-from-email" style="font-weight: 700;">Nombre del Remitente</label>
+                                        <input type="text" id="smtp-from-email" class="form-control" placeholder="Espacio Terapéutico <notificaciones@espacioterapeutico.net>">
+                                    </div>
+                                    <div class="form-group mb-4" style="background: rgba(16, 185, 129, 0.05); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; margin: 0; color: var(--text-dark);">
+                                            <input type="checkbox" id="auto-welcome-email-switch"> 📧 Enviar Correo de Bienvenida con Credenciales y Preguntas de Seguridad al Registrarse
+                                        </label>
+                                    </div>
+                                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                                        <button type="submit" class="btn btn-primary" style="flex: 2; font-weight: 700;">💾 Guardar Configuración SMTP</button>
+                                        <button type="button" onclick="handleSendSMTPTest()" class="btn btn-secondary" style="flex: 1; font-weight: 700; background: #059669; color: white; border: none;">🧪 Probar Conexión</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -5982,6 +6027,6 @@
     </div>
 
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v={{ asset_v or '104' }}"></script>
+    <script src="/static/js/app.js?v={{ asset_v or '105' }}"></script>
 </body>
 </html>

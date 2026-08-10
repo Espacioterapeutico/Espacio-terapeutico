@@ -1607,6 +1607,154 @@ def auto_check_patient_birthdays(db):
     except Exception as e:
         print("Error en auto_check_patient_birthdays:", e)
 
+# ==========================================
+# ENVÍO DE CORREOS ELECTRÓNICOS SMTP (@espacioterapeutico.net)
+# ==========================================
+def send_email_async(to_email, subject, html_content, text_content=None):
+    """
+    Envía un correo electrónico de forma asíncrona mediante SMTP configurado en BD.
+    No bloquea la ejecución principal del servidor.
+    """
+    if not to_email or '@' not in str(to_email):
+        return
+
+    def _worker():
+        try:
+            with app.app_context():
+                db = get_db()
+                cursor = db.cursor()
+                cursor.execute("""
+                    SELECT clave, valor FROM configuracion 
+                    WHERE clave IN ('smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email', 'auto_welcome_email_active')
+                """)
+                cfg = {r['clave']: r['valor'] for r in cursor.fetchall()}
+                
+                if cfg.get('auto_welcome_email_active', '1') == '0':
+                    print("[SMTP] Los correos automáticos de bienvenida están desactivados.")
+                    return
+
+                smtp_host = cfg.get('smtp_host', '').strip()
+                smtp_port_raw = cfg.get('smtp_port', '587').strip()
+                smtp_port = int(smtp_port_raw) if smtp_port_raw.isdigit() else 587
+                smtp_user = cfg.get('smtp_user', '').strip()
+                smtp_pass = cfg.get('smtp_password', '').strip()
+                smtp_from = cfg.get('smtp_from_email', '').strip() or f"Espacio Terapéutico <{smtp_user}>"
+
+                if not smtp_host or not smtp_user or not smtp_pass:
+                    print(f"[SMTP] Configuración SMTP incompleta para enviar correo a {to_email}.")
+                    return
+
+                import smtplib
+                from email.mime.multipart import MIMEMultipart
+                from email.mime.text import MIMEText
+
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = subject
+                msg['From'] = smtp_from
+                msg['To'] = to_email
+
+                if text_content:
+                    msg.attach(MIMEText(text_content, 'plain', 'utf-8'))
+                msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+
+                if smtp_port == 465:
+                    server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
+                else:
+                    server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+                    server.starttls()
+
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(smtp_user, [to_email], msg.as_string())
+                server.quit()
+                print(f"[SMTP] Correo enviado exitosamente a {to_email}")
+        except Exception as e:
+            print(f"[SMTP ERROR] Falló el envío de correo a {to_email}: {e}")
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+
+def send_welcome_credentials_email(user_type, email, full_name, username, raw_password, p1=None, r1=None, p2=None, r2=None, login_url=None):
+    """
+    Construye y envía el correo HTML estilizado con credenciales y preguntas de seguridad.
+    """
+    if not email or '@' not in str(email):
+        return
+
+    site_url = login_url or "https://www.espacioterapeutico.net"
+    portal_label = "Plataforma de Consultorio Psicológico" if user_type == 'psicologo' else "Portal del Consultante"
+    subject = f"🌿 Tus Credenciales de Acceso - Espacio Terapéutico ({full_name})"
+
+    p1_text = p1 or "No especificada"
+    r1_text = r1 or "No especificada"
+    p2_text = p2 or "No especificada"
+    r2_text = r2 or "No especificada"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #1e293b; }}
+            .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }}
+            .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px 24px; text-align: center; color: #ffffff; }}
+            .header h1 {{ margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
+            .header p {{ margin: 6px 0 0 0; opacity: 0.9; font-size: 14px; }}
+            .content {{ padding: 32px 28px; }}
+            .greeting {{ font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }}
+            .intro {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
+            .box {{ background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 20px; }}
+            .box-title {{ font-size: 13px; font-weight: 800; text-transform: uppercase; color: #059669; letter-spacing: 0.5px; margin-bottom: 14px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px; }}
+            .field {{ margin-bottom: 10px; font-size: 14px; }}
+            .field strong {{ color: #334155; width: 140px; display: inline-block; }}
+            .field span {{ font-family: monospace; font-size: 15px; font-weight: 700; color: #0f172a; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; }}
+            .btn-wrap {{ text-align: center; margin: 30px 0 10px 0; }}
+            .btn {{ background: #10b981; color: #ffffff !important; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }}
+            .footer {{ background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">
+                <h1>🌿 Espacio Terapéutico</h1>
+                <p>{portal_label}</p>
+            </div>
+            <div class="content">
+                <div class="greeting">¡Hola, {full_name}! 👋</div>
+                <div class="intro">
+                    Te damos la bienvenida oficial a <strong>Espacio Terapéutico</strong>. Tu cuenta ha sido registrada exitosamente. A continuación encontrarás tus credenciales de acceso y tus preguntas de seguridad guardadas.
+                </div>
+
+                <div class="box">
+                    <div class="box-title">🔐 Credenciales de Ingreso</div>
+                    <div class="field"><strong>Usuario / Correo:</strong> <span>{username}</span></div>
+                    <div class="field"><strong>Contraseña:</strong> <span>{raw_password}</span></div>
+                    <div class="field"><strong>Enlace de Acceso:</strong> <a href="{site_url}" style="color:#059669;">{site_url}</a></div>
+                </div>
+
+                <div class="box" style="background:#faf5ff; border-color:#e9d5ff;">
+                    <div class="box-title" style="color:#7e22ce;">🛡️ Preguntas de Seguridad</div>
+                    <div class="field"><strong>Pregunta 1:</strong> {p1_text}</div>
+                    <div class="field"><strong>Respuesta 1:</strong> <span>{r1_text}</span></div>
+                    <div style="height: 8px;"></div>
+                    <div class="field"><strong>Pregunta 2:</strong> {p2_text}</div>
+                    <div class="field"><strong>Respuesta 2:</strong> <span>{r2_text}</span></div>
+                </div>
+
+                <div class="btn-wrap">
+                    <a href="{site_url}" class="btn">🚀 Iniciar Sesión en la Plataforma</a>
+                </div>
+            </div>
+            <div class="footer">
+                Este es un correo automático generado por Espacio Terapéutico.<br>
+                Si no solicitaste esta cuenta, por favor escríbenos a notificaciones@espacioterapeutico.net.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    send_email_async(email, subject, html_content)
+
 def send_hourly_patient_tool_reminders(db=None):
     """
     Revisa la hora local (8:00 PM / 20:00) de cada paciente que tenga herramientas
@@ -2115,6 +2263,13 @@ def register():
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1, ?, ?, ?, ?)
             """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug, default_visual_cfg, default_pm_str, p1, r1_hash, p2, r2_hash))
             db.commit()
+            
+            # Enviar correo de bienvenida con credenciales y preguntas de seguridad
+            email_target = username if '@' in username else data.get('email')
+            if email_target:
+                full_name_psic = f"Psic. {nombres} {apellidos}".strip()
+                send_welcome_credentials_email('psicologo', email_target, full_name_psic, username, password, p1, r1, p2, r2)
+
             return jsonify({'success': 'Cuenta de psicólogo creada con éxito. Tienes 1 mes (30 días) de prueba gratuita.'})
             
         elif tipo_usuario == 'paciente':
@@ -2225,6 +2380,15 @@ def register():
             send_webpush_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
 
             db.commit()
+            
+            # Enviar correo de bienvenida con credenciales y preguntas de seguridad al consultante
+            if email:
+                full_name_pac = pat_name
+                send_welcome_credentials_email(
+                    'paciente', email, full_name_pac, username, password, 
+                    pregunta_1, resp_1, pregunta_2, resp_2, 
+                    login_url="https://www.espacioterapeutico.net/portal"
+                )
             
             # Sincronización en segundo plano con Firebase
             import threading
@@ -5589,6 +5753,104 @@ def admin_message_templates():
         return jsonify({'success': 'Plantillas de mensajes actualizadas con éxito.'})
     except Exception as e:
         return jsonify({'error': f'Error al actualizar plantillas: {str(e)}'}), 500
+
+@app.route('/api/admin/smtp-settings', methods=['GET', 'POST'])
+@login_required
+def admin_smtp_settings():
+    db = get_db()
+    cursor = db.cursor()
+    
+    keys = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email', 'auto_welcome_email_active']
+    
+    if request.method == 'GET':
+        settings = {}
+        for key in keys:
+            cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (key,))
+            row = cursor.fetchone()
+            settings[key] = row['valor'] if row else ""
+        if not settings.get('smtp_host'):
+            settings['smtp_host'] = 'mail.privateemail.com'
+        if not settings.get('smtp_port'):
+            settings['smtp_port'] = '587'
+        if not settings.get('auto_welcome_email_active'):
+            settings['auto_welcome_email_active'] = '1'
+        return jsonify(settings)
+        
+    data = request.json or {}
+    try:
+        for key in keys:
+            if key in data:
+                cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", (key, str(data[key]).strip()))
+        db.commit()
+        return jsonify({'success': 'Configuración de servidor SMTP actualizada con éxito.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al guardar configuración SMTP: {str(e)}'}), 500
+
+@app.route('/api/admin/smtp-test', methods=['POST'])
+@login_required
+def admin_smtp_test():
+    data = request.json or {}
+    test_email = data.get('test_email', '').strip()
+    if not test_email or '@' not in test_email:
+        return jsonify({'error': 'Proporciona una dirección de correo válida para la prueba.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT clave, valor FROM configuracion 
+        WHERE clave IN ('smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email')
+    """)
+    cfg = {r['clave']: r['valor'] for r in cursor.fetchall()}
+    
+    smtp_host = data.get('smtp_host') or cfg.get('smtp_host', '').strip()
+    smtp_port_raw = str(data.get('smtp_port') or cfg.get('smtp_port', '587')).strip()
+    smtp_port = int(smtp_port_raw) if smtp_port_raw.isdigit() else 587
+    smtp_user = data.get('smtp_user') or cfg.get('smtp_user', '').strip()
+    smtp_pass = data.get('smtp_password') or cfg.get('smtp_password', '').strip()
+    smtp_from = data.get('smtp_from_email') or cfg.get('smtp_from_email', '').strip() or f"Espacio Terapéutico <{smtp_user}>"
+
+    if not smtp_host or not smtp_user or not smtp_pass:
+        return jsonify({'error': 'Incompleto. Servidor Host, Usuario y Contraseña SMTP son requeridos.'}), 400
+
+    try:
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = "🧪 Prueba de Conexión SMTP - Espacio Terapéutico"
+        msg['From'] = smtp_from
+        msg['To'] = test_email
+
+        html_body = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; background: #f4f6f9;">
+            <div style="max-width: 500px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; border: 1px solid #10b981;">
+                <h2 style="color: #10b981; margin-top: 0;">✅ Servidor de Correo Operativo</h2>
+                <p>¡Hola! Este es un correo de prueba enviado exitosamente desde <strong>Espacio Terapéutico</strong>.</p>
+                <p><strong>Configuración Verificada:</strong></p>
+                <ul>
+                    <li>Servidor: <code>{smtp_host}:{smtp_port}</code></li>
+                    <li>Usuario Remitente: <code>{smtp_user}</code></li>
+                </ul>
+                <p style="font-size: 12px; color: #64748b;">Tu plataforma ya está lista para enviar credenciales y notificaciones a psicólogos y consultantes.</p>
+            </div>
+        </div>
+        """
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=12)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=12)
+            server.starttls()
+
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(smtp_user, [test_email], msg.as_string())
+        server.quit()
+
+        return jsonify({'success': f'¡Correo de prueba enviado con éxito a {test_email}!'})
+    except Exception as e:
+        return jsonify({'error': f'Falló la conexión SMTP: {str(e)}'}), 500
 
 @app.route('/api/admin/payment-methods', methods=['GET', 'POST'])
 @login_required
