@@ -1540,8 +1540,13 @@ def auto_check_patient_birthdays(db):
         today_str = now_dt.strftime("%Y-%m-%d")
         now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
 
+        cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_cumpleanos', 'auto_cumpleanos_activo')")
+        cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
+        auto_cumple_activo = cfg_rows.get('auto_cumpleanos_activo', '0') == '1'
+        tmpl_cumple_default = cfg_rows.get('msg_cumpleanos') or "¡Feliz cumpleaños, *{nombre}*! 🎉🎂\n\nDesde Espacio Terapéutico te deseamos un excelente día lleno de bienestar, paz y alegría. ¡Gracias por acompañarnos!"
+
         cursor.execute("""
-            SELECT id, nombres, apellidos, fecha_nacimiento, psicologo_id
+            SELECT id, nombres, apellidos, fecha_nacimiento, telefono, psicologo_id
             FROM pacientes
             WHERE fecha_nacimiento IS NOT NULL AND fecha_nacimiento != ''
         """)
@@ -1555,8 +1560,10 @@ def auto_check_patient_birthdays(db):
                 psic_id = p['psicologo_id'] or 1
                 pac_id = p['id']
                 pac_nombre = f"{p['nombres']} {p['apellidos']}".strip()
+                first_name = p['nombres'].strip().split()[0] if p['nombres'] else 'Consultante'
                 notif_msg = f"¡Hoy es el cumpleaños de {pac_nombre}! Deséale un feliz día."
 
+                # 1. Notificación interna
                 cursor.execute("""
                     SELECT id FROM notificaciones
                     WHERE user_id = ? AND tipo = 'cumpleanos' AND mensaje LIKE ? AND fecha LIKE ?
@@ -1578,6 +1585,25 @@ def auto_check_patient_birthdays(db):
                         )
                     except Exception:
                         pass
+
+                # 2. Envío de WhatsApp automático de Feliz Cumpleaños (si el interruptor está activo)
+                if auto_cumple_activo and p['telefono']:
+                    cursor.execute("""
+                        SELECT id FROM notificaciones
+                        WHERE user_id = ? AND tipo = 'cumpleanos_wa' AND mensaje LIKE ? AND fecha LIKE ?
+                    """, (psic_id, f"%ID: {pac_id}%", f"{today_str}%"))
+                    
+                    if not cursor.fetchone():
+                        # Registrar inmediatamente en notificaciones de control para prevenir reenvíos
+                        wa_log_msg = f"Mensaje de cumpleaños enviado por WhatsApp a {pac_nombre} (ID: {pac_id})"
+                        cursor.execute("""
+                            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                            VALUES (?, 'cumpleanos_wa', '🎂 WhatsApp de Cumpleaños Enviado', ?, ?, 1, '')
+                        """, (psic_id, wa_log_msg, now_str))
+                        db.commit()
+
+                        msg_wa = tmpl_cumple_default.replace('{nombre}', first_name).replace('{nombre_completo}', pac_nombre)
+                        send_whatsapp_message_async(p['telefono'], msg_wa, user_id=psic_id)
     except Exception as e:
         print("Error en auto_check_patient_birthdays:", e)
 
@@ -5544,7 +5570,7 @@ def admin_message_templates():
     db = get_db()
     cursor = db.cursor()
     
-    keys = ['msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo']
+    keys = ['msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo']
     
     if request.method == 'GET':
         templates = {}
