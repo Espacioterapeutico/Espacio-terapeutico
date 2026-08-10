@@ -1690,28 +1690,30 @@ def send_welcome_credentials_email(user_type, email, full_name, username, raw_pa
     p2_text = p2 or "No especificada"
     r2_text = r2 or "No especificada"
 
+    support_email = "espacioterapeuticoapp@gmail.com"
+
     html_content = f"""
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="UTF-8">
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #1e293b; }}
-            .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }}
-            .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px 24px; text-align: center; color: #ffffff; }}
+            body {{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #334155; }}
+            .card {{ max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(15,23,42,0.08); border: 1px solid #e2e8f0; }}
+            .header {{ background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 32px 24px; text-align: center; color: #ffffff; }}
             .header h1 {{ margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
-            .header p {{ margin: 6px 0 0 0; opacity: 0.9; font-size: 14px; }}
+            .header p {{ margin: 6px 0 0 0; opacity: 0.92; font-size: 14px; font-weight: 500; }}
             .content {{ padding: 32px 28px; }}
             .greeting {{ font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }}
             .intro {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
             .box {{ background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 20px; }}
-            .box-title {{ font-size: 13px; font-weight: 800; text-transform: uppercase; color: #059669; letter-spacing: 0.5px; margin-bottom: 14px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px; }}
-            .field {{ margin-bottom: 10px; font-size: 14px; }}
-            .field strong {{ color: #334155; width: 140px; display: inline-block; }}
-            .field span {{ font-family: monospace; font-size: 15px; font-weight: 700; color: #0f172a; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; }}
+            .box-title {{ font-size: 13px; font-weight: 800; text-transform: uppercase; color: #0d9488; letter-spacing: 0.5px; margin-bottom: 14px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px; }}
+            .field {{ margin-bottom: 10px; font-size: 14px; color: #334155; }}
+            .field strong {{ color: #0f172a; width: 140px; display: inline-block; font-weight: 600; }}
+            .field span {{ font-family: monospace; font-size: 15px; font-weight: 700; color: #0f766e; background: #ccfbf1; padding: 3px 10px; border-radius: 6px; border: 1px solid #99f6e4; }}
             .btn-wrap {{ text-align: center; margin: 30px 0 10px 0; }}
-            .btn {{ background: #10b981; color: #ffffff !important; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }}
-            .footer {{ background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }}
+            .btn {{ background: #0d9488; color: #ffffff !important; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(13,148,136,0.3); }}
+            .footer {{ background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }}
         </style>
     </head>
     <body>
@@ -1723,18 +1725,18 @@ def send_welcome_credentials_email(user_type, email, full_name, username, raw_pa
             <div class="content">
                 <div class="greeting">¡Hola, {full_name}! 👋</div>
                 <div class="intro">
-                    Te damos la bienvenida oficial a <strong>Espacio Terapéutico</strong>. Tu cuenta ha sido registrada exitosamente. A continuación encontrarás tus credenciales de acceso y tus preguntas de seguridad guardadas.
+                    Te damos la bienvenida oficial a <strong>Espacio Terapéutico</strong>. Tu cuenta ha sido registrada exitosamente. A continuación encontrarás tus credenciales de acceso e información de seguridad guardada.
                 </div>
 
                 <div class="box">
                     <div class="box-title">🔐 Credenciales de Ingreso</div>
                     <div class="field"><strong>Usuario / Correo:</strong> <span>{username}</span></div>
                     <div class="field"><strong>Contraseña:</strong> <span>{raw_password}</span></div>
-                    <div class="field"><strong>Enlace de Acceso:</strong> <a href="{site_url}" style="color:#059669;">{site_url}</a></div>
+                    <div class="field"><strong>Enlace de Acceso:</strong> <a href="{site_url}" style="color:#0d9488; font-weight: 600;">{site_url}</a></div>
                 </div>
 
-                <div class="box" style="background:#faf5ff; border-color:#e9d5ff;">
-                    <div class="box-title" style="color:#7e22ce;">🛡️ Preguntas de Seguridad</div>
+                <div class="box" style="background:#f0fdf4; border-color:#bbf7d0;">
+                    <div class="box-title" style="color:#047857;">🛡️ Preguntas de Seguridad</div>
                     <div class="field"><strong>Pregunta 1:</strong> {p1_text}</div>
                     <div class="field"><strong>Respuesta 1:</strong> <span>{r1_text}</span></div>
                     <div style="height: 8px;"></div>
@@ -1748,7 +1750,7 @@ def send_welcome_credentials_email(user_type, email, full_name, username, raw_pa
             </div>
             <div class="footer">
                 Este es un correo automático generado por Espacio Terapéutico.<br>
-                Si no solicitaste esta cuenta, por favor escríbenos a notificaciones@espacioterapeutico.net.
+                Si tienes alguna consulta, puedes escribirnos directamente a <a href="mailto:{support_email}" style="color:#0d9488;">{support_email}</a>.
             </div>
         </div>
     </body>
