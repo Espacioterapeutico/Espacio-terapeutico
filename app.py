@@ -1670,6 +1670,7 @@ def send_email_async(to_email, subject, html_content, text_content=None):
         except Exception as e:
             print(f"[SMTP ERROR] Falló el envío de correo a {to_email}: {e}")
 
+    import threading
     threading.Thread(target=_worker, daemon=True).start()
 
 
