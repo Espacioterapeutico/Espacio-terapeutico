@@ -3948,6 +3948,8 @@ async function loadAgendaCompact() {
         listContainer.innerHTML = '<p class="text-danger">Error al cargar evoluciones pendientes.</p>';
     }
 }
+window.loadDashboardStats = loadDashboardStats;
+window.loadDashboardData = loadDashboardStats;
 
 let _upcomingEventsCache = [];
 let _upcomingCurrentIndex = 0;
@@ -4042,8 +4044,22 @@ async function renderUpcomingConsultationPage(idx) {
 window.renderUpcomingConsultationPage = renderUpcomingConsultationPage;
 
 async function quickMarkApptStatusFromDashboard(citaId, status) {
-    await quickMarkApptStatus(citaId, status);
-    loadDashboardData();
+    const success = await quickMarkApptStatus(citaId, status);
+    if (success) {
+        if (_upcomingEventsCache && _upcomingEventsCache.length > 0) {
+            const item = _upcomingEventsCache.find(e => e.id === citaId);
+            if (item) {
+                item.confirmada = (status === 'Confirmada') ? 1 : 0;
+                if (status === 'Cancelada') {
+                    item.estado_pago = 'Cancelada';
+                }
+                renderUpcomingConsultationPage(_upcomingCurrentIndex);
+            }
+        }
+        if (typeof loadDashboardStats === 'function') {
+            loadDashboardStats();
+        }
+    }
 }
 window.quickMarkApptStatusFromDashboard = quickMarkApptStatusFromDashboard;
 
@@ -4053,7 +4069,16 @@ async function deleteAgendaEventFromDashboard(citaId) {
         const res = await fetch(`/api/agenda/events/${citaId}`, { method: 'DELETE' });
         if (res.ok) {
             alert('Cita eliminada con éxito.');
-            loadDashboardData();
+            if (_upcomingEventsCache && _upcomingEventsCache.length > 0) {
+                _upcomingEventsCache = _upcomingEventsCache.filter(e => e.id !== citaId);
+                if (_upcomingCurrentIndex >= _upcomingEventsCache.length) {
+                    _upcomingCurrentIndex = Math.max(0, _upcomingEventsCache.length - 1);
+                }
+                renderUpcomingConsultationPage(_upcomingCurrentIndex);
+            }
+            if (typeof loadDashboardStats === 'function') {
+                loadDashboardStats();
+            }
         } else {
             const data = await res.json();
             alert('Error: ' + (data.error || 'No se pudo eliminar la cita.'));
@@ -14516,7 +14541,7 @@ async function sendWhatsappTemplateFromMc(apptId, type) {
 window.sendWhatsappTemplateFromMc = sendWhatsappTemplateFromMc;
 
 async function quickMarkApptStatus(apptId, newStatus) {
-    if (!confirm(`¿Deseas cambiar el estado de esta cita a "${newStatus}"?`)) return;
+    if (!confirm(`¿Deseas cambiar el estado de esta cita a "${newStatus}"?`)) return false;
 
     try {
         const payload = {
@@ -14532,13 +14557,18 @@ async function quickMarkApptStatus(apptId, newStatus) {
             body: JSON.stringify(payload)
         });
         if (res.ok) {
-            renderManualConfirmationsView();
+            if (typeof renderManualConfirmationsView === 'function') {
+                renderManualConfirmationsView();
+            }
+            return true;
         } else {
             const errData = await res.json().catch(() => ({}));
             alert("Error al actualizar el estado de la cita: " + (errData.error || "Desconocido"));
+            return false;
         }
     } catch (err) {
         alert("Error de conexión al actualizar la cita.");
+        return false;
     }
 }
 window.quickMarkApptStatus = quickMarkApptStatus;
@@ -14594,7 +14624,7 @@ async function forceSyncWithFirebase() {
             } else {
                 alert(`✅ ${data.success}`);
             }
-            if (typeof loadDashboardData === 'function') loadDashboardData();
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
             if (typeof loadPatientsData === 'function') loadPatientsData();
             if (typeof loadAgendaData === 'function') loadAgendaData();
         } else {
