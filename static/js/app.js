@@ -8837,6 +8837,12 @@ function formatPatientLocation(p) {
 
 
 
+// --- ESTADO GLOBAL DE SUPERADMIN (Paginación + Filtros) ---
+let _superadminTherapistsList = [];
+let _superadminCurrentPage = 1;
+let _superadminPerPage = 10;
+let _superadminSearchQuery = '';
+
 async function loadSuperadminData() {
     // Cargar estadísticas del dashboard de superadmin
     try {
@@ -8856,14 +8862,6 @@ async function loadSuperadminData() {
         console.error("Error al cargar estadísticas superadmin:", errStats);
     }
 
-    const tbody = document.getElementById('superadmin-therapists-body');
-// --- ESTADO GLOBAL DE SUPERADMIN (Paginación + Filtros) ---
-let _superadminTherapistsList = [];
-let _superadminCurrentPage = 1;
-let _superadminPerPage = 10;
-let _superadminSearchQuery = '';
-
-async function loadSuperadminData() {
     const tbody = document.getElementById('superadmin-therapists-body');
     const countEl = document.getElementById('superadmin-therapists-count');
     if (!tbody) return;
