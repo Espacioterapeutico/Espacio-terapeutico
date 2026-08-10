@@ -1633,11 +1633,11 @@ def send_email_async(to_email, subject, html_content, text_content=None):
                     print("[SMTP] Los correos automáticos de bienvenida están desactivados.")
                     return
 
-                smtp_host = cfg.get('smtp_host', '').strip()
+                smtp_host = cfg.get('smtp_host', '').strip() or 'smtp.gmail.com'
                 smtp_port_raw = cfg.get('smtp_port', '587').strip()
                 smtp_port = int(smtp_port_raw) if smtp_port_raw.isdigit() else 587
-                smtp_user = cfg.get('smtp_user', '').strip()
-                smtp_pass = cfg.get('smtp_password', '').strip()
+                smtp_user = cfg.get('smtp_user', '').strip() or 'espacioterapeuticoapp@gmail.com'
+                smtp_pass = cfg.get('smtp_password', '').strip() or 'kinygwxtkovrtsjp'
                 smtp_from = cfg.get('smtp_from_email', '').strip() or f"Espacio Terapéutico <{smtp_user}>"
 
                 if not smtp_host or not smtp_user or not smtp_pass:
@@ -5769,9 +5769,15 @@ def admin_smtp_settings():
             row = cursor.fetchone()
             settings[key] = row['valor'] if row else ""
         if not settings.get('smtp_host'):
-            settings['smtp_host'] = 'mail.privateemail.com'
+            settings['smtp_host'] = 'smtp.gmail.com'
         if not settings.get('smtp_port'):
             settings['smtp_port'] = '587'
+        if not settings.get('smtp_user'):
+            settings['smtp_user'] = 'espacioterapeuticoapp@gmail.com'
+        if not settings.get('smtp_password'):
+            settings['smtp_password'] = 'kinygwxtkovrtsjp'
+        if not settings.get('smtp_from_email'):
+            settings['smtp_from_email'] = 'Espacio Terapéutico <espacioterapeuticoapp@gmail.com>'
         if not settings.get('auto_welcome_email_active'):
             settings['auto_welcome_email_active'] = '1'
         return jsonify(settings)
