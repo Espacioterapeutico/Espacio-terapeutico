@@ -8857,8 +8857,19 @@ async function loadSuperadminData() {
     }
 
     const tbody = document.getElementById('superadmin-therapists-body');
+// --- ESTADO GLOBAL DE SUPERADMIN (Paginación + Filtros) ---
+let _superadminTherapistsList = [];
+let _superadminCurrentPage = 1;
+let _superadminPerPage = 10;
+let _superadminSearchQuery = '';
+
+async function loadSuperadminData() {
+    const tbody = document.getElementById('superadmin-therapists-body');
+    const countEl = document.getElementById('superadmin-therapists-count');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Cargando psicólogos...</td></tr>';
+    
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary" style="padding: 1.5rem;">⌛ Cargando psicólogos...</td></tr>';
+    if (countEl) countEl.textContent = 'Cargando psicólogos...';
     
     try {
         const res = await fetch('/api/superadmin/therapists?_t=' + Date.now());
@@ -8866,134 +8877,335 @@ async function loadSuperadminData() {
         if (!res.ok) {
             console.error("Error al cargar psicólogos superadmin:", res.status, data);
             if (res.status === 401) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">⚠️ Tu sesión expiró. Por favor haz clic en <b>[Cerrar Sesión]</b> en el menú lateral e ingresa de nuevo para actualizar tus permisos de administrador.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">⚠️ Tu sesión expiró. Por favor haz clic en <b>[Cerrar Sesión]</b> e ingresa de nuevo.</td></tr>';
             } else {
                 tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">⚠️ ${data.error || 'Error al cargar la lista de psicólogos.'}</td></tr>`;
             }
             return;
         }
-        const list = Array.isArray(data) ? data : [];
-        tbody.innerHTML = '';
+        _superadminTherapistsList = Array.isArray(data) ? data : [];
+        if (countEl) countEl.textContent = `${_superadminTherapistsList.length} Psicólogo(s) Registrado(s)`;
         
-        if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">No hay psicólogos registrados.</td></tr>';
-            return;
-        }
+        renderSuperadminTherapistsTable();
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">Error al cargar datos.</td></tr>';
+    }
+}
+
+function onSuperadminSearchInput(query) {
+    _superadminSearchQuery = (query || '').toLowerCase().trim();
+    _superadminCurrentPage = 1;
+    renderSuperadminTherapistsTable();
+}
+
+function onSuperadminPerPageChange(val) {
+    _superadminPerPage = parseInt(val, 10) || 10;
+    _superadminCurrentPage = 1;
+    renderSuperadminTherapistsTable();
+}
+
+function renderSuperadminTherapistsTable() {
+    const tbody = document.getElementById('superadmin-therapists-body');
+    const paginationContainer = document.getElementById('superadmin-pagination-container');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    // 1. Filtrar lista por Búsqueda (Nombres, Apellidos, Username, Cédula, Correo)
+    let filtered = _superadminTherapistsList.filter(p => {
+        if (!_superadminSearchQuery) return true;
+        const q = _superadminSearchQuery;
+        const full = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
+        const user = (p.username || '').toLowerCase();
+        const ced = (p.cedula || p.cedula_identidad || '').toString().toLowerCase();
+        const email = (p.email || p.email_publico || '').toLowerCase();
+        return full.includes(q) || user.includes(q) || ced.includes(q) || email.includes(q);
+    });
+
+    const totalFiltered = filtered.length;
+    
+    if (totalFiltered === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-secondary" style="padding: 2rem;">🔍 No se encontraron psicólogos que coincidan con "${_superadminSearchQuery}".</td></tr>`;
+        if (paginationContainer) paginationContainer.innerHTML = '';
+        return;
+    }
+
+    // 2. Aplicar Paginación
+    const totalPages = Math.ceil(totalFiltered / _superadminPerPage) || 1;
+    if (_superadminCurrentPage > totalPages) _superadminCurrentPage = totalPages;
+    if (_superadminCurrentPage < 1) _superadminCurrentPage = 1;
+    
+    const startIndex = (_superadminCurrentPage - 1) * _superadminPerPage;
+    const endIndex = Math.min(startIndex + _superadminPerPage, totalFiltered);
+    const paginatedList = filtered.slice(startIndex, endIndex);
+
+    // 3. Renderizar Filas Limpias (Opción B)
+    paginatedList.forEach(p => {
+        const escName = (p.nombres || '').replace(/'/g, "\\'");
+        const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || p.username;
         
-        list.forEach(p => {
-            const tr = document.createElement('tr');
-            const activeLabel = p.activo === 1 ? 'Activo' : 'Inactivo';
-            const activeClass = p.activo === 1 ? 'badge-success' : 'badge-danger';
-            const buttonText = p.activo === 1 ? 'Desactivar' : 'Activar';
-            const buttonClass = p.activo === 1 ? 'btn-danger' : 'btn-primary';
+        // Documentos cell
+        const tituloBtn = p.foto_titulo 
+            ? `<button type="button" class="btn btn-sm btn-outline-primary" style="padding: 3px 8px; font-size: 0.75rem; font-weight: 600; border-radius: 6px;" onclick="viewDocumentPreview(\`${p.foto_titulo}\`, 'Título de ${escName}', ${p.id}, 'titulo')">📄 Título</button>` 
+            : `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 3px 8px; font-size: 0.75rem; font-weight: 500; border-radius: 6px;" onclick="viewDocumentPreview('', 'Título de ${escName}', ${p.id}, 'titulo')">➕ Título</button>`;
             
-            const escName = (p.nombres || '').replace(/'/g, "\\'");
-            const tituloBtn = p.foto_titulo ? `<button type="button" class="btn btn-sm btn-outline-primary" style="padding:2px 6px; font-size:0.75rem; margin-right:4px;" onclick="viewDocumentPreview(\`${p.foto_titulo}\`, 'Título de ${escName}', ${p.id}, 'titulo')">📄 Título</button>` : `<button type="button" class="btn btn-sm btn-outline-primary" style="padding:2px 6px; font-size:0.75rem; margin-right:4px;" onclick="viewDocumentPreview('', 'Título de ${escName}', ${p.id}, 'titulo')">➕ Título</button>`;
-            const docBtn = p.foto_documento ? `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="viewDocumentPreview(\`${p.foto_documento}\`, 'Documento de ${escName}', ${p.id}, 'documento')">🪪 Cédula</button>` : `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="viewDocumentPreview('', 'Documento de ${escName}', ${p.id}, 'documento')">➕ Cédula</button>`;
-            const docCell = `${tituloBtn}${docBtn}`;
-
-            let trialBadge = '';
-            let subBtnText = p.suscripcion_paga === 1 ? '⭐ Suscripción Paga' : '🚀 Activar Suscripción';
-            let subBtnStyle = p.suscripcion_paga === 1 ? 'background: #10b981; color: #fff;' : 'background: #6366f1; color: #fff; font-weight: 700;';
+        const docBtn = p.foto_documento 
+            ? `<button type="button" class="btn btn-sm btn-outline-info" style="padding: 3px 8px; font-size: 0.75rem; font-weight: 600; border-radius: 6px;" onclick="viewDocumentPreview(\`${p.foto_documento}\`, 'Documento de ${escName}', ${p.id}, 'documento')">🆔 Cédula</button>` 
+            : `<button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 3px 8px; font-size: 0.75rem; font-weight: 500; border-radius: 6px;" onclick="viewDocumentPreview('', 'Documento de ${escName}', ${p.id}, 'documento')">➕ Cédula</button>`;
             
-            const expDate = p.fecha_expiracion_prueba ? new Date(p.fecha_expiracion_prueba) : null;
-            const regDate = p.fecha_registro ? new Date(p.fecha_registro) : null;
-            const diffHours = expDate ? (expDate - new Date()) / (1000 * 60 * 60) : 0;
-            const regStr = regDate && !isNaN(regDate) ? regDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
-            const expStr = expDate && !isNaN(expDate) ? expDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
-            const daysLeft = expDate ? Math.max(0, Math.ceil(diffHours / 24)) : 0;
-            const rangeText = regStr && expStr ? `${regStr} al ${expStr}` : (expStr ? `Vence: ${expStr}` : '');
+        const docCell = `<div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">${tituloBtn}${docBtn}</div>`;
 
-            if (p.suscripcion_paga === 1) {
-                trialBadge = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                    <span class="badge" style="background:#10b981; color:#fff; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⭐ Suscripción Paga (${daysLeft} días disponibles)</span>
-                    ${rangeText ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">📅 ${rangeText}</span>` : ''}
+        // Suscripción Badge
+        let subBadgeHtml = '';
+        const expDate = p.fecha_expiracion_prueba ? new Date(p.fecha_expiracion_prueba) : null;
+        const regDate = p.fecha_registro ? new Date(p.fecha_registro) : null;
+        const diffHours = expDate ? (expDate - new Date()) / (1000 * 60 * 60) : 0;
+        const regStr = regDate && !isNaN(regDate) ? regDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+        const expStr = expDate && !isNaN(expDate) ? expDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+        const daysLeft = expDate ? Math.max(0, Math.ceil(diffHours / 24)) : 0;
+        const rangeText = regStr && expStr ? `${regStr} al ${expStr}` : (expStr ? `Vence: ${expStr}` : '');
+
+        if (p.suscripcion_paga === 1 && daysLeft > 0) {
+            subBadgeHtml = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <span class="badge" style="background:#10b981; color:#ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; box-shadow: 0 2px 4px rgba(16,185,129,0.2);">
+                    🟢 Suscripción Activa (${daysLeft} días disponibles)
+                </span>
+                ${rangeText ? `<span style="font-size:0.72rem; color:#64748b; font-weight:600;">📅 ${rangeText}</span>` : ''}
+            </div>`;
+        } else if (p.suscripcion_paga === 1) {
+            subBadgeHtml = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <span class="badge" style="background:#ef4444; color:#ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;">
+                    🔴 Suscripción Vencida (0 días disponibles)
+                </span>
+                ${rangeText ? `<span style="font-size:0.72rem; color:#64748b; font-weight:600;">📅 ${rangeText}</span>` : ''}
+            </div>`;
+        } else if (p.fecha_expiracion_prueba) {
+            if (diffHours <= 0) {
+                subBadgeHtml = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+                    <span class="badge" style="background:#ef4444; color:#ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;">
+                        🔴 Prueba Expirada (0 días disponibles)
+                    </span>
+                    <span style="font-size:0.72rem; color:#64748b;">Venció: ${expStr}</span>
                 </div>`;
-            } else if (p.fecha_expiracion_prueba) {
-                if (diffHours <= 0) {
-                    trialBadge = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                        <span class="badge" style="background:#ef4444; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⚠️ Prueba Expirada</span>
-                        <span style="font-size:0.7rem; color:var(--text-muted);">Venció: ${expStr}</span>
-                    </div>`;
-                } else {
-                    trialBadge = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                        <span class="badge" style="background:#f59e0b; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">⏳ Prueba (${daysLeft} días disponibles)</span>
-                        <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">📅 ${rangeText}</span>
-                    </div>`;
-                }
             } else {
-                trialBadge = '<span class="badge" style="background:#6b7280; color:#fff; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem;">Sin Prueba</span>';
+                subBadgeHtml = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+                    <span class="badge" style="background:#f59e0b; color:#ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;">
+                        ⏳ Período de Prueba (${daysLeft} días disponibles)
+                    </span>
+                    ${rangeText ? `<span style="font-size:0.72rem; color:#64748b; font-weight:600;">📅 ${rangeText}</span>` : ''}
+                </div>`;
             }
+        } else {
+            subBadgeHtml = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <span class="badge" style="background:#64748b; color:#ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;">
+                    ⚪ Sin Suscripción Activa
+                </span>
+            </div>`;
+        }
 
-            tr.setAttribute('data-therapist-id', p.id);
-            tr.innerHTML = `
-                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-weight: 600;">${p.username}</td>
-                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">${p.nombres} ${p.apellidos}</td>
-                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">
-                    ${docCell}
-                </td>
-                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-size: 0.8rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-evoluciones" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''}> Bloquear Evoluciones</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-finanzas" ${p.bloqueo_finanzas === 1 ? 'checked' : ''}> Bloquear Finanzas</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-agenda" ${p.bloqueo_agenda === 1 ? 'checked' : ''}> Bloquear Agenda</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-mensajes" ${p.bloqueo_mensajes === 1 ? 'checked' : ''}> Bloquear Recordatorios</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear C. Confirmaciones</label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #047857; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.35rem; margin-top: 0.25rem;">
-                            <input type="checkbox" class="chk-mostrar-directorio" ${p.mostrar_en_directorio === 1 ? 'checked' : ''}> 🌐 Mostrar en Directorio Público
-                        </label>
-                        <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / 3; border-top: 1px dashed var(--border-color); padding-top: 0.25rem; margin-top: 0.15rem;">
-                            <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> Activar Aviso de Pago (No Solvente)
-                        </label>
-                        <button type="button" class="btn btn-sm btn-success" style="grid-column: 1 / 3; margin-top: 0.4rem; padding: 5px 12px; font-weight: 700; background-color: #10b981; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);" onclick="saveTherapistRowSettings(${p.id})">
-                            💾 Guardar Cambios
+        // Fila Principal
+        const trMain = document.createElement('tr');
+        trMain.setAttribute('data-therapist-id', p.id);
+        trMain.style.borderBottom = '1px solid #e2e8f0';
+        trMain.innerHTML = `
+            <td style="padding: 0.85rem 1rem; vertical-align: middle;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem;">
+                        ${(p.nombres || p.username || 'P')[0].toUpperCase()}
+                    </div>
+                    <div>
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">${fullName}</div>
+                        <div style="font-size: 0.78rem; color: #64748b; font-weight: 600;">@${p.username} ${p.role === 'superadmin' ? '👑 Admin' : ''}</div>
+                    </div>
+                </div>
+            </td>
+            <td style="padding: 0.85rem 1rem; vertical-align: middle;">
+                ${docCell}
+            </td>
+            <td style="padding: 0.85rem 1rem; text-align: center; vertical-align: middle;">
+                <button type="button" class="btn btn-sm ${p.mostrar_en_directorio === 1 ? 'btn-outline-success' : 'btn-outline-secondary'}" style="padding: 4px 10px; font-size: 0.75rem; font-weight: 700; border-radius: 20px;" onclick="toggleTherapistDirectorio(${p.id})">
+                    ${p.mostrar_en_directorio === 1 ? '🌐 Visible' : '🚫 Oculto'}
+                </button>
+            </td>
+            <td style="padding: 0.85rem 1rem; text-align: center; vertical-align: middle;">
+                ${subBadgeHtml}
+            </td>
+            <td style="padding: 0.85rem 1rem; text-align: center; vertical-align: middle;">
+                <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: center; width: 100%; max-width: 220px; margin: 0 auto;">
+                    <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="openSuperadminExpirationModal(${p.id}, \`${escName}\`, '${p.fecha_expiracion_prueba || ''}', ${p.suscripcion_paga || 0})">
+                        🚀 Activar / Modificar Plazo
+                    </button>
+                    <div style="display: flex; gap: 0.35rem; width: 100%;">
+                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 8px; font-size: 0.72rem; font-weight: 600; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px;" onclick="deactivateTherapistSubscription(${p.id})">
+                            ⛔ Desactivar
+                        </button>
+                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 8px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0d9488; background: #f0fdf4; color: #0f766e; border-radius: 6px;" onclick="toggleTherapistPermissionsRow(${p.id})">
+                            ⚙️ Permisos ▼
+                        </button>
+                        <button type="button" class="btn btn-sm" style="padding: 4px 8px; font-size: 0.72rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 6px; font-weight: 700;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">
+                            🗑️
                         </button>
                     </div>
-                </td>
-                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); text-align: center;">
-                    <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: center;">
-                        <div style="margin-bottom: 0.2rem;">
-                            ${trialBadge}
-                        </div>
-                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: center;">
-                            <button class="btn btn-sm" style="padding: 2px 8px; font-size: 0.75rem; ${subBtnStyle}" onclick="toggleTherapistSubscription(${p.id})">${subBtnText}</button>
-                            <button class="btn btn-sm ${buttonClass}" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleTherapistActive(${p.id})">${buttonText}</button>
-                        </div>
-                        <div style="display: flex; gap: 0.35rem; margin-top: 0.2rem; flex-wrap: wrap; justify-content: center;">
-                            <button type="button" class="btn btn-sm btn-outline-primary" style="padding: 2px 6px; font-size: 0.7rem; font-weight: 700;" onclick="openSuperadminExpirationModal(${p.id}, \`${escName}\`, '${p.fecha_expiracion_prueba || ''}', ${p.suscripcion_paga || 0})">🚀 Activar/Renovar Plan</button>
-                            <button type="button" class="btn btn-sm ${p.mostrar_en_directorio === 1 ? 'btn-outline-success' : 'btn-outline-secondary'}" style="padding: 2px 6px; font-size: 0.7rem; font-weight: 700;" onclick="toggleTherapistDirectorio(${p.id})">
-                                ${p.mostrar_en_directorio === 1 ? '🌐 En Directorio' : '🚫 Oculto'}
-                            </button>
-                            <button type="button" class="btn btn-sm" style="padding: 2px 6px; font-size: 0.7rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">🗑️ Eliminar</button>
-                        </div>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(trMain);
+
+        // Fila Secundaria: Accordion de Permisos & Bloqueos
+        const trAccordion = document.createElement('tr');
+        trAccordion.id = `perm-row-${p.id}`;
+        trAccordion.className = 'hide';
+        trAccordion.style.background = '#f8fafc';
+        trAccordion.style.borderBottom = '2px solid #cbd5e1';
+        trAccordion.innerHTML = `
+            <td colspan="5" style="padding: 1rem 1.25rem;">
+                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1rem 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 0.85rem;">
+                        <h4 style="margin: 0; font-size: 0.88rem; font-weight: 700; color: #0f172a;">⚙️ Configuración de Permisos y Bloqueos de Funciones - ${fullName}</h4>
+                        <span style="font-size: 0.75rem; color: #64748b;">Marca las casillas que deseas restringir para este psicólogo</span>
                     </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al cargar datos.</td></tr>';
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.6rem; font-size: 0.82rem; margin-bottom: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-evoluciones" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''}> Bloquear Evoluciones</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-finanzas" ${p.bloqueo_finanzas === 1 ? 'checked' : ''}> Bloquear Finanzas</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-agenda" ${p.bloqueo_agenda === 1 ? 'checked' : ''}> Bloquear Agenda</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-mensajes" ${p.bloqueo_mensajes === 1 ? 'checked' : ''}> Bloquear Recordatorios</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear C. Confirmaciones</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.5rem; margin-top: 0.25rem;">
+                            <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> ⚠️ Activar Aviso de Pago (Notificar No Solvente en su pantalla)
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleTherapistPermissionsRow(${p.id})" style="border-radius: 6px; font-weight: 600;">Cerrar</button>
+                        <button type="button" class="btn btn-sm btn-success" onclick="saveTherapistRowSettings(${p.id})" style="background: #10b981; color: white; border: none; font-weight: 700; border-radius: 6px; padding: 0.4rem 1rem;">
+                            💾 Guardar Cambios de Permisos
+                        </button>
+                    </div>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(trAccordion);
+    });
+
+    // 4. Renderizar Paginación
+    renderSuperadminPaginationControls(totalFiltered, startIndex, endIndex, totalPages);
+}
+
+function toggleTherapistPermissionsRow(userId) {
+    const accRow = document.getElementById(`perm-row-${userId}`);
+    if (accRow) {
+        accRow.classList.toggle('hide');
     }
+}
+
+async function deactivateTherapistSubscription(userId) {
+    if (!confirm("¿Deseas suspender inmediatamente la suscripción de este psicólogo?")) return;
+    try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const res = await fetch(`/api/superadmin/therapists/${userId}/set-expiration`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fecha_expiracion_prueba: todayStr,
+                suscripcion_paga: 0
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Suscripción desactivada.");
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo desactivar la suscripción."));
+        }
+    } catch (err) {
+        alert("Error de conexión al desactivar suscripción.");
+    }
+}
+
+function renderSuperadminPaginationControls(totalFiltered, startIndex, endIndex, totalPages) {
+    const container = document.getElementById('superadmin-pagination-container');
+    if (!container) return;
+
+    if (totalFiltered === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const startNum = startIndex + 1;
+    const endNum = endIndex;
+
+    let pagesButtons = '';
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= _superadminCurrentPage - 1 && i <= _superadminCurrentPage + 1)) {
+            const isActive = i === _superadminCurrentPage;
+            pagesButtons += `
+                <button type="button" class="btn btn-sm ${isActive ? 'btn-primary' : 'btn-outline-secondary'}" 
+                        style="padding: 0.35rem 0.7rem; font-size: 0.8rem; font-weight: 700; border-radius: 6px; ${isActive ? 'background:#0d9488; border-color:#0d9488;' : ''}"
+                        onclick="goToSuperadminPage(${i})">
+                    ${i}
+                </button>
+            `;
+        } else if (i === _superadminCurrentPage - 2 || i === _superadminCurrentPage + 2) {
+            pagesButtons += `<span style="color:#64748b; font-weight:700; padding:0 2px;">...</span>`;
+        }
+    }
+
+    container.innerHTML = `
+        <div style="font-size: 0.85rem; color: #475569; font-weight: 600;">
+            Mostrando <strong>${startNum} - ${endNum}</strong> de <strong>${totalFiltered}</strong> psicólogos
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <button type="button" class="btn btn-sm btn-secondary" ${_superadminCurrentPage <= 1 ? 'disabled style="opacity:0.5;"' : ''} 
+                    style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px;"
+                    onclick="goToSuperadminPage(${_superadminCurrentPage - 1})">
+                ◀ Anterior
+            </button>
+            ${pagesButtons}
+            <button type="button" class="btn btn-sm btn-secondary" ${_superadminCurrentPage >= totalPages ? 'disabled style="opacity:0.5;"' : ''} 
+                    style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px;"
+                    onclick="goToSuperadminPage(${_superadminCurrentPage + 1})">
+                Siguiente ▶
+            </button>
+        </div>
+    `;
+}
+
+function goToSuperadminPage(page) {
+    _superadminCurrentPage = page;
+    renderSuperadminTherapistsTable();
+}
+
+window.onSuperadminSearchInput = onSuperadminSearchInput;
+window.onSuperadminPerPageChange = onSuperadminPerPageChange;
+window.goToSuperadminPage = goToSuperadminPage;
+window.toggleTherapistPermissionsRow = toggleTherapistPermissionsRow;
+window.deactivateTherapistSubscription = deactivateTherapistSubscription;
 }
 
 async function saveTherapistRowSettings(userId) {
     const row = document.querySelector(`tr[data-therapist-id="${userId}"]`);
-    if (!row) return;
+    const permRow = document.getElementById(`perm-row-${userId}`);
+    const container = permRow || row;
+    if (!container) return;
     
     const payload = {
-        mostrar_en_directorio: row.querySelector('.chk-mostrar-directorio')?.checked ? 1 : 0,
-        aviso_pago: row.querySelector('.chk-aviso-pago')?.checked ? 1 : 0,
-        bloqueo_registro: row.querySelector('.chk-bloqueo-registro')?.checked ? 1 : 0,
-        bloqueo_evoluciones: row.querySelector('.chk-bloqueo-evoluciones')?.checked ? 1 : 0,
-        bloqueo_finanzas: row.querySelector('.chk-bloqueo-finanzas')?.checked ? 1 : 0,
-        bloqueo_agenda: row.querySelector('.chk-bloqueo-agenda')?.checked ? 1 : 0,
-        bloqueo_mensajes: row.querySelector('.chk-bloqueo-mensajes')?.checked ? 1 : 0,
-        bloqueo_pizarra: row.querySelector('.chk-bloqueo-pizarra')?.checked ? 1 : 0,
-        bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0,
-        bloqueo_confirmaciones: row.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0
+        mostrar_en_directorio: (container.querySelector('.chk-mostrar-directorio') || row?.querySelector('.chk-mostrar-directorio'))?.checked ? 1 : 0,
+        aviso_pago: container.querySelector('.chk-aviso-pago')?.checked ? 1 : 0,
+        bloqueo_registro: container.querySelector('.chk-bloqueo-registro')?.checked ? 1 : 0,
+        bloqueo_evoluciones: container.querySelector('.chk-bloqueo-evoluciones')?.checked ? 1 : 0,
+        bloqueo_finanzas: container.querySelector('.chk-bloqueo-finanzas')?.checked ? 1 : 0,
+        bloqueo_agenda: container.querySelector('.chk-bloqueo-agenda')?.checked ? 1 : 0,
+        bloqueo_mensajes: container.querySelector('.chk-bloqueo-mensajes')?.checked ? 1 : 0,
+        bloqueo_pizarra: container.querySelector('.chk-bloqueo-pizarra')?.checked ? 1 : 0,
+        bloqueo_herramientas: container.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0,
+        bloqueo_confirmaciones: container.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0
     };
     
     try {

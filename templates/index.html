@@ -1220,30 +1220,54 @@
                     <!-- Contenedor: Terapeutas -->
                     <div id="sa-card-therapists" class="superadmin-tab-content">
                         <div class="card">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <h3>Psicólogos Registrados en la Plataforma</h3>
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                                 <div>
-                                    <button class="btn btn-success btn-sm" onclick="saveAllTherapistsSettings()" style="margin-right: 0.5rem; font-weight: 700; background: #10b981; color: white; border: none;">💾 Guardar Todos los Cambios</button>
-                                    <button class="btn btn-primary btn-sm" onclick="openCreatePsychologistModal()" style="margin-right: 0.5rem; font-weight: 600;">➕ Registrar Psicólogo</button>
-                                    <button class="btn btn-secondary btn-sm" onclick="loadSuperadminData()">Actualizar Lista</button>
+                                    <h3 style="margin: 0;">Psicólogos Registrados en la Plataforma</h3>
+                                    <span id="superadmin-therapists-count" style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;">Cargando psicólogos...</span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="openCreatePsychologistModal()" style="font-weight: 700; background: #0d9488; border: none; padding: 0.45rem 0.9rem; border-radius: 8px;">➕ Registrar Psicólogo</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadSuperadminData()" style="font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 8px;">🔄 Actualizar Lista</button>
                                 </div>
                             </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                            <div class="card-body" style="padding: 1.25rem;">
+                                <!-- Barra de Búsqueda y Filtros Page-to-Page -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                    <div style="flex: 1; min-width: 260px; max-width: 480px; position: relative;">
+                                        <input type="text" id="superadmin-search-therapist" class="form-control" placeholder="🔍 Buscar por nombre, apellidos, usuario, cédula o correo..." oninput="onSuperadminSearchInput(this.value)" style="padding: 0.55rem 0.85rem; font-size: 0.88rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 100%;">
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; font-size: 0.85rem; color: #475569; font-weight: 600;">
+                                        <label for="superadmin-per-page" style="margin: 0;">Mostrar:</label>
+                                        <select id="superadmin-per-page" onchange="onSuperadminPerPageChange(this.value)" style="padding: 0.4rem 0.6rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; background: white; cursor: pointer;">
+                                            <option value="10" selected>10 por página</option>
+                                            <option value="25">25 por página</option>
+                                            <option value="50">50 por página</option>
+                                            <option value="100">100 por página</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Tabla de Psicólogos (Opción B) -->
+                                <div class="table-responsive" style="border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+                                    <table class="table" style="width: 100%; border-collapse: collapse; margin: 0;">
                                         <thead>
-                                            <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
-                                                <th style="padding: 0.75rem;">Usuario</th>
-                                                <th style="padding: 0.75rem;">Nombre Completo</th>
-                                                <th style="padding: 0.75rem;">Documentos</th>
-                                                <th style="padding: 0.75rem;">Funciones Suspendidas (Bloqueo)</th>
-                                                <th style="padding: 0.75rem; text-align: center;">Estado Suscripción</th>
+                                            <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left; font-size: 0.85rem; color: #0f172a;">
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Psicólogo / Usuario</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Documentos</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center;">Directorio</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center;">Estado Suscripción</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center;">Acciones Directas</th>
                                             </tr>
                                         </thead>
                                         <tbody id="superadmin-therapists-body">
-                                            <!-- Dinámico -->
+                                            <!-- Contenido Dinámico Limpio + Sub-filas Accordion -->
                                         </tbody>
                                     </table>
+                                </div>
+
+                                <!-- Footer de Paginación Page-to-Page -->
+                                <div id="superadmin-pagination-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; flex-wrap: wrap; gap: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
+                                    <!-- Generado dinámicamente por JavaScript -->
                                 </div>
                             </div>
                         </div>
@@ -6027,6 +6051,6 @@
     </div>
 
     <!-- Local JavaScript Link -->
-    <script src="/static/js/app.js?v={{ asset_v or '105' }}"></script>
+    <script src="/static/js/app.js?v={{ asset_v or '106' }}"></script>
 </body>
 </html>
