@@ -9185,7 +9185,6 @@ window.onSuperadminPerPageChange = onSuperadminPerPageChange;
 window.goToSuperadminPage = goToSuperadminPage;
 window.toggleTherapistPermissionsRow = toggleTherapistPermissionsRow;
 window.deactivateTherapistSubscription = deactivateTherapistSubscription;
-}
 
 async function saveTherapistRowSettings(userId) {
     const row = document.querySelector(`tr[data-therapist-id="${userId}"]`);

@@ -51,10 +51,33 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True if IS_PA else False
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
 
+import gzip
+
 @app.after_request
-def add_static_cache_headers(response):
+def add_static_cache_and_gzip(response):
     if request.path.startswith('/static/'):
         response.headers['Cache-Control'] = 'public, max-age=86400'
+    
+    # Compresión Gzip automática para respuestas HTML, JS, CSS y JSON > 500 bytes
+    accept_encoding = request.headers.get('Accept-Encoding', '')
+    if (
+        'gzip' in accept_encoding.lower()
+        and response.status_code == 200
+        and not response.direct_passthrough
+        and 'Content-Encoding' not in response.headers
+        and response.mimetype in ('text/html', 'text/css', 'text/javascript', 'application/javascript', 'application/json')
+    ):
+        try:
+            data = response.get_data()
+            if len(data) > 500:
+                compressed_data = gzip.compress(data)
+                response.set_data(compressed_data)
+                response.headers['Content-Encoding'] = 'gzip'
+                response.headers['Content-Length'] = str(len(compressed_data))
+                response.headers['Vary'] = 'Accept-Encoding'
+        except Exception:
+            pass
+
     return response
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, 'clinica.db')
