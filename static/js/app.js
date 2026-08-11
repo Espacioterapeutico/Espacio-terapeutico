@@ -9279,15 +9279,16 @@ async function saveInlineTherapistProfile(userId) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        const data = await res.json();
+        let data = {};
+        try { data = await res.json(); } catch(e) {}
         if (res.ok) {
             alert("✅ Ficha del psicólogo actualizada con éxito.");
             loadSuperadminData();
         } else {
-            alert("Error: " + (data.error || "No se pudo actualizar la ficha."));
+            alert("Error: " + (data.error || `No se pudo actualizar la ficha (HTTP ${res.status}). Verifica 'git pull' y 'Reload' en PythonAnywhere.`));
         }
     } catch(err) {
-        alert("Error de conexión al guardar los datos del psicólogo.");
+        alert("Error al procesar la solicitud. Por favor ejecuta 'git pull origin main' y realiza 'Reload' en la pestaña Web de PythonAnywhere.");
     }
 }
 window.saveInlineTherapistProfile = saveInlineTherapistProfile;
