@@ -9035,7 +9035,7 @@ function renderSuperadminTherapistsTable() {
             </td>
             <td style="padding: 0.85rem 1rem; text-align: center; vertical-align: middle;">
                 <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: center; width: 100%; max-width: 220px; margin: 0 auto;">
-                    <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="openSuperadminExpirationModal(${p.id}, \`${escName}\`, '${p.fecha_expiracion_prueba || ''}', ${p.suscripcion_paga || 0})">
+                    <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="openSuperadminExpirationModal(${p.id})">
                         🚀 Activar / Modificar Plazo
                     </button>
                     <div style="display: flex; gap: 0.35rem; width: 100%;">
@@ -11574,23 +11574,29 @@ let _currentSuperadminExpUserId = null;
 let _currentSuperadminExpUserName = '';
 
 function openSuperadminExpirationModal(userId, userName, currentExp, isPaid) {
+    let therapist = null;
+    if (Array.isArray(_superadminTherapistsList)) {
+        therapist = _superadminTherapistsList.find(t => t.id == userId);
+    }
+
     _currentSuperadminExpUserId = userId;
-    _currentSuperadminExpUserName = userName;
+    _currentSuperadminExpUserName = userName || (therapist ? `${therapist.nombres || ''} ${therapist.apellidos || ''}`.trim() || therapist.username : '');
 
     const modal = document.getElementById('modal-superadmin-set-expiration');
     const userEl = document.getElementById('superadmin-exp-username');
     const startInput = document.getElementById('superadmin-exp-start');
     const endInput = document.getElementById('superadmin-exp-end');
 
-    if (userEl) userEl.textContent = `Psicólogo: ${userName}`;
+    if (userEl) userEl.textContent = `Psicólogo: ${_currentSuperadminExpUserName || userId}`;
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     if (startInput) startInput.value = todayStr;
 
     let defaultEnd = new Date(today);
-    if (currentExp && !isNaN(new Date(currentExp))) {
-        const parsed = new Date(currentExp);
+    const expDateVal = currentExp || (therapist ? therapist.fecha_expiracion_prueba : null);
+    if (expDateVal && !isNaN(new Date(expDateVal))) {
+        const parsed = new Date(expDateVal);
         if (parsed > today) {
             defaultEnd = parsed;
         } else {
@@ -11608,6 +11614,7 @@ function openSuperadminExpirationModal(userId, userName, currentExp, isPaid) {
         openModal('modal-superadmin-set-expiration');
     } else if (modal) {
         modal.classList.remove('hide');
+        modal.style.setProperty('display', 'flex', 'important');
     }
 }
 window.openSuperadminExpirationModal = openSuperadminExpirationModal;
