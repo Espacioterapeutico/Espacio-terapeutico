@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Local CSS Link -->
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_v or '223' }}">
     <!-- FullCalendar v6 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/es.global.min.js"></script>
@@ -823,20 +823,14 @@
                 <p id="fast-booking-therapist-name" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Cargando terapeuta...</p>
             
             <!-- Banner de Zona Horaria Interactiva Reestructurado -->
-            <div id="fast-tz-banner" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #38bdf8; padding: 1.1rem 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 14px rgba(56, 189, 248, 0.15); display: flex; flex-direction: column; gap: 0.75rem;">
+            <div id="fast-tz-banner" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #38bdf8; padding: 1rem 1.15rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 14px rgba(56, 189, 248, 0.12); display: flex; flex-direction: column; gap: 0.6rem;">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
-                    <span style="font-size: 0.98rem; font-weight: 800; color: #0369a1; display: inline-flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.95rem; font-weight: 800; color: #0369a1; display: inline-flex; align-items: center; gap: 6px;">
                         📍 ¿Desde dónde agendas tu cita?
-                    </span>
-                    <span style="font-size: 0.75rem; font-weight: 700; color: #0284c7; background: #ffffff; padding: 2px 10px; border-radius: 12px; border: 1px solid #7dd3fc;">
-                        ✏️ Modificable
                     </span>
                 </div>
 
                 <div>
-                    <label for="fast-tz-select" style="display: block; font-size: 0.85rem; font-weight: 700; color: #0c4a6e; margin-bottom: 0.35rem;">
-                        Tu Zona Horaria / País Actual *
-                    </label>
                     <select id="fast-tz-select" onchange="onFastTimeZoneChange()" style="width: 100%; background: #ffffff; border: 2px solid #0284c7; border-radius: 8px; padding: 0.65rem 0.85rem; font-weight: 800; color: #0369a1; font-size: 0.95rem; cursor: pointer; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12); transition: all 0.2s;">
                         <option value="America/Caracas">🇻🇪 Venezuela (GMT-4 / Hora del Terapeuta)</option>
                         <option value="America/Bogota">🇨🇴 Colombia (GMT-5)</option>
@@ -850,15 +844,11 @@
                         <option value="Europe/Madrid">🇪🇸 España / Europa (GMT+2)</option>
                         <option value="Europe/Lisbon">🇵🇹 Portugal (GMT+1)</option>
                         <option value="America/Santo_Domingo">🇩🇴 Rep. Dominicana (GMT-4)</option>
-                        <option value="America/Guayaquil">🇪🇨 Ecuador (GMT-5)</option>
+                        <option value="America/Guayaquil">🇪C Ecuador (GMT-5)</option>
                         <option value="America/Panama">🇵🇦 Panamá (GMT-5)</option>
                         <option value="America/Costa_Rica">🇨🇷 Costa Rica (GMT-6)</option>
                         <option value="America/Montevideo">🇺🇾 Uruguay (GMT-3)</option>
                     </select>
-                </div>
-
-                <div id="fast-tz-info-text" style="font-size: 0.8rem; color: #0369a1; font-weight: 600; line-height: 1.35; background: rgba(255,255,255,0.6); padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #0284c7;">
-                    💡 <strong>¡Evita confusiones!</strong> Selecciona tu país arriba. El calendario convertirá automáticamente las horas disponibles del terapeuta a tu horario local.
                 </div>
             </div>
             </div>
