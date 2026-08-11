@@ -2033,59 +2033,26 @@ async function loadPatientPortalData(patientId) {
         }
         
         if (data.compartido) {
-            const lastSumEl = document.getElementById('pat-last-session-summary');
-            if (lastSumEl) {
-                lastSumEl.textContent = data.compartido.resumen_sesion || 'Aún no se ha registrado un resumen de tu última sesión.';
-            }
-            document.getElementById('pat-next-topics').textContent = data.compartido.temas_proxima_sesion || 'Aún no se han definido temas para la próxima sesión.';
-            
-            const tasksList = document.getElementById('pat-tasks-list');
-            tasksList.innerHTML = '';
-            
-            const tasksString = data.compartido.tareas_asignadas || '';
-            const tasks = tasksString.split('\n').map(t => t.trim()).filter(t => t !== '');
-            
-            if (tasks.length > 0) {
-                tasks.forEach((taskText, idx) => {
-                    const item = document.createElement('div');
-                    item.className = 'pat-task-item';
-                    
-                    const storageKey = `task_checked_${patientId}_${idx}`;
-                    const isChecked = localStorage.getItem(storageKey) === 'true';
-                    if (isChecked) item.classList.add('completed');
-                    
-                    item.innerHTML = `
-                        <input type="checkbox" id="pat-task-${idx}" ${isChecked ? 'checked' : ''} onchange="togglePatientTask(${patientId}, ${idx}, this)">
-                        <label for="pat-task-${idx}" class="pat-task-text">${taskText}</label>
-                    `;
-                    tasksList.appendChild(item);
-                });
-            } else {
-                tasksList.innerHTML = '<p class="text-muted">No tienes tareas asignadas pendientes.</p>';
-            }
-            
-            const resList = document.getElementById('pat-resources-list');
-            resList.innerHTML = '';
-            const resString = data.compartido.recursos_entregados || '';
-            const resources = resString.split('\n').map(r => r.trim()).filter(r => r !== '');
-            
-            if (resources.length > 0) {
-                resources.forEach(resText => {
-                    const link = document.createElement('a');
-                    const urlMatch = resText.match(/https?:\/\/[^\s]+/);
-                    link.href = urlMatch ? urlMatch[0] : '#';
-                    link.target = '_blank';
-                    link.className = 'btn btn-secondary text-sm flex items-center gap-2';
-                    link.style.width = '100%';
-                    link.innerHTML = `
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                        <span>${resText}</span>
-                    `;
-                    resList.appendChild(link);
-                });
-            } else {
-                resList.innerHTML = '<p class="text-muted text-sm">No se han adjuntado recursos en la última sesión.</p>';
-            }
+            renderPatientLastSessionDetails(data.compartido);
+        } else {
+            // Intentar cargar la última sesión si data.compartido no trajo registros directos
+            fetch('/api/patient/sessions')
+                .then(r => r.json())
+                .then(sessions => {
+                    if (sessions && sessions.length > 0) {
+                        const lastS = sessions[0];
+                        renderPatientLastSessionDetails({
+                            resumen_sesion: lastS.resumen_paciente || '',
+                            temas_proxima_sesion: lastS.anotaciones_proxima || '',
+                            tareas_asignadas: lastS.tareas_asignadas || '',
+                            recursos_entregados: lastS.recursos_entregados || '',
+                            archivo_adjunto: lastS.archivo_adjunto || ''
+                        });
+                    } else {
+                        renderPatientLastSessionDetails({});
+                    }
+                })
+                .catch(() => renderPatientLastSessionDetails({}));
         }
         
         if (data.finanzas) {
@@ -10610,8 +10577,116 @@ async function handlePatientConfirmAppointment(apptId) {
             if (patientId) loadPatientPortalData(patientId);
         }
     } catch (err) {
-        console.error("Error al confirmar cita:", err);
-        alert("Error de conexión al intentar confirmar la cita.");
+function renderPatientLastSessionDetails(compartido) {
+    if (!compartido) compartido = {};
+
+    const summaryWrapper = document.getElementById('pat-sec-summary-wrapper');
+    const topicsWrapper = document.getElementById('pat-sec-next-topics-wrapper');
+    const tasksWrapper = document.getElementById('pat-sec-tasks-wrapper');
+    const resourcesWrapper = document.getElementById('pat-sec-resources-wrapper');
+
+    const lastSumEl = document.getElementById('pat-last-session-summary');
+    const nextTopicsEl = document.getElementById('pat-next-topics');
+    const tasksListEl = document.getElementById('pat-tasks-list');
+    const resourcesListEl = document.getElementById('pat-resources-list');
+
+    // 1. Resumen de la Última Sesión
+    const resumen = (compartido.resumen_sesion || '').trim();
+    const hasResumen = resumen && 
+                       resumen !== 'Sin resumen registrado para esta sesión.' && 
+                       resumen !== 'Aún no se ha registrado un resumen de tu última sesión.';
+
+    if (hasResumen) {
+        if (lastSumEl) lastSumEl.textContent = resumen;
+        if (summaryWrapper) summaryWrapper.style.display = 'block';
+    } else {
+        if (summaryWrapper) summaryWrapper.style.display = 'none';
+    }
+
+    // 2. Temas a trabajar en la próxima sesión
+    const temas = (compartido.temas_proxima_sesion || '').trim();
+    const hasTemas = temas && temas !== 'Aún no se han definido temas para la próxima sesión.';
+
+    if (hasTemas) {
+        if (nextTopicsEl) nextTopicsEl.textContent = temas;
+        if (topicsWrapper) topicsWrapper.style.display = 'block';
+    } else {
+        if (topicsWrapper) topicsWrapper.style.display = 'none';
+    }
+
+    // 3. Mis Compromisos (Tareas)
+    const tasksString = (compartido.tareas_asignadas || '').trim();
+    const tasks = tasksString.split('\n').map(t => t.trim()).filter(t => t !== '');
+    if (tasks.length > 0) {
+        if (tasksListEl) {
+            tasksListEl.innerHTML = '';
+            tasks.forEach((taskText, idx) => {
+                const item = document.createElement('div');
+                item.className = 'pat-task-item';
+                const storageKey = `task_checked_${idx}`;
+                const isChecked = localStorage.getItem(storageKey) === 'true';
+                if (isChecked) item.classList.add('completed');
+                
+                item.innerHTML = `
+                    <input type="checkbox" id="pat-task-${idx}" ${isChecked ? 'checked' : ''} onchange="togglePatientTask(${idx}, this)">
+                    <label for="pat-task-${idx}" class="pat-task-text">${taskText}</label>
+                `;
+                tasksListEl.appendChild(item);
+            });
+        }
+        if (tasksWrapper) tasksWrapper.style.display = 'block';
+    } else {
+        if (tasksWrapper) tasksWrapper.style.display = 'none';
+    }
+
+    // 4. Recursos entregados y Archivo Adjunto
+    const resString = (compartido.recursos_entregados || '').trim();
+    const archivoAdjunto = (compartido.archivo_adjunto || '').trim();
+    const resources = resString.split('\n').map(r => r.trim()).filter(r => r !== '');
+
+    if (resources.length > 0 || archivoAdjunto) {
+        if (resourcesListEl) {
+            resourcesListEl.innerHTML = '';
+            resources.forEach(resText => {
+                const link = document.createElement('a');
+                const urlMatch = resText.match(/https?:\/\/[^\s]+/);
+                link.href = urlMatch ? urlMatch[0] : '#';
+                link.target = '_blank';
+                link.className = 'btn btn-secondary text-sm flex items-center gap-2';
+                link.style.width = '100%';
+                link.innerHTML = `
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    <span>${resText}</span>
+                `;
+                resourcesListEl.appendChild(link);
+            });
+
+            if (archivoAdjunto) {
+                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(archivoAdjunto);
+                const attDiv = document.createElement('div');
+                attDiv.style.marginTop = '0.5rem';
+                attDiv.innerHTML = `
+                    <a href="#" onclick="openFilePreview('${archivoAdjunto}'); return false;" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); font-weight: 600; width: 100%;">
+                        <svg style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        ${isImg ? '📷 Ver Imagen Adjunta de la Sesión' : '📄 Descargar Archivo Adjunto de la Sesión'}
+                    </a>
+                `;
+                resourcesListEl.appendChild(attDiv);
+            }
+        }
+        if (resourcesWrapper) resourcesWrapper.style.display = 'block';
+    } else {
+        if (resourcesWrapper) resourcesWrapper.style.display = 'none';
+    }
+}
+
+function onPatientBookingTimezoneChange() {
+    const tzSelect = document.getElementById('pat-booking-timezone');
+    if (tzSelect) {
+        localStorage.setItem('patient_user_timezone', tzSelect.value);
+        if (typeof selectedBookingDate !== 'undefined' && selectedBookingDate) {
+            renderBookingSlots(selectedBookingDate);
+        }
     }
 }
 

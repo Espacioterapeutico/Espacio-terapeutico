@@ -5478,12 +5478,28 @@ def get_patient_portal_data_dict(patient_id):
     """, (patient_id,))
     deudas_detalle = [dict(r) for r in cursor.fetchall()]
             
+    # Obtener todos los IDs de paciente pertenecientes a la misma persona (por ID, cédula o teléfono)
+    pat_cedula_clean = clean_digits_only(patient["cedula"])
+    pat_telefono_clean = clean_digits_only(patient["telefono"])
+
     cursor.execute("""
-        SELECT resumen_paciente, anotaciones_proxima, tareas_asignadas, recursos_entregados
+        SELECT id FROM pacientes
+        WHERE id = ?
+           OR (REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '') = ? AND ? != '')
+           OR (telefono != '' AND ? != '' AND REPLACE(REPLACE(REPLACE(telefono, '-', ''), ' ', ''), '+', '') LIKE ?)
+    """, (patient_id, pat_cedula_clean, pat_cedula_clean, pat_telefono_clean, f"%{pat_telefono_clean}%"))
+    all_pat_ids = [r[0] for r in cursor.fetchall()]
+    if not all_pat_ids:
+        all_pat_ids = [patient_id]
+
+    placeholders = ','.join('?' for _ in all_pat_ids)
+
+    cursor.execute(f"""
+        SELECT resumen_paciente, anotaciones_proxima, tareas_asignadas, recursos_entregados, archivo_adjunto
         FROM sesiones
-        WHERE paciente_id = ?
+        WHERE paciente_id IN ({placeholders})
         ORDER BY fecha DESC, id DESC LIMIT 1
-    """, (patient_id,))
+    """, all_pat_ids)
     last_session = cursor.fetchone()
     
     res_pac_dec = decrypt_clinical_text(last_session["resumen_paciente"]) if (last_session and last_session["resumen_paciente"]) else ""
@@ -5492,8 +5508,9 @@ def get_patient_portal_data_dict(patient_id):
     compartido = {
         "resumen_sesion": res_pac_dec,
         "temas_proxima_sesion": temas_prox_dec,
-        "tareas_asignadas": last_session["tareas_asignadas"] if last_session else "",
-        "recursos_entregados": last_session["recursos_entregados"] if last_session else ""
+        "tareas_asignadas": last_session["tareas_asignadas"] if last_session and last_session["tareas_asignadas"] else "",
+        "recursos_entregados": last_session["recursos_entregados"] if last_session and last_session["recursos_entregados"] else "",
+        "archivo_adjunto": last_session["archivo_adjunto"] if last_session and last_session["archivo_adjunto"] else ""
     }
     
     from datetime import datetime, timedelta
@@ -5526,22 +5543,6 @@ def get_patient_portal_data_dict(patient_id):
                             modalidades = m_list
                 except:
                     pass
-
-    # Obtener todos los IDs de paciente pertenecientes a la misma persona (por ID, cédula o teléfono)
-    pat_cedula_clean = clean_digits_only(patient["cedula"])
-    pat_telefono_clean = clean_digits_only(patient["telefono"])
-
-    cursor.execute("""
-        SELECT id FROM pacientes
-        WHERE id = ?
-           OR (REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '') = ? AND ? != '')
-           OR (telefono != '' AND ? != '' AND REPLACE(REPLACE(REPLACE(telefono, '-', ''), ' ', ''), '+', '') LIKE ?)
-    """, (patient_id, pat_cedula_clean, pat_cedula_clean, pat_telefono_clean, f"%{pat_telefono_clean}%"))
-    all_pat_ids = [r[0] for r in cursor.fetchall()]
-    if not all_pat_ids:
-        all_pat_ids = [patient_id]
-
-    placeholders = ','.join('?' for _ in all_pat_ids)
 
     # Citas agendadas del paciente que NO hayan sido evolucionadas (Realizada) ni canceladas
     cursor.execute(f"""
