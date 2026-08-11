@@ -8886,7 +8886,8 @@ async function loadSuperadminData() {
         
         renderSuperadminTherapistsTable();
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">Error al cargar datos.</td></tr>';
+        console.error("Error en loadSuperadminData:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">⚠️ Error al renderizar la tabla: ${err.message || 'Error desconocido'}.</td></tr>`;
     }
 }
 
@@ -9055,6 +9056,11 @@ function renderSuperadminTherapistsTable() {
         tbody.appendChild(trMain);
 
         // Fila Secundaria: Panel Integrado de Suscripción & Permisos
+        const expStatusText = p.suscripcion_paga === 1 
+            ? `🟢 Suscripción Activa (${daysLeft} días restantes)`
+            : (diffHours > 0 
+                ? `⏳ Período de Prueba (${daysLeft} días restantes)` 
+                : `🔴 Sin Suscripción Activa / Expirada`);
         const defaultExpDate = p.fecha_expiracion_prueba ? p.fecha_expiracion_prueba.split('T')[0] : new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
         
         const trAccordion = document.createElement('tr');
