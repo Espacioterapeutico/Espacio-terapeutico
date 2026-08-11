@@ -1781,6 +1781,208 @@ def send_welcome_credentials_email(user_type, email, full_name, username, raw_pa
     """
     send_email_async(email, subject, html_content)
 
+
+def send_subscription_renewed_email(user_email, full_name, new_exp_str):
+    """
+    Envía un correo cuando la suscripción es activada o renovada por el superadministrador.
+    """
+    if not user_email or '@' not in str(user_email):
+        return
+
+    subject = f"🎉 ¡Tu Suscripción ha sido Activada/Renovada! - Espacio Terapéutico"
+    site_url = "https://www.espacioterapeutico.net"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #334155; }}
+            .card {{ max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(15,23,42,0.08); border: 1px solid #e2e8f0; }}
+            .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px 24px; text-align: center; color: #ffffff; }}
+            .header h1 {{ margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
+            .header p {{ margin: 6px 0 0 0; opacity: 0.95; font-size: 14px; font-weight: 600; }}
+            .content {{ padding: 32px 28px; }}
+            .greeting {{ font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }}
+            .intro {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
+            .box {{ background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }}
+            .box-title {{ font-size: 13px; font-weight: 800; text-transform: uppercase; color: #166534; letter-spacing: 0.5px; margin-bottom: 10px; }}
+            .field {{ margin-bottom: 8px; font-size: 14px; color: #166534; }}
+            .field strong {{ color: #0f172a; font-weight: 700; }}
+            .btn-wrap {{ text-align: center; margin: 30px 0 10px 0; }}
+            .btn {{ background: #10b981; color: #ffffff !important; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }}
+            .footer {{ background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">
+                <h1>🌿 Espacio Terapéutico</h1>
+                <p>Suscripción Activada Exitosamente</p>
+            </div>
+            <div class="content">
+                <div class="greeting">¡Hola, {full_name}! 👋</div>
+                <div class="intro">
+                    Nos complace informarte que tu suscripción en <strong>Espacio Terapéutico</strong> ha sido activada/renovada exitosamente. Tienes acceso completo a todas tus herramientas de consultorio, pacientes, evoluciones, agenda y finanzas.
+                </div>
+                
+                <div class="box">
+                    <div class="box-title">📋 Detalles de tu Membresía</div>
+                    <div class="field"><strong>Estado:</strong> 🟢 Suscripción Activa / Solvente</div>
+                    <div class="field"><strong>Válida hasta el:</strong> <span style="font-weight:700; background:#dcfce7; padding:2px 8px; border-radius:4px; color:#15803d;">{new_exp_str}</span></div>
+                </div>
+
+                <div class="btn-wrap">
+                    <a href="{site_url}" class="btn">🌿 Ingresar a Mi Consultorio</a>
+                </div>
+            </div>
+            <div class="footer">
+                Espacio Terapéutico — Tu plataforma de gestión clínica.<br>
+                Si tienes preguntas sobre tu plan o pagos, puedes escribirnos a soporte.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    send_email_async(user_email, subject, html_content)
+
+
+def send_subscription_expiring_soon_email(user_email, full_name, days_left, exp_date_str):
+    """
+    Envía un correo recordatorio cuando la membresía está por vencer en 3 días o menos.
+    """
+    if not user_email or '@' not in str(user_email):
+        return
+
+    subject = f"⏳ Recordatorio: Tu membresía en Espacio Terapéutico vence en {days_left} días"
+    site_url = "https://www.espacioterapeutico.net"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #334155; }}
+            .card {{ max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(15,23,42,0.08); border: 1px solid #e2e8f0; }}
+            .header {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 32px 24px; text-align: center; color: #ffffff; }}
+            .header h1 {{ margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
+            .header p {{ margin: 6px 0 0 0; opacity: 0.95; font-size: 14px; font-weight: 600; }}
+            .content {{ padding: 32px 28px; }}
+            .greeting {{ font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }}
+            .intro {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
+            .box {{ background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 20px; margin-bottom: 20px; }}
+            .box-title {{ font-size: 13px; font-weight: 800; text-transform: uppercase; color: #b45309; letter-spacing: 0.5px; margin-bottom: 10px; }}
+            .field {{ margin-bottom: 8px; font-size: 14px; color: #92400e; }}
+            .field strong {{ color: #0f172a; font-weight: 700; }}
+            .btn-wrap {{ text-align: center; margin: 30px 0 10px 0; }}
+            .btn {{ background: #0d9488; color: #ffffff !important; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(13,148,136,0.3); }}
+            .footer {{ background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">
+                <h1>🌿 Espacio Terapéutico</h1>
+                <p>Aviso de Próximo Vencimiento de Membresía</p>
+            </div>
+            <div class="content">
+                <div class="greeting">¡Hola, {full_name}! 👋</div>
+                <div class="intro">
+                    Te escribimos para recordarte que tu membresía / período de prueba en <strong>Espacio Terapéutico</strong> está por vencer en <strong>{days_left} días</strong> ({exp_date_str}).
+                </div>
+                
+                <div class="box">
+                    <div class="box-title">⏳ Estado de tu Membresía</div>
+                    <div class="field"><strong>Fecha de Vencimiento:</strong> <span style="font-weight:700; background:#fef3c7; padding:2px 8px; border-radius:4px; color:#b45309;">{exp_date_str}</span></div>
+                    <div class="field"><strong>Días Restantes:</strong> {days_left} días</div>
+                </div>
+
+                <div class="intro" style="margin-top: 16px;">
+                    Para mantener tu acceso ininterrumpido a tus historias clínicas, agenda y herramientas, comunícate con la administración para renovar tu plan.
+                </div>
+
+                <div class="btn-wrap">
+                    <a href="{site_url}" class="btn">🌿 Ingresar a Mi Consultorio</a>
+                </div>
+            </div>
+            <div class="footer">
+                Espacio Terapéutico — Tu plataforma de gestión clínica.<br>
+                Si ya realizaste tu pago o renovación, por favor ignora este mensaje.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    send_email_async(user_email, subject, html_content)
+
+
+def auto_check_subscription_expiration_reminders(db):
+    """
+    Verifica automáticamente psicólogos cuya membresía venza en 3 días o menos
+    y les envía una notificación por correo (máximo una vez cada 6 horas).
+    """
+    try:
+        ensure_usuarios_columns(db)
+        cursor = db.cursor()
+        
+        # Verificar última ejecución en tabla configuracion (máximo 1 vez cada 6 horas)
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'last_sub_exp_check'")
+        row = cursor.fetchone()
+        now_dt = datetime.datetime.now()
+        
+        if row and row['valor']:
+            try:
+                last_run = datetime.datetime.fromisoformat(row['valor'])
+                if (now_dt - last_run).total_seconds() < 21600:
+                    return
+            except Exception:
+                pass
+
+        cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('last_sub_exp_check', ?)", (now_dt.isoformat(),))
+        db.commit()
+
+        cursor.execute("""
+            SELECT id, nombres, apellidos, username, email, fecha_expiracion_prueba, recordatorio_expiracion_enviado
+            FROM usuarios 
+            WHERE role != 'superadmin' AND fecha_expiracion_prueba IS NOT NULL AND fecha_expiracion_prueba != ''
+        """)
+        users = cursor.fetchall()
+        
+        for u in users:
+            u_dict = dict(u)
+            user_id = u_dict['id']
+            email = u_dict.get('email') or ''
+            exp_str = u_dict.get('fecha_expiracion_prueba') or ''
+            already_sent_exp = u_dict.get('recordatorio_expiracion_enviado') or ''
+            
+            if not email or '@' not in email or not exp_str:
+                continue
+
+            try:
+                if 'T' in exp_str:
+                    exp_date = datetime.datetime.fromisoformat(exp_str)
+                else:
+                    exp_date = datetime.datetime.strptime(exp_str[:10], '%Y-%m-%d')
+
+                diff = exp_date - now_dt
+                days_left = math.ceil(diff.total_seconds() / 86400)
+                
+                # Si faltan 3 días o menos (1 <= days_left <= 3) y no se ha enviado recordatorio para esta fecha
+                if 1 <= days_left <= 3 and already_sent_exp != exp_str[:10]:
+                    full_name = f"{u_dict.get('nombres') or ''} {u_dict.get('apellidos') or ''}".strip() or u_dict.get('username')
+                    exp_formatted = exp_date.strftime('%d/%m/%Y')
+                    send_subscription_expiring_soon_email(email, full_name, days_left, exp_formatted)
+                    
+                    cursor.execute("UPDATE usuarios SET recordatorio_expiracion_enviado = ? WHERE id = ?", (exp_str[:10], user_id))
+                    db.commit()
+            except Exception as ex_u:
+                print(f"Error procesando recordatorio de suscripción para usuario {user_id}:", ex_u)
+    except Exception as e:
+        print("Error en auto_check_subscription_expiration_reminders:", e)
+
+
 def send_hourly_patient_tool_reminders(db=None):
     """
     Revisa la hora local (8:00 PM / 20:00) de cada paciente que tenga herramientas
@@ -1891,6 +2093,7 @@ def before_request_cleanup():
     auto_send_confirmation_requests(db)
     auto_check_patient_birthdays(db)
     send_hourly_patient_tool_reminders(db)
+    auto_check_subscription_expiration_reminders(db)
 
 def auto_settle_patient_debts(db, patient_id):
     if not patient_id:
@@ -2817,7 +3020,8 @@ def ensure_usuarios_columns(db=None):
         ('modalidades_json', 'TEXT'),
         ('whatsapp_publico', 'TEXT'),
         ('email_publico', 'TEXT'),
-        ('redes_sociales_json', 'TEXT')
+        ('redes_sociales_json', 'TEXT'),
+        ('recordatorio_expiracion_enviado', 'TEXT DEFAULT \'\'')
     ]
     for col_name, col_type in columns:
         try:
@@ -3046,6 +3250,24 @@ def superadmin_set_therapist_expiration(user_id):
         WHERE id = ?
     """, (fecha_exp, suscripcion_paga, user_id))
     db.commit()
+
+    # Enviar correo de notificación de activación/renovación si suscripción está activa
+    if suscripcion_paga == 1 or fecha_exp:
+        try:
+            cursor.execute("SELECT nombres, apellidos, username, email FROM usuarios WHERE id = ?", (user_id,))
+            usr = cursor.fetchone()
+            if usr and usr['email']:
+                u_dict = dict(usr)
+                full_name = f"{u_dict.get('nombres') or ''} {u_dict.get('apellidos') or ''}".strip() or u_dict.get('username')
+                try:
+                    exp_dt = datetime.datetime.strptime(str(fecha_exp)[:10], '%Y-%m-%d')
+                    exp_formatted = exp_dt.strftime('%d/%m/%Y')
+                except Exception:
+                    exp_formatted = str(fecha_exp)[:10]
+                send_subscription_renewed_email(u_dict['email'], full_name, exp_formatted)
+        except Exception as ex_mail:
+            print("[SMTP] Error enviando correo de renovación:", ex_mail)
+
     return jsonify({'success': 'Fecha de expiración / renovación actualizada con éxito.'})
 
 @app.route('/api/superadmin/therapists/<int:user_id>/save-settings', methods=['POST'])
