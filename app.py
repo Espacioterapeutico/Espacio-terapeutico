@@ -3068,6 +3068,8 @@ def superadmin_get_therapists():
         cursor = db.cursor()
         cursor.execute("""
             SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, 
+                   COALESCE(email, '') as email, COALESCE(email_publico, '') as email_publico, COALESCE(cedula, '') as cedula,
+                   COALESCE(whatsapp_publico, '') as whatsapp_publico, COALESCE(descripcion_biografia, '') as descripcion_biografia,
                    COALESCE(activo, 1) as activo, fecha_registro, fecha_expiracion_prueba, COALESCE(suscripcion_paga, 0) as suscripcion_paga,
                    COALESCE(bloqueo_registro, 0) as bloqueo_registro, COALESCE(bloqueo_evoluciones, 0) as bloqueo_evoluciones, 
                    COALESCE(bloqueo_finanzas, 0) as bloqueo_finanzas, COALESCE(bloqueo_agenda, 0) as bloqueo_agenda, 

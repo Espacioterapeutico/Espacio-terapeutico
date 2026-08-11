@@ -9283,7 +9283,10 @@ async function saveInlineTherapistProfile(userId) {
         try { data = await res.json(); } catch(e) {}
         if (res.ok) {
             alert("✅ Ficha del psicólogo actualizada con éxito.");
-            loadSuperadminData();
+            await loadSuperadminData();
+            setTimeout(() => {
+                toggleTherapistAccordion(userId, 'ficha');
+            }, 100);
         } else {
             alert("Error: " + (data.error || `No se pudo actualizar la ficha (HTTP ${res.status}). Verifica 'git pull' y 'Reload' en PythonAnywhere.`));
         }
