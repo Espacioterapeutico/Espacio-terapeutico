@@ -3236,10 +3236,14 @@ def superadmin_set_therapist_expiration(user_id):
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
         
     data = request.json or {}
-    fecha_exp = data.get('fecha_expiracion')
+    fecha_exp = data.get('fecha_expiracion') or data.get('fecha_expiracion_prueba')
     suscripcion_paga = 1 if data.get('suscripcion_paga') else 0
     
-    if not fecha_exp:
+    if suscripcion_paga == 0:
+        # Si se desactiva, forzar fecha de expiración a ayer a las 23:59:59
+        yesterday_dt = datetime.datetime.now() - datetime.timedelta(days=1)
+        fecha_exp = yesterday_dt.strftime('%Y-%m-%d 23:59:59')
+    elif not fecha_exp:
         return jsonify({'error': 'Fecha de expiración/renovación es requerida.'}), 400
         
     db = get_db()
@@ -3259,8 +3263,8 @@ def superadmin_set_therapist_expiration(user_id):
     db.commit()
 
     email_status_msg = ""
-    # Enviar correo de notificación de activación/renovación si suscripción está activa
-    if suscripcion_paga == 1 or fecha_exp:
+    # Enviar correo de notificación de activación/renovación solo si la suscripción se marca como activa
+    if suscripcion_paga == 1:
         try:
             cursor.execute("SELECT nombres, apellidos, username, email, email_publico FROM usuarios WHERE id = ?", (user_id,))
             usr = cursor.fetchone()
@@ -3282,7 +3286,8 @@ def superadmin_set_therapist_expiration(user_id):
             print("[SMTP] Error enviando correo de renovación:", ex_mail)
             email_status_msg = f"⚠️ Ocurrió una duda al enviar correo: {ex_mail}"
 
-    return jsonify({'success': 'Fecha de expiración / renovación actualizada con éxito.', 'email_status': email_status_msg})
+    res_text = '⛔ Suscripción desactivada inmediatamente.' if suscripcion_paga == 0 else 'Fecha de expiración / renovación actualizada con éxito.'
+    return jsonify({'success': res_text, 'email_status': email_status_msg})
 
 @app.route('/api/superadmin/therapists/<int:user_id>/update-profile', methods=['POST'])
 @login_required

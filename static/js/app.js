@@ -9273,18 +9273,22 @@ window.saveTherapistProfile = saveTherapistProfile;
 async function deactivateTherapistSubscription(userId) {
     if (!confirm("¿Deseas suspender inmediatamente la suscripción de este psicólogo?")) return;
     try {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        
         const res = await fetch(`/api/superadmin/therapists/${userId}/set-expiration`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                fecha_expiracion_prueba: todayStr,
+                fecha_expiracion: yesterdayStr,
+                fecha_expiracion_prueba: yesterdayStr,
                 suscripcion_paga: 0
             })
         });
         const data = await res.json();
         if (res.ok) {
-            alert(data.success || "Suscripción desactivada.");
+            alert(data.success || "⛔ Suscripción desactivada inmediatamente.");
             loadSuperadminData();
         } else {
             alert("Error: " + (data.error || "No se pudo desactivar la suscripción."));
