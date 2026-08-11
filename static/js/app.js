@@ -1435,15 +1435,20 @@ async function fetchAvailableHours(dateStr) {
             });
         }
         
-        // Ordenar las horas locales cronológicamente
-        localSlots.sort((a, b) => a.displayTime.localeCompare(b.displayTime));
+        // Ordenar las horas cronológicamente
+        localSlots.sort((a, b) => a.valHora.localeCompare(b.valHora));
         
+        const targetTz = getPatientBookingTimezone();
+
         if (localSlots.length > 0) {
             localSlots.forEach(slot => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'btn-slot-hour';
-                btn.textContent = format12h(slot.displayTime);
+                
+                const converted = convertTimeFromVETToZone(slot.valFecha, slot.valHora, targetTz);
+                const timeFormatted = format12h(converted.timeStr);
+                btn.textContent = `${timeFormatted}${converted.dayOffsetStr}`;
                 
                 btn.style.padding = '0.5rem 1rem';
                 btn.style.border = '1.5px solid #10b981';
