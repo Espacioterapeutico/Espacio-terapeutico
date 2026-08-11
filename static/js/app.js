@@ -10577,6 +10577,11 @@ async function handlePatientConfirmAppointment(apptId) {
             if (patientId) loadPatientPortalData(patientId);
         }
     } catch (err) {
+        console.error("Error al confirmar cita:", err);
+        alert("Error de conexión al intentar confirmar la cita.");
+    }
+}
+
 function renderPatientLastSessionDetails(compartido) {
     if (!compartido) compartido = {};
 
