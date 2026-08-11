@@ -3022,6 +3022,7 @@ def ensure_usuarios_columns(db=None):
         ('bloqueo_herramientas', 'INTEGER DEFAULT 0'),
         ('bloqueo_confirmaciones', 'INTEGER DEFAULT 0'),
         ('cedula', 'TEXT DEFAULT \'\''),
+        ('email', 'TEXT DEFAULT \'\''),
         ('nomenclatura', 'TEXT'),
         ('descripcion_biografia', 'TEXT'),
         ('modalidades_json', 'TEXT'),
@@ -3066,10 +3067,18 @@ def superadmin_get_therapists():
     ensure_usuarios_columns(db)
     try:
         cursor = db.cursor()
-        cursor.execute("""
+        cursor.execute("PRAGMA table_info(usuarios)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+
+        email_expr = "COALESCE(email, '') as email" if 'email' in existing_cols else "'' as email"
+        email_pub_expr = "COALESCE(email_publico, '') as email_publico" if 'email_publico' in existing_cols else "'' as email_publico"
+        cedula_expr = "COALESCE(cedula, '') as cedula" if 'cedula' in existing_cols else "'' as cedula"
+        whatsapp_expr = "COALESCE(whatsapp_publico, '') as whatsapp_publico" if 'whatsapp_publico' in existing_cols else "'' as whatsapp_publico"
+        bio_expr = "COALESCE(descripcion_biografia, '') as descripcion_biografia" if 'descripcion_biografia' in existing_cols else "'' as descripcion_biografia"
+
+        cursor.execute(f"""
             SELECT id, username, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, 
-                   COALESCE(email, '') as email, COALESCE(email_publico, '') as email_publico, COALESCE(cedula, '') as cedula,
-                   COALESCE(whatsapp_publico, '') as whatsapp_publico, COALESCE(descripcion_biografia, '') as descripcion_biografia,
+                   {email_expr}, {email_pub_expr}, {cedula_expr}, {whatsapp_expr}, {bio_expr},
                    COALESCE(activo, 1) as activo, fecha_registro, fecha_expiracion_prueba, COALESCE(suscripcion_paga, 0) as suscripcion_paga,
                    COALESCE(bloqueo_registro, 0) as bloqueo_registro, COALESCE(bloqueo_evoluciones, 0) as bloqueo_evoluciones, 
                    COALESCE(bloqueo_finanzas, 0) as bloqueo_finanzas, COALESCE(bloqueo_agenda, 0) as bloqueo_agenda, 
@@ -3085,6 +3094,8 @@ def superadmin_get_therapists():
         return jsonify([dict(r) for r in rows])
     except Exception as e:
         print(f"Error en superadmin_get_therapists: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Error al obtener lista de psicólogos: {str(e)}'}), 500
 
 @app.route('/api/superadmin/stats', methods=['GET'])
