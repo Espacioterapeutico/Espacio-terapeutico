@@ -133,25 +133,50 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
                 if (!msg.message || msg.key.fromMe) continue;
 
                 const remoteJid = msg.key.remoteJid;
-                if (!remoteJid || !remoteJid.endsWith('@s.whatsapp.net')) continue;
+                if (!remoteJid || (!remoteJid.endsWith('@s.whatsapp.net') && !remoteJid.includes('@s.whatsapp.net'))) continue;
 
-                const phone = remoteJid.replace('@s.whatsapp.net', '');
-                const text = msg.message.conversation ||
-                             msg.message.extendedTextMessage?.text || '';
+                const phone = remoteJid.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
 
-                if (!text.trim()) continue;
+                // Desempaquetar cualquier tipo de mensaje (efímero, viewOnce, respuesta a botones, texto normal)
+                let innerMsg = msg.message.ephemeralMessage?.message ||
+                               msg.message.viewOnceMessage?.message ||
+                               msg.message.viewOnceMessageV2?.message ||
+                               msg.message;
+
+                const text = innerMsg.conversation ||
+                             innerMsg.extendedTextMessage?.text ||
+                             innerMsg.buttonsResponseMessage?.selectedButtonId ||
+                             innerMsg.buttonsResponseMessage?.selectedDisplayText ||
+                             innerMsg.listResponseMessage?.singleSelectReply?.selectedRowId ||
+                             innerMsg.templateButtonReplyMessage?.selectedId ||
+                             innerMsg.templateButtonReplyMessage?.selectedDisplayText ||
+                             innerMsg.interactiveResponseMessage?.body?.text ||
+                             '';
+
+                if (!text || !text.trim()) continue;
 
                 console.log(`📩 [User ${key}] Mensaje recibido de ${phone}: "${text}"`);
 
+                const payload = {
+                    user_id: parseInt(key, 10),
+                    phone: phone,
+                    text: text.trim(),
+                    pushName: msg.pushName || ''
+                };
+
                 try {
-                    await axios.post(FLASK_WEBHOOK_URL, {
-                        user_id: parseInt(key, 10),
-                        phone: phone,
-                        text: text,
-                        pushName: msg.pushName || ''
-                    }, { timeout: 5000 });
+                    await axios.post(FLASK_WEBHOOK_URL, payload, { timeout: 6000 });
                 } catch (err) {
-                    console.error(`[User ${key}] Error enviando Webhook a Flask:`, err.message);
+                    console.error(`[User ${key}] Error enviando Webhook a ${FLASK_WEBHOOK_URL}:`, err.message);
+                    if (FLASK_WEBHOOK_URL.includes('127.0.0.1') || FLASK_WEBHOOK_URL.includes('localhost')) {
+                        try {
+                            const prodUrl = 'https://espacioterapeutico.net/api/whatsapp/webhook';
+                            await axios.post(prodUrl, payload, { timeout: 6000 });
+                            console.log(`[User ${key}] Webhook enviado exitosamente a producción (${prodUrl})`);
+                        } catch (e2) {
+                            console.error(`[User ${key}] Error enviando fallback webhook a producción:`, e2.message);
+                        }
+                    }
                 }
             }
         });
