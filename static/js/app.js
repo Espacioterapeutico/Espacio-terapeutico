@@ -9036,17 +9036,17 @@ function renderSuperadminTherapistsTable() {
             </td>
             <td style="padding: 0.85rem 1rem; text-align: center; vertical-align: middle;">
                 <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: center; width: 100%; max-width: 220px; margin: 0 auto;">
-                    <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="toggleTherapistPermissionsRow(${p.id})">
+                    <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="toggleTherapistAccordion(${p.id}, 'sub')">
                         🚀 Activar / Opciones ▼
                     </button>
                     <div style="display: flex; gap: 0.25rem; width: 100%;">
-                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0284c7; background: #f0f9ff; color: #0369a1; border-radius: 6px;" onclick="openEditTherapistProfileModal(${p.id})">
+                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0284c7; background: #f0f9ff; color: #0369a1; border-radius: 6px;" onclick="toggleTherapistAccordion(${p.id}, 'ficha')">
                             📋 Ficha
                         </button>
                         <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px;" onclick="deactivateTherapistSubscription(${p.id})">
                             ⛔ Desactivar
                         </button>
-                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0d9488; background: #f0fdf4; color: #0f766e; border-radius: 6px;" onclick="toggleTherapistPermissionsRow(${p.id})">
+                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0d9488; background: #f0fdf4; color: #0f766e; border-radius: 6px;" onclick="toggleTherapistAccordion(${p.id}, 'perm')">
                             ⚙️ Permisos ▼
                         </button>
                         <button type="button" class="btn btn-sm" style="padding: 4px 6px; font-size: 0.72rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 6px; font-weight: 700;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">
@@ -9058,7 +9058,7 @@ function renderSuperadminTherapistsTable() {
         `;
         tbody.appendChild(trMain);
 
-        // Fila Secundaria: Panel Integrado de Suscripción & Permisos
+        // Fila Secundaria: Panel Integrado Acordeón (Ficha + Suscripción + Permisos)
         const expStatusText = p.suscripcion_paga === 1 
             ? `🟢 Suscripción Activa (${daysLeft} días restantes)`
             : (diffHours > 0 
@@ -9073,10 +9073,65 @@ function renderSuperadminTherapistsTable() {
         trAccordion.style.borderBottom = '2px solid #cbd5e1';
         trAccordion.innerHTML = `
             <td colspan="5" style="padding: 1rem 1.25rem;">
-                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 1.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
                     
-                    <!-- PANEL DE ACTIVACIÓN Y RENOVACIÓN DE SUSCRIPCIÓN -->
-                    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+                    <!-- SECCIÓN 1: FICHA / DATOS DEL PSICÓLOGO -->
+                    <div id="sec-ficha-${p.id}" style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 1.1rem; margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <div style="font-weight: 800; color: #0369a1; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                                <span>📋</span> Ficha / Datos del Perfil: ${fullName}
+                            </div>
+                            <span style="font-size: 0.75rem; color: #0284c7; font-weight: 600; background: #e0f2fe; padding: 0.25rem 0.6rem; border-radius: 6px;">
+                                Edita los datos de contacto y notificaciones
+                            </span>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Nombres</label>
+                                <input type="text" id="inline-nombres-${p.id}" class="form-control form-control-sm" value="${p.nombres || ''}" placeholder="Ej: María Sofía" style="border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Apellidos</label>
+                                <input type="text" id="inline-apellidos-${p.id}" class="form-control form-control-sm" value="${p.apellidos || ''}" placeholder="Ej: Rodríguez" style="border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Usuario (@)</label>
+                                <input type="text" id="inline-username-${p.id}" class="form-control form-control-sm" value="${p.username || ''}" placeholder="username" style="border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Cédula / Documento</label>
+                                <input type="text" id="inline-cedula-${p.id}" class="form-control form-control-sm" value="${p.cedula || ''}" placeholder="Ej: V-12345678" style="border-radius: 6px;">
+                            </div>
+                            <div style="grid-column: 1 / -1;">
+                                <label style="font-size: 0.78rem; font-weight: 800; color: #0d9488; display: block; margin-bottom: 0.25rem;">
+                                    📧 Correo Electrónico (Fundamental para notificaciones de suscripción y credenciales)
+                                </label>
+                                <input type="email" id="inline-email-${p.id}" class="form-control form-control-sm" value="${p.email || ''}" placeholder="ejemplo@correo.com" style="border-radius: 6px; border: 1.5px solid #0d9488; background: #ffffff;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Correo Público</label>
+                                <input type="email" id="inline-email-pub-${p.id}" class="form-control form-control-sm" value="${p.email_publico || ''}" placeholder="publico@correo.com" style="border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Teléfono / WhatsApp</label>
+                                <input type="text" id="inline-whatsapp-${p.id}" class="form-control form-control-sm" value="${p.whatsapp_publico || p.telefono || ''}" placeholder="+58 412..." style="border-radius: 6px;">
+                            </div>
+                            <div style="grid-column: 1 / -1;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Especialidad / Biografía</label>
+                                <textarea id="inline-bio-${p.id}" class="form-control form-control-sm" rows="2" placeholder="Especialidad o resumen..." style="border-radius: 6px;">${p.descripcion_biografia || ''}</textarea>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn btn-sm" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: none; font-weight: 700; border-radius: 8px; padding: 0.45rem 1.2rem; box-shadow: 0 2px 6px rgba(2,132,199,0.3);" onclick="saveInlineTherapistProfile(${p.id})">
+                                💾 Guardar Cambios de la Ficha
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN 2: ACTIVACIÓN Y RENOVACIÓN DE SUSCRIPCIÓN -->
+                    <div id="sec-sub-${p.id}" style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 1.1rem; margin-bottom: 1.25rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
                             <div style="font-weight: 800; color: #166534; font-size: 0.92rem; display: flex; align-items: center; gap: 0.4rem;">
                                 <span>⭐</span> Activar / Renovar Suscripción de ${fullName}
@@ -9114,8 +9169,8 @@ function renderSuperadminTherapistsTable() {
                         </div>
                     </div>
 
-                    <!-- PANEL DE PERMISOS Y BLOQUEOS -->
-                    <div style="border-top: 1px solid #e2e8f0; padding-top: 0.85rem;">
+                    <!-- SECCIÓN 3: PERMISOS Y BLOQUEOS -->
+                    <div id="sec-perm-${p.id}" style="border-top: 1px solid #e2e8f0; padding-top: 0.85rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
                             <h4 style="margin: 0; font-size: 0.88rem; font-weight: 700; color: #0f172a;">⚙️ Configuración de Permisos y Bloqueos de Funciones</h4>
                             <span style="font-size: 0.75rem; color: #64748b;">Marca las casillas que deseas restringir</span>
@@ -9134,7 +9189,7 @@ function renderSuperadminTherapistsTable() {
                             </label>
                         </div>
                         <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleTherapistPermissionsRow(${p.id})" style="border-radius: 6px; font-weight: 600;">Cerrar</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleTherapistAccordion(${p.id})" style="border-radius: 6px; font-weight: 600;">Cerrar</button>
                             <button type="button" class="btn btn-sm btn-success" onclick="saveTherapistRowSettings(${p.id})" style="background: #0d9488; color: white; border: none; font-weight: 700; border-radius: 6px; padding: 0.4rem 1rem;">
                                 💾 Guardar Permisos
                             </button>
@@ -9150,12 +9205,74 @@ function renderSuperadminTherapistsTable() {
     renderSuperadminPaginationControls(totalFiltered, startIndex, endIndex, totalPages);
 }
 
-function toggleTherapistPermissionsRow(userId) {
-    const accRow = document.getElementById(`perm-row-${userId}`);
-    if (accRow) {
-        accRow.classList.toggle('hide');
+function toggleTherapistAccordion(userId, sectionTarget) {
+    const targetRow = document.getElementById(`perm-row-${userId}`);
+    if (!targetRow) return;
+
+    const isCurrentlyHidden = targetRow.classList.contains('hide');
+
+    // 1. Ocultar todos los otros acordeones abiertos en la tabla
+    const allAccordions = document.querySelectorAll('#superadmin-therapists-body tr[id^="perm-row-"]');
+    allAccordions.forEach(row => {
+        if (row.id !== `perm-row-${userId}`) {
+            row.classList.add('hide');
+        }
+    });
+
+    // 2. Si el acordeón actual ya estaba visible y se hace clic en la misma sección, cerrarlo
+    if (!isCurrentlyHidden && targetRow.dataset.activeSection === sectionTarget) {
+        targetRow.classList.add('hide');
+        targetRow.dataset.activeSection = '';
+        return;
+    }
+
+    // 3. Abrir el acordeón actual
+    targetRow.classList.remove('hide');
+    targetRow.dataset.activeSection = sectionTarget || 'all';
+
+    // 4. Scroll suave hacia la sección solicitada si aplica
+    if (sectionTarget) {
+        setTimeout(() => {
+            const secEl = document.getElementById(`sec-${sectionTarget}-${userId}`);
+            if (secEl) {
+                secEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 50);
     }
 }
+window.toggleTherapistAccordion = toggleTherapistAccordion;
+window.toggleTherapistPermissionsRow = toggleTherapistAccordion;
+
+async function saveInlineTherapistProfile(userId) {
+    const payload = {
+        nombres: document.getElementById(`inline-nombres-${userId}`)?.value || '',
+        apellidos: document.getElementById(`inline-apellidos-${userId}`)?.value || '',
+        username: document.getElementById(`inline-username-${userId}`)?.value || '',
+        email: document.getElementById(`inline-email-${userId}`)?.value || '',
+        email_publico: document.getElementById(`inline-email-pub-${userId}`)?.value || '',
+        cedula: document.getElementById(`inline-cedula-${userId}`)?.value || '',
+        whatsapp_publico: document.getElementById(`inline-whatsapp-${userId}`)?.value || '',
+        descripcion_biografia: document.getElementById(`inline-bio-${userId}`)?.value || ''
+    };
+    
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/update-profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ Ficha del psicólogo actualizada con éxito.");
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo actualizar la ficha."));
+        }
+    } catch(err) {
+        alert("Error de conexión al guardar los datos del psicólogo.");
+    }
+}
+window.saveInlineTherapistProfile = saveInlineTherapistProfile;
 
 function setInlineSubPreset(userId, days) {
     const endInput = document.getElementById(`inline-sub-end-${userId}`);
