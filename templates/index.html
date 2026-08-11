@@ -3846,12 +3846,12 @@
                         <h2>Ficha de Admisión / Primer Acceso</h2>
                     </div>
                     
-                    <!-- Indicador de pasos -->
+                    <!-- Indicador de pasos (Interactivo: haz clic en cualquier paso para navegar) -->
                     <div class="setup-steps-indicator mb-6" style="display: flex; justify-content: space-between; position: relative;">
-                        <div class="setup-step active" id="step-ind-1">1. Seguridad</div>
-                        <div class="setup-step" id="step-ind-2">2. Personales</div>
-                        <div class="setup-step" id="step-ind-3">3. Anamnesis</div>
-                        <div class="setup-step" id="step-ind-4">4. Emergencia</div>
+                        <div class="setup-step active" id="step-ind-1" onclick="goToWizardStep(1)" style="cursor: pointer;" title="Ir al Paso 1: Seguridad">1. Seguridad</div>
+                        <div class="setup-step" id="step-ind-2" onclick="goToWizardStep(2)" style="cursor: pointer;" title="Ir al Paso 2: Personales">2. Personales</div>
+                        <div class="setup-step" id="step-ind-3" onclick="goToWizardStep(3)" style="cursor: pointer;" title="Ir al Paso 3: Anamnesis">3. Anamnesis</div>
+                        <div class="setup-step" id="step-ind-4" onclick="goToWizardStep(4)" style="cursor: pointer;" title="Ir al Paso 4: Emergencia">4. Emergencia</div>
                     </div>
                     
                     <div class="card">
