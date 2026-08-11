@@ -1648,13 +1648,9 @@ def send_email_async(to_email, subject, html_content, text_content=None):
                 cursor = db.cursor()
                 cursor.execute("""
                     SELECT clave, valor FROM configuracion 
-                    WHERE clave IN ('smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email', 'auto_welcome_email_active')
+                    WHERE clave IN ('smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email')
                 """)
                 cfg = {r['clave']: r['valor'] for r in cursor.fetchall()}
-                
-                if cfg.get('auto_welcome_email_active', '1') == '0':
-                    print("[SMTP] Los correos automáticos de bienvenida están desactivados.")
-                    return
 
                 smtp_host = cfg.get('smtp_host', '').strip() or 'smtp.gmail.com'
                 smtp_port_raw = cfg.get('smtp_port', '587').strip()
@@ -1703,6 +1699,17 @@ def send_welcome_credentials_email(user_type, email, full_name, username, raw_pa
     """
     if not email or '@' not in str(email):
         return
+
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'auto_welcome_email_active'")
+        row = cursor.fetchone()
+        if row and row['valor'] == '0':
+            print("[SMTP] Los correos automáticos de bienvenida están desactivados por configuración.")
+            return
+    except Exception:
+        pass
 
     site_url = login_url or "https://www.espacioterapeutico.net"
     portal_label = "Plataforma de Consultorio Psicológico" if user_type == 'psicologo' else "Portal del Consultante"
@@ -1944,7 +1951,7 @@ def auto_check_subscription_expiration_reminders(db):
         db.commit()
 
         cursor.execute("""
-            SELECT id, nombres, apellidos, username, email, fecha_expiracion_prueba, recordatorio_expiracion_enviado
+            SELECT id, nombres, apellidos, username, email, email_publico, fecha_expiracion_prueba, recordatorio_expiracion_enviado
             FROM usuarios 
             WHERE role != 'superadmin' AND fecha_expiracion_prueba IS NOT NULL AND fecha_expiracion_prueba != ''
         """)
@@ -1953,7 +1960,7 @@ def auto_check_subscription_expiration_reminders(db):
         for u in users:
             u_dict = dict(u)
             user_id = u_dict['id']
-            email = u_dict.get('email') or ''
+            email = (u_dict.get('email') or u_dict.get('email_publico') or '').strip()
             exp_str = u_dict.get('fecha_expiracion_prueba') or ''
             already_sent_exp = u_dict.get('recordatorio_expiracion_enviado') or ''
             
@@ -3254,17 +3261,21 @@ def superadmin_set_therapist_expiration(user_id):
     # Enviar correo de notificación de activación/renovación si suscripción está activa
     if suscripcion_paga == 1 or fecha_exp:
         try:
-            cursor.execute("SELECT nombres, apellidos, username, email FROM usuarios WHERE id = ?", (user_id,))
+            cursor.execute("SELECT nombres, apellidos, username, email, email_publico FROM usuarios WHERE id = ?", (user_id,))
             usr = cursor.fetchone()
-            if usr and usr['email']:
+            if usr:
                 u_dict = dict(usr)
-                full_name = f"{u_dict.get('nombres') or ''} {u_dict.get('apellidos') or ''}".strip() or u_dict.get('username')
-                try:
-                    exp_dt = datetime.datetime.strptime(str(fecha_exp)[:10], '%Y-%m-%d')
-                    exp_formatted = exp_dt.strftime('%d/%m/%Y')
-                except Exception:
-                    exp_formatted = str(fecha_exp)[:10]
-                send_subscription_renewed_email(u_dict['email'], full_name, exp_formatted)
+                target_email = (u_dict.get('email') or u_dict.get('email_publico') or '').strip()
+                if target_email:
+                    full_name = f"{u_dict.get('nombres') or ''} {u_dict.get('apellidos') or ''}".strip() or u_dict.get('username')
+                    try:
+                        exp_dt = datetime.datetime.strptime(str(fecha_exp)[:10], '%Y-%m-%d')
+                        exp_formatted = exp_dt.strftime('%d/%m/%Y')
+                    except Exception:
+                        exp_formatted = str(fecha_exp)[:10]
+                    send_subscription_renewed_email(target_email, full_name, exp_formatted)
+                else:
+                    print(f"[SMTP] El psicólogo ID {user_id} no tiene un correo registrado.")
         except Exception as ex_mail:
             print("[SMTP] Error enviando correo de renovación:", ex_mail)
 
