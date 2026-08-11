@@ -9035,8 +9035,8 @@ function renderSuperadminTherapistsTable() {
             </td>
             <td style="padding: 0.85rem 1rem; text-align: center; vertical-align: middle;">
                 <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: center; width: 100%; max-width: 220px; margin: 0 auto;">
-                    <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="openSuperadminExpirationModal(${p.id})">
-                        🚀 Activar / Modificar Plazo
+                    <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="toggleTherapistPermissionsRow(${p.id})">
+                        🚀 Activar / Opciones ▼
                     </button>
                     <div style="display: flex; gap: 0.35rem; width: 100%;">
                         <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 8px; font-size: 0.72rem; font-weight: 600; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px;" onclick="deactivateTherapistSubscription(${p.id})">
@@ -9054,7 +9054,9 @@ function renderSuperadminTherapistsTable() {
         `;
         tbody.appendChild(trMain);
 
-        // Fila Secundaria: Accordion de Permisos & Bloqueos
+        // Fila Secundaria: Panel Integrado de Suscripción & Permisos
+        const defaultExpDate = p.fecha_expiracion_prueba ? p.fecha_expiracion_prueba.split('T')[0] : new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+        
         const trAccordion = document.createElement('tr');
         trAccordion.id = `perm-row-${p.id}`;
         trAccordion.className = 'hide';
@@ -9062,29 +9064,72 @@ function renderSuperadminTherapistsTable() {
         trAccordion.style.borderBottom = '2px solid #cbd5e1';
         trAccordion.innerHTML = `
             <td colspan="5" style="padding: 1rem 1.25rem;">
-                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1rem 1.25rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 0.85rem;">
-                        <h4 style="margin: 0; font-size: 0.88rem; font-weight: 700; color: #0f172a;">⚙️ Configuración de Permisos y Bloqueos de Funciones - ${fullName}</h4>
-                        <span style="font-size: 0.75rem; color: #64748b;">Marca las casillas que deseas restringir para este psicólogo</span>
+                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 1.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                    
+                    <!-- PANEL DE ACTIVACIÓN Y RENOVACIÓN DE SUSCRIPCIÓN -->
+                    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <div style="font-weight: 800; color: #166534; font-size: 0.92rem; display: flex; align-items: center; gap: 0.4rem;">
+                                <span>⭐</span> Activar / Renovar Suscripción de ${fullName}
+                            </div>
+                            <span style="font-size: 0.78rem; font-weight: 700; color: #15803d; background: #dcfce7; padding: 0.3rem 0.7rem; border-radius: 6px; border: 1px solid #86efac;">
+                                Estado: ${expStatusText}
+                            </span>
+                        </div>
+                        
+                        <!-- Presets de días -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem;">
+                            <button type="button" class="btn btn-sm" style="background: #ffffff; border: 1.5px solid #16a34a; color: #15803d; font-weight: 700; font-size: 0.78rem; border-radius: 8px; padding: 0.4rem 0.85rem;" onclick="setInlineSubPreset(${p.id}, 30)">
+                                📅 +30 Días (1 Mes)
+                            </button>
+                            <button type="button" class="btn btn-sm" style="background: #ffffff; border: 1.5px solid #16a34a; color: #15803d; font-weight: 700; font-size: 0.78rem; border-radius: 8px; padding: 0.4rem 0.85rem;" onclick="setInlineSubPreset(${p.id}, 60)">
+                                🚀 +60 Días (2 Meses)
+                            </button>
+                            <button type="button" class="btn btn-sm" style="background: #ffffff; border: 1.5px solid #16a34a; color: #15803d; font-weight: 700; font-size: 0.78rem; border-radius: 8px; padding: 0.4rem 0.85rem;" onclick="setInlineSubPreset(${p.id}, 90)">
+                                🌟 +90 Días (3 Meses)
+                            </button>
+                            <button type="button" class="btn btn-sm" style="background: #ffffff; border: 1.5px solid #16a34a; color: #15803d; font-weight: 700; font-size: 0.78rem; border-radius: 8px; padding: 0.4rem 0.85rem;" onclick="setInlineSubPreset(${p.id}, 365)">
+                                👑 +1 Año (365 Días)
+                            </button>
+                        </div>
+                        
+                        <!-- Inputs y Botón de activación -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.85rem;">
+                            <div style="flex: 1; min-width: 160px;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #166534; display: block; margin-bottom: 0.25rem;">Fecha de Expiración / Fin</label>
+                                <input type="date" id="inline-sub-end-${p.id}" class="form-control form-control-sm" value="${defaultExpDate}" style="font-size: 0.85rem; font-weight: 700; border-radius: 6px; border: 1px solid #86efac;">
+                            </div>
+                            <button type="button" class="btn btn-sm" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 800; font-size: 0.82rem; border: none; border-radius: 8px; padding: 0.5rem 1.25rem; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" onclick="saveInlineSubscription(${p.id}, \`${escName}\`)">
+                                ✅ Guardar y Activar Suscripción
+                            </button>
+                        </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.6rem; font-size: 0.82rem; margin-bottom: 1rem;">
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-evoluciones" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''}> Bloquear Evoluciones</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-finanzas" ${p.bloqueo_finanzas === 1 ? 'checked' : ''}> Bloquear Finanzas</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-agenda" ${p.bloqueo_agenda === 1 ? 'checked' : ''}> Bloquear Agenda</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-mensajes" ${p.bloqueo_mensajes === 1 ? 'checked' : ''}> Bloquear Recordatorios</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear C. Confirmaciones</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.5rem; margin-top: 0.25rem;">
-                            <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> ⚠️ Activar Aviso de Pago (Notificar No Solvente en su pantalla)
-                        </label>
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleTherapistPermissionsRow(${p.id})" style="border-radius: 6px; font-weight: 600;">Cerrar</button>
-                        <button type="button" class="btn btn-sm btn-success" onclick="saveTherapistRowSettings(${p.id})" style="background: #10b981; color: white; border: none; font-weight: 700; border-radius: 6px; padding: 0.4rem 1rem;">
-                            💾 Guardar Cambios de Permisos
-                        </button>
+
+                    <!-- PANEL DE PERMISOS Y BLOQUEOS -->
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                            <h4 style="margin: 0; font-size: 0.88rem; font-weight: 700; color: #0f172a;">⚙️ Configuración de Permisos y Bloqueos de Funciones</h4>
+                            <span style="font-size: 0.75rem; color: #64748b;">Marca las casillas que deseas restringir</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.6rem; font-size: 0.82rem; margin-bottom: 1rem;">
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro</label>
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-evoluciones" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''}> Bloquear Evoluciones</label>
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-finanzas" ${p.bloqueo_finanzas === 1 ? 'checked' : ''}> Bloquear Finanzas</label>
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-agenda" ${p.bloqueo_agenda === 1 ? 'checked' : ''}> Bloquear Agenda</label>
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-mensajes" ${p.bloqueo_mensajes === 1 ? 'checked' : ''}> Bloquear Recordatorios</label>
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra</label>
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas</label>
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear C. Confirmaciones</label>
+                            <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.5rem; margin-top: 0.25rem;">
+                                <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> ⚠️ Activar Aviso de Pago (Notificar No Solvente en su pantalla)
+                            </label>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleTherapistPermissionsRow(${p.id})" style="border-radius: 6px; font-weight: 600;">Cerrar</button>
+                            <button type="button" class="btn btn-sm btn-success" onclick="saveTherapistRowSettings(${p.id})" style="background: #0d9488; color: white; border: none; font-weight: 700; border-radius: 6px; padding: 0.4rem 1rem;">
+                                💾 Guardar Permisos
+                            </button>
+                        </div>
                     </div>
                 </div>
             </td>
@@ -9102,6 +9147,51 @@ function toggleTherapistPermissionsRow(userId) {
         accRow.classList.toggle('hide');
     }
 }
+
+function setInlineSubPreset(userId, days) {
+    const endInput = document.getElementById(`inline-sub-end-${userId}`);
+    if (!endInput) return;
+    let baseDate = new Date();
+    if (endInput.value) {
+        const parsed = new Date(endInput.value);
+        if (!isNaN(parsed.getTime()) && parsed > new Date()) {
+            baseDate = parsed;
+        }
+    }
+    baseDate.setDate(baseDate.getDate() + days);
+    endInput.value = baseDate.toISOString().split('T')[0];
+}
+window.setInlineSubPreset = setInlineSubPreset;
+
+async function saveInlineSubscription(userId, userName) {
+    const endInput = document.getElementById(`inline-sub-end-${userId}`);
+    const expStr = endInput ? endInput.value : '';
+    if (!expStr) {
+        alert("Por favor selecciona una fecha de expiración válida.");
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/set-expiration`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fecha_expiracion: expStr,
+                suscripcion_paga: 1
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(`✅ Suscripción activada/renovada exitosamente para ${userName} hasta el ${expStr}.`);
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo activar la suscripción."));
+        }
+    } catch(err) {
+        alert("Error de conexión al activar la suscripción.");
+    }
+}
+window.saveInlineSubscription = saveInlineSubscription;
 
 async function deactivateTherapistSubscription(userId) {
     if (!confirm("¿Deseas suspender inmediatamente la suscripción de este psicólogo?")) return;
