@@ -1650,46 +1650,75 @@ function wizCalculateAge() {
 async function handlePatientWizardSubmit(e) {
     e.preventDefault();
     const statusMsg = document.getElementById('wiz-status-msg');
-    statusMsg.classList.add('hide');
+    if (statusMsg) statusMsg.classList.add('hide');
     
-    const patientId = document.getElementById('wizard-patient-id').value;
-    const username = document.getElementById('wiz-username').value;
-    const new_password = document.getElementById('wiz-password').value;
-    const pregunta_1 = document.getElementById('wiz-pregunta-1').value;
-    const respuesta_1 = document.getElementById('wiz-respuesta-1').value;
-    const pregunta_2 = document.getElementById('wiz-pregunta-2').value;
-    const respuesta_2 = document.getElementById('wiz-respuesta-2').value;
+    const patientId = document.getElementById('wizard-patient-id')?.value || '';
+    const username = document.getElementById('wiz-username')?.value || '';
+    const new_password = document.getElementById('wiz-password')?.value || '';
+    const pregunta_1 = document.getElementById('wiz-pregunta-1')?.value || '';
+    const respuesta_1 = document.getElementById('wiz-respuesta-1')?.value || '';
+    const pregunta_2 = document.getElementById('wiz-pregunta-2')?.value || '';
+    const respuesta_2 = document.getElementById('wiz-respuesta-2')?.value || '';
+
+    // Validación de requeridos en Paso 1 (Seguridad)
+    if (!username || !new_password || !respuesta_1 || !respuesta_2) {
+        goToWizardStep(1);
+        if (statusMsg) {
+            statusMsg.textContent = 'Por favor completa el nombre de usuario, contraseña y las respuestas de seguridad en el Paso 1.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        } else {
+            alert('Por favor completa el nombre de usuario, contraseña y las respuestas de seguridad en el Paso 1.');
+        }
+        return;
+    }
+
+    // Validación de requeridos en Paso 4 (Emergencia)
+    const emergenciaNombre = document.getElementById('wiz-emergencia-nombre')?.value || '';
+    const emergenciaParentesco = document.getElementById('wiz-emergencia-parentesco')?.value || '';
+    if (!emergenciaNombre || !emergenciaParentesco) {
+        goToWizardStep(4);
+        if (statusMsg) {
+            statusMsg.textContent = 'Por favor completa el Nombre y Teléfono del Contacto de Emergencia en el Paso 4.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        } else {
+            alert('Por favor completa el Nombre y Teléfono del Contacto de Emergencia en el Paso 4.');
+        }
+        return;
+    }
     
     const payload = {
-        patient_id: parseInt(patientId),
+        patient_id: parseInt(patientId) || 0,
         username,
         new_password,
         pregunta_1,
         respuesta_1,
         pregunta_2,
         respuesta_2,
-        pronombre: document.getElementById('wiz-pronombre').value,
-        genero: document.getElementById('wiz-genero').value,
-        fecha_nacimiento: document.getElementById('wiz-fecha-nac').value,
-        edad: parseInt(document.getElementById('wiz-edad').value) || 0,
-        lugar_nacimiento: document.getElementById('wiz-lugar-nac').value,
-        residencia_actual: document.getElementById('wiz-residencia').value,
-        con_quien_reside: document.getElementById('wiz-con-quien-reside').value,
-        nivel_academico: document.getElementById('wiz-nivel-acad').value,
-        ocupacion: document.getElementById('wiz-ocupacion').value,
-        estado_civil: document.getElementById('wiz-estado-civil').value,
-        telefono: document.getElementById('wiz-telefono').value,
-        email: document.getElementById('wiz-email').value,
-        antecedentes_medicos_personales: document.getElementById('wiz-ant-med-pers').value,
-        antecedentes_medicos_familiares: document.getElementById('wiz-ant-med-fam').value,
-        antecedentes_psicologicos_personales: document.getElementById('wiz-ant-psic-pers').value,
-        antecedentes_psicologicos_familiares: document.getElementById('wiz-ant-psic-fam').value,
-        asistencia_previa_psicologo: document.getElementById('wiz-asistencia-previa').value,
-        motivo_consulta: document.getElementById('wiz-motivo-consulta').value,
-        expectativas: document.getElementById('wiz-expectativas').value,
-        farmacologia: document.getElementById('wiz-farmacologia').value,
-        contacto_emergencia_nombre: document.getElementById('wiz-emergencia-nombre').value,
-        contacto_emergencia_parentesco: document.getElementById('wiz-emergencia-parentesco').value
+        pronombre: document.getElementById('wiz-pronombre')?.value || '',
+        genero: document.getElementById('wiz-genero')?.value || '',
+        fecha_nacimiento: document.getElementById('wiz-fecha-nac')?.value || '',
+        edad: parseInt(document.getElementById('wiz-edad')?.value) || 0,
+        lugar_nacimiento: document.getElementById('wiz-lugar-nac')?.value || '',
+        residencia_actual: document.getElementById('wiz-pais')?.value || document.getElementById('wiz-residencia')?.value || '',
+        ciudad: document.getElementById('wiz-ciudad')?.value || '',
+        con_quien_reside: document.getElementById('wiz-con-quien-reside')?.value || '',
+        nivel_academico: document.getElementById('wiz-nivel-acad')?.value || '',
+        ocupacion: document.getElementById('wiz-ocupacion')?.value || '',
+        estado_civil: document.getElementById('wiz-estado-civil')?.value || '',
+        telefono: document.getElementById('wiz-telefono')?.value || '',
+        email: document.getElementById('wiz-email')?.value || '',
+        antecedentes_medicos_personales: document.getElementById('wiz-ant-med-pers')?.value || '',
+        antecedentes_medicos_familiares: document.getElementById('wiz-ant-med-fam')?.value || '',
+        antecedentes_psicologicos_personales: document.getElementById('wiz-ant-psic-pers')?.value || '',
+        antecedentes_psicologicos_familiares: document.getElementById('wiz-ant-psic-fam')?.value || '',
+        asistencia_previa_psicologo: document.getElementById('wiz-asistencia-previa')?.value || '',
+        motivo_consulta: document.getElementById('wiz-motivo-consulta')?.value || '',
+        expectativas: document.getElementById('wiz-expectativas')?.value || '',
+        farmacologia: document.getElementById('wiz-farmacologia')?.value || '',
+        contacto_emergencia_nombre: emergenciaNombre,
+        contacto_emergencia_parentesco: emergenciaParentesco
     };
     
     try {
@@ -1704,14 +1733,20 @@ async function handlePatientWizardSubmit(e) {
             alert("¡Felicidades! Registro completado y cuenta configurada correctamente.");
             showPatientLayout(username, patientId);
         } else {
-            statusMsg.textContent = data.error || 'Error al completar el registro.';
+            if (statusMsg) {
+                statusMsg.textContent = data.error || 'Error al completar el registro.';
+                statusMsg.className = 'status-msg error-msg';
+                statusMsg.classList.remove('hide');
+            }
+            alert("Error: " + (data.error || 'No se pudo completar el registro.'));
+        }
+    } catch (err) {
+        if (statusMsg) {
+            statusMsg.textContent = 'Error de conexión con el servidor.';
             statusMsg.className = 'status-msg error-msg';
             statusMsg.classList.remove('hide');
         }
-    } catch (err) {
-        statusMsg.textContent = 'Error de conexión con el servidor.';
-        statusMsg.className = 'status-msg error-msg';
-        statusMsg.classList.remove('hide');
+        alert("Error de conexión al completar el registro.");
     }
 }
 

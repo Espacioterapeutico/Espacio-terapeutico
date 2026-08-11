@@ -3856,7 +3856,7 @@
                     
                     <div class="card">
                         <div class="card-body">
-                            <form id="pat-setup-wizard-form" onsubmit="handlePatientWizardSubmit(event)">
+                            <form id="pat-setup-wizard-form" onsubmit="handlePatientWizardSubmit(event)" novalidate>
                                 <input type="hidden" id="wizard-patient-id">
                                 
                                 <!-- PASO 1: SEGURIDAD -->
@@ -3915,6 +3915,7 @@
                                     <h3 class="mb-4">Información Personal</h3>
                                     <p class="text-secondary mb-4">Ayúdanos a rellenar tu perfil básico.</p>
                                     
+                                    <!-- Fila 1: Pronombre | Género | Fecha de Nacimiento (3 columnas alineadas) -->
                                     <div class="form-row">
                                         <div class="form-group col-4">
                                             <label for="wiz-pronombre">Pronombre (Ej. Él, Ella, Otro)</label>
@@ -3936,12 +3937,13 @@
                                         </div>
                                     </div>
                                     
+                                    <!-- Fila 2: Edad | Lugar de Nacimiento | País de Residencia (3 columnas alineadas) -->
                                     <div class="form-row">
-                                        <div class="form-group col-2">
+                                        <div class="form-group col-4">
                                             <label for="wiz-edad">Edad</label>
                                             <input type="number" id="wiz-edad" min="0" placeholder="0">
                                         </div>
-                                        <div class="form-group col-3">
+                                        <div class="form-group col-4">
                                             <label for="wiz-lugar-nac">Lugar de Nacimiento</label>
                                             <input type="text" id="wiz-lugar-nac" placeholder="Ciudad / Estado">
                                         </div>
@@ -3981,27 +3983,13 @@
                                                 <option value="Otro">Otro país...</option>
                                             </select>
                                         </div>
-                                        <div class="form-group col-3">
-                                            <label for="wiz-ciudad">Ciudad</label>
-                                            <input type="text" id="wiz-ciudad" placeholder="Ciudad">
-                                        </div>
                                     </div>
                                     
-                                    <div class="form-row">
-                                        <div class="form-group col-6">
-                                            <label for="wiz-con-quien-reside">Con quién reside actualmente</label>
-                                            <input type="text" id="wiz-con-quien-reside" placeholder="Solo, padres, cónyuge, etc.">
-                                        </div>
-                                        <div class="form-group col-6">
-                                            <label for="wiz-nivel-acad">Nivel Académico Alcanzado</label>
-                                            <input type="text" id="wiz-nivel-acad" placeholder="Técnico, Universitario, Bachiller...">
-                                        </div>
-                                    </div>
-                                    
+                                    <!-- Fila 3: Ciudad | Estado Relacional | Teléfono Principal (3 columnas alineadas) -->
                                     <div class="form-row">
                                         <div class="form-group col-4">
-                                            <label for="wiz-ocupacion">Ocupación / Profesión</label>
-                                            <input type="text" id="wiz-ocupacion" placeholder="Estudiante, Trabajador...">
+                                            <label for="wiz-ciudad">Ciudad de Residencia</label>
+                                            <input type="text" id="wiz-ciudad" placeholder="Ciudad">
                                         </div>
                                         <div class="form-group col-4">
                                             <label for="wiz-estado-civil">Estado Relacional</label>
@@ -4019,9 +4007,29 @@
                                             <input type="text" id="wiz-telefono" placeholder="Número de contacto">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="wiz-email">Correo Electrónico</label>
-                                        <input type="email" id="wiz-email" placeholder="correo@ejemplo.com">
+
+                                    <!-- Fila 4: Con quién reside actualmente | Nivel Académico (2 columnas alineadas) -->
+                                    <div class="form-row">
+                                        <div class="form-group col-6">
+                                            <label for="wiz-con-quien-reside">Con quién reside actualmente</label>
+                                            <input type="text" id="wiz-con-quien-reside" placeholder="Solo, padres, cónyuge, etc.">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label for="wiz-nivel-acad">Nivel Académico Alcanzado</label>
+                                            <input type="text" id="wiz-nivel-acad" placeholder="Técnico, Universitario, Bachiller...">
+                                        </div>
+                                    </div>
+
+                                    <!-- Fila 5: Ocupación / Profesión | Correo Electrónico (2 columnas alineadas) -->
+                                    <div class="form-row">
+                                        <div class="form-group col-6">
+                                            <label for="wiz-ocupacion">Ocupación / Profesión</label>
+                                            <input type="text" id="wiz-ocupacion" placeholder="Estudiante, Trabajador...">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label for="wiz-email">Correo Electrónico</label>
+                                            <input type="email" id="wiz-email" placeholder="correo@ejemplo.com">
+                                        </div>
                                     </div>
                                     
                                     <div class="flex justify-between mt-6">
