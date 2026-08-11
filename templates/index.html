@@ -6050,6 +6050,75 @@
         </div>
     </div>
 
+    <!-- MODAL DE EDICIÓN DE FICHA DEL PSICÓLOGO (SUPERADMIN) -->
+    <div id="modal-edit-therapist-profile" class="modal hide" style="z-index: 3600;">
+        <div class="modal-content" style="max-width: 650px; border-radius: 20px; padding: 1.75rem; background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <div style="width: 42px; height: 42px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                        📋
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-family: var(--font-title, 'Outfit', sans-serif); color: #0f172a; font-size: 1.15rem; font-weight: 700;">
+                            Editar Ficha del Psicólogo
+                        </h3>
+                        <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">Modifica o completa los datos del perfil</span>
+                    </div>
+                </div>
+                <button type="button" class="close-btn" onclick="closeModal('modal-edit-therapist-profile')" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+
+            <form id="form-edit-therapist-profile" onsubmit="saveTherapistProfile(event)">
+                <input type="hidden" id="edit-therapist-id">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.25rem;">
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">Nombres</label>
+                        <input type="text" id="edit-therapist-nombres" class="form-control" placeholder="Ej: María Sofía" style="font-size: 0.88rem; padding: 0.5rem; border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">Apellidos</label>
+                        <input type="text" id="edit-therapist-apellidos" class="form-control" placeholder="Ej: Rodríguez" style="font-size: 0.88rem; padding: 0.5rem; border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">Nombre de Usuario (@)</label>
+                        <input type="text" id="edit-therapist-username" class="form-control" placeholder="Ej: psico.maria" style="font-size: 0.88rem; padding: 0.5rem; border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">Cédula / Documento</label>
+                        <input type="text" id="edit-therapist-cedula" class="form-control" placeholder="Ej: V-12345678" style="font-size: 0.88rem; padding: 0.5rem; border-radius: 8px;">
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <label style="font-size: 0.82rem; font-weight: 800; color: #0d9488; display: block; margin-bottom: 0.35rem;">
+                            📧 Correo Electrónico (Fundamental para notificaciones y vencimientos)
+                        </label>
+                        <input type="email" id="edit-therapist-email" class="form-control" placeholder="ejemplo@correo.com" style="font-size: 0.88rem; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #0d9488; background: #f0fdf4;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">Correo Público</label>
+                        <input type="email" id="edit-therapist-email-publico" class="form-control" placeholder="publico@correo.com" style="font-size: 0.88rem; padding: 0.5rem; border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">Teléfono / WhatsApp</label>
+                        <input type="text" id="edit-therapist-whatsapp" class="form-control" placeholder="Ej: +58 412 1234567" style="font-size: 0.88rem; padding: 0.5rem; border-radius: 8px;">
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">Especialidad / Biografía</label>
+                        <textarea id="edit-therapist-bio" class="form-control" rows="2" placeholder="Psicología Clínica, Terapia Cognitivo Conductual..." style="font-size: 0.85rem; padding: 0.5rem; border-radius: 8px;"></textarea>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.65rem; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-therapist-profile')" style="border-radius: 10px; font-weight: 600; padding: 0.65rem 1.1rem;">
+                        ❌ Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; border-radius: 10px; font-weight: 700; padding: 0.65rem 1.25rem; color: white;">
+                        💾 Guardar Cambios de la Ficha
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Local JavaScript Link -->
     <script src="/static/js/app.js?v={{ asset_v or '111' }}"></script>
 </body>

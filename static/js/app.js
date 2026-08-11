@@ -9039,14 +9039,17 @@ function renderSuperadminTherapistsTable() {
                     <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="toggleTherapistPermissionsRow(${p.id})">
                         🚀 Activar / Opciones ▼
                     </button>
-                    <div style="display: flex; gap: 0.35rem; width: 100%;">
-                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 8px; font-size: 0.72rem; font-weight: 600; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px;" onclick="deactivateTherapistSubscription(${p.id})">
+                    <div style="display: flex; gap: 0.25rem; width: 100%;">
+                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0284c7; background: #f0f9ff; color: #0369a1; border-radius: 6px;" onclick="openEditTherapistProfileModal(${p.id})">
+                            📋 Ficha
+                        </button>
+                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px;" onclick="deactivateTherapistSubscription(${p.id})">
                             ⛔ Desactivar
                         </button>
-                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 8px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0d9488; background: #f0fdf4; color: #0f766e; border-radius: 6px;" onclick="toggleTherapistPermissionsRow(${p.id})">
+                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0d9488; background: #f0fdf4; color: #0f766e; border-radius: 6px;" onclick="toggleTherapistPermissionsRow(${p.id})">
                             ⚙️ Permisos ▼
                         </button>
-                        <button type="button" class="btn btn-sm" style="padding: 4px 8px; font-size: 0.72rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 6px; font-weight: 700;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">
+                        <button type="button" class="btn btn-sm" style="padding: 4px 6px; font-size: 0.72rem; background-color: #ef4444; color: #ffffff; border: none; border-radius: 6px; font-weight: 700;" onclick="deleteTherapistAccount(${p.id}, \`${escName}\`)">
                             🗑️
                         </button>
                     </div>
@@ -9188,7 +9191,8 @@ async function saveInlineSubscription(userId, userName) {
         });
         const data = await res.json();
         if (res.ok) {
-            alert(`✅ Suscripción activada/renovada exitosamente para ${userName} hasta el ${expStr}.`);
+            const emailNotice = data.email_status ? `\n\n${data.email_status}` : '';
+            alert(`✅ Suscripción activada/renovada exitosamente para ${userName} hasta el ${expStr}.${emailNotice}`);
             loadSuperadminData();
         } else {
             alert("Error: " + (data.error || "No se pudo activar la suscripción."));
@@ -9198,6 +9202,73 @@ async function saveInlineSubscription(userId, userName) {
     }
 }
 window.saveInlineSubscription = saveInlineSubscription;
+
+function openEditTherapistProfileModal(userId) {
+    const therapist = (_superadminTherapistsList || []).find(t => t.id === userId);
+    if (!therapist) {
+        alert("No se encontró el psicólogo especificado.");
+        return;
+    }
+    
+    const idEl = document.getElementById('edit-therapist-id');
+    const nomEl = document.getElementById('edit-therapist-nombres');
+    const apeEl = document.getElementById('edit-therapist-apellidos');
+    const usrEl = document.getElementById('edit-therapist-username');
+    const emlEl = document.getElementById('edit-therapist-email');
+    const emlPubEl = document.getElementById('edit-therapist-email-publico');
+    const cedEl = document.getElementById('edit-therapist-cedula');
+    const wsEl = document.getElementById('edit-therapist-whatsapp');
+    const bioEl = document.getElementById('edit-therapist-bio');
+
+    if (idEl) idEl.value = therapist.id;
+    if (nomEl) nomEl.value = therapist.nombres || '';
+    if (apeEl) apeEl.value = therapist.apellidos || '';
+    if (usrEl) usrEl.value = therapist.username || '';
+    if (emlEl) emlEl.value = therapist.email || '';
+    if (emlPubEl) emlPubEl.value = therapist.email_publico || '';
+    if (cedEl) cedEl.value = therapist.cedula || '';
+    if (wsEl) wsEl.value = therapist.whatsapp_publico || therapist.telefono || '';
+    if (bioEl) bioEl.value = therapist.descripcion_biografia || '';
+
+    openModal('modal-edit-therapist-profile');
+}
+window.openEditTherapistProfileModal = openEditTherapistProfileModal;
+
+async function saveTherapistProfile(event) {
+    if (event) event.preventDefault();
+    const userId = document.getElementById('edit-therapist-id')?.value;
+    if (!userId) return;
+    
+    const payload = {
+        nombres: document.getElementById('edit-therapist-nombres')?.value || '',
+        apellidos: document.getElementById('edit-therapist-apellidos')?.value || '',
+        username: document.getElementById('edit-therapist-username')?.value || '',
+        email: document.getElementById('edit-therapist-email')?.value || '',
+        email_publico: document.getElementById('edit-therapist-email-publico')?.value || '',
+        cedula: document.getElementById('edit-therapist-cedula')?.value || '',
+        whatsapp_publico: document.getElementById('edit-therapist-whatsapp')?.value || '',
+        descripcion_biografia: document.getElementById('edit-therapist-bio')?.value || ''
+    };
+    
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/update-profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ Ficha del psicólogo actualizada con éxito.");
+            closeModal('modal-edit-therapist-profile');
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo actualizar la ficha."));
+        }
+    } catch(err) {
+        alert("Error de conexión al guardar los datos del psicólogo.");
+    }
+}
+window.saveTherapistProfile = saveTherapistProfile;
 
 async function deactivateTherapistSubscription(userId) {
     if (!confirm("¿Deseas suspender inmediatamente la suscripción de este psicólogo?")) return;

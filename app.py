@@ -3258,6 +3258,7 @@ def superadmin_set_therapist_expiration(user_id):
     """, (fecha_exp, suscripcion_paga, user_id))
     db.commit()
 
+    email_status_msg = ""
     # Enviar correo de notificación de activación/renovación si suscripción está activa
     if suscripcion_paga == 1 or fecha_exp:
         try:
@@ -3274,12 +3275,48 @@ def superadmin_set_therapist_expiration(user_id):
                     except Exception:
                         exp_formatted = str(fecha_exp)[:10]
                     send_subscription_renewed_email(target_email, full_name, exp_formatted)
+                    email_status_msg = f"📧 Correo de renovación enviado a {target_email}"
                 else:
-                    print(f"[SMTP] El psicólogo ID {user_id} no tiene un correo registrado.")
+                    email_status_msg = "⚠️ El psicólogo no tiene correo electrónico guardado. Usa '📋 Ficha' para agregarlo."
         except Exception as ex_mail:
             print("[SMTP] Error enviando correo de renovación:", ex_mail)
+            email_status_msg = f"⚠️ Ocurrió una duda al enviar correo: {ex_mail}"
 
-    return jsonify({'success': 'Fecha de expiración / renovación actualizada con éxito.'})
+    return jsonify({'success': 'Fecha de expiración / renovación actualizada con éxito.', 'email_status': email_status_msg})
+
+@app.route('/api/superadmin/therapists/<int:user_id>/update-profile', methods=['POST'])
+@login_required
+def superadmin_update_therapist_profile(user_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+        
+    data = request.json or {}
+    db = get_db()
+    ensure_usuarios_columns(db)
+    cursor = db.cursor()
+    
+    nombres = (data.get('nombres') or '').strip()
+    apellidos = (data.get('apellidos') or '').strip()
+    username = (data.get('username') or '').strip()
+    email = (data.get('email') or '').strip()
+    email_publico = (data.get('email_publico') or '').strip()
+    cedula = (data.get('cedula') or '').strip()
+    whatsapp = (data.get('whatsapp_publico') or '').strip()
+    bio = (data.get('descripcion_biografia') or '').strip()
+
+    if username:
+        cursor.execute("SELECT id FROM usuarios WHERE LOWER(username) = LOWER(?) AND id != ?", (username, user_id))
+        if cursor.fetchone():
+            return jsonify({'error': f"El nombre de usuario '@{username}' ya está registrado en la plataforma."}), 400
+
+    cursor.execute("""
+        UPDATE usuarios 
+        SET nombres = ?, apellidos = ?, username = ?, email = ?, email_publico = ?, 
+            cedula = ?, whatsapp_publico = ?, descripcion_biografia = ?
+        WHERE id = ?
+    """, (nombres, apellidos, username, email, email_publico, cedula, whatsapp, bio, user_id))
+    db.commit()
+    return jsonify({'success': 'Ficha del psicólogo actualizada con éxito.'})
 
 @app.route('/api/superadmin/therapists/<int:user_id>/save-settings', methods=['POST'])
 @login_required
