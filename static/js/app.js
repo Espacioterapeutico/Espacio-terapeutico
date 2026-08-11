@@ -1391,7 +1391,10 @@ String.prototype.zfill = function(size) {
     return s;
 };
 
+let selectedBookingDate = null;
+
 async function fetchAvailableHours(dateStr) {
+    selectedBookingDate = dateStr;
     const hoursGrid = document.getElementById('pat-hours-grid');
     const hoursContainer = document.getElementById('pat-hours-container');
     const hoursTitle = document.getElementById('pat-hours-title');
@@ -10693,12 +10696,22 @@ function renderPatientLastSessionDetails(compartido) {
     }
 }
 
+function getPatientBookingTimezone() {
+    const tzSelect = document.getElementById('pat-booking-timezone');
+    if (tzSelect && tzSelect.value) {
+        return tzSelect.value;
+    }
+    const saved = localStorage.getItem('patient_user_timezone');
+    if (saved) return saved;
+    return 'America/Caracas';
+}
+
 function onPatientBookingTimezoneChange() {
     const tzSelect = document.getElementById('pat-booking-timezone');
     if (tzSelect) {
         localStorage.setItem('patient_user_timezone', tzSelect.value);
         if (typeof selectedBookingDate !== 'undefined' && selectedBookingDate) {
-            renderBookingSlots(selectedBookingDate);
+            fetchAvailableHours(selectedBookingDate);
         }
     }
 }
