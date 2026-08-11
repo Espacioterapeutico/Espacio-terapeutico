@@ -3295,33 +3295,57 @@ def superadmin_update_therapist_profile(user_id):
     if not check_is_superadmin():
         return jsonify({'error': 'Acceso denegado.'}), 403
         
-    data = request.json or {}
-    db = get_db()
-    ensure_usuarios_columns(db)
-    cursor = db.cursor()
-    
-    nombres = (data.get('nombres') or '').strip()
-    apellidos = (data.get('apellidos') or '').strip()
-    username = (data.get('username') or '').strip()
-    email = (data.get('email') or '').strip()
-    email_publico = (data.get('email_publico') or '').strip()
-    cedula = (data.get('cedula') or '').strip()
-    whatsapp = (data.get('whatsapp_publico') or '').strip()
-    bio = (data.get('descripcion_biografia') or '').strip()
+    try:
+        data = request.json or {}
+        db = get_db()
+        ensure_usuarios_columns(db)
+        cursor = db.cursor()
+        
+        cursor.execute("SELECT id FROM usuarios WHERE id = ?", (user_id,))
+        if not cursor.fetchone():
+            return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+            
+        nombres = (data.get('nombres') or '').strip()
+        apellidos = (data.get('apellidos') or '').strip()
+        username = (data.get('username') or '').strip()
+        email = (data.get('email') or '').strip()
+        email_publico = (data.get('email_publico') or '').strip()
+        cedula = (data.get('cedula') or '').strip()
+        whatsapp = (data.get('whatsapp_publico') or '').strip()
+        bio = (data.get('descripcion_biografia') or '').strip()
 
-    if username:
-        cursor.execute("SELECT id FROM usuarios WHERE LOWER(username) = LOWER(?) AND id != ?", (username, user_id))
-        if cursor.fetchone():
-            return jsonify({'error': f"El nombre de usuario '@{username}' ya está registrado en la plataforma."}), 400
+        if username:
+            cursor.execute("SELECT id FROM usuarios WHERE LOWER(username) = LOWER(?) AND id != ?", (username, user_id))
+            if cursor.fetchone():
+                return jsonify({'error': f"El nombre de usuario '@{username}' ya está registrado en la plataforma."}), 400
 
-    cursor.execute("""
-        UPDATE usuarios 
-        SET nombres = ?, apellidos = ?, username = ?, email = ?, email_publico = ?, 
-            cedula = ?, whatsapp_publico = ?, descripcion_biografia = ?
-        WHERE id = ?
-    """, (nombres, apellidos, username, email, email_publico, cedula, whatsapp, bio, user_id))
-    db.commit()
-    return jsonify({'success': 'Ficha del psicólogo actualizada con éxito.'})
+        cursor.execute("PRAGMA table_info(usuarios)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+
+        fields_to_update = {}
+        if 'nombres' in existing_cols: fields_to_update['nombres'] = nombres
+        if 'apellidos' in existing_cols: fields_to_update['apellidos'] = apellidos
+        if 'username' in existing_cols and username: fields_to_update['username'] = username
+        if 'email' in existing_cols: fields_to_update['email'] = email
+        if 'email_publico' in existing_cols: fields_to_update['email_publico'] = email_publico
+        if 'cedula' in existing_cols: fields_to_update['cedula'] = cedula
+        if 'whatsapp_publico' in existing_cols: fields_to_update['whatsapp_publico'] = whatsapp
+        if 'telefono' in existing_cols and 'whatsapp_publico' not in existing_cols: fields_to_update['telefono'] = whatsapp
+        if 'descripcion_biografia' in existing_cols: fields_to_update['descripcion_biografia'] = bio
+        if 'slug' in existing_cols and username: fields_to_update['slug'] = f"psic.{username.lower()}"
+
+        if fields_to_update:
+            set_clause = ", ".join([f"{col} = ?" for col in fields_to_update.keys()])
+            params = list(fields_to_update.values()) + [user_id]
+            cursor.execute(f"UPDATE usuarios SET {set_clause} WHERE id = ?", params)
+            db.commit()
+
+        return jsonify({'success': 'Ficha del psicólogo actualizada con éxito.'})
+    except Exception as ex:
+        print("[SUPERADMIN] Error actualizando ficha de psicólogo:", ex)
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f"Error en base de datos: {str(ex)}"}), 500
 
 @app.route('/api/superadmin/therapists/<int:user_id>/save-settings', methods=['POST'])
 @login_required
