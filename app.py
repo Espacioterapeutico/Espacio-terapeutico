@@ -13092,12 +13092,33 @@ def get_patient_screen_time_history():
 # RUTAS DE BACKEND: EXAMEN MENTAL ESTRUCTURADO (MSE) & EXPORTACIÓN
 # =========================================================================
 
+def _ensure_examenes_mentales_table(cursor):
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS examenes_mentales (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                psicologo_id INTEGER NOT NULL,
+                paciente_id INTEGER NOT NULL,
+                fecha_evaluacion TEXT NOT NULL,
+                medio_evaluacion TEXT NOT NULL,
+                datos_evaluacion_json TEXT NOT NULL,
+                observaciones_generales TEXT,
+                fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+            )
+        """)
+    except Exception as _e:
+        print("Error en _ensure_examenes_mentales_table:", _e)
+
+
 @app.route('/api/examen-mental', methods=['POST'])
 @login_required
 def save_examen_mental():
     user_id = session.get('user_id')
     db = get_db()
     cursor = db.cursor()
+    _ensure_examenes_mentales_table(cursor)
     
     data = request.json or {}
     paciente_id = data.get('paciente_id')
@@ -13136,6 +13157,7 @@ def get_examen_mental_historial():
     
     db = get_db()
     cursor = db.cursor()
+    _ensure_examenes_mentales_table(cursor)
     
     query = """
         SELECT e.id, e.psicologo_id, e.paciente_id, e.fecha_evaluacion, e.medio_evaluacion,

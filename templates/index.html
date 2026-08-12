@@ -2552,19 +2552,20 @@
                         </div>
                     </div>
 
-                    <!-- PESTAÑAS DE NAVEGACIÓN SUB-MENÚ -->
-                    <div style="display: flex; gap: 0.75rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem;">
-                        <button type="button" id="mse-tab-btn-new" onclick="switchExamenMentalTab('new')" class="btn-tab-sub active" style="padding: 0.65rem 1.25rem; font-weight: 700; border: none; background: none; border-bottom: 3px solid var(--primary-color); color: var(--primary-color); cursor: pointer;">
+                    <!-- PESTAÑAS DE NAVEGACIÓN SUB-MENÚ (PILL STYLE MODERNO) -->
+                    <div class="sub-nav-pills mb-4" style="display: flex; gap: 0.75rem; background: rgba(0,0,0,0.03); padding: 6px; border-radius: 16px; width: fit-content; max-width: 100%;">
+                        <button type="button" id="mse-tab-btn-new" onclick="switchExamenMentalTab('new')" class="btn-pill-sub active" style="padding: 0.65rem 1.6rem; font-weight: 700; border-radius: 12px; border: none; background: var(--primary-color); color: #ffffff; cursor: pointer; transition: all 0.25s ease; box-shadow: 0 4px 12px rgba(169, 89, 147, 0.25);">
                             📝 Nuevo Examen Mental
                         </button>
-                        <button type="button" id="mse-tab-btn-history" onclick="switchExamenMentalTab('history')" class="btn-tab-sub" style="padding: 0.65rem 1.25rem; font-weight: 600; border: none; background: none; border-bottom: 3px solid transparent; color: var(--text-muted); cursor: pointer;">
+                        <button type="button" id="mse-tab-btn-history" onclick="switchExamenMentalTab('history')" class="btn-pill-sub" style="padding: 0.65rem 1.6rem; font-weight: 600; border-radius: 12px; border: 1.5px solid var(--border-color); background: #ffffff; color: var(--text-dark); cursor: pointer; transition: all 0.25s ease;">
                             📚 Historial de Exámenes Mentales
                         </button>
                     </div>
 
                     <!-- SUB-VISTA 1: NUEVO EXAMEN MENTAL -->
                     <div id="mse-subview-new">
-                        <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+                        <!-- TARJETA 1: PASO INICIAL - SELECCIÓN DE PACIENTE -->
+                        <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                             <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
                                 <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">1. Selección de Consultante y Datos de Sesión</h3>
                             </div>
@@ -2590,7 +2591,7 @@
                                     </div>
                                 </div>
 
-                                <div id="mse-selected-patient-info" class="hide mt-2" style="background: #fcf4f9; border: 1.5px solid rgba(169, 89, 147, 0.2); border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.9rem; color: #3D1E3F;">
+                                <div id="mse-selected-patient-info" class="hide mt-2" style="background: #fcf4f9; border: 1.5px solid rgba(169, 89, 147, 0.25); border-radius: 10px; padding: 0.85rem 1.1rem; font-size: 0.92rem; color: #3D1E3F; box-shadow: inset 0 2px 4px rgba(169, 89, 147, 0.05);">
                                     <strong>Consultante:</strong> <span id="mse-badge-name"></span> | 
                                     <strong>Cédula:</strong> <span id="mse-badge-cedula"></span> | 
                                     <strong>Edad:</strong> <span id="mse-badge-edad"></span> | 
@@ -2599,34 +2600,47 @@
                             </div>
                         </div>
 
-                        <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
-                            <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
-                                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">2. Evaluación por Áreas Clínicas (Selección Múltiple y Observaciones)</h3>
-                                <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">Haz clic sobre las etiquetas para activar/desactivar hallazgos (puedes seleccionar varias a la vez) o escribe directamente observaciones personalizadas.</p>
-                            </div>
-                            <div class="card-body" style="padding: 1.25rem;">
-                                <div id="mse-areas-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
-                                    <!-- Renderizado dinámico desde JS -->
+                        <!-- ALERTA CUANDO NO HAY PACIENTE SELECCIONADO -->
+                        <div id="mse-no-patient-alert" style="background: #ffffff; border: 2px dashed var(--border-color); border-radius: 16px; padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
+                            <div style="font-size: 3rem; margin-bottom: 0.75rem;">👤</div>
+                            <h4 style="font-weight: 700; color: var(--text-dark); margin: 0 0 0.4rem 0; font-size: 1.15rem;">Selecciona un Consultante arriba</h4>
+                            <p style="margin: 0; font-size: 0.92rem; max-width: 480px; margin: 0 auto; color: #64748b;">Elige un paciente en el buscador para desbloquear el formulario estandarizado del Examen Mental.</p>
+                        </div>
+
+                        <!-- SECCIÓN COMPLETA DE EVALUACIÓN (OCULTA HASTA ELEGIR PACIENTE) -->
+                        <div id="mse-evaluation-section" class="hide">
+                            <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+                                <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">2. Evaluación por Áreas Clínicas (Acordeón & Cuadrícula Compacta)</h3>
+                                        <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">Haz clic en cada área para desplegar su cuadrícula (Área / Alteraciones / Observaciones). Al cambiar de área, las elegidas permanecen resumidas.</p>
+                                    </div>
+                                    <button type="button" onclick="expandAllMseAreas()" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 600;">Desplegar Todas</button>
+                                </div>
+                                <div class="card-body" style="padding: 1.25rem;">
+                                    <div id="mse-areas-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                                        <!-- Renderizado dinámico acordeón -->
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- CONCLUSIONES GENERALES -->
-                        <div class="card mb-4">
-                            <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
-                                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">3. Impresión Diagnóstica / Observaciones Generales</h3>
+                            <!-- CONCLUSIONES GENERALES -->
+                            <div class="card mb-4">
+                                <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+                                    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">3. Impresión Diagnóstica / Observaciones Generales</h3>
+                                </div>
+                                <div class="card-body" style="padding: 1.25rem;">
+                                    <textarea id="mse-general-obs" rows="3" placeholder="Ingresa impresiones diagnósticas, síntesis clínica o recomendaciones adicionales..." style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-family: inherit; font-size: 0.95rem; resize: vertical; outline: none;"></textarea>
+                                </div>
                             </div>
-                            <div class="card-body" style="padding: 1.25rem;">
-                                <textarea id="mse-general-obs" rows="3" placeholder="Ingresa impresiones diagnósticas, síntesis clínica o recomendaciones adicionales..." style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-family: inherit; font-size: 0.95rem; resize: vertical; outline: none;"></textarea>
-                            </div>
-                        </div>
 
-                        <div style="display: flex; justify-content: flex-end; margin-bottom: 2rem;">
-                            <button type="button" onclick="handleSaveExamenMental()" class="btn btn-primary" style="padding: 0.75rem 2rem; font-weight: 700; font-size: 1rem; border-radius: 20px;">
-                                💾 Guardar Examen Mental en Expediente
-                            </button>
+                            <div style="display: flex; justify-content: flex-end; margin-bottom: 2rem;">
+                                <button type="button" onclick="handleSaveExamenMental()" class="btn btn-primary" style="padding: 0.85rem 2.5rem; font-weight: 700; font-size: 1rem; border-radius: 24px; box-shadow: 0 4px 15px rgba(169, 89, 147, 0.3);">
+                                    💾 Guardar Examen Mental en Expediente
+                                </button>
+                            </div>
+                            <div id="mse-status-msg" class="status-msg hide mb-4"></div>
                         </div>
-                        <div id="mse-status-msg" class="status-msg hide mb-4"></div>
                     </div>
 
                     <!-- SUB-VISTA 2: HISTORIAL -->

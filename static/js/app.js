@@ -16252,23 +16252,31 @@ function switchExamenMentalTab(tabKey) {
     
     if (tabKey === 'new') {
         btnNew.classList.add('active');
-        btnNew.style.borderBottomColor = 'var(--primary-color)';
-        btnNew.style.color = 'var(--primary-color)';
+        btnNew.style.background = 'var(--primary-color)';
+        btnNew.style.color = '#ffffff';
+        btnNew.style.border = 'none';
+        btnNew.style.boxShadow = '0 4px 12px rgba(169, 89, 147, 0.25)';
         
         btnHistory.classList.remove('active');
-        btnHistory.style.borderBottomColor = 'transparent';
-        btnHistory.style.color = 'var(--text-muted)';
+        btnHistory.style.background = '#ffffff';
+        btnHistory.style.color = 'var(--text-dark)';
+        btnHistory.style.border = '1.5px solid var(--border-color)';
+        btnHistory.style.boxShadow = 'none';
         
         viewNew.classList.remove('hide');
         viewHistory.classList.add('hide');
     } else {
         btnHistory.classList.add('active');
-        btnHistory.style.borderBottomColor = 'var(--primary-color)';
-        btnHistory.style.color = 'var(--primary-color)';
+        btnHistory.style.background = 'var(--primary-color)';
+        btnHistory.style.color = '#ffffff';
+        btnHistory.style.border = 'none';
+        btnHistory.style.boxShadow = '0 4px 12px rgba(169, 89, 147, 0.25)';
         
         btnNew.classList.remove('active');
-        btnNew.style.borderBottomColor = 'transparent';
-        btnNew.style.color = 'var(--text-muted)';
+        btnNew.style.background = '#ffffff';
+        btnNew.style.color = 'var(--text-dark)';
+        btnNew.style.border = '1.5px solid var(--border-color)';
+        btnNew.style.boxShadow = 'none';
         
         viewHistory.classList.remove('hide');
         viewNew.classList.add('hide');
@@ -16282,30 +16290,95 @@ function renderMseAreasForm() {
     if (!container || container.children.length > 0) return;
     
     let html = '';
-    MSE_AREAS_CONFIG.forEach(area => {
+    MSE_AREAS_CONFIG.forEach((area, index) => {
         let chipsHtml = '';
         area.chips.forEach(chipText => {
             chipsHtml += `
-            <button type="button" class="mse-chip-btn" data-area="${area.key}" data-val="${chipText}" onclick="toggleMseChip(this)" style="padding: 0.4rem 0.85rem; border-radius: 20px; border: 1.5px solid rgba(169, 89, 147, 0.3); background: #fdf4f9; color: #3D1E3F; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+            <button type="button" class="mse-chip-btn" data-area="${area.key}" data-val="${chipText}" onclick="toggleMseChip(this)" style="padding: 0.35rem 0.75rem; border-radius: 18px; border: 1.5px solid rgba(169, 89, 147, 0.3); background: #fdf4f9; color: #3D1E3F; font-size: 0.83rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
                 + ${chipText}
             </button>`;
         });
         
+        const isFirst = index === 0;
+        const displayStyle = isFirst ? 'block' : 'none';
+        const arrowChar = isFirst ? '▲' : '▼';
+        
         html += `
-        <div class="mse-area-card" style="background: #faf8fa; border: 1px solid var(--border-color); border-radius: 10px; padding: 1.1rem;">
-            <h4 style="color: var(--primary-color); font-size: 1rem; font-weight: 700; margin: 0 0 0.75rem 0;">${area.title}</h4>
-            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem;">
-                ${chipsHtml}
+        <div class="mse-accordion-item" id="mse-acc-${area.key}" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.25s ease;">
+            <!-- CABECERA DEL ACORDEÓN -->
+            <div class="mse-accordion-header" onclick="toggleMseArea('${area.key}')" style="background: #fdfafc; padding: 0.85rem 1.1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0;">
+                    <span style="font-weight: 700; color: var(--primary-color); font-size: 0.95rem; white-space: nowrap;">${area.title}</span>
+                    <span id="mse-summary-${area.key}" style="font-size: 0.8rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 0.2rem 0.65rem; border-radius: 12px; font-weight: 500; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 350px;">
+                        Sin hallazgos seleccionados
+                    </span>
+                </div>
+                <span id="mse-arrow-${area.key}" style="font-size: 0.85rem; color: var(--primary-color); font-weight: 800; margin-left: 0.5rem;">${arrowChar}</span>
             </div>
-            <textarea id="mse-obs-${area.key}" rows="2" placeholder="Observaciones adicionales sobre ${area.title.split('.')[1].trim().toLowerCase()}..." style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.88rem; font-family: inherit; resize: vertical; outline: none;"></textarea>
+
+            <!-- CUERPO EN CUADRÍCULA 3-COLUMNAS (ÁREA | ALTERACIONES | OBSERVACIONES) -->
+            <div class="mse-accordion-body" id="mse-body-${area.key}" style="display: ${displayStyle}; padding: 1.1rem; background: #ffffff;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.25rem; align-items: start;">
+                    
+                    <!-- COL 1: ÁREA CLÍNICA -->
+                    <div style="background: #faf6f9; padding: 0.85rem; border-radius: 8px; border: 1px solid rgba(169, 89, 147, 0.15);">
+                        <div style="font-weight: 700; color: var(--primary-color); font-size: 0.9rem; margin-bottom: 0.25rem;">${area.title}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Selecciona alteraciones clínicamente observadas durante la sesión.</div>
+                    </div>
+
+                    <!-- COL 2: ALTERACIONES (CHECKLIST CHIPS) -->
+                    <div>
+                        <label style="font-weight: 700; font-size: 0.85rem; color: var(--text-dark); display: block; margin-bottom: 0.4rem;">Alteraciones / Hallazgos (Checklist):</label>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            ${chipsHtml}
+                        </div>
+                    </div>
+
+                    <!-- COL 3: OBSERVACIONES -->
+                    <div>
+                        <label style="font-weight: 700; font-size: 0.85rem; color: var(--text-dark); display: block; margin-bottom: 0.4rem;">Observaciones del Área:</label>
+                        <textarea id="mse-obs-${area.key}" rows="3" oninput="updateMseAreaSummary('${area.key}')" placeholder="Detalles de ${area.title.split('.')[1].trim().toLowerCase()}..." style="width: 100%; padding: 0.55rem; border-radius: 6px; border: 1.5px solid var(--border-color); font-size: 0.85rem; font-family: inherit; resize: vertical; outline: none;"></textarea>
+                    </div>
+
+                </div>
+            </div>
         </div>`;
     });
     
     container.innerHTML = html;
 }
 
+function toggleMseArea(areaKey) {
+    const body = document.getElementById(`mse-body-${areaKey}`);
+    const arrow = document.getElementById(`mse-arrow-${areaKey}`);
+    if (!body || !arrow) return;
+    
+    const isHidden = body.style.display === 'none';
+    if (isHidden) {
+        body.style.display = 'block';
+        arrow.textContent = '▲';
+    } else {
+        body.style.display = 'none';
+        arrow.textContent = '▼';
+    }
+    updateMseAreaSummary(areaKey);
+}
+
+function expandAllMseAreas() {
+    MSE_AREAS_CONFIG.forEach(area => {
+        const body = document.getElementById(`mse-body-${area.key}`);
+        const arrow = document.getElementById(`mse-arrow-${area.key}`);
+        if (body && arrow) {
+            body.style.display = 'block';
+            arrow.textContent = '▲';
+        }
+    });
+}
+
 function toggleMseChip(btn) {
     const val = btn.getAttribute('data-val');
+    const areaKey = btn.getAttribute('data-area');
+    
     if (btn.classList.contains('active')) {
         btn.classList.remove('active');
         btn.style.background = '#fdf4f9';
@@ -16318,6 +16391,33 @@ function toggleMseChip(btn) {
         btn.style.color = '#ffffff';
         btn.style.borderColor = '#A95993';
         btn.textContent = '✓ ' + val;
+    }
+    
+    if (areaKey) updateMseAreaSummary(areaKey);
+}
+
+function updateMseAreaSummary(areaKey) {
+    const summarySpan = document.getElementById(`mse-summary-${areaKey}`);
+    if (!summarySpan) return;
+    
+    const activeChips = Array.from(document.querySelectorAll(`.mse-chip-btn.active[data-area="${areaKey}"]`)).map(c => c.getAttribute('data-val'));
+    const obsEl = document.getElementById(`mse-obs-${areaKey}`);
+    const obsVal = obsEl ? obsEl.value.trim() : '';
+    
+    let summaryTxt = [];
+    if (activeChips.length > 0) summaryTxt.push('✓ ' + activeChips.join(', '));
+    if (obsVal) summaryTxt.push('📝 ' + obsVal);
+    
+    if (summaryTxt.length > 0) {
+        summarySpan.textContent = summaryTxt.join(' | ');
+        summarySpan.style.background = 'rgba(169, 89, 147, 0.15)';
+        summarySpan.style.color = 'var(--primary-color)';
+        summarySpan.style.fontWeight = '700';
+    } else {
+        summarySpan.textContent = 'Sin hallazgos seleccionados';
+        summarySpan.style.background = 'rgba(0,0,0,0.04)';
+        summarySpan.style.color = 'var(--text-muted)';
+        summarySpan.style.fontWeight = '500';
     }
 }
 
@@ -16363,11 +16463,16 @@ function filterMsePatients() {
 function onMsePatientSelected() {
     const select = document.getElementById('mse-patient-select');
     const infoBox = document.getElementById('mse-selected-patient-info');
-    if (!select || !infoBox) return;
+    const noPatientAlert = document.getElementById('mse-no-patient-alert');
+    const evalSection = document.getElementById('mse-evaluation-section');
+    
+    if (!select) return;
     
     const pId = parseInt(select.value);
     if (!pId) {
-        infoBox.classList.add('hide');
+        if (infoBox) infoBox.classList.add('hide');
+        if (evalSection) evalSection.classList.add('hide');
+        if (noPatientAlert) noPatientAlert.classList.remove('hide');
         return;
     }
     
@@ -16389,7 +16494,10 @@ function onMsePatientSelected() {
         }
         document.getElementById('mse-badge-edad').textContent = edadStr;
         document.getElementById('mse-badge-genero').textContent = p.genero || 'No especificado';
-        infoBox.classList.remove('hide');
+        
+        if (infoBox) infoBox.classList.remove('hide');
+        if (noPatientAlert) noPatientAlert.classList.add('hide');
+        if (evalSection) evalSection.classList.remove('hide');
     }
 }
 

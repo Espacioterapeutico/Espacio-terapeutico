@@ -218,3 +218,16 @@ CREATE TABLE IF NOT EXISTS activacion_registros (
     UNIQUE(paciente_id, actividad_id, fecha)
 );
 
+-- Tabla de Exámenes Mentales Estructurados (MSE)
+CREATE TABLE IF NOT EXISTS examenes_mentales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    psicologo_id INTEGER NOT NULL,
+    paciente_id INTEGER NOT NULL,
+    fecha_evaluacion TEXT NOT NULL,
+    medio_evaluacion TEXT NOT NULL,
+    datos_evaluacion_json TEXT NOT NULL,
+    observaciones_generales TEXT,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+);
