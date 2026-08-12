@@ -444,6 +444,10 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 1")
         if 'bloqueo_confirmaciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_confirmaciones INTEGER DEFAULT 1")
+        if 'bloqueo_examen_mental' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_examen_mental INTEGER DEFAULT 1")
+        if 'bloqueo_tests' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_tests INTEGER DEFAULT 1")
         if 'terminos_condiciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
         if 'nomenclatura' not in cols_usr:
@@ -3041,6 +3045,8 @@ def ensure_usuarios_columns(db=None):
         ('bloqueo_pizarra', 'INTEGER DEFAULT 0'),
         ('bloqueo_herramientas', 'INTEGER DEFAULT 1'),
         ('bloqueo_confirmaciones', 'INTEGER DEFAULT 1'),
+        ('bloqueo_examen_mental', 'INTEGER DEFAULT 1'),
+        ('bloqueo_tests', 'INTEGER DEFAULT 1'),
         ('cedula', 'TEXT DEFAULT \'\''),
         ('email', 'TEXT DEFAULT \'\''),
         ('nomenclatura', 'TEXT'),
@@ -3106,8 +3112,9 @@ def superadmin_get_therapists():
                    COALESCE(bloqueo_registro, 0) as bloqueo_registro, COALESCE(bloqueo_evoluciones, 0) as bloqueo_evoluciones, 
                    COALESCE(bloqueo_finanzas, 0) as bloqueo_finanzas, COALESCE(bloqueo_agenda, 0) as bloqueo_agenda, 
                    COALESCE(bloqueo_mensajes, 0) as bloqueo_mensajes, COALESCE(bloqueo_pizarra, 0) as bloqueo_pizarra, 
-                   COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, COALESCE(bloqueo_confirmaciones, 0) as bloqueo_confirmaciones, COALESCE(aviso_pago, 0) as aviso_pago,
-                   COALESCE(mostrar_en_directorio, 1) as mostrar_en_directorio
+                   COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, COALESCE(bloqueo_confirmaciones, 0) as bloqueo_confirmaciones,
+                   COALESCE(bloqueo_examen_mental, 1) as bloqueo_examen_mental, COALESCE(bloqueo_tests, 1) as bloqueo_tests, COALESCE(aviso_pago, 0) as aviso_pago,
+                   COALESCE(mostrar_en_directorio, 0) as mostrar_en_directorio
             FROM usuarios
             WHERE (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin')
               AND id != ?
@@ -3404,15 +3411,19 @@ def superadmin_save_therapist_settings(user_id):
     bloqueo_pizarra = 1 if data.get('bloqueo_pizarra') else 0
     bloqueo_herramientas = 1 if data.get('bloqueo_herramientas') else 0
     bloqueo_confirmaciones = 1 if data.get('bloqueo_confirmaciones') else 0
+    bloqueo_examen_mental = 1 if data.get('bloqueo_examen_mental') else 0
+    bloqueo_tests = 1 if data.get('bloqueo_tests') else 0
     
     cursor.execute("""
         UPDATE usuarios 
         SET mostrar_en_directorio = ?, aviso_pago = ?,
             bloqueo_registro = ?, bloqueo_evoluciones = ?, bloqueo_finanzas = ?,
-            bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?, bloqueo_confirmaciones = ?
+            bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?, bloqueo_confirmaciones = ?,
+            bloqueo_examen_mental = ?, bloqueo_tests = ?
         WHERE id = ?
     """, (mostrar_en_directorio, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas,
-          bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, bloqueo_confirmaciones, user_id))
+          bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, bloqueo_confirmaciones,
+          bloqueo_examen_mental, bloqueo_tests, user_id))
     db.commit()
     return jsonify({'success': '¡Cambios guardados con éxito en la base de datos!'})
 
@@ -3666,8 +3677,10 @@ def login():
                     'agenda': u_dict.get('bloqueo_agenda', 0),
                     'mensajes': u_dict.get('bloqueo_mensajes', 0),
                     'pizarra': u_dict.get('bloqueo_pizarra', 0),
-                    'herramientas': u_dict.get('bloqueo_herramientas', 0),
-                    'confirmaciones': u_dict.get('bloqueo_confirmaciones', 0)
+                    'herramientas': u_dict.get('bloqueo_herramientas', 1),
+                    'confirmaciones': u_dict.get('bloqueo_confirmaciones', 1),
+                    'examen_mental': u_dict.get('bloqueo_examen_mental', 1),
+                    'tests': u_dict.get('bloqueo_tests', 1)
                 }
             })
         
@@ -13170,6 +13183,12 @@ def save_examen_mental():
     user_id = session.get('user_id')
     db = get_db()
     cursor = db.cursor()
+    
+    if session.get('role') != 'superadmin':
+        cursor.execute("SELECT COALESCE(bloqueo_examen_mental, 1) FROM usuarios WHERE id = ?", (user_id,))
+        b_row = cursor.fetchone()
+        if b_row and b_row[0] == 1:
+            return jsonify({'error': 'La función de Examen Mental está inhabilitada para tu cuenta. Contacta a administración.'}), 403
     _ensure_examenes_mentales_table(cursor)
     
     data = request.json or {}

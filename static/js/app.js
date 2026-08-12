@@ -1119,6 +1119,14 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
             const link = document.querySelector('[data-view="manual-confirmations"]');
             if (link) link.classList.add('hide');
         }
+        if (bloqueos.examen_mental === 1) {
+            const link = document.querySelector('[data-view="examen-mental"]');
+            if (link) link.classList.add('hide');
+        }
+        if (bloqueos.tests === 1) {
+            const testEl = document.getElementById('s-test-aplicados');
+            if (testEl && testEl.parentElement) testEl.parentElement.classList.add('hide');
+        }
     } else {
         sessionStorage.removeItem('bloqueos');
     }
@@ -9257,6 +9265,8 @@ function renderSuperadminTherapistsTable() {
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear C. Confirmaciones</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-examen-mental" ${p.bloqueo_examen_mental === 1 ? 'checked' : ''}> Bloquear Examen Mental</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-tests" ${p.bloqueo_tests === 1 ? 'checked' : ''}> Bloquear Tests Psicológicos</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.5rem; margin-top: 0.25rem;">
                             <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> ⚠️ Activar Aviso de Pago (Notificar No Solvente en su pantalla)
                         </label>
@@ -9576,7 +9586,9 @@ async function saveTherapistRowSettings(userId) {
         bloqueo_mensajes: container.querySelector('.chk-bloqueo-mensajes')?.checked ? 1 : 0,
         bloqueo_pizarra: container.querySelector('.chk-bloqueo-pizarra')?.checked ? 1 : 0,
         bloqueo_herramientas: container.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0,
-        bloqueo_confirmaciones: container.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0
+        bloqueo_confirmaciones: container.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0,
+        bloqueo_examen_mental: container.querySelector('.chk-bloqueo-examen-mental')?.checked ? 1 : 0,
+        bloqueo_tests: container.querySelector('.chk-bloqueo-tests')?.checked ? 1 : 0
     };
     
     try {
@@ -9617,7 +9629,9 @@ async function saveAllTherapistsSettings() {
             bloqueo_mensajes: row.querySelector('.chk-bloqueo-mensajes')?.checked ? 1 : 0,
             bloqueo_pizarra: row.querySelector('.chk-bloqueo-pizarra')?.checked ? 1 : 0,
             bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0,
-            bloqueo_confirmaciones: row.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0
+            bloqueo_confirmaciones: row.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0,
+            bloqueo_examen_mental: row.querySelector('.chk-bloqueo-examen-mental')?.checked ? 1 : 0,
+            bloqueo_tests: row.querySelector('.chk-bloqueo-tests')?.checked ? 1 : 0
         };
         
         try {
@@ -16041,16 +16055,37 @@ async function loadDedicatedTherapistProfile(slug) {
         if (document.getElementById('pub-profile-nomenclatura')) document.getElementById('pub-profile-nomenclatura').textContent = t.nomenclatura || 'Psicólogo Clínico';
         if (document.getElementById('pub-profile-bio')) document.getElementById('pub-profile-bio').textContent = t.descripcion_biografia || 'Bienvenido a mi espacio terapéutico profesional.';
 
-        // 1. Badges de modalidades en el banner principal
+        // 1. Badges de modalidades, localidad, población y especialidad en el banner principal
         const modsBox = document.getElementById('pub-profile-mods');
         if (modsBox) {
+            let badgesHtml = '';
+            
+            // Modalidades
             const list = Array.isArray(t.modalidades) ? t.modalidades : ["Online", "Presencial"];
-            modsBox.innerHTML = list.map(m => {
+            badgesHtml += list.map(m => {
                 let icon = "🌐";
                 if (m === "Presencial") icon = "🏢";
                 if (m === "Domicilio") icon = "🚗";
                 return `<span class="pub-mod-badge" style="background: rgba(255,255,255,0.18); color: #fff; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">${icon} ${m}</span>`;
             }).join(" ");
+
+            // Localidad / Ubicación
+            if (t.pais) {
+                badgesHtml += ` <span class="pub-mod-badge" style="background: rgba(147,197,253,0.22); color: #e0f2fe; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(147,197,253,0.45); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">📍 ${t.pais}</span>`;
+            }
+
+            // Población atendida
+            if (t.poblaciones && (Array.isArray(t.poblaciones) ? t.poblaciones.length > 0 : t.poblaciones)) {
+                const pobStr = Array.isArray(t.poblaciones) ? t.poblaciones.join(' • ') : t.poblaciones;
+                badgesHtml += ` <span class="pub-mod-badge" style="background: rgba(240,171,252,0.22); color: #fce7f3; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(240,171,252,0.45); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">👥 ${pobStr}</span>`;
+            }
+
+            // Especialidades
+            if (t.especialidades) {
+                badgesHtml += ` <span class="pub-mod-badge" style="background: rgba(134,239,172,0.22); color: #dcfce7; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(134,239,172,0.45); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">🎯 ${t.especialidades}</span>`;
+            }
+
+            modsBox.innerHTML = badgesHtml;
         }
 
         // 2. Sección detallada de Modalidades y sus Descripciones
