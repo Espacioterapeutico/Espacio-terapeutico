@@ -530,6 +530,8 @@ function switchView(viewId) {
         loadPizarraVisual();
     } else if (viewId === 'examen-mental') {
         initExamenMentalModule();
+    } else if (viewId === 'tests-psicologicos') {
+        populateMainViewPatientSelect();
     } else if (viewId === 'therapist-tools') {
         loadTherapistToolsCatalog();
     } else if (viewId === 'manual-confirmations') {
@@ -2786,6 +2788,7 @@ function renderPatientsTable(list) {
             <td>${p.genero || 'N/A'}</td>
             <td>${loc}</td>
             <td class="actions-cell">
+                <button class="btn btn-sm" style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-weight: 700;" onclick="openPatientTestsModal(${p.id}, '${(p.nombres || '').replace(/'/g, "\\'")} ${(p.apellidos || '').replace(/'/g, "\\'")}')">🧪 Tests</button>
                 <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${p.id})">Ficha Resumen</button>
                 <button class="btn btn-primary btn-sm" onclick="openEditPatientModal(${p.id})">Editar</button>
             </td>
@@ -16915,6 +16918,482 @@ async function viewExamenMentalDetail(id) {
         bodyContent.innerHTML = '<p style="color: #ef4444;">Error al cargar detalle del examen mental.</p>';
     }
 }
+
+
+// =========================================================================
+// MÓDULO DE TESTS PSICOLÓGICOS (BDI-II, BAI, TCS, UGDS-GS)
+// =========================================================================
+
+let currentTestsPatientId = null;
+let currentTestsPatientName = '';
+let currentPublicTestDefinition = null;
+let currentPublicTestToken = null;
+let currentPublicTestAnswers = {};
+
+function initPublicTestRouteHandler() {
+    const path = window.location.pathname;
+    if (path.startsWith('/evaluacion/')) {
+        const token = path.replace('/evaluacion/', '').trim();
+        if (token) {
+            loadAndRenderPublicTest(token);
+        }
+    }
+}
+
+async function loadAndRenderPublicTest(token) {
+    currentPublicTestToken = token;
+    currentPublicTestAnswers = {};
+
+    const appEl = document.getElementById('app');
+    const authEl = document.getElementById('auth-screen');
+    const landingEl = document.getElementById('public-landing');
+    const pubProfileEl = document.getElementById('public-therapist-profile-screen');
+    const testScreen = document.getElementById('public-test-screen');
+
+    if (appEl) appEl.style.display = 'none';
+    if (authEl) authEl.style.display = 'none';
+    if (landingEl) landingEl.style.display = 'none';
+    if (pubProfileEl) pubProfileEl.style.display = 'none';
+    if (testScreen) {
+        testScreen.style.display = 'block';
+        testScreen.classList.remove('hide');
+    }
+
+    try {
+        const resp = await fetch(`/api/public/evaluacion/${token}`);
+        const data = await resp.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        const assign = data.assignment;
+        const testDef = data.test_definition;
+        currentPublicTestDefinition = testDef;
+
+        const headerTherapist = document.getElementById('pub-test-header-therapist');
+        if (headerTherapist) {
+            headerTherapist.innerHTML = `
+                <img src="${assign.psicologo_foto}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                <span>${assign.psicologo_nombre} (${assign.psicologo_titulo})</span>
+            `;
+        }
+
+        if (assign.estado === 'completado') {
+            document.getElementById('pub-test-form-card').style.display = 'none';
+            const successCard = document.getElementById('pub-test-success-card');
+            successCard.style.display = 'block';
+            successCard.classList.remove('hide');
+
+            document.getElementById('pub-test-success-summary').innerHTML = `
+                <div style="color: #047857; margin-bottom: 0.35rem;">✓ Evaluación: <strong>${testDef.nombre}</strong></div>
+                <div style="font-size: 1.1rem; color: #702e5e; font-weight: 800;">Resultado: ${assign.clasificacion_resultado || 'Procesado'}</div>
+                <div style="font-size: 0.85rem; color: #475569; margin-top: 0.5rem; line-height: 1.5;">${assign.interpretacion_clinica || ''}</div>
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem;">Fecha de envío: ${assign.fecha_completado || ''}</div>
+            `;
+            return;
+        }
+
+        document.getElementById('pub-test-badge-categoria').textContent = testDef.categoria || 'Evaluación Clínica';
+        document.getElementById('pub-test-title').textContent = testDef.nombre;
+        document.getElementById('pub-test-patient-info').textContent = `Consultante: ${assign.paciente_nombre}`;
+        document.getElementById('pub-test-instructions').textContent = testDef.instrucciones || 'Lea atentamente y seleccione su respuesta.';
+
+        renderPublicTestItems(testDef);
+        updatePublicTestProgressBar();
+
+    } catch (err) {
+        console.error("Error al cargar test público:", err);
+        alert("Error de conexión al cargar la evaluación.");
+    }
+}
+
+function renderPublicTestItems(testDef) {
+    const container = document.getElementById('pub-test-items-container');
+    if (!container) return;
+
+    let html = '';
+    const items = testDef.items || [];
+    const isBdi2 = testDef.code === 'BDI-II';
+
+    items.forEach((item, index) => {
+        const itemNum = item.num || (index + 1);
+        const itemTitle = item.titulo || item.txt || `Pregunta ${itemNum}`;
+
+        html += `
+            <div id="test-item-card-${itemNum}" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s ease;">
+                <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem;">
+                    ${itemTitle}
+                </div>`;
+
+        if (isBdi2 && item.opciones) {
+            html += `<div style="display: flex; flex-direction: column; gap: 0.6rem;">`;
+            item.opciones.forEach(op => {
+                html += `
+                    <label style="display: flex; align-items: flex-start; gap: 10px; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
+                        <input type="radio" name="item_${itemNum}" value="${op.val}" onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" style="margin-top: 3px; accent-color: #702e5e;">
+                        <span style="font-size: 0.92rem; color: #334155; line-height: 1.45;">${op.txt}</span>
+                    </label>`;
+            });
+            html += `</div>`;
+        } else {
+            const escala = testDef.escala_opciones || [];
+            html += `<div style="display: flex; flex-wrap: wrap; gap: 0.6rem;">`;
+            escala.forEach(op => {
+                html += `
+                    <label style="flex: 1; min-width: 140px; text-align: center; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 0.65rem 0.85rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
+                        <input type="radio" name="item_${itemNum}" value="${op.val}" onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" style="margin-right: 6px; accent-color: #702e5e;">
+                        <span style="font-size: 0.88rem; font-weight: 700; color: #334155;">${op.txt}</span>
+                    </label>`;
+            });
+            html += `</div>`;
+        }
+
+        html += `</div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function selectPublicTestAnswer(itemNum, value) {
+    currentPublicTestAnswers[itemNum] = value;
+
+    const card = document.getElementById(`test-item-card-${itemNum}`);
+    if (card) {
+        card.style.borderColor = '#a855f7';
+        card.style.background = '#fdf4ff';
+    }
+
+    updatePublicTestProgressBar();
+}
+
+function updatePublicTestProgressBar() {
+    if (!currentPublicTestDefinition) return;
+    const totalItems = (currentPublicTestDefinition.items || []).length;
+    const answeredCount = Object.keys(currentPublicTestAnswers).length;
+
+    const progressPct = totalItems > 0 ? Math.round((answeredCount / totalItems) * 100) : 0;
+    const progressBar = document.getElementById('pub-test-progress-bar');
+    const progressText = document.getElementById('pub-test-progress-text');
+
+    if (progressBar) progressBar.style.width = `${progressPct}%`;
+    if (progressText) progressText.textContent = `${answeredCount} / ${totalItems} Respondidas`;
+}
+
+async function submitPublicTestResponse() {
+    if (!currentPublicTestDefinition || !currentPublicTestToken) return;
+
+    const totalItems = (currentPublicTestDefinition.items || []).length;
+    const answeredCount = Object.keys(currentPublicTestAnswers).length;
+
+    if (answeredCount < totalItems) {
+        alert(`Por favor responda todas las preguntas antes de enviar (${answeredCount} de ${totalItems} completadas).`);
+        return;
+    }
+
+    const btn = document.getElementById('pub-test-submit-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Procesando Evaluación...';
+    }
+
+    try {
+        const resp = await fetch(`/api/public/evaluacion/${currentPublicTestToken}/responder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ respuestas: currentPublicTestAnswers })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+            alert(data.error);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '✅ Enviar Evaluación Completada';
+            }
+            return;
+        }
+
+        document.getElementById('pub-test-form-card').style.display = 'none';
+        const successCard = document.getElementById('pub-test-success-card');
+        successCard.style.display = 'block';
+        successCard.classList.remove('hide');
+
+        document.getElementById('pub-test-success-summary').innerHTML = `
+            <div style="color: #047857; margin-bottom: 0.35rem; font-size: 1rem;">✓ Evaluación: <strong>${currentPublicTestDefinition.nombre}</strong></div>
+            <div style="font-size: 1.1rem; color: #702e5e; font-weight: 800; margin: 0.5rem 0;">Resultado: ${data.clasificacion}</div>
+            <p style="font-size: 0.85rem; color: #475569; line-height: 1.5; margin: 0;">${data.interpretacion}</p>
+        `;
+
+    } catch (e) {
+        console.error("Error al enviar respuestas del test:", e);
+        alert("Error de conexión al enviar la evaluación.");
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '✅ Enviar Evaluación Completada';
+        }
+    }
+}
+
+
+// --- GESTIÓN DESDE EL PANEL DEL TERAPEUTA ---
+
+async function openPatientTestsModal(patientId, patientName) {
+    currentTestsPatientId = patientId;
+    currentTestsPatientName = patientName || 'Consultante';
+
+    const subtitle = document.getElementById('patient-tests-subtitle');
+    if (subtitle) subtitle.textContent = `Paciente: ${currentTestsPatientName}`;
+
+    openModal('modal-patient-tests');
+    await loadPatientTestsHistory(patientId);
+}
+
+async function loadPatientTestsHistory(patientId) {
+    const container = document.getElementById('patient-tests-history-container');
+    const badge = document.getElementById('patient-tests-count-badge');
+    if (!container) return;
+
+    container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 1.5rem;">Cargando historial de tests...</p>';
+
+    try {
+        const resp = await fetch(`/api/tests/paciente/${patientId}`);
+        const data = await resp.json();
+
+        if (data.error) {
+            container.innerHTML = `<p style="color: #ef4444; padding: 1rem;">${data.error}</p>`;
+            return;
+        }
+
+        const tests = data.tests || [];
+        if (badge) badge.textContent = `${tests.length} evaluaciones`;
+
+        if (tests.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                    <p style="color: #64748b; font-weight: 600; margin: 0;">No se han asignado evaluaciones psicológicas a este paciente.</p>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        tests.forEach(t => {
+            const isCompleted = t.estado === 'completado';
+            const statusBadge = isCompleted 
+                ? '<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">🟢 Completado</span>'
+                : '<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">⏳ Pendiente</span>';
+
+            html += `
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.35rem;">
+                            ${statusBadge}
+                            <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">${t.test_nombre} (${t.test_siglas})</span>
+                        </div>
+                        <div style="font-size: 0.82rem; color: #64748b; font-weight: 600;">
+                            Asignado: ${t.fecha_asignacion || ''} ${t.fecha_completado ? ' | Completado: ' + t.fecha_completado : ''}
+                        </div>
+                        ${isCompleted ? `
+                            <div style="margin-top: 0.4rem; font-size: 0.88rem; font-weight: 800; color: #702e5e;">
+                                Puntaje: ${t.puntaje_total} pts — ${t.clasificacion_resultado || ''}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button type="button" onclick="copyTestLink('${t.url_test}')" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; font-weight: 700; font-size: 0.78rem;">
+                            📋 Copiar Link
+                        </button>
+                        ${!isCompleted ? `
+                            <button type="button" onclick="openTestPresencialWindow('${t.url_test}')" class="btn btn-sm btn-outline-primary" style="border-radius: 8px; font-weight: 700; font-size: 0.78rem;">
+                                💻 Responder Presencial
+                            </button>
+                        ` : `
+                            <button type="button" onclick='openTestDetailModal(${JSON.stringify(t)})' class="btn btn-sm" style="background: #702e5e; color: white; border-radius: 8px; font-weight: 700; font-size: 0.78rem;">
+                                👁️ Ver Informe / Resultados
+                            </button>
+                        `}
+                        <button type="button" onclick="deleteTestAssignment(${t.id})" class="btn btn-sm btn-outline-danger" style="border-radius: 8px; font-weight: 700; font-size: 0.78rem;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>`;
+        });
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Error al cargar historial de tests:", e);
+        container.innerHTML = `<p style="color: #ef4444; padding: 1rem;">Error de conexión.</p>`;
+    }
+}
+
+async function executeAssignTestToPatient() {
+    if (!currentTestsPatientId) {
+        alert("Seleccione un paciente para asignar la evaluación.");
+        return;
+    }
+
+    const testCode = document.getElementById('select-assign-test-code').value;
+    const modo = document.getElementById('select-assign-test-mode').value;
+
+    try {
+        const resp = await fetch('/api/tests/asignar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: currentTestsPatientId,
+                test_code: testCode,
+                modo_aplicacion: modo
+            })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        if (modo === 'presencial') {
+            window.open(data.url_test, '_blank');
+        } else if (modo === 'link' && data.whatsapp_phone) {
+            const msg = encodeURIComponent(`Hola ${data.paciente_nombre}, por favor responde la siguiente evaluación psicológica asignada para tu consulta: ${data.url_test}`);
+            window.open(`https://wa.me/${data.whatsapp_phone}?text=${msg}`, '_blank');
+        } else {
+            alert(`✅ Test asignado exitosamente.\n\nEnlace único: ${data.url_test}`);
+        }
+
+        await loadPatientTestsHistory(currentTestsPatientId);
+
+    } catch (e) {
+        console.error("Error al asignar test:", e);
+        alert("Error de conexión al asignar test.");
+    }
+}
+
+function copyTestLink(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        alert("📋 Enlace de evaluación copiado al portapapeles:\n" + url);
+    }).catch(() => {
+        prompt("Copia el siguiente enlace:", url);
+    });
+}
+
+function openTestPresencialWindow(url) {
+    window.open(url, '_blank');
+}
+
+async function deleteTestAssignment(id) {
+    if (!confirm("¿Está seguro de eliminar esta asignación de test?")) return;
+
+    try {
+        const resp = await fetch(`/api/tests/asignacion/${id}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+        if (currentTestsPatientId) await loadPatientTestsHistory(currentTestsPatientId);
+    } catch (e) {
+        alert("Error al eliminar la asignación.");
+    }
+}
+
+function openTestDetailModal(testData) {
+    document.getElementById('test-detail-badge-code').textContent = testData.test_siglas || testData.test_code;
+    document.getElementById('test-detail-title').textContent = testData.test_nombre;
+
+    const body = document.getElementById('test-detail-body');
+    if (!body) return;
+
+    let subscalesHtml = '';
+    const sub = testData.subescalas || {};
+    if (Object.keys(sub).length > 0) {
+        subscalesHtml = `<div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 1rem; margin-top: 1rem;">
+            <strong style="color: #334155; display: block; margin-bottom: 0.5rem;">Puntuaciones por Subescalas:</strong>
+            <ul style="margin: 0; padding-left: 1.25rem; color: #475569;">`;
+        for (let [sName, sVal] of Object.entries(sub)) {
+            subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
+        }
+        subscalesHtml += `</ul></div>`;
+    }
+
+    body.innerHTML = `
+        <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 14px; padding: 1.25rem; text-align: center;">
+            <span style="font-size: 0.85rem; font-weight: 700; color: #702e5e; text-transform: uppercase;">Diagnóstico / Severidad Clínica</span>
+            <h3 style="font-size: 1.4rem; font-weight: 800; color: #702e5e; margin: 0.35rem 0;">${testData.clasificacion_resultado || 'Sin clasificación'}</h3>
+            <div style="font-size: 1rem; font-weight: 800; color: #334155;">Puntuación Total Directa: ${testData.puntaje_total} pts</div>
+        </div>
+
+        ${subscalesHtml}
+
+        <div>
+            <strong style="color: #0f172a; font-size: 0.95rem;">Análisis e Interpretación Clínica para Informe:</strong>
+            <p style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; font-size: 0.92rem; color: #334155; line-height: 1.6; margin-top: 0.35rem;">
+                ${testData.interpretacion_clinica || 'Sin interpretación disponible.'}
+            </p>
+        </div>
+
+        <div style="font-size: 0.8rem; color: #64748b; text-align: right;">
+            Fecha de aplicación: ${testData.fecha_completado || testData.fecha_asignacion || ''}
+        </div>
+    `;
+
+    openModal('modal-view-test-detail');
+}
+
+async function populateMainViewPatientSelect() {
+    const select = document.getElementById('select-test-main-patient');
+    if (!select) return;
+
+    try {
+        const resp = await fetch('/api/pacientes');
+        const data = await resp.json();
+        const pacs = data.pacientes || data || [];
+
+        let html = '<option value="">-- Seleccionar Paciente --</option>';
+        pacs.forEach(p => {
+            html += `<option value="${p.id}">${p.nombres} ${p.apellidos} (CI: ${p.cedula || 'S/I'})</option>`;
+        });
+        select.innerHTML = html;
+    } catch (e) {
+        console.error("Error al poblar selector de pacientes para tests:", e);
+    }
+}
+
+function loadTestsForSelectedPatientFromMainView() {
+    const select = document.getElementById('select-test-main-patient');
+    if (!select || !select.value) return;
+
+    const patientId = select.value;
+    const patientName = select.options[select.selectedIndex].text;
+    openPatientTestsModal(patientId, patientName);
+}
+
+function openAssignTestFromMainView() {
+    const select = document.getElementById('select-test-main-patient');
+    if (!select || !select.value) {
+        alert("Por favor seleccione un paciente primero para asignar la evaluación.");
+        return;
+    }
+    loadTestsForSelectedPatientFromMainView();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    initPublicTestRouteHandler();
+});
+
+window.openPatientTestsModal = openPatientTestsModal;
+window.executeAssignTestToPatient = executeAssignTestToPatient;
+window.copyTestLink = copyTestLink;
+window.openTestPresencialWindow = openTestPresencialWindow;
+window.deleteTestAssignment = deleteTestAssignment;
+window.openTestDetailModal = openTestDetailModal;
+window.submitPublicTestResponse = submitPublicTestResponse;
+window.loadTestsForSelectedPatientFromMainView = loadTestsForSelectedPatientFromMainView;
+window.openAssignTestFromMainView = openAssignTestFromMainView;
+
 
 
 

@@ -1049,6 +1049,7 @@ def init_db():
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
         cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
         ensure_usuarios_columns(db)
+        ensure_tests_tables(db)
 
         def_landing_defaults = [
             ('landing_hero_title', 'Espacio Terapéutico'),
@@ -13792,6 +13793,553 @@ def export_examen_mental_word(exam_id):
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
+
+
+# ==============================================================================
+# MÓDULO DE TESTS PSICOLÓGICOS (BDI-II, BAI, TCS, UGDS-GS)
+# ==============================================================================
+
+import uuid
+
+def ensure_tests_tables(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tests_definiciones (
+            code TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            siglas TEXT NOT NULL,
+            categoria TEXT,
+            descripcion TEXT,
+            instrucciones TEXT,
+            escala_opciones_json TEXT,
+            items_json TEXT NOT NULL,
+            reglas_correccion_json TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS test_asignaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uuid_token TEXT UNIQUE NOT NULL,
+            patient_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            test_code TEXT NOT NULL,
+            estado TEXT DEFAULT 'pendiente',
+            modo_aplicacion TEXT DEFAULT 'link',
+            fecha_asignacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha_completado DATETIME,
+            respuestas_json TEXT,
+            puntaje_total REAL,
+            subescalas_json TEXT,
+            clasificacion_resultado TEXT,
+            interpretacion_clinica TEXT,
+            notas_terapeuta TEXT,
+            FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            FOREIGN KEY (patient_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
+    db.commit()
+
+    # Verificar e insertar catálogo base de tests si está vacío
+    cursor.execute("SELECT COUNT(*) FROM tests_definiciones")
+    if cursor.fetchone()[0] == 0:
+        seed_tests = [
+            (
+                "BDI-II",
+                "Inventario de Depresión de Beck - Segunda Edición",
+                "BDI-II",
+                "Evaluación Emocional / Depresión",
+                "Instrumento clínico autoadministrado de 21 ítems para medir la gravedad de la depresión en adultos y adolescentes.",
+                "Por favor, lea con atención cada grupo de afirmaciones y elija la que mejor describa cómo se ha sentido durante las últimas dos semanas, incluyendo el día de hoy.",
+                json.dumps([]),
+                json.dumps([
+                    {"num": 1, "titulo": "1. Tristeza", "opciones": [{"val": 0, "txt": "No me siento triste."}, {"val": 1, "txt": "Me siento triste gran parte del tiempo."}, {"val": 2, "txt": "Estoy triste todo el tiempo."}, {"val": 3, "txt": "Estoy tan triste o desdichado que no puedo soportarlo."}]},
+                    {"num": 2, "titulo": "2. Pesimismo", "opciones": [{"val": 0, "txt": "No estoy desalentado respecto a mi futuro."}, {"val": 1, "txt": "Me siento más desalentado respecto a mi futuro que antes."}, {"val": 2, "txt": "No espero que las cosas me salgan bien."}, {"val": 3, "txt": "Siento que mi futuro es desesperanzador y que las cosas solo empeorarán."}]},
+                    {"num": 3, "titulo": "3. Fracaso", "opciones": [{"val": 0, "txt": "No me siento como un fracasado."}, {"val": 1, "txt": "He fracasado más de lo que debería."}, {"val": 2, "txt": "Cuando miro hacia atrás, veo muchos fracasos."}, {"val": 3, "txt": "Siento que como persona soy un fracaso total."}]},
+                    {"num": 4, "titulo": "4. Pérdida de placer", "opciones": [{"val": 0, "txt": "Obtengo el mismo placer de siempre de las cosas que me gustan."}, {"val": 1, "txt": "No disfruto de las cosas tanto como antes."}, {"val": 2, "txt": "Obtengo muy poco placer de las cosas que solía disfrutar."}, {"val": 3, "txt": "No puedo obtener ningún placer de las cosas que solía disfrutar."}]},
+                    {"num": 5, "titulo": "5. Sentimiento de culpa", "opciones": [{"val": 0, "txt": "No me siento particularmente culpable."}, {"val": 1, "txt": "Me siento culpable por muchas cosas que he hecho o debería haber hecho."}, {"val": 2, "txt": "Me siento bastante culpable la mayor parte del tiempo."}, {"val": 3, "txt": "Me siento continuamente culpable."}]},
+                    {"num": 6, "titulo": "6. Sentimiento de castigo", "opciones": [{"val": 0, "txt": "No siento que esté siendo castigado."}, {"val": 1, "txt": "Siento que tal vez pueda ser castigado."}, {"val": 2, "txt": "Espero ser castigado."}, {"val": 3, "txt": "Siento que estoy siendo castigado."}]},
+                    {"num": 7, "titulo": "7. Disconformidad con uno mismo", "opciones": [{"val": 0, "txt": "Siento lo mismo que siempre respecto a mí mismo."}, {"val": 1, "txt": "He perdido la confianza en mí mismo."}, {"val": 2, "txt": "Estoy decepcionado de mí mismo."}, {"val": 3, "txt": "Me detesto a mí mismo."}]},
+                    {"num": 8, "titulo": "8. Autocrítica", "opciones": [{"val": 0, "txt": "No me critico ni me culpo más de lo habitual."}, {"val": 1, "txt": "Estoy más crítico conmigo mismo de lo que solía estar."}, {"val": 2, "txt": "Me critico por todas mis faltas."}, {"val": 3, "txt": "Me culpo por todo lo malo que sucede."}]},
+                    {"num": 9, "titulo": "9. Pensamientos o deseos suicidas", "opciones": [{"val": 0, "txt": "No tengo ningún pensamiento de matarme."}, {"val": 1, "txt": "Tengo pensamientos de matarme, pero no los llevaría a cabo."}, {"val": 2, "txt": "Desearía matarme."}, {"val": 3, "txt": "Me mataría si tuviera la oportunidad."}]},
+                    {"num": 10, "titulo": "10. Llanto", "opciones": [{"val": 0, "txt": "No lloro más de lo que solía hacerlo."}, {"val": 1, "txt": "Lloro más de lo que solía hacerlo."}, {"val": 2, "txt": "Lloro por cualquier pequeñez."}, {"val": 3, "txt": "Siento ganas de llorar, pero no puedo."}]},
+                    {"num": 11, "titulo": "11. Agitación / Inquietud", "opciones": [{"val": 0, "txt": "No me siento más inquieto o agitado que de costumbre."}, {"val": 1, "txt": "Me siento más inquieto o agitado de lo habitual."}, {"val": 2, "txt": "Estoy tan inquieto que me cuesta quedarme quieto."}, {"val": 3, "txt": "Estoy tan agitado que tengo que estar en constante movimiento."}]},
+                    {"num": 12, "titulo": "12. Pérdida de interés", "opciones": [{"val": 0, "txt": "No he perdido el interés en otras personas o actividades."}, {"val": 1, "txt": "Estoy menos interesado en los demás o en las cosas que antes."}, {"val": 2, "txt": "He perdido casi todo el interés en los demás o en las cosas."}, {"val": 3, "txt": "Me cuesta mucho interesarme por algo."}]},
+                    {"num": 13, "titulo": "13. Indecisión", "opciones": [{"val": 0, "txt": "Tomo decisiones tan bien como siempre."}, {"val": 1, "txt": "Me resulta más difícil tomar decisiones que de costumbre."}, {"val": 2, "txt": "Tengo mucha más dificultad para tomar decisiones que antes."}, {"val": 3, "txt": "Tengo problemas para tomar cualquier decisión."}]},
+                    {"num": 14, "titulo": "14. Inutilidad", "opciones": [{"val": 0, "txt": "No me siento inútil."}, {"val": 1, "txt": "No me considero tan útil o valioso como solía ser."}, {"val": 2, "txt": "Me siento más inútil en comparación con otras personas."}, {"val": 3, "txt": "Me siento completamente inútil."}]},
+                    {"num": 15, "titulo": "15. Pérdida de energía", "opciones": [{"val": 0, "txt": "Tengo tanta energía como siempre."}, {"val": 1, "txt": "Tengo menos energía de la que solía tener."}, {"val": 2, "txt": "No tengo suficiente energía para hacer casi nada."}, {"val": 3, "txt": "No tengo energía para hacer nada."}]},
+                    {"num": 16, "titulo": "16. Cambios en el patrón de sueño", "opciones": [{"val": 0, "txt": "No he experimentado ningún cambio en mis hábitos de sueño."}, {"val": 1, "txt": "Duermo algo más o algo menos de lo habitual."}, {"val": 2, "txt": "Duermo mucho más o mucho menos de lo habitual."}, {"val": 3, "txt": "Duermo casi todo el día o me despierto 1-2 horas antes y no puedo volver a dormirme."}]},
+                    {"num": 17, "titulo": "17. Irritabilidad", "opciones": [{"val": 0, "txt": "No estoy más irritable de lo habitual."}, {"val": 1, "txt": "Estoy más irritable de lo habitual."}, {"val": 2, "txt": "Estoy mucho más irritable de lo habitual."}, {"val": 3, "txt": "Estoy irritable todo el tiempo."}]},
+                    {"num": 18, "titulo": "18. Cambios en el apetito", "opciones": [{"val": 0, "txt": "No he experimentado ningún cambio en mi apetito."}, {"val": 1, "txt": "Mi apetito es algo menor o mayor que de costumbre."}, {"val": 2, "txt": "Mi apetito es mucho menor o mayor que antes."}, {"val": 3, "txt": "No tengo ningún apetito o tengo ganas de comer todo el tiempo."}]},
+                    {"num": 19, "titulo": "19. Dificultad de concentración", "opciones": [{"val": 0, "txt": "Puedo concentrarme tan bien como siempre."}, {"val": 1, "txt": "No puedo concentrarme tan bien como habitualmente."}, {"val": 2, "txt": "Me cuesta mantener la mente en algo por mucho tiempo."}, {"val": 3, "txt": "Encuentro que no puedo concentrarme en nada."}]},
+                    {"num": 20, "titulo": "20. Cansancio o fatiga", "opciones": [{"val": 0, "txt": "No estoy más cansado o fatigado que de costumbre."}, {"val": 1, "txt": "Me canso o me fatigo más fácilmente que antes."}, {"val": 2, "txt": "Estoy demasiado cansado o fatigado para hacer muchas cosas que solía hacer."}, {"val": 3, "txt": "Estoy demasiado cansado o fatigado para hacer la mayoría de las cosas."}]},
+                    {"num": 21, "titulo": "21. Pérdida de interés por el sexo", "opciones": [{"val": 0, "txt": "No he notado ningún cambio reciente en mi interés por el sexo."}, {"val": 1, "txt": "Estoy menos interesado en el sexo de lo que solía estar."}, {"val": 2, "txt": "Estoy mucho menos interesado en el sexo ahora."}, {"val": 3, "txt": "He perdido completamente el interés en el sexo."}]}
+                ]),
+                json.dumps({"max": 63, "cortes": [13, 19, 28]})
+            ),
+            (
+                "BAI",
+                "Inventario de Ansiedad de Beck",
+                "BAI",
+                "Evaluación Emocional / Ansiedad",
+                "Instrumento autoadministrado de 21 síntomas para discriminar la gravedad de la ansiedad clínica.",
+                "A continuación se presenta una lista de síntomas comunes de la ansiedad. Lea cada uno atentamente e indique cuánto le ha molestado cada síntoma durante la última semana, incluyendo el día de hoy.",
+                json.dumps([
+                    {"val": 0, "txt": "0 = En absoluto"},
+                    {"val": 1, "txt": "1 = Levemente (no me molestó mucho)"},
+                    {"val": 2, "txt": "2 = Moderadamente (fue muy desagradable pero pude soportarlo)"},
+                    {"val": 3, "txt": "3 = Severamente (casi no pude soportarlo)"}
+                ]),
+                json.dumps([
+                    {"num": 1, "txt": "1. Entumecimiento o hormigueo"},
+                    {"num": 2, "txt": "2. Sensación de calor / Sofocos"},
+                    {"num": 3, "txt": "3. Temblor en las piernas"},
+                    {"num": 4, "txt": "4. Incapacidad para relajarse"},
+                    {"num": 5, "txt": "5. Temor a que ocurra lo peor"},
+                    {"num": 6, "txt": "6. Mareo o aturdimiento"},
+                    {"num": 7, "txt": "7. Palpitaciones o ritmo cardíaco acelerado"},
+                    {"num": 8, "txt": "8. Inestabilidad o sensación de desmayo"},
+                    {"num": 9, "txt": "9. Terror, miedo o pánico"},
+                    {"num": 10, "txt": "10. Nerviosismo"},
+                    {"num": 11, "txt": "11. Sensación de ahogo o sofocación"},
+                    {"num": 12, "txt": "12. Temblor en las manos"},
+                    {"num": 13, "txt": "13. Inquietud / Tembloroso"},
+                    {"num": 14, "txt": "14. Miedo a perder el control"},
+                    {"num": 15, "txt": "15. Dificultad para respirar"},
+                    {"num": 16, "txt": "16. Miedo a morir"},
+                    {"num": 17, "txt": "17. Sobresalto / Asustadizo"},
+                    {"num": 18, "txt": "18. Indigestión o malestar en el estómago"},
+                    {"num": 19, "txt": "19. Sensación de desvanecimiento"},
+                    {"num": 20, "txt": "20. Enrojecimiento facial"},
+                    {"num": 21, "txt": "21. Sudoración (no debida al calor)"}
+                ]),
+                json.dumps({"max": 63, "cortes": [7, 15, 25]})
+            ),
+            (
+                "TCS",
+                "Escala de Congruencia Transgénero",
+                "TCS",
+                "Identidad de Género / Afirmación",
+                "Evalúa el grado de autoaceptación y congruencia de la apariencia corporal respecto a la identidad de género felt/sentida.",
+                "Por favor, lee atentamente cada una de las siguientes afirmaciones y marca la opción que mejor describa cómo te sientes.",
+                json.dumps([
+                    {"val": 1, "txt": "1 = Totalmente en desacuerdo"},
+                    {"val": 2, "txt": "2 = En desacuerdo"},
+                    {"val": 3, "txt": "3 = Ni de acuerdo ni en desacuerdo"},
+                    {"val": 4, "txt": "4 = De acuerdo"},
+                    {"val": 5, "txt": "5 = Totalmente de acuerdo"}
+                ]),
+                json.dumps([
+                    {"num": 1, "txt": "1. Siento que mi apariencia física expresa adecuadamente mi identidad de género."},
+                    {"num": 2, "txt": "2. Mi apariencia física exterior es incongruente con mi identidad de género. (Inverso)"},
+                    {"num": 3, "txt": "3. Acepto mi identidad de género."},
+                    {"num": 4, "txt": "4. Siento que la forma en que los demás ven mi género coincide con mi identidad de género."},
+                    {"num": 5, "txt": "5. Me alegra tener la identidad de género que tengo."},
+                    {"num": 6, "txt": "6. Desearía que mi cuerpo representara con mayor precisión mi identidad de género. (Inverso)"},
+                    {"num": 7, "txt": "7. Me siento cómodo/a/e con mi identidad de género."},
+                    {"num": 8, "txt": "8. Siento que mi cuerpo no representa mi identidad de género. (Inverso)"},
+                    {"num": 9, "txt": "9. He aceptado completamente mi identidad de género."},
+                    {"num": 10, "txt": "10. Mi apariencia física exterior representa con precisión mi identidad de género."},
+                    {"num": 11, "txt": "11. Siento que mi identidad de género es una parte hermosa de lo que soy."},
+                    {"num": 12, "txt": "12. Siento que mi cuerpo y mi identidad de género están en sintonía."}
+                ]),
+                json.dumps({"inversos": [2, 6, 8]})
+            ),
+            (
+                "UGDS-GS",
+                "Escala de Disforia de Género de Utrecht - Espectro de Género",
+                "UGDS-GS",
+                "Identidad de Género / Disforia",
+                "Mide el malestar o distrés derivado de la incongruencia entre el sexo asignado al nacer y la identidad de género sentida.",
+                "Responde a las siguientes afirmaciones indicando qué tan de acuerdo estás con cada una de ellas de acuerdo a tu experiencia reciente.",
+                json.dumps([
+                    {"val": 1, "txt": "1 = Totalmente en desacuerdo"},
+                    {"val": 2, "txt": "2 = En desacuerdo"},
+                    {"val": 3, "txt": "3 = Neutral / A veces"},
+                    {"val": 4, "txt": "4 = De acuerdo"},
+                    {"val": 5, "txt": "5 = Totalmente de acuerdo"}
+                ]),
+                json.dumps([
+                    {"num": 1, "txt": "1. Me siento incómodo/a/e cuando veo mi cuerpo desnudo en el espejo debido a mis características sexuales."},
+                    {"num": 2, "txt": "2. Me siento feliz con las partes de mi cuerpo que corresponden a mi sexo asignado al nacer. (Inverso)"},
+                    {"num": 3, "txt": "3. Evito que otras personas vean o toquen ciertas partes de mi cuerpo por malestar con mi sexo asignado."},
+                    {"num": 4, "txt": "4. Siento que las expectativas sociales asociadas a mi sexo asignado al nacer me asfixian o limitan."},
+                    {"num": 5, "txt": "5. Me genera mucho malestar que la gente se refiera a mí con términos asociados a mi sexo asignado al nacer."},
+                    {"num": 6, "txt": "6. Experimento una sensación de alivio y felicidad cuando las personas me reconocen con mi género sentido. (Inverso)"},
+                    {"num": 7, "txt": "7. Desearía haber nacido con las características corporales de mi género sentido."},
+                    {"num": 8, "txt": "8. Siento que mi cuerpo actual no encaja en lo absoluto con quién soy internamente."},
+                    {"num": 9, "txt": "9. Me resulta doloroso o incómodo participar en interacciones sociales bajo las expectativas de mi sexo asignado."},
+                    {"num": 10, "txt": "10. Me siento cómodo/a/e interpretando el rol social correspondiente al género con el que me identifico. (Inverso)"},
+                    {"num": 11, "txt": "11. La idea de vivir el resto de mi vida siendo tratado/a/e según mi sexo asignado al nacer me resulta insoportable."},
+                    {"num": 12, "txt": "12. Constantemente busco formas de modificar o camuflar mis características sexuales secundarias (pecho, vello, voz, etc.)."},
+                    {"num": 13, "txt": "13. Siento envidia cuando veo a personas que expresan y viven libremente el género con el que me identifico."},
+                    {"num": 14, "txt": "14. He llegado a sentir un profundo rechazo hacia mis propios genitales."},
+                    {"num": 15, "txt": "15. Me siento orgulloso/a/e del camino que estoy tomando para afirmar mi identidad de género. (Inverso)"},
+                    {"num": 16, "txt": "16. Socializar en mi género sentido me hace sentir una persona más auténtica y completa. (Inverso)"},
+                    {"num": 17, "txt": "17. Siento que la incongruencia entre mi mente y mi cuerpo me genera un desgaste emocional muy alto en el día a día."},
+                    {"num": 18, "txt": "18. El reconocimiento legal de mi identidad de género (documentos, nombres) es fundamental para mi bienestar."}
+                ]),
+                json.dumps({"inversos": [2, 6, 10, 15, 16], "cortes": [40, 60]})
+            )
+        ]
+        cursor.executemany("""
+            INSERT INTO tests_definiciones 
+            (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json, reglas_correccion_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, seed_tests)
+        db.commit()
+
+
+def process_test_scoring(test_code, answers):
+    """
+    answers es un diccionario {"1": val, "2": val, ...}
+    retorna (total_score, subscales_dict, classification_str, interpretation_str)
+    """
+    total_score = 0.0
+    subscales = {}
+    classification = ""
+    interpretation = ""
+
+    if test_code == "BDI-II":
+        for k, v in answers.items():
+            try: total_score += float(v)
+            except: pass
+
+        if total_score <= 13:
+            classification = "Depresión Mínima"
+            interpretation = "Puntuación entre 0 y 13. Muestra una vivencia emocional estable sin indicadores clínicos significativos de depresión."
+        elif total_score <= 19:
+            classification = "Depresión Leve"
+            interpretation = "Puntuación entre 14 y 19. Presencia de sintomatología depresiva leve. Se sugiere monitorear fluctuaciones del estado de ánimo."
+        elif total_score <= 28:
+            classification = "Depresión Moderada"
+            interpretation = "Puntuación entre 20 y 28. Presencia de clínica depresiva moderada. Se recomienda abordaje focalizado y evaluación de factores estresantes."
+        else:
+            classification = "Depresión Grave"
+            interpretation = "Puntuación entre 29 y 63. Sintomatología depresiva severa. Requiere intervención prioritaria y plan de acompañamiento intensivo."
+
+    elif test_code == "BAI":
+        for k, v in answers.items():
+            try: total_score += float(v)
+            except: pass
+
+        if total_score <= 7:
+            classification = "Ansiedad Mínima"
+            interpretation = "Puntuación entre 0 y 7. Niveles basales normales de ansiedad sin interferencia significativa."
+        elif total_score <= 15:
+            classification = "Ansiedad Leve"
+            interpretation = "Puntuación entre 8 y 15. Sintomatología ansiosa leve, principalmente manifestada de forma intermitente."
+        elif total_score <= 25:
+            classification = "Ansiedad Moderada"
+            interpretation = "Puntuación entre 16 y 25. Ansiedad clínica moderada con activación somática u objetiva relevante."
+        else:
+            classification = "Ansiedad Grave"
+            interpretation = "Puntuación entre 26 y 63. Niveles elevados y severos de ansiedad. Justifica abordaje terapéutico prioritario."
+
+    elif test_code == "TCS":
+        processed_answers = {}
+        for num in range(1, 13):
+            val = float(answers.get(str(num), answers.get(num, 3)))
+            if num in [2, 6, 8]:
+                val = 6.0 - val
+            processed_answers[num] = val
+
+        aceptacion = sum(processed_answers[n] for n in [3, 5, 7, 9, 11])
+        congruencia = sum(processed_answers[n] for n in [1, 2, 4, 6, 8, 10, 12])
+        total_score = aceptacion + congruencia
+
+        subscales = {
+            "Aceptación de la Identidad": round(aceptacion, 1),
+            "Congruencia de la Apariencia": round(congruencia, 1)
+        }
+        classification = f"Aceptación: {int(aceptacion)}/25 | Congruencia: {int(congruencia)}/35"
+        interpretation = (
+            f"Subescala Aceptación de la Identidad: {int(aceptacion)} pts (Rango 5-25). "
+            f"Subescala Congruencia de la Apariencia: {int(congruencia)} pts (Rango 7-35). "
+            "Puntuaciones más altas en Aceptación reflejan consolidación del orgullo identitario y autoaceptación afectiva."
+        )
+
+    elif test_code == "UGDS-GS":
+        processed_answers = {}
+        for num in range(1, 19):
+            val = float(answers.get(str(num), answers.get(num, 3)))
+            if num in [2, 6, 10, 15, 16]:
+                val = 6.0 - val
+            processed_answers[num] = val
+
+        distres = sum(processed_answers[n] for n in [1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 14, 17, 18])
+        afirmacion = sum(processed_answers[n] for n in [2, 6, 10, 15, 16])
+        total_score = sum(processed_answers.values())
+
+        subscales = {
+            "Distrés por Incongruencia": round(distres, 1),
+            "Resiliencia y Afirmación": round(afirmacion, 1)
+        }
+
+        if total_score <= 40:
+            classification = "Disforia Mínima o Nula"
+            interpretation = f"Puntuación Total: {int(total_score)}/90. Niveles mínimos o nulos de distrés o disforia por incongruencia de género."
+        elif total_score <= 60:
+            classification = "Disforia Moderada / Malestar Intermitente"
+            interpretation = f"Puntuación Total: {int(total_score)}/90. Malestar intermitente. Característico de transiciones avanzadas o identidades no binarias."
+        else:
+            classification = "Disforia de Género Clínicamente Significativa"
+            interpretation = f"Puntuación Total: {int(total_score)}/90. Disforia de género elevada. Justifica acompañamiento de afirmación de género prioritario."
+
+    return total_score, subscales, classification, interpretation
+
+
+@app.route('/evaluacion/<token>', methods=['GET'])
+def render_public_test_page(token):
+    return render_template('index.html')
+
+
+@app.route('/api/tests/catalogo', methods=['GET'])
+def api_get_tests_catalogo():
+    db = get_db()
+    ensure_tests_tables(db)
+    cursor = db.cursor()
+    cursor.execute("SELECT code, nombre, siglas, categoria, descripcion FROM tests_definiciones")
+    rows = cursor.fetchall()
+    return jsonify({'tests': [dict(r) for r in rows]})
+
+
+@app.route('/api/tests/asignar', methods=['POST'])
+def api_asignar_test():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_usuarios_columns(db)
+    cursor = db.cursor()
+
+    # Verificar bloqueo de tests
+    cursor.execute("SELECT bloqueo_tests FROM usuarios WHERE id = ?", (user_id,))
+    usr = cursor.fetchone()
+    if usr and usr['bloqueo_tests'] == 1:
+        return jsonify({'error': 'El módulo de Tests Psicológicos se encuentra restringido para tu usuario.'}), 403
+
+    data = request.json or {}
+    patient_id = data.get('patient_id')
+    test_code = data.get('test_code')
+    modo = data.get('modo_aplicacion', 'link')
+
+    if not patient_id or not test_code:
+        return jsonify({'error': 'Faltan datos obligatorios.'}), 400
+
+    ensure_tests_tables(db)
+
+    cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    pac = cursor.fetchone()
+    if not pac:
+        return jsonify({'error': 'Paciente no encontrado o acceso no permitido.'}), 404
+
+    token = uuid.uuid4().hex
+    try:
+        cursor.execute("""
+            INSERT INTO test_asignaciones (uuid_token, patient_id, user_id, test_code, estado, modo_aplicacion)
+            VALUES (?, ?, ?, ?, 'pendiente', ?)
+        """, (token, patient_id, user_id, test_code, modo))
+        db.commit()
+
+        url_test = f"{request.host_url.rstrip('/')}/evaluacion/{token}"
+        clean_phone = (pac['telefono'] or '').replace(' ', '').replace('-', '').replace('+', '')
+
+        return jsonify({
+            'success': 'Test asignado exitosamente.',
+            'assignment_id': cursor.lastrowid,
+            'token': token,
+            'url_test': url_test,
+            'whatsapp_phone': clean_phone,
+            'paciente_nombre': f"{pac['nombres']} {pac['apellidos']}".strip()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al asignar test: {str(e)}'}), 500
+
+
+@app.route('/api/public/evaluacion/<token>', methods=['GET'])
+def api_get_public_evaluacion(token):
+    db = get_db()
+    ensure_tests_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT a.*, p.nombres as pac_nombres, p.apellidos as pac_apellidos,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.nomenclatura as psic_titulo, u.foto_titulo as psic_foto
+        FROM test_asignaciones a
+        JOIN pacientes p ON a.patient_id = p.id
+        JOIN usuarios u ON a.user_id = u.id
+        WHERE a.uuid_token = ?
+    """, (token,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Evaluación no encontrada o token inválido.'}), 404
+
+    assign = dict(row)
+
+    cursor.execute("SELECT * FROM tests_definiciones WHERE code = ?", (assign['test_code'],))
+    test_def_row = cursor.fetchone()
+    if not test_def_row:
+        return jsonify({'error': 'Definición del test no encontrada.'}), 404
+
+    test_def = dict(test_def_row)
+    try: test_def['escala_opciones'] = json.loads(test_def['escala_opciones_json'])
+    except: test_def['escala_opciones'] = []
+
+    try: test_def['items'] = json.loads(test_def['items_json'])
+    except: test_def['items'] = []
+
+    return jsonify({
+        'assignment': {
+            'id': assign['id'],
+            'token': assign['uuid_token'],
+            'estado': assign['estado'],
+            'fecha_asignacion': assign['fecha_asignacion'],
+            'fecha_completado': assign['fecha_completado'],
+            'test_code': assign['test_code'],
+            'paciente_nombre': f"{assign['pac_nombres']} {assign['pac_apellidos']}".strip(),
+            'psicologo_nombre': f"Psic. {assign['psic_nombres']} {assign['psic_apellidos']}".strip(),
+            'psicologo_titulo': assign['psic_titulo'] or 'Psicólogo Clínico',
+            'psicologo_foto': assign['psic_foto'] or '/static/logo.png',
+            'puntaje_total': assign['puntaje_total'],
+            'clasificacion_resultado': assign['clasificacion_resultado'],
+            'interpretacion_clinica': assign['interpretacion_clinica'],
+            'subescalas': json.loads(assign['subescalas_json']) if assign['subescalas_json'] else {}
+        },
+        'test_definition': test_def
+    })
+
+
+@app.route('/api/public/evaluacion/<token>/responder', methods=['POST'])
+def api_responder_public_evaluacion(token):
+    db = get_db()
+    ensure_tests_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM test_asignaciones WHERE uuid_token = ?", (token,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Evaluación no encontrada.'}), 404
+
+    assign = dict(row)
+    if assign['estado'] == 'completado':
+        return jsonify({'error': 'Esta evaluación ya fue completada previamente.', 'already_completed': True}), 400
+
+    data = request.json or {}
+    answers = data.get('respuestas', {})
+    if not answers:
+        return jsonify({'error': 'Debe enviar las respuestas del test.'}), 400
+
+    total_score, subscales, classification, interpretation = process_test_scoring(assign['test_code'], answers)
+
+    try:
+        cursor.execute("""
+            UPDATE test_asignaciones SET
+                estado = 'completado',
+                fecha_completado = CURRENT_TIMESTAMP,
+                respuestas_json = ?,
+                puntaje_total = ?,
+                subescalas_json = ?,
+                clasificacion_resultado = ?,
+                interpretacion_clinica = ?
+            WHERE uuid_token = ?
+        """, (json.dumps(answers), total_score, json.dumps(subscales), classification, interpretation, token))
+        db.commit()
+
+        return jsonify({
+            'success': 'Evaluación completada exitosamente.',
+            'puntaje_total': total_score,
+            'subescalas': subscales,
+            'clasificacion': classification,
+            'interpretacion': interpretation
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al guardar respuestas: {str(e)}'}), 500
+
+
+@app.route('/api/tests/paciente/<int:patient_id>', methods=['GET'])
+def api_get_tests_paciente(patient_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_tests_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria
+        FROM test_asignaciones a
+        JOIN tests_definiciones td ON a.test_code = td.code
+        WHERE a.patient_id = ? AND a.user_id = ?
+        ORDER BY a.fecha_asignacion DESC
+    """, (patient_id, user_id))
+
+    rows = cursor.fetchall()
+    results = []
+    for r in rows:
+        d = dict(r)
+        try: d['subescalas'] = json.loads(d['subescalas_json']) if d['subescalas_json'] else {}
+        except: d['subescalas'] = {}
+        try: d['respuestas'] = json.loads(d['respuestas_json']) if d['respuestas_json'] else {}
+        except: d['respuestas'] = {}
+        d['url_test'] = f"{request.host_url.rstrip('/')}/evaluacion/{d['uuid_token']}"
+        results.append(d)
+
+    return jsonify({'tests': results})
+
+
+@app.route('/api/tests/asignacion/<int:assignment_id>', methods=['DELETE'])
+def api_eliminar_test_asignacion(assignment_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_tests_tables(db)
+    cursor = db.cursor()
+
+    try:
+        cursor.execute("DELETE FROM test_asignaciones WHERE id = ? AND user_id = ?", (assignment_id, user_id))
+        db.commit()
+        return jsonify({'success': 'Asignación eliminada correctamente.'})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/patient-portal/tests', methods=['GET'])
+def api_patient_portal_tests():
+    patient_id = session.get('patient_id')
+    if not patient_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_tests_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+        FROM test_asignaciones a
+        JOIN tests_definiciones td ON a.test_code = td.code
+        JOIN usuarios u ON a.user_id = u.id
+        WHERE a.patient_id = ?
+        ORDER BY a.fecha_asignacion DESC
+    """, (patient_id,))
+
+    rows = cursor.fetchall()
+    tests_list = []
+    for r in rows:
+        d = dict(r)
+        d['psicologo_nombre'] = f"Psic. {d['psic_nombres']} {d['psic_apellidos']}".strip()
+        d['url_evaluacion'] = f"/evaluacion/{d['uuid_token']}"
+        tests_list.append(d)
+
+    return jsonify({'tests': tests_list})
+
 
 
 
