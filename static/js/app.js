@@ -2293,25 +2293,33 @@ async function handleSavePizarraUpdate() {
     const inputArea = document.getElementById('pat-pizarra-input');
     const fileInput = document.getElementById('pat-pizarra-file');
     const statusMsg = document.getElementById('pat-pizarra-status-msg');
+    const saveBtn = document.querySelector('button[onclick="handleSavePizarraUpdate()"]');
     if (!inputArea || !statusMsg) return;
     
     statusMsg.classList.add('hide');
     const text = inputArea.value.trim();
     
     if (!text && (!fileInput || fileInput.files.length === 0)) {
-        statusMsg.textContent = 'Por favor, escribe algún contenido o adjunta un archivo antes de guardar.';
-        statusMsg.className = 'status-msg error-msg';
+        const errorText = 'Por favor, escribe algún contenido o adjunta un archivo antes de guardar.';
+        statusMsg.innerHTML = `<div style="background: #fef2f2; border: 1.5px solid #ef4444; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">⚠️ ${errorText}</div>`;
         statusMsg.classList.remove('hide');
+        alert(`⚠️ ${errorText}`);
         return;
     }
     
+    let originalBtnText = 'Guardar en Pizarra';
+    if (saveBtn) {
+        originalBtnText = saveBtn.textContent;
+        saveBtn.disabled = true;
+        saveBtn.textContent = '⏳ Guardando en Pizarra...';
+    }
+
     let uploadedFilename = null;
     
     try {
         // Si hay archivo seleccionado, subirlo primero
         if (fileInput && fileInput.files.length > 0) {
-            statusMsg.textContent = 'Subiendo archivo adjunto...';
-            statusMsg.className = 'status-msg info-msg';
+            statusMsg.innerHTML = `<div style="background: #eff6ff; border: 1.5px solid #3b82f6; color: #1e40af; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">⏳ Subiendo archivo adjunto...</div>`;
             statusMsg.classList.remove('hide');
             
             const formData = new FormData();
@@ -2324,9 +2332,14 @@ async function handleSavePizarraUpdate() {
             
             const uploadData = await uploadRes.json();
             if (!uploadRes.ok) {
-                statusMsg.textContent = uploadData.error || 'Error al subir el archivo.';
-                statusMsg.className = 'status-msg error-msg';
+                const uploadErr = uploadData.error || 'Error al subir el archivo.';
+                statusMsg.innerHTML = `<div style="background: #fef2f2; border: 1.5px solid #ef4444; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">❌ ${uploadErr}</div>`;
                 statusMsg.classList.remove('hide');
+                alert(`❌ ${uploadErr}`);
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalBtnText;
+                }
                 return;
             }
             uploadedFilename = uploadData.filename;
@@ -2343,24 +2356,33 @@ async function handleSavePizarraUpdate() {
         if (res.ok) {
             inputArea.value = '';
             if (fileInput) fileInput.value = ''; // Limpiar selector
-            statusMsg.textContent = '¡Apunte guardado con éxito y compartido en tiempo real!';
-            statusMsg.className = 'status-msg success-msg';
+            
+            const successMsgText = '¡Apunte guardado con éxito en tu Pizarra Terapéutica! Tu terapeuta ya puede visualizarlo en tiempo real.';
+            statusMsg.innerHTML = `<div style="background: #ecfdf5; border: 1.5px solid #10b981; color: #047857; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">✅ ${successMsgText}</div>`;
             statusMsg.classList.remove('hide');
             
             loadPizarraHistory();
+            alert(`✅ ${successMsgText}`);
             
             setTimeout(() => {
                 statusMsg.classList.add('hide');
-            }, 3000);
+            }, 4000);
         } else {
-            statusMsg.textContent = data.error || 'Error al guardar la actualización.';
-            statusMsg.className = 'status-msg error-msg';
+            const errTxt = data.error || 'Error al guardar la actualización.';
+            statusMsg.innerHTML = `<div style="background: #fef2f2; border: 1.5px solid #ef4444; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">❌ ${errTxt}</div>`;
             statusMsg.classList.remove('hide');
+            alert(`❌ ${errTxt}`);
         }
     } catch (err) {
-        statusMsg.textContent = 'Error de conexión con el servidor.';
-        statusMsg.className = 'status-msg error-msg';
+        const connErr = 'Error de conexión con el servidor.';
+        statusMsg.innerHTML = `<div style="background: #fef2f2; border: 1.5px solid #ef4444; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">❌ ${connErr}</div>`;
         statusMsg.classList.remove('hide');
+        alert(`❌ ${connErr}`);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalBtnText;
+        }
     }
 }
 
