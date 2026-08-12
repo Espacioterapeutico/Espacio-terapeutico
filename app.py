@@ -441,9 +441,9 @@ def init_db():
         if 'bloqueo_pizarra' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_pizarra INTEGER DEFAULT 0")
         if 'bloqueo_herramientas' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 0")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 1")
         if 'bloqueo_confirmaciones' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_confirmaciones INTEGER DEFAULT 0")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_confirmaciones INTEGER DEFAULT 1")
         if 'terminos_condiciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
         if 'nomenclatura' not in cols_usr:
@@ -2515,8 +2515,8 @@ def register():
             r2_hash = generate_password_hash(r2) if r2 else None
 
             cursor.execute("""
-                INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug, configuracion_horarios_visual, metodos_pago, primer_inicio, pregunta_seguridad_1, respuesta_seguridad_1_hash, pregunta_seguridad_2, respuesta_seguridad_2_hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1, ?, ?, ?, ?)
+                INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug, configuracion_horarios_visual, metodos_pago, primer_inicio, pregunta_seguridad_1, respuesta_seguridad_1_hash, pregunta_seguridad_2, respuesta_seguridad_2_hash, mostrar_en_directorio, bloqueo_herramientas, bloqueo_confirmaciones)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1, ?, ?, ?, ?, 0, 1, 1)
             """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug, default_visual_cfg, default_pm_str, p1, r1_hash, p2, r2_hash))
             db.commit()
             
@@ -3031,7 +3031,7 @@ def ensure_usuarios_columns(db=None):
         close_at_end = True
     cursor = db.cursor()
     columns = [
-        ('mostrar_en_directorio', 'INTEGER DEFAULT 1'),
+        ('mostrar_en_directorio', 'INTEGER DEFAULT 0'),
         ('aviso_pago', 'INTEGER DEFAULT 0'),
         ('bloqueo_registro', 'INTEGER DEFAULT 0'),
         ('bloqueo_evoluciones', 'INTEGER DEFAULT 0'),
@@ -3039,8 +3039,8 @@ def ensure_usuarios_columns(db=None):
         ('bloqueo_agenda', 'INTEGER DEFAULT 0'),
         ('bloqueo_mensajes', 'INTEGER DEFAULT 0'),
         ('bloqueo_pizarra', 'INTEGER DEFAULT 0'),
-        ('bloqueo_herramientas', 'INTEGER DEFAULT 0'),
-        ('bloqueo_confirmaciones', 'INTEGER DEFAULT 0'),
+        ('bloqueo_herramientas', 'INTEGER DEFAULT 1'),
+        ('bloqueo_confirmaciones', 'INTEGER DEFAULT 1'),
         ('cedula', 'TEXT DEFAULT \'\''),
         ('email', 'TEXT DEFAULT \'\''),
         ('nomenclatura', 'TEXT'),
@@ -3212,8 +3212,8 @@ def superadmin_create_psychologist():
             clean_slug = re.sub(r'[^a-z0-9\.]', '', unicodedata.normalize('NFD', clean_name))
 
         cursor.execute("""
-            INSERT INTO usuarios (username, password_hash, nombres, apellidos, cedula, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?)
+            INSERT INTO usuarios (username, password_hash, nombres, apellidos, cedula, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug, mostrar_en_directorio, bloqueo_herramientas, bloqueo_confirmaciones)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, 0, 1, 1)
         """, (username, password_hash, nombres, apellidos, cedula, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug))
         db.commit()
         return jsonify({'success': 'Psicólogo registrado con éxito (Modo Prueba 1 Mes / 30 Días activo).'})
