@@ -16436,98 +16436,139 @@ function updateMseAreaSummary(areaKey) {
 }
 
 async function loadMsePatientsDropdown() {
-    const select = document.getElementById('mse-patient-select');
-    if (!select) return;
-    
     try {
         const res = await fetch('/api/patients');
         if (!res.ok) return;
         const patients = await res.json();
         msePatientsCache = patients;
-        filterMsePatients();
     } catch (e) {
         console.error('Error al cargar pacientes para MSE:', e);
     }
 }
 
-function filterMsePatients() {
-    const searchInput = document.getElementById('mse-patient-search');
-    const select = document.getElementById('mse-patient-select');
-    if (!select) return;
+function onMseSearchInput() {
+    const input = document.getElementById('mse-patient-search');
+    const dropdown = document.getElementById('mse-patient-dropdown-list');
+    if (!input || !dropdown) return;
     
-    const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
-    const currentVal = select.value;
+    const query = input.value.toLowerCase().trim();
+    const hiddenId = document.getElementById('mse-patient-id-hidden').value;
     
-    select.innerHTML = '<option value="">-- Seleccionar Consultante --</option>';
+    if (hiddenId && query) {
+        const selectedP = msePatientsCache.find(x => x.id === parseInt(hiddenId));
+        if (selectedP) {
+            const expectedStr = `[${selectedP.cedula || 'S/C'}] ${selectedP.nombres} ${selectedP.apellidos}`.toLowerCase();
+            if (query === expectedStr) return;
+        }
+    }
     
-    msePatientsCache.forEach(p => {
+    const matches = msePatientsCache.filter(p => {
         const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
         const cedula = (p.cedula || '').toLowerCase();
-        if (!query || fullName.includes(query) || cedula.includes(query)) {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = `[${p.cedula || 'S/C'}] ${p.nombres} ${p.apellidos}`;
-            select.appendChild(opt);
-        }
+        return !query || fullName.includes(query) || cedula.includes(query);
     });
     
-    if (currentVal) select.value = currentVal;
+    if (matches.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 0.85rem 1rem; color: #94a3b8; font-size: 0.88rem; text-align: center;">No se encontraron consultantes</div>';
+        dropdown.classList.remove('hide');
+        return;
+    }
+    
+    let html = '';
+    matches.forEach(p => {
+        const cedulaTxt = p.cedula ? `Cédula: ${p.cedula}` : 'Sin cédula';
+        html += `
+        <div onclick="selectMsePatient(${p.id})" style="padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s ease;" onmouseover="this.style.background='#fdf4f9'" onmouseout="this.style.background='#ffffff'">
+            <div>
+                <strong style="color: var(--text-dark); font-size: 0.92rem;">${p.nombres} ${p.apellidos}</strong>
+            </div>
+            <div style="color: #64748b; font-size: 0.82rem; background: #f1f5f9; padding: 0.15rem 0.5rem; border-radius: 12px; font-weight: 600;">${cedulaTxt}</div>
+        </div>`;
+    });
+    
+    dropdown.innerHTML = html;
+    dropdown.classList.remove('hide');
 }
 
-function onMsePatientSelected() {
-    const select = document.getElementById('mse-patient-select');
+function selectMsePatient(pId) {
+    const p = msePatientsCache.find(x => x.id === pId);
+    if (!p) return;
+    
+    document.getElementById('mse-patient-id-hidden').value = p.id;
+    document.getElementById('mse-patient-search').value = `[${p.cedula || 'S/C'}] ${p.nombres} ${p.apellidos}`;
+    
+    const dropdown = document.getElementById('mse-patient-dropdown-list');
+    if (dropdown) dropdown.classList.add('hide');
+    
+    const clearBtn = document.getElementById('mse-clear-patient-btn');
+    if (clearBtn) clearBtn.classList.remove('hide');
+    
+    document.getElementById('mse-badge-name').textContent = `${p.nombres} ${p.apellidos}`;
+    document.getElementById('mse-badge-cedula').textContent = p.cedula || 'N/A';
+    
+    let edadStr = 'N/E';
+    if (p.fecha_nacimiento) {
+        try {
+            const b = new Date(p.fecha_nacimiento);
+            const today = new Date();
+            let age = today.getFullYear() - b.getFullYear();
+            const m = today.getMonth() - b.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+            edadStr = age + ' años';
+        } catch (e) {}
+    }
+    document.getElementById('mse-badge-edad').textContent = edadStr;
+    document.getElementById('mse-badge-genero').textContent = p.genero || 'No especificado';
+    
     const infoBox = document.getElementById('mse-selected-patient-info');
     const noPatientAlert = document.getElementById('mse-no-patient-alert');
     const evalSection = document.getElementById('mse-evaluation-section');
     
-    if (!select) return;
-    
-    const pId = parseInt(select.value);
-    if (!pId) {
-        if (infoBox) infoBox.classList.add('hide');
-        if (evalSection) evalSection.classList.add('hide');
-        if (noPatientAlert) noPatientAlert.classList.remove('hide');
-        return;
-    }
-    
-    const p = msePatientsCache.find(x => x.id === pId);
-    if (p) {
-        document.getElementById('mse-badge-name').textContent = `${p.nombres} ${p.apellidos}`;
-        document.getElementById('mse-badge-cedula').textContent = p.cedula || 'N/A';
-        
-        let edadStr = 'N/E';
-        if (p.fecha_nacimiento) {
-            try {
-                const b = new Date(p.fecha_nacimiento);
-                const today = new Date();
-                let age = today.getFullYear() - b.getFullYear();
-                const m = today.getMonth() - b.getMonth();
-                if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
-                edadStr = age + ' años';
-            } catch (e) {}
-        }
-        document.getElementById('mse-badge-edad').textContent = edadStr;
-        document.getElementById('mse-badge-genero').textContent = p.genero || 'No especificado';
-        
-        if (infoBox) infoBox.classList.remove('hide');
-        if (noPatientAlert) noPatientAlert.classList.add('hide');
-        if (evalSection) evalSection.classList.remove('hide');
-    }
+    if (infoBox) infoBox.classList.remove('hide');
+    if (noPatientAlert) noPatientAlert.classList.add('hide');
+    if (evalSection) evalSection.classList.remove('hide');
 }
 
+function clearMseSelectedPatient() {
+    document.getElementById('mse-patient-id-hidden').value = '';
+    document.getElementById('mse-patient-search').value = '';
+    
+    const clearBtn = document.getElementById('mse-clear-patient-btn');
+    if (clearBtn) clearBtn.classList.add('hide');
+    
+    const dropdown = document.getElementById('mse-patient-dropdown-list');
+    if (dropdown) dropdown.classList.add('hide');
+    
+    const infoBox = document.getElementById('mse-selected-patient-info');
+    const noPatientAlert = document.getElementById('mse-no-patient-alert');
+    const evalSection = document.getElementById('mse-evaluation-section');
+    
+    if (infoBox) infoBox.classList.add('hide');
+    if (evalSection) evalSection.classList.add('hide');
+    if (noPatientAlert) noPatientAlert.classList.remove('hide');
+}
+
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('mse-patient-dropdown-list');
+    const searchInput = document.getElementById('mse-patient-search');
+    if (dropdown && searchInput && !dropdown.contains(e.target) && !searchInput.contains(e.target)) {
+        dropdown.classList.add('hide');
+    }
+});
+
 async function handleSaveExamenMental() {
-    const select = document.getElementById('mse-patient-select');
+    const hiddenIdEl = document.getElementById('mse-patient-id-hidden');
     const dateInput = document.getElementById('mse-eval-date');
     const medioSelect = document.getElementById('mse-eval-medio');
     const generalObsInput = document.getElementById('mse-general-obs');
     
-    const patientId = select ? select.value : '';
+    const patientId = hiddenIdEl ? hiddenIdEl.value : '';
     const dateVal = dateInput ? dateInput.value : '';
     const medioVal = medioSelect ? medioSelect.value : 'Presencial';
     const genObs = generalObsInput ? generalObsInput.value.trim() : '';
     
     if (!patientId || !dateVal) {
-        alert('⚠️ Por favor selecciona un consultante y una fecha de evaluación.');
+        alert('⚠️ Por favor busca y selecciona un consultante de la lista emergente.');
         return;
     }
     
@@ -16566,8 +16607,7 @@ async function handleSaveExamenMental() {
         if (res.ok) {
             alert('✅ Examen Mental guardado e integrado a la historia clínica del paciente.');
             
-            select.value = '';
-            onMsePatientSelected();
+            clearMseSelectedPatient();
             if (generalObsInput) generalObsInput.value = '';
             
             document.querySelectorAll('.mse-chip-btn.active').forEach(c => toggleMseChip(c));

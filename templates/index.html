@@ -2575,12 +2575,17 @@
                             </div>
                             <div class="card-body" style="padding: 1.25rem;">
                                 <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                                    <div>
-                                        <label for="mse-patient-select" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Buscar Consultante (Cédula, Nombre o Apellido) *</label>
-                                        <input type="text" id="mse-patient-search" placeholder="🔍 Escribe cédula o nombre..." oninput="filterMsePatients()" style="width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; margin-bottom: 0.5rem;">
-                                        <select id="mse-patient-select" onchange="onMsePatientSelected()" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; cursor: pointer;">
-                                            <option value="">-- Seleccionar Consultante --</option>
-                                        </select>
+                                    <div style="position: relative;">
+                                        <label for="mse-patient-search" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Buscar Consultante (Cédula, Nombre o Apellido) *</label>
+                                        <div style="position: relative;">
+                                            <input type="text" id="mse-patient-search" placeholder="🔍 Escribe cédula o nombre del consultante..." autocomplete="off" oninput="onMseSearchInput()" onfocus="onMseSearchInput()" style="width: 100%; padding: 0.65rem 2.2rem 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; outline: none; background: #ffffff;">
+                                            <span id="mse-clear-patient-btn" onclick="clearMseSelectedPatient()" class="hide" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 1.1rem; font-weight: 700; padding: 2px 6px;">✕</span>
+                                        </div>
+                                        <input type="hidden" id="mse-patient-id-hidden" value="">
+                                        
+                                        <!-- LISTA FLOTANTE AUTOCOMPLETABLE -->
+                                        <div id="mse-patient-dropdown-list" class="hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: #ffffff; border: 1.5px solid var(--primary-color); border-radius: 10px; margin-top: 4px; max-height: 240px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+                                        </div>
                                     </div>
                                     <div>
                                         <label for="mse-eval-date" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Fecha de Evaluación *</label>
