@@ -968,6 +968,10 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
                     <span>Pizarra Terapéutica</span>
                 </a>
+                <a href="#" class="nav-item" data-view="examen-mental" onclick="switchView('examen-mental')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <span>Examen Mental</span>
+                </a>
                 <a href="#" class="nav-item" data-view="therapist-tools" onclick="switchView('therapist-tools')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
                     <span>Herramientas Terapéuticas</span>
@@ -2534,6 +2538,130 @@
                                     <button type="submit" class="btn btn-primary btn-block" style="width:100%;">Enviar Mensaje de Soporte</button>
                                 </form>
                                 <div id="sup-status-msg" class="status-msg hide mt-3" style="padding:0.75rem; border-radius:6px; font-weight:600;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4c. VISTA EXAMEN MENTAL ESTRUCTURADO (MSE) -->
+                <section id="view-examen-mental" class="app-view hide">
+                    <div class="view-header-row mb-3">
+                        <div>
+                            <h2>🧠 Examen Mental del Estado Psíquico (MSE)</h2>
+                            <p class="text-secondary text-sm" style="margin-top: 4px;">Realiza evaluaciones estandarizadas del estado mental, consulta el historial clínico por consultante y exporta informes membretados en PDF o Word.</p>
+                        </div>
+                    </div>
+
+                    <!-- PESTAÑAS DE NAVEGACIÓN SUB-MENÚ -->
+                    <div style="display: flex; gap: 0.75rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem;">
+                        <button type="button" id="mse-tab-btn-new" onclick="switchExamenMentalTab('new')" class="btn-tab-sub active" style="padding: 0.65rem 1.25rem; font-weight: 700; border: none; background: none; border-bottom: 3px solid var(--primary-color); color: var(--primary-color); cursor: pointer;">
+                            📝 Nuevo Examen Mental
+                        </button>
+                        <button type="button" id="mse-tab-btn-history" onclick="switchExamenMentalTab('history')" class="btn-tab-sub" style="padding: 0.65rem 1.25rem; font-weight: 600; border: none; background: none; border-bottom: 3px solid transparent; color: var(--text-muted); cursor: pointer;">
+                            📚 Historial de Exámenes Mentales
+                        </button>
+                    </div>
+
+                    <!-- SUB-VISTA 1: NUEVO EXAMEN MENTAL -->
+                    <div id="mse-subview-new">
+                        <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+                            <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+                                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">1. Selección de Consultante y Datos de Sesión</h3>
+                            </div>
+                            <div class="card-body" style="padding: 1.25rem;">
+                                <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                                    <div>
+                                        <label for="mse-patient-select" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Buscar Consultante (Cédula, Nombre o Apellido) *</label>
+                                        <input type="text" id="mse-patient-search" placeholder="🔍 Escribe cédula o nombre..." oninput="filterMsePatients()" style="width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; margin-bottom: 0.5rem;">
+                                        <select id="mse-patient-select" onchange="onMsePatientSelected()" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; cursor: pointer;">
+                                            <option value="">-- Seleccionar Consultante --</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="mse-eval-date" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Fecha de Evaluación *</label>
+                                        <input type="date" id="mse-eval-date" style="width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
+                                    </div>
+                                    <div>
+                                        <label for="mse-eval-medio" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Medio de Evaluación *</label>
+                                        <select id="mse-eval-medio" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; cursor: pointer;">
+                                            <option value="Presencial">Presencial (Consultorio)</option>
+                                            <option value="Online">Online (Teleconsulta)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div id="mse-selected-patient-info" class="hide mt-2" style="background: #fcf4f9; border: 1.5px solid rgba(169, 89, 147, 0.2); border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.9rem; color: #3D1E3F;">
+                                    <strong>Consultante:</strong> <span id="mse-badge-name"></span> | 
+                                    <strong>Cédula:</strong> <span id="mse-badge-cedula"></span> | 
+                                    <strong>Edad:</strong> <span id="mse-badge-edad"></span> | 
+                                    <strong>Género:</strong> <span id="mse-badge-genero"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+                            <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+                                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">2. Evaluación por Áreas Clínicas (Selección Múltiple y Observaciones)</h3>
+                                <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">Haz clic sobre las etiquetas para activar/desactivar hallazgos (puedes seleccionar varias a la vez) o escribe directamente observaciones personalizadas.</p>
+                            </div>
+                            <div class="card-body" style="padding: 1.25rem;">
+                                <div id="mse-areas-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                    <!-- Renderizado dinámico desde JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CONCLUSIONES GENERALES -->
+                        <div class="card mb-4">
+                            <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+                                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">3. Impresión Diagnóstica / Observaciones Generales</h3>
+                            </div>
+                            <div class="card-body" style="padding: 1.25rem;">
+                                <textarea id="mse-general-obs" rows="3" placeholder="Ingresa impresiones diagnósticas, síntesis clínica o recomendaciones adicionales..." style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-family: inherit; font-size: 0.95rem; resize: vertical; outline: none;"></textarea>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 2rem;">
+                            <button type="button" onclick="handleSaveExamenMental()" class="btn btn-primary" style="padding: 0.75rem 2rem; font-weight: 700; font-size: 1rem; border-radius: 20px;">
+                                💾 Guardar Examen Mental en Expediente
+                            </button>
+                        </div>
+                        <div id="mse-status-msg" class="status-msg hide mb-4"></div>
+                    </div>
+
+                    <!-- SUB-VISTA 2: HISTORIAL -->
+                    <div id="mse-subview-history" class="hide">
+                        <div class="card mb-4">
+                            <div class="card-body" style="padding: 1.25rem;">
+                                <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 280px;">
+                                        <label for="mse-history-search" style="font-weight: 700; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">Filtrar Historial por Cédula, Nombre o Apellido:</label>
+                                        <input type="text" id="mse-history-search" oninput="loadExamenMentalHistory()" placeholder="🔍 Escribe para filtrar historial..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
+                                    </div>
+                                    <div style="padding-top: 1.4rem;">
+                                        <button type="button" onclick="loadExamenMentalHistory()" class="btn btn-secondary" style="padding: 0.6rem 1.25rem; font-weight: 600;">🔄 Actualizar Lista</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-body" style="padding: 0; overflow-x: auto;">
+                                <table class="table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                                    <thead>
+                                        <tr style="background: var(--bg-light); border-bottom: 1.5px solid var(--border-color); font-weight: 700; font-size: 0.88rem; color: var(--text-dark);">
+                                            <th style="padding: 1rem;">Fecha Eval.</th>
+                                            <th style="padding: 1rem;">Consultante</th>
+                                            <th style="padding: 1rem;">Cédula</th>
+                                            <th style="padding: 1rem;">Medio</th>
+                                            <th style="padding: 1rem;">Registro</th>
+                                            <th style="padding: 1rem; text-align: center;">Acciones & Exportación</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="mse-history-table-body">
+                                        <!-- Carga dinámica -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -5809,6 +5937,28 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('therapist-tool-report-modal')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE DE EXAMEN MENTAL (MSE) -->
+    <div id="modal-view-mse" class="modal hide" style="z-index: 10007;">
+        <div class="modal-content" style="max-width: 820px; width: 95%;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding: 1rem 1.25rem;">
+                <h3 style="margin: 0; color: var(--primary-color); font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    🧠 Detalle de Examen Mental (MSE)
+                </h3>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modal-view-mse')">✕</button>
+            </div>
+            <div class="modal-body" id="modal-mse-body-content" style="max-height: 70vh; overflow-y: auto; padding: 1.25rem;">
+                <!-- Dinámico -->
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-top: 1.5px solid var(--border-color); padding: 1rem 1.25rem;">
+                <div>
+                    <button type="button" id="mse-btn-export-pdf" class="btn btn-secondary" style="font-weight: 700;">📄 Exportar PDF</button>
+                    <button type="button" id="mse-btn-export-word" class="btn btn-secondary" style="font-weight: 700; margin-left: 0.5rem;">📝 Exportar Word (.docx)</button>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-view-mse')">Cerrar</button>
             </div>
         </div>
     </div>

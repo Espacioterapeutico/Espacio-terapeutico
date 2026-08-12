@@ -516,6 +516,8 @@ function switchView(viewId) {
     } else if (viewId === 'pizarra-visual') {
         loadPizarraPatients();
         loadPizarraVisual();
+    } else if (viewId === 'examen-mental') {
+        initExamenMentalModule();
     } else if (viewId === 'therapist-tools') {
         loadTherapistToolsCatalog();
     } else if (viewId === 'manual-confirmations') {
@@ -16206,6 +16208,404 @@ function closeFastBookingScreen() {
 window.addEventListener('popstate', () => {
     initLandingRouteHandling();
 });
+
+
+// =========================================================================
+// MÓDULO EXAMEN MENTAL ESTRUCTURADO (MSE)
+// =========================================================================
+
+const MSE_AREAS_CONFIG = [
+    { key: 'apariencia', title: '1. Apariencia y Porte', chips: ['Adecuada/Aliñada', 'Desaliñada', 'Higiene deficiente', 'Indumentaria estrafalaria', 'Aliño llamativo', 'Aspecto avejentado', 'Vestimenta acorde al clima'] },
+    { key: 'actitud', title: '2. Actitud hacia el Evaluador', chips: ['Colaboradora', 'Receptiva', 'Pasiva', 'Hostil', 'Defensiva', 'Evasiva', 'Reserva excesiva', 'Suspicaz', 'Demandante'] },
+    { key: 'conciencia', title: '3. Nivel de Conciencia', chips: ['Vigil / Alerta', 'Somnoliento', 'Obnubilado', 'Estuporoso', 'Fluctuante', 'Estado crepuscular'] },
+    { key: 'orientacion', title: '4. Orientación', chips: ['Orientado autopsíquicamente', 'Orientado alopsíquicamente (Tiempo, Espacio, Persona)', 'Desorientado en Tiempo', 'Desorientado en Espacio', 'Desorientación Global'] },
+    { key: 'memoria', title: '5. Memoria', chips: ['Conservada sin alterations', 'Amnesia retrógrada', 'Amnesia anterógrada', 'Hipomnesia', 'Paramnesias', 'Lagunas amnésicas', 'Hipermnesia'] },
+    { key: 'atencion', title: '6. Atención y Concentración', chips: ['Euproséxica (Conservada)', 'Hipoproséxica (Disminuida)', 'Paraproséxica', 'Labilidad atentiva', 'Distractibilidad', 'Aproséxica'] },
+    { key: 'lenguaje', title: '7. Lenguaje y Comunicación', chips: ['Normofluido y coherente', 'Taquilálico', 'Bradilálico', 'Disártrico', 'Mutismo', 'Aprosodia', 'Lenguaje tangencial', 'Verborreico'] },
+    { key: 'pensamiento', title: '8. Pensamiento (Curso y Contenido)', chips: ['Curso normopsíquico y coherente', 'Taquipsiquia', 'Bradipsiquia', 'Bloqueos del pensamiento', 'Ideas delirantes', 'Ideas obsesivas', 'Ideas de minusvalía', 'Ideación autolítica', 'Fuga de ideas'] },
+    { key: 'afecto', title: '9. Afecto y Estado de Ánimo', chips: ['Eutímico', 'Hipotímico / Depresivo', 'Hipertímico / Eufórico', 'Labilidad afectiva', 'Aplanamiento afectivo', 'Anhedonia', 'Irritabilidad', 'Ansiedad manifiesta'] },
+    { key: 'percepcion', title: '10. Percepción', chips: ['Sin alteraciones perceptivas', 'Alucinaciones auditivas', 'Alucinaciones visuales', 'Ilusiones', 'Pseudoalucinaciones', 'Despersonalización', 'Desrealización'] },
+    { key: 'juicio', title: '11. Juicio de Realidad', chips: ['Juicio de realidad conservado', 'Juicio comprometido / debilitado', 'Juicio desviado / alterado', 'Juicio de realidad suspendido'] },
+    { key: 'introspeccion', title: '12. Introspección (Insight)', chips: ['Adecuada (Conciencia de malestar/enfermedad)', 'Parcial / Limitada', 'Nula (Ausencia de introspección)', 'Resistencia al tratamiento'] }
+];
+
+let msePatientsCache = [];
+
+function initExamenMentalModule() {
+    const dateInput = document.getElementById('mse-eval-date');
+    if (dateInput && !dateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+    
+    renderMseAreasForm();
+    loadMsePatientsDropdown();
+}
+
+function switchExamenMentalTab(tabKey) {
+    const btnNew = document.getElementById('mse-tab-btn-new');
+    const btnHistory = document.getElementById('mse-tab-btn-history');
+    const viewNew = document.getElementById('mse-subview-new');
+    const viewHistory = document.getElementById('mse-subview-history');
+    
+    if (!btnNew || !btnHistory || !viewNew || !viewHistory) return;
+    
+    if (tabKey === 'new') {
+        btnNew.classList.add('active');
+        btnNew.style.borderBottomColor = 'var(--primary-color)';
+        btnNew.style.color = 'var(--primary-color)';
+        
+        btnHistory.classList.remove('active');
+        btnHistory.style.borderBottomColor = 'transparent';
+        btnHistory.style.color = 'var(--text-muted)';
+        
+        viewNew.classList.remove('hide');
+        viewHistory.classList.add('hide');
+    } else {
+        btnHistory.classList.add('active');
+        btnHistory.style.borderBottomColor = 'var(--primary-color)';
+        btnHistory.style.color = 'var(--primary-color)';
+        
+        btnNew.classList.remove('active');
+        btnNew.style.borderBottomColor = 'transparent';
+        btnNew.style.color = 'var(--text-muted)';
+        
+        viewHistory.classList.remove('hide');
+        viewNew.classList.add('hide');
+        
+        loadExamenMentalHistory();
+    }
+}
+
+function renderMseAreasForm() {
+    const container = document.getElementById('mse-areas-container');
+    if (!container || container.children.length > 0) return;
+    
+    let html = '';
+    MSE_AREAS_CONFIG.forEach(area => {
+        let chipsHtml = '';
+        area.chips.forEach(chipText => {
+            chipsHtml += `
+            <button type="button" class="mse-chip-btn" data-area="${area.key}" data-val="${chipText}" onclick="toggleMseChip(this)" style="padding: 0.4rem 0.85rem; border-radius: 20px; border: 1.5px solid rgba(169, 89, 147, 0.3); background: #fdf4f9; color: #3D1E3F; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+                + ${chipText}
+            </button>`;
+        });
+        
+        html += `
+        <div class="mse-area-card" style="background: #faf8fa; border: 1px solid var(--border-color); border-radius: 10px; padding: 1.1rem;">
+            <h4 style="color: var(--primary-color); font-size: 1rem; font-weight: 700; margin: 0 0 0.75rem 0;">${area.title}</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem;">
+                ${chipsHtml}
+            </div>
+            <textarea id="mse-obs-${area.key}" rows="2" placeholder="Observaciones adicionales sobre ${area.title.split('.')[1].trim().toLowerCase()}..." style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.88rem; font-family: inherit; resize: vertical; outline: none;"></textarea>
+        </div>`;
+    });
+    
+    container.innerHTML = html;
+}
+
+function toggleMseChip(btn) {
+    const val = btn.getAttribute('data-val');
+    if (btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        btn.style.background = '#fdf4f9';
+        btn.style.color = '#3D1E3F';
+        btn.style.borderColor = 'rgba(169, 89, 147, 0.3)';
+        btn.textContent = '+ ' + val;
+    } else {
+        btn.classList.add('active');
+        btn.style.background = '#A95993';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = '#A95993';
+        btn.textContent = '✓ ' + val;
+    }
+}
+
+async function loadMsePatientsDropdown() {
+    const select = document.getElementById('mse-patient-select');
+    if (!select) return;
+    
+    try {
+        const res = await fetch('/api/patients');
+        if (!res.ok) return;
+        const patients = await res.json();
+        msePatientsCache = patients;
+        filterMsePatients();
+    } catch (e) {
+        console.error('Error al cargar pacientes para MSE:', e);
+    }
+}
+
+function filterMsePatients() {
+    const searchInput = document.getElementById('mse-patient-search');
+    const select = document.getElementById('mse-patient-select');
+    if (!select) return;
+    
+    const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+    const currentVal = select.value;
+    
+    select.innerHTML = '<option value="">-- Seleccionar Consultante --</option>';
+    
+    msePatientsCache.forEach(p => {
+        const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
+        const cedula = (p.cedula || '').toLowerCase();
+        if (!query || fullName.includes(query) || cedula.includes(query)) {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `[${p.cedula || 'S/C'}] ${p.nombres} ${p.apellidos}`;
+            select.appendChild(opt);
+        }
+    });
+    
+    if (currentVal) select.value = currentVal;
+}
+
+function onMsePatientSelected() {
+    const select = document.getElementById('mse-patient-select');
+    const infoBox = document.getElementById('mse-selected-patient-info');
+    if (!select || !infoBox) return;
+    
+    const pId = parseInt(select.value);
+    if (!pId) {
+        infoBox.classList.add('hide');
+        return;
+    }
+    
+    const p = msePatientsCache.find(x => x.id === pId);
+    if (p) {
+        document.getElementById('mse-badge-name').textContent = `${p.nombres} ${p.apellidos}`;
+        document.getElementById('mse-badge-cedula').textContent = p.cedula || 'N/A';
+        
+        let edadStr = 'N/E';
+        if (p.fecha_nacimiento) {
+            try {
+                const b = new Date(p.fecha_nacimiento);
+                const today = new Date();
+                let age = today.getFullYear() - b.getFullYear();
+                const m = today.getMonth() - b.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+                edadStr = age + ' años';
+            } catch (e) {}
+        }
+        document.getElementById('mse-badge-edad').textContent = edadStr;
+        document.getElementById('mse-badge-genero').textContent = p.genero || 'No especificado';
+        infoBox.classList.remove('hide');
+    }
+}
+
+async function handleSaveExamenMental() {
+    const select = document.getElementById('mse-patient-select');
+    const dateInput = document.getElementById('mse-eval-date');
+    const medioSelect = document.getElementById('mse-eval-medio');
+    const generalObsInput = document.getElementById('mse-general-obs');
+    
+    const patientId = select ? select.value : '';
+    const dateVal = dateInput ? dateInput.value : '';
+    const medioVal = medioSelect ? medioSelect.value : 'Presencial';
+    const genObs = generalObsInput ? generalObsInput.value.trim() : '';
+    
+    if (!patientId || !dateVal) {
+        alert('⚠️ Por favor selecciona un consultante y una fecha de evaluación.');
+        return;
+    }
+    
+    const datosEvaluacion = {};
+    MSE_AREAS_CONFIG.forEach(area => {
+        const activeChips = Array.from(document.querySelectorAll(`.mse-chip-btn.active[data-area="${area.key}"]`)).map(c => c.getAttribute('data-val'));
+        const obsEl = document.getElementById(`mse-obs-${area.key}`);
+        const obsVal = obsEl ? obsEl.value.trim() : '';
+        
+        datosEvaluacion[area.key] = {
+            selecciones: activeChips,
+            observacion: obsVal
+        };
+    });
+    
+    const saveBtn = document.querySelector('button[onclick="handleSaveExamenMental()"]');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '⏳ Guardando Examen Mental...';
+    }
+    
+    try {
+        const res = await fetch('/api/examen-mental', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                paciente_id: parseInt(patientId),
+                fecha_evaluacion: dateVal,
+                medio_evaluacion: medioVal,
+                datos_evaluacion_json: datosEvaluacion,
+                observaciones_generales: genObs
+            })
+        });
+        
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ Examen Mental guardado e integrado a la historia clínica del paciente.');
+            
+            select.value = '';
+            onMsePatientSelected();
+            if (generalObsInput) generalObsInput.value = '';
+            
+            document.querySelectorAll('.mse-chip-btn.active').forEach(c => toggleMseChip(c));
+            document.querySelectorAll('[id^="mse-obs-"]').forEach(t => t.value = '');
+            
+            switchExamenMentalTab('history');
+        } else {
+            alert('❌ ' + (data.error || 'Error al guardar examen mental.'));
+        }
+    } catch (err) {
+        alert('❌ Error de conexión al guardar examen mental.');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Guardar Examen Mental en Expediente';
+        }
+    }
+}
+
+async function loadExamenMentalHistory() {
+    const tbody = document.getElementById('mse-history-table-body');
+    const searchInput = document.getElementById('mse-history-search');
+    if (!tbody) return;
+    
+    const query = searchInput ? searchInput.value.trim() : '';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1.5rem; color: #64748b;">Cargando historial de exámenes mentales...</td></tr>';
+    
+    try {
+        const res = await fetch('/api/examen-mental/historial?search=' + encodeURIComponent(query));
+        if (!res.ok) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1.5rem; color: #ef4444;">Error al cargar historial.</td></tr>';
+            return;
+        }
+        
+        const list = await res.json();
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1.5rem; color: #64748b;">No se encontraron registros de exámenes mentales.</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        list.forEach(item => {
+            const pNombre = `${item.pac_nombres || ''} ${item.pac_apellidos || ''}`.trim() || 'Consultante';
+            
+            let fFmt = item.fecha_evaluacion;
+            try {
+                const parts = item.fecha_evaluacion.split('-');
+                fFmt = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            } catch(e) {}
+            
+            html += `
+            <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.9rem;">
+                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--primary-color);">${fFmt}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 600; color: var(--text-dark);">${pNombre}</td>
+                <td style="padding: 0.85rem 1rem; color: #64748b;">${item.pac_cedula || 'N/A'}</td>
+                <td style="padding: 0.85rem 1rem;"><span style="background: #f1f5f9; padding: 0.25rem 0.6rem; border-radius: 12px; font-weight: 600; font-size: 0.8rem; color: #475569;">${item.medio_evaluacion || 'Presencial'}</span></td>
+                <td style="padding: 0.85rem 1rem; color: #94a3b8; font-size: 0.82rem;">${item.fecha_registro ? item.fecha_registro.split('.')[0] : ''}</td>
+                <td style="padding: 0.85rem 1rem; text-align: center;">
+                    <button type="button" onclick="viewExamenMentalDetail(${item.id})" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600;">👁️ Ver</button>
+                    <a href="/api/examen-mental/${item.id}/export/pdf" target="_blank" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600; margin-left: 0.35rem; text-decoration: none;">📄 PDF</a>
+                    <a href="/api/examen-mental/${item.id}/export/word" target="_blank" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600; margin-left: 0.35rem; text-decoration: none;">📝 Word</a>
+                </td>
+            </tr>`;
+        });
+        
+        tbody.innerHTML = html;
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1.5rem; color: #ef4444;">Error de conexión.</td></tr>';
+    }
+}
+
+async function viewExamenMentalDetail(id) {
+    const modal = document.getElementById('modal-view-mse');
+    const bodyContent = document.getElementById('modal-mse-body-content');
+    const btnPdf = document.getElementById('mse-btn-export-pdf');
+    const btnWord = document.getElementById('mse-btn-export-word');
+    if (!modal || !bodyContent) return;
+    
+    bodyContent.innerHTML = '<p class="text-muted" style="text-align: center; padding: 2rem;">Cargando detalle del examen mental...</p>';
+    modal.classList.remove('hide');
+    modal.style.display = 'block';
+    
+    if (btnPdf) btnPdf.onclick = () => window.open(`/api/examen-mental/${id}/export/pdf`, '_blank');
+    if (btnWord) btnWord.onclick = () => window.open(`/api/examen-mental/${id}/export/word`, '_blank');
+    
+    try {
+        const res = await fetch(`/api/examen-mental/${id}`);
+        if (!res.ok) {
+            bodyContent.innerHTML = '<p style="color: #ef4444;">Error al cargar detalle.</p>';
+            return;
+        }
+        
+        const data = await res.json();
+        const pNombre = `${data.pac_nombres || ''} ${data.pac_apellidos || ''}`.trim() || 'Consultante';
+        
+        let fFmt = data.fecha_evaluacion;
+        try {
+            const parts = data.fecha_evaluacion.split('-');
+            fFmt = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        } catch(e) {}
+        
+        const areaTitles = {
+            apariencia: 'Apariencia y Porte',
+            actitud: 'Actitud hacia el Evaluador',
+            conciencia: 'Nivel de Conciencia',
+            orientacion: 'Orientación',
+            memoria: 'Memoria',
+            atencion: 'Atención y Concentración',
+            lenguaje: 'Lenguaje y Comunicación',
+            pensamiento: 'Pensamiento (Curso y Contenido)',
+            afecto: 'Afecto y Estado de Ánimo',
+            percepcion: 'Percepción',
+            juicio: 'Juicio de Realidad',
+            introspeccion: 'Introspección (Insight)'
+        };
+        
+        let areaRowsHtml = '';
+        Object.keys(areaTitles).forEach(k => {
+            const valObj = (data.datos_evaluacion && data.datos_evaluacion[k]) || {};
+            const selecciones = valObj.selecciones || [];
+            const observacion = (valObj.observacion || '').trim();
+            
+            let txtParts = [];
+            if (selecciones.length > 0) txtParts.push(selecciones.join(', '));
+            if (observacion) txtParts.push(`<em>Obs:</em> ${observacion}`);
+            
+            const finalTxt = txtParts.length > 0 ? txtParts.join(' — ') : '<span style="color: #94a3b8;">Sin hallazgos reportados</span>';
+            
+            areaRowsHtml += `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 0.6rem 0.85rem; font-weight: 700; color: #3D1E3F; width: 35%; background: #faf5f9;">${areaTitles[k]}</td>
+                <td style="padding: 0.6rem 0.85rem; color: #334155;">${finalTxt}</td>
+            </tr>`;
+        });
+        
+        bodyContent.innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; font-size: 0.9rem;">
+                <div><strong>Consultante:</strong> ${pNombre}</div>
+                <div><strong>Cédula:</strong> ${data.pac_cedula || 'N/A'}</div>
+                <div><strong>Fecha Eval.:</strong> ${fFmt}</div>
+                <div><strong>Medio:</strong> ${data.medio_evaluacion || 'Presencial'}</div>
+            </div>
+        </div>
+
+        <h4 style="color: var(--primary-color); font-weight: 700; margin-bottom: 0.75rem;">Resultados por Áreas Clínicas:</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 0.9rem;">
+            <tbody>
+                ${areaRowsHtml}
+            </tbody>
+        </table>
+
+        <h4 style="color: var(--primary-color); font-weight: 700; margin-bottom: 0.5rem;">Impresión Diagnóstica / Observaciones Generales:</h4>
+        <div style="background: #f8fafc; border-left: 4px solid var(--primary-color); padding: 0.85rem 1rem; border-radius: 4px; font-size: 0.92rem; color: #334155; line-height: 1.5;">
+            ${data.observaciones_generales || 'Sin observaciones adicionales.'}
+        </div>`;
+    } catch (e) {
+        bodyContent.innerHTML = '<p style="color: #ef4444;">Error al cargar detalle del examen mental.</p>';
+    }
+}
 
 
 

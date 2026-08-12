@@ -1013,6 +1013,20 @@ def init_db():
             valor TEXT
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS examenes_mentales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            psicologo_id INTEGER NOT NULL,
+            paciente_id INTEGER NOT NULL,
+            fecha_evaluacion TEXT NOT NULL,
+            medio_evaluacion TEXT NOT NULL,
+            datos_evaluacion_json TEXT NOT NULL,
+            observaciones_generales TEXT,
+            fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
     
     # Parche automático de migración y normalización de datos para bases de datos viejas o restauradas
     try:
@@ -6524,6 +6538,7 @@ def get_public_landing_content():
         FROM usuarios 
         WHERE (COALESCE(activo, 1) = 1) 
           AND (COALESCE(mostrar_en_directorio, 1) = 1) 
+          AND (COALESCE(suscripcion_paga, 0) = 1 OR role = 'superadmin')
           AND (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin' OR role = 'superadmin')
           AND LOWER(username) NOT IN ('admin', 'superadmin')
         ORDER BY id ASC
@@ -13071,6 +13086,545 @@ def get_patient_screen_time_history():
     cursor.execute("SELECT * FROM registro_consumo_pantalla WHERE paciente_id = ? ORDER BY fecha_registro DESC LIMIT 50", (patient_id,))
     rows = [dict(r) for r in cursor.fetchall()]
     return jsonify(rows)
+
+
+# =========================================================================
+# RUTAS DE BACKEND: EXAMEN MENTAL ESTRUCTURADO (MSE) & EXPORTACIÓN
+# =========================================================================
+
+@app.route('/api/examen-mental', methods=['POST'])
+@login_required
+def save_examen_mental():
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    data = request.json or {}
+    paciente_id = data.get('paciente_id')
+    fecha_evaluacion = data.get('fecha_evaluacion')
+    medio_evaluacion = data.get('medio_evaluacion', 'Presencial')
+    datos_evaluacion = data.get('datos_evaluacion_json', {})
+    observaciones_generales = data.get('observaciones_generales', '').strip()
+    
+    if not paciente_id or not fecha_evaluacion:
+        return jsonify({'error': 'El paciente y la fecha de evaluación son requeridos.'}), 400
+        
+    try:
+        import json
+        datos_json_str = json.dumps(datos_evaluacion, ensure_ascii=False)
+        
+        cursor.execute("""
+            INSERT INTO examenes_mentales (psicologo_id, paciente_id, fecha_evaluacion, medio_evaluacion, datos_evaluacion_json, observaciones_generales)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, paciente_id, fecha_evaluacion, medio_evaluacion, datos_json_str, observaciones_generales))
+        
+        exam_id = cursor.lastrowid
+        db.commit()
+        
+        return jsonify({'success': 'Examen mental guardado con éxito e integrado a la historia clínica.', 'id': exam_id})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al guardar el examen mental: {str(e)}'}), 500
+
+
+@app.route('/api/examen-mental/historial', methods=['GET'])
+@login_required
+def get_examen_mental_historial():
+    user_id = session.get('user_id')
+    search = request.args.get('search', '').strip()
+    paciente_id_param = request.args.get('paciente_id')
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    query = """
+        SELECT e.id, e.psicologo_id, e.paciente_id, e.fecha_evaluacion, e.medio_evaluacion,
+               e.datos_evaluacion_json, e.observaciones_generales, e.fecha_registro,
+               p.nombres as pac_nombres, p.apellidos as pac_apellidos, p.cedula as pac_cedula,
+               p.genero as pac_genero, p.fecha_nacimiento as pac_fecha_nacimiento
+        FROM examenes_mentales e
+        JOIN pacientes p ON e.paciente_id = p.id
+        WHERE e.psicologo_id = ?
+    """
+    params = [user_id]
+    
+    if paciente_id_param:
+        query += " AND e.paciente_id = ?"
+        params.append(paciente_id_param)
+        
+    if search:
+        query += " AND (p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)"
+        s_term = f"%{search}%"
+        params.extend([s_term, s_term, s_term])
+        
+    query += " ORDER BY e.fecha_registro DESC, e.id DESC"
+    
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    
+    result = []
+    import json
+    for r in rows:
+        r_dict = dict(r)
+        try:
+            r_dict['datos_evaluacion'] = json.loads(r_dict['datos_evaluacion_json']) if r_dict['datos_evaluacion_json'] else {}
+        except:
+            r_dict['datos_evaluacion'] = {}
+        result.append(r_dict)
+        
+    return jsonify(result)
+
+
+@app.route('/api/examen-mental/<int:exam_id>', methods=['GET'])
+@login_required
+def get_examen_mental_detail(exam_id):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        SELECT e.*, p.nombres as pac_nombres, p.apellidos as pac_apellidos, p.cedula as pac_cedula,
+               p.genero as pac_genero, p.fecha_nacimiento as pac_fecha_nacimiento, p.email as pac_email
+        FROM examenes_mentales e
+        JOIN pacientes p ON e.paciente_id = p.id
+        WHERE e.id = ? AND e.psicologo_id = ?
+    """, (exam_id, user_id))
+    
+    r = cursor.fetchone()
+    if not r:
+        return jsonify({'error': 'Examen mental no encontrado.'}), 404
+        
+    r_dict = dict(r)
+    import json
+    try:
+        r_dict['datos_evaluacion'] = json.loads(r_dict['datos_evaluacion_json']) if r_dict['datos_evaluacion_json'] else {}
+    except:
+        r_dict['datos_evaluacion'] = {}
+        
+    return jsonify(r_dict)
+
+
+def _calculate_age_str(fecha_nac):
+    if not fecha_nac:
+        return "N/E"
+    try:
+        from datetime import datetime
+        born = datetime.strptime(str(fecha_nac).strip(), "%Y-%m-%d")
+        today = datetime.today()
+        age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+        return f"{age}"
+    except:
+        return "N/E"
+
+
+@app.route('/api/examen-mental/<int:exam_id>/export/pdf', methods=['GET'])
+@login_required
+def export_examen_mental_pdf(exam_id):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    psic = cursor.fetchone()
+    if not psic:
+        return "Error: Usuario no encontrado", 404
+        
+    cursor.execute("""
+        SELECT e.*, p.nombres as pac_nombres, p.apellidos as pac_apellidos, p.cedula as pac_cedula,
+               p.genero as pac_genero, p.fecha_nacimiento as pac_fecha_nacimiento
+        FROM examenes_mentales e
+        JOIN pacientes p ON e.paciente_id = p.id
+        WHERE e.id = ? AND e.psicologo_id = ?
+    """, (exam_id, user_id))
+    
+    exam = cursor.fetchone()
+    if not exam:
+        return "Error: Examen mental no encontrado", 404
+        
+    import json
+    datos_eval = {}
+    try:
+        datos_eval = json.loads(exam['datos_evaluacion_json']) if exam['datos_evaluacion_json'] else {}
+    except:
+        pass
+        
+    psic_nombre = f"Psic. {psic['nombres'] or ''} {psic['apellidos'] or ''}".strip()
+    psic_titulo = psic['nomenclatura'] or psic['estudios'] or "Psicólogo Clínico"
+    psic_fed = psic['federacion'] or "N/R"
+    
+    pac_nombre = f"{exam['pac_nombres'] or ''} {exam['pac_apellidos'] or ''}".strip()
+    pac_cedula = exam['pac_cedula'] or "N/A"
+    pac_genero = exam['pac_genero'] or "No especificado"
+    pac_edad = _calculate_age_str(exam['pac_fecha_nacimiento'])
+    
+    # Formatear la fecha
+    try:
+        f_parts = exam['fecha_evaluacion'].split('-')
+        fecha_fmt = f"{f_parts[2]}/{f_parts[1]}/{f_parts[0]}"
+    except:
+        fecha_fmt = exam['fecha_evaluacion']
+
+    area_titles = {
+        "apariencia": "Apariencia y Porte",
+        "actitud": "Actitud hacia el Evaluador",
+        "conciencia": "Nivel de Conciencia",
+        "orientacion": "Orientación",
+        "memoria": "Memoria",
+        "atencion": "Atención y Concentración",
+        "lenguaje": "Lenguaje y Comunicación",
+        "pensamiento": "Pensamiento (Curso y Contenido)",
+        "afecto": "Afecto y Estado de Ánimo",
+        "percepcion": "Percepción",
+        "juicio": "Juicio de Realidad",
+        "introspeccion": "Introspección (Insight)"
+    }
+    
+    area_rows_html = ""
+    for area_key, area_name in area_titles.items():
+        val_obj = datos_eval.get(area_key, {})
+        selecciones = val_obj.get('selecciones', [])
+        observacion = val_obj.get('observacion', '').strip()
+        
+        txt_parts = []
+        if selecciones:
+            txt_parts.append(", ".join(selecciones))
+        if observacion:
+            txt_parts.append(f"<em>Obs:</em> {observacion}")
+            
+        final_txt = " — ".join(txt_parts) if txt_parts else "Sin hallazgos significativos reportados."
+        
+        area_rows_html += f"""
+        <tr>
+            <td style="padding: 8px 12px; font-weight: 700; color: #3D1E3F; border-bottom: 1px solid #e2e8f0; width: 32%; background: #faf5f9;">{area_name}</td>
+            <td style="padding: 8px 12px; color: #334155; border-bottom: 1px solid #e2e8f0; line-height: 1.5;">{final_txt}</td>
+        </tr>
+        """
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Examen Mental - {pac_nombre}</title>
+    <style>
+        body {{
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            background: #ffffff;
+            margin: 0;
+            padding: 40px;
+            font-size: 13px;
+        }}
+        .header {{
+            border-bottom: 2.5px solid #A95993;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }}
+        .header-title {{
+            font-size: 20px;
+            font-weight: 800;
+            color: #A95993;
+            margin: 0;
+            letter-spacing: 0.5px;
+        }}
+        .header-sub {{
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }}
+        .psic-info {{
+            text-align: right;
+            font-size: 11px;
+            color: #475569;
+        }}
+        .section-title {{
+            font-size: 13px;
+            font-weight: 700;
+            color: #A95993;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1.5px solid #e2e8f0;
+            padding-bottom: 4px;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }}
+        .meta-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+        }}
+        .meta-item {{
+            font-size: 12px;
+        }}
+        .meta-label {{
+            font-weight: 700;
+            color: #475569;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }}
+        .obs-box {{
+            background: #f8fafc;
+            border-left: 4px solid #A95993;
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #334155;
+            margin-bottom: 40px;
+        }}
+        .signature-block {{
+            margin-top: 60px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }}
+        .signature-line {{
+            width: 250px;
+            border-top: 1.5px solid #475569;
+            margin-bottom: 8px;
+        }}
+        @media print {{
+            body {{ padding: 20px; }}
+            .no-print {{ display: none; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+        <button onclick="window.print()" style="background: #A95993; color: white; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 700; cursor: pointer;">🖨️ Imprimir / Guardar en PDF</button>
+    </div>
+
+    <div class="header">
+        <div>
+            <h1 class="header-title">INFORME DE EXAMEN MENTAL</h1>
+            <div class="header-sub">Evaluación Clínica del Estado Mental (MSE)</div>
+        </div>
+        <div class="psic-info">
+            <strong style="font-size: 13px; color: #3D1E3F;">{psic_nombre}</strong><br>
+            {psic_titulo}<br>
+            N° Federación / Colegiado: {psic_fed}
+        </div>
+    </div>
+
+    <div class="section-title">1. DATOS DEL CONSULTANTE</div>
+    <div class="meta-grid">
+        <div class="meta-item"><span class="meta-label">Paciente:</span> {pac_nombre}</div>
+        <div class="meta-item"><span class="meta-label">Identificación / Cédula:</span> {pac_cedula}</div>
+        <div class="meta-item"><span class="meta-label">Edad / Género:</span> {pac_edad} años ({pac_genero})</div>
+        <div class="meta-item"><span class="meta-label">Fecha / Modalidad:</span> {fecha_fmt} ({exam['medio_evaluacion']})</div>
+    </div>
+
+    <div class="section-title">2. EVALUACIÓN ESTRUCTURADA POR ÁREAS CLÍNICAS</div>
+    <table>
+        <tbody>
+            {area_rows_html}
+        </tbody>
+    </table>
+
+    <div class="section-title">3. IMPRESIÓN DIAGNÓSTICA Y OBSERVACIONES GENERALES</div>
+    <div class="obs-box">
+        {exam['observaciones_generales'] or 'Sin observaciones adicionales registradas por el profesional.'}
+    </div>
+
+    <div class="signature-block">
+        <div class="signature-line"></div>
+        <strong style="font-size: 13px; color: #3D1E3F;">{psic_nombre}</strong>
+        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">{psic_titulo} — N° Fed: {psic_fed}</div>
+        <div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">Firma y Sello Profesional</div>
+    </div>
+</body>
+</html>"""
+
+    return html_content
+
+
+@app.route('/api/examen-mental/<int:exam_id>/export/word', methods=['GET'])
+@login_required
+def export_examen_mental_word(exam_id):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    psic = cursor.fetchone()
+    if not psic:
+        return "Error: Usuario no encontrado", 404
+        
+    cursor.execute("""
+        SELECT e.*, p.nombres as pac_nombres, p.apellidos as pac_apellidos, p.cedula as pac_cedula,
+               p.genero as pac_genero, p.fecha_nacimiento as pac_fecha_nacimiento
+        FROM examenes_mentales e
+        JOIN pacientes p ON e.paciente_id = p.id
+        WHERE e.id = ? AND e.psicologo_id = ?
+    """, (exam_id, user_id))
+    
+    exam = cursor.fetchone()
+    if not exam:
+        return "Error: Examen mental no encontrado", 404
+        
+    import json
+    datos_eval = {}
+    try:
+        datos_eval = json.loads(exam['datos_evaluacion_json']) if exam['datos_evaluacion_json'] else {}
+    except:
+        pass
+        
+    psic_nombre = f"Psic. {psic['nombres'] or ''} {psic['apellidos'] or ''}".strip()
+    psic_titulo = psic['nomenclatura'] or psic['estudios'] or "Psicólogo Clínico"
+    psic_fed = psic['federacion'] or "N/R"
+    
+    pac_nombre = f"{exam['pac_nombres'] or ''} {exam['pac_apellidos'] or ''}".strip()
+    pac_cedula = exam['pac_cedula'] or "N/A"
+    pac_genero = exam['pac_genero'] or "No especificado"
+    pac_edad = _calculate_age_str(exam['pac_fecha_nacimiento'])
+    
+    try:
+        f_parts = exam['fecha_evaluacion'].split('-')
+        fecha_fmt = f"{f_parts[2]}/{f_parts[1]}/{f_parts[0]}"
+    except:
+        fecha_fmt = exam['fecha_evaluacion']
+
+    import io
+    import docx
+    from docx.shared import Inches, Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    doc = docx.Document()
+    
+    # Configurar márgenes
+    sections = doc.sections
+    for section in sections:
+        section.top_margin = Inches(0.8)
+        section.bottom_margin = Inches(0.8)
+        section.left_margin = Inches(0.85)
+        section.right_margin = Inches(0.85)
+
+    # Título principal
+    p_header = doc.add_paragraph()
+    p_header.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    r_title = p_header.add_run("INFORME DE EXAMEN MENTAL (MSE)\n")
+    r_title.bold = True
+    r_title.font.size = Pt(16)
+    r_title.font.color.rgb = RGBColor(0xA9, 0x59, 0x93)
+
+    r_psic = p_header.add_run(f"{psic_nombre} — {psic_titulo} (N° Fed: {psic_fed})\n")
+    r_psic.font.size = Pt(10)
+    r_psic.font.color.rgb = RGBColor(0x47, 0x55, 0x69)
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+    # 1. DATOS DEL CONSULTANTE
+    p_s1 = doc.add_paragraph()
+    r_s1 = p_s1.add_run("1. DATOS DEL CONSULTANTE")
+    r_s1.bold = True
+    r_s1.font.size = Pt(12)
+    r_s1.font.color.rgb = RGBColor(0xA9, 0x59, 0x93)
+
+    p_info = doc.add_paragraph()
+    p_info.add_run(f"• Paciente: ").bold = True
+    p_info.add_run(f"{pac_nombre}\n")
+    p_info.add_run(f"• Identificación / Cédula: ").bold = True
+    p_info.add_run(f"{pac_cedula}\n")
+    p_info.add_run(f"• Edad / Género: ").bold = True
+    p_info.add_run(f"{pac_edad} años ({pac_genero})\n")
+    p_info.add_run(f"• Fecha / Modalidad de Evaluación: ").bold = True
+    p_info.add_run(f"{fecha_fmt} ({exam['medio_evaluacion']})")
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+    # 2. EVALUACIÓN ESTRUCTURADA POR ÁREAS
+    p_s2 = doc.add_paragraph()
+    r_s2 = p_s2.add_run("2. HALLAZGOS POR ÁREAS CLÍNICAS")
+    r_s2.bold = True
+    r_s2.font.size = Pt(12)
+    r_s2.font.color.rgb = RGBColor(0xA9, 0x59, 0x93)
+
+    area_titles = {
+        "apariencia": "Apariencia y Porte",
+        "actitud": "Actitud hacia el Evaluador",
+        "conciencia": "Nivel de Conciencia",
+        "orientacion": "Orientación",
+        "memoria": "Memoria",
+        "atencion": "Atención y Concentración",
+        "lenguaje": "Lenguaje y Comunicación",
+        "pensamiento": "Pensamiento (Curso y Contenido)",
+        "afecto": "Afecto y Estado de Ánimo",
+        "percepcion": "Percepción",
+        "juicio": "Juicio de Realidad",
+        "introspeccion": "Introspección (Insight)"
+    }
+
+    table = doc.add_table(rows=1, cols=2)
+    table.style = 'Table Grid'
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = "Área Clínica"
+    hdr_cells[1].text = "Hallazgos / Observaciones"
+    hdr_cells[0].paragraphs[0].runs[0].font.bold = True
+    hdr_cells[1].paragraphs[0].runs[0].font.bold = True
+
+    for area_key, area_name in area_titles.items():
+        val_obj = datos_eval.get(area_key, {})
+        selecciones = val_obj.get('selecciones', [])
+        observacion = val_obj.get('observacion', '').strip()
+        
+        txt_parts = []
+        if selecciones:
+            txt_parts.append(", ".join(selecciones))
+        if observacion:
+            txt_parts.append(f"Obs: {observacion}")
+            
+        final_txt = " — ".join(txt_parts) if txt_parts else "Sin hallazgos significativos reportados."
+        
+        row_cells = table.add_row().cells
+        row_cells[0].text = area_name
+        row_cells[0].paragraphs[0].runs[0].font.bold = True
+        row_cells[1].text = final_txt
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)
+
+    # 3. IMPRESIÓN DIAGNÓSTICA
+    p_s3 = doc.add_paragraph()
+    r_s3 = p_s3.add_run("3. IMPRESIÓN DIAGNÓSTICA Y OBSERVACIONES GENERALES")
+    r_s3.bold = True
+    r_s3.font.size = Pt(12)
+    r_s3.font.color.rgb = RGBColor(0xA9, 0x59, 0x93)
+
+    p_obs = doc.add_paragraph()
+    p_obs.add_run(exam['observaciones_generales'] or 'Sin observaciones adicionales registradas por el profesional.')
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(30)
+
+    # Firma
+    p_sig = doc.add_paragraph()
+    p_sig.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_sig.add_run("___________________________________________\n").bold = True
+    p_sig.add_run(f"{psic_nombre}\n").bold = True
+    p_sig.add_run(f"{psic_titulo} — N° Fed: {psic_fed}\n")
+    p_sig.add_run("Firma y Sello Profesional").font.color.rgb = RGBColor(0x94, 0xA3, 0xB8)
+
+    mem_file = io.BytesIO()
+    doc.save(mem_file)
+    mem_file.seek(0)
+    
+    clean_cedula = pac_cedula.replace(" ", "_")
+    filename = f"Examen_Mental_{clean_cedula}_{exam['fecha_evaluacion']}.docx"
+    
+    return Response(
+        mem_file.getvalue(),
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
 
 
 
