@@ -8742,8 +8742,10 @@ async function loadPaymentMethods() {
 
 async function savePaymentMethods() {
     const statusMsg = document.getElementById('set-pagos-status-msg');
-    statusMsg.classList.add('hide');
-    const metodos = document.getElementById('set-pagos-instrucciones').value;
+    if (statusMsg) statusMsg.classList.add('hide');
+    
+    const inputEl = document.getElementById('set-pagos-instrucciones');
+    const metodos = inputEl ? inputEl.value : '';
     
     try {
         const res = await fetch('/api/admin/payment-methods', {
@@ -8754,18 +8756,30 @@ async function savePaymentMethods() {
         const data = await res.json();
         
         if (res.ok) {
-            statusMsg.textContent = data.success || "Métodos de pago guardados.";
-            statusMsg.className = "status-msg success-msg";
-            statusMsg.classList.remove('hide');
+            if (statusMsg) {
+                statusMsg.textContent = data.success || "Métodos de pago guardados con éxito.";
+                statusMsg.className = "status-msg success-msg";
+                statusMsg.classList.remove('hide');
+            } else {
+                alert("✅ Métodos de pago guardados con éxito.");
+            }
         } else {
-            statusMsg.textContent = data.error || "Error al guardar.";
-            statusMsg.className = "status-msg error-msg";
-            statusMsg.classList.remove('hide');
+            if (statusMsg) {
+                statusMsg.textContent = data.error || "Error al guardar.";
+                statusMsg.className = "status-msg error-msg";
+                statusMsg.classList.remove('hide');
+            } else {
+                alert("❌ " + (data.error || "Error al guardar métodos de pago."));
+            }
         }
     } catch (err) {
-        statusMsg.textContent = "Error de conexión.";
-        statusMsg.className = "status-msg error-msg";
-        statusMsg.classList.remove('hide');
+        if (statusMsg) {
+            statusMsg.textContent = "Error de conexión al guardar métodos de pago.";
+            statusMsg.className = "status-msg error-msg";
+            statusMsg.classList.remove('hide');
+        } else {
+            alert("❌ Error de conexión al guardar métodos de pago.");
+        }
     }
 }
 
