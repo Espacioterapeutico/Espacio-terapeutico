@@ -16767,7 +16767,19 @@ async function viewExamenMentalDetail(id) {
             return res.length > 0 ? res.join(' ') : defaultStr;
         };
 
-        const narrativeText = `Al examen mental, el/la consultante se presenta con apariencia y porte ${getAreaVal('apariencia', 'adecuada y aliñada')}, evidenciando una actitud ${getAreaVal('actitud', 'colaboradora y receptiva')} hacia el evaluador. Se encuentra en nivel de conciencia ${getAreaVal('conciencia', 'vigil y alerta')}, ${getAreaVal('orientacion', 'orientado autopsíquica y alopsíquicamente')}. En la esfera cognitiva, la memoria se aprecia ${getAreaVal('memoria', 'conservada sin alteraciones')}, con atención y concentración ${getAreaVal('atencion', 'euproséxica')}. Mantiene un lenguaje y comunicación ${getAreaVal('lenguaje', 'normofluido y coherente')}, con pensamiento de ${getAreaVal('pensamiento', 'curso normopsíquico y contenido coherente')}. En el área afectiva, muestra afecto y estado de ánimo ${getAreaVal('afecto', 'eutímico')}, ${getAreaVal('percepcion', 'sin alteraciones perceptivas')}. Conserva ${getAreaVal('juicio', 'juicio de realidad conservado')} y presenta ${getAreaVal('introspeccion', 'introspección adecuada con conciencia de malestar/enfermedad')}.`;
+        const pGenero = (data.pac_genero || 'no especificado').toLowerCase();
+        let pEdad = 'N/E';
+        if (data.pac_fecha_nacimiento) {
+            try {
+                const dob = new Date(data.pac_fecha_nacimiento);
+                const diff_ms = Date.now() - dob.getTime();
+                const age_dt = new Date(diff_ms);
+                pEdad = Math.abs(age_dt.getUTCFullYear() - 1970);
+            } catch(e){}
+        }
+        const pModality = (data.medio_evaluacion || 'Presencial').toLowerCase();
+
+        const narrativeText = `Paciente de género ${pGenero}, de ${pEdad} años de edad, asiste a consulta en modalidad ${pModality} con una apariencia y porte ${getAreaVal('apariencia', 'adecuada y aliñada')}, mostrando una actitud ${getAreaVal('actitud', 'colaboradora y receptiva')} hacia el evaluador. Se encuentra en nivel de conciencia ${getAreaVal('conciencia', 'vigil / alerta')}, ${getAreaVal('orientacion', 'orientado(a) autopsíquica y alopsíquicamente')}. En el área de memoria ${getAreaVal('memoria', 'conservada sin alteraciones')}, atención y concentración ${getAreaVal('atencion', 'euproséxica (conservada)')}. Presenta un lenguaje ${getAreaVal('lenguaje', 'normofluido y coherente')}, con pensamiento de ${getAreaVal('pensamiento', 'curso normopsíquico y contenido coherente')}. En el estado de ánimo y afecto ${getAreaVal('afecto', 'eutímico')}, percepción ${getAreaVal('percepcion', 'sin alteraciones perceptivas')}. Mantiene un juicio de realidad ${getAreaVal('juicio', 'juicio de realidad conservado')} e introspección ${getAreaVal('introspeccion', 'adecuada (conciencia de malestar/enfermedad)')}.`;
         
         let areaRowsHtml = '';
         Object.keys(areaTitles).forEach(k => {

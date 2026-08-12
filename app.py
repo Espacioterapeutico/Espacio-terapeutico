@@ -13239,7 +13239,7 @@ def _calculate_age_str(fecha_nac):
         return "N/E"
 
 
-def _build_mse_narrative(datos_eval):
+def _build_mse_narrative(datos_eval, pac_genero="no especificado", pac_edad="N/E", modalidad="Presencial"):
     def get_val(key, default_str=""):
         val_obj = datos_eval.get(key, {})
         if isinstance(val_obj, dict):
@@ -13255,27 +13255,31 @@ def _build_mse_narrative(datos_eval):
             return val_obj.strip()
         return default_str
 
+    genero_str = (pac_genero or "no especificado").lower()
+    edad_str = str(pac_edad or "N/E")
+    modalidad_str = (modalidad or "Presencial").lower()
+
     apariencia = get_val('apariencia', 'adecuada y aliñada')
     actitud = get_val('actitud', 'colaboradora y receptiva')
     conciencia = get_val('conciencia', 'vigil y alerta')
     orientacion = get_val('orientacion', 'orientado autopsíquica y alopsíquicamente')
     memoria = get_val('memoria', 'conservada sin alteraciones')
-    atencion = get_val('atencion', 'euproséxica')
+    atencion = get_val('atencion', 'euproséxica (conservada)')
     lenguaje = get_val('lenguaje', 'normofluido y coherente')
     pensamiento = get_val('pensamiento', 'curso normopsíquico y contenido coherente')
     afecto = get_val('afecto', 'eutímico')
     percepcion = get_val('percepcion', 'sin alteraciones perceptivas')
     juicio = get_val('juicio', 'juicio de realidad conservado')
-    introspeccion = get_val('introspeccion', 'introspección adecuada con conciencia de malestar/enfermedad')
+    introspeccion = get_val('introspeccion', 'adecuada (conciencia de malestar/enfermedad)')
 
     text = (
-        f"Al examen mental, el/la consultante se presenta con apariencia y porte {apariencia}, "
-        f"evidenciando una actitud {actitud} hacia el evaluador. "
+        f"Paciente de género {genero_str}, de {edad_str} años de edad, asiste a consulta en modalidad {modalidad_str} "
+        f"con una apariencia y porte {apariencia}, mostrando una actitud {actitud} hacia el evaluador. "
         f"Se encuentra en nivel de conciencia {conciencia}, {orientacion}. "
-        f"En la esfera cognitiva, la memoria se aprecia {memoria}, con atención y concentración {atencion}. "
-        f"Mantiene un lenguaje y comunicación {lenguaje}, con pensamiento de {pensamiento}. "
-        f"En el área afectiva, muestra afecto y estado de ánimo {afecto}, {percepcion}. "
-        f"Conserva {juicio} y presenta {introspeccion}."
+        f"En el área de memoria {memoria}, atención y concentración {atencion}. "
+        f"Presenta un lenguaje {lenguaje}, con pensamiento de {pensamiento}. "
+        f"En el estado de ánimo y afecto {afecto}, percepción {percepcion}. "
+        f"Mantiene un juicio de realidad {juicio} e introspección {introspeccion}."
     )
     return text
 
@@ -13327,7 +13331,7 @@ def export_examen_mental_pdf(exam_id):
     except:
         fecha_fmt = exam['fecha_evaluacion']
 
-    narrative_text = _build_mse_narrative(datos_eval)
+    narrative_text = _build_mse_narrative(datos_eval, pac_genero=pac_genero, pac_edad=pac_edad, modalidad=exam['medio_evaluacion'])
 
     area_titles = {
         "apariencia": "Apariencia y Porte",
@@ -13621,7 +13625,7 @@ def export_examen_mental_word(exam_id):
     r_s2.font.size = Pt(12)
     r_s2.font.color.rgb = RGBColor(0xA9, 0x59, 0x93)
 
-    narrative_text = _build_mse_narrative(datos_eval)
+    narrative_text = _build_mse_narrative(datos_eval, pac_genero=pac_genero, pac_edad=pac_edad, modalidad=exam['medio_evaluacion'])
 
     p_nar = doc.add_paragraph()
     p_nar.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
