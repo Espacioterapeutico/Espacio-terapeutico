@@ -1,4 +1,16 @@
 
+// Helper universal para descargar archivos (.docx, .pdf, .zip, .csv) sin abrir pestañas en blanco ni desviar la pantalla
+function downloadFileSilently(url) {
+    let iframe = document.getElementById('hidden-download-iframe');
+    if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'hidden-download-iframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+    }
+    iframe.src = url;
+}
+
 // ==========================================
 // MÓDULO DE DERECCIÓN Y CONVERSIÓN DE ZONA HORARIA
 // ==========================================
@@ -3245,7 +3257,11 @@ async function openSummaryModal(patientId) {
         document.getElementById('summary-edit-btn').onclick = () => openEditPatientModal(p.id);
         
         const wordBtn = document.getElementById('summary-export-word-btn');
-        wordBtn.href = `/api/export/word/${p.id}`;
+        wordBtn.removeAttribute('href');
+        wordBtn.onclick = (e) => {
+            e.preventDefault();
+            downloadFileSilently(`/api/export/word/${p.id}`);
+        };
         
         document.getElementById('summary-print-pdf-btn').onclick = () => {
             window.open(`/api/patients/${p.id}/print`, '_blank');
@@ -6611,7 +6627,7 @@ window.deleteNotifiedPaymentFromModal = deleteNotifiedPaymentFromModal;
 
 function downloadPatientsWordZip() {
     alert("🚀 Generando expedientes clínicos en Word (.docx) para todos tus consultantes...\nEsto descargará un archivo .ZIP comprimido.");
-    window.location.href = '/api/admin/backup/export-patients-word-zip';
+    downloadFileSilently('/api/admin/backup/export-patients-word-zip');
 }
 window.downloadPatientsWordZip = downloadPatientsWordZip;
         
@@ -7690,7 +7706,7 @@ function getWhatsAppLink(phone, text) {
 function exportFinanceCSV() {
     const year = document.getElementById('finance-filter-year')?.value || new Date().getFullYear();
     const month = document.getElementById('finance-filter-month')?.value || (new Date().getMonth() + 1);
-    window.location.href = `/api/finance/export-csv?year=${year}&month=${month}`;
+    downloadFileSilently(`/api/finance/export-csv?year=${year}&month=${month}`);
 }
 
 // --- Navegación de Sub-Pestañas en Módulos ---
@@ -16684,8 +16700,8 @@ async function loadExamenMentalHistory() {
                 <td style="padding: 0.85rem 1rem; color: #94a3b8; font-size: 0.82rem;">${item.fecha_registro ? item.fecha_registro.split('.')[0] : ''}</td>
                 <td style="padding: 0.85rem 1rem; text-align: center;">
                     <button type="button" onclick="viewExamenMentalDetail(${item.id})" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600;">👁️ Ver</button>
-                    <a href="/api/examen-mental/${item.id}/export/pdf" target="_blank" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600; margin-left: 0.35rem; text-decoration: none;">📄 PDF</a>
-                    <a href="/api/examen-mental/${item.id}/export/word" target="_blank" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600; margin-left: 0.35rem; text-decoration: none;">📝 Word</a>
+                    <button type="button" onclick="downloadFileSilently('/api/examen-mental/${item.id}/export/pdf')" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600; margin-left: 0.35rem;">📄 PDF</button>
+                    <button type="button" onclick="downloadFileSilently('/api/examen-mental/${item.id}/export/word')" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600; margin-left: 0.35rem;">📝 Word</button>
                 </td>
             </tr>`;
         });
@@ -16707,8 +16723,8 @@ async function viewExamenMentalDetail(id) {
     modal.classList.remove('hide');
     modal.style.display = 'block';
     
-    if (btnPdf) btnPdf.onclick = () => window.open(`/api/examen-mental/${id}/export/pdf`, '_blank');
-    if (btnWord) btnWord.onclick = () => window.open(`/api/examen-mental/${id}/export/word`, '_blank');
+    if (btnPdf) btnPdf.onclick = () => downloadFileSilently(`/api/examen-mental/${id}/export/pdf`);
+    if (btnWord) btnWord.onclick = () => downloadFileSilently(`/api/examen-mental/${id}/export/word`);
     
     try {
         const res = await fetch(`/api/examen-mental/${id}`);
