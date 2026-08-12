@@ -16362,31 +16362,48 @@ function renderMseAreasForm() {
     container.innerHTML = html;
 }
 
-function toggleMseArea(areaKey) {
-    const body = document.getElementById(`mse-body-${areaKey}`);
-    const arrow = document.getElementById(`mse-arrow-${areaKey}`);
-    if (!body || !arrow) return;
+function toggleMseArea(targetKey) {
+    const targetBody = document.getElementById(`mse-body-${targetKey}`);
+    if (!targetBody) return;
     
-    const isHidden = body.style.display === 'none';
-    if (isHidden) {
-        body.style.display = 'block';
-        arrow.textContent = '▲';
-    } else {
-        body.style.display = 'none';
-        arrow.textContent = '▼';
-    }
-    updateMseAreaSummary(areaKey);
-}
-
-function expandAllMseAreas() {
+    const wasHidden = targetBody.style.display === 'none';
+    
+    // Cierra todas las demás áreas (Acordeón exclusivo)
     MSE_AREAS_CONFIG.forEach(area => {
         const body = document.getElementById(`mse-body-${area.key}`);
         const arrow = document.getElementById(`mse-arrow-${area.key}`);
         if (body && arrow) {
-            body.style.display = 'block';
-            arrow.textContent = '▲';
+            body.style.display = 'none';
+            arrow.textContent = '▼';
         }
     });
+    
+    // Si el área cliqueada estaba cerrada, se abre
+    if (wasHidden) {
+        targetBody.style.display = 'block';
+        const targetArrow = document.getElementById(`mse-arrow-${targetKey}`);
+        if (targetArrow) targetArrow.textContent = '▲';
+    }
+    
+    updateMseAreaSummary(targetKey);
+}
+
+function expandAllMseAreas() {
+    const btn = document.getElementById('mse-expand-all-btn');
+    const isExpanding = btn ? btn.textContent.includes('Desplegar') : true;
+    
+    MSE_AREAS_CONFIG.forEach(area => {
+        const body = document.getElementById(`mse-body-${area.key}`);
+        const arrow = document.getElementById(`mse-arrow-${area.key}`);
+        if (body && arrow) {
+            body.style.display = isExpanding ? 'block' : 'none';
+            arrow.textContent = isExpanding ? '▲' : '▼';
+        }
+    });
+    
+    if (btn) {
+        btn.textContent = isExpanding ? 'Colapsar Todas' : 'Desplegar Todas';
+    }
 }
 
 function toggleMseChip(btn) {
