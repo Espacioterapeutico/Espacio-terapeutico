@@ -2803,19 +2803,32 @@
                         </div>
                     </div>
 
-                    <!-- BUSCADOR DE PACIENTE Y BOTÓN DE ASIGNACIÓN -->
-                    <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color); padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem;">
-                            <div style="flex: 1; min-width: 250px;">
-                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">🔍 Escribir o Buscar Paciente (Nombre, Apellido o Cédula)</label>
-                                <input type="text" id="input-search-test-patient" class="form-control mb-2" placeholder="Escriba aquí el nombre, apellido o CI..." style="font-size: 0.88rem; border-radius: 8px;" oninput="filterTestPatientSelect()">
-                                <select id="select-test-main-patient" class="form-control" style="font-size: 0.9rem; font-weight: 700; border-radius: 8px;" onchange="loadTestsForSelectedPatientFromMainView()">
+                    <!-- BUSCADOR DE PACIENTE Y BOTÓN DE ASIGNACIÓN (DISEÑO AMPLIO MÁS GRANDE) -->
+                    <div class="card mb-4" style="background: #ffffff; border-radius: 16px; border: 1.5px solid #e2e8f0; padding: 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.04);">
+                        <div style="margin-bottom: 0.85rem;">
+                            <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0 0 0.25rem 0;">🔍 Buscar o Seleccionar Consultante</h3>
+                            <p style="font-size: 0.85rem; color: #64748b; margin: 0;">Escriba el nombre, apellido o cédula para filtrar a su paciente y gestionar sus evaluaciones psicológicas.</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; align-items: flex-end;">
+                            <div>
+                                <label style="font-size: 0.8rem; font-weight: 800; color: #334155; display: block; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">Escribir Ficha / CI / Nombre</label>
+                                <div style="position: relative;">
+                                    <input type="text" id="input-search-test-patient" class="form-control" placeholder="Ej: Juan Pérez, 1234567..." style="font-size: 0.98rem; height: 50px; border-radius: 12px; border: 2px solid #cbd5e1; padding-left: 2.5rem;" oninput="filterTestPatientSelect()">
+                                    <span style="position: absolute; left: 14px; top: 14px; font-size: 1.1rem; color: #94a3b8;">🔍</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="font-size: 0.8rem; font-weight: 800; color: #334155; display: block; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">Paciente Seleccionado</label>
+                                <select id="select-test-main-patient" class="form-control" style="font-size: 0.98rem; font-weight: 700; height: 50px; border-radius: 12px; border: 2px solid #cbd5e1; background: #ffffff;" onchange="loadTestsForSelectedPatientFromMainView()">
                                     <option value="">-- Seleccionar Paciente --</option>
                                 </select>
                             </div>
+
                             <div>
-                                <button type="button" class="btn" style="background: linear-gradient(135deg, #702e5e 0%, #a855f7 100%); color: white; font-weight: 800; font-size: 0.9rem; border: none; border-radius: 10px; padding: 0.75rem 1.5rem; box-shadow: 0 4px 12px rgba(112,46,94,0.3);" onclick="openAssignTestFromMainView()">
-                                    ➕ Asignar / Ver Evaluaciones
+                                <button type="button" class="btn" style="width: 100%; background: linear-gradient(135deg, #702e5e 0%, #a855f7 100%); color: white; font-weight: 800; font-size: 1rem; border: none; height: 50px; border-radius: 12px; padding: 0 1.5rem; box-shadow: 0 4px 14px rgba(112,46,94,0.35); display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s ease;" onclick="openAssignTestFromMainView()">
+                                    <span style="font-size: 1.1rem;">➕</span> Asignar / Ver Evaluaciones
                                 </button>
                             </div>
                         </div>
