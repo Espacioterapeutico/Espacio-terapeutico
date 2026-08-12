@@ -6809,7 +6809,10 @@ def admin_profile_public():
                 WHERE id = ?
             """, (nomenclatura, descripcion, json.dumps(mods_data), whatsapp, email, json.dumps(redes),
                   especialidades, json.dumps(poblaciones), pais_ubicacion, foto, foto, user_id))
+            db.commit()
+            return jsonify({'success': 'Perfil público actualizado exitosamente.'})
         except Exception as e:
+            db.rollback()
             return jsonify({'error': f'Error al actualizar perfil: {str(e)}'}), 500
 
 @app.route('/api/admin/rates', methods=['POST'])
