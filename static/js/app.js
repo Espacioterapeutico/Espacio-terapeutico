@@ -16055,37 +16055,52 @@ async function loadDedicatedTherapistProfile(slug) {
         if (document.getElementById('pub-profile-nomenclatura')) document.getElementById('pub-profile-nomenclatura').textContent = t.nomenclatura || 'Psicólogo Clínico';
         if (document.getElementById('pub-profile-bio')) document.getElementById('pub-profile-bio').textContent = t.descripcion_biografia || 'Bienvenido a mi espacio terapéutico profesional.';
 
-        // 1. Badges de modalidades, localidad, población y especialidad en el banner principal
+        // 1. Badges organizados: Especialidad, Ubicación, Población, Modalidades en el banner principal
         const modsBox = document.getElementById('pub-profile-mods');
         if (modsBox) {
-            let badgesHtml = '';
+            let html = `<div style="display: flex; flex-direction: column; align-items: center; gap: 0.6rem; max-width: 680px; width: 100%; margin: 0 auto;">`;
             
-            // Modalidades
+            // 1. Especialidad
+            if (t.especialidades) {
+                html += `
+                    <div style="background: rgba(236, 253, 245, 0.14); color: #dcfce7; padding: 6px 18px; border-radius: 20px; font-weight: 600; font-size: 0.95rem; border: 1px solid rgba(167, 243, 208, 0.35); backdrop-filter: blur(4px); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); text-align: center;">
+                        <span>🎯</span> <strong>Especialidad:</strong> ${t.especialidades}
+                    </div>`;
+            }
+
+            // 2. Ubicación
+            if (t.pais) {
+                html += `
+                    <div style="background: rgba(239, 246, 255, 0.14); color: #e0f2fe; padding: 6px 18px; border-radius: 20px; font-weight: 600; font-size: 0.95rem; border: 1px solid rgba(186, 230, 253, 0.35); backdrop-filter: blur(4px); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); text-align: center;">
+                        <span>📍</span> <strong>Ubicación:</strong> ${t.pais}
+                    </div>`;
+            }
+
+            // 3. Población
+            if (t.poblaciones && (Array.isArray(t.poblaciones) ? t.poblaciones.length > 0 : t.poblaciones)) {
+                const pobStr = Array.isArray(t.poblaciones) ? t.poblaciones.join(' • ') : t.poblaciones;
+                html += `
+                    <div style="background: rgba(253, 244, 255, 0.14); color: #fce7f3; padding: 6px 18px; border-radius: 20px; font-weight: 600; font-size: 0.95rem; border: 1px solid rgba(240, 171, 252, 0.35); backdrop-filter: blur(4px); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); text-align: center;">
+                        <span>👥</span> <strong>Población:</strong> ${pobStr}
+                    </div>`;
+            }
+
+            // 4. Modalidades
             const list = Array.isArray(t.modalidades) ? t.modalidades : ["Online", "Presencial"];
-            badgesHtml += list.map(m => {
+            const modsBadges = list.map(m => {
                 let icon = "🌐";
                 if (m === "Presencial") icon = "🏢";
                 if (m === "Domicilio") icon = "🚗";
-                return `<span class="pub-mod-badge" style="background: rgba(255,255,255,0.18); color: #fff; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">${icon} ${m}</span>`;
+                return `<span class="pub-mod-badge" style="background: rgba(255,255,255,0.18); color: #fff; padding: 5px 16px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 6px;">${icon} ${m}</span>`;
             }).join(" ");
 
-            // Localidad / Ubicación
-            if (t.pais) {
-                badgesHtml += ` <span class="pub-mod-badge" style="background: rgba(147,197,253,0.22); color: #e0f2fe; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(147,197,253,0.45); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">📍 ${t.pais}</span>`;
-            }
+            html += `
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.35rem; margin-bottom: 0.5rem;">
+                    ${modsBadges}
+                </div>`;
 
-            // Población atendida
-            if (t.poblaciones && (Array.isArray(t.poblaciones) ? t.poblaciones.length > 0 : t.poblaciones)) {
-                const pobStr = Array.isArray(t.poblaciones) ? t.poblaciones.join(' • ') : t.poblaciones;
-                badgesHtml += ` <span class="pub-mod-badge" style="background: rgba(240,171,252,0.22); color: #fce7f3; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(240,171,252,0.45); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">👥 ${pobStr}</span>`;
-            }
-
-            // Especialidades
-            if (t.especialidades) {
-                badgesHtml += ` <span class="pub-mod-badge" style="background: rgba(134,239,172,0.22); color: #dcfce7; padding: 6px 16px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(134,239,172,0.45); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">🎯 ${t.especialidades}</span>`;
-            }
-
-            modsBox.innerHTML = badgesHtml;
+            html += `</div>`;
+            modsBox.innerHTML = html;
         }
 
         // 2. Sección detallada de Modalidades y sus Descripciones
