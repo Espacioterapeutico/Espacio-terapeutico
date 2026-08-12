@@ -2805,16 +2805,17 @@
 
                     <!-- BUSCADOR DE PACIENTE Y BOTÓN DE ASIGNACIÓN -->
                     <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color); padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem;">
                             <div style="flex: 1; min-width: 250px;">
-                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">Buscar Paciente para Evaluar</label>
+                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.35rem;">🔍 Escribir o Buscar Paciente (Nombre, Apellido o Cédula)</label>
+                                <input type="text" id="input-search-test-patient" class="form-control mb-2" placeholder="Escriba aquí el nombre, apellido o CI..." style="font-size: 0.88rem; border-radius: 8px;" oninput="filterTestPatientSelect()">
                                 <select id="select-test-main-patient" class="form-control" style="font-size: 0.9rem; font-weight: 700; border-radius: 8px;" onchange="loadTestsForSelectedPatientFromMainView()">
                                     <option value="">-- Seleccionar Paciente --</option>
                                 </select>
                             </div>
                             <div>
-                                <button type="button" class="btn" style="background: linear-gradient(135deg, #702e5e 0%, #a855f7 100%); color: white; font-weight: 800; font-size: 0.9rem; border: none; border-radius: 10px; padding: 0.7rem 1.5rem; box-shadow: 0 4px 12px rgba(112,46,94,0.3);" onclick="openAssignTestFromMainView()">
-                                    ➕ Asignar Evaluación al Paciente
+                                <button type="button" class="btn" style="background: linear-gradient(135deg, #702e5e 0%, #a855f7 100%); color: white; font-weight: 800; font-size: 0.9rem; border: none; border-radius: 10px; padding: 0.75rem 1.5rem; box-shadow: 0 4px 12px rgba(112,46,94,0.3);" onclick="openAssignTestFromMainView()">
+                                    ➕ Asignar / Ver Evaluaciones
                                 </button>
                             </div>
                         </div>

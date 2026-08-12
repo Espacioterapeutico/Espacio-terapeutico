@@ -17343,22 +17343,56 @@ function openTestDetailModal(testData) {
     openModal('modal-view-test-detail');
 }
 
+let allTestPatientsCache = [];
+
 async function populateMainViewPatientSelect() {
     const select = document.getElementById('select-test-main-patient');
     if (!select) return;
 
     try {
-        const resp = await fetch('/api/pacientes');
+        const resp = await fetch('/api/patients');
         const data = await resp.json();
-        const pacs = data.pacientes || data || [];
+        allTestPatientsCache = Array.isArray(data) ? data : (data.pacientes || []);
 
-        let html = '<option value="">-- Seleccionar Paciente --</option>';
-        pacs.forEach(p => {
-            html += `<option value="${p.id}">${p.nombres} ${p.apellidos} (CI: ${p.cedula || 'S/I'})</option>`;
-        });
-        select.innerHTML = html;
+        renderTestPatientsOptions(allTestPatientsCache);
     } catch (e) {
         console.error("Error al poblar selector de pacientes para tests:", e);
+    }
+}
+
+function renderTestPatientsOptions(patientsList) {
+    const select = document.getElementById('select-test-main-patient');
+    if (!select) return;
+
+    let html = '<option value="">-- Seleccionar Paciente --</option>';
+    (patientsList || []).forEach(p => {
+        const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
+        const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
+        html += `<option value="${p.id}">${nameStr}${ciStr}</option>`;
+    });
+    select.innerHTML = html;
+}
+
+function filterTestPatientSelect() {
+    const searchInput = document.getElementById('input-search-test-patient');
+    if (!searchInput) return;
+    const query = searchInput.value.toLowerCase().trim();
+
+    if (!query) {
+        renderTestPatientsOptions(allTestPatientsCache);
+        return;
+    }
+
+    const filtered = allTestPatientsCache.filter(p => {
+        const fullStr = `${p.nombres || ''} ${p.apellidos || ''} ${p.cedula || ''}`.toLowerCase();
+        return fullStr.includes(query);
+    });
+
+    renderTestPatientsOptions(filtered);
+    
+    const select = document.getElementById('select-test-main-patient');
+    if (filtered.length === 1 && select) {
+        select.value = filtered[0].id;
     }
 }
 
@@ -17374,7 +17408,7 @@ function loadTestsForSelectedPatientFromMainView() {
 function openAssignTestFromMainView() {
     const select = document.getElementById('select-test-main-patient');
     if (!select || !select.value) {
-        alert("Por favor seleccione un paciente primero para asignar la evaluación.");
+        alert("Por favor busque o seleccione un paciente primero para asignar la evaluación.");
         return;
     }
     loadTestsForSelectedPatientFromMainView();
@@ -17393,6 +17427,7 @@ window.openTestDetailModal = openTestDetailModal;
 window.submitPublicTestResponse = submitPublicTestResponse;
 window.loadTestsForSelectedPatientFromMainView = loadTestsForSelectedPatientFromMainView;
 window.openAssignTestFromMainView = openAssignTestFromMainView;
+window.filterTestPatientSelect = filterTestPatientSelect;
 
 
 
