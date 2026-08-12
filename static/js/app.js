@@ -15614,6 +15614,19 @@ function renderTherapistsGrid(therapists) {
                 </a>
             `;
         }
+
+        const paisHtml = t.pais ? `<div style="font-size: 0.82rem; font-weight: 700; color: #475569; margin-top: 2px;">📍 ${t.pais}</div>` : '';
+        const poblacionesList = Array.isArray(t.poblaciones) ? t.poblaciones : [];
+        const poblacionHtml = poblacionesList.length > 0 ? `<div style="font-size: 0.78rem; font-weight: 700; color: #702e5e; margin-top: 4px;">👥 ${poblacionesList.join(' • ')}</div>` : '';
+        
+        let especialidadesHtml = '';
+        if (t.especialidades) {
+            const espItems = t.especialidades.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            if (espItems.length > 0) {
+                const chips = espItems.map(esp => `<span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; padding: 2px 8px; border-radius: 12px; font-size: 0.73rem; font-weight: 600;">${esp}</span>`).join(" ");
+                especialidadesHtml = `<div style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 6px; margin-bottom: 6px;">${chips}</div>`;
+            }
+        }
         
         return `
             <div class="pub-therapist-card">
@@ -15623,7 +15636,10 @@ function renderTherapistsGrid(therapists) {
                 <div class="pub-therapist-info">
                     <h3 class="pub-therapist-name">${t.nombre_completo}</h3>
                     <p class="pub-therapist-title">${t.nomenclatura || 'Psicólogo Clínico'}</p>
-                    <div class="pub-therapist-mods">
+                    ${paisHtml}
+                    ${poblacionHtml}
+                    ${especialidadesHtml}
+                    <div class="pub-therapist-mods" style="margin-top: 6px;">
                         ${modalidadesBadges}
                     </div>
                 </div>
@@ -15792,6 +15808,14 @@ function populateProfileUI(data) {
     }
     if (document.getElementById('prof-nomenclatura')) document.getElementById('prof-nomenclatura').value = data.nomenclatura || '';
     if (document.getElementById('prof-biografia')) document.getElementById('prof-biografia').value = data.descripcion_biografia || '';
+    if (document.getElementById('prof-especialidades')) document.getElementById('prof-especialidades').value = data.especialidades || '';
+    if (document.getElementById('prof-pais')) document.getElementById('prof-pais').value = data.pais_ubicacion || data.pais || '';
+
+    const pObs = data.poblaciones || ["Adultos", "Adolescentes"];
+    document.querySelectorAll('.chk-prof-poblacion').forEach(chk => {
+        chk.checked = Array.isArray(pObs) && pObs.includes(chk.value);
+    });
+
     if (document.getElementById('prof-whatsapp')) document.getElementById('prof-whatsapp').value = data.whatsapp_publico || '';
     if (document.getElementById('prof-email')) document.getElementById('prof-email').value = data.email_publico || '';
     
@@ -15883,10 +15907,18 @@ async function savePublicProfileSettings() {
     const previewImg = document.getElementById('set-perfil-preview-img');
     const fotoSrc = previewImg ? previewImg.src : '';
     
+    const poblacionesArr = [];
+    document.querySelectorAll('.chk-prof-poblacion:checked').forEach(chk => {
+        poblacionesArr.push(chk.value);
+    });
+
     const payload = {
         foto: fotoSrc,
         nomenclatura: document.getElementById('prof-nomenclatura').value.trim(),
         descripcion_biografia: document.getElementById('prof-biografia').value.trim(),
+        especialidades: document.getElementById('prof-especialidades')?.value.trim() || '',
+        poblaciones: poblacionesArr,
+        pais_ubicacion: document.getElementById('prof-pais')?.value.trim() || '',
         modalidades: modalidades,
         modalidades_data: modalidades_data,
         whatsapp_publico: document.getElementById('prof-whatsapp').value.trim(),

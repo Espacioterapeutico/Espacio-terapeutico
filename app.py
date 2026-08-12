@@ -466,6 +466,12 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN pregunta_seguridad_2 TEXT")
         if 'respuesta_seguridad_2_hash' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN respuesta_seguridad_2_hash TEXT")
+        if 'especialidades' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN especialidades TEXT DEFAULT ''")
+        if 'poblaciones_json' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN poblaciones_json TEXT DEFAULT '[\"Adultos\", \"Adolescentes\"]'")
+        if 'pais_ubicacion' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN pais_ubicacion TEXT DEFAULT ''")
         db.commit()
         
     cursor.execute("""
@@ -6534,7 +6540,8 @@ def get_public_landing_content():
     # 2. Directorio de psicólogos activos (excluye cuenta de sistema 'admin')
     cursor.execute("""
         SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo, foto_documento,
-               nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json
+               nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json,
+               especialidades, poblaciones_json, pais_ubicacion
         FROM usuarios 
         WHERE (COALESCE(activo, 1) = 1) 
           AND (COALESCE(mostrar_en_directorio, 1) = 1) 
@@ -6549,6 +6556,14 @@ def get_public_landing_content():
         slug = generate_default_slug_for_user(t)
         modalidades = json.loads(t['modalidades_json']) if t['modalidades_json'] else ["Online", "Presencial"]
         redes = json.loads(t['redes_sociales_json']) if t['redes_sociales_json'] else {}
+        
+        poblaciones = ["Adultos", "Adolescentes"]
+        if t['poblaciones_json']:
+            try:
+                poblaciones = json.loads(t['poblaciones_json'])
+            except Exception:
+                pass
+
         therapists.append({
             'id': t['id'],
             'nombres': t['nombres'] or 'Psicólogo',
@@ -6559,6 +6574,9 @@ def get_public_landing_content():
             'descripcion': t['descripcion_biografia'] or '',
             'foto': t['foto_titulo'] or '/static/logo.png',
             'modalidades': modalidades,
+            'especialidades': t['especialidades'] or '',
+            'poblaciones': poblaciones,
+            'pais': t['pais_ubicacion'] or '',
             'whatsapp': t['whatsapp_publico'] or '',
             'email': t['email_publico'] or '',
             'redes': redes,
@@ -6617,6 +6635,13 @@ def get_public_therapist_profile(slug):
     clean_slug = psych.get('slug') or generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
     
+    poblaciones = ["Adultos", "Adolescentes"]
+    if psych.get('poblaciones_json'):
+        try:
+            poblaciones = json.loads(psych.get('poblaciones_json'))
+        except Exception:
+            pass
+
     resp = jsonify({
         'id': psych.get('id'),
         'nombres': psych.get('nombres') or '',
@@ -6628,6 +6653,9 @@ def get_public_therapist_profile(slug):
         'foto': foto_url,
         'modalidades': modalidades_list,
         'modalidades_data': modalidades_data,
+        'especialidades': psych.get('especialidades') or '',
+        'poblaciones': poblaciones,
+        'pais': psych.get('pais_ubicacion') or '',
         'whatsapp_publico': psych.get('whatsapp_publico') or '',
         'email_publico': psych.get('email_publico') or '',
         'redes_sociales': redes,
@@ -6666,7 +6694,7 @@ def update_admin_landing_content():
 @app.route('/api/admin/profile-public', methods=['GET', 'POST'])
 @login_required
 def admin_profile_public():
-    """Permite a cada psicólogo personalizar su perfil público (foto, biografía, modalidades, WhatsApp, redes)."""
+    """Permite a cada psicólogo personalizar su perfil público (foto, biografía, modalidades, WhatsApp, redes, especialidades, poblaciones, país)."""
     db = get_db()
     cursor = db.cursor()
     user_id = session['user_id']
@@ -6674,7 +6702,8 @@ def admin_profile_public():
     if request.method == 'GET':
         cursor.execute("""
             SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo,
-                   nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json
+                   nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json,
+                   especialidades, poblaciones_json, pais_ubicacion
             FROM usuarios WHERE id = ?
         """, (user_id,))
         u = cursor.fetchone()
@@ -6714,6 +6743,13 @@ def admin_profile_public():
 
         redes = json.loads(u['redes_sociales_json']) if u['redes_sociales_json'] else {}
         
+        poblaciones = ["Adultos", "Adolescentes"]
+        if u['poblaciones_json']:
+            try:
+                poblaciones = json.loads(u['poblaciones_json'])
+            except Exception:
+                pass
+
         slug = u['slug'] or generate_default_slug_for_user(u)
         clean_slug = slug.replace('psic.', '') if slug.startswith('psic.') else slug
 
@@ -6727,6 +6763,9 @@ def admin_profile_public():
             'descripcion_biografia': u['descripcion_biografia'] or '',
             'modalidades': modalidades_list,
             'modalidades_data': modalidades_data,
+            'especialidades': u['especialidades'] or '',
+            'poblaciones': poblaciones,
+            'pais_ubicacion': u['pais_ubicacion'] or '',
             'whatsapp_publico': u['whatsapp_publico'] or '',
             'email_publico': u['email_publico'] or '',
             'redes_sociales': redes,
@@ -6745,6 +6784,10 @@ def admin_profile_public():
         email = data.get('email_publico', '').strip()
         redes = data.get('redes_sociales', {})
         foto = data.get('foto', '')
+
+        especialidades = data.get('especialidades', '').strip()
+        poblaciones = data.get('poblaciones', ["Adultos", "Adolescentes"])
+        pais_ubicacion = data.get('pais_ubicacion', '').strip()
         
         try:
             cursor.execute("""
@@ -6755,11 +6798,13 @@ def admin_profile_public():
                     whatsapp_publico = ?,
                     email_publico = ?,
                     redes_sociales_json = ?,
+                    especialidades = ?,
+                    poblaciones_json = ?,
+                    pais_ubicacion = ?,
                     foto_titulo = CASE WHEN ? != '' THEN ? ELSE foto_titulo END
                 WHERE id = ?
-            """, (nomenclatura, descripcion, json.dumps(mods_data), whatsapp, email, json.dumps(redes), foto, foto, user_id))
-            db.commit()
-            return jsonify({'success': 'Perfil público actualizado con éxito.'})
+            """, (nomenclatura, descripcion, json.dumps(mods_data), whatsapp, email, json.dumps(redes),
+                  especialidades, json.dumps(poblaciones), pais_ubicacion, foto, foto, user_id))
         except Exception as e:
             return jsonify({'error': f'Error al actualizar perfil: {str(e)}'}), 500
 
