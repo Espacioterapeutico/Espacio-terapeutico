@@ -3049,6 +3049,9 @@ def ensure_usuarios_columns(db=None):
         ('whatsapp_publico', 'TEXT'),
         ('email_publico', 'TEXT'),
         ('redes_sociales_json', 'TEXT'),
+        ('especialidades', 'TEXT DEFAULT \'\''),
+        ('poblaciones_json', 'TEXT DEFAULT \'["Adultos", "Adolescentes"]\''),
+        ('pais_ubicacion', 'TEXT DEFAULT \'\''),
         ('recordatorio_expiracion_enviado', 'TEXT DEFAULT \'\'')
     ]
     for col_name, col_type in columns:
@@ -6696,6 +6699,7 @@ def update_admin_landing_content():
 def admin_profile_public():
     """Permite a cada psicólogo personalizar su perfil público (foto, biografía, modalidades, WhatsApp, redes, especialidades, poblaciones, país)."""
     db = get_db()
+    ensure_usuarios_columns(db)
     cursor = db.cursor()
     user_id = session['user_id']
     
