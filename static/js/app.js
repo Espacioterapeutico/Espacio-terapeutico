@@ -16756,6 +16756,18 @@ async function viewExamenMentalDetail(id) {
             juicio: 'Juicio de Realidad',
             introspeccion: 'Introspección (Insight)'
         };
+
+        const getAreaVal = (k, defaultStr) => {
+            const valObj = (data.datos_evaluacion && data.datos_evaluacion[k]) || {};
+            const selecciones = valObj.selecciones || [];
+            const obs = (valObj.observacion || '').trim();
+            let res = [];
+            if (selecciones.length > 0) res.push(selecciones.join(', '));
+            if (obs) res.push(`(${obs})`);
+            return res.length > 0 ? res.join(' ') : defaultStr;
+        };
+
+        const narrativeText = `Al examen mental, el/la consultante se presenta con apariencia y porte ${getAreaVal('apariencia', 'adecuada y aliñada')}, evidenciando una actitud ${getAreaVal('actitud', 'colaboradora y receptiva')} hacia el evaluador. Se encuentra en nivel de conciencia ${getAreaVal('conciencia', 'vigil y alerta')}, ${getAreaVal('orientacion', 'orientado autopsíquica y alopsíquicamente')}. En la esfera cognitiva, la memoria se aprecia ${getAreaVal('memoria', 'conservada sin alteraciones')}, con atención y concentración ${getAreaVal('atencion', 'euproséxica')}. Mantiene un lenguaje y comunicación ${getAreaVal('lenguaje', 'normofluido y coherente')}, con pensamiento de ${getAreaVal('pensamiento', 'curso normopsíquico y contenido coherente')}. En el área afectiva, muestra afecto y estado de ánimo ${getAreaVal('afecto', 'eutímico')}, ${getAreaVal('percepcion', 'sin alteraciones perceptivas')}. Conserva ${getAreaVal('juicio', 'juicio de realidad conservado')} y presenta ${getAreaVal('introspeccion', 'introspección adecuada con conciencia de malestar/enfermedad')}.`;
         
         let areaRowsHtml = '';
         Object.keys(areaTitles).forEach(k => {
@@ -16786,7 +16798,15 @@ async function viewExamenMentalDetail(id) {
             </div>
         </div>
 
-        <h4 style="color: var(--primary-color); font-weight: 700; margin-bottom: 0.75rem;">Resultados por Áreas Clínicas:</h4>
+        <div style="background: #fdfafc; border-left: 4.5px solid var(--primary-color); border: 1.5px solid rgba(169,89,147,0.2); border-left-width: 4.5px; padding: 1.1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <h4 style="color: var(--primary-color); font-weight: 700; margin: 0; font-size: 0.95rem;">✍️ Redacción Clínica Continua (Texto Corrido):</h4>
+                <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.78rem; font-weight: 600;" onclick="navigator.clipboard.writeText(\`${narrativeText.replace(/`/g, "'")}\`); this.textContent='✅ ¡Copiado!'; setTimeout(()=>this.textContent='📋 Copiar Texto', 2000);">📋 Copiar Texto</button>
+            </div>
+            <p style="font-size: 0.92rem; color: #334155; line-height: 1.65; text-align: justify; margin: 0;">${narrativeText}</p>
+        </div>
+
+        <h4 style="color: var(--primary-color); font-weight: 700; margin-bottom: 0.75rem;">Cuadrícula Resumen por Áreas Clínicas:</h4>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 0.9rem;">
             <tbody>
                 ${areaRowsHtml}

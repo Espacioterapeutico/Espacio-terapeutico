@@ -13239,6 +13239,47 @@ def _calculate_age_str(fecha_nac):
         return "N/E"
 
 
+def _build_mse_narrative(datos_eval):
+    def get_val(key, default_str=""):
+        val_obj = datos_eval.get(key, {})
+        if isinstance(val_obj, dict):
+            selecciones = val_obj.get('selecciones', [])
+            obs = val_obj.get('observacion', '').strip()
+            res = []
+            if selecciones:
+                res.append(", ".join(selecciones))
+            if obs:
+                res.append(f"({obs})")
+            return " ".join(res).strip() if res else default_str
+        elif isinstance(val_obj, str) and val_obj.strip():
+            return val_obj.strip()
+        return default_str
+
+    apariencia = get_val('apariencia', 'adecuada y aliñada')
+    actitud = get_val('actitud', 'colaboradora y receptiva')
+    conciencia = get_val('conciencia', 'vigil y alerta')
+    orientacion = get_val('orientacion', 'orientado autopsíquica y alopsíquicamente')
+    memoria = get_val('memoria', 'conservada sin alteraciones')
+    atencion = get_val('atencion', 'euproséxica')
+    lenguaje = get_val('lenguaje', 'normofluido y coherente')
+    pensamiento = get_val('pensamiento', 'curso normopsíquico y contenido coherente')
+    afecto = get_val('afecto', 'eutímico')
+    percepcion = get_val('percepcion', 'sin alteraciones perceptivas')
+    juicio = get_val('juicio', 'juicio de realidad conservado')
+    introspeccion = get_val('introspeccion', 'introspección adecuada con conciencia de malestar/enfermedad')
+
+    text = (
+        f"Al examen mental, el/la consultante se presenta con apariencia y porte {apariencia}, "
+        f"evidenciando una actitud {actitud} hacia el evaluador. "
+        f"Se encuentra en nivel de conciencia {conciencia}, {orientacion}. "
+        f"En la esfera cognitiva, la memoria se aprecia {memoria}, con atención y concentración {atencion}. "
+        f"Mantiene un lenguaje y comunicación {lenguaje}, con pensamiento de {pensamiento}. "
+        f"En el área afectiva, muestra afecto y estado de ánimo {afecto}, {percepcion}. "
+        f"Conserva {juicio} y presenta {introspeccion}."
+    )
+    return text
+
+
 @app.route('/api/examen-mental/<int:exam_id>/export/pdf', methods=['GET'])
 @login_required
 def export_examen_mental_pdf(exam_id):
@@ -13285,6 +13326,8 @@ def export_examen_mental_pdf(exam_id):
         fecha_fmt = f"{f_parts[2]}/{f_parts[1]}/{f_parts[0]}"
     except:
         fecha_fmt = exam['fecha_evaluacion']
+
+    narrative_text = _build_mse_narrative(datos_eval)
 
     area_titles = {
         "apariencia": "Apariencia y Porte",
@@ -13402,7 +13445,7 @@ def export_examen_mental_pdf(exam_id):
             font-size: 12px;
             line-height: 1.6;
             color: #334155;
-            margin-bottom: 40px;
+            margin-bottom: 25px;
         }}
         .signature-block {{
             margin-top: 60px;
@@ -13447,7 +13490,13 @@ def export_examen_mental_pdf(exam_id):
         <div class="meta-item"><span class="meta-label">Fecha / Modalidad:</span> {fecha_fmt} ({exam['medio_evaluacion']})</div>
     </div>
 
-    <div class="section-title">2. EVALUACIÓN ESTRUCTURADA POR ÁREAS CLÍNICAS</div>
+    <div class="section-title">2. REDACCIÓN CLÍNICA DEL EXAMEN MENTAL (TEXTO CORRIDO)</div>
+    <div class="obs-box" style="text-align: justify; font-size: 12.5px; line-height: 1.7; border-left: 4.5px solid #A95993; background: #fdfafc;">
+        <strong style="color: #A95993;">Redacción Clínica Continua:</strong><br>
+        {narrative_text}
+    </div>
+
+    <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase;">Cuadrícula Resumen por Área Clínica:</div>
     <table>
         <tbody>
             {area_rows_html}
@@ -13565,12 +13614,33 @@ def export_examen_mental_word(exam_id):
 
     doc.add_paragraph().paragraph_format.space_after = Pt(6)
 
-    # 2. EVALUACIÓN ESTRUCTURADA POR ÁREAS
+    # 2. REDACCIÓN CLÍNICA Y HALLAZGOS POR ÁREAS
     p_s2 = doc.add_paragraph()
-    r_s2 = p_s2.add_run("2. HALLAZGOS POR ÁREAS CLÍNICAS")
+    r_s2 = p_s2.add_run("2. REDACCIÓN CLÍNICA DEL EXAMEN MENTAL (TEXTO CORRIDO)")
     r_s2.bold = True
     r_s2.font.size = Pt(12)
     r_s2.font.color.rgb = RGBColor(0xA9, 0x59, 0x93)
+
+    narrative_text = _build_mse_narrative(datos_eval)
+
+    p_nar = doc.add_paragraph()
+    p_nar.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    r_nar_lbl = p_nar.add_run("Redacción Clínica Continua:\n")
+    r_nar_lbl.bold = True
+    r_nar_lbl.font.size = Pt(11)
+    r_nar_lbl.font.color.rgb = RGBColor(0xA9, 0x59, 0x93)
+    
+    r_nar_txt = p_nar.add_run(narrative_text)
+    r_nar_txt.font.size = Pt(10.5)
+    r_nar_txt.font.color.rgb = RGBColor(0x1E, 0x29, 0x3B)
+    
+    doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+    p_tbl_h = doc.add_paragraph()
+    r_tbl_h = p_tbl_h.add_run("Cuadrícula Resumen por Área Clínica:")
+    r_tbl_h.bold = True
+    r_tbl_h.font.size = Pt(10)
+    r_tbl_h.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
 
     area_titles = {
         "apariencia": "Apariencia y Porte",
