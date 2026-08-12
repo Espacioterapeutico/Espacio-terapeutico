@@ -303,22 +303,27 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar {
     background-color: var(--text-dark);
     color: var(--bg-color);
-    padding: 1.25rem 1rem;
+    padding: 1rem 0.85rem;
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     width: 260px;
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    z-index: 100;
+    z-index: 200;
     box-shadow: 4px 0 20px rgba(61, 30, 63, 0.15);
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .sidebar-footer {
     margin-top: auto;
-    padding-top: 1.25rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.25rem;
     border-top: 1px solid rgba(119, 102, 130, 0.2);
     flex-shrink: 0;
 }
@@ -327,8 +332,9 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     padding: 0 0.5rem;
+    flex-shrink: 0;
 }
 
 .sidebar-logo {
@@ -357,10 +363,11 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    flex-grow: 1;
+    gap: 0.25rem;
+    flex: 1 1 auto;
     overflow-y: auto;
     min-height: 0;
+    padding-right: 2px;
 }
 
 /* Scrollbar sutil para el sidebar y menús laterales */
@@ -1247,10 +1254,15 @@ h1, h2, h3, h4, h5, h6 {
         left: -280px;
         top: 0;
         bottom: 0;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100dvh;
         width: 260px;
-        z-index: 200;
+        z-index: 2000;
         transition: left var(--transition-normal);
         box-shadow: 4px 0 24px rgba(0,0,0,0.25);
+        box-sizing: border-box;
+        overflow: hidden;
     }
     
     .sidebar.open {
