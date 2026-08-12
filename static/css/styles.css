@@ -269,6 +269,16 @@ h1, h2, h3, h4, h5, h6 {
     transition: all var(--transition-fast);
 }
 
+.form-group input[type="checkbox"],
+.form-group input[type="radio"] {
+    width: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    border: none !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+}
+
 .form-group input:focus, 
 .form-group select:focus, 
 .form-group textarea:focus {
