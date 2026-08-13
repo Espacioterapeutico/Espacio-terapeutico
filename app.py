@@ -11326,10 +11326,13 @@ def whatsapp_webhook():
     text_norm = unicodedata.normalize('NFD', text_lower)
     text_clean = ''.join(c for c in text_norm if unicodedata.category(c) != 'Mn')
     text_clean = re.sub(r'[^a-z0-9\s👍]', ' ', text_clean).strip()
-    words_set = set(text_clean.split())
+    
+    # Normalizar letras repetidas (ej. 'siiiiii' -> 'si', 'siii' -> 'si')
+    text_dedup = re.sub(r'i+', 'i', text_clean)
+    words_set = set(text_clean.split()) | set(text_dedup.split())
 
     confirm_keywords = {
-        'si', 'sip', 'sii', 'siii', 'confirmo', 'confirmar', 'confirmado', 'confirmada',
+        'si', 'sip', 'sii', 'siii', 'siiii', 'siiiii', 'confirmo', 'confirmar', 'confirmado', 'confirmada',
         'asistire', 'ok', 'listo', '1', 's', 'voy', 'asisto', 'seguro', 'perfecto',
         'excelente', 'correcto', 'claro', 'dale', 'ahi', 'estare', 'allí', 'estaré', '👍'
     }
@@ -11339,20 +11342,38 @@ def whatsapp_webhook():
         'podre', 'asisto', '2'
     }
 
-    is_confirm = any(w in words_set for w in confirm_keywords) or any(k in text_clean for k in ['si', 'confirmo', 'asistire', 'ahi estare', 'allí estaré', '👍'])
-    is_cancel = ('no' in words_set and 'si' not in words_set) or any(k in text_clean for k in ['cancelo', 'cancelar', 'no podre', 'no asisto'])
+    is_confirm = any(w in words_set for w in confirm_keywords) or ('si' in text_dedup.split()) or any(k in text_clean for k in ['si', 'confirmo', 'asistire', 'ahi estare', 'allí estaré', '👍'])
+    is_cancel = ('no' in words_set and 'si' not in words_set and 'sii' not in words_set and 'siii' not in words_set) or any(k in text_clean for k in ['cancelo', 'cancelar', 'no podre', 'no asisto'])
 
     if not is_confirm and not is_cancel:
         return jsonify({'status': 'text_received_no_action', 'message': f'Mensaje "{text}" recibido pero no requiere acción de confirmación.'})
 
-    # 2. Buscar cita pendiente sin confirmar para este paciente
+    # 2. Buscar cita pendiente sin confirmar para este paciente (priorizando fecha de hoy o futura)
     cursor.execute("""
         SELECT id, fecha, hora, confirmada, tipo_consulta 
         FROM agenda_finanzas 
-        WHERE paciente_id = ? AND (confirmada IS NULL OR confirmada = 0) AND (estado_pago IS NULL OR estado_pago != 'Cancelada')
+        WHERE paciente_id = ? AND (confirmada IS NULL OR confirmada = 0) AND (estado_pago IS NULL OR estado_pago != 'Cancelada') AND fecha >= date('now', '-1 day')
         ORDER BY fecha ASC, hora ASC LIMIT 1
     """, (patient_id,))
     next_cita = cursor.fetchone()
+
+    if not next_cita:
+        cursor.execute("""
+            SELECT id, fecha, hora, confirmada, tipo_consulta 
+            FROM agenda_finanzas 
+            WHERE paciente_id = ? AND (confirmada IS NULL OR confirmada = 0) AND (estado_pago IS NULL OR estado_pago != 'Cancelada')
+            ORDER BY fecha DESC, hora DESC LIMIT 1
+        """, (patient_id,))
+        next_cita = cursor.fetchone()
+
+    if not next_cita:
+        cursor.execute("""
+            SELECT id, fecha, hora, confirmada, tipo_consulta 
+            FROM agenda_finanzas 
+            WHERE paciente_id = ? AND (estado_pago IS NULL OR estado_pago != 'Cancelada')
+            ORDER BY fecha DESC, hora DESC LIMIT 1
+        """, (patient_id,))
+        next_cita = cursor.fetchone()
 
     if not next_cita:
         cursor.execute("""
