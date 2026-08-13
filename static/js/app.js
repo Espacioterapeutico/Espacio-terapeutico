@@ -538,6 +538,7 @@ function switchView(viewId) {
         initExamenMentalModule();
     } else if (viewId === 'tests-psicologicos') {
         populateMainViewPatientSelect();
+        loadTestsCatalogCards();
     } else if (viewId === 'therapist-tools') {
         loadTherapistToolsCatalog();
     } else if (viewId === 'manual-confirmations') {
@@ -18070,6 +18071,75 @@ window.loadTestsForSelectedPatientFromMainView = loadTestsForSelectedPatientFrom
 window.openAssignTestFromMainView = openAssignTestFromMainView;
 window.filterTestPatientSelect = filterTestPatientSelect;
 window.switchTestsTab = switchTestsTab;
+window.loadTestsCatalogCards = loadTestsCatalogCards;
+
+async function loadTestsCatalogCards() {
+    const container = document.getElementById('container-tests-catalog-cards');
+    if (!container) return;
+
+    try {
+        const resp = await fetch('/api/tests/catalogo');
+        const data = await resp.json();
+        const tests = data.tests || [];
+
+        if (tests.length === 0) {
+            container.innerHTML = '<p style="color: #64748b; font-weight: 600; text-align: center; padding: 2rem;">No hay evaluaciones registradas en el catálogo.</p>';
+            return;
+        }
+
+        let html = '';
+        tests.forEach(t => {
+            const code = t.code;
+            const isSelected = selectedTestCodeForApplication === code;
+            const borderStyle = isSelected ? '2.5px solid #702e5e' : '2.5px solid #e2e8f0';
+            const bgStyle = isSelected ? '#fdf4ff' : '#ffffff';
+            const checkDisplay = isSelected ? 'inline' : 'none';
+
+            let badgeCat = t.categoria || 'Evaluación';
+            let badgeBg = '#fdf4ff';
+            let badgeColor = '#702e5e';
+            let badgeBorder = '#f0abfc';
+
+            if (code === 'HOLLAND') {
+                badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
+            } else if (code === 'BAI') {
+                badgeBg = '#eff6ff'; badgeColor = '#1d4ed8'; badgeBorder = '#bfdbfe';
+            } else if (code === 'UGDS-GS') {
+                badgeBg = '#fff7ed'; badgeColor = '#c2410c'; badgeBorder = '#ffedd5';
+            } else if (code === 'TCS') {
+                badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
+            }
+
+            let itemCount = 'Estandarizado';
+            try {
+                const itemsArr = JSON.parse(t.items_json || '[]');
+                if (Array.isArray(itemsArr) && itemsArr.length > 0) itemCount = `${itemsArr.length} Ítems`;
+            } catch(e) {}
+
+            html += `
+                <div id="card-test-choice-${code}" onclick="selectTestForApplication('${code}')" style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">${badgeCat}</span>
+                            <span class="test-card-check" style="display: ${checkDisplay}; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
+                        </div>
+                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">${t.siglas || code} — ${t.nombre || ''}</h4>
+                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">${t.descripcion || ''}</p>
+                    </div>
+                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
+                        <span>✓ Autocorrección instantánea</span>
+                        <span>${itemCount}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Error al cargar tarjetas del catálogo de tests:", e);
+    }
+}
+
 window.selectTestForApplication = selectTestForApplication;
 window.onSelectMainPatientChange = onSelectMainPatientChange;
 window.executeMainApplyTest = executeMainApplyTest;
