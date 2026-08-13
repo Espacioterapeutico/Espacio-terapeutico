@@ -18287,7 +18287,11 @@ async function loadTestsCatalogCards() {
             let badgeColor = '#702e5e';
             let badgeBorder = '#f0abfc';
 
-            if (code === 'ASRS-ADHD') {
+            if (code === 'AQ' || code === 'RAADS-R') {
+                badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; badgeBorder = '#c7d2fe';
+            } else if (code === 'CAT-Q') {
+                badgeBg = '#fae8ff'; badgeColor = '#86198f'; badgeBorder = '#f5d0fe';
+            } else if (code === 'ASRS-ADHD') {
                 badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeBorder = '#fde68a';
             } else if (code === 'HOLLAND') {
                 badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
