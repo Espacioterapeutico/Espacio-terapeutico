@@ -17823,8 +17823,14 @@ function switchTestsTab(tab) {
             btnHistory.style.color = '#64748b';
             btnHistory.style.boxShadow = 'none';
         }
-        if (contentApply) contentApply.classList.remove('hide');
-        if (contentHistory) contentHistory.classList.add('hide');
+        if (contentApply) {
+            contentApply.classList.remove('hide');
+            contentApply.style.display = 'block';
+        }
+        if (contentHistory) {
+            contentHistory.classList.add('hide');
+            contentHistory.style.display = 'none';
+        }
     } else {
         if (btnHistory) {
             btnHistory.style.background = 'white';
@@ -17836,22 +17842,43 @@ function switchTestsTab(tab) {
             btnApply.style.color = '#64748b';
             btnApply.style.boxShadow = 'none';
         }
-        if (contentHistory) contentHistory.classList.remove('hide');
-        if (contentApply) contentApply.classList.add('hide');
+        if (contentHistory) {
+            contentHistory.classList.remove('hide');
+            contentHistory.style.display = 'block';
+        }
+        if (contentApply) {
+            contentApply.classList.add('hide');
+            contentApply.style.display = 'none';
+        }
 
         loadAllAppliedTestsHistory();
     }
 }
 
 function selectTestForApplication(testCode) {
+    if (selectedTestCodeForApplication === testCode) {
+        // Toggle / deselect if clicked again
+        selectedTestCodeForApplication = null;
+        const panel = document.getElementById('panel-apply-selected-test');
+        if (panel) {
+            panel.classList.add('hide');
+            panel.style.display = 'none';
+        }
+        document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
+            card.style.border = '2.5px solid #e2e8f0';
+            card.style.background = '#ffffff';
+            const checkSpan = card.querySelector('.test-card-check');
+            if (checkSpan) checkSpan.style.display = 'none';
+        });
+        return;
+    }
+
     selectedTestCodeForApplication = testCode;
 
-    const codes = ['BDI-II', 'BAI', 'TCS', 'UGDS-GS'];
-    codes.forEach(c => {
-        const card = document.getElementById(`card-test-choice-${c}`);
-        if (!card) return;
+    document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
+        const cardCode = card.id.replace('card-test-choice-', '');
         const checkSpan = card.querySelector('.test-card-check');
-        if (c === testCode) {
+        if (cardCode === testCode) {
             card.style.border = '2.5px solid #702e5e';
             card.style.background = '#fdf4ff';
             if (checkSpan) checkSpan.style.display = 'inline';
@@ -17863,9 +17890,13 @@ function selectTestForApplication(testCode) {
     });
 
     const panel = document.getElementById('panel-apply-selected-test');
-    if (panel) panel.classList.remove('hide');
+    if (panel) {
+        panel.classList.remove('hide');
+        panel.style.display = 'block';
+    }
 
     const testNamesMap = {
+        'MCMI-II': 'MCMI-II — Inventario Multiaxial Clínico de Millon (175 ítems)',
         'BDI-II': 'BDI-II — Inventario de Depresión de Beck (21 ítems)',
         'BAI': 'BAI — Inventario de Ansiedad de Beck (21 ítems)',
         'TCS': 'TCS — Escala de Congruencia Transgénero (12 ítems)',
