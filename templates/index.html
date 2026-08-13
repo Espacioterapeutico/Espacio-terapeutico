@@ -2893,28 +2893,40 @@
 
                             <p style="font-size: 0.88rem; color: #475569; margin-bottom: 1.25rem;">Seleccione la modalidad de aplicación deseada para enviar o iniciar la prueba:</p>
 
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-                                <!-- Opción Presencial -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                                <!-- Opción 1: Presencial -->
                                 <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
                                     <div>
                                         <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">💻</div>
-                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">Aplicación Presencial en Consultorio</h4>
-                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Abre la evaluación inmediatamente en una nueva ventana aislada para que el paciente responda en la tablet o PC del consultorio.</p>
+                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">1. Aplicación Presencial</h4>
+                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Abre la evaluación inmediatamente en una ventana aislada para que el consultante responda en la tablet o PC del consultorio.</p>
                                     </div>
                                     <button type="button" onclick="executeMainApplyTest('presencial')" class="btn" style="background: #702e5e; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
-                                        💻 Iniciar Evaluación Presencial
+                                        💻 Iniciar Presencial Ahora
                                     </button>
                                 </div>
 
-                                <!-- Opción Enlace Multicanal -->
+                                <!-- Opción 2: Online PWA -->
                                 <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
                                     <div>
-                                        <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">📲</div>
-                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">Generar Enlace Seguro (WhatsApp / Email)</h4>
-                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Genera un enlace único de acceso directo para enviar al paciente por WhatsApp o correo electrónico.</p>
+                                        <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">📱</div>
+                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">2. Asignar a Perfil Online</h4>
+                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Envía la notificación y activa la prueba directamente dentro de la app / portal web del consultante para cuando inicie sesión.</p>
                                     </div>
-                                    <button type="button" onclick="executeMainApplyTest('remoto')" class="btn" style="background: #15803d; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
-                                        📲 Generar Enlace Remoto
+                                    <button type="button" onclick="executeMainApplyTest('online')" class="btn" style="background: #0284c7; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
+                                        📱 Asignar a Perfil Paciente
+                                    </button>
+                                </div>
+
+                                <!-- Opción 3: Enlace Directo (WhatsApp / Email) -->
+                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                    <div>
+                                        <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">🔗</div>
+                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">3. Enlace Directo / WhatsApp</h4>
+                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Genera un enlace público directo accesible sin iniciar sesión para compartir por WhatsApp o correo electrónico.</p>
+                                    </div>
+                                    <button type="button" onclick="executeMainApplyTest('link')" class="btn" style="background: #15803d; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
+                                        🔗 Generar Enlace Directo
                                     </button>
                                 </div>
                             </div>

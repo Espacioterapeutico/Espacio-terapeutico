@@ -17935,17 +17935,47 @@ async function loadAllAppliedTestsHistory() {
     }
 }
 
-
 // ==============================================================================
-// GESTIÓN DE PACIENTES AUTOCOMPLETADO Y SELECCIÓN PARA TESTS
+// MÓDULO DE TESTS Y EVALUACIONES PSICOLÓGICAS - CATÁLOGO Y GESTIÓN DE PACIENTES
 // ==============================================================================
+let catalogCurrentCategoryFilter = 'TODAS';
+let catalogCurrentPage = 1;
+const CATALOG_ITEMS_PER_PAGE = 10; // Cuadrícula 5x2 (10 por página)
+let selectedTestCodeForApplication = null; // Test actualmente seleccionado en catálogo
 let allTestPatientsCache = [];
+
+const catalogTestsMasterList = [
+    { code: 'MCMI-II', nombre: 'Test de Millon', siglas: 'MCMI-II', categoria: 'Personalidad y Psicopatología', descripcion: '175 ítems V/F para evaluación multiaxial de personalidad y síndromes clínicos.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175]' },
+    { code: 'HOLLAND', nombre: 'Test de Intereses Vocacionales', siglas: 'Holland', categoria: 'Orientación Vocacional', descripcion: 'Modelo RIASEC para determinar código vocacional y recomendar carreras profesionales y técnicas.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221]' },
+    { code: 'RAVEN', nombre: 'Test de Matrices Progresivas', siglas: 'RAVEN', categoria: 'Capacidad Intelectual', descripcion: '60 matrices en 5 series (A-E) para evaluar razonamiento no verbal y nivel intelectual.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60]' },
+    { code: 'ASRS-ADHD', nombre: 'Síntomas de TDAH Adultos (OMS)', siglas: 'ASRS v1.1', categoria: 'Neurodivergencia y Autismo', descripcion: '18 síntomas de autoinforme para valorar inatención e hiperactividad/impulsividad.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]' },
+    { code: 'AQ', nombre: 'Cociente de Espectro Autista', siglas: 'AQ', categoria: 'Neurodivergencia y Autismo', descripcion: '50 ítems de autoinforme (Baron-Cohen) para medir rasgos autistas en 5 dimensiones.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]' },
+    { code: 'RAADS-R', nombre: 'Escala Diagnóstica de Ritvo', siglas: 'RAADS-R', categoria: 'Neurodivergencia y Autismo', descripcion: '80 ítems clínicos para evaluar relaciones sociales, lenguaje e intereses sensoriomotores.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80]' },
+    { code: 'CAT-Q', nombre: 'Camuflaje de Rasgos Autistas', siglas: 'CAT-Q', categoria: 'Neurodivergencia y Autismo', descripcion: '25 ítems para medir enmascaramiento social, compensación y asimilación (Hull et al.).', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]' },
+    { code: 'BDI-II', nombre: 'Depresión de Beck', siglas: 'BDI-II', categoria: 'Depresión y Ansiedad', descripcion: '21 reactivos autoadministrados para clasificar sintomatología depresiva.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]' },
+    { code: 'BAI', nombre: 'Ansiedad de Beck', siglas: 'BAI', categoria: 'Depresión y Ansiedad', descripcion: '21 síntomas somáticos y cognitivos para valorar el nivel de ansiedad clínica.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]' },
+    { code: 'TCS', nombre: 'Congruencia Transgénero', siglas: 'TCS', categoria: 'Identidad de Género', descripcion: '12 ítems con inversión automática. Subescalas de Aceptación de Identidad y Congruencia.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12]' },
+    { code: 'UGDS-GS', nombre: 'Disforia de Utrecht', siglas: 'UGDS-GS', categoria: 'Identidad de Género', descripcion: '18 ítems para medir el nivel de distrés por incongruencia y la resiliencia.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]' }
+];
+
+const TEST_METADATA_MAP = {
+    'MCMI-II': { autor: 'Theodore Millon', poblacion: 'Adultos (18 a 65+ años)', validez: 'TB Estandarizada' },
+    'HOLLAND': { autor: 'John L. Holland (RIASEC)', poblacion: 'Adolescentes y Adultos (14-65+ años)', validez: 'α = 0.86 (Vocacional)' },
+    'RAVEN': { autor: 'John C. Raven', poblacion: 'Adolescentes y Adultos (12-65+ años)', validez: 'α = 0.90 (Razonamiento)' },
+    'ASRS-ADHD': { autor: 'OMS / Valdizán et al.', poblacion: 'Adultos (18 a 65+ años)', validez: 'α = 0.87 (DSM / OMS)' },
+    'AQ': { autor: 'Simon Baron-Cohen et al.', poblacion: 'Adolescentes y Adultos (16-65+ años)', validez: 'α = 0.82 (Corte >= 32)' },
+    'RAADS-R': { autor: 'Riva Ariella Ritvo et al.', poblacion: 'Adultos (18 a 65+ años)', validez: 'α = 0.92 (Umbral >= 65)' },
+    'CAT-Q': { autor: 'Laura Hull et al. (2019)', poblacion: 'Adolescentes y Adultos (16-65+ años)', validez: 'α = 0.90 (Masking / Camuflaje)' },
+    'BDI-II': { autor: 'Aaron T. Beck et al.', poblacion: 'Adolescentes y Adultos (13-65+ años)', validez: 'α = 0.92 (Depresión)' },
+    'BAI': { autor: 'Aaron T. Beck et al.', poblacion: 'Adolescentes y Adultos (13-65+ años)', validez: 'α = 0.92 (Ansiedad)' },
+    'TCS': { autor: 'Kozee, Reisner et al.', poblacion: 'Jóvenes y Adultos (16-65+ años)', validez: 'α = 0.89 (Afirmación)' },
+    'UGDS-GS': { autor: 'McGuire et al. / Utrecht', poblacion: 'Adolescentes y Adultos (12-65+ años)', validez: 'α = 0.91 (Disforia Género)' }
+};
 
 async function populateMainViewPatientSelect() {
     const select = document.getElementById('select-test-main-patient');
     if (!select) return;
 
-    // Si ya tenemos pacientes en cache, renderizarlos inmediatamente
     if (allTestPatientsCache.length > 0) {
         renderTestPatientsOptions(allTestPatientsCache);
     }
@@ -17958,7 +17988,7 @@ async function populateMainViewPatientSelect() {
             allTestPatientsCache = patients;
             const currentVal = select.value;
             renderTestPatientsOptions(allTestPatientsCache);
-            if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+            if (currentVal && select.querySelector("option[value='" + currentVal + "']")) {
                 select.value = currentVal;
             }
         }
@@ -17971,6 +18001,7 @@ function renderTestPatientsOptions(patientsList) {
     const select = document.getElementById('select-test-main-patient');
     if (!select) return;
 
+    const currentVal = select.value;
     let html = '<option value="">-- Seleccionar Paciente --</option>';
     (patientsList || []).forEach(p => {
         const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
@@ -17978,6 +18009,9 @@ function renderTestPatientsOptions(patientsList) {
         html += `<option value="${p.id}">${nameStr}${ciStr}</option>`;
     });
     select.innerHTML = html;
+    if (currentVal && select.querySelector("option[value='" + currentVal + "']")) {
+        select.value = currentVal;
+    }
 }
 
 async function filterTestPatientSelect() {
@@ -18028,12 +18062,6 @@ async function filterTestPatientSelect() {
             autoList.classList.remove('hide');
         }
     }
-
-    const select = document.getElementById('select-test-main-patient');
-    if (select && filtered.length > 0) {
-        select.value = filtered[0].id;
-        onSelectMainPatientChange();
-    }
 }
 
 function selectTestPatientFromAutocomplete(patientId, patientName) {
@@ -18042,10 +18070,11 @@ function selectTestPatientFromAutocomplete(patientId, patientName) {
     const autoList = document.getElementById('test-patient-autocomplete-list');
 
     if (select) {
+        // Asegurar que las opciones completas están disponibles en el DOM
         if (allTestPatientsCache && allTestPatientsCache.length > 0) {
             renderTestPatientsOptions(allTestPatientsCache);
         }
-        select.value = patientId;
+        select.value = String(patientId);
     }
     if (searchInput) searchInput.value = patientName;
     if (autoList) {
@@ -18138,8 +18167,6 @@ function onSelectMainPatientChange() {
     updateSelectedPatientLabel();
 }
 
-
-
 async function executeMainApplyTest(modoParam) {
     const select = document.getElementById('select-test-main-patient');
     if (!select || !select.value) {
@@ -18155,8 +18182,7 @@ async function executeMainApplyTest(modoParam) {
 
     const patientId = select.value;
     const testCode = selectedTestCodeForApplication;
-    const modoSelect = document.getElementById('select-main-apply-mode');
-    const modo = modoParam || (modoSelect ? modoSelect.value : 'link');
+    const modo = modoParam || 'link';
 
     try {
         const res = await fetch('/api/tests/asignar', {
@@ -18200,20 +18226,25 @@ async function executeMainApplyTest(modoParam) {
             openTestPresencialWindow(testUrl);
         }
 
+        let modoLabelHtml = '🔗 Enlace Directo (WhatsApp / Público)';
+        if (modo === 'presencial') modoLabelHtml = '💻 Presencial (Consultorio)';
+        else if (modo === 'online') modoLabelHtml = '📱 Online (Perfil Paciente / App)';
+
         if (successDetails) {
             successDetails.innerHTML = `
                 <div><strong>Token ID:</strong> <code>${data.token || ''}</code></div>
-                <div><strong>Modo:</strong> <span style="font-weight:700; color:#702e5e;">${modo === 'presencial' ? '💻 Presencial' : '📲 Remoto (Link)'}</span></div>
-                <div><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all;">${testUrl}</a></div>
+                <div><strong>Modo de Aplicación:</strong> <span style="font-weight:800; color:#702e5e;">${modoLabelHtml}</span></div>
+                <div><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all; font-weight: 700;">${testUrl}</a></div>
+                ${modo === 'online' ? '<div style="margin-top: 6px; font-size: 0.84rem; color: #0284c7; font-weight: 700;">📲 La prueba ha sido asignada a la cuenta del paciente y estará visible al iniciar sesión en su app.</div>' : ''}
             `;
         }
 
         if (successActions) {
             let actionsHtml = `
-                <button type="button" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none;" onclick="copyTestLink('${testUrl}')">
+                <button type="button" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; cursor: pointer;" onclick="copyTestLink('${testUrl}')">
                     📋 Copiar Link del Test
                 </button>
-                <button type="button" class="btn btn-sm" style="background: #15803d; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none;" onclick="openTestPresencialWindow('${testUrl}')">
+                <button type="button" class="btn btn-sm" style="background: #15803d; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; cursor: pointer;" onclick="openTestPresencialWindow('${testUrl}')">
                     💻 Responder Presencial Ahora
                 </button>
             `;
@@ -18297,6 +18328,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 window.openPatientTestsModal = openPatientTestsModal;
 window.executeAssignTestToPatient = executeAssignTestToPatient;
+window.executeMainApplyTest = executeMainApplyTest;
 window.copyTestLink = copyTestLink;
 window.openTestPresencialWindow = openTestPresencialWindow;
 window.deleteTestAssignment = deleteTestAssignment;
@@ -18312,42 +18344,11 @@ window.populateMainViewPatientSelect = populateMainViewPatientSelect;
 window.selectTestPatientFromAutocomplete = selectTestPatientFromAutocomplete;
 window.onSelectMainPatientChange = onSelectMainPatientChange;
 window.renderCatalogViewWithFiltersAndPagination = renderCatalogViewWithFiltersAndPagination;
+window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
 
 // ==============================================================================
 // MÓDULO MEJORADO DE CATÁLOGO, FILTRADO Y PAGINACIÓN 5x2 DE TESTS
 // ==============================================================================
-let catalogCurrentCategoryFilter = 'TODAS';
-let catalogCurrentPage = 1;
-const CATALOG_ITEMS_PER_PAGE = 10; // Cuadrícula 5x2 (10 por página)
-let selectedTestCodeForApplication = null; // Test actualmente seleccionado en catálogo
-let catalogTestsMasterList = [
-
-    { code: 'MCMI-II', nombre: 'Test de Millon', siglas: 'MCMI-II', categoria: 'Personalidad y Psicopatología', descripcion: '175 ítems V/F para evaluación multiaxial de personalidad y síndromes clínicos.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175]' },
-    { code: 'HOLLAND', nombre: 'Test de Intereses Vocacionales', siglas: 'Holland', categoria: 'Orientación Vocacional', descripcion: 'Modelo RIASEC para determinar código vocacional y recomendar carreras profesionales y técnicas.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221]' },
-    { code: 'RAVEN', nombre: 'Test de Matrices Progresivas', siglas: 'RAVEN', categoria: 'Capacidad Intelectual', descripcion: '60 matrices en 5 series (A-E) para evaluar razonamiento no verbal y nivel intelectual.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60]' },
-    { code: 'ASRS-ADHD', nombre: 'Síntomas de TDAH Adultos (OMS)', siglas: 'ASRS v1.1', categoria: 'Neurodivergencia y Autismo', descripcion: '18 síntomas de autoinforme para valorar inatención e hiperactividad/impulsividad.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]' },
-    { code: 'AQ', nombre: 'Cociente de Espectro Autista', siglas: 'AQ', categoria: 'Neurodivergencia y Autismo', descripcion: '50 ítems de autoinforme (Baron-Cohen) para medir rasgos autistas en 5 dimensiones.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]' },
-    { code: 'RAADS-R', nombre: 'Escala Diagnóstica de Ritvo', siglas: 'RAADS-R', categoria: 'Neurodivergencia y Autismo', descripcion: '80 ítems clínicos para evaluar relaciones sociales, lenguaje e intereses sensoriomotores.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80]' },
-    { code: 'CAT-Q', nombre: 'Camuflaje de Rasgos Autistas', siglas: 'CAT-Q', categoria: 'Neurodivergencia y Autismo', descripcion: '25 ítems para medir enmascaramiento social, compensación y asimilación (Hull et al.).', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]' },
-    { code: 'BDI-II', nombre: 'Depresión de Beck', siglas: 'BDI-II', categoria: 'Depresión y Ansiedad', descripcion: '21 reactivos autoadministrados para clasificar sintomatología depresiva.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]' },
-    { code: 'BAI', nombre: 'Ansiedad de Beck', siglas: 'BAI', categoria: 'Depresión y Ansiedad', descripcion: '21 síntomas somáticos y cognitivos para valorar el nivel de ansiedad clínica.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]' },
-    { code: 'TCS', nombre: 'Congruencia Transgénero', siglas: 'TCS', categoria: 'Identidad de Género', descripcion: '12 ítems con inversión automática. Subescalas de Aceptación de Identidad y Congruencia.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12]' },
-    { code: 'UGDS-GS', nombre: 'Disforia de Utrecht', siglas: 'UGDS-GS', categoria: 'Identidad de Género', descripcion: '18 ítems para medir el nivel de distrés por incongruencia y la resiliencia.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]' }
-];
-
-const TEST_METADATA_MAP = {
-    'MCMI-II': { autor: 'Theodore Millon', poblacion: 'Adultos (18 a 65+ años)', validez: 'TB Estandarizada' },
-    'HOLLAND': { autor: 'John L. Holland (RIASEC)', poblacion: 'Adolescentes y Adultos (14-65+ años)', validez: 'α = 0.86 (Vocacional)' },
-    'RAVEN': { autor: 'John C. Raven', poblacion: 'Adolescentes y Adultos (12-65+ años)', validez: 'α = 0.90 (Razonamiento)' },
-    'ASRS-ADHD': { autor: 'OMS / Valdizán et al.', poblacion: 'Adultos (18 a 65+ años)', validez: 'α = 0.87 (DSM / OMS)' },
-    'AQ': { autor: 'Simon Baron-Cohen et al.', poblacion: 'Adolescentes y Adultos (16-65+ años)', validez: 'α = 0.82 (Corte >= 32)' },
-    'RAADS-R': { autor: 'Riva Ariella Ritvo et al.', poblacion: 'Adultos (18 a 65+ años)', validez: 'α = 0.92 (Umbral >= 65)' },
-    'CAT-Q': { autor: 'Laura Hull et al. (2019)', poblacion: 'Adolescentes y Adultos (16-65+ años)', validez: 'α = 0.90 (Masking / Camuflaje)' },
-    'BDI-II': { autor: 'Aaron T. Beck et al.', poblacion: 'Adolescentes y Adultos (13-65+ años)', validez: 'α = 0.92 (Depresión)' },
-    'BAI': { autor: 'Aaron T. Beck et al.', poblacion: 'Adolescentes y Adultos (13-65+ años)', validez: 'α = 0.92 (Ansiedad)' },
-    'TCS': { autor: 'Kozee, Reisner et al.', poblacion: 'Jóvenes y Adultos (16-65+ años)', validez: 'α = 0.89 (Afirmación)' },
-    'UGDS-GS': { autor: 'McGuire et al. / Utrecht', poblacion: 'Adolescentes y Adultos (12-65+ años)', validez: 'α = 0.91 (Disforia Género)' }
-};
 
 function loadTestsCatalogCards() {
     // La lista hardcodeada catalogTestsMasterList ya tiene todos los tests completos.
