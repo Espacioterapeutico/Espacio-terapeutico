@@ -14114,6 +14114,39 @@ def ensure_tests_tables(db):
     """, raven_def)
     db.commit()
 
+    # Asegurar la definición e inserción del ASRS-ADHD
+    adhd_def = (
+        "ASRS-ADHD",
+        "Inventario de Síntomas de TDAH en Adultos (ASRS v1.1 OMS)",
+        "ASRS-ADHD",
+        "Neurodesarrollo / TDAH Adulto",
+        "Escala de Autoinforme de TDAH en Adultos de la OMS (18 ítems) para medir la severidad de síntomas de inatención e hiperactividad/impulsividad.",
+        "Responda a las siguientes preguntas indicando con qué frecuencia ha experimentado cada síntoma durante los últimos 6 meses.",
+        json.dumps([
+            {"val": 0, "txt": "0 = Nunca"},
+            {"val": 1, "txt": "1 = Raramente"},
+            {"val": 2, "txt": "2 = Algunas veces"},
+            {"val": 3, "txt": "3 = A menudo"},
+            {"val": 4, "txt": "4 = Muy a menudo"}
+        ]),
+        "[{\"num\": 1, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"1. \u00bfCon qu\u00e9 frecuencia comete errores cuando tiene que trabajar en un proyecto aburrido o dif\u00edcil?\"}, {\"num\": 2, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"2. \u00bfCon qu\u00e9 frecuencia tiene dificultades para mantener su atenci\u00f3n cuando est\u00e1 aburrido o con un trabajo repetitivo?\"}, {\"num\": 3, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"3. \u00bfCon qu\u00e9 frecuencia tiene dificultades para concentrarse en cuestiones que otras personas le comunican aun cuando se dirijan directamente a usted?\"}, {\"num\": 4, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"4. \u00bfCon qu\u00e9 frecuencia tiene dificultades para concretar los detalles de un proyecto una vez que las partes m\u00e1s dif\u00edciles se han conseguido?\"}, {\"num\": 5, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"5. \u00bfCon qu\u00e9 frecuencia tiene dificultades en ordenar las cosas en una tarea que requiere organizaci\u00f3n?\"}, {\"num\": 6, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"6. Cuando tiene una tarea que requiere mucha reflexi\u00f3n, \u00bfcon qu\u00e9 frecuencia la evita o demora en iniciarla?\"}, {\"num\": 7, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"7. \u00bfCon qu\u00e9 frecuencia extrav\u00eda cosas o tiene dificultades para encontrarlas en su casa o en el trabajo?\"}, {\"num\": 8, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"8. \u00bfCon qu\u00e9 frecuencia se distrae por actividad o ruido a su alrededor?\"}, {\"num\": 9, \"sec\": \"Parte A - Inatenci\u00f3n\", \"txt\": \"9. \u00bfCon qu\u00e9 frecuencia tiene dificultades para recordar citas u obligaciones?\"}, {\"num\": 10, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"10. \u00bfCon qu\u00e9 frecuencia se inquieta o mueve sus manos o pies cuando tiene que permanecer sentado durante largo tiempo?\"}, {\"num\": 11, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"11. \u00bfCon qu\u00e9 frecuencia abandona su asiento en reuniones o en otras situaciones en las cuales debe permanecer sentado?\"}, {\"num\": 12, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"12. \u00bfCon qu\u00e9 frecuencia tiene sensaci\u00f3n de inquietud?\"}, {\"num\": 13, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"13. \u00bfCon qu\u00e9 frecuencia tiene dificultades para relajarse durante el tiempo libre?\"}, {\"num\": 14, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"14. \u00bfCon qu\u00e9 frecuencia se nota forzado en realizar actividades, como impulsado por un motor?\"}, {\"num\": 15, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"15. \u00bfCon qu\u00e9 frecuencia habla demasiado en ambientes sociales?\"}, {\"num\": 16, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"16. Cuando mantiene una conversaci\u00f3n, \u00bfcon qu\u00e9 frecuencia interrumpe o termina la frase de las personas antes de que ellas concluyan?\"}, {\"num\": 17, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"17. \u00bfCon qu\u00e9 frecuencia tiene dificultad para esperar su turno en situaciones que requieran una espera?\"}, {\"num\": 18, \"sec\": \"Parte B - Hiperactividad / Impulsividad\", \"txt\": \"18. \u00bfCon qu\u00e9 frecuencia interrumpe a los dem\u00e1s mientras est\u00e1n ocupados?\"}]",
+        json.dumps({"partes": ["Parte A - Inatención", "Parte B - Hiperactividad / Impulsividad"], "cortes": [17, 24]})
+    )
+    cursor.execute("""
+        INSERT INTO tests_definiciones 
+        (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json, reglas_correccion_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(code) DO UPDATE SET
+            nombre=excluded.nombre,
+            descripcion=excluded.descripcion,
+            instrucciones=excluded.instrucciones,
+            escala_opciones_json=excluded.escala_opciones_json,
+            items_json=excluded.items_json,
+            reglas_correccion_json=excluded.reglas_correccion_json
+    """, adhd_def)
+    db.commit()
+
+
     db.commit()
 
     # Asegurar la definición e inserción del MCMI-II
@@ -14220,6 +14253,60 @@ def calculate_raven_diagnosis(percentile, score, age):
         return "IV", "INFERIOR AL TÉRMINO MEDIO", "Capacidad intelectual en el rango inferior al promedio."
     else:
         return "V", "DEFICIENTE MENTAL", "Capacidad intelectual en el rango deficiente respecto a su grupo normativo."
+
+
+# ==============================================================================
+# MOTOR DE CÁLCULO ASRS V1.1 TDAH EN ADULTOS (OMS / VALDIZÁN ET AL.)
+# ==============================================================================
+ASRS_ADHD_ITEMS = [{"num": 1, "sec": "Parte A - Inatención", "txt": "1. ¿Con qué frecuencia comete errores cuando tiene que trabajar en un proyecto aburrido o difícil?"}, {"num": 2, "sec": "Parte A - Inatención", "txt": "2. ¿Con qué frecuencia tiene dificultades para mantener su atención cuando está aburrido o con un trabajo repetitivo?"}, {"num": 3, "sec": "Parte A - Inatención", "txt": "3. ¿Con qué frecuencia tiene dificultades para concentrarse en cuestiones que otras personas le comunican aun cuando se dirijan directamente a usted?"}, {"num": 4, "sec": "Parte A - Inatención", "txt": "4. ¿Con qué frecuencia tiene dificultades para concretar los detalles de un proyecto una vez que las partes más difíciles se han conseguido?"}, {"num": 5, "sec": "Parte A - Inatención", "txt": "5. ¿Con qué frecuencia tiene dificultades en ordenar las cosas en una tarea que requiere organización?"}, {"num": 6, "sec": "Parte A - Inatención", "txt": "6. Cuando tiene una tarea que requiere mucha reflexión, ¿con qué frecuencia la evita o demora en iniciarla?"}, {"num": 7, "sec": "Parte A - Inatención", "txt": "7. ¿Con qué frecuencia extravía cosas o tiene dificultades para encontrarlas en su casa o en el trabajo?"}, {"num": 8, "sec": "Parte A - Inatención", "txt": "8. ¿Con qué frecuencia se distrae por actividad o ruido a su alrededor?"}, {"num": 9, "sec": "Parte A - Inatención", "txt": "9. ¿Con qué frecuencia tiene dificultades para recordar citas u obligaciones?"}, {"num": 10, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "10. ¿Con qué frecuencia se inquieta o mueve sus manos o pies cuando tiene que permanecer sentado durante largo tiempo?"}, {"num": 11, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "11. ¿Con qué frecuencia abandona su asiento en reuniones o en otras situaciones en las cuales debe permanecer sentado?"}, {"num": 12, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "12. ¿Con qué frecuencia tiene sensación de inquietud?"}, {"num": 13, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "13. ¿Con qué frecuencia tiene dificultades para relajarse durante el tiempo libre?"}, {"num": 14, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "14. ¿Con qué frecuencia se nota forzado en realizar actividades, como impulsado por un motor?"}, {"num": 15, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "15. ¿Con qué frecuencia habla demasiado en ambientes sociales?"}, {"num": 16, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "16. Cuando mantiene una conversación, ¿con qué frecuencia interrumpe o termina la frase de las personas antes de que ellas concluyan?"}, {"num": 17, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "17. ¿Con qué frecuencia tiene dificultad para esperar su turno en situaciones que requieran una espera?"}, {"num": 18, "sec": "Parte B - Hiperactividad / Impulsividad", "txt": "18. ¿Con qué frecuencia interrumpe a los demás mientras están ocupados?"}]
+
+def process_asrs_adhd_scoring(answers):
+    score_a = 0
+    score_b = 0
+    
+    for item in ASRS_ADHD_ITEMS:
+        num = item['num']
+        ans = answers.get(str(num), answers.get(num, 0))
+        try: val = int(ans)
+        except: val = 0
+        
+        if num <= 9:
+            score_a += val
+        else:
+            score_b += val
+
+    max_subscore = max(score_a, score_b)
+    total_score = score_a + score_b
+
+    if max_subscore >= 24 or total_score >= 40:
+        classification = "Muy Probable TDAH del Adulto"
+        interpretation = (
+            "Resultado Altamente Significativo (Puntuación >= 24 pts en Inatención o Hiperactividad/Impulsividad).\n"
+            "Es MUY PROBABLE que el consultante presente síntomas compatibles con Trastorno por Déficit de Atención e Hiperactividad (TDAH en el Adulto).\n"
+            "Se recomienda evaluación neuropsicológica complementaria e indagación de sintomatología previa a los 7 años de edad."
+        )
+    elif max_subscore >= 17 or total_score >= 28:
+        classification = "Probable TDAH del Adulto"
+        interpretation = (
+            "Resultado Moderado (Puntuación entre 17 y 23 pts).\n"
+            "Es PROBABLE que el consultante presente sintomatología clínica de TDAH del Adulto en nivel moderado.\n"
+            "Se sugiere evaluar el impacto funcional en la esfera laboral, académica y personal."
+        )
+    else:
+        classification = "Poco Probable TDAH del Adulto"
+        interpretation = (
+            "Resultado Leve o Negativo (Puntuación de 0 a 16 pts).\n"
+            "Es POCO PROBABLE que el consultante presente TDAH del Adulto significativo según el inventario de autoinforme ASRS."
+        )
+
+    subscales_dict = {
+        "Parte A: Inatención": {"puntuacion": score_a, "max": 36},
+        "Parte B: Hiperactividad / Impulsividad": {"puntuacion": score_b, "max": 36},
+        "Puntuación Total ASRS": {"puntuacion": total_score, "max": 72}
+    }
+
+    return total_score, subscales_dict, classification, interpretation
+
 
 def process_raven_scoring(answers, duration_seconds=0, age=25):
     series_scores = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0}
@@ -14471,7 +14558,9 @@ def process_test_scoring(test_code, answers):
     classification = ""
     interpretation = ""
 
-    if test_code == "RAVEN":
+    if test_code == "ASRS-ADHD":
+        return process_asrs_adhd_scoring(answers)
+    elif test_code == "RAVEN":
         patient_age = 25
         if assignment and assignment.get("patient_id"):
             cur = db.cursor()

@@ -18287,7 +18287,9 @@ async function loadTestsCatalogCards() {
             let badgeColor = '#702e5e';
             let badgeBorder = '#f0abfc';
 
-            if (code === 'HOLLAND') {
+            if (code === 'ASRS-ADHD') {
+                badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeBorder = '#fde68a';
+            } else if (code === 'HOLLAND') {
                 badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
             } else if (code === 'BAI') {
                 badgeBg = '#eff6ff'; badgeColor = '#1d4ed8'; badgeBorder = '#bfdbfe';
