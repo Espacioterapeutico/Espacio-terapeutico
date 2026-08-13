@@ -17396,22 +17396,282 @@ function filterTestPatientSelect() {
     }
 }
 
-function loadTestsForSelectedPatientFromMainView() {
+let selectedTestCodeForApplication = null;
+let currentTestsActiveTab = 'apply';
+
+function switchTestsTab(tab) {
+    currentTestsActiveTab = tab;
+    const btnApply = document.getElementById('tab-btn-apply-test');
+    const btnHistory = document.getElementById('tab-btn-history-test');
+    const contentApply = document.getElementById('tests-tab-content-apply');
+    const contentHistory = document.getElementById('tests-tab-content-history');
+
+    if (tab === 'apply') {
+        if (btnApply) {
+            btnApply.style.background = 'white';
+            btnApply.style.color = '#702e5e';
+            btnApply.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+        }
+        if (btnHistory) {
+            btnHistory.style.background = 'transparent';
+            btnHistory.style.color = '#64748b';
+            btnHistory.style.boxShadow = 'none';
+        }
+        if (contentApply) contentApply.classList.remove('hide');
+        if (contentHistory) contentHistory.classList.add('hide');
+    } else {
+        if (btnHistory) {
+            btnHistory.style.background = 'white';
+            btnHistory.style.color = '#702e5e';
+            btnHistory.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+        }
+        if (btnApply) {
+            btnApply.style.background = 'transparent';
+            btnApply.style.color = '#64748b';
+            btnApply.style.boxShadow = 'none';
+        }
+        if (contentHistory) contentHistory.classList.remove('hide');
+        if (contentApply) contentApply.classList.add('hide');
+
+        loadAllAppliedTestsHistory();
+    }
+}
+
+function selectTestForApplication(testCode) {
+    selectedTestCodeForApplication = testCode;
+
+    const codes = ['BDI-II', 'BAI', 'TCS', 'UGDS-GS'];
+    codes.forEach(c => {
+        const card = document.getElementById(`card-test-choice-${c}`);
+        if (!card) return;
+        const checkSpan = card.querySelector('.test-card-check');
+        if (c === testCode) {
+            card.style.border = '2.5px solid #702e5e';
+            card.style.background = '#fdf4ff';
+            if (checkSpan) checkSpan.style.display = 'inline';
+        } else {
+            card.style.border = '2.5px solid #e2e8f0';
+            card.style.background = '#ffffff';
+            if (checkSpan) checkSpan.style.display = 'none';
+        }
+    });
+
+    const panel = document.getElementById('panel-apply-selected-test');
+    if (panel) panel.classList.remove('hide');
+
+    const testNamesMap = {
+        'BDI-II': 'BDI-II — Inventario de Depresión de Beck (21 ítems)',
+        'BAI': 'BAI — Inventario de Ansiedad de Beck (21 ítems)',
+        'TCS': 'TCS — Escala de Congruencia Transgénero (12 ítems)',
+        'UGDS-GS': 'UGDS-GS — Escala de Disforia de Utrecht (18 ítems)'
+    };
+
+    const labelTest = document.getElementById('label-selected-test-name');
+    if (labelTest) labelTest.textContent = testNamesMap[testCode] || testCode;
+
+    updateSelectedPatientLabel();
+
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function onSelectMainPatientChange() {
+    updateSelectedPatientLabel();
+}
+
+function updateSelectedPatientLabel() {
     const select = document.getElementById('select-test-main-patient');
-    if (!select || !select.value) return;
+    const labelPat = document.getElementById('label-selected-patient-name');
+    if (!select || !labelPat) return;
+
+    if (select.value) {
+        const selectedText = select.options[select.selectedIndex].text;
+        labelPat.textContent = selectedText;
+        labelPat.style.color = '#702e5e';
+    } else {
+        labelPat.textContent = "⚠️ Ningún paciente seleccionado aún (Busque o elija uno arriba)";
+        labelPat.style.color = '#dc2626';
+    }
+}
+
+async function executeMainApplyTest() {
+    const select = document.getElementById('select-test-main-patient');
+    if (!select || !select.value) {
+        alert("Por favor busque o seleccione un paciente primero en la barra superior.");
+        select.focus();
+        return;
+    }
+
+    if (!selectedTestCodeForApplication) {
+        alert("Por favor haga clic sobre una de las baterías psicológicas disponibles para seleccionarla.");
+        return;
+    }
 
     const patientId = select.value;
-    const patientName = select.options[select.selectedIndex].text;
-    openPatientTestsModal(patientId, patientName);
+    const testCode = selectedTestCodeForApplication;
+    const modoSelect = document.getElementById('select-main-apply-mode');
+    const modo = modoSelect ? modoSelect.value : 'link';
+
+    try {
+        const res = await fetch('/api/tests/asignar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: patientId,
+                test_code: testCode,
+                modo_aplicacion: modo
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || "Error al asignar la evaluación.");
+            return;
+        }
+
+        const successPanel = document.getElementById('panel-apply-success-result');
+        const successDetails = document.getElementById('text-apply-success-details');
+        const successActions = document.getElementById('container-apply-success-actions');
+
+        if (successPanel) successPanel.classList.remove('hide');
+
+        const testUrl = data.url;
+
+        if (successDetails) {
+            successDetails.innerHTML = `
+                <div><strong>Token ID:</strong> <code>${data.token}</code></div>
+                <div><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all;">${testUrl}</a></div>
+            `;
+        }
+
+        if (successActions) {
+            let actionsHtml = `
+                <button type="button" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none;" onclick="copyTestLink('${testUrl}')">
+                    📋 Copiar Link del Test
+                </button>
+            `;
+
+            if (data.whatsapp_url) {
+                actionsHtml += `
+                    <a href="${data.whatsapp_url}" target="_blank" class="btn btn-sm" style="background: #25d366; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                        📲 Enviar por WhatsApp
+                    </a>
+                `;
+            }
+
+            actionsHtml += `
+                <button type="button" class="btn btn-sm btn-outline-secondary" style="font-weight: 700; border-radius: 8px; padding: 0.55rem 1.1rem;" onclick="openTestPresencialWindow('${testUrl}')">
+                    💻 Responder en pantalla
+                </button>
+            `;
+
+            successActions.innerHTML = actionsHtml;
+        }
+
+        if (modo === 'link' && data.whatsapp_url) {
+            window.open(data.whatsapp_url, '_blank');
+        }
+
+    } catch (e) {
+        console.error("Error al aplicar test:", e);
+        alert("Ocurrió un error al procesar la asignación.");
+    }
+}
+
+async function loadAllAppliedTestsHistory() {
+    const container = document.getElementById('main-tests-history-container');
+    if (!container) return;
+
+    container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 1.5rem;">Cargando historial de evaluaciones...</p>';
+
+    const select = document.getElementById('select-test-main-patient');
+    const patientId = select ? select.value : '';
+
+    let fetchUrl = '/api/tests/historial';
+    if (patientId) {
+        fetchUrl += `?patient_id=${patientId}`;
+    }
+
+    try {
+        const res = await fetch(fetchUrl);
+        const data = await res.json();
+        const tests = data.tests || [];
+
+        if (tests.length === 0) {
+            container.innerHTML = '<div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 2rem; text-align: center; color: #64748b; font-weight: 600;">No hay evaluaciones registradas aún para este filtro.</div>';
+            return;
+        }
+
+        let html = '';
+        tests.forEach(t => {
+            const isCompleted = t.estado === 'completado';
+            const badgeClass = isCompleted ? 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;' : 'background: #fef9c3; color: #a16207; border: 1px solid #fef08a;';
+            const badgeText = isCompleted ? '🟢 Completado' : '⏳ Pendiente';
+
+            const patName = `${t.patient_nombres || ''} ${t.patient_apellidos || ''}`.trim() || 'Consultante';
+            const patCi = t.patient_cedula ? ` (CI: ${t.patient_cedula})` : '';
+
+            html += `
+                <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.15rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; ${badgeClass}">
+                                ${badgeText}
+                            </span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-left: 8px;">ID: ${t.uuid_token.substring(0, 8)}...</span>
+                            <h4 style="margin: 0.3rem 0 0 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">${t.test_siglas} — ${t.test_nombre}</h4>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #702e5e; margin-top: 2px;">👤 ${patName}${patCi}</div>
+                        </div>
+                        <div style="text-align: right; font-size: 0.8rem; color: #64748b;">
+                            <div><strong>Asignado:</strong> ${t.fecha_asignacion ? t.fecha_asignacion.substring(0, 16) : 'N/A'}</div>
+                            ${t.fecha_respuesta ? `<div style="color: #15803d; font-weight: 700;">Respondido: ${t.fecha_respuesta.substring(0, 16)}</div>` : ''}
+                        </div>
+                    </div>
+
+                    ${isCompleted ? `
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <div>
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Puntaje Total:</span>
+                                <strong style="font-size: 1.1rem; color: #702e5e; margin-left: 4px;">${t.puntaje_total} pts</strong>
+                            </div>
+                            <div>
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Clasificación:</span>
+                                <strong style="font-size: 0.95rem; color: #0f172a; margin-left: 4px;">${t.clasificacion || 'N/A'}</strong>
+                            </div>
+                            <button type="button" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 700; border-radius: 8px;" onclick="openTestDetailModal(${t.id})">
+                                👁️ Ver Informe Detallado
+                            </button>
+                        </div>
+                    ` : `
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="copyTestLink('${t.url_test}')">
+                                📋 Copiar Link
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="openTestPresencialWindow('${t.url_test}')">
+                                💻 Responder Presencial
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px; margin-left: auto;" onclick="deleteTestAssignment(${t.id})">
+                                🗑️ Eliminar
+                            </button>
+                        </div>
+                    `}
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Error al cargar historial de tests:", e);
+        container.innerHTML = '<p style="color: #dc2626; text-align: center;">Error al cargar el historial de evaluaciones.</p>';
+    }
+}
+
+function loadTestsForSelectedPatientFromMainView() {
+    onSelectMainPatientChange();
 }
 
 function openAssignTestFromMainView() {
-    const select = document.getElementById('select-test-main-patient');
-    if (!select || !select.value) {
-        alert("Por favor busque o seleccione un paciente primero para asignar la evaluación.");
-        return;
-    }
-    loadTestsForSelectedPatientFromMainView();
+    onSelectMainPatientChange();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -17428,6 +17688,11 @@ window.submitPublicTestResponse = submitPublicTestResponse;
 window.loadTestsForSelectedPatientFromMainView = loadTestsForSelectedPatientFromMainView;
 window.openAssignTestFromMainView = openAssignTestFromMainView;
 window.filterTestPatientSelect = filterTestPatientSelect;
+window.switchTestsTab = switchTestsTab;
+window.selectTestForApplication = selectTestForApplication;
+window.onSelectMainPatientChange = onSelectMainPatientChange;
+window.executeMainApplyTest = executeMainApplyTest;
+window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
 
 
 
