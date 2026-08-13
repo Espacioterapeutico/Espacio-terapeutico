@@ -14338,6 +14338,314 @@ def api_get_tests_paciente(patient_id):
     return jsonify({'tests': results})
 
 
+@app.route('/api/tests/asignacion/<int:assignment_id>/export/word', methods=['GET'])
+def api_export_test_word(assignment_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria, td.preguntas_json,
+               p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula
+        FROM test_asignaciones a
+        JOIN tests_definiciones td ON a.test_code = td.code
+        JOIN pacientes p ON a.patient_id = p.id
+        WHERE a.id = ? AND a.user_id = ?
+    """, (assignment_id, user_id))
+
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Evaluación no encontrada.'}), 404
+
+    data = dict(row)
+    patient_name = f"{data['patient_nombres']} {data['patient_apellidos']}"
+    test_title = f"{data['test_siglas']} — {data['test_nombre']}"
+
+    import io
+    from docx import Document
+    from docx.shared import Inches, Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+
+    doc = Document()
+
+    title_p = doc.add_paragraph()
+    title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_title = title_p.add_run("INFORME DE EVALUACIÓN PSICOLÓGICA")
+    run_title.font.name = 'Arial'
+    run_title.font.size = Pt(16)
+    run_title.font.bold = True
+    run_title.font.color.rgb = RGBColor(112, 46, 94)
+
+    sub_p = doc.add_paragraph()
+    sub_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_sub = sub_p.add_run("Espacio Terapéutico — Reporte Psicométrico Estandarizado")
+    run_sub.font.name = 'Arial'
+    run_sub.font.size = Pt(10)
+    run_sub.font.italic = True
+    run_sub.font.color.rgb = RGBColor(100, 116, 139)
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)
+
+    table_info = doc.add_table(rows=4, cols=2)
+    table_info.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table_info.style = 'Table Grid'
+
+    info_data = [
+        ("Consultante:", patient_name),
+        ("Cédula (CI):", data.get('patient_cedula') or 'Sin información'),
+        ("Evaluación Aplicada:", test_title),
+        ("Fecha de Aplicación:", str(data.get('fecha_respuesta') or data.get('fecha_asignacion') or ''))
+    ]
+
+    for idx, (label, val) in enumerate(info_data):
+        row_cells = table_info.rows[idx].cells
+        p0 = row_cells[0].paragraphs[0]
+        r0 = p0.add_run(label)
+        r0.font.bold = True
+        r0.font.size = Pt(9.5)
+        
+        p1 = row_cells[1].paragraphs[0]
+        r1 = p1.add_run(val)
+        r1.font.size = Pt(9.5)
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)
+
+    heading_res = doc.add_heading("1. Resultado y Clasificación Clínica", level=2)
+    heading_res.runs[0].font.color.rgb = RGBColor(112, 46, 94)
+
+    p_res = doc.add_paragraph()
+    r_diag_lbl = p_res.add_run("Diagnóstico / Clasificación: ")
+    r_diag_lbl.font.bold = True
+    r_diag_val = p_res.add_run(data.get('clasificacion_resultado') or 'Completado')
+    r_diag_val.font.bold = True
+    r_diag_val.font.size = Pt(12)
+    r_diag_val.font.color.rgb = RGBColor(112, 46, 94)
+
+    p_score = doc.add_paragraph()
+    r_score_lbl = p_score.add_run("Puntuación Total Obtenida: ")
+    r_score_lbl.font.bold = True
+    r_score_val = p_score.add_run(f"{data.get('puntaje_total', 0)} pts")
+    r_score_val.font.bold = True
+
+    sub_json = data.get('subescalas_json')
+    if sub_json:
+        try:
+            sub_dict = json.loads(sub_json)
+            if sub_dict:
+                p_sub = doc.add_paragraph()
+                p_sub.add_run("Desglose por Subescalas:").font.bold = True
+                for s_name, s_val in sub_dict.items():
+                    doc.add_paragraph(f"  • {s_name}: {s_val} pts", style='List Bullet')
+        except: pass
+
+    if data.get('interpretacion_clinica'):
+        doc.add_heading("2. Interpretación Diagnóstica para Historia Clínica", level=2).runs[0].font.color.rgb = RGBColor(112, 46, 94)
+        p_inter = doc.add_paragraph(data['interpretacion_clinica'])
+        p_inter.paragraph_format.line_spacing = 1.25
+
+    doc.add_heading("3. Ficha de Respuestas Ítem por Ítem", level=2).runs[0].font.color.rgb = RGBColor(112, 46, 94)
+    
+    resp_json = data.get('respuestas_json')
+    questions = []
+    try: questions = json.loads(data['preguntas_json']) if data.get('preguntas_json') else []
+    except: pass
+    
+    answers = {}
+    try: answers = json.loads(resp_json) if resp_json else {}
+    except: pass
+
+    if questions:
+        table_resp = doc.add_table(rows=1, cols=3)
+        table_resp.style = 'Table Grid'
+        hdr_cells = table_resp.rows[0].cells
+        hdr_cells[0].paragraphs[0].add_run("Ítem").font.bold = True
+        hdr_cells[1].paragraphs[0].add_run("Pregunta / Reactivo").font.bold = True
+        hdr_cells[2].paragraphs[0].add_run("Valor / Opción Seleccionada").font.bold = True
+
+        for q in questions:
+            q_num = str(q.get('numero', ''))
+            ans_val = answers.get(q_num, 'S/R')
+            ans_text = str(ans_val)
+            for opt in q.get('opciones', []):
+                if str(opt.get('valor')) == str(ans_val):
+                    ans_text = f"{ans_val} — {opt.get('texto', '')}"
+                    break
+
+            row_cells = table_resp.add_row().cells
+            row_cells[0].paragraphs[0].add_run(f"Item {q_num}")
+            row_cells[1].paragraphs[0].add_run(q.get('titulo') or q.get('pregunta') or '')
+            row_cells[2].paragraphs[0].add_run(ans_text)
+
+    doc.add_paragraph().paragraph_format.space_before = Pt(24)
+    p_sign = doc.add_paragraph()
+    p_sign.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    p_sign.add_run("_________________________________________\nFirma y Sello Profesional").font.size = Pt(9.5)
+
+    file_stream = io.BytesIO()
+    doc.save(file_stream)
+    file_stream.seek(0)
+
+    clean_filename = f"Informe_{data['test_siglas']}_{data['patient_nombres']}_{data['patient_apellidos']}.docx".replace(" ", "_")
+    return send_file(
+        file_stream,
+        as_attachment=True,
+        download_name=clean_filename,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+
+
+@app.route('/api/tests/asignacion/<int:assignment_id>/export/pdf', methods=['GET'])
+def api_export_test_pdf(assignment_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria, td.preguntas_json,
+               p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula
+        FROM test_asignaciones a
+        JOIN tests_definiciones td ON a.test_code = td.code
+        JOIN pacientes p ON a.patient_id = p.id
+        WHERE a.id = ? AND a.user_id = ?
+    """, (assignment_id, user_id))
+
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Evaluación no encontrada.'}), 404
+
+    data = dict(row)
+    patient_name = f"{data['patient_nombres']} {data['patient_apellidos']}"
+    test_title = f"{data['test_siglas']} — {data['test_nombre']}"
+
+    questions = []
+    try: questions = json.loads(data['preguntas_json']) if data.get('preguntas_json') else []
+    except: pass
+
+    answers = {}
+    try: answers = json.loads(data['respuestas_json']) if data.get('respuestas_json') else {}
+    except: pass
+
+    subscales = {}
+    try: subscales = json.loads(data['subescalas_json']) if data.get('subescalas_json') else {}
+    except: pass
+
+    items_rows_html = ""
+    for q in questions:
+        q_num = str(q.get('numero', ''))
+        ans_val = answers.get(q_num, 'N/A')
+        ans_text = str(ans_val)
+        for opt in q.get('opciones', []):
+            if str(opt.get('valor')) == str(ans_val):
+                ans_text = f"<strong>({ans_val})</strong> {opt.get('texto', '')}"
+                break
+
+        items_rows_html += f"""
+        <tr>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #702e5e;">Ítem {q_num}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b;">{q.get('titulo') or q.get('pregunta') or ''}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #0f172a;">{ans_text}</td>
+        </tr>
+        """
+
+    subscales_html = ""
+    if subscales:
+        subscales_html = "<div style='margin-top: 1rem; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;'><strong style='color:#334155;'>Subescalas:</strong><ul style='margin: 4px 0 0 0; padding-left: 20px;'>"
+        for k, v in subscales.items():
+            subscales_html += f"<li><strong>{k}:</strong> {v} pts</li>"
+        subscales_html += "</ul></div>"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Informe Psicológico - {patient_name}</title>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 20px; }}
+            .report-card {{ max-width: 850px; margin: 0 auto; background: white; border-radius: 16px; padding: 2.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }}
+            .header {{ text-align: center; border-bottom: 2px solid #702e5e; padding-bottom: 1rem; margin-bottom: 1.5rem; }}
+            .header h1 {{ margin: 0; font-size: 1.6rem; color: #702e5e; font-weight: 800; }}
+            .header p {{ margin: 4px 0 0 0; font-size: 0.9rem; color: #64748b; font-weight: 600; }}
+            .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; }}
+            .info-item {{ font-size: 0.9rem; color: #334155; }}
+            .info-item strong {{ color: #702e5e; }}
+            .result-box {{ background: linear-gradient(135deg, #702e5e 0%, #a855f7 100%); color: white; border-radius: 12px; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; }}
+            .result-box h2 {{ margin: 0; font-size: 1.5rem; }}
+            .result-box p {{ margin: 4px 0 0 0; font-size: 1.1rem; opacity: 0.95; font-weight: 700; }}
+            .narrative {{ background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 1.25rem; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.88rem; }}
+            th {{ background: #f1f5f9; color: #334155; text-align: left; padding: 10px 12px; border-bottom: 2px solid #cbd5e1; }}
+            .no-print {{ text-align: center; margin-bottom: 20px; }}
+            .btn-print {{ background: #702e5e; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 12px rgba(112,46,94,0.3); }}
+            @media print {{
+                .no-print {{ display: none; }}
+                body {{ background: white; padding: 0; }}
+                .report-card {{ box-shadow: none; padding: 0; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="no-print">
+            <button onclick="window.print()" class="btn-print">🖨️ Imprimir / Guardar como PDF</button>
+        </div>
+
+        <div class="report-card">
+            <div class="header">
+                <h1>INFORME DE EVALUACIÓN PSICOLÓGICA</h1>
+                <p>Espacio Terapéutico — Diagnóstico Psicométrico Estandarizado</p>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item"><strong>Consultante:</strong> {patient_name}</div>
+                <div class="info-item"><strong>Cédula (CI):</strong> {data.get('patient_cedula') or 'Sin información'}</div>
+                <div class="info-item"><strong>Instrumento:</strong> {test_title}</div>
+                <div class="info-item"><strong>Fecha de Aplicación:</strong> {str(data.get('fecha_respuesta') or data.get('fecha_asignacion') or '')}</div>
+            </div>
+
+            <div class="result-box">
+                <h2>{data.get('clasificacion_resultado') or 'Completado'}</h2>
+                <p>Puntuación Total Obtenida: {data.get('puntaje_total', 0)} pts</p>
+            </div>
+
+            {subscales_html}
+
+            <h3 style="color:#0f172a; margin-top: 1.5rem;">Interpretación Diagnóstica</h3>
+            <div class="narrative">
+                {data.get('interpretacion_clinica') or 'Sin interpretación clínica generada.'}
+            </div>
+
+            <h3 style="color:#0f172a; margin-top: 1.5rem;">Ficha de Respuestas del Paciente</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ítem</th>
+                        <th>Pregunta / Enunciado</th>
+                        <th>Respuesta Seleccionada</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {items_rows_html}
+                </tbody>
+            </table>
+
+            <div style="margin-top: 3rem; text-align: right; font-size: 0.85rem; color: #64748b;">
+                <p>_________________________________________<br>Firma y Sello del Profesional Tratante</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+    return render_template_string(html_content)
+
+
 @app.route('/api/tests/asignacion/<int:assignment_id>', methods=['DELETE'])
 def api_eliminar_test_asignacion(assignment_id):
     user_id = session.get('user_id')

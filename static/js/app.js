@@ -17300,9 +17300,28 @@ async function deleteTestAssignment(id) {
     }
 }
 
+let allAppliedTestsCache = [];
+
+function openTestDetailModalById(assignmentId) {
+    const testObj = allAppliedTestsCache.find(x => x.id === assignmentId);
+    if (testObj) {
+        openTestDetailModal(testObj);
+    } else {
+        fetch(`/api/tests/historial`)
+            .then(r => r.json())
+            .then(d => {
+                const found = (d.tests || []).find(x => x.id === assignmentId);
+                if (found) openTestDetailModal(found);
+            });
+    }
+}
+
 function openTestDetailModal(testData) {
-    document.getElementById('test-detail-badge-code').textContent = testData.test_siglas || testData.test_code;
-    document.getElementById('test-detail-title').textContent = testData.test_nombre;
+    const badgeEl = document.getElementById('test-detail-badge-code');
+    if (badgeEl) badgeEl.textContent = testData.test_siglas || testData.test_code || 'TEST';
+
+    const titleEl = document.getElementById('test-detail-title');
+    if (titleEl) titleEl.textContent = `Ficha Técnica: ${testData.test_nombre || 'Evaluación Psicológica'}`;
 
     const body = document.getElementById('test-detail-body');
     if (!body) return;
@@ -17319,28 +17338,165 @@ function openTestDetailModal(testData) {
         subscalesHtml += `</ul></div>`;
     }
 
+    let answersTableHtml = '';
+    const answers = testData.respuestas || {};
+    if (Object.keys(answers).length > 0) {
+        answersTableHtml = `
+            <div style="margin-top: 1rem;">
+                <strong style="color: #0f172a; font-size: 0.95rem; display: block; margin-bottom: 0.5rem;">Ficha de Respuestas del Consultante:</strong>
+                <div style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.5rem;">
+                    <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f1f5f9; color: #334155; text-align: left;">
+                                <th style="padding: 6px 10px;">Ítem</th>
+                                <th style="padding: 6px 10px;">Opción / Puntaje Seleccionado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+        for (let [qNum, qVal] of Object.entries(answers)) {
+            answersTableHtml += `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 6px 10px; font-weight: 700; color: #702e5e;">Ítem ${qNum}</td>
+                    <td style="padding: 6px 10px; color: #0f172a; font-weight: 700;">${qVal}</td>
+                </tr>
+            `;
+        }
+        answersTableHtml += `</tbody></table></div></div>`;
+    }
+
+    const patName = `${testData.patient_nombres || ''} ${testData.patient_apellidos || ''}`.trim() || 'Consultante';
+    const patCi = testData.patient_cedula ? ` - CI: ${testData.patient_cedula}` : '';
+
     body.innerHTML = `
         <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 14px; padding: 1.25rem; text-align: center;">
-            <span style="font-size: 0.85rem; font-weight: 700; color: #702e5e; text-transform: uppercase;">Diagnóstico / Severidad Clínica</span>
-            <h3 style="font-size: 1.4rem; font-weight: 800; color: #702e5e; margin: 0.35rem 0;">${testData.clasificacion_resultado || 'Sin clasificación'}</h3>
-            <div style="font-size: 1rem; font-weight: 800; color: #334155;">Puntuación Total Directa: ${testData.puntaje_total} pts</div>
+            <span style="font-size: 0.8rem; font-weight: 800; color: #702e5e; text-transform: uppercase;">Diagnóstico / Severidad Clínica</span>
+            <h3 style="font-size: 1.35rem; font-weight: 800; color: #702e5e; margin: 0.35rem 0;">${testData.clasificacion_resultado || testData.clasificacion || 'Completado'}</h3>
+            <div style="font-size: 0.98rem; font-weight: 800; color: #334155;">Puntuación Total Obtenida: ${testData.puntaje_total || 0} pts</div>
+            <div style="font-size: 0.82rem; font-weight: 700; color: #64748b; margin-top: 4px;">👤 ${patName}${patCi}</div>
         </div>
 
         ${subscalesHtml}
 
         <div>
-            <strong style="color: #0f172a; font-size: 0.95rem;">Análisis e Interpretación Clínica para Informe:</strong>
+            <strong style="color: #0f172a; font-size: 0.95rem;">Análisis e Interpretación Diagnóstica:</strong>
             <p style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; font-size: 0.92rem; color: #334155; line-height: 1.6; margin-top: 0.35rem;">
-                ${testData.interpretacion_clinica || 'Sin interpretación disponible.'}
+                ${testData.interpretacion_clinica || 'Sin interpretación clínica generada.'}
             </p>
         </div>
 
-        <div style="font-size: 0.8rem; color: #64748b; text-align: right;">
-            Fecha de aplicación: ${testData.fecha_completado || testData.fecha_asignacion || ''}
+        ${answersTableHtml}
+
+        <!-- BOTONES DE EXPORTACIÓN EN MODAL -->
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
+            <a href="/api/tests/asignacion/${testData.id}/export/word" target="_blank" class="btn btn-sm" style="background: #2b579a; color: white; font-weight: 800; border-radius: 8px; text-decoration: none; padding: 0.55rem 1.1rem; display: inline-flex; align-items: center; gap: 6px;">
+                📄 Exportar Word (.docx)
+            </a>
+            <a href="/api/tests/asignacion/${testData.id}/export/pdf" target="_blank" class="btn btn-sm" style="background: #dc2626; color: white; font-weight: 800; border-radius: 8px; text-decoration: none; padding: 0.55rem 1.1rem; display: inline-flex; align-items: center; gap: 6px;">
+                picture_as_pdf Exportar PDF
+            </a>
         </div>
     `;
 
     openModal('modal-view-test-detail');
+}
+
+async function loadAllAppliedTestsHistory() {
+    const container = document.getElementById('main-tests-history-container');
+    if (!container) return;
+
+    container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 1.5rem;">Cargando historial de evaluaciones...</p>';
+
+    const select = document.getElementById('select-test-main-patient');
+    const patientId = select ? select.value : '';
+
+    let fetchUrl = '/api/tests/historial';
+    if (patientId) {
+        fetchUrl += `?patient_id=${patientId}`;
+    }
+
+    try {
+        const res = await fetch(fetchUrl);
+        const data = await res.json();
+        const tests = data.tests || [];
+        allAppliedTestsCache = tests;
+
+        if (tests.length === 0) {
+            container.innerHTML = '<div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 2rem; text-align: center; color: #64748b; font-weight: 600;">No hay evaluaciones registradas aún para este filtro.</div>';
+            return;
+        }
+
+        let html = '';
+        tests.forEach(t => {
+            const isCompleted = t.estado === 'completado';
+            const badgeClass = isCompleted ? 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;' : 'background: #fef9c3; color: #a16207; border: 1px solid #fef08a;';
+            const badgeText = isCompleted ? '🟢 Completado' : '⏳ Pendiente por responder';
+
+            const patName = `${t.patient_nombres || ''} ${t.patient_apellidos || ''}`.trim() || 'Consultante';
+            const patCi = t.patient_cedula ? ` (CI: ${t.patient_cedula})` : '';
+
+            html += `
+                <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.15rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; ${badgeClass}">
+                                ${badgeText}
+                            </span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-left: 8px;">ID: ${t.uuid_token.substring(0, 8)}...</span>
+                            <h4 style="margin: 0.3rem 0 0 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">${t.test_siglas} — ${t.test_nombre}</h4>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #702e5e; margin-top: 2px;">👤 ${patName}${patCi}</div>
+                        </div>
+                        <div style="text-align: right; font-size: 0.8rem; color: #64748b;">
+                            <div><strong>Asignado:</strong> ${t.fecha_asignacion ? t.fecha_asignacion.substring(0, 16) : 'N/A'}</div>
+                            ${t.fecha_respuesta ? `<div style="color: #15803d; font-weight: 700;">Respondido: ${t.fecha_respuesta.substring(0, 16)}</div>` : ''}
+                        </div>
+                    </div>
+
+                    ${isCompleted ? `
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <div>
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Diagnóstico:</span>
+                                <strong style="font-size: 0.98rem; color: #702e5e; margin-left: 4px;">${t.clasificacion_resultado || t.clasificacion || 'Completado'}</strong>
+                                <span style="font-size: 0.85rem; font-weight: 700; color: #334155; margin-left: 8px;">(${t.puntaje_total || 0} pts)</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                            <button type="button" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 800; border-radius: 8px; padding: 0.5rem 1rem;" onclick="openTestDetailModalById(${t.id})">
+                                👁️ Ver Ficha
+                            </button>
+                            <a href="/api/tests/asignacion/${t.id}/export/word" target="_blank" class="btn btn-sm" style="background: #2b579a; color: white; font-weight: 800; border-radius: 8px; text-decoration: none; padding: 0.5rem 1.05rem;">
+                                📄 Exportar Word
+                            </a>
+                            <a href="/api/tests/asignacion/${t.id}/export/pdf" target="_blank" class="btn btn-sm" style="background: #dc2626; color: white; font-weight: 800; border-radius: 8px; text-decoration: none; padding: 0.5rem 1.05rem;">
+                                picture_as_pdf Exportar PDF
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px; margin-left: auto;" onclick="deleteTestAssignment(${t.id})">
+                                🗑️ Eliminar
+                            </button>
+                        </div>
+                    ` : `
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="copyTestLink('${t.url_test}')">
+                                📋 Copiar Link
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="openTestPresencialWindow('${t.url_test}')">
+                                💻 Responder Presencial
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px; margin-left: auto;" onclick="deleteTestAssignment(${t.id})">
+                                🗑️ Eliminar
+                            </button>
+                        </div>
+                    `}
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Error al cargar historial de tests:", e);
+        container.innerHTML = '<p style="color: #dc2626; text-align: center;">Error al cargar el historial de evaluaciones.</p>';
+    }
 }
 
 let allTestPatientsCache = [];
@@ -17693,6 +17849,7 @@ window.selectTestForApplication = selectTestForApplication;
 window.onSelectMainPatientChange = onSelectMainPatientChange;
 window.executeMainApplyTest = executeMainApplyTest;
 window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
+window.openTestDetailModalById = openTestDetailModalById;
 
 
 
