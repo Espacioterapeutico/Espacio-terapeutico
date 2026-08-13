@@ -18595,7 +18595,7 @@ function loadTestsCatalogCards() {
 
 // 3. HISTORIAL DE EVALUACIONES APLICADAS
 async function loadAllAppliedTestsHistory() {
-    const container = document.getElementById('container-applied-tests-history');
+    const container = document.getElementById('main-tests-history-container') || document.getElementById('container-applied-tests-history') || document.getElementById('tests-history-container') || document.getElementById('patient-tests-history-container');
     if (!container) return;
 
     container.innerHTML = '<div style="padding: 2rem; text-align: center; color: #64748b; font-weight: 700;">🔄 Cargando historial de evaluaciones aplicadas...</div>';
