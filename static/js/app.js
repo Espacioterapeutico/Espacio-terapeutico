@@ -17896,6 +17896,7 @@ function selectTestForApplication(testCode) {
     }
 
     const testNamesMap = {
+        'HOLLAND': 'HOLLAND — Test de Intereses Vocacionales (Modelo RIASEC)',
         'MCMI-II': 'MCMI-II — Inventario Multiaxial Clínico de Millon (175 ítems)',
         'BDI-II': 'BDI-II — Inventario de Depresión de Beck (21 ítems)',
         'BAI': 'BAI — Inventario de Ansiedad de Beck (21 ítems)',
