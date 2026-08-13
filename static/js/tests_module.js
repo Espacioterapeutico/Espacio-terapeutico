@@ -579,15 +579,7 @@ async function deleteTestAssignment(assignmentId) {
     }
 }
 
-// INICIALIZACIÓN Y EXPORTACIÓN A WINDOW
-window.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('container-tests-catalog-cards')) {
-        renderCatalogViewWithFiltersAndPagination();
-    }
-    populateMainViewPatientSelect();
-});
-
-// EXPORTACIONES AL OBJETO GLOBAL WINDOW
+// EXPORTACIONES AL OBJETO GLOBAL WINDOW (INMEDIATAS)
 window.populateMainViewPatientSelect = populateMainViewPatientSelect;
 window.renderTestPatientsOptions = renderTestPatientsOptions;
 window.onTestPatientInputFocus = onTestPatientInputFocus;
@@ -606,3 +598,14 @@ window.changeCatalogPage = changeCatalogPage;
 window.loadTestsCatalogCards = loadTestsCatalogCards;
 window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
 window.deleteTestAssignment = deleteTestAssignment;
+
+function initTestsModule() {
+    renderCatalogViewWithFiltersAndPagination();
+    populateMainViewPatientSelect();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTestsModule);
+} else {
+    initTestsModule();
+}
