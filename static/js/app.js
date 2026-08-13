@@ -17811,15 +17811,6 @@ async function executeMainApplyTest() {
     }
 }
 
-async function loadAllAppliedTestsHistory() {
-    const container = document.getElementById('main-tests-history-container');
-    if (!container) return;
-
-    container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 1.5rem;">Cargando historial de evaluaciones...</p>';
-
-    const select = document.getElementById('select-test-main-patient');
-    const patientId = select ? select.value : '';
-
 function toggleTestDetailAccordion(tId) {
     const drawer = document.getElementById(`test-detail-drawer-${tId}`);
     const btn = document.getElementById(`test-detail-btn-${tId}`);
