@@ -13883,9 +13883,25 @@ def ensure_tests_tables(db):
                     {"num": 13, "titulo": "13. Indecisión", "opciones": [{"val": 0, "txt": "Tomo decisiones tan bien como siempre."}, {"val": 1, "txt": "Me resulta más difícil tomar decisiones que de costumbre."}, {"val": 2, "txt": "Tengo mucha más dificultad para tomar decisiones que antes."}, {"val": 3, "txt": "Tengo problemas para tomar cualquier decisión."}]},
                     {"num": 14, "titulo": "14. Inutilidad", "opciones": [{"val": 0, "txt": "No me siento inútil."}, {"val": 1, "txt": "No me considero tan útil o valioso como solía ser."}, {"val": 2, "txt": "Me siento más inútil en comparación con otras personas."}, {"val": 3, "txt": "Me siento completamente inútil."}]},
                     {"num": 15, "titulo": "15. Pérdida de energía", "opciones": [{"val": 0, "txt": "Tengo tanta energía como siempre."}, {"val": 1, "txt": "Tengo menos energía de la que solía tener."}, {"val": 2, "txt": "No tengo suficiente energía para hacer casi nada."}, {"val": 3, "txt": "No tengo energía para hacer nada."}]},
-                    {"num": 16, "titulo": "16. Cambios en el patrón de sueño", "opciones": [{"val": 0, "txt": "0 No he experimentado ningún cambio en mis hábitos de sueño."}, {"val": 1, "txt": "1a Duermo algo más de lo habitual."}, {"val": 1, "txt": "1b Duermo algo menos de lo habitual."}, {"val": 2, "txt": "2a Duermo mucho más de lo habitual."}, {"val": 2, "txt": "2b Duermo mucho menos de lo habitual."}, {"val": 3, "txt": "3a Duermo casi todo el día."}, {"val": 3, "txt": "3b Me despierto 1-2 horas antes y no puedo volver a dormirme."}]},
+                    {"num": 16, "titulo": "16. Cambios en el patrón de sueño", "opciones": [
+                        {"val": 0, "txt": "No he experimentado ningún cambio en mis hábitos de sueño."},
+                        {"val": 1, "txt": "Duermo algo más de lo habitual."},
+                        {"val": 1, "txt": "Duermo algo menos de lo habitual."},
+                        {"val": 2, "txt": "Duermo mucho más de lo habitual."},
+                        {"val": 2, "txt": "Duermo mucho menos de lo habitual."},
+                        {"val": 3, "txt": "Duermo casi todo el día."},
+                        {"val": 3, "txt": "Me despierto 1-2 horas antes y no puedo volver a dormirme."}
+                    ]},
                     {"num": 17, "titulo": "17. Irritabilidad", "opciones": [{"val": 0, "txt": "No estoy más irritable de lo habitual."}, {"val": 1, "txt": "Estoy más irritable de lo habitual."}, {"val": 2, "txt": "Estoy mucho más irritable de lo habitual."}, {"val": 3, "txt": "Estoy irritable todo el tiempo."}]},
-                    {"num": 18, "titulo": "18. Cambios en el apetito", "opciones": [{"val": 0, "txt": "0 No he experimentado ningún cambio en mi apetito."}, {"val": 1, "txt": "1a Mi apetito es algo menor que de costumbre."}, {"val": 1, "txt": "1b Mi apetito es algo mayor que de costumbre."}, {"val": 2, "txt": "2a Mi apetito es mucho menor que antes."}, {"val": 2, "txt": "2b Mi apetito es mucho mayor que antes."}, {"val": 3, "txt": "3a No tengo ningún apetito en absoluto."}, {"val": 3, "txt": "3b Tengo ganas de comer todo el tiempo."}]},
+                    {"num": 18, "titulo": "18. Cambios en el apetito", "opciones": [
+                        {"val": 0, "txt": "No he experimentado ningún cambio en mi apetito."},
+                        {"val": 1, "txt": "Mi apetito es algo menor que de costumbre."},
+                        {"val": 1, "txt": "Mi apetito es algo mayor que de costumbre."},
+                        {"val": 2, "txt": "Mi apetito es mucho menor que antes."},
+                        {"val": 2, "txt": "Mi apetito es mucho mayor que antes."},
+                        {"val": 3, "txt": "No tengo ningún apetito en absoluto."},
+                        {"val": 3, "txt": "Tengo ganas de comer todo el tiempo."}
+                    ]},
                     {"num": 19, "titulo": "19. Dificultad de concentración", "opciones": [{"val": 0, "txt": "Puedo concentrarme tan bien como siempre."}, {"val": 1, "txt": "No puedo concentrarme tan bien como habitualmente."}, {"val": 2, "txt": "Me cuesta mantener la mente en algo por mucho tiempo."}, {"val": 3, "txt": "Encuentro que no puedo concentrarme en nada."}]},
                     {"num": 20, "titulo": "20. Cansancio o fatiga", "opciones": [{"val": 0, "txt": "No estoy más cansado o fatigado que de costumbre."}, {"val": 1, "txt": "Me canso o me fatigo más fácilmente que antes."}, {"val": 2, "txt": "Estoy demasiado cansado o fatigado para hacer muchas cosas que solía hacer."}, {"val": 3, "txt": "Estoy demasiado cansado o fatigado para hacer la mayoría de las cosas."}]},
                     {"num": 21, "titulo": "21. Pérdida de interés por el sexo", "opciones": [{"val": 0, "txt": "No he notado ningún cambio reciente en mi interés por el sexo."}, {"val": 1, "txt": "Estoy menos interesado en el sexo de lo que solía estar."}, {"val": 2, "txt": "Estoy mucho menos interesado en el sexo ahora."}, {"val": 3, "txt": "He perdido completamente el interés en el sexo."}]}
@@ -14022,23 +14038,23 @@ def ensure_tests_tables(db):
         {"num": 14, "titulo": "14. Inutilidad", "opciones": [{"val": 0, "txt": "No me siento inútil."}, {"val": 1, "txt": "No me considero tan útil o valioso como solía ser."}, {"val": 2, "txt": "Me siento más inútil en comparación con otras personas."}, {"val": 3, "txt": "Me siento completamente inútil."}]},
         {"num": 15, "titulo": "15. Pérdida de energía", "opciones": [{"val": 0, "txt": "Tengo tanta energía como siempre."}, {"val": 1, "txt": "Tengo menos energía de la que solía tener."}, {"val": 2, "txt": "No tengo suficiente energía para hacer casi nada."}, {"val": 3, "txt": "No tengo energía para hacer nada."}]},
         {"num": 16, "titulo": "16. Cambios en el patrón de sueño", "opciones": [
-            {"val": 0, "txt": "0 No he experimentado ningún cambio en mis hábitos de sueño."},
-            {"val": 1, "txt": "1a Duermo algo más de lo habitual."},
-            {"val": 1, "txt": "1b Duermo algo menos de lo habitual."},
-            {"val": 2, "txt": "2a Duermo mucho más de lo habitual."},
-            {"val": 2, "txt": "2b Duermo mucho menos de lo habitual."},
-            {"val": 3, "txt": "3a Duermo casi todo el día."},
-            {"val": 3, "txt": "3b Me despierto 1-2 horas antes y no puedo volver a dormirme."}
+            {"val": 0, "txt": "No he experimentado ningún cambio en mis hábitos de sueño."},
+            {"val": 1, "txt": "Duermo algo más de lo habitual."},
+            {"val": 1, "txt": "Duermo algo menos de lo habitual."},
+            {"val": 2, "txt": "Duermo mucho más de lo habitual."},
+            {"val": 2, "txt": "Duermo mucho menos de lo habitual."},
+            {"val": 3, "txt": "Duermo casi todo el día."},
+            {"val": 3, "txt": "Me despierto 1-2 horas antes y no puedo volver a dormirme."}
         ]},
         {"num": 17, "titulo": "17. Irritabilidad", "opciones": [{"val": 0, "txt": "No estoy más irritable de lo habitual."}, {"val": 1, "txt": "Estoy más irritable de lo habitual."}, {"val": 2, "txt": "Estoy mucho más irritable de lo habitual."}, {"val": 3, "txt": "Estoy irritable todo el tiempo."}]},
         {"num": 18, "titulo": "18. Cambios en el apetito", "opciones": [
-            {"val": 0, "txt": "0 No he experimentado ningún cambio en mi apetito."},
-            {"val": 1, "txt": "1a Mi apetito es algo menor que de costumbre."},
-            {"val": 1, "txt": "1b Mi apetito es algo mayor que de costumbre."},
-            {"val": 2, "txt": "2a Mi apetito es mucho menor que antes."},
-            {"val": 2, "txt": "2b Mi apetito es mucho mayor que antes."},
-            {"val": 3, "txt": "3a No tengo ningún apetito en absoluto."},
-            {"val": 3, "txt": "3b Tengo ganas de comer todo el tiempo."}
+            {"val": 0, "txt": "No he experimentado ningún cambio en mi apetito."},
+            {"val": 1, "txt": "Mi apetito es algo menor que de costumbre."},
+            {"val": 1, "txt": "Mi apetito es algo mayor que de costumbre."},
+            {"val": 2, "txt": "Mi apetito es mucho menor que antes."},
+            {"val": 2, "txt": "Mi apetito es mucho mayor que antes."},
+            {"val": 3, "txt": "No tengo ningún apetito en absoluto."},
+            {"val": 3, "txt": "Tengo ganas de comer todo el tiempo."}
         ]},
         {"num": 19, "titulo": "19. Dificultad de concentración", "opciones": [{"val": 0, "txt": "Puedo concentrarme tan bien como siempre."}, {"val": 1, "txt": "No puedo concentrarme tan bien como habitualmente."}, {"val": 2, "txt": "Me cuesta mantener la mente en algo por mucho tiempo."}, {"val": 3, "txt": "Encuentro que no puedo concentrarme en nada."}]},
         {"num": 20, "titulo": "20. Cansancio o fatiga", "opciones": [{"val": 0, "txt": "No estoy más cansado o fatigado que de costumbre."}, {"val": 1, "txt": "Me canso o me fatigo más fácilmente que antes."}, {"val": 2, "txt": "Estoy demasiado cansado o fatigado para hacer muchas cosas que solía hacer."}, {"val": 3, "txt": "Estoy demasiado cansado o fatigado para hacer la mayoría de las cosas."}]},
