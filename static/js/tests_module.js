@@ -586,7 +586,7 @@ function renderCatalogViewWithFiltersAndPagination() {
 
         html += `
             <div id="card-test-choice-${test.code}" onclick="selectTestForApplication('${test.code}')" 
-                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.15rem; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow};"
+                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.15rem; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow}; min-height: 320px; box-sizing: border-box;"
                  onmouseover="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#702e5e'; this.style.transform='translateY(-2px)'; }"
                  onmouseout="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#e2e8f0'; this.style.transform='none'; }">
                 
