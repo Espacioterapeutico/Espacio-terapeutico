@@ -18327,27 +18327,55 @@ async function loadTestsCatalogCards() {
     }
 }
 
-function filterTestsByCategory(catName) {
-    catalogCurrentCategoryFilter = catName;
-    catalogCurrentPage = 1;
 
-    // Actualizar estilos visuales de los botones de filtro
+function filterTestsByCategory(catName) {
     document.querySelectorAll('.btn-test-cat-filter').forEach(btn => {
-        if (btn.textContent.trim().toLowerCase() === catName.toLowerCase() || (catName === 'TODAS' && btn.textContent.trim() === 'Todas')) {
+        const btnTxt = btn.textContent.trim();
+        if (btnTxt.toLowerCase() === catName.toLowerCase() || (catName === 'TODAS' && btnTxt === 'Todas')) {
             btn.style.background = '#702e5e';
             btn.style.color = '#ffffff';
             btn.style.border = 'none';
-            btn.classList.add('active');
         } else {
             btn.style.background = '#ffffff';
             btn.style.color = '#475569';
             btn.style.border = '1px solid #cbd5e1';
-            btn.classList.remove('active');
         }
     });
 
-    renderCatalogViewWithFiltersAndPagination();
+    const cards = document.querySelectorAll('[id^="card-test-choice-"]');
+    cards.forEach(card => {
+        const catBadge = card.querySelector('.test-card-cat-badge');
+        const catText = catBadge ? catBadge.textContent.trim().toLowerCase() : '';
+        if (catName === 'TODAS') {
+            card.style.display = 'flex';
+        } else {
+            const filterNorm = catName.toLowerCase();
+            if (filterNorm.includes('depresión') || filterNorm.includes('ansiedad')) {
+                if (catText.includes('depresión') || catText.includes('ansiedad')) card.style.display = 'flex';
+                else card.style.display = 'none';
+            } else if (filterNorm.includes('neurodivergencia') || filterNorm.includes('autismo')) {
+                if (catText.includes('neurodivergencia') || catText.includes('autismo') || catText.includes('tdah')) card.style.display = 'flex';
+                else card.style.display = 'none';
+            } else if (filterNorm.includes('personalidad')) {
+                if (catText.includes('personalidad')) card.style.display = 'flex';
+                else card.style.display = 'none';
+            } else if (filterNorm.includes('intelectual')) {
+                if (catText.includes('intelectual')) card.style.display = 'flex';
+                else card.style.display = 'none';
+            } else if (filterNorm.includes('vocacional')) {
+                if (catText.includes('vocacional')) card.style.display = 'flex';
+                else card.style.display = 'none';
+            } else if (filterNorm.includes('género') || filterNorm.includes('identidad')) {
+                if (catText.includes('género') || catText.includes('afirmación')) card.style.display = 'flex';
+                else card.style.display = 'none';
+            } else {
+                if (catText.includes(filterNorm)) card.style.display = 'flex';
+                else card.style.display = 'none';
+            }
+        }
+    });
 }
+
 
 function changeCatalogPage(delta) {
     catalogCurrentPage += delta;
