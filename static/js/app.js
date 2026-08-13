@@ -18123,20 +18123,7 @@ function onSelectMainPatientChange() {
     updateSelectedPatientLabel();
 }
 
-function updateSelectedPatientLabel() {
-    const select = document.getElementById('select-test-main-patient');
-    const labelPat = document.getElementById('label-selected-patient-name');
-    if (!select || !labelPat) return;
 
-    if (select.value) {
-        const selectedText = select.options[select.selectedIndex].text;
-        labelPat.textContent = selectedText;
-        labelPat.style.color = '#702e5e';
-    } else {
-        labelPat.textContent = "⚠️ Ningún paciente seleccionado aún (Busque o elija uno arriba)";
-        labelPat.style.color = '#dc2626';
-    }
-}
 
 async function executeMainApplyTest() {
     const select = document.getElementById('select-test-main-patient');
@@ -18261,8 +18248,36 @@ function openAssignTestFromMainView() {
     onSelectMainPatientChange();
 }
 
+// ==============================================================================
+// FUNCIÓN switchTestsTab — Conmutación de pestañas Aplicar / Historial
+// ==============================================================================
+function switchTestsTab(tab) {
+    const btnApply = document.getElementById('tab-btn-apply-test');
+    const btnHistory = document.getElementById('tab-btn-history-test');
+    const contentApply = document.getElementById('tests-tab-content-apply');
+    const contentHistory = document.getElementById('tests-tab-content-history');
+
+    if (tab === 'apply') {
+        if (btnApply) { btnApply.style.background = '#ffffff'; btnApply.style.color = '#702e5e'; btnApply.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }
+        if (btnHistory) { btnHistory.style.background = 'transparent'; btnHistory.style.color = '#64748b'; btnHistory.style.boxShadow = 'none'; }
+        if (contentApply) { contentApply.classList.remove('hide'); contentApply.style.display = 'block'; }
+        if (contentHistory) { contentHistory.classList.add('hide'); contentHistory.style.display = 'none'; }
+    } else {
+        if (btnHistory) { btnHistory.style.background = '#ffffff'; btnHistory.style.color = '#702e5e'; btnHistory.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }
+        if (btnApply) { btnApply.style.background = 'transparent'; btnApply.style.color = '#64748b'; btnApply.style.boxShadow = 'none'; }
+        if (contentHistory) { contentHistory.classList.remove('hide'); contentHistory.style.display = 'block'; }
+        if (contentApply) { contentApply.classList.add('hide'); contentApply.style.display = 'none'; }
+        if (typeof loadAllAppliedTestsHistory === 'function') loadAllAppliedTestsHistory();
+    }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     initPublicTestRouteHandler();
+    // Auto-inicializar catálogo de tests y selector de pacientes
+    if (document.getElementById('container-tests-catalog-cards')) {
+        renderCatalogViewWithFiltersAndPagination();
+    }
+    populateMainViewPatientSelect();
 });
 
 window.openPatientTestsModal = openPatientTestsModal;
@@ -18277,6 +18292,11 @@ window.loadTestsForSelectedPatientFromMainView = loadTestsForSelectedPatientFrom
 window.openAssignTestFromMainView = openAssignTestFromMainView;
 window.filterTestPatientSelect = filterTestPatientSelect;
 window.switchTestsTab = switchTestsTab;
+window.selectTestForApplication = selectTestForApplication;
+window.populateMainViewPatientSelect = populateMainViewPatientSelect;
+window.selectTestPatientFromAutocomplete = selectTestPatientFromAutocomplete;
+window.onSelectMainPatientChange = onSelectMainPatientChange;
+window.renderCatalogViewWithFiltersAndPagination = renderCatalogViewWithFiltersAndPagination;
 
 // ==============================================================================
 // MÓDULO MEJORADO DE CATÁLOGO, FILTRADO Y PAGINACIÓN 5x2 DE TESTS
