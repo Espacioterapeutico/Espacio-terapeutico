@@ -2805,485 +2805,125 @@
                 </section>
 
                 <!-- VISTA DEDICADA DE TESTS PSICOLÓGICOS -->
+                                <!-- VISTA: TESTS Y EVALUACIONES PSICOLÓGICAS -->
                 <section id="view-tests-psicologicos" class="app-view hide">
-                    <div class="view-header-row mb-3">
-                        <div>
-                            <h2>Tests y Evaluaciones Psicológicas</h2>
-                            <p class="text-secondary text-sm" style="margin-top: 4px;">Catálogo e historial de pruebas psicométricas estandarizadas con autocorrección inmediata, baremos y asignación multicanal.</p>
-                        </div>
+                    <div class="view-header-row">
+                        <h2>🧩 Tests y Evaluaciones Psicológicas</h2>
+                        <span class="text-secondary">Catálogo e historial de pruebas psicométricas estandarizadas con autocorrección inmediata, baremos y asignación multicanal.</span>
                     </div>
 
-                    <!-- PESTAÑAS TOGGLE DESPLAZABLES -->
-                    <div style="display: flex; gap: 0.5rem; background: #e2e8f0; padding: 5px; border-radius: 14px; margin-bottom: 1.5rem; width: fit-content; max-width: 100%;">
-                        <button type="button" id="tab-btn-apply-test" onclick="switchTestsTab('apply')" class="btn" style="background: white; color: #702e5e; font-weight: 800; font-size: 0.95rem; border-radius: 10px; padding: 0.65rem 1.35rem; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s ease;">
+                    <!-- BOTONES PESTAÑAS PRINCIPALES: APLICAR TEST vs HISTORIAL -->
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: #e2e8f0; padding: 4px; border-radius: 12px; width: fit-content;">
+                        <button type="button" id="tab-btn-apply-test" onclick="switchTestsTab('apply')" style="background: white; color: #702e5e; font-weight: 800; font-size: 0.9rem; padding: 0.6rem 1.4rem; border-radius: 9px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.2s;">
                             Aplicar Evaluación
                         </button>
-                        <button type="button" id="tab-btn-history-test" onclick="switchTestsTab('history')" class="btn" style="background: transparent; color: #64748b; font-weight: 700; font-size: 0.95rem; border-radius: 10px; padding: 0.65rem 1.35rem; border: none; cursor: pointer; transition: all 0.2s ease;">
+                        <button type="button" id="tab-btn-history-test" onclick="switchTestsTab('history')" style="background: transparent; color: #64748b; font-weight: 800; font-size: 0.9rem; padding: 0.6rem 1.4rem; border-radius: 9px; border: none; cursor: pointer; transition: all 0.2s;">
                             Historial de Tests Aplicados
                         </button>
                     </div>
 
-                    <!-- BUSCADOR DE PACIENTE -->
-                    <div class="card mb-4" style="background: #ffffff; border-radius: 16px; border: 1.5px solid #e2e8f0; padding: 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.04);">
-                        <div style="margin-bottom: 0.85rem;">
-                            <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0 0 0.25rem 0;">Buscar o Seleccionar Consultante</h3>
-                            <p style="font-size: 0.85rem; color: #64748b; margin: 0;">Escriba el nombre, apellido o cédula para seleccionar al paciente que responderá la prueba.</p>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; align-items: flex-end;">
-                            <div>
-                                <label style="font-size: 0.8rem; font-weight: 800; color: #334155; display: block; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">Escribir Ficha / CI / Nombre</label>
-                                <div style="position: relative;">
-                                    <input type="text" id="input-search-test-patient" class="form-control" placeholder="Ej: Juan Pérez, 1234567..." style="font-size: 0.98rem; height: 50px; border-radius: 12px; border: 2px solid #cbd5e1; padding-left: 2.5rem;" oninput="filterTestPatientSelect()">
-                                    <span style="position: absolute; left: 14px; top: 14px; font-size: 1.1rem; color: #94a3b8;">🔍</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label style="font-size: 0.8rem; font-weight: 800; color: #334155; display: block; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">Paciente Seleccionado</label>
-                                <select id="select-test-main-patient" class="form-control" style="font-size: 0.98rem; font-weight: 700; height: 50px; border-radius: 12px; border: 2px solid #cbd5e1; background: #ffffff;" onchange="onSelectMainPatientChange()">
-                                    <option value="">-- Seleccionar Paciente --</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- CONTENIDO PESTAÑA 1: APLICAR TEST -->
                     <div id="tests-tab-content-apply">
-                        <div style="margin-top: 1rem;">
-                            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 1rem;">
+                        <!-- BUSCARDOR RÁPIDO Y SELECTOR DE PACIENTE -->
+                        <div style="background: white; border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                            <h4 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">Buscar o Seleccionar Consultante</h4>
+                            <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 0.85rem;">Escriba el nombre, apellido o cédula para seleccionar al paciente que responderá la prueba.</p>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; align-items: center;">
+                                <div style="position: relative;">
+                                    <label style="font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">ESCRIBIR FICHA / CI / NOMBRE</label>
+                                    <input type="text" id="input-search-test-patient" onfocus="populateMainViewPatientSelect()" onkeyup="filterTestPatientSelect()" oninput="filterTestPatientSelect()" placeholder="🔍 Ej: Juan Pérez, 1234567..." autocomplete="off" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.88rem; outline: none; transition: border-color 0.2s;">
+                                    
+                                    <!-- LISTA AUTOCOMPLETABLE FLOTANTE -->
+                                    <div id="test-patient-autocomplete-list" class="hide" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid #702e5e; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-height: 220px; overflow-y: auto; z-index: 1000; margin-top: 4px;"></div>
+                                </div>
                                 <div>
-                                    <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">Seleccionar la Prueba a Aplicar</h3>
-                                    <p style="font-size: 0.83rem; color: #64748b; margin: 2px 0 0 0;">Haga clic en la tarjeta de la evaluación psicológica que desea aplicar al paciente seleccionado.</p>
+                                    <label style="font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">PACIENTE SELECCIONADO</label>
+                                    <select id="select-test-main-patient" onfocus="populateMainViewPatientSelect()" onchange="onSelectMainPatientChange()" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #702e5e; border-radius: 10px; font-size: 0.88rem; background: #ffffff; color: #0f172a; font-weight: 700; outline: none;">
+                                        <option value="">-- Seleccionar Paciente --</option>
+                                    </select>
                                 </div>
-                                <div id="catalog-pagination-top-controls" style="display: flex; align-items: center; gap: 8px;">
-                                    <!-- Paginación dinámica 10 tests por página -->
+                            </div>
+                        </div>
+
+                        <!-- ENCABEZADO DEL CATÁLOGO Y BOTONES DE FILTRO DE CATEGORÍAS -->
+                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 1rem;">
+                            <div>
+                                <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">Seleccionar la Prueba a Aplicar</h3>
+                                <p style="font-size: 0.83rem; color: #64748b; margin: 2px 0 0 0;">Haga clic en la tarjeta de la evaluación psicológica que desea aplicar al paciente seleccionado.</p>
+                            </div>
+                            <div id="catalog-pagination-top-controls" style="display: flex; align-items: center; gap: 8px;">
+                                <!-- Paginación superior -->
+                            </div>
+                        </div>
+
+                        <!-- FILTRO POR CATEGORÍAS -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; background: #f8fafc; padding: 10px 14px; border-radius: 14px; border: 1px solid #e2e8f0;" id="container-tests-category-filters">
+                            <button type="button" class="btn-test-cat-filter active" onclick="filterTestsByCategory('TODAS')" style="background: #702e5e; color: white; border: none; font-size: 0.78rem; font-weight: 800; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Todas</button>
+                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Depresión y Ansiedad')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Depresión y Ansiedad</button>
+                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Neurodivergencia y Autismo')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Neurodivergencia y Autismo</button>
+                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Personalidad y Psicopatología')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Personalidad</button>
+                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Capacidad Intelectual')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Capacidad Intelectual</button>
+                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Orientación Vocacional')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Orientación Vocacional</button>
+                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Identidad de Género')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Identidad de Género</button>
+                        </div>
+
+                        <!-- UNICO CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 -->
+                        <div id="container-tests-catalog-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.1rem; min-height: 380px;">
+                            <!-- Las tarjetas se generan dinámicamente -->
+                        </div>
+
+                        <!-- PAGINACIÓN INFERIOR DEBAJO DE LAS TARJETAS -->
+                        <div id="catalog-pagination-bottom-controls" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 1.25rem;">
+                            <!-- Controles de paginación -->
+                        </div>
+
+                        <!-- PANEL ACCIÓN DE APLICAR TEST (SE DESPLIEGA AL SELECCIONAR TARJETA) -->
+                        <div id="panel-apply-selected-test" class="hide mt-4" style="background: #ffffff; border: 2.5px solid #702e5e; border-radius: 18px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(112,46,94,0.08);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                                <div>
+                                    <span style="font-size: 0.75rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 10px; border-radius: 12px;">EVALUACIÓN SELECCIONADA</span>
+                                    <h3 id="label-selected-test-name" style="margin: 0.25rem 0 0 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">-- Ninguna --</h3>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase;">PACIENTE DESTINO</span>
+                                    <div id="label-selected-patient-name" style="font-size: 1rem; font-weight: 800; color: #702e5e;">-- Seleccionar Paciente arriba --</div>
                                 </div>
                             </div>
 
-                            <!-- FILTRO POR CATEGORÍAS DE TESTS -->
-                            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; background: #f8fafc; padding: 10px 14px; border-radius: 14px; border: 1px solid #e2e8f0;" id="container-tests-category-filters">
-                                <button type="button" class="btn-test-cat-filter active" onclick="filterTestsByCategory('TODAS')" style="background: #702e5e; color: white; border: none; font-size: 0.78rem; font-weight: 800; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Todas</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Depresión y Ansiedad')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Depresión y Ansiedad</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Neurodivergencia y Autismo')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Neurodivergencia y Autismo</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Personalidad y Psicopatología')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Personalidad</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Capacidad Intelectual')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Capacidad Intelectual</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Orientación Vocacional')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Orientación Vocacional</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Identidad de Género')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Identidad de Género</button>
-                            </div>
+                            <p style="font-size: 0.88rem; color: #475569; margin-bottom: 1.25rem;">Seleccione la modalidad de aplicación deseada para enviar o iniciar la prueba:</p>
 
-                            <!-- CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 (10 por página) -->
-                            <div id="container-tests-catalog-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.1rem; min-height: 420px;">
-                                <!-- Card MCMI-II -->
-                                <div id="card-test-choice-MCMI-II" onclick="selectTestForApplication('MCMI-II')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                                <!-- Opción Presencial -->
+                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
                                     <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Personalidad y Psicopatología</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">MCMI-II — Test de Millon</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> Theodore Millon<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adultos (18 a 65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">175 ítems V/F para evaluación multiaxial de personalidad y síndromes clínicos.</p>
+                                        <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">💻</div>
+                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">Aplicación Presencial en Consultorio</h4>
+                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Abre la evaluación inmediatamente en una nueva ventana aislada para que el paciente responda en la tablet o PC del consultorio.</p>
                                     </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ TB Estandarizada</span>
-                                        <span>175 Ítems</span>
-                                    </div>
+                                    <button type="button" onclick="executeMainApplyTest('presencial')" class="btn" style="background: #702e5e; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
+                                        💻 Iniciar Evaluación Presencial
+                                    </button>
                                 </div>
 
-                                <!-- Card HOLLAND -->
-                                <div id="card-test-choice-HOLLAND" onclick="selectTestForApplication('HOLLAND')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
+                                <!-- Opción Enlace Multicanal -->
+                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
                                     <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Orientación Vocacional</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">Holland — Test Vocacional</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> John L. Holland (RIASEC)<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adolescentes y Adultos (14-65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">Modelo RIASEC para determinar código vocacional y recomendar carreras profesionales.</p>
+                                        <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">📲</div>
+                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">Generar Enlace Seguro (WhatsApp / Email)</h4>
+                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Genera un enlace único de acceso directo para enviar al paciente por WhatsApp o correo electrónico.</p>
                                     </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.86 (Vocacional)</span>
-                                        <span>221 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card RAVEN -->
-                                <div id="card-test-choice-RAVEN" onclick="selectTestForApplication('RAVEN')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Capacidad Intelectual</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">RAVEN — Matrices Progresivas</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> John C. Raven<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adolescentes y Adultos (12-65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">60 matrices en 5 series (A-E) para evaluar razonamiento no verbal y nivel intelectual.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.90 (Razonamiento)</span>
-                                        <span>60 Matrices</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card ASRS-ADHD -->
-                                <div id="card-test-choice-ASRS-ADHD" onclick="selectTestForApplication('ASRS-ADHD')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Neurodivergencia y Autismo</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">ASRS v1.1 — TDAH Adultos</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> OMS / Valdizán et al.<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adultos (18 a 65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">18 síntomas de autoinforme para valorar inatención e hiperactividad/impulsividad.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.87 (DSM / OMS)</span>
-                                        <span>18 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card AQ -->
-                                <div id="card-test-choice-AQ" onclick="selectTestForApplication('AQ')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Neurodivergencia y Autismo</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">AQ — Cociente de Espectro Autista</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> Simon Baron-Cohen et al.<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adolescentes y Adultos (16-65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">50 ítems de autoinforme (Baron-Cohen) para medir rasgos autistas en 5 dimensiones.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.82 (Corte >= 32)</span>
-                                        <span>50 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card RAADS-R -->
-                                <div id="card-test-choice-RAADS-R" onclick="selectTestForApplication('RAADS-R')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Neurodivergencia y Autismo</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">RAADS-R — Escala Diagnóstica de Ritvo</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> Riva Ariella Ritvo et al.<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adultos (18 a 65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">80 ítems clínicos para evaluar relaciones sociales, lenguaje e intereses sensoriomotores.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.92 (Umbral >= 65)</span>
-                                        <span>80 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card CAT-Q -->
-                                <div id="card-test-choice-CAT-Q" onclick="selectTestForApplication('CAT-Q')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #fae8ff; color: #86198f; border: 1px solid #f5d0fe; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Neurodivergencia y Autismo</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">CAT-Q — Camuflaje de Rasgos Autistas</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> Laura Hull et al. (2019)<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adolescentes y Adultos (16-65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">25 ítems para medir enmascaramiento social, compensación y asimilación (Hull et al.).</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.90 (Masking)</span>
-                                        <span>25 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card BDI-II -->
-                                <div id="card-test-choice-BDI-II" onclick="selectTestForApplication('BDI-II')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Depresión y Ansiedad</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">BDI-II — Depresión de Beck</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> Aaron T. Beck et al.<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adolescentes y Adultos (13-65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">21 reactivos autoadministrados para clasificar sintomatología depresiva.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.92 (Depresión)</span>
-                                        <span>21 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card BAI -->
-                                <div id="card-test-choice-BAI" onclick="selectTestForApplication('BAI')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Depresión y Ansiedad</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">BAI — Ansiedad de Beck</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> Aaron T. Beck et al.<br>
-                                            <span style="color: #047857;">👥 Población:</span> Adolescentes y Adultos (13-65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">21 síntomas somáticos y cognitivos para valorar el nivel de ansiedad clínica.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.92 (Ansiedad)</span>
-                                        <span>21 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card TCS -->
-                                <div id="card-test-choice-TCS" onclick="selectTestForApplication('TCS')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                                            <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">Identidad de Género</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">TCS — Congruencia Transgénero</h4>
-                                        <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                                            <span style="color: #702e5e;">👤 Autor:</span> Kozee, Reisner et al.<br>
-                                            <span style="color: #047857;">👥 Población:</span> Jóvenes y Adultos (16-65+ años)
-                                        </div>
-                                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">12 ítems con inversión automática. Subescalas de Aceptación de Identidad y Congruencia.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ α = 0.89 (Afirmación)</span>
-                                        <span>12 Ítems</span>
-                                    </div>
+                                    <button type="button" onclick="executeMainApplyTest('remoto')" class="btn" style="background: #15803d; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
+                                        📲 Generar Enlace Remoto
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- CONTROLES DE PAGINACIÓN INFERIOR -->
-                            <div id="catalog-pagination-bottom-controls" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 1.25rem;">
-                                <!-- Paginación -->
-                            </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">MCMI-II — Test de Millon</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">175 ítems V/F para evaluación multiaxial de personalidad y síndromes clínicos.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Baremos Tasa Base (TB)</span>
-                                        <span>175 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card HOLLAND -->
-                                <div id="card-test-choice-HOLLAND" onclick="selectTestForApplication('HOLLAND')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Orientación Vocacional</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">Holland — Test de Intereses Vocacionales</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">Modelo RIASEC para determinar código vocacional y recomendar carreras profesionales y técnicas.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Manual de Ocupaciones</span>
-                                        <span>221 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card RAVEN -->
-                                <div id="card-test-choice-RAVEN" onclick="selectTestForApplication('RAVEN')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Capacidad Intelectual</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">RAVEN — Test de Matrices Progresivas</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">60 matrices en 5 series (A-E) para evaluar razonamiento no verbal y nivel intelectual.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Cronómetro & Baremos por Edad</span>
-                                        <span>60 Matrices</span>
-                                    </div>
-                                </div>
-
-                                                                                                <!-- Card AQ -->
-                                <div id="card-test-choice-AQ" onclick="selectTestForApplication('AQ')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Neurodivergencia / TEA Adultos</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">AQ — Cociente de Espectro Autista</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">50 ítems de autoinforme (Baron-Cohen) para medir rasgos autistas en 5 dimensiones.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Corte Clínico >= 32 pts</span>
-                                        <span>50 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card RAADS-R -->
-                                <div id="card-test-choice-RAADS-R" onclick="selectTestForApplication('RAADS-R')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Neurodivergencia / TEA Adultos</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">RAADS-R — Escala Diagnóstica de Ritvo</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">80 ítems clínicos para evaluar relaciones sociales, lenguaje e intereses sensoriomotores.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Umbral Clínico >= 65 pts</span>
-                                        <span>80 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card CAT-Q -->
-                                <div id="card-test-choice-CAT-Q" onclick="selectTestForApplication('CAT-Q')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #fae8ff; color: #86198f; border: 1px solid #f5d0fe; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Camuflaje Social / Masking</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">CAT-Q — Camuflaje de Rasgos Autistas</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">25 ítems para medir enmascaramiento social, compensación y asimilación (Hull et al.).</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Escala de Masking (Corte >= 100)</span>
-                                        <span>25 Ítems</span>
-                                    </div>
-                                </div>
-
-<!-- Card ASRS-ADHD -->
-                                <div id="card-test-choice-ASRS-ADHD" onclick="selectTestForApplication('ASRS-ADHD')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">TDAH Adulto</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">ASRS v1.1 — Síntomas de TDAH Adultos (OMS)</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">18 síntomas de autoinforme para valorar inatención e hiperactividad/impulsividad.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Criterios OMS / Valdizán</span>
-                                        <span>18 Ítems</span>
-                                    </div>
-                                </div>
-
-<!-- Card BDI-II -->
-                                <div id="card-test-choice-BDI-II" onclick="selectTestForApplication('BDI-II')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Depresión</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">BDI-II — Depresión de Beck</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">21 reactivos autoadministrados para clasificar sintomatología depresiva.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Autocorrección instantánea</span>
-                                        <span>21 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card BAI -->
-                                <div id="card-test-choice-BAI" onclick="selectTestForApplication('BAI')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Ansiedad</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">BAI — Ansiedad de Beck</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">21 síntomas somáticos y cognitivos para valorar el nivel de ansiedad clínica.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Autocorrección instantánea</span>
-                                        <span>21 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card TCS -->
-                                <div id="card-test-choice-TCS" onclick="selectTestForApplication('TCS')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Afirmación de Género</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">TCS — Congruencia Transgénero</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">12 ítems con inversión automática. Subescalas de Aceptación de Identidad y Congruencia.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Subescalas automáticas</span>
-                                        <span>12 Ítems</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card UGDS-GS -->
-                                <div id="card-test-choice-UGDS-GS" onclick="selectTestForApplication('UGDS-GS')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Disforia de Género</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">UGDS-GS — Disforia de Utrecht</h4>
-                                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">18 ítems para medir el nivel de distrés por incongruencia y la resiliencia.</p>
-                                    </div>
-                                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                                        <span>✓ Baremos inclusivos</span>
-                                        <span>18 Ítems</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- PANEL ACCIÓN DE APLICAR TEST (SE DESPLIEGA AL SELECCIONAR TEST) -->
-                            <div id="panel-apply-selected-test" class="card mt-4 hide" style="background: #fdf4ff; border: 2px solid #f0abfc; border-radius: 18px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(112,46,94,0.08);">
-                                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; border-bottom: 1.5px solid #fae8ff; padding-bottom: 1rem; margin-bottom: 1rem;">
-                                    <div>
-                                        <span style="font-size: 0.78rem; font-weight: 800; color: #702e5e; text-transform: uppercase;">Prueba Seleccionada</span>
-                                        <h3 id="label-selected-test-name" style="margin: 0.2rem 0 0 0; font-size: 1.2rem; font-weight: 800; color: #702e5e;">BDI-II — Depresión de Beck</h3>
-                                    </div>
-                                    <div>
-                                        <span style="font-size: 0.78rem; font-weight: 800; color: #475569; text-transform: uppercase;">Consultante Destino</span>
-                                        <div id="label-selected-patient-name" style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Ningún paciente seleccionado</div>
-                                    </div>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; align-items: flex-end;">
-                                    <div>
-                                        <label style="font-size: 0.82rem; font-weight: 800; color: #334155; display: block; margin-bottom: 0.4rem;">Modo de Aplicación / Entrega</label>
-                                        <select id="select-main-apply-mode" class="form-control" style="font-size: 0.95rem; font-weight: 700; height: 48px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: white;">
-                                            <option value="link">🌐 Responder a distancia (Portal + WhatsApp / Enlace)</option>
-                                            <option value="presencial">💻 Modo Presencial (Responder en pantalla en Consultorio)</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <button type="button" id="btn-execute-main-apply-test" onclick="executeMainApplyTest()" class="btn" style="width: 100%; background: linear-gradient(135deg, #702e5e 0%, #a855f7 100%); color: white; font-weight: 800; font-size: 1.05rem; border: none; height: 48px; border-radius: 10px; box-shadow: 0 4px 15px rgba(112,46,94,0.35); cursor: pointer;">
-                                            🚀 Aplicar Test y Generar Enlace
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- TARJETA DE ÉXITO RESULTADO GENERADO -->
-                                <div id="panel-apply-success-result" class="hide mt-3" style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 1.25rem;">
-                                    <div style="color: #15803d; font-weight: 800; font-size: 1.05rem; margin-bottom: 0.5rem;">✅ ¡Evaluación creada exitosamente!</div>
-                                    <div id="text-apply-success-details" style="font-size: 0.9rem; color: #334155; margin-bottom: 1rem;"></div>
-                                    <div id="container-apply-success-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;"></div>
-                                </div>
+                            <!-- TARJETA DE ÉXITO RESULTADO GENERADO -->
+                            <div id="panel-apply-success-result" class="hide mt-3" style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 1.25rem;">
+                                <div style="color: #15803d; font-weight: 800; font-size: 1.05rem; margin-bottom: 0.5rem;">✅ ¡Evaluación creada exitosamente!</div>
+                                <div id="text-apply-success-details" style="font-size: 0.9rem; color: #334155; margin-bottom: 1rem;"></div>
+                                <div id="container-apply-success-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;"></div>
                             </div>
                         </div>
                     </div>
@@ -3302,7 +2942,6 @@
                     </div>
                 </section>
 
-                <!-- VISTA: HERRAMIENTAS TERAPÉUTICAS (PSICÓLOGO) -->
                 <section id="view-therapist-tools" class="app-view hide">
                     <div class="view-header-row">
                         <h2>🛠️ Herramientas Terapéuticas Especiales</h2>

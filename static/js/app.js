@@ -17935,6 +17935,10 @@ async function loadAllAppliedTestsHistory() {
     }
 }
 
+
+// ==============================================================================
+// GESTIÓN DE PACIENTES AUTOCOMPLETADO Y SELECCIÓN PARA TESTS
+// ==============================================================================
 let allTestPatientsCache = [];
 
 async function populateMainViewPatientSelect() {
@@ -17972,11 +17976,17 @@ function renderTestPatientsOptions(patientsList) {
 
 function filterTestPatientSelect() {
     const searchInput = document.getElementById('input-search-test-patient');
+    const autoList = document.getElementById('test-patient-autocomplete-list');
     if (!searchInput) return;
+
     const query = searchInput.value.toLowerCase().trim();
 
     if (!query) {
         renderTestPatientsOptions(allTestPatientsCache);
+        if (autoList) {
+            autoList.innerHTML = '';
+            autoList.classList.add('hide');
+        }
         onSelectMainPatientChange();
         return;
     }
@@ -17987,75 +17997,52 @@ function filterTestPatientSelect() {
     });
 
     renderTestPatientsOptions(filtered);
-    
-    const select = document.getElementById('select-test-main-patient');
-    if (select) {
-        if (filtered.length > 0) {
-            select.value = filtered[0].id;
+
+    // Render flotante autocompletado
+    if (autoList) {
+        if (filtered.length === 0) {
+            autoList.innerHTML = '<div style="padding: 10px; color: #64748b; font-size: 0.85rem; font-weight: 600;">No se encontraron consultantes.</div>';
+            autoList.classList.remove('hide');
+        } else {
+            let autoHtml = '';
+            filtered.forEach(p => {
+                const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
+                const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
+                autoHtml += `
+                    <div onclick="selectTestPatientFromAutocomplete('${p.id}', '${nameStr.replace(/'/g, "\'")}')" style="padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; font-weight: 700; color: #0f172a; transition: background 0.15s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">
+                        👤 ${nameStr} <span style="color: #702e5e; font-size: 0.78rem;">${ciStr}</span>
+                    </div>
+                `;
+            });
+            autoList.innerHTML = autoHtml;
+            autoList.classList.remove('hide');
         }
+    }
+
+    const select = document.getElementById('select-test-main-patient');
+    if (select && filtered.length > 0) {
+        select.value = filtered[0].id;
         onSelectMainPatientChange();
     }
 }
 
-let selectedTestCodeForApplication = null;
-let currentTestsActiveTab = 'apply';
+function selectTestPatientFromAutocomplete(patientId, patientName) {
+    const select = document.getElementById('select-test-main-patient');
+    const searchInput = document.getElementById('input-search-test-patient');
+    const autoList = document.getElementById('test-patient-autocomplete-list');
 
-function switchTestsTab(tab) {
-    currentTestsActiveTab = tab;
-    const btnApply = document.getElementById('tab-btn-apply-test');
-    const btnHistory = document.getElementById('tab-btn-history-test');
-    const contentApply = document.getElementById('tests-tab-content-apply');
-    const contentHistory = document.getElementById('tests-tab-content-history');
-
-    if (tab === 'apply') {
-        if (btnApply) {
-            btnApply.style.background = '#ffffff';
-            btnApply.style.color = '#702e5e';
-            btnApply.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-        }
-        if (btnHistory) {
-            btnHistory.style.background = 'transparent';
-            btnHistory.style.color = '#64748b';
-            btnHistory.style.boxShadow = 'none';
-        }
-        if (contentApply) {
-            contentApply.classList.remove('hide');
-            contentApply.style.display = 'block';
-        }
-        if (contentHistory) {
-            contentHistory.classList.add('hide');
-            contentHistory.style.display = 'none';
-        }
-    } else {
-        if (btnHistory) {
-            btnHistory.style.background = '#ffffff';
-            btnHistory.style.color = '#702e5e';
-            btnHistory.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-        }
-        if (btnApply) {
-            btnApply.style.background = 'transparent';
-            btnApply.style.color = '#64748b';
-            btnApply.style.boxShadow = 'none';
-        }
-        if (contentHistory) {
-            contentHistory.classList.remove('hide');
-            contentHistory.style.display = 'block';
-        }
-        if (contentApply) {
-            contentApply.classList.add('hide');
-            contentApply.style.display = 'none';
-        }
-
-        loadAllAppliedTestsHistory();
-        if (contentHistory) {
-            contentHistory.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+    if (select) select.value = patientId;
+    if (searchInput) searchInput.value = patientName;
+    if (autoList) {
+        autoList.innerHTML = '';
+        autoList.classList.add('hide');
     }
+
+    onSelectMainPatientChange();
 }
 
 function selectTestForApplication(testCode) {
     if (selectedTestCodeForApplication === testCode) {
-        // Toggle / deselect if clicked again
         selectedTestCodeForApplication = null;
         const panel = document.getElementById('panel-apply-selected-test');
         if (panel) {
@@ -18094,8 +18081,13 @@ function selectTestForApplication(testCode) {
     }
 
     const testNamesMap = {
-        'HOLLAND': 'HOLLAND — Test de Intereses Vocacionales (Modelo RIASEC)',
+        'AQ': 'AQ — Cociente de Espectro Autista (50 ítems - Baron-Cohen)',
+        'RAADS-R': 'RAADS-R — Escala Revisada para Diagnóstico de Autismo y Asperger (80 ítems)',
+        'CAT-Q': 'CAT-Q — Cuestionario de Camuflaje de Rasgos Autistas (25 ítems - Hull et al.)',
+        'ASRS-ADHD': 'ASRS v1.1 — Inventario de Síntomas de TDAH en Adultos (OMS)',
+        'RAVEN': 'RAVEN — Test de Matrices Progresivas de Raven (60 matrices)',
         'MCMI-II': 'MCMI-II — Inventario Multiaxial Clínico de Millon (175 ítems)',
+        'HOLLAND': 'HOLLAND — Test de Intereses Vocacionales (Modelo RIASEC)',
         'BDI-II': 'BDI-II — Inventario de Depresión de Beck (21 ítems)',
         'BAI': 'BAI — Inventario de Ansiedad de Beck (21 ítems)',
         'TCS': 'TCS — Escala de Congruencia Transgénero (12 ítems)',
@@ -18107,7 +18099,24 @@ function selectTestForApplication(testCode) {
 
     updateSelectedPatientLabel();
 
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (panel) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function updateSelectedPatientLabel() {
+    const select = document.getElementById('select-test-main-patient');
+    const label = document.getElementById('label-selected-patient-name');
+    if (!label) return;
+
+    if (select && select.value) {
+        const selectedOpt = select.options[select.selectedIndex];
+        label.textContent = selectedOpt ? selectedOpt.textContent : 'Consultante Seleccionado';
+        label.style.color = '#15803d';
+    } else {
+        label.textContent = '-- Seleccionar Paciente arriba --';
+        label.style.color = '#702e5e';
+    }
 }
 
 function onSelectMainPatientChange() {
