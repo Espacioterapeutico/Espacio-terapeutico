@@ -2851,17 +2851,36 @@
                     <!-- CONTENIDO PESTAÑA 1: APLICAR TEST -->
                     <div id="tests-tab-content-apply">
                         <div style="margin-top: 1rem;">
-                            <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem;">Seleccionar la Prueba a Aplicar</h3>
-                            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem;">Haga clic en la tarjeta de la evaluación psicológica que desea aplicar al paciente seleccionado.</p>
-                            
-                            <div id="container-tests-catalog-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1.25rem;">
-                                <!-- Card MCMI-II -->
-                                <div id="card-test-choice-MCMI-II" onclick="selectTestForApplication('MCMI-II')" style="background: #ffffff; border: 2.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                                    <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">Personalidad y Psicopatología</span>
-                                            <span class="test-card-check" style="display: none; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                                        </div>
+                            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 1rem;">
+                                <div>
+                                    <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">Seleccionar la Prueba a Aplicar</h3>
+                                    <p style="font-size: 0.83rem; color: #64748b; margin: 2px 0 0 0;">Haga clic en la tarjeta de la evaluación psicológica que desea aplicar al paciente seleccionado.</p>
+                                </div>
+                                <div id="catalog-pagination-top-controls" style="display: flex; align-items: center; gap: 8px;">
+                                    <!-- Paginación dinámica 10 tests por página -->
+                                </div>
+                            </div>
+
+                            <!-- FILTRO POR CATEGORÍAS DE TESTS -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; background: #f8fafc; padding: 10px 14px; border-radius: 14px; border: 1px solid #e2e8f0;" id="container-tests-category-filters">
+                                <button type="button" class="btn-test-cat-filter active" onclick="filterTestsByCategory('TODAS')" style="background: #702e5e; color: white; border: none; font-size: 0.78rem; font-weight: 800; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Todas</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Depresión y Ansiedad')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Depresión y Ansiedad</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Neurodivergencia y Autismo')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Neurodivergencia y Autismo</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Personalidad y Psicopatología')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Personalidad</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Capacidad Intelectual')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Capacidad Intelectual</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Orientación Vocacional')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Orientación Vocacional</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Identidad de Género')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Identidad de Género</button>
+                            </div>
+
+                            <!-- CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 (10 por página) -->
+                            <div id="container-tests-catalog-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.1rem; min-height: 420px;">
+                                <!-- Se renderiza dinámicamente -->
+                            </div>
+
+                            <!-- CONTROLES DE PAGINACIÓN INFERIOR -->
+                            <div id="catalog-pagination-bottom-controls" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 1.25rem;">
+                                <!-- Paginación -->
+                            </div>
                                         <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">MCMI-II — Test de Millon</h4>
                                         <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">175 ítems V/F para evaluación multiaxial de personalidad y síndromes clínicos.</p>
                                     </div>

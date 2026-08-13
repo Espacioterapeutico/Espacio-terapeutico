@@ -18260,6 +18260,29 @@ window.loadTestsForSelectedPatientFromMainView = loadTestsForSelectedPatientFrom
 window.openAssignTestFromMainView = openAssignTestFromMainView;
 window.filterTestPatientSelect = filterTestPatientSelect;
 window.switchTestsTab = switchTestsTab;
+
+// ==============================================================================
+// MÓDULO MEJORADO DE CATÁLOGO, FILTRADO Y PAGINACIÓN 5x2 DE TESTS
+// ==============================================================================
+let catalogCurrentCategoryFilter = 'TODAS';
+let catalogCurrentPage = 1;
+const CATALOG_ITEMS_PER_PAGE = 10; // Cuadrícula 5x2 (10 por página)
+let catalogTestsMasterList = [];
+
+const TEST_METADATA_MAP = {
+    'MCMI-II': { autor: 'Theodore Millon', poblacion: 'Adultos (18 a 65+ años)', validez: 'TB Estandarizada' },
+    'HOLLAND': { autor: 'John L. Holland (RIASEC)', poblacion: 'Adolescentes y Adultos (14-65+ años)', validez: 'α = 0.86 (Vocacional)' },
+    'RAVEN': { autor: 'John C. Raven', poblacion: 'Adolescentes y Adultos (12-65+ años)', validez: 'α = 0.90 (Razonamiento)' },
+    'ASRS-ADHD': { autor: 'OMS / Valdizán et al.', poblacion: 'Adultos (18 a 65+ años)', validez: 'α = 0.87 (DSM / OMS)' },
+    'AQ': { autor: 'Simon Baron-Cohen et al.', poblacion: 'Adolescentes y Adultos (16-65+ años)', validez: 'α = 0.82 (Corte >= 32)' },
+    'RAADS-R': { autor: 'Riva Ariella Ritvo et al.', poblacion: 'Adultos (18 a 65+ años)', validez: 'α = 0.92 (Umbral >= 65)' },
+    'CAT-Q': { autor: 'Laura Hull et al. (2019)', poblacion: 'Adolescentes y Adultos (16-65+ años)', validez: 'α = 0.90 (Masking / Camuflaje)' },
+    'BDI-II': { autor: 'Aaron T. Beck et al.', poblacion: 'Adolescentes y Adultos (13-65+ años)', validez: 'α = 0.92 (Depresión)' },
+    'BAI': { autor: 'Aaron T. Beck et al.', poblacion: 'Adolescentes y Adultos (13-65+ años)', validez: 'α = 0.92 (Ansiedad)' },
+    'TCS': { autor: 'Kozee, Reisner et al.', poblacion: 'Jóvenes y Adultos (16-65+ años)', validez: 'α = 0.89 (Afirmación)' },
+    'UGDS-GS': { autor: 'McGuire et al. / Utrecht', poblacion: 'Adolescentes y Adultos (12-65+ años)', validez: 'α = 0.91 (Disforia Género)' }
+};
+
 async function loadTestsCatalogCards() {
     const container = document.getElementById('container-tests-catalog-cards');
     if (!container) return;
@@ -18267,82 +18290,179 @@ async function loadTestsCatalogCards() {
     try {
         const resp = await fetch('/api/tests/catalogo');
         const data = await resp.json();
-        const tests = data.tests || [];
+        catalogTestsMasterList = data.tests || [];
 
-        if (tests.length === 0) {
-            container.innerHTML = '<p style="color: #64748b; font-weight: 600; text-align: center; padding: 2rem;">No hay evaluaciones registradas en el catálogo.</p>';
-            return;
-        }
-
-        let html = '';
-        tests.forEach(t => {
-            const code = t.code;
-            const isSelected = selectedTestCodeForApplication === code;
-            const borderStyle = isSelected ? '2.5px solid #702e5e' : '2.5px solid #e2e8f0';
-            const bgStyle = isSelected ? '#fdf4ff' : '#ffffff';
-            const checkDisplay = isSelected ? 'inline' : 'none';
-
-            let badgeCat = t.categoria || 'Evaluación';
-            let badgeBg = '#fdf4ff';
-            let badgeColor = '#702e5e';
-            let badgeBorder = '#f0abfc';
-
-            if (code === 'AQ' || code === 'RAADS-R') {
-                badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; badgeBorder = '#c7d2fe';
-            } else if (code === 'CAT-Q') {
-                badgeBg = '#fae8ff'; badgeColor = '#86198f'; badgeBorder = '#f5d0fe';
-            } else if (code === 'ASRS-ADHD') {
-                badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeBorder = '#fde68a';
-            } else if (code === 'HOLLAND') {
-                badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
-            } else if (code === 'BAI') {
-                badgeBg = '#eff6ff'; badgeColor = '#1d4ed8'; badgeBorder = '#bfdbfe';
-            } else if (code === 'UGDS-GS') {
-                badgeBg = '#fff7ed'; badgeColor = '#c2410c'; badgeBorder = '#ffedd5';
-            } else if (code === 'TCS') {
-                badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
-            }
-
-            let itemCount = 'Estandarizado';
-            try {
-                const itemsArr = JSON.parse(t.items_json || '[]');
-                if (Array.isArray(itemsArr) && itemsArr.length > 0) itemCount = `${itemsArr.length} Ítems`;
-            } catch(e) {}
-
-            html += `
-                <div id="card-test-choice-${code}" onclick="selectTestForApplication('${code}')" style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">${badgeCat}</span>
-                            <span class="test-card-check" style="display: ${checkDisplay}; color: #702e5e; font-weight: 800; font-size: 0.85rem;">✔ Seleccionado</span>
-                        </div>
-                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">${t.siglas || code} — ${t.nombre || ''}</h4>
-                        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin-bottom: 1rem;">${t.descripcion || ''}</p>
-                    </div>
-                    <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                        <span>✓ Autocorrección instantánea</span>
-                        <span>${itemCount}</span>
-                    </div>
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
+        renderCatalogViewWithFiltersAndPagination();
     } catch (e) {
         console.error("Error al cargar tarjetas del catálogo de tests:", e);
     }
 }
 
-window.selectTestForApplication = selectTestForApplication;
-window.onSelectMainPatientChange = onSelectMainPatientChange;
-window.executeMainApplyTest = executeMainApplyTest;
-window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
-window.openTestDetailModalById = openTestDetailModalById;
+function filterTestsByCategory(catName) {
+    catalogCurrentCategoryFilter = catName;
+    catalogCurrentPage = 1;
 
+    // Actualizar estilos visuales de los botones de filtro
+    document.querySelectorAll('.btn-test-cat-filter').forEach(btn => {
+        if (btn.textContent.trim().toLowerCase() === catName.toLowerCase() || (catName === 'TODAS' && btn.textContent.trim() === 'Todas')) {
+            btn.style.background = '#702e5e';
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
+            btn.classList.add('active');
+        } else {
+            btn.style.background = '#ffffff';
+            btn.style.color = '#475569';
+            btn.style.border = '1px solid #cbd5e1';
+            btn.classList.remove('active');
+        }
+    });
 
+    renderCatalogViewWithFiltersAndPagination();
+}
 
+function changeCatalogPage(delta) {
+    catalogCurrentPage += delta;
+    renderCatalogViewWithFiltersAndPagination();
+}
 
+function renderCatalogViewWithFiltersAndPagination() {
+    const container = document.getElementById('container-tests-catalog-cards');
+    if (!container) return;
 
+    let filtered = catalogTestsMasterList;
 
+    if (catalogCurrentCategoryFilter !== 'TODAS') {
+        const catNorm = catalogCurrentCategoryFilter.toLowerCase();
+        filtered = catalogTestsMasterList.filter(t => {
+            const tCat = (t.categoria || '').toLowerCase();
+            if (catNorm.includes('depresión') || catNorm.includes('ansiedad')) {
+                return tCat.includes('depresión') || tCat.includes('ansiedad') || t.code === 'BDI-II' || t.code === 'BAI';
+            } else if (catNorm.includes('neurodivergencia') || catNorm.includes('autismo')) {
+                return tCat.includes('neurodivergencia') || tCat.includes('autismo') || tCat.includes('tdah') || ['AQ', 'RAADS-R', 'CAT-Q', 'ASRS-ADHD'].includes(t.code);
+            } else if (catNorm.includes('personalidad')) {
+                return tCat.includes('personalidad') || t.code === 'MCMI-II';
+            } else if (catNorm.includes('intelectual') || catNorm.includes('inteligencia')) {
+                return tCat.includes('intelectual') || t.code === 'RAVEN';
+            } else if (catNorm.includes('vocacional')) {
+                return tCat.includes('vocacional') || t.code === 'HOLLAND';
+            } else if (catNorm.includes('género') || catNorm.includes('identidad')) {
+                return tCat.includes('género') || tCat.includes('afirmación') || t.code === 'TCS' || t.code === 'UGDS-GS';
+            }
+            return tCat.includes(catNorm);
+        });
+    }
+
+    const totalItems = filtered.length;
+    const totalPages = Math.ceil(totalItems / CATALOG_ITEMS_PER_PAGE) || 1;
+
+    if (catalogCurrentPage > totalPages) catalogCurrentPage = totalPages;
+    if (catalogCurrentPage < 1) catalogCurrentPage = 1;
+
+    const startIdx = (catalogCurrentPage - 1) * CATALOG_ITEMS_PER_PAGE;
+    const endIdx = startIdx + CATALOG_ITEMS_PER_PAGE;
+    const pageItems = filtered.slice(startIdx, endIdx);
+
+    if (pageItems.length === 0) {
+        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #64748b; font-weight: 600; background: white; border-radius: 16px; border: 1.5px solid #e2e8f0;">No se encontraron evaluaciones para la categoría seleccionada.</div>';
+        renderPaginationControls(0, 1);
+        return;
+    }
+
+    let html = '';
+    pageItems.forEach(t => {
+        const code = t.code;
+        const isSelected = selectedTestCodeForApplication === code;
+        const borderStyle = isSelected ? '2.5px solid #702e5e' : '2.5px solid #e2e8f0';
+        const bgStyle = isSelected ? '#fdf4ff' : '#ffffff';
+        const checkDisplay = isSelected ? 'inline' : 'none';
+
+        let badgeCat = t.categoria || 'Evaluación';
+        let badgeBg = '#fdf4ff';
+        let badgeColor = '#702e5e';
+        let badgeBorder = '#f0abfc';
+
+        if (code === 'AQ' || code === 'RAADS-R') {
+            badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; badgeBorder = '#c7d2fe';
+        } else if (code === 'CAT-Q') {
+            badgeBg = '#fae8ff'; badgeColor = '#86198f'; badgeBorder = '#f5d0fe';
+        } else if (code === 'ASRS-ADHD') {
+            badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeBorder = '#fde68a';
+        } else if (code === 'HOLLAND') {
+            badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
+        } else if (code === 'BAI') {
+            badgeBg = '#eff6ff'; badgeColor = '#1d4ed8'; badgeBorder = '#bfdbfe';
+        } else if (code === 'UGDS-GS') {
+            badgeBg = '#fff7ed'; badgeColor = '#c2410c'; badgeBorder = '#ffedd5';
+        } else if (code === 'TCS') {
+            badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
+        }
+
+        let itemCount = 'Estandarizado';
+        try {
+            const itemsArr = JSON.parse(t.items_json || '[]');
+            if (Array.isArray(itemsArr) && itemsArr.length > 0) itemCount = `${itemsArr.length} Ítems`;
+        } catch(e) {}
+
+        const meta = TEST_METADATA_MAP[code] || { autor: 'Estandarizado', poblacion: 'Adultos', validez: 'Validado' };
+
+        html += `
+            <div id="card-test-choice-${code}" onclick="selectTestForApplication('${code}')" style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">${badgeCat}</span>
+                        <span class="test-card-check" style="display: ${checkDisplay}; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
+                    </div>
+                    <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">${t.siglas || code} — ${t.nombre || ''}</h4>
+                    
+                    <!-- METADATOS: AUTOR Y POBLACIÓN -->
+                    <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
+                        <span style="color: #702e5e;">👤 Autor:</span> ${meta.autor}<br>
+                        <span style="color: #047857;">👥 Población:</span> ${meta.poblacion}
+                    </div>
+
+                    <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">${t.descripcion || ''}</p>
+                </div>
+                <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
+                    <span>✓ ${meta.validez}</span>
+                    <span>${itemCount}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    renderPaginationControls(totalItems, totalPages);
+}
+
+function renderPaginationControls(totalItems, totalPages) {
+    const topCtrl = document.getElementById('catalog-pagination-top-controls');
+    const btmCtrl = document.getElementById('catalog-pagination-bottom-controls');
+
+    if (totalPages <= 1) {
+        if (topCtrl) topCtrl.innerHTML = `<span style="font-size: 0.82rem; font-weight: 700; color: #64748b;">${totalItems} evaluaciones</span>`;
+        if (btmCtrl) btmCtrl.innerHTML = '';
+        return;
+    }
+
+    const prevDisabled = catalogCurrentPage <= 1 ? 'disabled' : '';
+    const nextDisabled = catalogCurrentPage >= totalPages ? 'disabled' : '';
+
+    const controlsHtml = `
+        <button type="button" onclick="changeCatalogPage(-1)" ${prevDisabled} style="background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; color: #334155; cursor: pointer; opacity: ${prevDisabled ? 0.5 : 1};">
+            ← Anterior
+        </button>
+        <span style="font-size: 0.82rem; font-weight: 800; color: #702e5e; padding: 0 4px;">
+            Página ${catalogCurrentPage} de ${totalPages}
+        </span>
+        <button type="button" onclick="changeCatalogPage(1)" ${nextDisabled} style="background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; color: #334155; cursor: pointer; opacity: ${nextDisabled ? 0.5 : 1};">
+            Siguiente →
+        </button>
+    `;
+
+    if (topCtrl) topCtrl.innerHTML = controlsHtml;
+    if (btmCtrl) btmCtrl.innerHTML = controlsHtml;
+}
 
 window.loadTestsCatalogCards = loadTestsCatalogCards;
+window.filterTestsByCategory = filterTestsByCategory;
+window.changeCatalogPage = changeCatalogPage;
