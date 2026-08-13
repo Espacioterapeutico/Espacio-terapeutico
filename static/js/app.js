@@ -17071,7 +17071,196 @@ async function loadAndRenderPublicTest(token) {
     }
 }
 
+
+// ==============================================================================
+// MÓDULO INTERACTIVO DE NAVEGACIÓN RAVEN MATRIZ POR MATRIZ
+// ==============================================================================
+window.ravenCurrentIndex = 0; // 0 = Instrucciones, 1..60 = Matrices, 61 = Resumen
+window.ravenStartTime = null;
+window.ravenBreakSeries = null;
+
+function startRavenTest() {
+    window.ravenCurrentIndex = 1;
+    window.ravenStartTime = Date.now();
+    window.ravenBreakSeries = null;
+    if (currentPublicTestDefinition) {
+        renderPublicTestItems(currentPublicTestDefinition);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function continueRavenSeries() {
+    window.ravenBreakSeries = null;
+    window.ravenCurrentIndex++;
+    if (currentPublicTestDefinition) {
+        renderPublicTestItems(currentPublicTestDefinition);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function selectRavenAnswer(matCode, val) {
+    currentPublicTestAnswers[matCode] = val;
+    
+    // Check if inter-series break is needed (matrices 12, 24, 36, 48)
+    const curIdx = window.ravenCurrentIndex;
+    if (curIdx === 12) {
+        window.ravenBreakSeries = { fromSerie: 'A', nextSerie: 'B' };
+    } else if (curIdx === 24) {
+        window.ravenBreakSeries = { fromSerie: 'B', nextSerie: 'C' };
+    } else if (curIdx === 36) {
+        window.ravenBreakSeries = { fromSerie: 'C', nextSerie: 'D' };
+    } else if (curIdx === 48) {
+        window.ravenBreakSeries = { fromSerie: 'D', nextSerie: 'E' };
+    } else {
+        window.ravenCurrentIndex++;
+    }
+
+    if (currentPublicTestDefinition) {
+        renderPublicTestItems(currentPublicTestDefinition);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderRavenPublicView(testDef, container) {
+    const curIdx = window.ravenCurrentIndex || 0;
+
+    // STEP 0: INSTRUCTIONS PAGE
+    if (curIdx === 0) {
+        container.innerHTML = `
+            <div style="background: #ffffff; border: 2px solid #702e5e; border-radius: 18px; padding: 2rem; box-shadow: 0 10px 30px rgba(112,46,94,0.08); text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🧩</div>
+                <h2 style="font-size: 1.5rem; font-weight: 800; color: #702e5e; margin-bottom: 0.5rem;">Test de Matrices Progresivas de Raven</h2>
+                <p style="font-size: 0.95rem; color: #475569; max-width: 650px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
+                    <strong>Instrucciones:</strong> A continuación se le presentará una serie de dibujos o matrices a las que les falta una pieza. 
+                    Examine atentamente la matriz principal y seleccione el número de la opción (1 al 6 o 1 al 8) que encaje y complete adecuadamente el patrón.
+                </p>
+                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.1rem; max-width: 550px; margin: 0 auto 1.5rem auto; text-align: left; font-size: 0.88rem; color: #334155; line-height: 1.6;">
+                    <div>📌 <strong>5 Series de Matrices:</strong> Serie A, B, C, D y E (12 matrices por serie = 60 en total).</div>
+                    <div style="margin-top: 6px;">⏱️ <strong>Registro de Tiempo:</strong> El tiempo de resolución se registrará automáticamente al hacer clic en comenzar.</div>
+                    <div style="margin-top: 6px;">☕ <strong>Pausas de Respiro:</strong> Entre cada serie se mostrará una breve pantalla de descanso.</div>
+                </div>
+                <button type="button" onclick="startRavenTest()" class="btn" style="background: linear-gradient(135deg, #702e5e 0%, #a855f7 100%); color: white; font-weight: 800; font-size: 1.1rem; padding: 0.85rem 2.2rem; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(112,46,94,0.35); cursor: pointer;">
+                    🚀 Comenzar Evaluación de Matrices
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    // STEP BREAK BETWEEN SERIES
+    if (window.ravenBreakSeries) {
+        container.innerHTML = `
+            <div style="background: #fdf4ff; border: 2.5px solid #f0abfc; border-radius: 18px; padding: 2.5rem 1.5rem; text-align: center; box-shadow: 0 10px 30px rgba(112,46,94,0.08);">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">☕</div>
+                <h2 style="font-size: 1.5rem; font-weight: 800; color: #702e5e; margin-bottom: 0.5rem;">¡Excelente trabajo! Toma un respiro</h2>
+                <p style="font-size: 1.02rem; color: #334155; margin-bottom: 1.5rem; line-height: 1.6;">
+                    Has completado exitosamente la <strong>Serie ${window.ravenBreakSeries.fromSerie} (12 matrices)</strong>.<br>
+                    A continuación iniciará la <strong>Serie ${window.ravenBreakSeries.nextSerie} (12 matrices)</strong>.
+                </p>
+                <button type="button" onclick="continueRavenSeries()" class="btn" style="background: #702e5e; color: white; font-weight: 800; font-size: 1.05rem; padding: 0.85rem 2.2rem; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(112,46,94,0.25); cursor: pointer;">
+                    Continuar a la Serie ${window.ravenBreakSeries.nextSerie} →
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    const items = testDef.items || [];
+    const itemIndex = curIdx - 1;
+
+    // STEP FINISH (INDEX > 60)
+    if (itemIndex >= items.length || curIdx > 60) {
+        const elapsedSecs = window.ravenStartTime ? Math.round((Date.now() - window.ravenStartTime) / 1000) : 0;
+        const mins = Math.floor(elapsedSecs / 60);
+        const secs = elapsedSecs % 60;
+        const timeStr = `${mins} min ${secs} seg`;
+
+        container.innerHTML = `
+            <div style="background: #ffffff; border: 2px solid #86efac; border-radius: 18px; padding: 2.2rem; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
+                <h2 style="font-size: 1.4rem; font-weight: 800; color: #15803d; margin-bottom: 0.5rem;">¡Has completado las 60 matrices de Raven!</h2>
+                <p style="font-size: 0.95rem; color: #334155; margin-bottom: 1.25rem;">
+                    Tiempo total transcurrido: <strong>${timeStr}</strong>
+                </p>
+                <div style="font-size: 0.88rem; color: #64748b; margin-bottom: 1.5rem;">
+                    Presione el botón a continuación para enviar sus respuestas al expediente clínico del terapeuta.
+                </div>
+                <button type="button" id="pub-test-submit-btn" onclick="submitPublicTestResponse()" class="btn" style="background: linear-gradient(135deg, #15803d 0%, #22c55e 100%); color: white; font-weight: 800; font-size: 1.08rem; padding: 0.85rem 2.2rem; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(21,128,61,0.3); cursor: pointer;">
+                    ✅ Enviar Evaluación Completada
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    // MATRIX PAGE (1 Matrix per page)
+    const item = items[itemIndex];
+    const matCode = item.code || `A${itemIndex + 1}`;
+    const serieCode = matCode[0];
+    const serieNum = ((itemIndex) % 12) + 1;
+    const is6Options = (serieCode === 'A' || serieCode === 'B');
+    const optsCount = is6Options ? 6 : 8;
+    const selectedVal = currentPublicTestAnswers[matCode];
+
+    const progressPct = Math.round((curIdx / 60) * 100);
+
+    let optsButtonsHtml = '';
+    for (let o = 1; o <= optsCount; o++) {
+        const isSel = selectedVal === o;
+        const btnBg = isSel ? '#702e5e' : '#ffffff';
+        const btnColor = isSel ? '#ffffff' : '#0f172a';
+        const btnBorder = isSel ? '#702e5e' : '#cbd5e1';
+
+        optsButtonsHtml += `
+            <button type="button" onclick="selectRavenAnswer('${matCode}', ${o})" style="flex: 1; min-width: 60px; max-width: 90px; height: 58px; background: ${btnBg}; color: ${btnColor}; border: 2.5px solid ${btnBorder}; border-radius: 12px; font-size: 1.3rem; font-weight: 800; cursor: pointer; transition: all 0.15 ease; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                ${o}
+            </button>
+        `;
+    }
+
+    container.innerHTML = `
+        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 18px; padding: 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.04);">
+            <!-- Barra de Progreso Header -->
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
+                <div>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 10px; border-radius: 12px;">Serie ${serieCode} (${serieNum} de 12)</span>
+                    <h3 style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: 800; color: #0f172a;">Matriz ${matCode}</h3>
+                </div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: #64748b;">
+                    Progreso: ${curIdx} / 60 (${progressPct}%)
+                </div>
+            </div>
+
+            <!-- Imagen de la Matriz -->
+            <div style="text-align: center; margin-bottom: 1.25rem; background: #f8fafc; padding: 1rem; border-radius: 14px; border: 1px solid #e2e8f0;">
+                <img src="/static/img/raven/${matCode}.png" alt="Matriz ${matCode}" style="max-width: 100%; max-height: 460px; height: auto; width: auto; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
+            </div>
+
+            <!-- Botones de Opciones Abajo -->
+            <div style="margin-top: 1rem;">
+                <div style="text-align: center; font-size: 0.85rem; font-weight: 800; color: #334155; margin-bottom: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Seleccione el número de la opción que completa la matriz:
+                </div>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem;">
+                    ${optsButtonsHtml}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+
 function renderPublicTestItems(testDef) {
+    if (!testDef) return;
+
+    if (testDef.code === 'RAVEN') {
+        const container = document.getElementById('pub-test-items-container');
+        if (container) {
+            renderRavenPublicView(testDef, container);
+            updatePublicTestProgressBar();
+            return;
+        }
+    }
     const container = document.getElementById('pub-test-items-container');
     if (!container) return;
 
@@ -17246,7 +17435,7 @@ async function submitPublicTestResponse() {
         const resp = await fetch(`/api/public/evaluacion/${currentPublicTestToken}/responder`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ respuestas: currentPublicTestAnswers })
+            body: JSON.stringify({ respuestas: currentPublicTestAnswers, duration_seconds: (window.ravenStartTime ? Math.round((Date.now() - window.ravenStartTime) / 1000) : 0) })
         });
         const data = await resp.json();
 
