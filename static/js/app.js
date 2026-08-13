@@ -17943,10 +17943,15 @@ async function populateMainViewPatientSelect() {
 
     try {
         const resp = await fetch('/api/patients');
+        if (!resp.ok) return;
         const data = await resp.json();
         allTestPatientsCache = Array.isArray(data) ? data : (data.pacientes || []);
 
+        const currentVal = select.value;
         renderTestPatientsOptions(allTestPatientsCache);
+        if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+            select.value = currentVal;
+        }
     } catch (e) {
         console.error("Error al poblar selector de pacientes para tests:", e);
     }
@@ -18004,7 +18009,7 @@ function switchTestsTab(tab) {
 
     if (tab === 'apply') {
         if (btnApply) {
-            btnApply.style.background = 'white';
+            btnApply.style.background = '#ffffff';
             btnApply.style.color = '#702e5e';
             btnApply.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
         }
@@ -18023,7 +18028,7 @@ function switchTestsTab(tab) {
         }
     } else {
         if (btnHistory) {
-            btnHistory.style.background = 'white';
+            btnHistory.style.background = '#ffffff';
             btnHistory.style.color = '#702e5e';
             btnHistory.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
         }
@@ -18042,6 +18047,9 @@ function switchTestsTab(tab) {
         }
 
         loadAllAppliedTestsHistory();
+        if (contentHistory) {
+            contentHistory.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 }
 
@@ -18411,7 +18419,7 @@ function renderCatalogViewWithFiltersAndPagination() {
 
         let itemCount = 'Estandarizado';
         try {
-            const itemsArr = JSON.parse(t.items_json || '[]');
+            let itemsArr = []; try { itemsArr = typeof t.items_json === 'string' ? JSON.parse(t.items_json) : (t.items_json || []); } catch(e) {}
             if (Array.isArray(itemsArr) && itemsArr.length > 0) itemCount = `${itemsArr.length} Ítems`;
         } catch(e) {}
 
