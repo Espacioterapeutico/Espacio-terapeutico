@@ -13840,6 +13840,19 @@ def ensure_tests_tables(db):
             FOREIGN KEY (patient_id) REFERENCES pacientes(id) ON DELETE CASCADE
         )
     """)
+    cursor.execute("PRAGMA table_info(test_asignaciones)")
+    ta_cols = [r[1] for r in cursor.fetchall()]
+    if ta_cols:
+        if 'modo_aplicacion' not in ta_cols:
+            cursor.execute("ALTER TABLE test_asignaciones ADD COLUMN modo_aplicacion TEXT DEFAULT 'link'")
+        if 'subescalas_json' not in ta_cols:
+            cursor.execute("ALTER TABLE test_asignaciones ADD COLUMN subescalas_json TEXT")
+        if 'clasificacion_resultado' not in ta_cols:
+            cursor.execute("ALTER TABLE test_asignaciones ADD COLUMN clasificacion_resultado TEXT")
+        if 'interpretacion_clinica' not in ta_cols:
+            cursor.execute("ALTER TABLE test_asignaciones ADD COLUMN interpretacion_clinica TEXT")
+        if 'notas_terapeuta' not in ta_cols:
+            cursor.execute("ALTER TABLE test_asignaciones ADD COLUMN notas_terapeuta TEXT")
     db.commit()
 
     # Verificar e insertar catálogo base de tests si está vacío
@@ -14135,7 +14148,10 @@ def api_asignar_test():
 
     ensure_tests_tables(db)
 
-    cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    if is_admin:
+        cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ?", (patient_id,))
+    else:
+        cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (patient_id, user_id))
     pac = cursor.fetchone()
     if not pac:
         return jsonify({'error': 'Acceso denegado: El consultante no pertenece a tu consulta activa.'}), 404
