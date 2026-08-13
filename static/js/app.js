@@ -17993,16 +17993,22 @@ async function populateMainViewPatientSelect() {
 
     try {
         const resp = await fetch('/api/patients');
-        if (!resp.ok) return;
+        if (!resp.ok) {
+            if (!allTestPatientsCache || allTestPatientsCache.length === 0) {
+                select.innerHTML = '<option value="">⚠️ Error al conectar con la base de datos de pacientes</option>';
+            }
+            return;
+        }
         const data = await resp.json();
         const patientsArr = Array.isArray(data) ? data : (data.pacientes || []);
-        if (patientsArr.length > 0) {
-            allTestPatientsCache = patientsArr;
-            window.patients = patientsArr;
-            renderTestPatientsOptions(allTestPatientsCache);
-        }
+        allTestPatientsCache = patientsArr;
+        window.patients = patientsArr;
+        renderTestPatientsOptions(allTestPatientsCache);
     } catch (e) {
         console.error("Error al poblar selector de pacientes para tests:", e);
+        if (!allTestPatientsCache || allTestPatientsCache.length === 0) {
+            select.innerHTML = '<option value="">⚠️ Error al conectar con la base de datos de pacientes</option>';
+        }
     }
 }
 
@@ -18012,12 +18018,17 @@ function renderTestPatientsOptions(patientsList) {
 
     const currentVal = select.value;
     const pool = patientsList || [];
-    let html = `<option value="">-- Seleccionar Consultante (${pool.length} disponibles) --</option>`;
-    pool.forEach(p => {
-        const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
-        const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
-        html += `<option value="${p.id}">${nameStr}${ciStr}</option>`;
-    });
+    let html = '';
+    if (pool.length === 0) {
+        html = '<option value="">⚠️ No hay consultantes registrados en tu cuenta (0 disponibles)</option>';
+    } else {
+        html = `<option value="">-- Seleccionar Consultante (${pool.length} disponibles) --</option>`;
+        pool.forEach(p => {
+            const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
+            const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
+            html += `<option value="${p.id}">${nameStr}${ciStr}</option>`;
+        });
+    }
     select.innerHTML = html;
     if (currentVal && select.querySelector("option[value='" + currentVal + "']")) {
         select.value = currentVal;

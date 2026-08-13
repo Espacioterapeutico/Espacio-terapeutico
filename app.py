@@ -6909,7 +6909,17 @@ def get_patients():
     search = request.args.get('search', '').strip()
     db = get_db()
     cursor = db.cursor()
+    
+    role = session.get('role', '')
+    user_id = session.get('user_id')
     psic_id = get_psicologo_id_filter()
+    
+    # Si el filtro retorna -1 para admins o no hay id, asegurar que traiga los pacientes
+    if psic_id == -1 or psic_id is None:
+        if role in ['admin', 'superadmin']:
+            psic_id = None # Los administradores ven todos los pacientes del sistema
+        else:
+            psic_id = user_id if user_id else 1
     
     if search:
         query = "%" + search + "%"
@@ -6917,7 +6927,7 @@ def get_patients():
             cursor.execute("""
                 SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad 
                 FROM pacientes 
-                WHERE psicologo_id = ? AND (nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ?)
+                WHERE (psicologo_id = ? OR psicologo_id IS NULL) AND (nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ?)
                 ORDER BY nombres ASC, apellidos ASC
             """, (psic_id, query, query, query))
         else:
@@ -6929,7 +6939,7 @@ def get_patients():
             """, (query, query, query))
     else:
         if psic_id is not None:
-            cursor.execute("SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad FROM pacientes WHERE psicologo_id = ? ORDER BY nombres ASC, apellidos ASC", (psic_id,))
+            cursor.execute("SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad FROM pacientes WHERE (psicologo_id = ? OR psicologo_id IS NULL) ORDER BY nombres ASC, apellidos ASC", (psic_id,))
         else:
             cursor.execute("SELECT id, nombres, apellidos, cedula, edad, genero, residencia_actual, pais, ciudad FROM pacientes ORDER BY nombres ASC, apellidos ASC")
         
