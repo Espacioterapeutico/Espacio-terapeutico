@@ -16960,6 +16960,9 @@ let currentTestsPatientName = '';
 let currentPublicTestDefinition = null;
 let currentPublicTestToken = null;
 let currentPublicTestAnswers = {};
+    currentPublicTestPageIndex = 0;
+let currentPublicTestPageIndex = 0;
+let currentPublicTestPageSize = 20;
 
 function initPublicTestRouteHandler() {
     const path = window.location.pathname;
@@ -17071,26 +17074,67 @@ function renderPublicTestItems(testDef) {
     const container = document.getElementById('pub-test-items-container');
     if (!container) return;
 
-    let html = '';
     const items = testDef.items || [];
+    const totalItems = items.length;
     const isBdi2 = testDef.code === 'BDI-II';
 
-    items.forEach((item, index) => {
-        const itemNum = item.num || (index + 1);
+    // Si el test tiene más de 15 ítems, activamos el modo paginado inteligente por bloques (20 ítems por página)
+    const isPaginated = totalItems > 15;
+    currentPublicTestPageSize = isPaginated ? 20 : totalItems;
+
+    const totalPages = Math.ceil(totalItems / currentPublicTestPageSize) || 1;
+    if (currentPublicTestPageIndex >= totalPages) currentPublicTestPageIndex = totalPages - 1;
+    if (currentPublicTestPageIndex < 0) currentPublicTestPageIndex = 0;
+
+    const startIdx = currentPublicTestPageIndex * currentPublicTestPageSize;
+    const endIdx = Math.min(startIdx + currentPublicTestPageSize, totalItems);
+
+    const pageItems = isPaginated ? items.slice(startIdx, endIdx) : items;
+
+    let html = '';
+
+    // Barra de control de página (si es paginado)
+    if (isPaginated) {
+        html += `
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 0.85rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                <div style="font-size: 0.88rem; font-weight: 700; color: #334155;">
+                    📖 Página <strong>${currentPublicTestPageIndex + 1}</strong> de <strong>${totalPages}</strong> &nbsp;<span style="font-size: 0.8rem; color: #64748b; font-weight: 500;">(Preguntas ${startIdx + 1} a ${endIdx})</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="changePublicTestPage(-1)" ${currentPublicTestPageIndex === 0 ? 'disabled' : ''} style="background: ${currentPublicTestPageIndex === 0 ? '#e2e8f0' : '#ffffff'}; border: 1.5px solid #cbd5e1; color: ${currentPublicTestPageIndex === 0 ? '#94a3b8' : '#334155'}; font-weight: 700; padding: 0.45rem 0.95rem; border-radius: 8px; cursor: ${currentPublicTestPageIndex === 0 ? 'not-allowed' : 'pointer'}; font-size: 0.85rem;">
+                        ← Anterior
+                    </button>
+                    <button type="button" onclick="changePublicTestPage(1)" ${currentPublicTestPageIndex >= totalPages - 1 ? 'disabled' : ''} style="background: ${currentPublicTestPageIndex >= totalPages - 1 ? '#e2e8f0' : '#702e5e'}; border: 1.5px solid ${currentPublicTestPageIndex >= totalPages - 1 ? '#cbd5e1' : '#702e5e'}; color: ${currentPublicTestPageIndex >= totalPages - 1 ? '#94a3b8' : '#ffffff'}; font-weight: 700; padding: 0.45rem 0.95rem; border-radius: 8px; cursor: ${currentPublicTestPageIndex >= totalPages - 1 ? 'not-allowed' : 'pointer'}; font-size: 0.85rem;">
+                        Siguiente →
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    pageItems.forEach((item, index) => {
+        const itemNum = item.num || (startIdx + index + 1);
         const itemTitle = item.titulo || item.txt || `Pregunta ${itemNum}`;
+        const selectedVal = currentPublicTestAnswers[itemNum];
+        const isAnswered = selectedVal !== undefined;
+
+        const cardBorder = isAnswered ? '#a855f7' : '#e2e8f0';
+        const cardBg = isAnswered ? '#fdf4ff' : '#ffffff';
 
         html += `
-            <div id="test-item-card-${itemNum}" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s ease;">
-                <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem;">
-                    ${itemTitle}
+            <div id="test-item-card-${itemNum}" style="background: ${cardBg}; border: 1.5px solid ${cardBorder}; border-radius: 12px; padding: 1.25rem; transition: all 0.2s ease;">
+                <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <span>${itemTitle}</span>
+                    ${isAnswered ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px;">✓ Respondida</span>' : ''}
                 </div>`;
 
         if (isBdi2 && item.opciones) {
             html += `<div style="display: flex; flex-direction: column; gap: 0.6rem;">`;
             item.opciones.forEach(op => {
+                const checked = (selectedVal !== undefined && String(selectedVal) === String(op.val)) ? 'checked' : '';
                 html += `
                     <label style="display: flex; align-items: flex-start; gap: 10px; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
-                        <input type="radio" name="item_${itemNum}" value="${op.val}" onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" style="margin-top: 3px; accent-color: #702e5e;">
+                        <input type="radio" name="item_${itemNum}" value="${op.val}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" style="margin-top: 3px; accent-color: #702e5e;">
                         <span style="font-size: 0.92rem; color: #334155; line-height: 1.45;">${op.txt}</span>
                     </label>`;
             });
@@ -17099,9 +17143,10 @@ function renderPublicTestItems(testDef) {
             const escala = testDef.escala_opciones || [];
             html += `<div style="display: flex; flex-wrap: wrap; gap: 0.6rem;">`;
             escala.forEach(op => {
+                const checked = (selectedVal !== undefined && String(selectedVal) === String(op.val)) ? 'checked' : '';
                 html += `
                     <label style="flex: 1; min-width: 140px; text-align: center; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 0.65rem 0.85rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
-                        <input type="radio" name="item_${itemNum}" value="${op.val}" onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" style="margin-right: 6px; accent-color: #702e5e;">
+                        <input type="radio" name="item_${itemNum}" value="${op.val}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" style="margin-right: 6px; accent-color: #702e5e;">
                         <span style="font-size: 0.88rem; font-weight: 700; color: #334155;">${op.txt}</span>
                     </label>`;
             });
@@ -17111,7 +17156,47 @@ function renderPublicTestItems(testDef) {
         html += `</div>`;
     });
 
+    // Controles inferiores de navegación (si es paginado)
+    if (isPaginated) {
+        html += `
+            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1rem 1.25rem; margin-top: 1.25rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+                <button type="button" onclick="changePublicTestPage(-1)" ${currentPublicTestPageIndex === 0 ? 'disabled' : ''} style="background: ${currentPublicTestPageIndex === 0 ? '#e2e8f0' : '#ffffff'}; border: 1.5px solid #cbd5e1; color: ${currentPublicTestPageIndex === 0 ? '#94a3b8' : '#334155'}; font-weight: 700; padding: 0.6rem 1.25rem; border-radius: 10px; cursor: ${currentPublicTestPageIndex === 0 ? 'not-allowed' : 'pointer'}; font-size: 0.9rem;">
+                    ← Página Anterior
+                </button>
+                <div style="font-size: 0.88rem; font-weight: 700; color: #475569; text-align: center;">
+                    Página ${currentPublicTestPageIndex + 1} de ${totalPages}
+                </div>
+                <button type="button" onclick="changePublicTestPage(1)" ${currentPublicTestPageIndex >= totalPages - 1 ? 'disabled' : ''} style="background: ${currentPublicTestPageIndex >= totalPages - 1 ? '#e2e8f0' : '#702e5e'}; border: 1.5px solid ${currentPublicTestPageIndex >= totalPages - 1 ? '#cbd5e1' : '#702e5e'}; color: ${currentPublicTestPageIndex >= totalPages - 1 ? '#94a3b8' : '#ffffff'}; font-weight: 700; padding: 0.6rem 1.25rem; border-radius: 10px; cursor: ${currentPublicTestPageIndex >= totalPages - 1 ? 'not-allowed' : 'pointer'}; font-size: 0.9rem;">
+                    Siguiente Página →
+                </button>
+            </div>
+        `;
+    }
+
     container.innerHTML = html;
+}
+
+function changePublicTestPage(delta) {
+    if (!currentPublicTestDefinition) return;
+    const items = currentPublicTestDefinition.items || [];
+    const totalItems = items.length;
+    const isPaginated = totalItems > 15;
+    if (!isPaginated) return;
+
+    const pageSize = currentPublicTestPageSize || 20;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+    currentPublicTestPageIndex += delta;
+    if (currentPublicTestPageIndex >= totalPages) currentPublicTestPageIndex = totalPages - 1;
+    if (currentPublicTestPageIndex < 0) currentPublicTestPageIndex = 0;
+
+    renderPublicTestItems(currentPublicTestDefinition);
+
+    // Scroll suave hacia arriba de la evaluación
+    const formCard = document.getElementById('pub-test-form-card');
+    if (formCard) {
+        formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function selectPublicTestAnswer(itemNum, value) {
