@@ -14120,8 +14120,9 @@ def api_asignar_test():
     cursor.execute("SELECT bloqueo_tests, role, es_admin, es_superadmin FROM usuarios WHERE id = ?", (user_id,))
     usr = cursor.fetchone()
     if usr:
-        is_admin = usr.get('es_superadmin') or usr.get('es_admin') or usr.get('role') in ['admin', 'superadmin']
-        if usr.get('bloqueo_tests') == 1 and not is_admin:
+        usr_dict = dict(usr)
+        is_admin = usr_dict.get('es_superadmin') or usr_dict.get('es_admin') or usr_dict.get('role') in ['admin', 'superadmin']
+        if usr_dict.get('bloqueo_tests') == 1 and not is_admin:
             return jsonify({'error': 'El módulo de Tests Psicológicos se encuentra restringido para tu usuario.'}), 403
 
     data = request.json or {}
