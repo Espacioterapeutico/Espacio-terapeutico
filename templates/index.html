@@ -2824,7 +2824,7 @@
 
                     <!-- CONTENIDO PESTAÑA 1: APLICAR TEST -->
                     <div id="tests-tab-content-apply">
-                        <!-- BUSCARDOR RÁPIDO Y SELECTOR UNIFICADO DE PACIENTE -->
+                        <!-- BUSCADOR RÁPIDO Y SELECTOR NATIVO DESPLEGABLE DE PACIENTE -->
                         <div style="background: white; border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
                                 <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: #0f172a;">👤 Seleccionar Consultante</h4>
@@ -2832,31 +2832,26 @@
                                     ⚠️ Ningún consultante seleccionado
                                 </span>
                             </div>
-                            <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 0.85rem;">Busque por nombre, apellido o cédula, o elija directamente en la lista desplegable.</p>
+                            <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 0.85rem;">Escriba para filtrar por nombre, apellido o cédula, o elija directamente de la lista desplegable.</p>
                             
-                            <div style="position: relative;">
-                                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-                                    <div style="position: relative; flex: 1; min-width: 260px;">
-                                        <input type="text" id="input-search-test-patient" 
-                                               onfocus="onTestPatientInputFocus()" 
-                                               oninput="filterTestPatientSelect()" 
-                                               onkeyup="filterTestPatientSelect()"
-                                               placeholder="🔍 Escriba un nombre, apellido o cédula para buscar..." 
-                                               autocomplete="off" 
-                                               style="width: 100%; padding: 0.75rem 2.5rem 0.75rem 1rem; border: 2px solid #702e5e; border-radius: 10px; font-size: 0.92rem; font-weight: 700; outline: none; transition: border-color 0.2s, box-shadow 0.2s;">
-                                        
-                                        <button type="button" id="btn-clear-test-patient" onclick="clearTestPatientSelection()" title="Limpiar selección" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #f1f5f9; border: none; border-radius: 50%; width: 26px; height: 26px; font-size: 0.9rem; cursor: pointer; color: #64748b; display: none; align-items: center; justify-content: center; font-weight: 800;">✕</button>
-                                    </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                                <div style="position: relative; flex: 1; min-width: 260px;">
+                                    <input type="text" id="input-search-test-patient" 
+                                           onfocus="onTestPatientInputFocus()" 
+                                           oninput="filterTestPatientSelect()" 
+                                           onkeyup="filterTestPatientSelect()"
+                                           placeholder="🔍 Filtrar por nombre, apellido o cédula..." 
+                                           autocomplete="off" 
+                                           style="width: 100%; padding: 0.75rem 2.5rem 0.75rem 1rem; border: 2px solid #702e5e; border-radius: 10px; font-size: 0.92rem; font-weight: 700; outline: none; transition: border-color 0.2s, box-shadow 0.2s;">
                                     
-                                    <div style="min-width: 220px;">
-                                        <select id="select-test-main-patient" onfocus="populateMainViewPatientSelect()" onchange="onSelectMainPatientChange()" style="width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.88rem; background: #f8fafc; color: #334155; font-weight: 700; outline: none; cursor: pointer;">
-                                            <option value="">-- O seleccionar de la lista --</option>
-                                        </select>
-                                    </div>
+                                    <button type="button" id="btn-clear-test-patient" onclick="clearTestPatientSelection()" title="Limpiar selección" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #f1f5f9; border: none; border-radius: 50%; width: 26px; height: 26px; font-size: 0.9rem; cursor: pointer; color: #64748b; display: none; align-items: center; justify-content: center; font-weight: 800;">✕</button>
                                 </div>
-
-                                <!-- LISTA AUTOCOMPLETABLE FLOTANTE -->
-                                <div id="test-patient-autocomplete-list" class="hide" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #702e5e; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.18); max-height: 260px; overflow-y: auto; z-index: 1000; margin-top: 6px;"></div>
+                                
+                                <div style="flex: 1; min-width: 260px;">
+                                    <select id="select-test-main-patient" onfocus="populateMainViewPatientSelect()" onchange="onSelectMainPatientChange()" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #702e5e; border-radius: 10px; font-size: 0.92rem; background: #ffffff; color: #0f172a; font-weight: 700; outline: none; cursor: pointer;">
+                                        <option value="">-- Cargando pacientes de la base de datos... --</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 

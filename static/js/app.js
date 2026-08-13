@@ -17982,16 +17982,23 @@ async function populateMainViewPatientSelect() {
     const select = document.getElementById('select-test-main-patient');
     if (!select) return;
 
-    if (allTestPatientsCache && allTestPatientsCache.length > 0) {
+    const existingPatients = (window.patients && Array.isArray(window.patients) && window.patients.length > 0)
+        ? window.patients
+        : ((allTestPatientsCache && allTestPatientsCache.length > 0) ? allTestPatientsCache : null);
+
+    if (existingPatients && existingPatients.length > 0) {
+        allTestPatientsCache = existingPatients;
         renderTestPatientsOptions(allTestPatientsCache);
     }
 
     try {
         const resp = await fetch('/api/patients');
+        if (!resp.ok) return;
         const data = await resp.json();
-        const patients = Array.isArray(data) ? data : (data.pacientes || []);
-        if (patients.length > 0) {
-            allTestPatientsCache = patients;
+        const patientsArr = Array.isArray(data) ? data : (data.pacientes || []);
+        if (patientsArr.length > 0) {
+            allTestPatientsCache = patientsArr;
+            window.patients = patientsArr;
             renderTestPatientsOptions(allTestPatientsCache);
         }
     } catch (e) {
@@ -18004,8 +18011,9 @@ function renderTestPatientsOptions(patientsList) {
     if (!select) return;
 
     const currentVal = select.value;
-    let html = '<option value="">-- O seleccionar de la lista --</option>';
-    (patientsList || []).forEach(p => {
+    const pool = patientsList || [];
+    let html = `<option value="">-- Seleccionar Consultante (${pool.length} disponibles) --</option>`;
+    pool.forEach(p => {
         const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
         const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
         html += `<option value="${p.id}">${nameStr}${ciStr}</option>`;
@@ -18020,33 +18028,28 @@ async function onTestPatientInputFocus() {
     if (!allTestPatientsCache || allTestPatientsCache.length === 0) {
         await populateMainViewPatientSelect();
     }
-    filterTestPatientSelect();
 }
 
 async function filterTestPatientSelect() {
     const searchInput = document.getElementById('input-search-test-patient');
-    const autoList = document.getElementById('test-patient-autocomplete-list');
     const select = document.getElementById('select-test-main-patient');
     const clearBtn = document.getElementById('btn-clear-test-patient');
-    if (!searchInput) return;
+    if (!select) return;
 
     if (!allTestPatientsCache || allTestPatientsCache.length === 0) {
         await populateMainViewPatientSelect();
     }
 
-    const query = searchInput.value.toLowerCase().trim();
+    const pool = (allTestPatientsCache && allTestPatientsCache.length > 0) 
+        ? allTestPatientsCache 
+        : (window.patients || []);
+
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
     if (!query) {
         if (clearBtn) clearBtn.style.display = 'none';
-        if (autoList) {
-            if (document.activeElement === searchInput && allTestPatientsCache.length > 0) {
-                renderAutocompleteDropdown(allTestPatientsCache);
-            } else {
-                autoList.innerHTML = '';
-                autoList.classList.add('hide');
-            }
-        }
-        if (select && !select.value) {
+        renderTestPatientsOptions(pool);
+        if (!select.value) {
             updateSelectedPatientLabel();
         }
         return;
@@ -18054,61 +18057,30 @@ async function filterTestPatientSelect() {
 
     if (clearBtn) clearBtn.style.display = 'inline-flex';
 
-    const filtered = (allTestPatientsCache || []).filter(p => {
+    const filtered = pool.filter(p => {
         const fullStr = `${p.nombres || ''} ${p.apellidos || ''} ${p.cedula || ''}`.toLowerCase();
         return fullStr.includes(query);
     });
 
-    if (autoList) {
-        if (filtered.length === 0) {
-            autoList.innerHTML = '<div style="padding: 12px 14px; color: #64748b; font-size: 0.86rem; font-weight: 600; text-align: center;">⚠️ No se encontró ningún consultante con esa búsqueda.</div>';
-            autoList.classList.remove('hide');
-        } else {
-            renderAutocompleteDropdown(filtered);
-        }
-    }
-}
-
-function renderAutocompleteDropdown(list) {
-    const autoList = document.getElementById('test-patient-autocomplete-list');
-    if (!autoList) return;
-
-    let autoHtml = '';
-    (list || []).forEach(p => {
-        const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
-        const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
-        autoHtml += `
-            <div onclick="selectTestPatientFromAutocomplete('${p.id}', '${nameStr.replace(/'/g, "\\'")}', '${(p.cedula || '').replace(/'/g, "\\'")}')" style="padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; font-weight: 700; color: #0f172a; transition: background 0.15s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">
-                👤 ${nameStr} <span style="color: #702e5e; font-size: 0.78rem; margin-left: 6px;">${ciStr}</span>
-            </div>
-        `;
-    });
-    autoList.innerHTML = autoHtml;
-    autoList.classList.remove('hide');
-}
-
-function selectTestPatientFromAutocomplete(patientId, patientName, patientCi) {
-    const select = document.getElementById('select-test-main-patient');
-    const searchInput = document.getElementById('input-search-test-patient');
-    const autoList = document.getElementById('test-patient-autocomplete-list');
-    const clearBtn = document.getElementById('btn-clear-test-patient');
-
-    if (select) {
-        if (!select.options || select.options.length <= 1) {
-            renderTestPatientsOptions(allTestPatientsCache);
-        }
-        select.value = String(patientId);
-    }
-    
-    if (searchInput) {
-        const fullDisplay = patientName + (patientCi ? ` (CI: ${patientCi})` : '');
-        searchInput.value = fullDisplay;
-    }
-
-    if (clearBtn) clearBtn.style.display = 'inline-flex';
-    if (autoList) {
-        autoList.innerHTML = '';
-        autoList.classList.add('hide');
+    if (filtered.length === 0) {
+        let html = `<option value="">⚠️ No hay coincidencias para "${query}"</option>`;
+        html += `<option value="">-- Ver todos los consultantes (${pool.length}) --</option>`;
+        pool.forEach(p => {
+            const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
+            const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
+            html += `<option value="${p.id}">${nameStr}${ciStr}</option>`;
+        });
+        select.innerHTML = html;
+        select.value = '';
+    } else {
+        let html = `<option value="">-- ${filtered.length} coincidencia(s) encontrada(s) --</option>`;
+        filtered.forEach(p => {
+            const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
+            const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
+            html += `<option value="${p.id}">${nameStr}${ciStr}</option>`;
+        });
+        select.innerHTML = html;
+        select.value = String(filtered[0].id);
     }
 
     updateSelectedPatientLabel();
@@ -18117,18 +18089,79 @@ function selectTestPatientFromAutocomplete(patientId, patientName, patientCi) {
 function clearTestPatientSelection() {
     const select = document.getElementById('select-test-main-patient');
     const searchInput = document.getElementById('input-search-test-patient');
-    const autoList = document.getElementById('test-patient-autocomplete-list');
     const clearBtn = document.getElementById('btn-clear-test-patient');
 
-    if (select) select.value = '';
+    if (select) {
+        renderTestPatientsOptions(allTestPatientsCache || window.patients || []);
+        select.value = '';
+    }
     if (searchInput) searchInput.value = '';
     if (clearBtn) clearBtn.style.display = 'none';
-    if (autoList) {
-        autoList.innerHTML = '';
-        autoList.classList.add('hide');
-    }
 
     updateSelectedPatientLabel();
+}
+
+function selectTestForApplication(testCode) {
+    if (selectedTestCodeForApplication === testCode) {
+        selectedTestCodeForApplication = null;
+        const panel = document.getElementById('panel-apply-selected-test');
+        if (panel) {
+            panel.classList.add('hide');
+            panel.style.display = 'none';
+        }
+        document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
+            card.style.border = '2.5px solid #e2e8f0';
+            card.style.background = '#ffffff';
+            const checkSpan = card.querySelector('.test-card-check');
+            if (checkSpan) checkSpan.style.display = 'none';
+        });
+        return;
+    }
+
+    selectedTestCodeForApplication = testCode;
+
+    document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
+        const cardCode = card.id.replace('card-test-choice-', '');
+        const checkSpan = card.querySelector('.test-card-check');
+        if (cardCode === testCode) {
+            card.style.border = '2.5px solid #702e5e';
+            card.style.background = '#fdf4ff';
+            if (checkSpan) checkSpan.style.display = 'inline';
+        } else {
+            card.style.border = '2.5px solid #e2e8f0';
+            card.style.background = '#ffffff';
+            if (checkSpan) checkSpan.style.display = 'none';
+        }
+    });
+
+    const panel = document.getElementById('panel-apply-selected-test');
+    if (panel) {
+        panel.classList.remove('hide');
+        panel.style.display = 'block';
+    }
+
+    const testNamesMap = {
+        'AQ': 'AQ — Cociente de Espectro Autista (50 ítems - Baron-Cohen)',
+        'RAADS-R': 'RAADS-R — Escala Revisada para Diagnóstico de Autismo y Asperger (80 ítems)',
+        'CAT-Q': 'CAT-Q — Cuestionario de Camuflaje de Rasgos Autistas (25 ítems - Hull et al.)',
+        'ASRS-ADHD': 'ASRS v1.1 — Inventario de Síntomas de TDAH en Adultos (OMS)',
+        'RAVEN': 'RAVEN — Test de Matrices Progresivas de Raven (60 matrices)',
+        'MCMI-II': 'MCMI-II — Inventario Multiaxial Clínico de Millon (175 ítems)',
+        'HOLLAND': 'HOLLAND — Test de Intereses Vocacionales (Modelo RIASEC)',
+        'BDI-II': 'BDI-II — Inventario de Depresión de Beck (21 ítems)',
+        'BAI': 'BAI — Inventario de Ansiedad de Beck (21 ítems)',
+        'TCS': 'TCS — Escala de Congruencia Transgénero (12 ítems)',
+        'UGDS-GS': 'UGDS-GS — Escala de Disforia de Utrecht (18 ítems)'
+    };
+
+    const labelTest = document.getElementById('label-selected-test-name');
+    if (labelTest) labelTest.textContent = testNamesMap[testCode] || testCode;
+
+    updateSelectedPatientLabel();
+
+    if (panel) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 function updateSelectedPatientLabel() {
@@ -18139,7 +18172,7 @@ function updateSelectedPatientLabel() {
 
     if (select && select.value) {
         const selectedOpt = select.options[select.selectedIndex];
-        const textVal = selectedOpt ? selectedOpt.textContent : 'Consultante Seleccionado';
+        const textVal = selectedOpt ? selectedOpt.textContent.replace(/^--.*?--\s*/, '') : 'Consultante Seleccionado';
         
         if (badge) {
             badge.innerHTML = `✓ Consultante Activo: <strong style="color:#15803d;">${textVal}</strong>`;
@@ -18175,6 +18208,8 @@ function updateSelectedPatientLabel() {
 
 function onSelectMainPatientChange() {
     const select = document.getElementById('select-test-main-patient');
+    const searchInput = document.getElementById('input-search-test-patient');
+    const clearBtn = document.getElementById('btn-clear-test-patient');
     if (!select) return;
 
     if (!select.value) {
@@ -18182,14 +18217,14 @@ function onSelectMainPatientChange() {
         return;
     }
 
-    const patientId = select.value;
-    const found = (allTestPatientsCache || []).find(p => String(p.id) === String(patientId));
-    if (found) {
-        const nameStr = `${found.nombres || ''} ${found.apellidos || ''}`.trim() || 'Sin Nombre';
-        selectTestPatientFromAutocomplete(found.id, nameStr, found.cedula || '');
-    } else {
-        updateSelectedPatientLabel();
+    const selectedOpt = select.options[select.selectedIndex];
+    if (selectedOpt && selectedOpt.value && searchInput) {
+        const rawTxt = selectedOpt.textContent.replace(/\s*\(CI:.*?\)/i, '').trim();
+        searchInput.value = rawTxt;
+        if (clearBtn) clearBtn.style.display = 'inline-flex';
     }
+
+    updateSelectedPatientLabel();
 }
 
 // Cerrar lista flotante al hacer clic fuera del buscador
