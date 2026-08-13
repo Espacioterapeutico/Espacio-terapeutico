@@ -17980,10 +17980,14 @@ function renderTestPatientsOptions(patientsList) {
     select.innerHTML = html;
 }
 
-function filterTestPatientSelect() {
+async function filterTestPatientSelect() {
     const searchInput = document.getElementById('input-search-test-patient');
     const autoList = document.getElementById('test-patient-autocomplete-list');
     if (!searchInput) return;
+
+    if (!allTestPatientsCache || allTestPatientsCache.length === 0) {
+        await populateMainViewPatientSelect();
+    }
 
     const query = searchInput.value.toLowerCase().trim();
 
@@ -18015,7 +18019,7 @@ function filterTestPatientSelect() {
                 const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
                 const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
                 autoHtml += `
-                    <div onclick="selectTestPatientFromAutocomplete('${p.id}', '${nameStr.replace(/'/g, "\'")}')" style="padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; font-weight: 700; color: #0f172a; transition: background 0.15s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">
+                    <div onclick="selectTestPatientFromAutocomplete('${p.id}', '${nameStr.replace(/'/g, "\\'")}')" style="padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; font-weight: 700; color: #0f172a; transition: background 0.15s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">
                         👤 ${nameStr} <span style="color: #702e5e; font-size: 0.78rem;">${ciStr}</span>
                     </div>
                 `;
@@ -18037,7 +18041,12 @@ function selectTestPatientFromAutocomplete(patientId, patientName) {
     const searchInput = document.getElementById('input-search-test-patient');
     const autoList = document.getElementById('test-patient-autocomplete-list');
 
-    if (select) select.value = patientId;
+    if (select) {
+        if (allTestPatientsCache && allTestPatientsCache.length > 0) {
+            renderTestPatientsOptions(allTestPatientsCache);
+        }
+        select.value = patientId;
+    }
     if (searchInput) searchInput.value = patientName;
     if (autoList) {
         autoList.innerHTML = '';
@@ -18131,7 +18140,7 @@ function onSelectMainPatientChange() {
 
 
 
-async function executeMainApplyTest() {
+async function executeMainApplyTest(modoParam) {
     const select = document.getElementById('select-test-main-patient');
     if (!select || !select.value) {
         alert("Por favor busque o seleccione un paciente primero en la barra superior.");
@@ -18147,7 +18156,7 @@ async function executeMainApplyTest() {
     const patientId = select.value;
     const testCode = selectedTestCodeForApplication;
     const modoSelect = document.getElementById('select-main-apply-mode');
-    const modo = modoSelect ? modoSelect.value : 'link';
+    const modo = modoParam || (modoSelect ? modoSelect.value : 'link');
 
     try {
         const res = await fetch('/api/tests/asignar', {
@@ -18187,9 +18196,14 @@ async function executeMainApplyTest() {
             whatsappUrl = `https://api.whatsapp.com/send?phone=${data.whatsapp_phone}&text=${msg}`;
         }
 
+        if (modo === 'presencial' && testUrl) {
+            openTestPresencialWindow(testUrl);
+        }
+
         if (successDetails) {
             successDetails.innerHTML = `
-                <div><strong>Token ID:</strong> <code>${data.token}</code></div>
+                <div><strong>Token ID:</strong> <code>${data.token || ''}</code></div>
+                <div><strong>Modo:</strong> <span style="font-weight:700; color:#702e5e;">${modo === 'presencial' ? '💻 Presencial' : '📲 Remoto (Link)'}</span></div>
                 <div><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all;">${testUrl}</a></div>
             `;
         }
@@ -18199,34 +18213,29 @@ async function executeMainApplyTest() {
                 <button type="button" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none;" onclick="copyTestLink('${testUrl}')">
                     📋 Copiar Link del Test
                 </button>
+                <button type="button" class="btn btn-sm" style="background: #15803d; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none;" onclick="openTestPresencialWindow('${testUrl}')">
+                    💻 Responder Presencial Ahora
+                </button>
             `;
 
             if (whatsappUrl) {
                 actionsHtml += `
-                    <a href="${whatsappUrl}" target="_blank" class="btn btn-sm" style="background: #25d366; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                        📲 Enviar por WhatsApp
+                    <a href="${whatsappUrl}" target="_blank" class="btn btn-sm" style="background: #25d366; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                        💬 Enviar por WhatsApp
                     </a>
                 `;
             }
 
-            actionsHtml += `
-                <button type="button" class="btn btn-sm btn-outline-secondary" style="font-weight: 700; border-radius: 8px; padding: 0.55rem 1.1rem;" onclick="openTestPresencialWindow('${testUrl}')">
-                    💻 Responder en pantalla
-                </button>
-            `;
-
             successActions.innerHTML = actionsHtml;
         }
 
-        if (modo === 'link' && whatsappUrl) {
-            window.open(whatsappUrl, '_blank');
-        } else if (modo === 'presencial' && testUrl) {
-            window.open(testUrl, '_blank');
+        if (successPanel) {
+            successPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
     } catch (e) {
-        console.error("Error al aplicar test:", e);
-        alert("Ocurrió un error al procesar la asignación: " + (e.message || e));
+        console.error("Error al asignar test:", e);
+        alert("Error al asignar la evaluación.");
     }
 }
 
@@ -18349,6 +18358,9 @@ function loadTestsCatalogCards() {
 
 
 function filterTestsByCategory(catName) {
+    catalogCurrentCategoryFilter = catName;
+    catalogCurrentPage = 1;
+
     document.querySelectorAll('.btn-test-cat-filter').forEach(btn => {
         const btnTxt = btn.textContent.trim();
         if (btnTxt.toLowerCase() === catName.toLowerCase() || (catName === 'TODAS' && btnTxt === 'Todas')) {
@@ -18362,38 +18374,7 @@ function filterTestsByCategory(catName) {
         }
     });
 
-    const cards = document.querySelectorAll('[id^="card-test-choice-"]');
-    cards.forEach(card => {
-        const catBadge = card.querySelector('.test-card-cat-badge');
-        const catText = catBadge ? catBadge.textContent.trim().toLowerCase() : '';
-        if (catName === 'TODAS') {
-            card.style.display = 'flex';
-        } else {
-            const filterNorm = catName.toLowerCase();
-            if (filterNorm.includes('depresión') || filterNorm.includes('ansiedad')) {
-                if (catText.includes('depresión') || catText.includes('ansiedad')) card.style.display = 'flex';
-                else card.style.display = 'none';
-            } else if (filterNorm.includes('neurodivergencia') || filterNorm.includes('autismo')) {
-                if (catText.includes('neurodivergencia') || catText.includes('autismo') || catText.includes('tdah')) card.style.display = 'flex';
-                else card.style.display = 'none';
-            } else if (filterNorm.includes('personalidad')) {
-                if (catText.includes('personalidad')) card.style.display = 'flex';
-                else card.style.display = 'none';
-            } else if (filterNorm.includes('intelectual')) {
-                if (catText.includes('intelectual')) card.style.display = 'flex';
-                else card.style.display = 'none';
-            } else if (filterNorm.includes('vocacional')) {
-                if (catText.includes('vocacional')) card.style.display = 'flex';
-                else card.style.display = 'none';
-            } else if (filterNorm.includes('género') || filterNorm.includes('identidad')) {
-                if (catText.includes('género') || catText.includes('afirmación')) card.style.display = 'flex';
-                else card.style.display = 'none';
-            } else {
-                if (catText.includes(filterNorm)) card.style.display = 'flex';
-                else card.style.display = 'none';
-            }
-        }
-    });
+    renderCatalogViewWithFiltersAndPagination();
 }
 
 
