@@ -445,9 +445,12 @@ def init_db():
         if 'bloqueo_confirmaciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_confirmaciones INTEGER DEFAULT 1")
         if 'bloqueo_examen_mental' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_examen_mental INTEGER DEFAULT 1")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_examen_mental INTEGER DEFAULT 0")
         if 'bloqueo_tests' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_tests INTEGER DEFAULT 1")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_tests INTEGER DEFAULT 0")
+        
+        cursor.execute("UPDATE usuarios SET bloqueo_tests = 0 WHERE bloqueo_tests IS NULL OR bloqueo_tests = 1")
+        cursor.execute("UPDATE usuarios SET bloqueo_examen_mental = 0 WHERE bloqueo_examen_mental IS NULL OR bloqueo_examen_mental = 1")
         if 'terminos_condiciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
         if 'nomenclatura' not in cols_usr:
@@ -3046,8 +3049,8 @@ def ensure_usuarios_columns(db=None):
         ('bloqueo_pizarra', 'INTEGER DEFAULT 0'),
         ('bloqueo_herramientas', 'INTEGER DEFAULT 1'),
         ('bloqueo_confirmaciones', 'INTEGER DEFAULT 1'),
-        ('bloqueo_examen_mental', 'INTEGER DEFAULT 1'),
-        ('bloqueo_tests', 'INTEGER DEFAULT 1'),
+        ('bloqueo_examen_mental', 'INTEGER DEFAULT 0'),
+        ('bloqueo_tests', 'INTEGER DEFAULT 0'),
         ('cedula', 'TEXT DEFAULT \'\''),
         ('email', 'TEXT DEFAULT \'\''),
         ('nomenclatura', 'TEXT'),
@@ -3114,7 +3117,7 @@ def superadmin_get_therapists():
                    COALESCE(bloqueo_finanzas, 0) as bloqueo_finanzas, COALESCE(bloqueo_agenda, 0) as bloqueo_agenda, 
                    COALESCE(bloqueo_mensajes, 0) as bloqueo_mensajes, COALESCE(bloqueo_pizarra, 0) as bloqueo_pizarra, 
                    COALESCE(bloqueo_herramientas, 0) as bloqueo_herramientas, COALESCE(bloqueo_confirmaciones, 0) as bloqueo_confirmaciones,
-                   COALESCE(bloqueo_examen_mental, 1) as bloqueo_examen_mental, COALESCE(bloqueo_tests, 1) as bloqueo_tests, COALESCE(aviso_pago, 0) as aviso_pago,
+                   COALESCE(bloqueo_examen_mental, 0) as bloqueo_examen_mental, COALESCE(bloqueo_tests, 0) as bloqueo_tests, COALESCE(aviso_pago, 0) as aviso_pago,
                    COALESCE(mostrar_en_directorio, 0) as mostrar_en_directorio
             FROM usuarios
             WHERE (role IS NULL OR role = '' OR role = 'psicologo' OR role = 'admin')
@@ -3438,7 +3441,7 @@ def superadmin_toggle_feature(user_id):
     feature = data.get('feature')
     status = data.get('status')
     
-    if feature not in ['registro', 'evoluciones', 'finanzas', 'agenda', 'mensajes', 'pizarra', 'herramientas']:
+    if feature not in ['registro', 'evoluciones', 'finanzas', 'agenda', 'mensajes', 'pizarra', 'herramientas', 'confirmaciones', 'examen_mental', 'tests']:
         return jsonify({'error': 'Función no válida.'}), 400
         
     if status not in [0, 1]:
@@ -14113,11 +14116,13 @@ def api_asignar_test():
     ensure_usuarios_columns(db)
     cursor = db.cursor()
 
-    # Verificar bloqueo de tests
-    cursor.execute("SELECT bloqueo_tests FROM usuarios WHERE id = ?", (user_id,))
+    # Verificar bloqueo de tests (Los administradores tienen permiso automático)
+    cursor.execute("SELECT bloqueo_tests, role, es_admin, es_superadmin FROM usuarios WHERE id = ?", (user_id,))
     usr = cursor.fetchone()
-    if usr and usr['bloqueo_tests'] == 1:
-        return jsonify({'error': 'El módulo de Tests Psicológicos se encuentra restringido para tu usuario.'}), 403
+    if usr:
+        is_admin = usr.get('es_superadmin') or usr.get('es_admin') or usr.get('role') in ['admin', 'superadmin']
+        if usr.get('bloqueo_tests') == 1 and not is_admin:
+            return jsonify({'error': 'El módulo de Tests Psicológicos se encuentra restringido para tu usuario.'}), 403
 
     data = request.json or {}
     patient_id = data.get('patient_id')
