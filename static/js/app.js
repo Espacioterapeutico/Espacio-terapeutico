@@ -18260,8 +18260,6 @@ window.loadTestsForSelectedPatientFromMainView = loadTestsForSelectedPatientFrom
 window.openAssignTestFromMainView = openAssignTestFromMainView;
 window.filterTestPatientSelect = filterTestPatientSelect;
 window.switchTestsTab = switchTestsTab;
-window.loadTestsCatalogCards = loadTestsCatalogCards;
-
 async function loadTestsCatalogCards() {
     const container = document.getElementById('container-tests-catalog-cards');
     if (!container) return;
@@ -18340,3 +18338,5 @@ window.openTestDetailModalById = openTestDetailModalById;
 
 
 
+
+window.loadTestsCatalogCards = loadTestsCatalogCards;
