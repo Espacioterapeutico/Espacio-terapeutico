@@ -17992,11 +17992,7 @@ async function populateMainViewPatientSelect() {
         const patients = Array.isArray(data) ? data : (data.pacientes || []);
         if (patients.length > 0) {
             allTestPatientsCache = patients;
-            const currentVal = select.value;
             renderTestPatientsOptions(allTestPatientsCache);
-            if (currentVal && select.querySelector("option[value='" + currentVal + "']")) {
-                select.value = currentVal;
-            }
         }
     } catch (e) {
         console.error("Error al poblar selector de pacientes para tests:", e);
@@ -18008,7 +18004,7 @@ function renderTestPatientsOptions(patientsList) {
     if (!select) return;
 
     const currentVal = select.value;
-    let html = '<option value="">-- Seleccionar Paciente --</option>';
+    let html = '<option value="">-- O seleccionar de la lista --</option>';
     (patientsList || []).forEach(p => {
         const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
         const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
@@ -18020,10 +18016,18 @@ function renderTestPatientsOptions(patientsList) {
     }
 }
 
+async function onTestPatientInputFocus() {
+    if (!allTestPatientsCache || allTestPatientsCache.length === 0) {
+        await populateMainViewPatientSelect();
+    }
+    filterTestPatientSelect();
+}
+
 async function filterTestPatientSelect() {
     const searchInput = document.getElementById('input-search-test-patient');
     const autoList = document.getElementById('test-patient-autocomplete-list');
     const select = document.getElementById('select-test-main-patient');
+    const clearBtn = document.getElementById('btn-clear-test-patient');
     if (!searchInput) return;
 
     if (!allTestPatientsCache || allTestPatientsCache.length === 0) {
@@ -18033,52 +18037,61 @@ async function filterTestPatientSelect() {
     const query = searchInput.value.toLowerCase().trim();
 
     if (!query) {
+        if (clearBtn) clearBtn.style.display = 'none';
         if (autoList) {
-            autoList.innerHTML = '';
-            autoList.classList.add('hide');
+            if (document.activeElement === searchInput && allTestPatientsCache.length > 0) {
+                renderAutocompleteDropdown(allTestPatientsCache);
+            } else {
+                autoList.innerHTML = '';
+                autoList.classList.add('hide');
+            }
         }
-        if (select) select.value = '';
-        updateSelectedPatientLabel();
+        if (select && !select.value) {
+            updateSelectedPatientLabel();
+        }
         return;
     }
+
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
 
     const filtered = (allTestPatientsCache || []).filter(p => {
         const fullStr = `${p.nombres || ''} ${p.apellidos || ''} ${p.cedula || ''}`.toLowerCase();
         return fullStr.includes(query);
     });
 
-    // Si hay exactamente 1 coincidencia directa, seleccionar en el dropdown
-    if (filtered.length === 1 && select) {
-        select.value = String(filtered[0].id);
-        updateSelectedPatientLabel();
-    }
-
-    // Render flotante autocompletado
     if (autoList) {
         if (filtered.length === 0) {
-            autoList.innerHTML = '<div style="padding: 10px 14px; color: #64748b; font-size: 0.85rem; font-weight: 600;">No se encontraron consultantes.</div>';
+            autoList.innerHTML = '<div style="padding: 12px 14px; color: #64748b; font-size: 0.86rem; font-weight: 600; text-align: center;">⚠️ No se encontró ningún consultante con esa búsqueda.</div>';
             autoList.classList.remove('hide');
         } else {
-            let autoHtml = '';
-            filtered.forEach(p => {
-                const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
-                const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
-                autoHtml += `
-                    <div onclick="selectTestPatientFromAutocomplete('${p.id}', '${nameStr.replace(/'/g, "\\'")}')" style="padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; font-weight: 700; color: #0f172a; transition: background 0.15s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">
-                        👤 ${nameStr} <span style="color: #702e5e; font-size: 0.78rem;">${ciStr}</span>
-                    </div>
-                `;
-            });
-            autoList.innerHTML = autoHtml;
-            autoList.classList.remove('hide');
+            renderAutocompleteDropdown(filtered);
         }
     }
 }
 
-function selectTestPatientFromAutocomplete(patientId, patientName) {
+function renderAutocompleteDropdown(list) {
+    const autoList = document.getElementById('test-patient-autocomplete-list');
+    if (!autoList) return;
+
+    let autoHtml = '';
+    (list || []).forEach(p => {
+        const nameStr = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
+        const ciStr = p.cedula ? ` (CI: ${p.cedula})` : '';
+        autoHtml += `
+            <div onclick="selectTestPatientFromAutocomplete('${p.id}', '${nameStr.replace(/'/g, "\\'")}', '${(p.cedula || '').replace(/'/g, "\\'")}')" style="padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; font-weight: 700; color: #0f172a; transition: background 0.15s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">
+                👤 ${nameStr} <span style="color: #702e5e; font-size: 0.78rem; margin-left: 6px;">${ciStr}</span>
+            </div>
+        `;
+    });
+    autoList.innerHTML = autoHtml;
+    autoList.classList.remove('hide');
+}
+
+function selectTestPatientFromAutocomplete(patientId, patientName, patientCi) {
     const select = document.getElementById('select-test-main-patient');
     const searchInput = document.getElementById('input-search-test-patient');
     const autoList = document.getElementById('test-patient-autocomplete-list');
+    const clearBtn = document.getElementById('btn-clear-test-patient');
 
     if (select) {
         if (!select.options || select.options.length <= 1) {
@@ -18086,7 +18099,13 @@ function selectTestPatientFromAutocomplete(patientId, patientName) {
         }
         select.value = String(patientId);
     }
-    if (searchInput) searchInput.value = patientName;
+    
+    if (searchInput) {
+        const fullDisplay = patientName + (patientCi ? ` (CI: ${patientCi})` : '');
+        searchInput.value = fullDisplay;
+    }
+
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
     if (autoList) {
         autoList.innerHTML = '';
         autoList.classList.add('hide');
@@ -18094,6 +18113,93 @@ function selectTestPatientFromAutocomplete(patientId, patientName) {
 
     updateSelectedPatientLabel();
 }
+
+function clearTestPatientSelection() {
+    const select = document.getElementById('select-test-main-patient');
+    const searchInput = document.getElementById('input-search-test-patient');
+    const autoList = document.getElementById('test-patient-autocomplete-list');
+    const clearBtn = document.getElementById('btn-clear-test-patient');
+
+    if (select) select.value = '';
+    if (searchInput) searchInput.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (autoList) {
+        autoList.innerHTML = '';
+        autoList.classList.add('hide');
+    }
+
+    updateSelectedPatientLabel();
+}
+
+function updateSelectedPatientLabel() {
+    const select = document.getElementById('select-test-main-patient');
+    const badge = document.getElementById('badge-patient-selected-status');
+    const label = document.getElementById('label-selected-patient-name');
+    const searchInput = document.getElementById('input-search-test-patient');
+
+    if (select && select.value) {
+        const selectedOpt = select.options[select.selectedIndex];
+        const textVal = selectedOpt ? selectedOpt.textContent : 'Consultante Seleccionado';
+        
+        if (badge) {
+            badge.innerHTML = `✓ Consultante Activo: <strong style="color:#15803d;">${textVal}</strong>`;
+            badge.style.background = '#dcfce7';
+            badge.style.color = '#15803d';
+            badge.style.borderColor = '#86efac';
+        }
+        if (label) {
+            label.textContent = textVal;
+            label.style.color = '#15803d';
+        }
+        if (searchInput) {
+            searchInput.style.borderColor = '#15803d';
+            searchInput.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+        }
+    } else {
+        if (badge) {
+            badge.innerHTML = '⚠️ Ningún consultante seleccionado';
+            badge.style.background = '#fdf4ff';
+            badge.style.color = '#702e5e';
+            badge.style.borderColor = '#f5d0fe';
+        }
+        if (label) {
+            label.textContent = '-- Seleccionar Paciente arriba --';
+            label.style.color = '#702e5e';
+        }
+        if (searchInput) {
+            searchInput.style.borderColor = '#702e5e';
+            searchInput.style.boxShadow = 'none';
+        }
+    }
+}
+
+function onSelectMainPatientChange() {
+    const select = document.getElementById('select-test-main-patient');
+    if (!select) return;
+
+    if (!select.value) {
+        clearTestPatientSelection();
+        return;
+    }
+
+    const patientId = select.value;
+    const found = (allTestPatientsCache || []).find(p => String(p.id) === String(patientId));
+    if (found) {
+        const nameStr = `${found.nombres || ''} ${found.apellidos || ''}`.trim() || 'Sin Nombre';
+        selectTestPatientFromAutocomplete(found.id, nameStr, found.cedula || '');
+    } else {
+        updateSelectedPatientLabel();
+    }
+}
+
+// Cerrar lista flotante al hacer clic fuera del buscador
+document.addEventListener('click', (evt) => {
+    const searchInput = document.getElementById('input-search-test-patient');
+    const autoList = document.getElementById('test-patient-autocomplete-list');
+    if (autoList && searchInput && !searchInput.contains(evt.target) && !autoList.contains(evt.target)) {
+        autoList.classList.add('hide');
+    }
+});
 
 function selectTestForApplication(testCode) {
     if (selectedTestCodeForApplication === testCode) {
@@ -18156,44 +18262,6 @@ function selectTestForApplication(testCode) {
     if (panel) {
         panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-}
-
-function updateSelectedPatientLabel() {
-    const select = document.getElementById('select-test-main-patient');
-    const label = document.getElementById('label-selected-patient-name');
-    if (!label) return;
-
-    if (select && select.value) {
-        const selectedOpt = select.options[select.selectedIndex];
-        label.textContent = selectedOpt ? selectedOpt.textContent : 'Consultante Seleccionado';
-        label.style.color = '#15803d';
-    } else {
-        label.textContent = '-- Seleccionar Paciente arriba --';
-        label.style.color = '#702e5e';
-    }
-}
-
-function onSelectMainPatientChange() {
-    const select = document.getElementById('select-test-main-patient');
-    const searchInput = document.getElementById('input-search-test-patient');
-    const autoList = document.getElementById('test-patient-autocomplete-list');
-
-    if (autoList) {
-        autoList.innerHTML = '';
-        autoList.classList.add('hide');
-    }
-
-    if (select && select.value && searchInput) {
-        const selectedOpt = select.options[select.selectedIndex];
-        if (selectedOpt && selectedOpt.value) {
-            const rawTxt = selectedOpt.textContent.replace(/\s*\(CI:.*?\)/i, '').trim();
-            searchInput.value = rawTxt;
-        }
-    } else if (select && !select.value && searchInput) {
-        searchInput.value = '';
-    }
-
-    updateSelectedPatientLabel();
 }
 
 async function executeMainApplyTest(modoParam) {
@@ -18372,6 +18440,8 @@ window.selectTestForApplication = selectTestForApplication;
 window.populateMainViewPatientSelect = populateMainViewPatientSelect;
 window.selectTestPatientFromAutocomplete = selectTestPatientFromAutocomplete;
 window.onSelectMainPatientChange = onSelectMainPatientChange;
+window.onTestPatientInputFocus = onTestPatientInputFocus;
+window.clearTestPatientSelection = clearTestPatientSelection;
 window.renderCatalogViewWithFiltersAndPagination = renderCatalogViewWithFiltersAndPagination;
 window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
 
