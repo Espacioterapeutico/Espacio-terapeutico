@@ -17536,6 +17536,7 @@ function filterTestPatientSelect() {
 
     if (!query) {
         renderTestPatientsOptions(allTestPatientsCache);
+        onSelectMainPatientChange();
         return;
     }
 
@@ -17547,8 +17548,11 @@ function filterTestPatientSelect() {
     renderTestPatientsOptions(filtered);
     
     const select = document.getElementById('select-test-main-patient');
-    if (filtered.length === 1 && select) {
-        select.value = filtered[0].id;
+    if (select) {
+        if (filtered.length > 0) {
+            select.value = filtered[0].id;
+        }
+        onSelectMainPatientChange();
     }
 }
 
@@ -17678,7 +17682,13 @@ async function executeMainApplyTest() {
             })
         });
 
-        const data = await res.json();
+        let data;
+        try {
+            data = await res.json();
+        } catch (jErr) {
+            data = { error: `Error en la respuesta del servidor (${res.status}).` };
+        }
+
         if (!res.ok) {
             alert(data.error || "Error al asignar la evaluación.");
             return;
@@ -17736,7 +17746,7 @@ async function executeMainApplyTest() {
 
     } catch (e) {
         console.error("Error al aplicar test:", e);
-        alert("Ocurrió un error al procesar la asignación.");
+        alert("Ocurrió un error al procesar la asignación: " + (e.message || e));
     }
 }
 
