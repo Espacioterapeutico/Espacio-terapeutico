@@ -2877,8 +2877,31 @@
                             <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Identidad de Género')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Identidad de Género</button>
                         </div>
 
-                        <!-- UNICO CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 -->
-                        <div id="container-tests-catalog-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.1rem; min-height: 380px;">
+                        <!-- UNICO CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 EXACTA -->
+                        <style>
+                            .tests-catalog-grid-5x2 {
+                                display: grid;
+                                grid-template-columns: repeat(5, 1fr) !important;
+                                gap: 1rem !important;
+                                min-height: 380px;
+                            }
+                            @media (max-width: 1300px) {
+                                .tests-catalog-grid-5x2 {
+                                    grid-template-columns: repeat(3, 1fr) !important;
+                                }
+                            }
+                            @media (max-width: 768px) {
+                                .tests-catalog-grid-5x2 {
+                                    grid-template-columns: repeat(2, 1fr) !important;
+                                }
+                            }
+                            @media (max-width: 480px) {
+                                .tests-catalog-grid-5x2 {
+                                    grid-template-columns: 1fr !important;
+                                }
+                            }
+                        </style>
+                        <div id="container-tests-catalog-cards" class="tests-catalog-grid-5x2">
                             <!-- Las tarjetas se generan dinámicamente -->
                         </div>
 
