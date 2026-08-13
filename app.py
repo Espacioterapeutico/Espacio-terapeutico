@@ -14117,11 +14117,10 @@ def process_holland_scoring(answers):
             scores[cat] += val
 
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    top_3_code = ''.join([k for k, v in sorted_scores[:3]])
     top_2_code = ''.join([k for k, v in sorted_scores[:2]])
     primary_letter = sorted_scores[0][0]
 
-    careers_list = code_careers.get(top_3_code) or code_careers.get(top_2_code) or code_careers.get(primary_letter) or []
+    careers_list = code_careers.get(top_2_code) or code_careers.get(primary_letter) or []
 
     subscales_dict = {}
     label_map = {
@@ -14139,13 +14138,13 @@ def process_holland_scoring(answers):
             'puntuacion': pts
         }
 
-    classification = f"Código Holland: {top_3_code}"
+    classification = f"Código Holland: {top_2_code}"
     
     prof_info = riasec_profiles.get(primary_letter, {})
     prof_name = prof_info.get('nombre', primary_letter)
     prof_desc = prof_info.get('actividades', '')
 
-    interp = f"Código Vocacional Holland Dominante: {top_3_code}.\n"
+    interp = f"Código Vocacional Holland Dominante (2 Letras): {top_2_code}.\n"
     interp += f"Perfil Primario: {primary_letter} — {prof_name}.\n"
     interp += f"Características Principales: {prof_desc}\n\n"
     
