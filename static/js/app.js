@@ -17945,16 +17945,22 @@ async function populateMainViewPatientSelect() {
     const select = document.getElementById('select-test-main-patient');
     if (!select) return;
 
+    // Si ya tenemos pacientes en cache, renderizarlos inmediatamente
+    if (allTestPatientsCache.length > 0) {
+        renderTestPatientsOptions(allTestPatientsCache);
+    }
+
     try {
         const resp = await fetch('/api/patients');
-        if (!resp.ok) return;
         const data = await resp.json();
-        allTestPatientsCache = Array.isArray(data) ? data : (data.pacientes || []);
-
-        const currentVal = select.value;
-        renderTestPatientsOptions(allTestPatientsCache);
-        if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
-            select.value = currentVal;
+        const patients = Array.isArray(data) ? data : (data.pacientes || []);
+        if (patients.length > 0) {
+            allTestPatientsCache = patients;
+            const currentVal = select.value;
+            renderTestPatientsOptions(allTestPatientsCache);
+            if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+                select.value = currentVal;
+            }
         }
     } catch (e) {
         console.error("Error al poblar selector de pacientes para tests:", e);
@@ -18339,12 +18345,26 @@ async function loadTestsCatalogCards() {
     try {
         const resp = await fetch('/api/tests/catalogo');
         const data = await resp.json();
-        catalogTestsMasterList = data.tests || [];
-
-        renderCatalogViewWithFiltersAndPagination();
+        // Solo reemplazar la lista si la API devuelve tests reales
+        if (Array.isArray(data.tests) && data.tests.length > 0) {
+            // Merge: API data merged with hardcoded metadata
+            catalogTestsMasterList = data.tests.map(apiTest => {
+                const hardcoded = catalogTestsMasterList.find(h => h.code === apiTest.code);
+                return hardcoded ? { ...hardcoded, ...apiTest } : apiTest;
+            });
+            // Add any hardcoded tests not in API response
+            catalogTestsMasterList.forEach(h => {
+                if (!data.tests.find(a => a.code === h.code)) {
+                    catalogTestsMasterList.push(h);
+                }
+            });
+        }
     } catch (e) {
-        console.error("Error al cargar tarjetas del catálogo de tests:", e);
+        console.error("Error al cargar catálogo de tests (usando datos locales):", e);
     }
+
+    // Siempre renderizar, sea con datos de API o con la lista hardcodeada
+    renderCatalogViewWithFiltersAndPagination();
 }
 
 
