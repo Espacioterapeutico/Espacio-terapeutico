@@ -3,5 +3,14 @@ __pycache__/
 *.pyc
 *.pyo
 *.db
+*.sqlite3
 .env
 *.log
+*.exe
+*.zip
+*.docx
+*.pdf
+credentials.json
+firebase_service_account.json
+*.json.secret
+
