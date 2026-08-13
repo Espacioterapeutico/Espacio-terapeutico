@@ -917,6 +917,23 @@ function purgeClientCacheOnLogin() {
 }
 
 function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba, nombres, apellidos) {
+    if (window.location.pathname.startsWith('/evaluacion/')) {
+        const appLayout = document.getElementById('app-layout');
+        const sidebar = document.getElementById('sidebar');
+        const authScr = document.getElementById('auth-screen');
+        if (appLayout) {
+            appLayout.style.display = 'none';
+            appLayout.classList.add('hide');
+        }
+        if (sidebar) sidebar.classList.add('hide');
+        if (authScr) { authScr.style.display = 'none'; authScr.classList.add('hide'); }
+        const testScreen = document.getElementById('public-test-screen');
+        if (testScreen) {
+            testScreen.style.display = 'block';
+            testScreen.classList.remove('hide');
+        }
+        return;
+    }
     purgeClientCacheOnLogin();
     document.body.classList.remove('is-patient');
     const authScr = document.getElementById('auth-screen');
@@ -16944,16 +16961,22 @@ async function loadAndRenderPublicTest(token) {
     currentPublicTestToken = token;
     currentPublicTestAnswers = {};
 
-    const appEl = document.getElementById('app');
+    const appLayout = document.getElementById('app-layout');
+    const sidebar = document.getElementById('sidebar');
     const authEl = document.getElementById('auth-screen');
     const landingEl = document.getElementById('public-landing');
     const pubProfileEl = document.getElementById('public-therapist-profile-screen');
     const testScreen = document.getElementById('public-test-screen');
 
-    if (appEl) appEl.style.display = 'none';
-    if (authEl) authEl.style.display = 'none';
-    if (landingEl) landingEl.style.display = 'none';
-    if (pubProfileEl) pubProfileEl.style.display = 'none';
+    if (appLayout) {
+        appLayout.style.display = 'none';
+        appLayout.classList.add('hide');
+    }
+    if (sidebar) sidebar.classList.add('hide');
+    if (authEl) { authEl.style.display = 'none'; authEl.classList.add('hide'); }
+    if (landingEl) landingEl.classList.add('hide');
+    if (pubProfileEl) pubProfileEl.classList.add('hide');
+    
     if (testScreen) {
         testScreen.style.display = 'block';
         testScreen.classList.remove('hide');
@@ -16974,9 +16997,22 @@ async function loadAndRenderPublicTest(token) {
 
         const headerTherapist = document.getElementById('pub-test-header-therapist');
         if (headerTherapist) {
+            const displayToken = assign.token || token || '';
+            const shortToken = displayToken.length > 14 ? displayToken.substring(0, 14) + '...' : displayToken;
+
             headerTherapist.innerHTML = `
-                <img src="${assign.psicologo_foto}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
-                <span>${assign.psicologo_nombre} (${assign.psicologo_titulo})</span>
+                <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; color: #334155;">
+                    <img src="${assign.psicologo_foto || '/static/logo.png'}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;">
+                    <span>${assign.psicologo_nombre} <span style="color: #64748b; font-weight: 500;">(${assign.psicologo_titulo})</span></span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 6px; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; color: #702e5e;">
+                    <span>👤 Consultante: <strong>${assign.paciente_nombre}</strong></span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 6px; background: #f1f5f9; border: 1.5px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; color: #475569;" title="Token de asignación: ${displayToken}">
+                    <span>🆔 ID Aplicación: <code style="font-family: monospace; font-size: 0.85rem; color: #0f172a; font-weight: 700;">${shortToken}</code></span>
+                </div>
             `;
         }
 
@@ -16997,7 +17033,7 @@ async function loadAndRenderPublicTest(token) {
 
         document.getElementById('pub-test-badge-categoria').textContent = testDef.categoria || 'Evaluación Clínica';
         document.getElementById('pub-test-title').textContent = testDef.nombre;
-        document.getElementById('pub-test-patient-info').textContent = `Consultante: ${assign.paciente_nombre}`;
+        document.getElementById('pub-test-patient-info').innerHTML = `Consultante: <strong>${assign.paciente_nombre}</strong> &nbsp;•&nbsp; <span style="font-size: 0.85rem; color: #64748b; background: #f1f5f9; padding: 3px 10px; border-radius: 8px; font-weight: 700;">ID Aplicación: ${assign.token}</span>`;
         document.getElementById('pub-test-instructions').textContent = testDef.instrucciones || 'Lea atentamente y seleccione su respuesta.';
 
         renderPublicTestItems(testDef);
