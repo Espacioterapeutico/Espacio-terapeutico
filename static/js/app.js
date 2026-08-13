@@ -17392,7 +17392,26 @@ function openTestDetailModal(testData) {
             <strong style="color: #334155; display: block; margin-bottom: 0.5rem;">Puntuaciones por Subescalas:</strong>
             <ul style="margin: 0; padding-left: 1.25rem; color: #475569;">`;
         for (let [sName, sVal] of Object.entries(sub)) {
-            subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
+            if (typeof sVal === 'object' && sVal !== null && sVal.tb !== undefined) {
+                const tbVal = sVal.tb;
+                const pdVal = sVal.pd !== undefined ? sVal.pd : '-';
+                const label = sVal.nombre || sName;
+                let badgeStyle = 'background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;';
+                let tag = '';
+                if (tbVal >= 85) {
+                    badgeStyle = 'background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;';
+                    tag = ' [SEVERO]';
+                } else if (tbVal >= 75) {
+                    badgeStyle = 'background:#ffedd5; color:#c2410c; border:1px solid #fdba74;';
+                    tag = ' [SUGESTIVO]';
+                }
+                subscalesHtml += `<li style="margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <span><strong>${sName} - ${label}:</strong> (PD: ${pdVal})</span>
+                    <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">TB ${tbVal}${tag}</span>
+                </li>`;
+            } else {
+                subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
+            }
         }
         subscalesHtml += `</ul></div>`;
     }
@@ -17503,9 +17522,28 @@ async function loadAllAppliedTestsHistory() {
                 subscalesHtml = `<div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.85rem;">
                     <strong style="color: #334155; display: block; margin-bottom: 0.35rem; font-size: 0.85rem;">Puntuaciones por Subescalas:</strong>
                     <ul style="margin: 0; padding-left: 1.2rem; color: #475569; font-size: 0.85rem;">`;
-                for (let [sName, sVal] of Object.entries(sub)) {
-                    subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
+        for (let [sName, sVal] of Object.entries(sub)) {
+            if (typeof sVal === 'object' && sVal !== null && sVal.tb !== undefined) {
+                const tbVal = sVal.tb;
+                const pdVal = sVal.pd !== undefined ? sVal.pd : '-';
+                const label = sVal.nombre || sName;
+                let badgeStyle = 'background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;';
+                let tag = '';
+                if (tbVal >= 85) {
+                    badgeStyle = 'background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;';
+                    tag = ' [SEVERO]';
+                } else if (tbVal >= 75) {
+                    badgeStyle = 'background:#ffedd5; color:#c2410c; border:1px solid #fdba74;';
+                    tag = ' [SUGESTIVO]';
                 }
+                subscalesHtml += `<li style="margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <span><strong>${sName} - ${label}:</strong> (PD: ${pdVal})</span>
+                    <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">TB ${tbVal}${tag}</span>
+                </li>`;
+            } else {
+                subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
+            }
+        }
                 subscalesHtml += `</ul></div>`;
             }
 
