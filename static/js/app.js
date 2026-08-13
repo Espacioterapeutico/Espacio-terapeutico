@@ -17942,46 +17942,146 @@ async function loadAllAppliedTestsHistory() {
 }
 
 // ==============================================================================
-// MÓDULO DE TESTS Y EVALUACIONES PSICOLÓGICAS - CATÁLOGO Y GESTIÓN DE PACIENTES
+// MÓDULO INDEPENDIENTE: EVALUACIONES Y TESTS PSICOLÓGICOS
 // ==============================================================================
-let catalogCurrentCategoryFilter = 'TODAS';
-let catalogCurrentPage = 1;
-const CATALOG_ITEMS_PER_PAGE = 10; // Cuadrícula 5x2 (10 por página)
-let selectedTestCodeForApplication = null; // Test actualmente seleccionado en catálogo
-let allTestPatientsCache = [];
 
-const catalogTestsMasterList = [
-    { code: 'MCMI-II', nombre: 'Test de Millon', siglas: 'MCMI-II', categoria: 'Personalidad y Psicopatología', descripcion: '175 ítems V/F para evaluación multiaxial de personalidad y síndromes clínicos.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175]' },
-    { code: 'HOLLAND', nombre: 'Test de Intereses Vocacionales', siglas: 'Holland', categoria: 'Orientación Vocacional', descripcion: 'Modelo RIASEC para determinar código vocacional y recomendar carreras profesionales y técnicas.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221]' },
-    { code: 'RAVEN', nombre: 'Test de Matrices Progresivas', siglas: 'RAVEN', categoria: 'Capacidad Intelectual', descripcion: '60 matrices en 5 series (A-E) para evaluar razonamiento no verbal y nivel intelectual.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60]' },
-    { code: 'ASRS-ADHD', nombre: 'Síntomas de TDAH Adultos (OMS)', siglas: 'ASRS v1.1', categoria: 'Neurodivergencia y Autismo', descripcion: '18 síntomas de autoinforme para valorar inatención e hiperactividad/impulsividad.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]' },
-    { code: 'AQ', nombre: 'Cociente de Espectro Autista', siglas: 'AQ', categoria: 'Neurodivergencia y Autismo', descripcion: '50 ítems de autoinforme (Baron-Cohen) para medir rasgos autistas en 5 dimensiones.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]' },
-    { code: 'RAADS-R', nombre: 'Escala Diagnóstica de Ritvo', siglas: 'RAADS-R', categoria: 'Neurodivergencia y Autismo', descripcion: '80 ítems clínicos para evaluar relaciones sociales, lenguaje e intereses sensoriomotores.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80]' },
-    { code: 'CAT-Q', nombre: 'Camuflaje de Rasgos Autistas', siglas: 'CAT-Q', categoria: 'Neurodivergencia y Autismo', descripcion: '25 ítems para medir enmascaramiento social, compensación y asimilación (Hull et al.).', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]' },
-    { code: 'BDI-II', nombre: 'Depresión de Beck', siglas: 'BDI-II', categoria: 'Depresión y Ansiedad', descripcion: '21 reactivos autoadministrados para clasificar sintomatología depresiva.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]' },
-    { code: 'BAI', nombre: 'Ansiedad de Beck', siglas: 'BAI', categoria: 'Depresión y Ansiedad', descripcion: '21 síntomas somáticos y cognitivos para valorar el nivel de ansiedad clínica.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]' },
-    { code: 'TCS', nombre: 'Congruencia Transgénero', siglas: 'TCS', categoria: 'Identidad de Género', descripcion: '12 ítems con inversión automática. Subescalas de Aceptación de Identidad y Congruencia.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12]' },
-    { code: 'UGDS-GS', nombre: 'Disforia de Utrecht', siglas: 'UGDS-GS', categoria: 'Identidad de Género', descripcion: '18 ítems para medir el nivel de distrés por incongruencia y la resiliencia.', items_json: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]' }
+let allTestPatientsCache = [];
+let selectedTestCodeForApplication = null;
+let currentCatalogCategory = 'TODAS';
+let currentCatalogPage = 1;
+const CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
+
+// BASE DE DATOS DE EVALUACIONES PSICOMÉTRICAS CON METADATOS COMPLETOS
+const testsCatalogDatabase = [
+    { 
+        code: 'AQ', 
+        name: 'AQ — Cociente de Espectro Autista', 
+        siglas: 'AQ-50', 
+        cat: 'Neurodivergencia y Autismo', 
+        desc: 'Evaluación estandarizada de 50 ítems desarrollada por Baron-Cohen et al. Mide rasgos del espectro autista en adultos.', 
+        autor: 'Simon Baron-Cohen et al.', 
+        poblacion: 'Adolescentes y Adultos (16+ años)', 
+        validez: 'α = 0.82 | Punto de corte: ≥ 32', 
+        itemsCount: 50 
+    },
+    { 
+        code: 'RAADS-R', 
+        name: 'RAADS-R — Escala Revisada para Diagnóstico de Autismo', 
+        siglas: 'RAADS-R', 
+        cat: 'Neurodivergencia y Autismo', 
+        desc: 'Inventario clínico completo de 80 ítems para el diagnóstico del Espectro Autista / Asperger en población adulta.', 
+        autor: 'Riva Ariella Ritvo et al.', 
+        poblacion: 'Adultos (18+ años)', 
+        validez: 'α = 0.92 | Umbral diagnóstico: ≥ 65', 
+        itemsCount: 80 
+    },
+    { 
+        code: 'CAT-Q', 
+        name: 'CAT-Q — Cuestionario de Camuflaje Autista', 
+        siglas: 'CAT-Q', 
+        cat: 'Neurodivergencia y Autismo', 
+        desc: 'Evaluación de 25 ítems desarrollada por Laura Hull et al. Mide estrategias de camuflaje y enmascaramiento social.', 
+        autor: 'Laura Hull et al.', 
+        poblacion: 'Adolescentes y Adultos (16+ años)', 
+        validez: 'α = 0.90 | Medición de Camuflaje', 
+        itemsCount: 25 
+    },
+    { 
+        code: 'ASRS-ADHD', 
+        name: 'ASRS v1.1 — Sintomatología TDAH en Adultos', 
+        siglas: 'ASRS v1.1', 
+        cat: 'Neurodivergencia y Autismo', 
+        desc: 'Escala de tamizaje oficial de la OMS de 18 ítems para la detección de Trastorno por Déficit de Atención e Hiperactividad en adultos.', 
+        autor: 'OMS / Adler et al.', 
+        poblacion: 'Adultos (18+ años)', 
+        validez: 'α = 0.87 | Criterios DSM / OMS', 
+        itemsCount: 18 
+    },
+    { 
+        code: 'BDI-II', 
+        name: 'BDI-II — Inventario de Depresión de Beck', 
+        siglas: 'BDI-II', 
+        cat: 'Depresión y Ansiedad', 
+        desc: 'Cuestionario de 21 ítems de autorreporte ampliamente utilizado para evaluar la severidad de los síntomas depresivos.', 
+        autor: 'Aaron T. Beck et al.', 
+        poblacion: 'Adolescentes y Adultos (13+ años)', 
+        validez: 'α = 0.92 | Validez Clínica Estandarizada', 
+        itemsCount: 21 
+    },
+    { 
+        code: 'BAI', 
+        name: 'BAI — Inventario de Ansiedad de Beck', 
+        siglas: 'BAI', 
+        cat: 'Depresión y Ansiedad', 
+        desc: 'Evaluación de 21 ítems diseñada para discriminar y medir la intensidad de la sintomatología ansiosa somática y cognitiva.', 
+        autor: 'Aaron T. Beck et al.', 
+        poblacion: 'Adolescentes y Adultos (13+ años)', 
+        validez: 'α = 0.92 | Alta Especificidad Ansiosa', 
+        itemsCount: 21 
+    },
+    { 
+        code: 'RAVEN', 
+        name: 'RAVEN — Test de Matrices Progresivas de Raven', 
+        siglas: 'RAVEN', 
+        cat: 'Capacidad Intelectual', 
+        desc: 'Prueba no verbal de 60 matrices estandarizadas para medir el factor g de inteligencia y la capacidad de razonamiento abstracto.', 
+        autor: 'John C. Raven', 
+        poblacion: 'Adolescentes y Adultos (12+ años)', 
+        validez: 'α = 0.90 | Razonamiento No Verbal', 
+        itemsCount: 60 
+    },
+    { 
+        code: 'MCMI-II', 
+        name: 'MCMI-II — Inventario Multiaxial Clínico de Millon', 
+        siglas: 'MCMI-II', 
+        cat: 'Personalidad', 
+        desc: 'Instrumento multiaxial psicométrico de 175 ítems para la evaluación de patrones de personalidad clínica y síndromes severos.', 
+        autor: 'Theodore Millon', 
+        poblacion: 'Adultos (18+ años)', 
+        validez: 'Estandarizado TB | 24 Escalones Clínicos', 
+        itemsCount: 175 
+    },
+    { 
+        code: 'HOLLAND', 
+        name: 'HOLLAND — Test de Intereses Vocacionales (RIASEC)', 
+        siglas: 'HOLLAND', 
+        cat: 'Orientación Vocacional', 
+        desc: 'Inventario vocacional basado en el modelo tipológico RIASEC para la identificación de perfil vocacional y profesional.', 
+        autor: 'John L. Holland', 
+        poblacion: 'Adolescentes y Adultos (14+ años)', 
+        validez: 'α = 0.86 | Perfil Tipológico RIASEC', 
+        itemsCount: 60 
+    },
+    { 
+        code: 'TCS', 
+        name: 'TCS — Escala de Congruencia Transgénero', 
+        siglas: 'TCS', 
+        cat: 'Identidad de Género', 
+        desc: 'Escala de 12 ítems desarrollada por Kozee et al. para evaluar el nivel de confort y aceptación de la identidad de género.', 
+        autor: 'Kozee, Reisner et al.', 
+        poblacion: 'Jóvenes y Adultos (16+ años)', 
+        validez: 'α = 0.89 | Afirmación e Identidad', 
+        itemsCount: 12 
+    },
+    { 
+        code: 'UGDS-GS', 
+        name: 'UGDS-GS — Escala de Disforia de Utrecht', 
+        siglas: 'UGDS-GS', 
+        cat: 'Identidad de Género', 
+        desc: 'Evaluación estandarizada de 18 ítems para la medición objetiva del grado de disforia de género clínica.', 
+        autor: 'McGuire et al. / Utrecht', 
+        poblacion: 'Adolescentes y Adultos (12+ años)', 
+        validez: 'α = 0.91 | Medición de Disforia', 
+        itemsCount: 18 
+    }
 ];
 
-const TEST_METADATA_MAP = {
-    'MCMI-II': { autor: 'Theodore Millon', poblacion: 'Adultos (18 a 65+ años)', validez: 'TB Estandarizada' },
-    'HOLLAND': { autor: 'John L. Holland (RIASEC)', poblacion: 'Adolescentes y Adultos (14-65+ años)', validez: 'α = 0.86 (Vocacional)' },
-    'RAVEN': { autor: 'John C. Raven', poblacion: 'Adolescentes y Adultos (12-65+ años)', validez: 'α = 0.90 (Razonamiento)' },
-    'ASRS-ADHD': { autor: 'OMS / Valdizán et al.', poblacion: 'Adultos (18 a 65+ años)', validez: 'α = 0.87 (DSM / OMS)' },
-    'AQ': { autor: 'Simon Baron-Cohen et al.', poblacion: 'Adolescentes y Adultos (16-65+ años)', validez: 'α = 0.82 (Corte >= 32)' },
-    'RAADS-R': { autor: 'Riva Ariella Ritvo et al.', poblacion: 'Adultos (18 a 65+ años)', validez: 'α = 0.92 (Umbral >= 65)' },
-    'CAT-Q': { autor: 'Laura Hull et al. (2019)', poblacion: 'Adolescentes y Adultos (16-65+ años)', validez: 'α = 0.90 (Masking / Camuflaje)' },
-    'BDI-II': { autor: 'Aaron T. Beck et al.', poblacion: 'Adolescentes y Adultos (13-65+ años)', validez: 'α = 0.92 (Depresión)' },
-    'BAI': { autor: 'Aaron T. Beck et al.', poblacion: 'Adolescentes y Adultos (13-65+ años)', validez: 'α = 0.92 (Ansiedad)' },
-    'TCS': { autor: 'Kozee, Reisner et al.', poblacion: 'Jóvenes y Adultos (16-65+ años)', validez: 'α = 0.89 (Afirmación)' },
-    'UGDS-GS': { autor: 'McGuire et al. / Utrecht', poblacion: 'Adolescentes y Adultos (12-65+ años)', validez: 'α = 0.91 (Disforia Género)' }
-};
-
+// 1. POBLACIÓN Y CARGA DE PACIENTES DESDE LA BASE DE DATOS
 async function populateMainViewPatientSelect() {
     const select = document.getElementById('select-test-main-patient');
     if (!select) return;
 
+    // Buscar en memoria global o caché previa
     const existingPatients = (window.patients && Array.isArray(window.patients) && window.patients.length > 0)
         ? window.patients
         : ((allTestPatientsCache && allTestPatientsCache.length > 0) ? allTestPatientsCache : null);
@@ -18238,83 +18338,11 @@ function onSelectMainPatientChange() {
     updateSelectedPatientLabel();
 }
 
-// Cerrar lista flotante al hacer clic fuera del buscador
-document.addEventListener('click', (evt) => {
-    const searchInput = document.getElementById('input-search-test-patient');
-    const autoList = document.getElementById('test-patient-autocomplete-list');
-    if (autoList && searchInput && !searchInput.contains(evt.target) && !autoList.contains(evt.target)) {
-        autoList.classList.add('hide');
-    }
-});
-
-function selectTestForApplication(testCode) {
-    if (selectedTestCodeForApplication === testCode) {
-        selectedTestCodeForApplication = null;
-        const panel = document.getElementById('panel-apply-selected-test');
-        if (panel) {
-            panel.classList.add('hide');
-            panel.style.display = 'none';
-        }
-        document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
-            card.style.border = '2.5px solid #e2e8f0';
-            card.style.background = '#ffffff';
-            const checkSpan = card.querySelector('.test-card-check');
-            if (checkSpan) checkSpan.style.display = 'none';
-        });
-        return;
-    }
-
-    selectedTestCodeForApplication = testCode;
-
-    document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
-        const cardCode = card.id.replace('card-test-choice-', '');
-        const checkSpan = card.querySelector('.test-card-check');
-        if (cardCode === testCode) {
-            card.style.border = '2.5px solid #702e5e';
-            card.style.background = '#fdf4ff';
-            if (checkSpan) checkSpan.style.display = 'inline';
-        } else {
-            card.style.border = '2.5px solid #e2e8f0';
-            card.style.background = '#ffffff';
-            if (checkSpan) checkSpan.style.display = 'none';
-        }
-    });
-
-    const panel = document.getElementById('panel-apply-selected-test');
-    if (panel) {
-        panel.classList.remove('hide');
-        panel.style.display = 'block';
-    }
-
-    const testNamesMap = {
-        'AQ': 'AQ — Cociente de Espectro Autista (50 ítems - Baron-Cohen)',
-        'RAADS-R': 'RAADS-R — Escala Revisada para Diagnóstico de Autismo y Asperger (80 ítems)',
-        'CAT-Q': 'CAT-Q — Cuestionario de Camuflaje de Rasgos Autistas (25 ítems - Hull et al.)',
-        'ASRS-ADHD': 'ASRS v1.1 — Inventario de Síntomas de TDAH en Adultos (OMS)',
-        'RAVEN': 'RAVEN — Test de Matrices Progresivas de Raven (60 matrices)',
-        'MCMI-II': 'MCMI-II — Inventario Multiaxial Clínico de Millon (175 ítems)',
-        'HOLLAND': 'HOLLAND — Test de Intereses Vocacionales (Modelo RIASEC)',
-        'BDI-II': 'BDI-II — Inventario de Depresión de Beck (21 ítems)',
-        'BAI': 'BAI — Inventario de Ansiedad de Beck (21 ítems)',
-        'TCS': 'TCS — Escala de Congruencia Transgénero (12 ítems)',
-        'UGDS-GS': 'UGDS-GS — Escala de Disforia de Utrecht (18 ítems)'
-    };
-
-    const labelTest = document.getElementById('label-selected-test-name');
-    if (labelTest) labelTest.textContent = testNamesMap[testCode] || testCode;
-
-    updateSelectedPatientLabel();
-
-    if (panel) {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-}
-
 async function executeMainApplyTest(modoParam) {
     const select = document.getElementById('select-test-main-patient');
     if (!select || !select.value) {
         alert("Por favor busque o seleccione un paciente primero en la barra superior.");
-        select.focus();
+        if (select) select.focus();
         return;
     }
 
@@ -18338,40 +18366,24 @@ async function executeMainApplyTest(modoParam) {
             })
         });
 
-        let data;
-        let responseText = '';
-        try {
-            responseText = await res.text();
-            data = JSON.parse(responseText);
-        } catch (jErr) {
-            data = { error: `Error en la respuesta del servidor (${res.status}): ${responseText ? responseText.substring(0, 150) : ''}` };
-        }
-
-        if (!res.ok) {
-            alert(data.error || "Error al asignar la evaluación.");
+        const data = await res.json();
+        if (!res.ok || data.error) {
+            alert(data.error || "No se pudo asignar el test.");
             return;
         }
 
         const successPanel = document.getElementById('panel-apply-success-result');
-        const successDetails = document.getElementById('text-apply-success-details');
-        const successActions = document.getElementById('container-apply-success-actions');
+        const successDetails = document.getElementById('text-apply-success-details') || document.getElementById('panel-apply-success-details');
+        const successActions = document.getElementById('container-apply-success-actions') || document.getElementById('panel-apply-success-actions');
 
-        if (successPanel) successPanel.classList.remove('hide');
-
-        const testUrl = data.url || data.url_test || '';
-        let whatsappUrl = data.whatsapp_url;
-        if (!whatsappUrl && data.whatsapp_phone) {
-            const msg = encodeURIComponent(`Hola ${data.paciente_nombre || ''}, te comparto el enlace para responder tu evaluación psicológica: ${testUrl}`);
-            whatsappUrl = `https://api.whatsapp.com/send?phone=${data.whatsapp_phone}&text=${msg}`;
+        if (successPanel) {
+            successPanel.classList.remove('hide');
+            successPanel.style.display = 'block';
         }
 
-        if (modo === 'presencial' && testUrl) {
-            openTestPresencialWindow(testUrl);
-        }
-
-        let modoLabelHtml = '🔗 Enlace Directo (WhatsApp / Público)';
-        if (modo === 'presencial') modoLabelHtml = '💻 Presencial (Consultorio)';
-        else if (modo === 'online') modoLabelHtml = '📱 Online (Perfil Paciente / App)';
+        const testUrl = data.url_test || `${window.location.origin}/evaluacion/${data.token}`;
+        const whatsappUrl = data.whatsapp_url || '';
+        const modoLabelHtml = modo === 'presencial' ? '💻 Presencial' : (modo === 'online' ? '📲 Portal del Paciente' : '🔗 Enlace / WhatsApp');
 
         if (successDetails) {
             successDetails.innerHTML = `
@@ -18413,33 +18425,20 @@ async function executeMainApplyTest(modoParam) {
     }
 }
 
-function toggleTestDetailAccordion(tId) {
-    const drawer = document.getElementById(`test-detail-drawer-${tId}`);
-    const btn = document.getElementById(`test-detail-btn-${tId}`);
-    if (!drawer) return;
-
-    if (drawer.style.display === 'none' || drawer.classList.contains('hide')) {
-        drawer.style.display = 'block';
-        drawer.classList.remove('hide');
-        if (btn) btn.innerHTML = '🔼 Ocultar Informe';
-    } else {
-        drawer.style.display = 'none';
-        drawer.classList.add('hide');
-        if (btn) btn.innerHTML = '👁️ Ver Informe Detallado';
-    }
+function copyTestLink(linkUrl) {
+    if (!linkUrl) return;
+    navigator.clipboard.writeText(linkUrl).then(() => {
+        alert("Enlace copiado al portapapeles con éxito.");
+    }).catch(err => {
+        console.error("Error al copiar link:", err);
+    });
 }
 
-function loadTestsForSelectedPatientFromMainView() {
-    onSelectMainPatientChange();
+function openTestPresencialWindow(linkUrl) {
+    if (!linkUrl) return;
+    window.open(linkUrl, '_blank', 'width=900,height=750,scrollbars=yes,resizable=yes');
 }
 
-function openAssignTestFromMainView() {
-    onSelectMainPatientChange();
-}
-
-// ==============================================================================
-// FUNCIÓN switchTestsTab — Conmutación de pestañas Aplicar / Historial
-// ==============================================================================
 function switchTestsTab(tab) {
     const btnApply = document.getElementById('tab-btn-apply-test');
     const btnHistory = document.getElementById('tab-btn-history-test');
@@ -18456,58 +18455,16 @@ function switchTestsTab(tab) {
         if (btnApply) { btnApply.style.background = 'transparent'; btnApply.style.color = '#64748b'; btnApply.style.boxShadow = 'none'; }
         if (contentHistory) { contentHistory.classList.remove('hide'); contentHistory.style.display = 'block'; }
         if (contentApply) { contentApply.classList.add('hide'); contentApply.style.display = 'none'; }
-        if (typeof loadAllAppliedTestsHistory === 'function') loadAllAppliedTestsHistory();
+        loadAllAppliedTestsHistory();
     }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    initPublicTestRouteHandler();
-    // Auto-inicializar catálogo de tests y selector de pacientes
-    if (document.getElementById('container-tests-catalog-cards')) {
-        renderCatalogViewWithFiltersAndPagination();
-    }
-    populateMainViewPatientSelect();
-});
-
-window.openPatientTestsModal = openPatientTestsModal;
-window.executeAssignTestToPatient = executeAssignTestToPatient;
-window.executeMainApplyTest = executeMainApplyTest;
-window.copyTestLink = copyTestLink;
-window.openTestPresencialWindow = openTestPresencialWindow;
-window.deleteTestAssignment = deleteTestAssignment;
-window.openTestDetailModal = openTestDetailModal;
-window.toggleTestDetailAccordion = toggleTestDetailAccordion;
-window.submitPublicTestResponse = submitPublicTestResponse;
-window.loadTestsForSelectedPatientFromMainView = loadTestsForSelectedPatientFromMainView;
-window.openAssignTestFromMainView = openAssignTestFromMainView;
-window.filterTestPatientSelect = filterTestPatientSelect;
-window.switchTestsTab = switchTestsTab;
-window.selectTestForApplication = selectTestForApplication;
-window.populateMainViewPatientSelect = populateMainViewPatientSelect;
-window.selectTestPatientFromAutocomplete = selectTestPatientFromAutocomplete;
-window.onSelectMainPatientChange = onSelectMainPatientChange;
-window.onTestPatientInputFocus = onTestPatientInputFocus;
-window.clearTestPatientSelection = clearTestPatientSelection;
-window.renderCatalogViewWithFiltersAndPagination = renderCatalogViewWithFiltersAndPagination;
-window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
-
-// ==============================================================================
-// MÓDULO MEJORADO DE CATÁLOGO, FILTRADO Y PAGINACIÓN 5x2 DE TESTS
-// ==============================================================================
-
-function loadTestsCatalogCards() {
-    // La lista hardcodeada catalogTestsMasterList ya tiene todos los tests completos.
-    // No necesitamos sincronizar con API — renderizamos directamente.
-    renderCatalogViewWithFiltersAndPagination();
-}
-
-
-
+// 2. FILTRADO Y PAGINACIÓN 5x2 DEL CATÁLOGO DE TESTS
 function filterTestsByCategory(catName) {
-    catalogCurrentCategoryFilter = catName;
-    catalogCurrentPage = 1;
+    currentCatalogCategory = catName || 'TODAS';
+    currentCatalogPage = 1;
 
-    document.querySelectorAll('.btn-test-cat-filter').forEach(btn => {
+    document.querySelectorAll('#container-tests-category-filters button').forEach(btn => {
         const btnTxt = btn.textContent.trim();
         if (btnTxt.toLowerCase() === catName.toLowerCase() || (catName === 'TODAS' && btnTxt === 'Todas')) {
             btn.style.background = '#702e5e';
@@ -18523,22 +18480,21 @@ function filterTestsByCategory(catName) {
     renderCatalogViewWithFiltersAndPagination();
 }
 
-
-function changeCatalogPage(delta) {
-    catalogCurrentPage += delta;
-    renderCatalogViewWithFiltersAndPagination();
+function filterTestsCatalogByCategory(catName) {
+    filterTestsByCategory(catName);
 }
 
 function renderCatalogViewWithFiltersAndPagination() {
     const container = document.getElementById('container-tests-catalog-cards');
+    const topCtrl = document.getElementById('catalog-pagination-top-controls');
+    const btmCtrl = document.getElementById('catalog-pagination-bottom-controls');
     if (!container) return;
 
-    let filtered = catalogTestsMasterList;
-
-    if (catalogCurrentCategoryFilter !== 'TODAS') {
-        const catNorm = catalogCurrentCategoryFilter.toLowerCase();
-        filtered = catalogTestsMasterList.filter(t => {
-            const tCat = (t.categoria || '').toLowerCase();
+    let filtered = testsCatalogDatabase;
+    if (currentCatalogCategory && currentCatalogCategory !== 'TODAS' && currentCatalogCategory !== 'todas') {
+        const catNorm = currentCatalogCategory.toLowerCase();
+        filtered = testsCatalogDatabase.filter(t => {
+            const tCat = (t.cat || '').toLowerCase();
             if (catNorm.includes('depresión') || catNorm.includes('ansiedad')) {
                 return tCat.includes('depresión') || tCat.includes('ansiedad') || t.code === 'BDI-II' || t.code === 'BAI';
             } else if (catNorm.includes('neurodivergencia') || catNorm.includes('autismo')) {
@@ -18549,114 +18505,75 @@ function renderCatalogViewWithFiltersAndPagination() {
                 return tCat.includes('intelectual') || t.code === 'RAVEN';
             } else if (catNorm.includes('vocacional')) {
                 return tCat.includes('vocacional') || t.code === 'HOLLAND';
-            } else if (catNorm.includes('género') || catNorm.includes('identidad')) {
-                return tCat.includes('género') || tCat.includes('afirmación') || t.code === 'TCS' || t.code === 'UGDS-GS';
+            } else if (catNorm.includes('identidad') || catNorm.includes('género')) {
+                return tCat.includes('identidad') || tCat.includes('género') || t.code === 'TCS' || t.code === 'UGDS-GS';
             }
-            return tCat.includes(catNorm);
+            return true;
         });
     }
 
-    const totalItems = filtered.length;
-    const totalPages = Math.ceil(totalItems / CATALOG_ITEMS_PER_PAGE) || 1;
+    const totalPages = Math.ceil(filtered.length / CATALOG_PER_PAGE) || 1;
+    if (currentCatalogPage < 1) currentCatalogPage = 1;
+    if (currentCatalogPage > totalPages) currentCatalogPage = totalPages;
 
-    if (catalogCurrentPage > totalPages) catalogCurrentPage = totalPages;
-    if (catalogCurrentPage < 1) catalogCurrentPage = 1;
-
-    const startIdx = (catalogCurrentPage - 1) * CATALOG_ITEMS_PER_PAGE;
-    const endIdx = startIdx + CATALOG_ITEMS_PER_PAGE;
-    const pageItems = filtered.slice(startIdx, endIdx);
-
-    if (pageItems.length === 0) {
-        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #64748b; font-weight: 600; background: white; border-radius: 16px; border: 1.5px solid #e2e8f0;">No se encontraron evaluaciones para la categoría seleccionada.</div>';
-        renderPaginationControls(0, 1);
-        return;
-    }
+    const startIdx = (currentCatalogPage - 1) * CATALOG_PER_PAGE;
+    const pageItems = filtered.slice(startIdx, startIdx + CATALOG_PER_PAGE);
 
     let html = '';
-    pageItems.forEach(t => {
-        const code = t.code;
-        const isSelected = selectedTestCodeForApplication === code;
+    pageItems.forEach(test => {
+        const isSelected = selectedTestCodeForApplication === test.code;
         const borderStyle = isSelected ? '2.5px solid #702e5e' : '2.5px solid #e2e8f0';
         const bgStyle = isSelected ? '#fdf4ff' : '#ffffff';
         const checkDisplay = isSelected ? 'inline' : 'none';
-
-        let badgeCat = t.categoria || 'Evaluación';
-        let badgeBg = '#fdf4ff';
-        let badgeColor = '#702e5e';
-        let badgeBorder = '#f0abfc';
-
-        if (code === 'AQ' || code === 'RAADS-R') {
-            badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; badgeBorder = '#c7d2fe';
-        } else if (code === 'CAT-Q') {
-            badgeBg = '#fae8ff'; badgeColor = '#86198f'; badgeBorder = '#f5d0fe';
-        } else if (code === 'ASRS-ADHD') {
-            badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeBorder = '#fde68a';
-        } else if (code === 'HOLLAND') {
-            badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
-        } else if (code === 'BAI') {
-            badgeBg = '#eff6ff'; badgeColor = '#1d4ed8'; badgeBorder = '#bfdbfe';
-        } else if (code === 'UGDS-GS') {
-            badgeBg = '#fff7ed'; badgeColor = '#c2410c'; badgeBorder = '#ffedd5';
-        } else if (code === 'TCS') {
-            badgeBg = '#ecfdf5'; badgeColor = '#047857'; badgeBorder = '#a7f3d0';
-        }
-
-        let itemCount = 'Estandarizado';
-        try {
-            let itemsArr = []; try { itemsArr = typeof t.items_json === 'string' ? JSON.parse(t.items_json) : (t.items_json || []); } catch(e) {}
-            if (Array.isArray(itemsArr) && itemsArr.length > 0) itemCount = `${itemsArr.length} Ítems`;
-        } catch(e) {}
-
-        const meta = TEST_METADATA_MAP[code] || { autor: 'Estandarizado', poblacion: 'Adultos', validez: 'Validado' };
+        const boxShadow = isSelected ? '0 8px 25px rgba(112, 46, 94, 0.15)' : '0 2px 8px rgba(0,0,0,0.03)';
 
         html += `
-            <div id="card-test-choice-${code}" onclick="selectTestForApplication('${code}')" style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s ease;">
+            <div id="card-test-choice-${test.code}" onclick="selectTestForApplication('${test.code}')" 
+                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.15rem; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow};"
+                 onmouseover="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#702e5e'; this.style.transform='translateY(-2px)'; }"
+                 onmouseout="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#e2e8f0'; this.style.transform='none'; }">
+                
+                <span class="test-card-check" style="display: ${checkDisplay}; position: absolute; top: 12px; right: 14px; font-weight: 900; color: #702e5e; font-size: 1.2rem;">✓</span>
+
                 <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">${badgeCat}</span>
-                        <span class="test-card-check" style="display: ${checkDisplay}; color: #702e5e; font-weight: 800; font-size: 0.8rem;">✔ Seleccionado</span>
-                    </div>
-                    <h4 style="margin: 0.35rem 0 0.2rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">${t.siglas || code} — ${t.nombre || ''}</h4>
-                    
-                    <!-- METADATOS: AUTOR Y POBLACIÓN -->
-                    <div style="font-size: 0.76rem; color: #475569; font-weight: 700; margin-bottom: 0.45rem; line-height: 1.35;">
-                        <span style="color: #702e5e;">👤 Autor:</span> ${meta.autor}<br>
-                        <span style="color: #047857;">👥 Población:</span> ${meta.poblacion}
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 8px;">
+                        <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 3px 10px; border-radius: 12px;">${test.siglas}</span>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 10px;">${test.itemsCount} ítems</span>
                     </div>
 
-                    <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45; margin-bottom: 0.75rem;">${t.descripcion || ''}</p>
+                    <h4 style="margin: 0 0 6px 0; font-size: 0.98rem; font-weight: 800; color: #0f172a; line-height: 1.35;">${test.name}</h4>
+                    <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: #64748b; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        ${test.desc}
+                    </p>
                 </div>
-                <div style="border-top: 1px solid #f1f5f9; padding-top: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
-                    <span>✓ ${meta.validez}</span>
-                    <span>${itemCount}</span>
+
+                <div>
+                    <div style="background: #f8fafc; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; font-size: 0.73rem; color: #475569; display: flex; flex-direction: column; gap: 3px;">
+                        <div><strong>👨‍⚕️ Autor:</strong> ${test.autor}</div>
+                        <div><strong>👥 Población:</strong> ${test.poblacion}</div>
+                        <div><strong>📊 Validez/Confiabilidad:</strong> ${test.validez}</div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                        <span style="font-size: 0.73rem; font-weight: 800; color: #702e5e;">${test.cat}</span>
+                        <span style="font-size: 0.82rem; font-weight: 900; color: #702e5e;">Seleccionar ➔</span>
+                    </div>
                 </div>
             </div>
         `;
     });
 
     container.innerHTML = html;
-    renderPaginationControls(totalItems, totalPages);
-}
 
-function renderPaginationControls(totalItems, totalPages) {
-    const topCtrl = document.getElementById('catalog-pagination-top-controls');
-    const btmCtrl = document.getElementById('catalog-pagination-bottom-controls');
-
-    if (totalPages <= 1) {
-        if (topCtrl) topCtrl.innerHTML = `<span style="font-size: 0.82rem; font-weight: 700; color: #64748b;">${totalItems} evaluaciones</span>`;
-        if (btmCtrl) btmCtrl.innerHTML = '';
-        return;
-    }
-
-    const prevDisabled = catalogCurrentPage <= 1 ? 'disabled' : '';
-    const nextDisabled = catalogCurrentPage >= totalPages ? 'disabled' : '';
+    const prevDisabled = currentCatalogPage <= 1 ? 'disabled' : '';
+    const nextDisabled = currentCatalogPage >= totalPages ? 'disabled' : '';
 
     const controlsHtml = `
         <button type="button" onclick="changeCatalogPage(-1)" ${prevDisabled} style="background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; color: #334155; cursor: pointer; opacity: ${prevDisabled ? 0.5 : 1};">
             ← Anterior
         </button>
         <span style="font-size: 0.82rem; font-weight: 800; color: #702e5e; padding: 0 4px;">
-            Página ${catalogCurrentPage} de ${totalPages}
+            Página ${currentCatalogPage} de ${totalPages}
         </span>
         <button type="button" onclick="changeCatalogPage(1)" ${nextDisabled} style="background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; color: #334155; cursor: pointer; opacity: ${nextDisabled ? 0.5 : 1};">
             Siguiente →
@@ -18667,6 +18584,143 @@ function renderPaginationControls(totalItems, totalPages) {
     if (btmCtrl) btmCtrl.innerHTML = controlsHtml;
 }
 
-window.loadTestsCatalogCards = loadTestsCatalogCards;
+function changeCatalogPage(delta) {
+    currentCatalogPage += delta;
+    renderCatalogViewWithFiltersAndPagination();
+}
+
+function loadTestsCatalogCards() {
+    renderCatalogViewWithFiltersAndPagination();
+}
+
+// 3. HISTORIAL DE EVALUACIONES APLICADAS
+async function loadAllAppliedTestsHistory() {
+    const container = document.getElementById('container-applied-tests-history');
+    if (!container) return;
+
+    container.innerHTML = '<div style="padding: 2rem; text-align: center; color: #64748b; font-weight: 700;">🔄 Cargando historial de evaluaciones aplicadas...</div>';
+
+    try {
+        const resp = await fetch('/api/tests/historial');
+        if (!resp.ok) {
+            container.innerHTML = '<div style="padding: 2rem; text-align: center; color: #dc2626; font-weight: 700;">⚠️ Error al cargar el historial.</div>';
+            return;
+        }
+
+        const data = await resp.json();
+        const tests = data.tests || (Array.isArray(data) ? data : []);
+
+        if (tests.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 3rem 1.5rem; text-align: center; background: white; border-radius: 16px; border: 1.5px solid #e2e8f0;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊</div>
+                    <h4 style="margin: 0 0 0.25rem 0; font-weight: 800; color: #0f172a;">No hay evaluaciones asignadas</h4>
+                    <p style="font-size: 0.85rem; color: #64748b; margin: 0;">Seleccione una prueba en la pestaña superior "Aplicar Evaluación" para comenzar.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <div style="overflow-x: auto; background: white; border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">
+                            <th style="padding: 12px 16px;">Fecha</th>
+                            <th style="padding: 12px 16px;">Consultante</th>
+                            <th style="padding: 12px 16px;">Evaluación</th>
+                            <th style="padding: 12px 16px;">Modo</th>
+                            <th style="padding: 12px 16px;">Estado</th>
+                            <th style="padding: 12px 16px; text-align: right;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        tests.forEach(t => {
+            const dateStr = t.fecha_asignacion ? new Date(t.fecha_asignacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+            const patientName = `${t.patient_nombres || ''} ${t.patient_apellidos || ''}`.trim() || 'Consultante';
+            const ciStr = t.patient_cedula ? ` (${t.patient_cedula})` : '';
+            
+            const isCompleted = t.estado === 'completado';
+            const statusBadge = isCompleted 
+                ? '<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">✓ Completado</span>'
+                : '<span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f5d0fe; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">⏳ Pendiente</span>';
+
+            const modoBadge = t.modo_aplicacion === 'presencial' ? '💻 Presencial' : (t.modo_aplicacion === 'online' ? '📲 App Online' : '🔗 Enlace / Link');
+
+            html += `
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='white'">
+                    <td style="padding: 12px 16px; font-weight: 700; color: #64748b; font-size: 0.82rem;">${dateStr}</td>
+                    <td style="padding: 12px 16px; font-weight: 800; color: #0f172a;">${patientName} <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${ciStr}</span></td>
+                    <td style="padding: 12px 16px; font-weight: 800; color: #702e5e;">${t.test_siglas || t.test_code} <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">- ${t.test_nombre || ''}</span></td>
+                    <td style="padding: 12px 16px; font-weight: 700; color: #475569; font-size: 0.82rem;">${modoBadge}</td>
+                    <td style="padding: 12px 16px;">${statusBadge}</td>
+                    <td style="padding: 12px 16px; text-align: right;">
+                        <button type="button" onclick="copyTestLink('${t.url_test}')" title="Copiar Enlace" style="background: #f1f5f9; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #334155; margin-right: 4px;">📋 Link</button>
+                        ${isCompleted ? `<button type="button" onclick="window.open('/api/tests/asignacion/${t.id}/export/pdf', '_blank')" title="Descargar PDF" style="background: #15803d; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800; margin-right: 4px;">📄 PDF</button>` : ''}
+                        <button type="button" onclick="deleteTestAssignment('${t.id}')" title="Eliminar Asignación" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800;">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Error al cargar historial de tests:", e);
+        container.innerHTML = '<div style="padding: 2rem; text-align: center; color: #dc2626; font-weight: 700;">⚠️ Error al cargar el historial.</div>';
+    }
+}
+
+async function deleteTestAssignment(assignmentId) {
+    if (!confirm("¿Está seguro de que desea eliminar esta asignación de test?")) return;
+
+    try {
+        const res = await fetch(`/api/tests/asignacion/${assignmentId}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadAllAppliedTestsHistory();
+        } else {
+            alert("No se pudo eliminar la asignación.");
+        }
+    } catch (e) {
+        console.error("Error al eliminar asignación:", e);
+    }
+}
+
+// EXPORTACIONES AL OBJETO GLOBAL WINDOW (INMEDIATAS)
+window.populateMainViewPatientSelect = populateMainViewPatientSelect;
+window.renderTestPatientsOptions = renderTestPatientsOptions;
+window.onTestPatientInputFocus = onTestPatientInputFocus;
+window.filterTestPatientSelect = filterTestPatientSelect;
+window.clearTestPatientSelection = clearTestPatientSelection;
+window.selectTestForApplication = selectTestForApplication;
+window.updateSelectedPatientLabel = updateSelectedPatientLabel;
+window.onSelectMainPatientChange = onSelectMainPatientChange;
+window.executeMainApplyTest = executeMainApplyTest;
+window.copyTestLink = copyTestLink;
+window.openTestPresencialWindow = openTestPresencialWindow;
+window.switchTestsTab = switchTestsTab;
 window.filterTestsByCategory = filterTestsByCategory;
+window.filterTestsCatalogByCategory = filterTestsCatalogByCategory;
+window.renderCatalogViewWithFiltersAndPagination = renderCatalogViewWithFiltersAndPagination;
 window.changeCatalogPage = changeCatalogPage;
+window.loadTestsCatalogCards = loadTestsCatalogCards;
+window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
+window.deleteTestAssignment = deleteTestAssignment;
+
+function initTestsModule() {
+    renderCatalogViewWithFiltersAndPagination();
+    populateMainViewPatientSelect();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTestsModule);
+} else {
+    initTestsModule();
+}
