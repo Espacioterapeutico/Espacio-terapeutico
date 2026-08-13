@@ -16961,6 +16961,11 @@ function initPublicTestRouteHandler() {
     }
 }
 
+function getPublicTestDisplayTitle(testDef) {
+    if (!testDef) return 'Evaluación Clínica';
+    return (testDef.siglas || testDef.code || testDef.nombre || 'Evaluación Clínica').trim();
+}
+
 async function loadAndRenderPublicTest(token) {
     currentPublicTestToken = token;
     currentPublicTestAnswers = {};
@@ -16998,6 +17003,8 @@ async function loadAndRenderPublicTest(token) {
         const testDef = data.test_definition;
         currentPublicTestDefinition = testDef;
 
+        const displayTitle = getPublicTestDisplayTitle(testDef);
+
         const headerTherapist = document.getElementById('pub-test-header-therapist');
         if (headerTherapist) {
             const displayToken = assign.token || token || '';
@@ -17026,16 +17033,16 @@ async function loadAndRenderPublicTest(token) {
             successCard.classList.remove('hide');
 
             document.getElementById('pub-test-success-summary').innerHTML = `
-                <div style="color: #047857; margin-bottom: 0.35rem;">✓ Evaluación: <strong>${testDef.nombre}</strong></div>
-                <div style="font-size: 1.1rem; color: #702e5e; font-weight: 800;">Resultado: ${assign.clasificacion_resultado || 'Procesado'}</div>
-                <div style="font-size: 0.85rem; color: #475569; margin-top: 0.5rem; line-height: 1.5;">${assign.interpretacion_clinica || ''}</div>
-                <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem;">Fecha de envío: ${assign.fecha_completado || ''}</div>
+                <div style="color: #047857; margin-bottom: 0.4rem; font-size: 0.95rem;">✓ Instrumento: <strong>${displayTitle}</strong></div>
+                <div style="font-size: 0.88rem; color: #475569; margin-bottom: 0.4rem;">Consultante: <strong>${assign.paciente_nombre}</strong></div>
+                <div style="font-size: 0.85rem; color: #059669; font-weight: 700;">✓ Estado: Respuestas enviadas al expediente del psicólogo</div>
+                ${assign.fecha_completado ? `<div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.4rem;">Fecha de envío: ${assign.fecha_completado}</div>` : ''}
             `;
             return;
         }
 
-        document.getElementById('pub-test-badge-categoria').textContent = testDef.categoria || 'Evaluación Clínica';
-        document.getElementById('pub-test-title').textContent = testDef.nombre;
+        document.getElementById('pub-test-badge-categoria').textContent = 'Evaluación Clínica';
+        document.getElementById('pub-test-title').textContent = displayTitle;
         document.getElementById('pub-test-patient-info').innerHTML = `Consultante: <strong>${assign.paciente_nombre}</strong> &nbsp;•&nbsp; <span style="font-size: 0.85rem; color: #64748b; background: #f1f5f9; padding: 3px 10px; border-radius: 8px; font-weight: 700;">ID Aplicación: ${assign.token}</span>`;
         document.getElementById('pub-test-instructions').textContent = testDef.instrucciones || 'Lea atentamente y seleccione su respuesta.';
 
@@ -17159,10 +17166,11 @@ async function submitPublicTestResponse() {
         successCard.style.display = 'block';
         successCard.classList.remove('hide');
 
+        const displayTitle = getPublicTestDisplayTitle(currentPublicTestDefinition);
+
         document.getElementById('pub-test-success-summary').innerHTML = `
-            <div style="color: #047857; margin-bottom: 0.35rem; font-size: 1rem;">✓ Evaluación: <strong>${currentPublicTestDefinition.nombre}</strong></div>
-            <div style="font-size: 1.1rem; color: #702e5e; font-weight: 800; margin: 0.5rem 0;">Resultado: ${data.clasificacion}</div>
-            <p style="font-size: 0.85rem; color: #475569; line-height: 1.5; margin: 0;">${data.interpretacion}</p>
+            <div style="color: #047857; margin-bottom: 0.4rem; font-size: 0.95rem;">✓ Instrumento: <strong>${displayTitle}</strong></div>
+            <div style="font-size: 0.85rem; color: #059669; font-weight: 700; margin-top: 0.25rem;">✓ Estado: Respuestas enviadas exitosamente al expediente del psicólogo</div>
         `;
 
     } catch (e) {
