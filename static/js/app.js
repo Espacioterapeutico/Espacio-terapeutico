@@ -921,12 +921,16 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         const appLayout = document.getElementById('app-layout');
         const sidebar = document.getElementById('sidebar');
         const authScr = document.getElementById('auth-screen');
-        if (appLayout) {
-            appLayout.style.display = 'none';
-            appLayout.classList.add('hide');
-        }
+        const pubLanding = document.getElementById('public-landing-screen');
+        const pubProfile = document.getElementById('public-therapist-profile-screen');
+        const fastBooking = document.getElementById('fast-booking-screen');
+        if (appLayout) { appLayout.style.display = 'none'; appLayout.classList.add('hide'); }
         if (sidebar) sidebar.classList.add('hide');
         if (authScr) { authScr.style.display = 'none'; authScr.classList.add('hide'); }
+        if (pubLanding) { pubLanding.style.display = 'none'; pubLanding.classList.add('hide'); }
+        if (pubProfile) { pubProfile.style.display = 'none'; pubProfile.classList.add('hide'); }
+        if (fastBooking) { fastBooking.style.display = 'none'; fastBooking.classList.add('hide'); }
+
         const testScreen = document.getElementById('public-test-screen');
         if (testScreen) {
             testScreen.style.display = 'block';
@@ -16964,18 +16968,17 @@ async function loadAndRenderPublicTest(token) {
     const appLayout = document.getElementById('app-layout');
     const sidebar = document.getElementById('sidebar');
     const authEl = document.getElementById('auth-screen');
-    const landingEl = document.getElementById('public-landing');
+    const landingEl = document.getElementById('public-landing-screen');
     const pubProfileEl = document.getElementById('public-therapist-profile-screen');
+    const fastBookingEl = document.getElementById('fast-booking-screen');
     const testScreen = document.getElementById('public-test-screen');
 
-    if (appLayout) {
-        appLayout.style.display = 'none';
-        appLayout.classList.add('hide');
-    }
-    if (sidebar) sidebar.classList.add('hide');
+    if (appLayout) { appLayout.style.display = 'none'; appLayout.classList.add('hide'); }
+    if (sidebar) { sidebar.style.display = 'none'; sidebar.classList.add('hide'); }
     if (authEl) { authEl.style.display = 'none'; authEl.classList.add('hide'); }
-    if (landingEl) landingEl.classList.add('hide');
-    if (pubProfileEl) pubProfileEl.classList.add('hide');
+    if (landingEl) { landingEl.style.display = 'none'; landingEl.classList.add('hide'); }
+    if (pubProfileEl) { pubProfileEl.style.display = 'none'; pubProfileEl.classList.add('hide'); }
+    if (fastBookingEl) { fastBookingEl.style.display = 'none'; fastBookingEl.classList.add('hide'); }
     
     if (testScreen) {
         testScreen.style.display = 'block';
