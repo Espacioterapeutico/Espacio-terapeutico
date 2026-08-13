@@ -15109,45 +15109,58 @@ def api_get_all_tests_historial():
     if not user_id:
         return jsonify({'error': 'No autorizado.'}), 401
 
-    db = get_db()
-    ensure_tests_tables(db)
-    cursor = db.cursor()
+    try:
+        db = get_db()
+        ensure_tests_tables(db)
+        cursor = db.cursor()
 
-    patient_id = request.args.get('patient_id')
+        patient_id = request.args.get('patient_id')
 
-    if patient_id:
-        cursor.execute("""
-            SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
-                   p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula, p.telefono as patient_telefono
-            FROM test_asignaciones a
-            JOIN tests_definiciones td ON a.test_code = td.code
-            JOIN pacientes p ON a.patient_id = p.id
-            WHERE a.patient_id = ? AND a.user_id = ?
-            ORDER BY a.fecha_asignacion DESC
-        """, (patient_id, user_id))
-    else:
-        cursor.execute("""
-            SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
-                   p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula, p.telefono as patient_telefono
-            FROM test_asignaciones a
-            JOIN tests_definiciones td ON a.test_code = td.code
-            JOIN pacientes p ON a.patient_id = p.id
-            WHERE a.user_id = ?
-            ORDER BY a.fecha_asignacion DESC
-        """, (user_id,))
+        if patient_id:
+            cursor.execute("""
+                SELECT a.*, 
+                       COALESCE(td.nombre, 'Prueba Psicológica') as test_nombre, 
+                       COALESCE(td.siglas, a.test_code) as test_siglas, 
+                       COALESCE(td.categoria, 'Evaluación') as test_categoria,
+                       p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula, p.telefono as patient_telefono
+                FROM test_asignaciones a
+                LEFT JOIN tests_definiciones td ON a.test_code = td.code
+                LEFT JOIN pacientes p ON a.patient_id = p.id
+                WHERE a.patient_id = ? AND a.user_id = ?
+                ORDER BY a.fecha_asignacion DESC
+            """, (patient_id, user_id))
+        else:
+            cursor.execute("""
+                SELECT a.*, 
+                       COALESCE(td.nombre, 'Prueba Psicológica') as test_nombre, 
+                       COALESCE(td.siglas, a.test_code) as test_siglas, 
+                       COALESCE(td.categoria, 'Evaluación') as test_categoria,
+                       p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula, p.telefono as patient_telefono
+                FROM test_asignaciones a
+                LEFT JOIN tests_definiciones td ON a.test_code = td.code
+                LEFT JOIN pacientes p ON a.patient_id = p.id
+                WHERE a.user_id = ?
+                ORDER BY a.fecha_asignacion DESC
+            """, (user_id,))
 
-    rows = cursor.fetchall()
-    results = []
-    for r in rows:
-        d = dict(r)
-        try: d['subescalas'] = json.loads(d['subescalas_json']) if d['subescalas_json'] else {}
-        except: d['subescalas'] = {}
-        try: d['respuestas'] = json.loads(d['respuestas_json']) if d['respuestas_json'] else {}
-        except: d['respuestas'] = {}
-        d['url_test'] = f"{request.host_url.rstrip('/')}/evaluacion/{d['uuid_token']}"
-        results.append(d)
+        rows = cursor.fetchall()
+        results = []
+        for r in rows:
+            d = dict(r)
+            try: d['subescalas'] = json.loads(d['subescalas_json']) if d.get('subescalas_json') else {}
+            except: d['subescalas'] = {}
+            try: d['respuestas'] = json.loads(d['respuestas_json']) if d.get('respuestas_json') else {}
+            except: d['respuestas'] = {}
+            d['url_test'] = f"{request.host_url.rstrip('/')}/evaluacion/{d.get('uuid_token', '')}"
+            results.append(d)
 
-    return jsonify({'tests': results})
+        return jsonify({'tests': results})
+    except Exception as e:
+        import traceback
+        print(f"Error en api_get_all_tests_historial: {e}")
+        traceback.print_exc()
+        return jsonify({'tests': [], 'error': str(e)}), 500
+
 
 
 @app.route('/api/tests/paciente/<int:patient_id>', methods=['GET'])
@@ -15156,30 +15169,40 @@ def api_get_tests_paciente(patient_id):
     if not user_id:
         return jsonify({'error': 'No autorizado.'}), 401
 
-    db = get_db()
-    ensure_tests_tables(db)
-    cursor = db.cursor()
+    try:
+        db = get_db()
+        ensure_tests_tables(db)
+        cursor = db.cursor()
 
-    cursor.execute("""
-        SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria
-        FROM test_asignaciones a
-        JOIN tests_definiciones td ON a.test_code = td.code
-        WHERE a.patient_id = ? AND a.user_id = ?
-        ORDER BY a.fecha_asignacion DESC
-    """, (patient_id, user_id))
+        cursor.execute("""
+            SELECT a.*, 
+                   COALESCE(td.nombre, 'Prueba Psicológica') as test_nombre, 
+                   COALESCE(td.siglas, a.test_code) as test_siglas, 
+                   COALESCE(td.categoria, 'Evaluación') as test_categoria
+            FROM test_asignaciones a
+            LEFT JOIN tests_definiciones td ON a.test_code = td.code
+            WHERE a.patient_id = ? AND a.user_id = ?
+            ORDER BY a.fecha_asignacion DESC
+        """, (patient_id, user_id))
 
-    rows = cursor.fetchall()
-    results = []
-    for r in rows:
-        d = dict(r)
-        try: d['subescalas'] = json.loads(d['subescalas_json']) if d['subescalas_json'] else {}
-        except: d['subescalas'] = {}
-        try: d['respuestas'] = json.loads(d['respuestas_json']) if d['respuestas_json'] else {}
-        except: d['respuestas'] = {}
-        d['url_test'] = f"{request.host_url.rstrip('/')}/evaluacion/{d['uuid_token']}"
-        results.append(d)
+        rows = cursor.fetchall()
+        results = []
+        for r in rows:
+            d = dict(r)
+            try: d['subescalas'] = json.loads(d['subescalas_json']) if d.get('subescalas_json') else {}
+            except: d['subescalas'] = {}
+            try: d['respuestas'] = json.loads(d['respuestas_json']) if d.get('respuestas_json') else {}
+            except: d['respuestas'] = {}
+            d['url_test'] = f"{request.host_url.rstrip('/')}/evaluacion/{d.get('uuid_token', '')}"
+            results.append(d)
 
-    return jsonify({'tests': results})
+        return jsonify({'tests': results})
+    except Exception as e:
+        import traceback
+        print(f"Error en api_get_tests_paciente: {e}")
+        traceback.print_exc()
+        return jsonify({'tests': [], 'error': str(e)}), 500
+
 
 
 @app.route('/api/tests/asignacion/<int:assignment_id>/export/word', methods=['GET'])
