@@ -17461,12 +17461,12 @@ function openTestDetailModal(testData) {
 }
 
 async function loadAllAppliedTestsHistory() {
-    const container = document.getElementById('main-tests-history-container');
+    const container = document.getElementById('main-tests-history-container') || document.getElementById('tests-history-container') || document.getElementById('patient-tests-history-container');
     if (!container) return;
 
-    container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 1.5rem;">Cargando historial de evaluaciones...</p>';
+    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b; font-weight: 600;">⏳ Cargando historial de evaluaciones...</div>';
 
-    const select = document.getElementById('select-test-main-patient');
+    const select = document.getElementById('select-test-main-patient') || document.getElementById('tests-history-patient-select');
     const patientId = select ? select.value : '';
 
     let fetchUrl = '/api/tests/historial';
@@ -17489,10 +17489,81 @@ async function loadAllAppliedTestsHistory() {
         tests.forEach(t => {
             const isCompleted = t.estado === 'completado';
             const badgeClass = isCompleted ? 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;' : 'background: #fef9c3; color: #a16207; border: 1px solid #fef08a;';
-            const badgeText = isCompleted ? '🟢 Completado' : '⏳ Pendiente por responder';
+            const badgeText = isCompleted ? '🟢 Completado' : '⏳ Pendiente';
 
             const patName = `${t.patient_nombres || ''} ${t.patient_apellidos || ''}`.trim() || 'Consultante';
             const patCi = t.patient_cedula ? ` (CI: ${t.patient_cedula})` : '';
+
+            const clasifDisplay = t.clasificacion_resultado || t.clasificacion || 'Completado';
+            const answers = t.respuestas || {};
+            const sub = t.subescalas || {};
+
+            let subscalesHtml = '';
+            if (typeof sub === 'object' && sub !== null && Object.keys(sub).length > 0) {
+                subscalesHtml = `<div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.85rem;">
+                    <strong style="color: #334155; display: block; margin-bottom: 0.35rem; font-size: 0.85rem;">Puntuaciones por Subescalas:</strong>
+                    <ul style="margin: 0; padding-left: 1.2rem; color: #475569; font-size: 0.85rem;">`;
+                for (let [sName, sVal] of Object.entries(sub)) {
+                    subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
+                }
+                subscalesHtml += `</ul></div>`;
+            }
+
+            let answersTableHtml = '';
+            if (typeof answers === 'object' && answers !== null && Object.keys(answers).length > 0) {
+                answersTableHtml = `
+                    <div style="margin-bottom: 0.85rem;">
+                        <strong style="color: #0f172a; font-size: 0.88rem; display: block; margin-bottom: 0.4rem;">Desglose de Respuestas del Consultante:</strong>
+                        <div style="max-height: 250px; overflow-y: auto; border: 1.5px solid #cbd5e1; border-radius: 10px; background: white;">
+                            <table style="width: 100%; font-size: 0.83rem; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f1f5f9; color: #334155; text-align: left; border-bottom: 1.5px solid #cbd5e1; position: sticky; top: 0; z-index: 1;">
+                                        <th style="padding: 7px 12px; font-weight: 700;">Reactivo / Pregunta</th>
+                                        <th style="padding: 7px 12px; font-weight: 700;">Respuesta Seleccionada (Puntaje)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+                for (let [qNum, qVal] of Object.entries(answers)) {
+                    answersTableHtml += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 6px 12px; font-weight: 700; color: #702e5e;">Ítem ${qNum}</td>
+                            <td style="padding: 6px 12px; color: #0f172a; font-weight: 700;">Opción / Puntaje ${qVal}</td>
+                        </tr>
+                    `;
+                }
+                answersTableHtml += `</tbody></table></div></div>`;
+            }
+
+            const drawerHtml = `
+                <div id="test-detail-drawer-${t.id}" class="hide" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1.5px dashed #cbd5e1; transition: all 0.3s ease;">
+                    <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 12px; padding: 1rem; margin-bottom: 0.85rem;">
+                        <div style="font-size: 0.75rem; font-weight: 800; color: #702e5e; text-transform: uppercase;">Diagnóstico / Severidad Clínica</div>
+                        <h4 style="font-size: 1.25rem; font-weight: 800; color: #702e5e; margin: 0.25rem 0;">${clasifDisplay}</h4>
+                        <div style="font-size: 0.9rem; font-weight: 700; color: #334155;">Puntuación Total Obtenida: <strong>${t.puntaje_total || 0} pts</strong></div>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: 0.85rem;">
+                        <strong style="color: #0f172a; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">Análisis e Interpretación Diagnóstica:</strong>
+                        <p style="font-size: 0.88rem; color: #334155; line-height: 1.55; margin: 0; white-space: pre-wrap;">${t.interpretacion_clinica || 'Sin interpretación clínica disponible.'}</p>
+                    </div>
+
+                    ${subscalesHtml}
+                    ${answersTableHtml}
+
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
+                        <a href="/api/tests/asignacion/${t.id}/export/word" target="_blank" class="btn btn-sm" style="background: #2b579a; color: white; font-weight: 700; border-radius: 8px; text-decoration: none; font-size: 0.82rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 4px;">
+                            📄 Exportar Word
+                        </a>
+                        <a href="/api/tests/asignacion/${t.id}/export/pdf" target="_blank" class="btn btn-sm" style="background: #dc2626; color: white; font-weight: 700; border-radius: 8px; text-decoration: none; font-size: 0.82rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 4px;">
+                            picture_as_pdf Exportar PDF
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="openTestDetailModalById(${t.id})">
+                            🔍 Vista Modal
+                        </button>
+                    </div>
+                </div>
+            `;
 
             html += `
                 <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.15rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
@@ -17501,8 +17572,8 @@ async function loadAllAppliedTestsHistory() {
                             <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; ${badgeClass}">
                                 ${badgeText}
                             </span>
-                            <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-left: 8px;">ID: ${t.uuid_token.substring(0, 8)}...</span>
-                            <h4 style="margin: 0.3rem 0 0 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">${t.test_siglas} — ${t.test_nombre}</h4>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-left: 8px;">ID: ${(t.uuid_token || '').substring(0, 8)}...</span>
+                            <h4 style="margin: 0.3rem 0 0 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">${t.test_siglas || ''} — ${t.test_nombre || 'Evaluación'}</h4>
                             <div style="font-size: 0.85rem; font-weight: 700; color: #702e5e; margin-top: 2px;">👤 ${patName}${patCi}</div>
                         </div>
                         <div style="text-align: right; font-size: 0.8rem; color: #64748b;">
@@ -17512,27 +17583,20 @@ async function loadAllAppliedTestsHistory() {
                     </div>
 
                     ${isCompleted ? `
-                        <div style="background: #f8fafc; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                             <div>
-                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Diagnóstico:</span>
-                                <strong style="font-size: 0.98rem; color: #702e5e; margin-left: 4px;">${t.clasificacion_resultado || t.clasificacion || 'Completado'}</strong>
-                                <span style="font-size: 0.85rem; font-weight: 700; color: #334155; margin-left: 8px;">(${t.puntaje_total || 0} pts)</span>
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Puntaje Total:</span>
+                                <strong style="font-size: 1.1rem; color: #702e5e; margin-left: 4px;">${t.puntaje_total || 0} pts</strong>
                             </div>
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                            <button type="button" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 800; border-radius: 8px; padding: 0.5rem 1rem;" onclick="openTestDetailModalById(${t.id})">
-                                👁️ Ver Ficha
-                            </button>
-                            <a href="/api/tests/asignacion/${t.id}/export/word" target="_blank" class="btn btn-sm" style="background: #2b579a; color: white; font-weight: 800; border-radius: 8px; text-decoration: none; padding: 0.5rem 1.05rem;">
-                                📄 Exportar Word
-                            </a>
-                            <a href="/api/tests/asignacion/${t.id}/export/pdf" target="_blank" class="btn btn-sm" style="background: #dc2626; color: white; font-weight: 800; border-radius: 8px; text-decoration: none; padding: 0.5rem 1.05rem;">
-                                picture_as_pdf Exportar PDF
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px; margin-left: auto;" onclick="deleteTestAssignment(${t.id})">
-                                🗑️ Eliminar
+                            <div>
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Clasificación:</span>
+                                <strong style="font-size: 0.95rem; color: #0f172a; margin-left: 4px;">${clasifDisplay}</strong>
+                            </div>
+                            <button type="button" id="test-detail-btn-${t.id}" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 700; border-radius: 8px;" onclick="toggleTestDetailAccordion(${t.id})">
+                                👁️ Ver Informe Detallado
                             </button>
                         </div>
+                        ${drawerHtml}
                     ` : `
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                             <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="copyTestLink('${t.url_test}')">
@@ -17554,7 +17618,7 @@ async function loadAllAppliedTestsHistory() {
 
     } catch (e) {
         console.error("Error al cargar historial de tests:", e);
-        container.innerHTML = '<p style="color: #dc2626; text-align: center;">Error al cargar el historial de evaluaciones.</p>';
+        container.innerHTML = '<p style="color: #dc2626; text-align: center; font-weight: 600; padding: 1.5rem;">Error al cargar el historial de evaluaciones.</p>';
     }
 }
 
@@ -17824,168 +17888,6 @@ function toggleTestDetailAccordion(tId) {
         drawer.style.display = 'none';
         drawer.classList.add('hide');
         if (btn) btn.innerHTML = '👁️ Ver Informe Detallado';
-    }
-}
-
-async function loadAllAppliedTestsHistory() {
-    const selectPat = document.getElementById('tests-history-patient-select');
-    const patientId = selectPat ? selectPat.value : '';
-
-    const container = document.getElementById('tests-history-container');
-    if (!container) return;
-
-    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b; font-weight: 600;">⏳ Cargando historial de evaluaciones...</div>';
-
-    let fetchUrl = '/api/tests/historial';
-    if (patientId) {
-        fetchUrl += `?patient_id=${patientId}`;
-    }
-
-    try {
-        const res = await fetch(fetchUrl);
-        const data = await res.json();
-        const tests = data.tests || [];
-        allAppliedTestsCache = tests;
-
-        if (tests.length === 0) {
-            container.innerHTML = '<div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 2rem; text-align: center; color: #64748b; font-weight: 600;">No hay evaluaciones registradas aún para este filtro.</div>';
-            return;
-        }
-
-        let html = '';
-        tests.forEach(t => {
-            const isCompleted = t.estado === 'completado';
-            const badgeClass = isCompleted ? 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;' : 'background: #fef9c3; color: #a16207; border: 1px solid #fef08a;';
-            const badgeText = isCompleted ? '🟢 Completado' : '⏳ Pendiente';
-
-            const patName = `${t.patient_nombres || ''} ${t.patient_apellidos || ''}`.trim() || 'Consultante';
-            const patCi = t.patient_cedula ? ` (CI: ${t.patient_cedula})` : '';
-
-            const clasifDisplay = t.clasificacion_resultado || t.clasificacion || 'Completado';
-            const answers = t.respuestas || {};
-            const sub = t.subescalas || {};
-
-            let subscalesHtml = '';
-            if (Object.keys(sub).length > 0) {
-                subscalesHtml = `<div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.85rem;">
-                    <strong style="color: #334155; display: block; margin-bottom: 0.35rem; font-size: 0.85rem;">Puntuaciones por Subescalas:</strong>
-                    <ul style="margin: 0; padding-left: 1.2rem; color: #475569; font-size: 0.85rem;">`;
-                for (let [sName, sVal] of Object.entries(sub)) {
-                    subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
-                }
-                subscalesHtml += `</ul></div>`;
-            }
-
-            let answersTableHtml = '';
-            if (Object.keys(answers).length > 0) {
-                answersTableHtml = `
-                    <div style="margin-bottom: 0.85rem;">
-                        <strong style="color: #0f172a; font-size: 0.88rem; display: block; margin-bottom: 0.4rem;">Desglose de Respuestas del Consultante:</strong>
-                        <div style="max-height: 250px; overflow-y: auto; border: 1.5px solid #cbd5e1; border-radius: 10px; background: white;">
-                            <table style="width: 100%; font-size: 0.83rem; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #f1f5f9; color: #334155; text-align: left; border-bottom: 1.5px solid #cbd5e1; position: sticky; top: 0; z-index: 1;">
-                                        <th style="padding: 7px 12px; font-weight: 700;">Reactivo / Pregunta</th>
-                                        <th style="padding: 7px 12px; font-weight: 700;">Respuesta Seleccionada (Puntaje)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                `;
-                for (let [qNum, qVal] of Object.entries(answers)) {
-                    answersTableHtml += `
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td style="padding: 6px 12px; font-weight: 700; color: #702e5e;">Ítem ${qNum}</td>
-                            <td style="padding: 6px 12px; color: #0f172a; font-weight: 700;">Opción / Puntaje ${qVal}</td>
-                        </tr>
-                    `;
-                }
-                answersTableHtml += `</tbody></table></div></div>`;
-            }
-
-            const drawerHtml = `
-                <div id="test-detail-drawer-${t.id}" class="hide" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1.5px dashed #cbd5e1; transition: all 0.3s ease;">
-                    <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 12px; padding: 1rem; margin-bottom: 0.85rem;">
-                        <div style="font-size: 0.75rem; font-weight: 800; color: #702e5e; text-transform: uppercase;">Diagnóstico / Severidad Clínica</div>
-                        <h4 style="font-size: 1.25rem; font-weight: 800; color: #702e5e; margin: 0.25rem 0;">${clasifDisplay}</h4>
-                        <div style="font-size: 0.9rem; font-weight: 700; color: #334155;">Puntuación Total Obtenida: <strong>${t.puntaje_total || 0} pts</strong></div>
-                    </div>
-
-                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: 0.85rem;">
-                        <strong style="color: #0f172a; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">Análisis e Interpretación Diagnóstica:</strong>
-                        <p style="font-size: 0.88rem; color: #334155; line-height: 1.55; margin: 0; white-space: pre-wrap;">${t.interpretacion_clinica || 'Sin interpretación clínica disponible.'}</p>
-                    </div>
-
-                    ${subscalesHtml}
-                    ${answersTableHtml}
-
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
-                        <a href="/api/tests/asignacion/${t.id}/export/word" target="_blank" class="btn btn-sm" style="background: #2b579a; color: white; font-weight: 700; border-radius: 8px; text-decoration: none; font-size: 0.82rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 4px;">
-                            📄 Exportar Word
-                        </a>
-                        <a href="/api/tests/asignacion/${t.id}/export/pdf" target="_blank" class="btn btn-sm" style="background: #dc2626; color: white; font-weight: 700; border-radius: 8px; text-decoration: none; font-size: 0.82rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 4px;">
-                            picture_as_pdf Exportar PDF
-                        </a>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="openTestDetailModalById(${t.id})">
-                            🔍 Vista Modal
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            html += `
-                <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.15rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
-                        <div>
-                            <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; ${badgeClass}">
-                                ${badgeText}
-                            </span>
-                            <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-left: 8px;">ID: ${t.uuid_token.substring(0, 8)}...</span>
-                            <h4 style="margin: 0.3rem 0 0 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">${t.test_siglas} — ${t.test_nombre}</h4>
-                            <div style="font-size: 0.85rem; font-weight: 700; color: #702e5e; margin-top: 2px;">👤 ${patName}${patCi}</div>
-                        </div>
-                        <div style="text-align: right; font-size: 0.8rem; color: #64748b;">
-                            <div><strong>Asignado:</strong> ${t.fecha_asignacion ? t.fecha_asignacion.substring(0, 16) : 'N/A'}</div>
-                            ${t.fecha_respuesta ? `<div style="color: #15803d; font-weight: 700;">Respondido: ${t.fecha_respuesta.substring(0, 16)}</div>` : ''}
-                        </div>
-                    </div>
-
-                    ${isCompleted ? `
-                        <div style="background: #f8fafc; border-radius: 10px; padding: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-                            <div>
-                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Puntaje Total:</span>
-                                <strong style="font-size: 1.1rem; color: #702e5e; margin-left: 4px;">${t.puntaje_total} pts</strong>
-                            </div>
-                            <div>
-                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Clasificación:</span>
-                                <strong style="font-size: 0.95rem; color: #0f172a; margin-left: 4px;">${clasifDisplay}</strong>
-                            </div>
-                            <button type="button" id="test-detail-btn-${t.id}" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 700; border-radius: 8px;" onclick="toggleTestDetailAccordion(${t.id})">
-                                👁️ Ver Informe Detallado
-                            </button>
-                        </div>
-                        ${drawerHtml}
-                    ` : `
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="copyTestLink('${t.url_test}')">
-                                📋 Copiar Link
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px;" onclick="openTestPresencialWindow('${t.url_test}')">
-                                💻 Responder Presencial
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px; margin-left: auto;" onclick="deleteTestAssignment(${t.id})">
-                                🗑️ Eliminar
-                            </button>
-                        </div>
-                    `}
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
-
-    } catch (e) {
-        console.error("Error al cargar historial de tests:", e);
-        container.innerHTML = '<p style="color: #dc2626; text-align: center;">Error al cargar el historial de evaluaciones.</p>';
     }
 }
 
