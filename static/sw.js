@@ -1,9 +1,10 @@
-const CACHE_NAME = 'mi-consultorio-v80';
+const CACHE_NAME = 'mi-consultorio-v81';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/logo.png',
   '/static/manifest.json',
-  '/static/notification.wav'
+  '/static/notification.wav',
+  '/static/js/tests_module.js'
 ];
 
 self.addEventListener('install', (event) => {
