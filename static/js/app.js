@@ -3384,6 +3384,7 @@ async function loadPatientsDropdowns() {
         const filterSelect = document.getElementById('session-filter-patient');
         const sessionFormSelect = document.getElementById('s-paciente');
         const eventFormSelect = document.getElementById('e-paciente');
+        const testMainSelect = document.getElementById('select-test-main-patient');
         
         // Guardar valores seleccionados previamente
         const filterVal = filterSelect ? filterSelect.value : '';
@@ -3408,6 +3409,11 @@ async function loadPatientsDropdowns() {
             patients.forEach(p => {
                 eventFormSelect.innerHTML += `<option value="${p.id}">${p.nombres} ${p.apellidos} (${p.cedula})</option>`;
             });
+        }
+
+        if (testMainSelect && Array.isArray(patients) && patients.length > 0) {
+            allTestPatientsCache = patients;
+            renderTestPatientsOptions(allTestPatientsCache);
         }
     } catch (err) {
         console.error("Error al cargar pacientes para dropdowns:", err);
@@ -17976,7 +17982,7 @@ async function populateMainViewPatientSelect() {
     const select = document.getElementById('select-test-main-patient');
     if (!select) return;
 
-    if (allTestPatientsCache.length > 0) {
+    if (allTestPatientsCache && allTestPatientsCache.length > 0) {
         renderTestPatientsOptions(allTestPatientsCache);
     }
 
@@ -18017,6 +18023,7 @@ function renderTestPatientsOptions(patientsList) {
 async function filterTestPatientSelect() {
     const searchInput = document.getElementById('input-search-test-patient');
     const autoList = document.getElementById('test-patient-autocomplete-list');
+    const select = document.getElementById('select-test-main-patient');
     if (!searchInput) return;
 
     if (!allTestPatientsCache || allTestPatientsCache.length === 0) {
@@ -18026,26 +18033,30 @@ async function filterTestPatientSelect() {
     const query = searchInput.value.toLowerCase().trim();
 
     if (!query) {
-        renderTestPatientsOptions(allTestPatientsCache);
         if (autoList) {
             autoList.innerHTML = '';
             autoList.classList.add('hide');
         }
-        onSelectMainPatientChange();
+        if (select) select.value = '';
+        updateSelectedPatientLabel();
         return;
     }
 
-    const filtered = allTestPatientsCache.filter(p => {
+    const filtered = (allTestPatientsCache || []).filter(p => {
         const fullStr = `${p.nombres || ''} ${p.apellidos || ''} ${p.cedula || ''}`.toLowerCase();
         return fullStr.includes(query);
     });
 
-    renderTestPatientsOptions(filtered);
+    // Si hay exactamente 1 coincidencia directa, seleccionar en el dropdown
+    if (filtered.length === 1 && select) {
+        select.value = String(filtered[0].id);
+        updateSelectedPatientLabel();
+    }
 
     // Render flotante autocompletado
     if (autoList) {
         if (filtered.length === 0) {
-            autoList.innerHTML = '<div style="padding: 10px; color: #64748b; font-size: 0.85rem; font-weight: 600;">No se encontraron consultantes.</div>';
+            autoList.innerHTML = '<div style="padding: 10px 14px; color: #64748b; font-size: 0.85rem; font-weight: 600;">No se encontraron consultantes.</div>';
             autoList.classList.remove('hide');
         } else {
             let autoHtml = '';
@@ -18070,8 +18081,7 @@ function selectTestPatientFromAutocomplete(patientId, patientName) {
     const autoList = document.getElementById('test-patient-autocomplete-list');
 
     if (select) {
-        // Asegurar que las opciones completas están disponibles en el DOM
-        if (allTestPatientsCache && allTestPatientsCache.length > 0) {
+        if (!select.options || select.options.length <= 1) {
             renderTestPatientsOptions(allTestPatientsCache);
         }
         select.value = String(patientId);
@@ -18082,7 +18092,7 @@ function selectTestPatientFromAutocomplete(patientId, patientName) {
         autoList.classList.add('hide');
     }
 
-    onSelectMainPatientChange();
+    updateSelectedPatientLabel();
 }
 
 function selectTestForApplication(testCode) {
@@ -18164,6 +18174,25 @@ function updateSelectedPatientLabel() {
 }
 
 function onSelectMainPatientChange() {
+    const select = document.getElementById('select-test-main-patient');
+    const searchInput = document.getElementById('input-search-test-patient');
+    const autoList = document.getElementById('test-patient-autocomplete-list');
+
+    if (autoList) {
+        autoList.innerHTML = '';
+        autoList.classList.add('hide');
+    }
+
+    if (select && select.value && searchInput) {
+        const selectedOpt = select.options[select.selectedIndex];
+        if (selectedOpt && selectedOpt.value) {
+            const rawTxt = selectedOpt.textContent.replace(/\s*\(CI:.*?\)/i, '').trim();
+            searchInput.value = rawTxt;
+        }
+    } else if (select && !select.value && searchInput) {
+        searchInput.value = '';
+    }
+
     updateSelectedPatientLabel();
 }
 
