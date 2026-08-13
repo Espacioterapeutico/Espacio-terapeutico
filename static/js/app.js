@@ -1,4 +1,137 @@
 
+// ==========================================
+// VARIABLES GLOBALES Y BASE DE DATOS DE TESTS PSICOLÓGICOS (TOP SCOPE)
+// ==========================================
+var allTestPatientsCache = [];
+var selectedTestCodeForApplication = null;
+var currentCatalogCategory = 'TODAS';
+var currentCatalogPage = 1;
+var CATALOG_PER_PAGE = 10;
+
+var testsCatalogDatabase = [
+    { 
+        code: 'AQ', 
+        name: 'AQ — Cociente de Espectro Autista', 
+        siglas: 'AQ-50', 
+        cat: 'Neurodivergencia y Autismo', 
+        desc: 'Evaluación estandarizada de 50 ítems desarrollada por Baron-Cohen et al. Mide rasgos del espectro autista en adultos.', 
+        autor: 'Simon Baron-Cohen et al.', 
+        poblacion: 'Adolescentes y Adultos (16+ años)', 
+        validez: 'α = 0.82 | Punto de corte: ≥ 32', 
+        itemsCount: 50 
+    },
+    { 
+        code: 'RAADS-R', 
+        name: 'RAADS-R — Escala Revisada para Diagnóstico de Autismo', 
+        siglas: 'RAADS-R', 
+        cat: 'Neurodivergencia y Autismo', 
+        desc: 'Inventario clínico completo de 80 ítems para el diagnóstico del Espectro Autista / Asperger en población adulta.', 
+        autor: 'Riva Ariella Ritvo et al.', 
+        poblacion: 'Adultos (18+ años)', 
+        validez: 'α = 0.92 | Umbral diagnóstico: ≥ 65', 
+        itemsCount: 80 
+    },
+    { 
+        code: 'CAT-Q', 
+        name: 'CAT-Q — Cuestionario de Camuflaje Autista', 
+        siglas: 'CAT-Q', 
+        cat: 'Neurodivergencia y Autismo', 
+        desc: 'Evaluación de 25 ítems desarrollada por Laura Hull et al. Mide estrategias de camuflaje y enmascaramiento social.', 
+        autor: 'Laura Hull et al.', 
+        poblacion: 'Adolescentes y Adultos (16+ años)', 
+        validez: 'α = 0.90 | Medición de Camuflaje', 
+        itemsCount: 25 
+    },
+    { 
+        code: 'ASRS-ADHD', 
+        name: 'ASRS v1.1 — Sintomatología TDAH en Adultos', 
+        siglas: 'ASRS v1.1', 
+        cat: 'Neurodivergencia y Autismo', 
+        desc: 'Escala de tamizaje oficial de la OMS de 18 ítems para la detección de Trastorno por Déficit de Atención e Hiperactividad en adultos.', 
+        autor: 'OMS / Adler et al.', 
+        poblacion: 'Adultos (18+ años)', 
+        validez: 'α = 0.87 | Criterios DSM / OMS', 
+        itemsCount: 18 
+    },
+    { 
+        code: 'BDI-II', 
+        name: 'BDI-II — Inventario de Depresión de Beck', 
+        siglas: 'BDI-II', 
+        cat: 'Depresión y Ansiedad', 
+        desc: 'Cuestionario de 21 ítems de autorreporte ampliamente utilizado para evaluar la severidad de los síntomas depresivos.', 
+        autor: 'Aaron T. Beck et al.', 
+        poblacion: 'Adolescentes y Adultos (13+ años)', 
+        validez: 'α = 0.92 | Validez Clínica Estandarizada', 
+        itemsCount: 21 
+    },
+    { 
+        code: 'BAI', 
+        name: 'BAI — Inventario de Ansiedad de Beck', 
+        siglas: 'BAI', 
+        cat: 'Depresión y Ansiedad', 
+        desc: 'Evaluación de 21 ítems diseñada para discriminar y medir la intensidad de la sintomatología ansiosa somática y cognitiva.', 
+        autor: 'Aaron T. Beck et al.', 
+        poblacion: 'Adolescentes y Adultos (13+ años)', 
+        validez: 'α = 0.92 | Alta Especificidad Ansiosa', 
+        itemsCount: 21 
+    },
+    { 
+        code: 'RAVEN', 
+        name: 'RAVEN — Test de Matrices Progresivas de Raven', 
+        siglas: 'RAVEN', 
+        cat: 'Capacidad Intelectual', 
+        desc: 'Prueba no verbal de 60 matrices estandarizadas para medir el factor g de inteligencia y la capacidad de razonamiento abstracto.', 
+        autor: 'John C. Raven', 
+        poblacion: 'Adolescentes y Adultos (12+ años)', 
+        validez: 'α = 0.90 | Razonamiento No Verbal', 
+        itemsCount: 60 
+    },
+    { 
+        code: 'MCMI-II', 
+        name: 'MCMI-II — Inventario Multiaxial Clínico de Millon', 
+        siglas: 'MCMI-II', 
+        cat: 'Personalidad', 
+        desc: 'Instrumento multiaxial psicométrico de 175 ítems para la evaluación de patrones de personalidad clínica y síndromes severos.', 
+        autor: 'Theodore Millon', 
+        poblacion: 'Adultos (18+ años)', 
+        validez: 'Estandarizado TB | 24 Escalones Clínicos', 
+        itemsCount: 175 
+    },
+    { 
+        code: 'HOLLAND', 
+        name: 'HOLLAND — Test de Intereses Vocacionales (RIASEC)', 
+        siglas: 'HOLLAND', 
+        cat: 'Orientación Vocacional', 
+        desc: 'Inventario vocacional basado en el modelo tipológico RIASEC para la identificación de perfil vocacional y profesional.', 
+        autor: 'John L. Holland', 
+        poblacion: 'Adolescentes y Adultos (14+ años)', 
+        validez: 'α = 0.86 | Perfil Tipológico RIASEC', 
+        itemsCount: 60 
+    },
+    { 
+        code: 'TCS', 
+        name: 'TCS — Escala de Congruencia Transgénero', 
+        siglas: 'TCS', 
+        cat: 'Identidad de Género', 
+        desc: 'Escala de 12 ítems desarrollada por Kozee et al. para evaluar el nivel de confort y aceptación de la identidad de género.', 
+        autor: 'Kozee, Reisner et al.', 
+        poblacion: 'Jóvenes y Adultos (16+ años)', 
+        validez: 'α = 0.89 | Afirmación e Identidad', 
+        itemsCount: 12 
+    },
+    { 
+        code: 'UGDS-GS', 
+        name: 'UGDS-GS — Escala de Disforia de Utrecht', 
+        siglas: 'UGDS-GS', 
+        cat: 'Identidad de Género', 
+        desc: 'Evaluación estandarizada de 18 ítems para la medición objetiva del grado de disforia de género clínica.', 
+        autor: 'McGuire et al. / Utrecht', 
+        poblacion: 'Adolescentes y Adultos (12+ años)', 
+        validez: 'α = 0.91 | Medición de Disforia', 
+        itemsCount: 18 
+    }
+];
+
 // Helper universal para descargar archivos (.docx, .pdf, .zip, .csv) sin abrir pestañas en blanco ni desviar la pantalla
 function downloadFileSilently(url) {
     let iframe = document.getElementById('hidden-download-iframe');
@@ -17941,140 +18074,7 @@ async function loadAllAppliedTestsHistory() {
     }
 }
 
-// ==============================================================================
-// MÓDULO INDEPENDIENTE: EVALUACIONES Y TESTS PSICOLÓGICOS
-// ==============================================================================
-
-let allTestPatientsCache = [];
-let selectedTestCodeForApplication = null;
-let currentCatalogCategory = 'TODAS';
-let currentCatalogPage = 1;
-const CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
-
-// BASE DE DATOS DE EVALUACIONES PSICOMÉTRICAS CON METADATOS COMPLETOS
-const testsCatalogDatabase = [
-    { 
-        code: 'AQ', 
-        name: 'AQ — Cociente de Espectro Autista', 
-        siglas: 'AQ-50', 
-        cat: 'Neurodivergencia y Autismo', 
-        desc: 'Evaluación estandarizada de 50 ítems desarrollada por Baron-Cohen et al. Mide rasgos del espectro autista en adultos.', 
-        autor: 'Simon Baron-Cohen et al.', 
-        poblacion: 'Adolescentes y Adultos (16+ años)', 
-        validez: 'α = 0.82 | Punto de corte: ≥ 32', 
-        itemsCount: 50 
-    },
-    { 
-        code: 'RAADS-R', 
-        name: 'RAADS-R — Escala Revisada para Diagnóstico de Autismo', 
-        siglas: 'RAADS-R', 
-        cat: 'Neurodivergencia y Autismo', 
-        desc: 'Inventario clínico completo de 80 ítems para el diagnóstico del Espectro Autista / Asperger en población adulta.', 
-        autor: 'Riva Ariella Ritvo et al.', 
-        poblacion: 'Adultos (18+ años)', 
-        validez: 'α = 0.92 | Umbral diagnóstico: ≥ 65', 
-        itemsCount: 80 
-    },
-    { 
-        code: 'CAT-Q', 
-        name: 'CAT-Q — Cuestionario de Camuflaje Autista', 
-        siglas: 'CAT-Q', 
-        cat: 'Neurodivergencia y Autismo', 
-        desc: 'Evaluación de 25 ítems desarrollada por Laura Hull et al. Mide estrategias de camuflaje y enmascaramiento social.', 
-        autor: 'Laura Hull et al.', 
-        poblacion: 'Adolescentes y Adultos (16+ años)', 
-        validez: 'α = 0.90 | Medición de Camuflaje', 
-        itemsCount: 25 
-    },
-    { 
-        code: 'ASRS-ADHD', 
-        name: 'ASRS v1.1 — Sintomatología TDAH en Adultos', 
-        siglas: 'ASRS v1.1', 
-        cat: 'Neurodivergencia y Autismo', 
-        desc: 'Escala de tamizaje oficial de la OMS de 18 ítems para la detección de Trastorno por Déficit de Atención e Hiperactividad en adultos.', 
-        autor: 'OMS / Adler et al.', 
-        poblacion: 'Adultos (18+ años)', 
-        validez: 'α = 0.87 | Criterios DSM / OMS', 
-        itemsCount: 18 
-    },
-    { 
-        code: 'BDI-II', 
-        name: 'BDI-II — Inventario de Depresión de Beck', 
-        siglas: 'BDI-II', 
-        cat: 'Depresión y Ansiedad', 
-        desc: 'Cuestionario de 21 ítems de autorreporte ampliamente utilizado para evaluar la severidad de los síntomas depresivos.', 
-        autor: 'Aaron T. Beck et al.', 
-        poblacion: 'Adolescentes y Adultos (13+ años)', 
-        validez: 'α = 0.92 | Validez Clínica Estandarizada', 
-        itemsCount: 21 
-    },
-    { 
-        code: 'BAI', 
-        name: 'BAI — Inventario de Ansiedad de Beck', 
-        siglas: 'BAI', 
-        cat: 'Depresión y Ansiedad', 
-        desc: 'Evaluación de 21 ítems diseñada para discriminar y medir la intensidad de la sintomatología ansiosa somática y cognitiva.', 
-        autor: 'Aaron T. Beck et al.', 
-        poblacion: 'Adolescentes y Adultos (13+ años)', 
-        validez: 'α = 0.92 | Alta Especificidad Ansiosa', 
-        itemsCount: 21 
-    },
-    { 
-        code: 'RAVEN', 
-        name: 'RAVEN — Test de Matrices Progresivas de Raven', 
-        siglas: 'RAVEN', 
-        cat: 'Capacidad Intelectual', 
-        desc: 'Prueba no verbal de 60 matrices estandarizadas para medir el factor g de inteligencia y la capacidad de razonamiento abstracto.', 
-        autor: 'John C. Raven', 
-        poblacion: 'Adolescentes y Adultos (12+ años)', 
-        validez: 'α = 0.90 | Razonamiento No Verbal', 
-        itemsCount: 60 
-    },
-    { 
-        code: 'MCMI-II', 
-        name: 'MCMI-II — Inventario Multiaxial Clínico de Millon', 
-        siglas: 'MCMI-II', 
-        cat: 'Personalidad', 
-        desc: 'Instrumento multiaxial psicométrico de 175 ítems para la evaluación de patrones de personalidad clínica y síndromes severos.', 
-        autor: 'Theodore Millon', 
-        poblacion: 'Adultos (18+ años)', 
-        validez: 'Estandarizado TB | 24 Escalones Clínicos', 
-        itemsCount: 175 
-    },
-    { 
-        code: 'HOLLAND', 
-        name: 'HOLLAND — Test de Intereses Vocacionales (RIASEC)', 
-        siglas: 'HOLLAND', 
-        cat: 'Orientación Vocacional', 
-        desc: 'Inventario vocacional basado en el modelo tipológico RIASEC para la identificación de perfil vocacional y profesional.', 
-        autor: 'John L. Holland', 
-        poblacion: 'Adolescentes y Adultos (14+ años)', 
-        validez: 'α = 0.86 | Perfil Tipológico RIASEC', 
-        itemsCount: 60 
-    },
-    { 
-        code: 'TCS', 
-        name: 'TCS — Escala de Congruencia Transgénero', 
-        siglas: 'TCS', 
-        cat: 'Identidad de Género', 
-        desc: 'Escala de 12 ítems desarrollada por Kozee et al. para evaluar el nivel de confort y aceptación de la identidad de género.', 
-        autor: 'Kozee, Reisner et al.', 
-        poblacion: 'Jóvenes y Adultos (16+ años)', 
-        validez: 'α = 0.89 | Afirmación e Identidad', 
-        itemsCount: 12 
-    },
-    { 
-        code: 'UGDS-GS', 
-        name: 'UGDS-GS — Escala de Disforia de Utrecht', 
-        siglas: 'UGDS-GS', 
-        cat: 'Identidad de Género', 
-        desc: 'Evaluación estandarizada de 18 ítems para la medición objetiva del grado de disforia de género clínica.', 
-        autor: 'McGuire et al. / Utrecht', 
-        poblacion: 'Adolescentes y Adultos (12+ años)', 
-        validez: 'α = 0.91 | Medición de Disforia', 
-        itemsCount: 18 
-    }
-];
+// 1. POBLACIÓN Y CARGA DE PACIENTES DESDE LA BASE DE DATOS
 
 // 1. POBLACIÓN Y CARGA DE PACIENTES DESDE LA BASE DE DATOS
 async function populateMainViewPatientSelect() {

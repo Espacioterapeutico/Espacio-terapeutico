@@ -2,14 +2,14 @@
 // MÓDULO INDEPENDIENTE: EVALUACIONES Y TESTS PSICOLÓGICOS
 // ==============================================================================
 
-let allTestPatientsCache = [];
-let selectedTestCodeForApplication = null;
-let currentCatalogCategory = 'TODAS';
-let currentCatalogPage = 1;
-const CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
+var allTestPatientsCache = [];
+var selectedTestCodeForApplication = null;
+var currentCatalogCategory = 'TODAS';
+var currentCatalogPage = 1;
+var CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
 
 // BASE DE DATOS DE EVALUACIONES PSICOMÉTRICAS CON METADATOS COMPLETOS
-const testsCatalogDatabase = [
+var testsCatalogDatabase = [
     { 
         code: 'AQ', 
         name: 'AQ — Cociente de Espectro Autista', 
