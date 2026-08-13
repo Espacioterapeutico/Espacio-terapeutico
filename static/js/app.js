@@ -360,6 +360,12 @@ let currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
 
 // Al iniciar la ventana (Arranque Seguro Móvil y Escritorio)
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.location.pathname.startsWith('/evaluacion/')) {
+        initPublicTestRouteHandler();
+        hideLoadingScreen();
+        return;
+    }
+
     // Garantía absoluta de ocultar pantalla de carga en máximo 1.5s
     setTimeout(() => {
         hideLoadingScreen();
@@ -1262,6 +1268,10 @@ function showPatientWizard(patientId, username) {
 }
 
 function showAuthScreen() {
+    if (window.location.pathname.startsWith('/evaluacion/')) {
+        hideLoadingScreen();
+        return;
+    }
     clearAllNotificationIntervals();
     sessionStorage.clear();
     document.body.classList.remove('is-patient');
@@ -17052,6 +17062,8 @@ async function loadAndRenderPublicTest(token) {
     } catch (err) {
         console.error("Error al cargar test público:", err);
         alert("Error de conexión al cargar la evaluación.");
+    } finally {
+        hideLoadingScreen();
     }
 }
 
