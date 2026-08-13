@@ -14135,13 +14135,10 @@ def api_asignar_test():
 
     ensure_tests_tables(db)
 
-    if is_admin:
-        cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ?", (patient_id,))
-    else:
-        cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (patient_id, user_id))
+    cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
     pac = cursor.fetchone()
     if not pac:
-        return jsonify({'error': 'Paciente no encontrado o acceso no permitido.'}), 404
+        return jsonify({'error': 'Acceso denegado: El consultante no pertenece a tu consulta activa.'}), 404
 
     token = uuid.uuid4().hex
     try:
