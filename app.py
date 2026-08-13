@@ -14150,12 +14150,20 @@ def api_asignar_test():
         url_test = f"{request.host_url.rstrip('/')}/evaluacion/{token}"
         clean_phone = (pac['telefono'] or '').replace(' ', '').replace('-', '').replace('+', '')
 
+        whatsapp_url = None
+        if clean_phone:
+            import urllib.parse
+            msg_text = f"Hola {pac['nombres']}, te comparto el enlace para responder tu evaluación psicológica: {url_test}"
+            whatsapp_url = f"https://api.whatsapp.com/send?phone={clean_phone}&text={urllib.parse.quote(msg_text)}"
+
         return jsonify({
             'success': 'Test asignado exitosamente.',
             'assignment_id': cursor.lastrowid,
             'token': token,
+            'url': url_test,
             'url_test': url_test,
             'whatsapp_phone': clean_phone,
+            'whatsapp_url': whatsapp_url,
             'paciente_nombre': f"{pac['nombres']} {pac['apellidos']}".strip()
         })
     except Exception as e:

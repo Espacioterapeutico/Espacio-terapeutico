@@ -2788,7 +2788,7 @@ function renderPatientsTable(list) {
             <td>${p.genero || 'N/A'}</td>
             <td>${loc}</td>
             <td class="actions-cell">
-                <button class="btn btn-sm" style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-weight: 700;" onclick="openPatientTestsModal(${p.id}, '${(p.nombres || '').replace(/'/g, "\\'")} ${(p.apellidos || '').replace(/'/g, "\\'")}')">🧪 Tests</button>
+                <button class="btn btn-sm" style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-weight: 700;" onclick="openPatientTestsModal(${p.id}, '${(p.nombres || '').replace(/'/g, "\\'")} ${(p.apellidos || '').replace(/'/g, "\\'")}')">📋 Tests</button>
                 <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${p.id})">Ficha Resumen</button>
                 <button class="btn btn-primary btn-sm" onclick="openEditPatientModal(${p.id})">Editar</button>
             </td>
@@ -17690,7 +17690,12 @@ async function executeMainApplyTest() {
 
         if (successPanel) successPanel.classList.remove('hide');
 
-        const testUrl = data.url;
+        const testUrl = data.url || data.url_test || '';
+        let whatsappUrl = data.whatsapp_url;
+        if (!whatsappUrl && data.whatsapp_phone) {
+            const msg = encodeURIComponent(`Hola ${data.paciente_nombre || ''}, te comparto el enlace para responder tu evaluación psicológica: ${testUrl}`);
+            whatsappUrl = `https://api.whatsapp.com/send?phone=${data.whatsapp_phone}&text=${msg}`;
+        }
 
         if (successDetails) {
             successDetails.innerHTML = `
@@ -17706,9 +17711,9 @@ async function executeMainApplyTest() {
                 </button>
             `;
 
-            if (data.whatsapp_url) {
+            if (whatsappUrl) {
                 actionsHtml += `
-                    <a href="${data.whatsapp_url}" target="_blank" class="btn btn-sm" style="background: #25d366; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                    <a href="${whatsappUrl}" target="_blank" class="btn btn-sm" style="background: #25d366; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
                         📲 Enviar por WhatsApp
                     </a>
                 `;
@@ -17723,8 +17728,10 @@ async function executeMainApplyTest() {
             successActions.innerHTML = actionsHtml;
         }
 
-        if (modo === 'link' && data.whatsapp_url) {
-            window.open(data.whatsapp_url, '_blank');
+        if (modo === 'link' && whatsappUrl) {
+            window.open(whatsappUrl, '_blank');
+        } else if (modo === 'presencial' && testUrl) {
+            window.open(testUrl, '_blank');
         }
 
     } catch (e) {
