@@ -17683,10 +17683,12 @@ async function executeMainApplyTest() {
         });
 
         let data;
+        let responseText = '';
         try {
-            data = await res.json();
+            responseText = await res.text();
+            data = JSON.parse(responseText);
         } catch (jErr) {
-            data = { error: `Error en la respuesta del servidor (${res.status}).` };
+            data = { error: `Error en la respuesta del servidor (${res.status}): ${responseText ? responseText.substring(0, 150) : ''}` };
         }
 
         if (!res.ok) {

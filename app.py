@@ -14125,39 +14125,41 @@ def api_asignar_test():
     if not user_id:
         return jsonify({'error': 'No autorizado.'}), 401
 
-    db = get_db()
-    ensure_usuarios_columns(db)
-    cursor = db.cursor()
-
-    # Verificar bloqueo de tests (Los administradores tienen permiso automático)
-    cursor.execute("SELECT bloqueo_tests, role, es_admin, es_superadmin FROM usuarios WHERE id = ?", (user_id,))
-    usr = cursor.fetchone()
-    if usr:
-        usr_dict = dict(usr)
-        is_admin = usr_dict.get('es_superadmin') or usr_dict.get('es_admin') or usr_dict.get('role') in ['admin', 'superadmin']
-        if usr_dict.get('bloqueo_tests') == 1 and not is_admin:
-            return jsonify({'error': 'El módulo de Tests Psicológicos se encuentra restringido para tu usuario.'}), 403
-
-    data = request.json or {}
-    patient_id = data.get('patient_id')
-    test_code = data.get('test_code')
-    modo = data.get('modo_aplicacion', 'link')
-
-    if not patient_id or not test_code:
-        return jsonify({'error': 'Faltan datos obligatorios.'}), 400
-
-    ensure_tests_tables(db)
-
-    if is_admin:
-        cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ?", (patient_id,))
-    else:
-        cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (patient_id, user_id))
-    pac = cursor.fetchone()
-    if not pac:
-        return jsonify({'error': 'Acceso denegado: El consultante no pertenece a tu consulta activa.'}), 404
-
-    token = uuid.uuid4().hex
     try:
+        db = get_db()
+        ensure_usuarios_columns(db)
+        ensure_tests_tables(db)
+        cursor = db.cursor()
+
+        role = session.get('role', '')
+        is_admin = role in ['admin', 'superadmin'] or user_id == 1
+
+        cursor.execute("SELECT bloqueo_tests, role, es_admin, es_superadmin FROM usuarios WHERE id = ?", (user_id,))
+        usr = cursor.fetchone()
+        if usr:
+            usr_dict = dict(usr)
+            if usr_dict.get('es_superadmin') or usr_dict.get('es_admin') or usr_dict.get('role') in ['admin', 'superadmin']:
+                is_admin = True
+            if usr_dict.get('bloqueo_tests') == 1 and not is_admin:
+                return jsonify({'error': 'El módulo de Tests Psicológicos se encuentra restringido para tu usuario.'}), 403
+
+        data = request.json or {}
+        patient_id = data.get('patient_id')
+        test_code = data.get('test_code')
+        modo = data.get('modo_aplicacion', 'link')
+
+        if not patient_id or not test_code:
+            return jsonify({'error': 'Faltan datos obligatorios.'}), 400
+
+        if is_admin:
+            cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ?", (patient_id,))
+        else:
+            cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (patient_id, user_id))
+        pac = cursor.fetchone()
+        if not pac:
+            return jsonify({'error': 'Acceso denegado: El consultante no pertenece a tu consulta activa.'}), 404
+
+        token = uuid.uuid4().hex
         cursor.execute("""
             INSERT INTO test_asignaciones (uuid_token, patient_id, user_id, test_code, estado, modo_aplicacion)
             VALUES (?, ?, ?, ?, 'pendiente', ?)
@@ -14184,7 +14186,8 @@ def api_asignar_test():
             'paciente_nombre': f"{pac['nombres']} {pac['apellidos']}".strip()
         })
     except Exception as e:
-        db.rollback()
+        import traceback
+        print("ERROR EN API_ASIGNAR_TEST:", traceback.format_exc())
         return jsonify({'error': f'Error al asignar test: {str(e)}'}), 500
 
 
