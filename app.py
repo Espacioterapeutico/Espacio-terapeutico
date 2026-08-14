@@ -11646,18 +11646,21 @@ def sync_whatsapp_session():
     import json
     db = get_db()
     cursor = db.cursor()
+    user_id = str(request.args.get('user_id') or (request.json or {}).get('user_id') or '1')
+    key_name = f'wa_auth_session_{user_id}'
+
     if request.method == 'DELETE':
-        cursor.execute("DELETE FROM configuracion WHERE clave = 'wa_auth_session'")
+        cursor.execute("DELETE FROM configuracion WHERE clave IN (?, 'wa_auth_session')", (key_name,))
         db.commit()
         return jsonify({'status': 'cleared'})
     elif request.method == 'POST':
         data = request.json or {}
         session_json = json.dumps(data)
-        cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('wa_auth_session', ?)", (session_json,))
+        cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", (key_name, session_json))
         db.commit()
         return jsonify({'status': 'saved'})
     else:
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'wa_auth_session'")
+        cursor.execute("SELECT valor FROM configuracion WHERE clave IN (?, 'wa_auth_session') ORDER BY clave DESC LIMIT 1", (key_name,))
         row = cursor.fetchone()
         if row and row['valor']:
             try:

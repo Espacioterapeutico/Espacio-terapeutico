@@ -18,6 +18,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 const FLASK_WEBHOOK_URL = process.env.FLASK_WEBHOOK_URL || 'http://127.0.0.1:5000/api/whatsapp/webhook';
+const FLASK_BASE_URL = FLASK_WEBHOOK_URL.replace('/api/whatsapp/webhook', '');
 const AUTH_BASE_DIR = path.join(__dirname, 'auth_info_baileys');
 
 // Mapa de sesiones activas por user_id: key = string(user_id) -> { userId, sock, connectionStatus, currentQR, connectedPhone }
@@ -46,6 +47,55 @@ function getUserAuthDir(userId) {
     return userDir;
 }
 
+// Persistencia remota en BD Flask para sobrevivir a reinicios/despliegues de servidores efímeros
+async function syncSessionToFlask(userId, userAuthDir) {
+    try {
+        if (!fs.existsSync(userAuthDir)) return;
+        const fileNames = fs.readdirSync(userAuthDir);
+        const filesMap = {};
+        for (const f of fileNames) {
+            const fullPath = path.join(userAuthDir, f);
+            if (fs.statSync(fullPath).isFile()) {
+                filesMap[f] = fs.readFileSync(fullPath, 'utf8');
+            }
+        }
+        if (Object.keys(filesMap).length > 0) {
+            const syncUrl = `${FLASK_BASE_URL}/api/whatsapp/sync-session`;
+            await axios.post(syncUrl, { user_id: userId, files: filesMap }, { timeout: 8000 }).catch(() => {});
+        }
+    } catch(e) {
+        // Silencioso
+    }
+}
+
+async function restoreSessionFromFlask(userId, userAuthDir) {
+    try {
+        if (!fs.existsSync(userAuthDir)) {
+            fs.mkdirSync(userAuthDir, { recursive: true });
+        }
+        const existing = fs.readdirSync(userAuthDir);
+        if (existing.length > 0) return; // Ya existen credenciales locales
+
+        const syncUrl = `${FLASK_BASE_URL}/api/whatsapp/sync-session?user_id=${userId}`;
+        const res = await axios.get(syncUrl, { timeout: 8000 }).catch(() => null);
+        if (res && res.data && res.data.files && Object.keys(res.data.files).length > 0) {
+            for (const [filename, content] of Object.entries(res.data.files)) {
+                fs.writeFileSync(path.join(userAuthDir, filename), content, 'utf8');
+            }
+            console.log(`[User ${userId}] 🔄 Credenciales de WhatsApp restauradas exitosamente desde la BD.`);
+        }
+    } catch(e) {
+        console.error(`[User ${userId}] Error al intentar restaurar credenciales de BD:`, e.message);
+    }
+}
+
+async function clearSessionFromFlask(userId) {
+    try {
+        const syncUrl = `${FLASK_BASE_URL}/api/whatsapp/sync-session?user_id=${userId}`;
+        await axios.delete(syncUrl, { timeout: 5000 }).catch(() => {});
+    } catch(e) {}
+}
+
 async function connectToWhatsAppUser(userId, forceNew = false) {
     const key = String(userId || 1);
     const session = getSessionObj(key);
@@ -65,9 +115,13 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
                     fs.rmSync(userAuthDir, { recursive: true, force: true });
                     fs.mkdirSync(userAuthDir, { recursive: true });
                 }
+                await clearSessionFromFlask(key);
             } catch(e) {
                 console.error(`[User ${key}] Error al limpiar authDir:`, e.message);
             }
+        } else {
+            // Intentar restaurar sesión guardada en BD por si el servidor/plataforma se reinició
+            await restoreSessionFromFlask(key, userAuthDir);
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(userAuthDir);
@@ -77,11 +131,17 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             version,
             auth: state,
             printQRInTerminal: false,
-            browser: [`Espacio Terapeutico (User ${key})`, 'Chrome', '1.0.0']
+            browser: [`Espacio Terapeutico (User ${key})`, 'Chrome', '1.0.0'],
+            keepAliveIntervalMs: 30000,     // Enviar pings WebSocket cada 30 segundos para prevenir desconexiones
+            connectTimeoutMs: 60000,        // Timeout de conexión 60s
+            defaultQueryTimeoutMs: 60000,   // Timeout de peticiones 60s
+            retryRequestDelayMs: 2500,      // Reintento de solicitudes tras fallo
+            maxMsgRetryCount: 5
         });
 
         session.sock.ev.on('creds.update', async () => {
             await saveCreds();
+            syncSessionToFlask(key, userAuthDir);
         });
 
         session.sock.ev.on('connection.update', async (update) => {
@@ -103,11 +163,14 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
                 const rawId = session.sock.user ? (session.sock.user.id || session.sock.user.jid || '') : '';
                 session.connectedPhone = rawId ? rawId.split(':')[0].replace(/@.*/, '') : 'Conectado';
                 console.log(`[User ${key}] ✅ WhatsApp Web Conectado Exitosamente: ${session.connectedPhone}`);
+                // Sincronizar credenciales recién logueadas a la BD
+                syncSessionToFlask(key, userAuthDir);
             }
 
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const isExplicitLogout = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+                // Solo desconectar definitivamente si es un logout explícito (DisconnectReason.loggedOut = 401)
+                const isExplicitLogout = statusCode === DisconnectReason.loggedOut;
                 console.log(`[User ${key}] ⚠️ Conexión cerrada. Código: ${statusCode}. Reconectando: ${!isExplicitLogout}`);
                 
                 if (isExplicitLogout) {
@@ -117,10 +180,12 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
                     if (fs.existsSync(userAuthDir)) {
                         try { fs.rmSync(userAuthDir, { recursive: true, force: true }); } catch(e) {}
                     }
+                    await clearSessionFromFlask(key);
                 } else {
                     session.connectionStatus = 'connecting';
                     session.currentQR = null;
-                    setTimeout(() => connectToWhatsAppUser(key, false), 1500);
+                    // Intentar reconectar automáticamente tras 2 segundos
+                    setTimeout(() => connectToWhatsAppUser(key, false), 2000);
                 }
             }
         });
@@ -276,6 +341,7 @@ app.post('/logout', async (req, res) => {
         if (fs.existsSync(userAuthDir)) {
             try { fs.rmSync(userAuthDir, { recursive: true, force: true }); } catch(e) {}
         }
+        await clearSessionFromFlask(userId);
         session.connectionStatus = 'disconnected';
         session.connectedPhone = null;
         session.currentQR = null;
