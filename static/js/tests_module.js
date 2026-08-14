@@ -469,6 +469,12 @@ async function executeMainApplyTest(modoParam) {
                 `;
             }
 
+            actionsHtml += `
+                <button type="button" class="btn btn-sm" style="background: #0284c7; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2,132,199,0.3);" onclick="resetTestApplicationModule()">
+                    💾 Guardar e Iniciar Nueva Solicitud
+                </button>
+            `;
+
             successActions.innerHTML = actionsHtml;
         }
 
@@ -481,6 +487,44 @@ async function executeMainApplyTest(modoParam) {
         alert("Error al asignar la evaluación.");
     }
 }
+
+function resetTestApplicationModule() {
+    selectedTestCodeForApplication = null;
+
+    const panelApply = document.getElementById('panel-apply-selected-test');
+    if (panelApply) {
+        panelApply.classList.add('hide');
+        panelApply.style.display = 'none';
+    }
+
+    const successPanel = document.getElementById('panel-apply-success-result');
+    if (successPanel) {
+        successPanel.classList.add('hide');
+        successPanel.style.display = 'none';
+    }
+
+    document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
+        card.style.border = '2.5px solid #e2e8f0';
+        card.style.background = '#ffffff';
+        const checkSpan = card.querySelector('.test-card-check');
+        if (checkSpan) checkSpan.style.display = 'none';
+    });
+
+    const successDetails = document.getElementById('text-apply-success-details') || document.getElementById('panel-apply-success-details');
+    const successActions = document.getElementById('container-apply-success-actions') || document.getElementById('panel-apply-success-actions');
+    if (successDetails) successDetails.innerHTML = '';
+    if (successActions) successActions.innerHTML = '';
+
+    const topContainer = document.getElementById('container-tests-catalog') || document.getElementById('select-test-main-patient');
+    if (topContainer) {
+        topContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    if (typeof showToast === 'function') {
+        showToast('✨ Listo para iniciar una nueva solicitud de evaluación.', 'success');
+    }
+}
+window.resetTestApplicationModule = resetTestApplicationModule;
 
 function copyTestLink(linkUrl) {
     if (!linkUrl) return;

@@ -18416,6 +18416,12 @@ async function executeMainApplyTest(modoParam) {
                 `;
             }
 
+            actionsHtml += `
+                <button type="button" class="btn btn-sm" style="background: #0284c7; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2,132,199,0.3);" onclick="resetTestApplicationModule()">
+                    💾 Guardar e Iniciar Nueva Solicitud
+                </button>
+            `;
+
             successActions.innerHTML = actionsHtml;
         }
 
