@@ -945,7 +945,10 @@ async function handleLogout() {
         if (typeof clearAllNotificationIntervals === 'function') {
             clearAllNotificationIntervals();
         }
-        window.location.href = '/logout';
+        window.location.replace('/login');
+        setTimeout(() => {
+            window.location.href = '/login';
+        }, 150);
     }
 }
 window.handleLogout = handleLogout;
