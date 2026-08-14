@@ -650,6 +650,7 @@ function switchView(viewId) {
     if (viewId === 'dashboard') {
         loadDashboardStats();
         loadAgendaCompact();
+        try { checkWhatsAppGlobalStatus(); } catch(e) {}
     } else if (viewId === 'patient-list') {
         loadPatients();
     } else if (viewId === 'sessions') {
@@ -18718,6 +18719,24 @@ function initTestsModule() {
     renderCatalogViewWithFiltersAndPagination();
     populateMainViewPatientSelect();
 }
+
+async function checkWhatsAppGlobalStatus() {
+    const banner = document.getElementById('dashboard-wa-disconnected-banner');
+    try {
+        const res = await fetch('/api/whatsapp/status');
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.status !== 'connected') {
+                if (banner) banner.classList.remove('hide');
+            } else {
+                if (banner) banner.classList.add('hide');
+            }
+        }
+    } catch (e) {
+        if (banner) banner.classList.remove('hide');
+    }
+}
+window.checkWhatsAppGlobalStatus = checkWhatsAppGlobalStatus;
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initTestsModule);

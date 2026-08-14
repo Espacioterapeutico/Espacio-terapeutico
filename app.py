@@ -11710,9 +11710,31 @@ def cron_send_whatsapp_reminders():
 
     today_str = now_local.strftime('%Y-%m-%d')
     tomorrow_str = (now_local + timedelta(days=1)).strftime('%Y-%m-%d')
+    current_time_str = now_local.strftime('%H:%M')
     
     db = get_db()
     cursor = db.cursor()
+
+    # 0. VERIFICAR QUE EL BOT DE WHATSAPP ESTÉ CONECTADO
+    wa_is_connected = False
+    try:
+        r_status = make_wa_http_request('GET', '/status', timeout=8)
+        if r_status and r_status.status_code == 200:
+            st_data = r_status.json() or {}
+            if st_data.get('status') == 'connected':
+                wa_is_connected = True
+    except Exception as e_wa_st:
+        print(f"⚠️ Error al verificar estado de WhatsApp en cron: {e_wa_st}")
+
+    if not wa_is_connected:
+        return jsonify({
+            'status': 'paused_whatsapp_disconnected',
+            'message': 'El servicio de WhatsApp está desconectado o requiere escaneo de QR. Envíos pausados automáticamente hasta reconexión.',
+            'confirmaciones_enviadas': 0,
+            'recordatorios_enviados': 0,
+            'reagendamientos_enviados': 0,
+            'cierres_enviados': 0
+        })
 
     # Actualizar o asegurar plantilla con SI/NO si la existente es muy antigua o genérica
     cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo')")
@@ -11720,7 +11742,6 @@ def cron_send_whatsapp_reminders():
     
     tmpl_conf_default = "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
     
-    # Si la plantilla guardada en BD no tiene 'SI' o 'NO', la actualizamos para garantizar la instrucción
     msg_conf_db = cfg_rows.get('msg_confirmacion', '')
     if not msg_conf_db or ('SI' not in msg_conf_db and 'Sí' not in msg_conf_db and 'si' not in msg_conf_db):
         cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('msg_confirmacion', ?)", (tmpl_conf_default,))
@@ -11731,6 +11752,8 @@ def cron_send_whatsapp_reminders():
 
     enviados_confirmaciones = []
     enviados_recordatorios = []
+    enviados_reagendamientos = []
+    enviados_cierres = []
     errores = []
 
     # 1. ENVIAR CONFIRMACIONES PARA MAÑANA (Citas no confirmadas de mañana)
@@ -11763,7 +11786,6 @@ def cron_send_whatsapp_reminders():
         mensaje_texto = format_whatsapp_message(msg_conf_db, patient_dict, cita_dict, psicologo_data)
         psych_id = cita['psicologo_id'] or 1
 
-        # Marcar inmediatamente para prevenir re-envíos duplicados por timeout o reintentos
         cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
         db.commit()
 
@@ -11780,7 +11802,7 @@ def cron_send_whatsapp_reminders():
         except Exception as e:
             errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': str(e)})
 
-    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy CONFIRMADAS en Citas O Finanzas)
+    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy CONFIRMADAS)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
@@ -11810,7 +11832,6 @@ def cron_send_whatsapp_reminders():
         mensaje_texto = format_whatsapp_message(tmpl_rec_default, patient_dict, cita_dict, psicologo_data)
         psych_id = cita['psicologo_id'] or 1
 
-        # Marcar inmediatamente para prevenir re-envíos duplicados
         cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
         db.commit()
 
@@ -11827,10 +11848,63 @@ def cron_send_whatsapp_reminders():
         except Exception as e:
             errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': str(e)})
 
-    # 3. ENVIAR MENSAJES DE CIERRE Y REAGENDAMIENTO AL FINAL DEL HORARIO LABORAL (18:00 a 21:59)
-    enviados_reagendamientos = []
-    enviados_cierres = []
+    # 3. ENVIAR MENSAJES DE CIERRE O REENGANCHE (POST-SESIÓN)
+    tmpl_cierre_default = cfg_rows.get('msg_cierre') or "Hola {nombre}, gracias por compartir el espacio terapéutico hoy. Recuerda realizar las tareas asignadas. Si deseas agendar o reprogramar tu próxima sesión, puedes hacerlo desde tu portal."
 
+    # Buscar citas de hoy cuyo horario ya transcurrió O citas pasadas sin cita futura agendada
+    past_7_days_str = (now_local - timedelta(days=7)).strftime('%Y-%m-%d')
+    cursor.execute("""
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+               COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
+        WHERE (
+                (af.fecha = ? AND af.hora <= ?)
+                OR
+                (af.fecha < ? AND af.fecha >= ?)
+              )
+          AND COALESCE(af.confirmada, 0) = 1
+          AND COALESCE(af.estado_pago, '') != 'Cancelada'
+          AND COALESCE(af.cierre_enviado_wa, 0) = 0
+          AND NOT EXISTS (
+              SELECT 1 FROM agenda_finanzas af_future 
+              WHERE af_future.paciente_id = af.paciente_id AND af_future.fecha > af.fecha
+          )
+        ORDER BY af.fecha ASC, af.hora ASC
+    """, (today_str, current_time_str, today_str, past_7_days_str))
+    citas_cierre = cursor.fetchall()
+
+    for cita in citas_cierre:
+        phone = cita['pat_telefono']
+        if not phone or not phone.strip():
+            continue
+        psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+        cita_dict = {
+            'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
+            'fecha': cita['fecha'],
+            'hora': cita['hora'],
+            'modalidad': cita['tipo_consulta'] or 'Presencial'
+        }
+        patient_dict = {
+            'nombres': cita['pat_nombres'],
+            'apellidos': cita['pat_apellidos'],
+            'pais': cita['pat_pais'] or ''
+        }
+        mensaje_texto = format_whatsapp_message(tmpl_cierre_default, patient_dict, cita_dict, psicologo_data)
+        psych_id = cita['psicologo_id'] or 1
+
+        cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (cita['id'],))
+        db.commit()
+
+        try:
+            r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+            if r and r.status_code == 200:
+                enviados_cierres.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'cierre'})
+        except Exception as e:
+            pass
+
+    # 4. ENVIAR REAGENDAMIENTO AL FINAL DEL HORARIO LABORAL (18:00 a 21:59)
     if current_hour >= 18 and current_hour < 22:
         auto_reag_activo = (cfg_rows.get('auto_reagendamiento_activo') == '1')
         
@@ -11877,7 +11951,6 @@ def cron_send_whatsapp_reminders():
                 mensaje_texto = format_whatsapp_message(tmpl_reag_default, patient_dict, cita_dict, psicologo_data)
                 psych_id = cita['psicologo_id'] or 1
 
-                # Marcar inmediatamente para prevenir re-envíos duplicados
                 cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado_wa = 1 WHERE id = ?", (cita['id'],))
                 db.commit()
 
@@ -11887,52 +11960,6 @@ def cron_send_whatsapp_reminders():
                         enviados_reagendamientos.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'reagendamiento'})
                 except Exception as e:
                     pass
-
-        # B) Cierre de Sesión (Citas de Hoy finalizadas para invitar a volver a agendar)
-        tmpl_cierre_default = cfg_rows.get('msg_cierre') or "Hola {nombre}, gracias por compartir el espacio terapéutico hoy. Recuerda realizar las tareas asignadas. Si deseas agendar o reprogramar tu próxima sesión, puedes hacerlo desde tu portal."
-
-        cursor.execute("""
-            SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
-                   COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
-            FROM agenda_finanzas af
-            JOIN pacientes p ON af.paciente_id = p.id
-            LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
-            WHERE af.fecha = ? 
-              AND COALESCE(af.confirmada, 0) = 1
-              AND COALESCE(af.estado_pago, '') != 'Cancelada'
-              AND COALESCE(af.cierre_enviado_wa, 0) = 0
-        """, (today_str,))
-        citas_cierre = cursor.fetchall()
-
-        for cita in citas_cierre:
-            phone = cita['pat_telefono']
-            if not phone or not phone.strip():
-                continue
-            psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
-            cita_dict = {
-                'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
-                'fecha': cita['fecha'],
-                'hora': cita['hora'],
-                'modalidad': cita['tipo_consulta'] or 'Presencial'
-            }
-            patient_dict = {
-                'nombres': cita['pat_nombres'],
-                'apellidos': cita['pat_apellidos'],
-                'pais': cita['pat_pais'] or ''
-            }
-            mensaje_texto = format_whatsapp_message(tmpl_cierre_default, patient_dict, cita_dict, psicologo_data)
-            psych_id = cita['psicologo_id'] or 1
-
-            # Marcar inmediatamente para prevenir re-envíos duplicados
-            cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (cita['id'],))
-            db.commit()
-
-            try:
-                r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
-                if r and r.status_code == 200:
-                    enviados_cierres.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'cierre'})
-            except Exception as e:
-                pass
 
     db.commit()
 

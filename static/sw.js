@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-consultorio-v89';
+const CACHE_NAME = 'mi-consultorio-v91';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/logo.png',
@@ -71,7 +71,29 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notifications handled exclusively by firebase-messaging-sw.js
+// Push notifications en segundo plano
+self.addEventListener('push', (event) => {
+  let data = { title: 'Espacio Terapéutico', body: 'Tienes una nueva notificación.', icon: '/static/logo.png' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body || data.mensaje || 'Nueva notificación',
+    icon: data.icon || '/static/logo.png',
+    badge: '/static/logo.png',
+    vibrate: [100, 50, 100],
+    data: { url: data.url || data.link || '/' }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Espacio Terapéutico', options)
+  );
+});
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

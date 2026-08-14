@@ -1455,6 +1455,22 @@
                             Activar / Ver Instrucciones
                         </button>
                     </div>
+
+                    <!-- BANNER ALERTA WHATSAPP DESCONECTADO -->
+                    <div id="dashboard-wa-disconnected-banner" class="hide" style="background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%); border: 1.5px solid #fecdd3; border-left: 5px solid #e11d48; border-radius: var(--radius-md); padding: 0.95rem 1.25rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; box-shadow: 0 4px 12px rgba(225,29,72,0.1); flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.85rem; color: #9f1239; font-size: 0.9rem; font-weight: 600;">
+                            <span style="font-size: 1.6rem; flex-shrink: 0;">⚠️📱</span>
+                            <div>
+                                <h4 style="margin: 0; color: #881337; font-weight: 800; font-size: 0.95rem;">WhatsApp Desconectado — Envíos en Pausa</h4>
+                                <p style="margin: 0.2rem 0 0 0; color: #9f1239; font-size: 0.82rem; font-weight: 500;">
+                                    El bot de WhatsApp perdió la conexión. Los recordatorios y confirmaciones automáticos están pausados temporalmente. Por favor, escanea el código QR o reconecta en Ajustes.
+                                </p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm" onclick="switchView('settings')" style="background: #e11d48; color: white; border: none; font-weight: 800; padding: 0.55rem 1.1rem; border-radius: 20px; font-size: 0.82rem; cursor: pointer; white-space: nowrap; box-shadow: 0 3px 8px rgba(225,29,72,0.25);">
+                            📲 Reconectar WhatsApp
+                        </button>
+                    </div>
                     <div id="dashboard-aviso-pago" class="hide mb-4" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 5px solid var(--danger-color); padding: 1.25rem 1.5rem; border-radius: var(--radius-md); border: 1.5px solid rgba(239, 68, 68, 0.15); display: flex; align-items: center; gap: 0.85rem; box-shadow: var(--shadow-sm);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width: 28px; height: 28px; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         <div>
