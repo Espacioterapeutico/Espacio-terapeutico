@@ -1211,6 +1211,27 @@ def ensure_db_initialized():
 
 FIREBASE_DB_URL = "https://espacio-terapeutico-default-rtdb.firebaseio.com"
 
+def notify_patient_firebase(patient_id, titulo, mensaje, link='#', icon='🔔'):
+    """Envía una notificación en tiempo real al portal del consultante vía Firebase Realtime DB."""
+    def _send():
+        try:
+            import requests
+            from datetime import datetime
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            fb_payload = {
+                'titulo': titulo,
+                'mensaje': mensaje,
+                'fecha': now_str,
+                'leida': False,
+                'link': link,
+                'icon': icon
+            }
+            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=3.0)
+        except Exception as e:
+            print(f"Error en notify_patient_firebase (paciente #{patient_id}): {e}")
+    import threading
+    threading.Thread(target=_send, daemon=True).start()
+
 def restore_patients_from_firebase():
     """Restaura y sincroniza consultantes desde Firebase Realtime Database a SQLite."""
     try:
@@ -8815,6 +8836,21 @@ def update_transaction(trans_id):
         ))
         db.commit()
         
+        if estado_pago in ['Pagado', 'Paga', 'Completado'] and row['estado_pago'] not in ['Pagado', 'Paga', 'Completado']:
+            notify_patient_firebase(
+                row['paciente_id'],
+                "💰 Pago Confirmado",
+                f"Tu psicólogo ha verificado y validado tu pago correspondiente a la consulta del {fecha}.",
+                icon="💰"
+            )
+        elif estado_pago == 'Cancelada' and row['estado_pago'] != 'Cancelada':
+            notify_patient_firebase(
+                row['paciente_id'],
+                "❌ Cita Cancelada",
+                f"Tu cita agendada para el {fecha} a las {hora} fue cancelada por tu profesional.",
+                icon="❌"
+            )
+
         # Sincronización en segundo plano con Firebase
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(row['paciente_id'],)).start()
@@ -11961,6 +11997,39 @@ def cron_send_whatsapp_reminders():
                 except Exception as e:
                     pass
 
+    # 5. RECORDATORIO NOCTURNO A PACIENTES (20:00 - 21:00 hrs) PARA ACTUALIZAR HERRAMIENTAS TERAPÉUTICAS
+    if current_hour == 20:
+        try:
+            cursor.execute("""
+                SELECT DISTINCT p.id, p.nombres, p.telefono, p.psicologo_id 
+                FROM pacientes p
+                JOIN modulos_terapeuticos_paciente m ON p.id = m.paciente_id
+                WHERE m.activo = 1 AND COALESCE(p.activo, 1) = 1
+            """)
+            patients_with_tools = cursor.fetchall()
+            for p_row in patients_with_tools:
+                pid = p_row['id']
+                p_phone = p_row['telefono']
+                p_name = p_row['nombres']
+                
+                # Notificar en Firebase Portal
+                notify_patient_firebase(
+                    pid, 
+                    "🌙 Recordatorio Diarios & Herramientas", 
+                    f"Hola {p_name}, recuerda ingresar hoy a tu portal para registrar tu avance en tus herramientas terapéuticas asignadas.", 
+                    icon="🌙"
+                )
+                
+                # Notificar vía WhatsApp si el bot está conectado y se tiene número
+                if p_phone and p_phone.strip():
+                    try:
+                        msg_wa = f"Hola *{p_name}* 🌿, te recordamos ingresar hoy a tu portal para actualizar tus avances en las herramientas terapéuticas asignadas. ¡Que tengas feliz noche!"
+                        make_wa_http_request('POST', '/send', json_data={'phone': p_phone, 'text': msg_wa}, timeout=10, user_id=p_row['psicologo_id'] or 1)
+                    except Exception:
+                        pass
+        except Exception as _e_rem:
+            print("Error en recordatorio nocturno de herramientas:", _e_rem)
+
     db.commit()
 
     return jsonify({
@@ -12268,6 +12337,25 @@ def toggle_patient_module(patient_id):
     
     import threading
     threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+    
+    if activo == 1:
+        mod_nombres = {
+            'sueno': 'Registro de Higiene del Sueño',
+            'ansiedad': 'Diario de Ansiedad',
+            'sobriedad': 'Registro de Consumo y Sobriedad',
+            'adherencia': 'Adherencia a Medicación',
+            'activacion': 'Activación Conductual',
+            'ingesta': 'Ingesta y Apetito',
+            'cognitivo': 'Registro Cognitivo',
+            'pantalla': 'Tracker de Pantalla'
+        }
+        mod_nombre = mod_nombres.get(modulo_clave, modulo_clave.capitalize())
+        notify_patient_firebase(
+            patient_id,
+            "🛠️ Nueva Herramienta Asignada",
+            f"Tu psicólogo te ha asignado la herramienta '{mod_nombre}' en tu portal.",
+            icon="🛠️"
+        )
     
     return jsonify({'success': True, 'modulo_clave': modulo_clave, 'activo': activo})
 
@@ -15037,6 +15125,14 @@ def api_asignar_test():
 
         url_test = f"{request.host_url.rstrip('/')}/evaluacion/{token}"
         clean_phone = (pac['telefono'] or '').replace(' ', '').replace('-', '').replace('+', '')
+
+        notify_patient_firebase(
+            patient_id,
+            "🧪 Nuevo Test Psicológico Asignado",
+            f"Tu psicólogo te ha asignado una evaluación psicológica ({test_code}) para responder.",
+            link=url_test,
+            icon="🧪"
+        )
 
         whatsapp_url = None
         if clean_phone:
