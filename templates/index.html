@@ -1467,9 +1467,14 @@
                                 </p>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm" onclick="switchView('settings')" style="background: #e11d48; color: white; border: none; font-weight: 800; padding: 0.55rem 1.1rem; border-radius: 20px; font-size: 0.82rem; cursor: pointer; white-space: nowrap; box-shadow: 0 3px 8px rgba(225,29,72,0.25);">
-                            📲 Reconectar WhatsApp
-                        </button>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-sm" onclick="handleBannerReconnectWhatsApp()" style="background: #e11d48; color: white; border: none; font-weight: 800; padding: 0.55rem 1.1rem; border-radius: 20px; font-size: 0.82rem; cursor: pointer; white-space: nowrap; box-shadow: 0 3px 8px rgba(225,29,72,0.25);">
+                                📲 Reconectar WhatsApp
+                            </button>
+                            <button type="button" class="btn btn-sm" onclick="snoozeWhatsAppDisconnectedBanner(6)" style="background: rgba(225,29,72,0.08); color: #9f1239; border: 1.5px solid #fecdd3; font-weight: 700; padding: 0.55rem 0.95rem; border-radius: 20px; font-size: 0.82rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                                ⏰ Recordar más tarde (6h)
+                            </button>
+                        </div>
                     </div>
                     <div id="dashboard-aviso-pago" class="hide mb-4" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 5px solid var(--danger-color); padding: 1.25rem 1.5rem; border-radius: var(--radius-md); border: 1.5px solid rgba(239, 68, 68, 0.15); display: flex; align-items: center; gap: 0.85rem; box-shadow: var(--shadow-sm);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width: 28px; height: 28px; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>

@@ -18723,19 +18723,52 @@ function initTestsModule() {
     populateMainViewPatientSelect();
 }
 
+function snoozeWhatsAppDisconnectedBanner(hours = 6) {
+    const snoozeUntil = Date.now() + (hours * 60 * 60 * 1000);
+    localStorage.setItem('wa_banner_snoozed_until', snoozeUntil.toString());
+    const banner = document.getElementById('dashboard-wa-disconnected-banner');
+    if (banner) banner.classList.add('hide');
+    if (typeof showToast === 'function') {
+        showToast(`Alerta ocultada. Se volverá a mostrar en ${hours} horas si WhatsApp sigue desconectado.`, 'info');
+    }
+}
+window.snoozeWhatsAppDisconnectedBanner = snoozeWhatsAppDisconnectedBanner;
+
+function handleBannerReconnectWhatsApp() {
+    if (typeof switchView === 'function') switchView('settings');
+    setTimeout(() => {
+        if (typeof switchSettingsTab === 'function') switchSettingsTab('whatsapp');
+        if (typeof requestNewWhatsAppQR === 'function') requestNewWhatsAppQR();
+    }, 300);
+}
+window.handleBannerReconnectWhatsApp = handleBannerReconnectWhatsApp;
+
 async function checkWhatsAppGlobalStatus() {
     const banner = document.getElementById('dashboard-wa-disconnected-banner');
+    let isConnected = false;
     try {
         const res = await fetch('/api/whatsapp/status');
         if (res.ok) {
             const data = await res.json();
-            if (data && data.status !== 'connected') {
-                if (banner) banner.classList.remove('hide');
-            } else {
-                if (banner) banner.classList.add('hide');
+            if (data && data.status === 'connected') {
+                isConnected = true;
             }
         }
     } catch (e) {
+        console.warn("Error consultando estado de WhatsApp:", e);
+    }
+
+    if (isConnected) {
+        localStorage.removeItem('wa_banner_snoozed_until');
+        if (banner) banner.classList.add('hide');
+        return;
+    }
+
+    // Si está desconectado, verificar si se silenció temporalmente
+    const snoozedUntil = localStorage.getItem('wa_banner_snoozed_until');
+    if (snoozedUntil && Date.now() < parseInt(snoozedUntil, 10)) {
+        if (banner) banner.classList.add('hide');
+    } else {
         if (banner) banner.classList.remove('hide');
     }
 }
