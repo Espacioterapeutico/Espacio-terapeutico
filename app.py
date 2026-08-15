@@ -1656,7 +1656,7 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
         cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_cumpleanos', 'auto_cumpleanos_activo')")
         cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
         auto_cumple_activo = cfg_rows.get('auto_cumpleanos_activo', '1') == '1'
-        tmpl_cumple_default = cfg_rows.get('msg_cumpleanos') or "¡Feliz cumpleaños, *{nombre}*! 🎉🎂\n\nDesde Espacio Terapéutico te deseamos un excelente día lleno de bienestar, paz y alegría. ¡Gracias por acompañarnos!"
+        tmpl_cumple_default = cfg_rows.get('msg_cumpleanos') or "¡Feliz cumpleaños, *{nombre}*! 🎉 🎂\n\nTe deseo un excelente día lleno de bienestar, paz y alegría."
 
         cursor.execute("""
             SELECT id, nombres, apellidos, fecha_nacimiento, telefono, psicologo_id
