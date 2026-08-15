@@ -567,12 +567,28 @@ function switchView(viewId) {
 
     const isPureSuperadmin = (cleanRole === 'superadmin' || cleanRole === 'admin') && (cleanUser !== 'pamoraro') && (userId !== 1);
 
-    if (isPureSuperadmin && (viewId === 'dashboard' || ['agenda', 'confirmations', 'manual-confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'patient-details'].includes(viewId))) {
+    let subTabToActivate = null;
+    if (viewId === 'agenda') {
+        viewId = 'dashboard';
+        subTabToActivate = 'calendario';
+    } else if (viewId === 'patient-list') {
+        viewId = 'expedientes-clinicos';
+        subTabToActivate = 'historias';
+    } else if (viewId === 'sessions') {
+        viewId = 'expedientes-clinicos';
+        subTabToActivate = 'evoluciones';
+    } else if (viewId === 'register-patient') {
+        openNewPatientModal();
+        viewId = 'expedientes-clinicos';
+        subTabToActivate = 'registro';
+    }
+
+    if (isPureSuperadmin && (viewId === 'dashboard' || ['agenda', 'confirmations', 'manual-confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'patient-details', 'expedientes-clinicos'].includes(viewId))) {
         viewId = 'superadmin-dashboard';
     }
 
     const isPending = sessionStorage.getItem('cuenta_pendiente_aprobacion') === '1';
-    const restrictedViews = ['agenda', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance'];
+    const restrictedViews = ['agenda', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'expedientes-clinicos'];
     if (isPending && restrictedViews.includes(viewId)) {
         alert("⌛ Cuenta en Proceso de Verificación 🔒\n\nEstamos chequeando tu documentación. Esta herramienta se activará automáticamente en cuanto tu cuenta sea aprobada por la administración.");
         return;
@@ -651,6 +667,20 @@ function switchView(viewId) {
         loadDashboardStats();
         loadAgendaCompact();
         try { checkWhatsAppGlobalStatus(); } catch(e) {}
+        if (subTabToActivate) {
+            switchDashboardTab(subTabToActivate);
+        } else {
+            switchDashboardTab('proximas');
+        }
+    } else if (viewId === 'expedientes-clinicos') {
+        loadPatientsDropdowns();
+        loadPatients();
+        loadSessions();
+        if (subTabToActivate) {
+            switchExpedientesTab(subTabToActivate);
+        } else {
+            switchExpedientesTab('evoluciones');
+        }
     } else if (viewId === 'patient-list') {
         loadPatients();
     } else if (viewId === 'sessions') {
@@ -680,6 +710,126 @@ function switchView(viewId) {
     } else if (viewId === 'superadmin-dashboard') {
         loadSuperadminData();
     }
+}
+
+function switchDashboardTab(tabKey) {
+    const tabs = ['proximas', 'calendario', 'historial'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`dash-tab-${t}`);
+        const content = document.getElementById(`dash-content-${t}`);
+        if (btn) {
+            if (t === tabKey) {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            }
+        }
+        if (content) {
+            if (t === tabKey) {
+                content.classList.remove('hide');
+            } else {
+                content.classList.add('hide');
+            }
+        }
+    });
+
+    if (tabKey === 'calendario') {
+        const calContainer = document.getElementById('full-calendar-dash');
+        const calSource = document.getElementById('full-calendar-agenda');
+        if (calSource && calContainer && calSource.children.length > 0 && calContainer.children.length === 0) {
+            calContainer.appendChild(calSource.children[0]);
+        }
+        setTimeout(() => {
+            if (window.calendarObj) {
+                window.calendarObj.updateSize();
+            } else if (typeof initAgendaCalendar === 'function') {
+                initAgendaCalendar();
+            }
+        }, 100);
+    } else if (tabKey === 'historial') {
+        if (typeof loadDashHistoryData === 'function') {
+            loadDashHistoryData();
+        }
+    } else if (tabKey === 'proximas') {
+        if (typeof loadDashboardStats === 'function') {
+            loadDashboardStats();
+            loadAgendaCompact();
+        }
+    }
+}
+
+function switchExpedientesTab(tabKey) {
+    const tabs = ['evoluciones', 'historias', 'registro'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`exp-tab-${t}`);
+        const content = document.getElementById(`exp-content-${t}`);
+        if (btn) {
+            if (t === tabKey) {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            }
+        }
+        if (content) {
+            if (t === tabKey) {
+                content.classList.remove('hide');
+            } else {
+                content.classList.add('hide');
+            }
+        }
+    });
+
+    if (tabKey === 'evoluciones') {
+        if (typeof loadPatientsDropdowns === 'function') loadPatientsDropdowns();
+        if (typeof loadSessions === 'function') loadSessions();
+    } else if (tabKey === 'historias') {
+        if (typeof loadPatients === 'function') loadPatients();
+    }
+}
+
+function loadDashHistoryData() {
+    const picker = document.getElementById('dash-history-month-picker');
+    const tbody = document.getElementById('dash-history-table-body');
+    if (!tbody) return;
+    
+    let monthVal = picker ? picker.value : '';
+    if (!monthVal) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        monthVal = `${y}-${m}`;
+        if (picker) picker.value = monthVal;
+    }
+
+    fetch(`/api/agenda/history?month=${monthVal}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">${data.error}</td></tr>`;
+                return;
+            }
+            if (!data.citas || data.citas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding: 1.5rem;">No hay consultas registradas para ${monthVal}.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.citas.map(c => `
+                <tr>
+                    <td style="font-weight: 600;">📅 ${c.fecha} <span style="font-size: 0.8rem; color: var(--text-secondary);">🕒 ${c.hora}</span></td>
+                    <td style="font-weight: 700;">${c.paciente_nombre}</td>
+                    <td><span class="badge" style="background: var(--bg-hover); color: var(--text-dark);">${c.tipo_consulta || 'General'}</span></td>
+                    <td><strong>${c.monto || 0} ${c.moneda || 'USD'}</strong></td>
+                    <td><span class="badge" style="background: ${c.estado_pago === 'Pagada' ? '#10b981' : '#f59e0b'}; color: white; font-weight: 600;">${c.estado_pago || 'Pendiente'}</span></td>
+                </tr>
+            `).join('');
+        })
+        .catch(err => {
+            console.error("Error al cargar historial:", err);
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No se pudo cargar el historial.</td></tr>`;
+        });
 }
 
 function toggleSidebar() {
