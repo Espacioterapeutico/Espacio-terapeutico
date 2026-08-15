@@ -772,6 +772,16 @@ def init_db():
     if 'user_id' not in cols_notif:
         cursor.execute("ALTER TABLE notificaciones ADD COLUMN user_id INTEGER")
     cursor.execute("UPDATE notificaciones SET user_id = 1 WHERE user_id IS NULL")
+    try:
+        from datetime import datetime, timezone, timedelta
+        try:
+            import zoneinfo
+            today_str = datetime.now(zoneinfo.ZoneInfo("America/Caracas")).strftime("%Y-%m-%d")
+        except Exception:
+            today_str = (datetime.utcnow() - timedelta(hours=4)).strftime("%Y-%m-%d")
+        cursor.execute("DELETE FROM notificaciones WHERE tipo = 'cumpleanos_wa' AND fecha LIKE ?", (f"{today_str}%",))
+    except Exception:
+        pass
     db.commit()
     # Asegurar existencia de la tabla soporte
     cursor.execute("""
