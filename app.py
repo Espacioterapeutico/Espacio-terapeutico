@@ -1687,16 +1687,18 @@ def auto_check_patient_birthdays(db):
                     """, (psic_id, f"%ID: {pac_id}%", f"{today_str}%"))
                     
                     if not cursor.fetchone():
-                        # Registrar inmediatamente en notificaciones de control para prevenir reenvíos
-                        wa_log_msg = f"Mensaje de cumpleaños enviado por WhatsApp a {pac_nombre} (ID: {pac_id})"
-                        cursor.execute("""
-                            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                            VALUES (?, 'cumpleanos_wa', '🎂 WhatsApp de Cumpleaños Enviado', ?, ?, 1, '')
-                        """, (psic_id, wa_log_msg, now_str))
-                        db.commit()
-
                         msg_wa = tmpl_cumple_default.replace('{nombre}', first_name).replace('{nombre_completo}', pac_nombre)
-                        send_whatsapp_message_async(p['telefono'], msg_wa, user_id=psic_id)
+                        try:
+                            res = make_wa_http_request('POST', '/send', json_data={'phone': p['telefono'], 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
+                            if res and res.status_code == 200:
+                                wa_log_msg = f"Mensaje de cumpleaños enviado por WhatsApp a {pac_nombre} (ID: {pac_id})"
+                                cursor.execute("""
+                                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                                    VALUES (?, 'cumpleanos_wa', '🎂 WhatsApp de Cumpleaños Enviado', ?, ?, 1, '')
+                                """, (psic_id, wa_log_msg, now_str))
+                                db.commit()
+                        except Exception as ex_wa:
+                            print(f"Error al enviar WhatsApp de cumpleaños a {pac_nombre}:", ex_wa)
     except Exception as e:
         print("Error en auto_check_patient_birthdays:", e)
 
@@ -11355,6 +11357,17 @@ def make_wa_http_request(method, endpoint, json_data=None, timeout=5, user_id=No
             return requests.get(url, params=params, headers=headers, timeout=timeout)
         else:
             return requests.post(url, json=json_data, params=params, headers=headers, timeout=timeout)
+
+def send_whatsapp_message_async(phone, text, user_id=1):
+    def _worker():
+        try:
+            make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': text, 'user_id': user_id}, timeout=15, user_id=user_id)
+        except Exception as ex:
+            print(f"Error enviando WhatsApp asíncrono a {phone}:", ex)
+    import threading
+    t = threading.Thread(target=_worker)
+    t.daemon = True
+    t.start()
 
 @app.route('/api/whatsapp/status', methods=['GET'])
 @login_required
