@@ -760,7 +760,7 @@ function switchDashboardTab(tabKey) {
 }
 
 function switchExpedientesTab(tabKey) {
-    const tabs = ['evoluciones', 'historias', 'registro'];
+    const tabs = ['evoluciones', 'historias'];
     tabs.forEach(t => {
         const btn = document.getElementById(`exp-tab-${t}`);
         const content = document.getElementById(`exp-content-${t}`);
