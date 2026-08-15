@@ -12908,6 +12908,7 @@ function switchSettingsTab(tabName) {
                 card.style.setProperty('display', 'none', 'important');
             } else {
                 card.classList.toggle('hide', t !== tabName);
+                card.style.display = (t === tabName) ? 'block' : 'none';
             }
         }
     });
@@ -19105,12 +19106,15 @@ async function loadEquipoSettings() {
             fetch('/api/clinica/mis-solicitudes')
         ]);
 
-        const dataEquipo = resEquipo.ok ? await resEquipo.json() : { pertenece: false };
-        const dataSol = resSolicitudes.ok ? await resSolicitudes.json() : { invitaciones_recibidas: [], solicitudes_para_admin: [] };
+        const dataEquipo = resEquipo.ok ? await resEquipo.json() : { pertenece_clinica: false };
+        const dataSol = resSolicitudes.ok ? await resSolicitudes.json() : { invitaciones: [] };
+
+        const pertenece = dataEquipo.pertenece_clinica || dataEquipo.pertenece;
+        const clinica = dataEquipo.clinica || {};
 
         let html = '';
 
-        if (dataEquipo.pertenece) {
+        if (pertenece) {
             // CASO A: Pertenece a una clínica registrada
             const esAdmin = dataEquipo.es_admin;
 
@@ -19126,13 +19130,13 @@ async function loadEquipoSettings() {
                 <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                            <span style="font-size: 1.25rem; font-weight: 800; color: #702e5e;">🏢 ${dataEquipo.nombre}</span>
+                            <span style="font-size: 1.25rem; font-weight: 800; color: #702e5e;">🏢 ${clinica.nombre || 'Mi Clínica'}</span>
                             <span class="badge" style="background: #702e5e; color: #fff; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px;">${esAdmin ? 'Director Administrador' : 'Integrante del Equipo'}</span>
                         </div>
                         <div style="color: #64748b; font-size: 0.88rem;">
-                            🔑 Código de Clínica: <strong style="color: #1e293b; background: #fff; padding: 0.15rem 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0; font-family: monospace;">${dataEquipo.codigo_clinica}</strong>
+                            🔑 Código de Clínica: <strong style="color: #1e293b; background: #fff; padding: 0.15rem 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0; font-family: monospace;">${clinica.codigo_clinica || ''}</strong>
                             <span style="margin: 0 0.5rem;">•</span>
-                            🌐 Portal Público: <a href="/clinica/${dataEquipo.slug}" target="_blank" style="color: #702e5e; font-weight: 700; text-decoration: underline;">/clinica/${dataEquipo.slug}</a>
+                            🌐 Portal Público: <a href="/clinica/${clinica.slug || ''}" target="_blank" style="color: #702e5e; font-weight: 700; text-decoration: underline;">/clinica/${clinica.slug || ''}</a>
                         </div>
                     </div>
                     ${!esAdmin ? `
@@ -19145,7 +19149,7 @@ async function loadEquipoSettings() {
 
             if (esAdmin) {
                 // Configuración de WhatsApp de la Clínica
-                const modoWa = dataEquipo.modo_whatsapp || 'centralizado';
+                const modoWa = clinica.modo_whatsapp || 'centralizado';
                 html += `
                     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
                         <h4 style="margin: 0 0 0.5rem 0; font-weight: 700; color: #1e293b;">💬 Configuración de Notificaciones WhatsApp del Equipo</h4>
@@ -19165,7 +19169,7 @@ async function loadEquipoSettings() {
                 `;
 
                 // Solicitudes pendientes enviadas por terapeutas para unirse a la clínica
-                const solAdmin = dataSol.solicitudes_para_admin || [];
+                const solAdmin = dataEquipo.solicitudes || dataSol.solicitudes_para_admin || [];
                 if (solAdmin.length > 0) {
                     html += `
                         <div style="background: #fffbe6; border: 1.5px solid #ffe58f; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
@@ -19176,8 +19180,8 @@ async function loadEquipoSettings() {
                                 ${solAdmin.map(s => `
                                     <div style="background: #ffffff; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #ffe58f; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
                                         <div>
-                                            <strong style="color: #111827;">Psic. ${s.solicitante_nombres} ${s.solicitante_apellidos}</strong>
-                                            <div style="color: #6b7280; font-size: 0.8rem;">Cédula: ${s.solicitante_cedula || 'N/D'} | Usuario: @${s.solicitante_username}</div>
+                                            <strong style="color: #111827;">Psic. ${s.nombres || s.solicitante_nombres || ''} ${s.apellidos || s.solicitante_apellidos || ''}</strong>
+                                            <div style="color: #6b7280; font-size: 0.8rem;">Cédula: ${s.cedula || s.solicitante_cedula || 'N/D'} | Usuario: @${s.username || s.solicitante_username || ''}</div>
                                         </div>
                                         <div style="display: flex; gap: 0.5rem;">
                                             <button type="button" class="btn btn-sm btn-success" style="font-weight: 700; border-radius: 8px;" onclick="responderSolicitudEquipo(${s.id}, 'aceptar')">✓ Aprobar Ingreso</button>
@@ -19218,7 +19222,7 @@ async function loadEquipoSettings() {
             `;
         } else {
             // CASO B: Usuario Independiente (No pertenece a ninguna clínica)
-            const invitaciones = dataSol.invitaciones_recibidas || [];
+            const invitaciones = dataSol.invitaciones || dataSol.invitaciones_recibidas || [];
 
             if (invitaciones.length > 0) {
                 html += `
@@ -19230,8 +19234,8 @@ async function loadEquipoSettings() {
                             ${invitaciones.map(inv => `
                                 <div style="background: #ffffff; padding: 1rem; border-radius: 10px; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
                                     <div>
-                                        <strong style="color: #111827; font-size: 1rem;">🏢 ${inv.organizacion_nombre}</strong>
-                                        <div style="color: #4b5563; font-size: 0.85rem; margin-top: 0.15rem;">Director: Psic. ${inv.admin_nombres} ${inv.admin_apellidos} (Código: ${inv.codigo_clinica})</div>
+                                        <strong style="color: #111827; font-size: 1rem;">🏢 ${inv.clinica_nombre || inv.organizacion_nombre || 'Clínica'}</strong>
+                                        <div style="color: #4b5563; font-size: 0.85rem; margin-top: 0.15rem;">Código: ${inv.codigo_clinica}</div>
                                     </div>
                                     <div style="display: flex; gap: 0.5rem;">
                                         <button type="button" class="btn btn-sm btn-success" style="font-weight: 700; border-radius: 8px; padding: 0.45rem 1.1rem;" onclick="responderSolicitudEquipo(${inv.id}, 'aceptar')">✓ Aceptar e Ingresar</button>
