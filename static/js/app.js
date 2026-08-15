@@ -9612,19 +9612,39 @@ function renderSuperadminTherapistsTable() {
 
                 <!-- SECCIÓN 3: PERMISOS Y BLOQUEOS -->
                 <div id="sec-perm-${p.id}" style="display: none; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 1.15rem; box-shadow: 0 4px 14px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-                        <h4 style="margin: 0; font-size: 0.88rem; font-weight: 700; color: #0f172a;">⚙️ Configuración de Permisos y Bloqueos de Funciones</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h4 style="margin: 0; font-size: 0.88rem; font-weight: 700; color: #0f172a;">⚙️ Configuración de Permisos y Bloqueos por Plan</h4>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <span style="font-size: 0.75rem; color: #64748b;">Marca las casillas que deseas restringir</span>
                             <button type="button" class="btn btn-sm btn-secondary" onclick="toggleTherapistAccordion(${p.id}, 'perm')" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700; border-radius: 6px;">✖ Cerrar</button>
                         </div>
                     </div>
+
+                    <!-- BOTONES DE PRESETS RÁPIDOS DE PLAN -->
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem;">
+                        <span style="font-size: 0.78rem; font-weight: 800; color: #334155; display: block; margin-bottom: 0.5rem;">⚡ Selección Rápida de Plan:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            <button type="button" class="btn btn-sm" style="background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-weight: 700; font-size: 0.75rem; border-radius: 6px;" onclick="applyPlanPreset(${p.id}, 'basico')">
+                                🥉 Plan Básico (Agenda + Confirmaciones + Finanzas)
+                            </button>
+                            <button type="button" class="btn btn-sm" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700; font-size: 0.75rem; border-radius: 6px;" onclick="applyPlanPreset(${p.id}, 'estandar')">
+                                🥈 Plan Estándar (Gratis 1er Mes: +Evoluciones, Pizarra, Herramientas)
+                            </button>
+                            <button type="button" class="btn btn-sm" style="background: #f0fdf4; color: #166534; border: 1px solid #86efac; font-weight: 700; font-size: 0.75rem; border-radius: 6px;" onclick="applyPlanPreset(${p.id}, 'profesional')">
+                                🥇 Plan Profesional Full (Acceso Total + Examen Mental + Tests)
+                            </button>
+                        </div>
+                    </div>
+
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; font-size: 0.84rem; margin-bottom: 1rem;">
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear Centro de Confirmaciones</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro Pacientes</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-evoluciones" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''}> Bloquear Evoluciones Clínicas</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-finanzas" ${p.bloqueo_finanzas === 1 ? 'checked' : ''}> Bloquear Control Finanzas</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-agenda" ${p.bloqueo_agenda === 1 ? 'checked' : ''}> Bloquear Agenda</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear Centro Confirmaciones</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra Terapéutica</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas Terapéuticas</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-examen-mental" ${p.bloqueo_examen_mental === 1 ? 'checked' : ''}> Bloquear Examen Mental</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-tests" ${p.bloqueo_tests === 1 ? 'checked' : ''}> Bloquear Tests Psicológicos</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas Terapéuticas</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.6rem; margin-top: 0.25rem;">
                             <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> ⚠️ Activar Aviso de Pago (Marcar No Solvente)
                         </label>
@@ -9925,8 +9945,58 @@ function goToSuperadminPage(page) {
 window.onSuperadminSearchInput = onSuperadminSearchInput;
 window.onSuperadminPerPageChange = onSuperadminPerPageChange;
 window.goToSuperadminPage = goToSuperadminPage;
-window.toggleTherapistPermissionsRow = toggleTherapistPermissionsRow;
-window.deactivateTherapistSubscription = deactivateTherapistSubscription;
+function applyPlanPreset(userId, planType) {
+    const permRow = document.getElementById(`perm-row-${userId}`);
+    if (!permRow) return;
+
+    const chkReg = permRow.querySelector('.chk-bloqueo-registro');
+    const chkEvo = permRow.querySelector('.chk-bloqueo-evoluciones');
+    const chkFin = permRow.querySelector('.chk-bloqueo-finanzas');
+    const chkAge = permRow.querySelector('.chk-bloqueo-agenda');
+    const chkConf = permRow.querySelector('.chk-bloqueo-confirmaciones');
+    const chkPiz = permRow.querySelector('.chk-bloqueo-pizarra');
+    const chkHerr = permRow.querySelector('.chk-bloqueo-herramientas');
+    const chkExa = permRow.querySelector('.chk-bloqueo-examen-mental');
+    const chkTest = permRow.querySelector('.chk-bloqueo-tests');
+
+    if (planType === 'basico') {
+        // Plan Básico: Agenda, Confirmaciones y Finanzas habilitados.
+        // Bloquea: Registro, Evoluciones, Pizarra, Herramientas, Examen Mental, Tests
+        if (chkReg) chkReg.checked = true;
+        if (chkEvo) chkEvo.checked = true;
+        if (chkFin) chkFin.checked = false;
+        if (chkAge) chkAge.checked = false;
+        if (chkConf) chkConf.checked = false;
+        if (chkPiz) chkPiz.checked = true;
+        if (chkHerr) chkHerr.checked = true;
+        if (chkExa) chkExa.checked = true;
+        if (chkTest) chkTest.checked = true;
+    } else if (planType === 'estandar') {
+        // Plan Estándar (Prueba 1er Mes Gratis): Incluye Agenda, Registro, Evoluciones, Finanzas, Pizarra, Herramientas, Confirmaciones.
+        // Bloquea únicamente: Examen Mental y Tests
+        if (chkReg) chkReg.checked = false;
+        if (chkEvo) chkEvo.checked = false;
+        if (chkFin) chkFin.checked = false;
+        if (chkAge) chkAge.checked = false;
+        if (chkConf) chkConf.checked = false;
+        if (chkPiz) chkPiz.checked = false;
+        if (chkHerr) chkHerr.checked = false;
+        if (chkExa) chkExa.checked = true;
+        if (chkTest) chkTest.checked = true;
+    } else if (planType === 'profesional') {
+        // Plan Profesional Full: Acceso a todos los 9 módulos desmarcando todos los bloqueos.
+        if (chkReg) chkReg.checked = false;
+        if (chkEvo) chkEvo.checked = false;
+        if (chkFin) chkFin.checked = false;
+        if (chkAge) chkAge.checked = false;
+        if (chkConf) chkConf.checked = false;
+        if (chkPiz) chkPiz.checked = false;
+        if (chkHerr) chkHerr.checked = false;
+        if (chkExa) chkExa.checked = false;
+        if (chkTest) chkTest.checked = false;
+    }
+}
+window.applyPlanPreset = applyPlanPreset;
 
 async function saveTherapistRowSettings(userId) {
     const row = document.querySelector(`tr[data-therapist-id="${userId}"]`);

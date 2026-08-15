@@ -592,63 +592,87 @@
                 </p>
 
                 <!-- GRID DE PLANES -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 2rem; margin-bottom: 3.5rem; text-align: left;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.75rem; margin-bottom: 3.5rem; text-align: left;">
                     
-                    <!-- PLAN PRUEBA (0$) -->
-                    <div style="background: rgba(255, 255, 255, 0.05); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 16px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; backdrop-filter: blur(10px);">
+                    <!-- PLAN BÁSICO -->
+                    <div style="background: rgba(255, 255, 255, 0.05); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 16px; padding: 2rem 1.5rem; display: flex; flex-direction: column; justify-content: space-between; backdrop-filter: blur(10px);">
                         <div>
-                            <div style="display: inline-block; background: rgba(236, 72, 153, 0.2); color: #f472b6; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 1rem;">
-                                🎁 Periodo de Prueba
+                            <div style="display: inline-block; background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 1rem;">
+                                🥉 Plan Inicial
                             </div>
-                            <h3 style="color: white; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem;">Plan Prueba Gratis</h3>
+                            <h3 style="color: white; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Plan Básico</h3>
                             <div style="display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 1.25rem;">
-                                <span style="font-size: 2.8rem; font-weight: 800; color: white;">$0</span>
-                                <span style="color: #cbd5e1; font-weight: 600;">/ 1er Mes</span>
+                                <span style="font-size: 2.5rem; font-weight: 800; color: white;">$10</span>
+                                <span style="color: #cbd5e1; font-weight: 600;">/ mes</span>
                             </div>
-                            <p style="color: #e2e8f0; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem;">
-                                Accede gratis y sin compromiso durante tu primer mes para probar todas las herramientas profesionales del sistema.
+                            <p style="color: #e2e8f0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 1.5rem;">
+                                Ideal para profesionales que necesitan organizar su agenda, cobranzas y automatizar mensajes por WhatsApp.
                             </p>
-                            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #f1f5f9; font-size: 0.92rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Sistema de agenda y pagos</span></li>
+                            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #f1f5f9; font-size: 0.88rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Sistema de agenda interactiva</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Confirmaciones y recordatorios WhatsApp</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Control de cobranzas y Finanzas</span></li>
                                 <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Sincronización con Google Calendar</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Automatización de mensajes de confirmación y recordatorios de WhatsApp</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Los datos se guardan encriptados en el servidor de manera segura</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Exportación de datos en formato Word o PDF</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Pizarra terapéutica</span></li>
                             </ul>
                         </div>
-                        <button class="pub-btn-primary" onclick="openAuthModal()" style="width: 100%; text-align: center; padding: 0.85rem;">Crear Perfil y Probar Gratis</button>
+                        <button class="pub-btn-outline" onclick="openSubscriptionModal()" style="width: 100%; text-align: center; padding: 0.8rem; font-size: 0.9rem;">Suscribir Plan Básico</button>
                     </div>
 
-                    <!-- PLAN PROFESIONAL (15$) -->
-                    <div style="background: linear-gradient(145deg, rgba(169, 89, 147, 0.25) 0%, rgba(61, 30, 63, 0.4) 100%); border: 2px solid #a95993; border-radius: 16px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 12px 30px rgba(169, 89, 147, 0.3);">
-                        <div style="position: absolute; top: -14px; right: 20px; background: #a95993; color: white; font-size: 0.75rem; font-weight: 800; padding: 0.3rem 0.85rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            ⭐ Más Popular
+                    <!-- PLAN ESTÁNDAR (INCLUYE 1er MES GRATIS) -->
+                    <div style="background: linear-gradient(145deg, rgba(236, 72, 153, 0.15) 0%, rgba(61, 30, 63, 0.5) 100%); border: 2px solid #ec4899; border-radius: 16px; padding: 2rem 1.5rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 10px 25px rgba(236, 72, 153, 0.25);">
+                        <div style="position: absolute; top: -14px; right: 15px; background: #ec4899; color: white; font-size: 0.72rem; font-weight: 800; padding: 0.3rem 0.85rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            🎁 1er Mes Gratis
+                        </div>
+                        <div>
+                            <div style="display: inline-block; background: rgba(236, 72, 153, 0.25); color: #f472b6; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 1rem;">
+                                🥈 Clínico Recomendado
+                            </div>
+                            <h3 style="color: white; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Plan Estándar</h3>
+                            <div style="display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 1.25rem;">
+                                <span style="font-size: 2.5rem; font-weight: 800; color: white;">$0</span>
+                                <span style="color: #cbd5e1; font-weight: 600;">/ 1er mes (luego $15/mes)</span>
+                            </div>
+                            <p style="color: #e2e8f0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 1.5rem;">
+                                Accede gratis a la suite de gestión clínica durante tu primer mes con expedientes y herramientas terapéuticas.
+                            </p>
+                            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #f1f5f9; font-size: 0.88rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Todo lo del Plan Básico</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Registro de pacientes e historias clínicas</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Evoluciones de sesiones encriptadas</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Pizarra Terapéutica interactiva</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Herramientas terapéuticas descargables</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Exportación en formato PDF / Word</span></li>
+                            </ul>
+                        </div>
+                        <button class="pub-btn-primary" onclick="openAuthModal()" style="width: 100%; text-align: center; padding: 0.8rem; font-size: 0.9rem;">Probar Gratis 1er Mes</button>
+                    </div>
+
+                    <!-- PLAN PROFESIONAL FULL -->
+                    <div style="background: linear-gradient(145deg, rgba(169, 89, 147, 0.25) 0%, rgba(61, 30, 63, 0.4) 100%); border: 2px solid #a95993; border-radius: 16px; padding: 2rem 1.5rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 12px 30px rgba(169, 89, 147, 0.3);">
+                        <div style="position: absolute; top: -14px; right: 15px; background: #a95993; color: white; font-size: 0.72rem; font-weight: 800; padding: 0.3rem 0.85rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            ⭐ Acceso Total
                         </div>
                         <div>
                             <div style="display: inline-block; background: rgba(168, 85, 247, 0.25); color: #c084fc; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 1rem;">
-                                🚀 Acceso Ilimitado
+                                🥇 Suite Completa + Psicometría
                             </div>
-                            <h3 style="color: white; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem;">Plan Profesional</h3>
+                            <h3 style="color: white; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Plan Profesional Full</h3>
                             <div style="display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 1.25rem;">
-                                <span style="font-size: 2.8rem; font-weight: 800; color: white;">$15</span>
+                                <span style="font-size: 2.5rem; font-weight: 800; color: white;">$20</span>
                                 <span style="color: #cbd5e1; font-weight: 600;">/ mes</span>
                             </div>
-                            <p style="color: #e2e8f0; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem;">
-                                La suite tecnológica definitiva para psicólogos que desean automatizar su consulta sin límites.
+                            <p style="color: #e2e8f0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 1.5rem;">
+                                Solución integral con examen mental estructurado y baterías psicométricas completas.
                             </p>
-                            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #f1f5f9; font-size: 0.92rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Sistema de agenda y pagos</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Sincronización con Google Calendar</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Automatización de mensajes de confirmación y recordatorios de WhatsApp</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Los datos se guardan encriptados en el servidor de manera segura</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Exportación de datos en formato Word o PDF</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Visualización en el directorio de la página web</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Pizarra terapéutica</span></li>
-                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Herramientas terapéuticas específicas</span></li>
+                            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #f1f5f9; font-size: 0.88rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Todo lo del Plan Estándar</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Examen Mental Clínico Estructurado</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Catálogo de Tests Psicológicos (BDI-II, HAM-A, MMSE, SCL-90-R, MCMI-III)</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Perfil destacado en Directorio de Psicólogos</span></li>
+                                <li style="display: flex; align-items: center; gap: 8px;">✅ <span>Soporte prioritario</span></li>
                             </ul>
                         </div>
-                        <button class="pub-btn-primary" onclick="openSubscriptionModal()" style="width: 100%; text-align: center; padding: 0.85rem; background: linear-gradient(135deg, #a95993 0%, #863d73 100%);">Ver Métodos de Pago y Suscribir</button>
+                        <button class="pub-btn-primary" onclick="openSubscriptionModal()" style="width: 100%; text-align: center; padding: 0.8rem; font-size: 0.9rem; background: linear-gradient(135deg, #a95993 0%, #863d73 100%);">Suscribir Plan Profesional</button>
                     </div>
 
                 </div>
