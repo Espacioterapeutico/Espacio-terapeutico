@@ -7498,18 +7498,18 @@ async function fetchRecoveryQuestions() {
     }
 }
 
-async function submitPasswordReset() {
+async function submitPasswordReset(sendViaEmail = false) {
     const username = document.getElementById('recovery-username').value.trim();
     const resp1 = document.getElementById('recovery-a1').value.trim();
     const resp2 = document.getElementById('recovery-a2').value.trim();
     const newPassword = document.getElementById('recovery-new-password').value.trim();
     
-    if (!resp1 || !resp2 || !newPassword) {
-        alert("Por favor completa todos los campos.");
+    if (!resp1 || !resp2) {
+        alert("Por favor responde a ambas preguntas de seguridad.");
         return;
     }
-    
-    if (newPassword.length < 6) {
+
+    if (!sendViaEmail && (!newPassword || newPassword.length < 6)) {
         alert("La nueva contraseña debe tener al menos 6 caracteres.");
         return;
     }
@@ -7522,16 +7522,17 @@ async function submitPasswordReset() {
                 username,
                 respuesta_1: resp1,
                 respuesta_2: resp2,
-                new_password: newPassword
+                new_password: newPassword,
+                send_via_email: sendViaEmail
             })
         });
         const data = await res.json();
         
         if (res.ok) {
-            alert(data.success || "Contraseña restablecida con éxito. Inicia sesión a continuación.");
+            alert(data.success || "Operación realizada con éxito.");
             closeModal('recovery-modal');
         } else {
-            alert(data.error || "Error al restablecer la contraseña.");
+            alert(data.error || "Error al procesar la solicitud.");
         }
     } catch (err) {
         console.error("Error al restablecer contraseña:", err);

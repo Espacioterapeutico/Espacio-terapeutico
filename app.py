@@ -4059,11 +4059,12 @@ def auth_reset_password():
     respuesta_1 = (data.get('respuesta_1') or '').strip().lower()
     respuesta_2 = (data.get('respuesta_2') or '').strip().lower()
     new_password = (data.get('new_password') or '').strip()
+    send_via_email = bool(data.get('send_via_email'))
     
-    if not username or not respuesta_1 or not respuesta_2 or not new_password:
-        return jsonify({'error': 'Todos los campos son obligatorios.'}), 400
+    if not username or not respuesta_1 or not respuesta_2:
+        return jsonify({'error': 'Todos los campos de preguntas de seguridad son obligatorios.'}), 400
 
-    if len(new_password) < 6:
+    if not send_via_email and (not new_password or len(new_password) < 6):
         return jsonify({'error': 'La nueva contraseña debe tener al menos 6 caracteres.'}), 400
 
     db = get_db()
@@ -4071,7 +4072,7 @@ def auth_reset_password():
 
     # 1. Intentar en usuarios (psicólogos/admin)
     cursor.execute("""
-        SELECT id, respuesta_seguridad_1_hash, respuesta_seguridad_2_hash 
+        SELECT id, username, nombres, apellidos, email, email_publico, respuesta_seguridad_1_hash, respuesta_seguridad_2_hash 
         FROM usuarios 
         WHERE LOWER(username) = ?
     """, (username.lower(),))
@@ -4081,16 +4082,57 @@ def auth_reset_password():
         match_1 = check_password_hash(user_row['respuesta_seguridad_1_hash'], respuesta_1)
         match_2 = check_password_hash(user_row['respuesta_seguridad_2_hash'], respuesta_2)
         if match_1 and match_2:
-            new_hash = generate_password_hash(new_password)
-            cursor.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (new_hash, user_row['id']))
-            db.commit()
-            return jsonify({'success': 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.'})
+            target_email = user_row['email'] or user_row['email_publico'] or (user_row['username'] if '@' in user_row['username'] else None)
+            
+            if send_via_email:
+                if not target_email:
+                    return jsonify({'error': 'Este usuario no tiene un correo electrónico registrado en su perfil para enviar las credenciales. Utiliza la opción de Restablecer Contraseña.'}), 400
+                import random
+                rand_num = random.randint(1000, 9999)
+                final_pass = f"Espacio#{rand_num}"
+                new_hash = generate_password_hash(final_pass)
+                cursor.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (new_hash, user_row['id']))
+                db.commit()
+                
+                nom_comp = f"{user_row['nombres'] or ''} {user_row['apellidos'] or ''}".strip() or user_row['username']
+                app_url = request.host_url.rstrip('/')
+                html_msg = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; padding: 25px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+                    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;">
+                        <h2 style="color: #702e5e; margin: 0; font-size: 1.4rem;">Espacio Terapéutico</h2>
+                        <p style="color: #64748b; font-size: 0.85rem; margin: 4px 0 0 0;">Recuperación de Credenciales de Acceso</p>
+                    </div>
+                    <p style="color: #334155; font-size: 0.95rem;">Hola <strong>{nom_comp}</strong>,</p>
+                    <p style="color: #475569; font-size: 0.9rem; line-height: 1.5;">Hemos procesado tu solicitud de recuperación de accesos mediante la verificación de tus preguntas de seguridad.</p>
+                    
+                    <div style="background: #fdf4ff; border-left: 4px solid #702e5e; padding: 16px; border-radius: 10px; margin: 20px 0;">
+                        <div style="margin-bottom: 8px; font-size: 0.92rem; color: #334155;">👤 <strong>Usuario:</strong> <code style="font-size: 1rem; color: #702e5e; font-weight: 700;">{user_row['username']}</code></div>
+                        <div style="font-size: 0.92rem; color: #334155;">🔑 <strong>Nueva Contraseña:</strong> <code style="font-size: 1.05rem; color: #059669; font-weight: 800;">{final_pass}</code></div>
+                    </div>
+                    
+                    <p style="font-size: 0.82rem; color: #64748b; margin-top: 15px;">Te sugerimos iniciar sesión y actualizar tu contraseña desde la sección de ajustes de tu cuenta por una de tu preferencia.</p>
+                    
+                    <div style="text-align: center; margin-top: 25px;">
+                        <a href="{app_url}/login" style="background: linear-gradient(135deg, #702e5e 0%, #58224a 100%); color: #ffffff; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 700; display: inline-block; font-size: 0.9rem;">🔑 Iniciar Sesión Ahora</a>
+                    </div>
+                </div>
+                """
+                send_email_async(target_email, "🔑 Tus Credenciales de Acceso - Espacio Terapéutico", html_msg)
+                
+                parts = target_email.split('@')
+                masked = parts[0][0] + '***' + parts[0][-1] + '@' + parts[1] if len(parts[0]) > 2 else target_email
+                return jsonify({'success': f'¡Credenciales enviadas con éxito a tu correo ({masked})! Revisa tu bandeja de entrada o spam.'})
+            else:
+                new_hash = generate_password_hash(new_password)
+                cursor.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (new_hash, user_row['id']))
+                db.commit()
+                return jsonify({'success': 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.'})
         else:
             return jsonify({'error': 'Respuestas a preguntas de seguridad incorrectas.'}), 401
 
     # 2. Intentar en pacientes
     cursor.execute("""
-        SELECT id, respuesta_seguridad_1_hash, respuesta_seguridad_2_hash 
+        SELECT id, username, nombres, apellidos, email, respuesta_seguridad_1_hash, respuesta_seguridad_2_hash 
         FROM pacientes 
         WHERE LOWER(username) = ? OR cedula = ?
     """, (username.lower(), username))
@@ -4100,15 +4142,61 @@ def auth_reset_password():
         match_1 = check_password_hash(patient_row['respuesta_seguridad_1_hash'], respuesta_1)
         match_2 = check_password_hash(patient_row['respuesta_seguridad_2_hash'], respuesta_2)
         if match_1 and match_2:
-            new_hash = generate_password_hash(new_password)
-            cursor.execute("UPDATE pacientes SET password_hash = ? WHERE id = ?", (new_hash, patient_row['id']))
-            db.commit()
-            try:
-                import threading
-                threading.Thread(target=sync_patient_to_firebase, args=(patient_row['id'],)).start()
-            except Exception:
-                pass
-            return jsonify({'success': 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.'})
+            target_email = patient_row['email'] or (patient_row['username'] if '@' in (patient_row['username'] or '') else None)
+            
+            if send_via_email:
+                if not target_email:
+                    return jsonify({'error': 'No tienes un correo electrónico registrado en tu perfil de consultante para enviar las credenciales. Utiliza la opción de Restablecer Contraseña.'}), 400
+                import random
+                rand_num = random.randint(1000, 9999)
+                final_pass = f"Espacio#{rand_num}"
+                new_hash = generate_password_hash(final_pass)
+                cursor.execute("UPDATE pacientes SET password_hash = ? WHERE id = ?", (new_hash, patient_row['id']))
+                db.commit()
+                try:
+                    import threading
+                    threading.Thread(target=sync_patient_to_firebase, args=(patient_row['id'],)).start()
+                except Exception:
+                    pass
+
+                nom_comp = f"{patient_row['nombres'] or ''} {patient_row['apellidos'] or ''}".strip() or patient_row['username']
+                app_url = request.host_url.rstrip('/')
+                html_msg = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; padding: 25px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+                    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;">
+                        <h2 style="color: #702e5e; margin: 0; font-size: 1.4rem;">Espacio Terapéutico</h2>
+                        <p style="color: #64748b; font-size: 0.85rem; margin: 4px 0 0 0;">Recuperación de Credenciales de Acceso (Consultante)</p>
+                    </div>
+                    <p style="color: #334155; font-size: 0.95rem;">Hola <strong>{nom_comp}</strong>,</p>
+                    <p style="color: #475569; font-size: 0.9rem; line-height: 1.5;">Hemos procesado tu solicitud de recuperación de accesos a tu portal mediante tus preguntas de seguridad.</p>
+                    
+                    <div style="background: #fdf4ff; border-left: 4px solid #702e5e; padding: 16px; border-radius: 10px; margin: 20px 0;">
+                        <div style="margin-bottom: 8px; font-size: 0.92rem; color: #334155;">👤 <strong>Usuario / Cédula:</strong> <code style="font-size: 1rem; color: #702e5e; font-weight: 700;">{patient_row['username']}</code></div>
+                        <div style="font-size: 0.92rem; color: #334155;">🔑 <strong>Nueva Contraseña:</strong> <code style="font-size: 1.05rem; color: #059669; font-weight: 800;">{final_pass}</code></div>
+                    </div>
+                    
+                    <p style="font-size: 0.82rem; color: #64748b; margin-top: 15px;">Te sugerimos iniciar sesión y actualizar esta contraseña desde tu perfil.</p>
+                    
+                    <div style="text-align: center; margin-top: 25px;">
+                        <a href="{app_url}/login" style="background: linear-gradient(135deg, #702e5e 0%, #58224a 100%); color: #ffffff; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 700; display: inline-block; font-size: 0.9rem;">🔑 Iniciar Sesión en mi Portal</a>
+                    </div>
+                </div>
+                """
+                send_email_async(target_email, "🔑 Tus Credenciales de Acceso - Espacio Terapéutico", html_msg)
+
+                parts = target_email.split('@')
+                masked = parts[0][0] + '***' + parts[0][-1] + '@' + parts[1] if len(parts[0]) > 2 else target_email
+                return jsonify({'success': f'¡Credenciales enviadas con éxito a tu correo ({masked})! Revisa tu bandeja de entrada o spam.'})
+            else:
+                new_hash = generate_password_hash(new_password)
+                cursor.execute("UPDATE pacientes SET password_hash = ? WHERE id = ?", (new_hash, patient_row['id']))
+                db.commit()
+                try:
+                    import threading
+                    threading.Thread(target=sync_patient_to_firebase, args=(patient_row['id'],)).start()
+                except Exception:
+                    pass
+                return jsonify({'success': 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.'})
         else:
             return jsonify({'error': 'Respuestas a preguntas de seguridad incorrectas.'}), 401
 
