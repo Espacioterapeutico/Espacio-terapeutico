@@ -16436,6 +16436,40 @@ def api_clinica_ajustes():
     return jsonify({'success': 'Ajustes de la clínica actualizados correctamente.'})
 
 
+@app.route('/api/clinica/eliminar', methods=['POST'])
+def api_clinica_eliminar():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT clinica_id, tipo_clinica FROM usuarios WHERE id = ?", (user_id,))
+    u_row = cursor.fetchone()
+    if not u_row or not u_row['clinica_id']:
+        return jsonify({'error': 'No perteneces a ninguna clínica.'}), 400
+
+    c_id = u_row['clinica_id']
+    cursor.execute("SELECT id, admin_id, nombre FROM clinicas WHERE id = ?", (c_id,))
+    c_row = cursor.fetchone()
+    if not c_row or c_row['admin_id'] != user_id:
+        return jsonify({'error': 'Solo el Director Administrador puede eliminar la clínica.'}), 403
+
+    # Desvincular a todos los usuarios de la clínica
+    cursor.execute("UPDATE usuarios SET clinica_id = NULL, tipo_clinica = 0 WHERE clinica_id = ?", (c_id,))
+    
+    # Eliminar solicitudes
+    cursor.execute("DELETE FROM solicitudes_clinica WHERE clinica_id = ?", (c_id,))
+
+    # Eliminar clínica
+    cursor.execute("DELETE FROM clinicas WHERE id = ?", (c_id,))
+
+    db.commit()
+    return jsonify({'success': f"La clínica '{c_row['nombre']}' ha sido eliminada exitosamente."})
+
+
+
 
 
 

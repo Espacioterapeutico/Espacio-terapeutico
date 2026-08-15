@@ -19139,11 +19139,15 @@ async function loadEquipoSettings() {
                             🌐 Portal Público: <a href="/clinica/${clinica.slug || ''}" target="_blank" style="color: #702e5e; font-weight: 700; text-decoration: underline;">/clinica/${clinica.slug || ''}</a>
                         </div>
                     </div>
-                    ${!esAdmin ? `
+                    ${esAdmin ? `
+                        <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-weight: 700; padding: 0.45rem 1rem;" onclick="eliminarClinicaPrompt()">
+                            🗑️ Eliminar Clínica
+                        </button>
+                    ` : `
                         <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-weight: 700; padding: 0.45rem 1rem;" onclick="salirClinicaPrompt()">
                             🚪 Salir del Equipo
                         </button>
-                    ` : ''}
+                    `}
                 </div>
             `;
 
@@ -19354,6 +19358,23 @@ async function salirClinicaPrompt() {
     }
 }
 
+async function eliminarClinicaPrompt() {
+    if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar y disolver esta clínica? Esta acción desvinculará a todos los miembros de tu equipo y restaurará tu perfil a Psicólogo Independiente.")) return;
+
+    try {
+        const res = await fetch('/api/clinica/eliminar', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "No se pudo eliminar la clínica."));
+        }
+    } catch (e) {
+        alert("Error de conexión al eliminar la clínica.");
+    }
+}
+
 async function ejecutarRegistroClinica() {
     const nombre = (document.getElementById('reg-clinica-nombre')?.value || '').trim();
     const desc = (document.getElementById('reg-clinica-desc')?.value || '').strip ? (document.getElementById('reg-clinica-desc')?.value || '').trim() : '';
@@ -19436,6 +19457,7 @@ window.loadEquipoSettings = loadEquipoSettings;
 window.invitarMiembroClinicaPrompt = invitarMiembroClinicaPrompt;
 window.responderSolicitudEquipo = responderSolicitudEquipo;
 window.salirClinicaPrompt = salirClinicaPrompt;
+window.eliminarClinicaPrompt = eliminarClinicaPrompt;
 window.ejecutarRegistroClinica = ejecutarRegistroClinica;
 window.ejecutarSolicitudUnirseClinica = ejecutarSolicitudUnirseClinica;
 window.actualizarModoWaClinica = actualizarModoWaClinica;
