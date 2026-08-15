@@ -19377,7 +19377,7 @@ async function eliminarClinicaPrompt() {
 
 async function ejecutarRegistroClinica() {
     const nombre = (document.getElementById('reg-clinica-nombre')?.value || '').trim();
-    const desc = (document.getElementById('reg-clinica-desc')?.value || '').strip ? (document.getElementById('reg-clinica-desc')?.value || '').trim() : '';
+    const desc = (document.getElementById('reg-clinica-desc')?.value || '').trim();
 
     if (!nombre) {
         alert("Por favor ingrese el nombre de su clínica u organización.");
