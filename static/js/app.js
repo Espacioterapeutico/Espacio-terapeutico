@@ -491,9 +491,17 @@ let googleConfigured = false;
 let currentYear = new Date().getFullYear();
 let currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
 
+if (window.location.pathname.startsWith('/evaluacion/')) {
+    document.documentElement.classList.add('is-public-eval-page');
+    if (document.readyState !== 'loading') {
+        try { initPublicTestRouteHandler(); hideLoadingScreen(); } catch(e) {}
+    }
+}
+
 // Al iniciar la ventana (Arranque Seguro Móvil y Escritorio)
 document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname.startsWith('/evaluacion/')) {
+        document.documentElement.classList.add('is-public-eval-page');
         initPublicTestRouteHandler();
         hideLoadingScreen();
         return;
@@ -17379,7 +17387,14 @@ let currentPublicTestPageSize = 20;
 function initPublicTestRouteHandler() {
     const path = window.location.pathname;
     if (path.startsWith('/evaluacion/')) {
-        const token = path.replace('/evaluacion/', '').trim();
+        document.documentElement.classList.add('is-public-eval-page');
+        let token = '';
+        const match = path.match(/\/evaluacion\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            token = match[1];
+        } else {
+            token = path.replace('/evaluacion/', '').split('?')[0].replace(/\/$/, '').trim();
+        }
         if (token) {
             loadAndRenderPublicTest(token);
         }
@@ -17392,6 +17407,7 @@ function getPublicTestDisplayTitle(testDef) {
 }
 
 async function loadAndRenderPublicTest(token) {
+    document.documentElement.classList.add('is-public-eval-page');
     currentPublicTestToken = token;
     currentPublicTestAnswers = {};
 

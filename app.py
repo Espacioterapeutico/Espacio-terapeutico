@@ -15479,76 +15479,91 @@ def api_asignar_test():
 
 @app.route('/api/public/evaluacion/<token>', methods=['GET'])
 def api_get_public_evaluacion(token):
-    db = get_db()
-    ensure_tests_tables(db)
-    cursor = db.cursor()
+    try:
+        db = get_db()
+        ensure_tests_tables(db)
+        cursor = db.cursor()
 
-    cursor.execute("""
-        SELECT a.*, p.nombres as pac_nombres, p.apellidos as pac_apellidos,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.nomenclatura as psic_titulo, u.foto_titulo as psic_foto
-        FROM test_asignaciones a
-        JOIN pacientes p ON a.patient_id = p.id
-        JOIN usuarios u ON a.user_id = u.id
-        WHERE a.uuid_token = ?
-    """, (token,))
-    row = cursor.fetchone()
-    if not row:
-        return jsonify({'error': 'Evaluación no encontrada o token inválido.'}), 404
+        clean_token = (token or '').strip()
 
-    assign = dict(row)
-    tcode = (assign.get('test_code') or '').strip()
+        cursor.execute("""
+            SELECT a.*, p.nombres as pac_nombres, p.apellidos as pac_apellidos,
+                   u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.nomenclatura as psic_titulo, u.foto_titulo as psic_foto
+            FROM test_asignaciones a
+            JOIN pacientes p ON a.patient_id = p.id
+            JOIN usuarios u ON a.user_id = u.id
+            WHERE a.uuid_token = ?
+        """, (clean_token,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'error': 'Evaluación no encontrada o token inválido.'}), 404
 
-    # Búsqueda inteligente por código exacto, siglas o patrón
-    cursor.execute("SELECT * FROM tests_definiciones WHERE LOWER(code) = LOWER(?) OR LOWER(siglas) = LOWER(?)", (tcode, tcode))
-    test_def_row = cursor.fetchone()
-    if not test_def_row:
-        cursor.execute("SELECT * FROM tests_definiciones WHERE LOWER(code) LIKE LOWER(?) OR LOWER(siglas) LIKE LOWER(?)", (f"%{tcode}%", f"%{tcode}%"))
+        assign = dict(row)
+        tcode = (assign.get('test_code') or '').strip()
+
+        # Búsqueda inteligente por código exacto, siglas o patrón
+        cursor.execute("SELECT * FROM tests_definiciones WHERE LOWER(code) = LOWER(?) OR LOWER(siglas) = LOWER(?)", (tcode, tcode))
         test_def_row = cursor.fetchone()
+        if not test_def_row:
+            cursor.execute("SELECT * FROM tests_definiciones WHERE LOWER(code) LIKE LOWER(?) OR LOWER(siglas) LIKE LOWER(?)", (f"%{tcode}%", f"%{tcode}%"))
+            test_def_row = cursor.fetchone()
 
-    if test_def_row:
-        test_def = dict(test_def_row)
-        try: test_def['escala_opciones'] = json.loads(test_def['escala_opciones_json'])
-        except: test_def['escala_opciones'] = []
+        if test_def_row:
+            test_def = dict(test_def_row)
+            try: test_def['escala_opciones'] = json.loads(test_def['escala_opciones_json'])
+            except: test_def['escala_opciones'] = []
 
-        try: test_def['items'] = json.loads(test_def['items_json'])
-        except: test_def['items'] = []
-    else:
-        # Fallback dinámico automático para asegurar que NINGUNA evaluación falle jamás al cargar
-        test_def = {
-            'code': tcode,
-            'nombre': f"Evaluación Psicológica ({tcode})",
-            'siglas': tcode,
-            'categoria': 'Evaluación Clínica',
-            'descripcion': 'Instrumento de evaluación psicológica estandarizado.',
-            'instrucciones': 'Lea con atención cada afirmación e indique la opción que mejor describa su vivencia o estado actual.',
-            'escala_opciones': [
-                {'val': 0, 'txt': '0 = En absoluto / Nunca'},
-                {'val': 1, 'txt': '1 = Levemente / A veces'},
-                {'val': 2, 'txt': '2 = Moderadamente / Frecuentemente'},
-                {'val': 3, 'txt': '3 = Severamente / Casi siempre'}
-            ],
-            'items': [{'num': i, 'txt': f'Ítem {i}'} for i in range(1, 21)]
-        }
+            try: test_def['items'] = json.loads(test_def['items_json'])
+            except: test_def['items'] = []
+        else:
+            # Fallback dinámico automático para asegurar que NINGUNA evaluación falle jamás al cargar
+            test_def = {
+                'code': tcode,
+                'nombre': f"Evaluación Psicológica ({tcode})",
+                'siglas': tcode,
+                'categoria': 'Evaluación Clínica',
+                'descripcion': 'Instrumento de evaluación psicológica estandarizado.',
+                'instrucciones': 'Lea con atención cada afirmación e indique la opción que mejor describa su vivencia o estado actual.',
+                'escala_opciones': [
+                    {'val': 0, 'txt': '0 = En absoluto / Nunca'},
+                    {'val': 1, 'txt': '1 = Levemente / A veces'},
+                    {'val': 2, 'txt': '2 = Moderadamente / Frecuentemente'},
+                    {'val': 3, 'txt': '3 = Severamente / Casi siempre'}
+                ],
+                'items': [{'num': i, 'txt': f'Ítem {i}'} for i in range(1, 21)]
+            }
 
-    return jsonify({
-        'assignment': {
-            'id': assign['id'],
-            'token': assign['uuid_token'],
-            'estado': assign['estado'],
-            'fecha_asignacion': assign['fecha_asignacion'],
-            'fecha_completado': assign['fecha_completado'],
-            'test_code': assign['test_code'],
-            'paciente_nombre': f"{assign['pac_nombres']} {assign['pac_apellidos']}".strip(),
-            'psicologo_nombre': f"Psic. {assign['psic_nombres']} {assign['psic_apellidos']}".strip(),
-            'psicologo_titulo': assign['psic_titulo'] or 'Psicólogo Clínico',
-            'psicologo_foto': assign['psic_foto'] or '/static/logo.png',
-            'puntaje_total': assign['puntaje_total'],
-            'clasificacion_resultado': assign['clasificacion_resultado'],
-            'interpretacion_clinica': assign['interpretacion_clinica'],
-            'subescalas': json.loads(assign['subescalas_json']) if assign.get('subescalas_json') else {}
-        },
-        'test_definition': test_def
-    })
+        pac_nombre = f"{(assign.get('pac_nombres') or '')} {(assign.get('pac_apellidos') or '')}".strip() or "Consultante"
+        psic_nombre = f"Psic. {(assign.get('psic_nombres') or '')} {(assign.get('psic_apellidos') or '')}".strip() or "Psicólogo Clínico"
+
+        subescalas_val = {}
+        if assign.get('subescalas_json'):
+            try: subescalas_val = json.loads(assign['subescalas_json'])
+            except: subescalas_val = {}
+
+        return jsonify({
+            'assignment': {
+                'id': assign['id'],
+                'token': assign['uuid_token'],
+                'estado': assign['estado'],
+                'fecha_asignacion': assign['fecha_asignacion'],
+                'fecha_completado': assign['fecha_completado'],
+                'test_code': assign['test_code'],
+                'paciente_nombre': pac_nombre,
+                'psicologo_nombre': psic_nombre,
+                'psicologo_titulo': assign.get('psic_titulo') or 'Psicólogo Clínico',
+                'psicologo_foto': assign.get('psic_foto') or '/static/logo.png',
+                'puntaje_total': assign.get('puntaje_total'),
+                'clasificacion_resultado': assign.get('clasificacion_resultado'),
+                'interpretacion_clinica': assign.get('interpretacion_clinica'),
+                'subescalas': subescalas_val
+            },
+            'test_definition': test_def
+        })
+    except Exception as e:
+        import traceback
+        print("ERROR EN API_GET_PUBLIC_EVALUACION:", traceback.format_exc())
+        return jsonify({'error': f'Error al obtener evaluación: {str(e)}'}), 500
 
 
 @app.route('/api/public/evaluacion/<token>/responder', methods=['POST'])
