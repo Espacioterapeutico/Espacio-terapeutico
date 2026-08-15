@@ -594,30 +594,34 @@ function switchView(viewId) {
         return;
     }
 
-    // Verificación de bloqueos granulares
-    if (viewId === 'register-patient' && isFeatureBlocked('registro')) {
-        alert("La función de Registro de Pacientes está suspendida por administración.");
+    // Verificación de bloqueos granulares y estado de solvencia
+    if (viewId === 'finance' && isNoSolvente()) {
+        alert("🔒 Módulo de Finanzas Suspendido\n\nEl Control de Finanzas está inhabilitado debido a una mensualidad de suscripción pendiente.");
         return;
     }
-    if (viewId === 'sessions' && isFeatureBlocked('evoluciones')) {
-        alert("La función de Evoluciones Clínicas está suspendida por administración.");
-        return;
-    }
-    if (viewId === 'finance' && isFeatureBlocked('finanzas')) {
-        alert("La función de Finanzas y Pagos está suspendida por administración.");
+    if (viewId === 'manual-confirmations' && (isFeatureBlocked('confirmaciones') || isNoSolvente())) {
+        alert("🔒 Centro de Confirmaciones Suspendido\n\nEsta función está inhabilitada por administración o suscripción pendiente.");
         return;
     }
     if (viewId === 'pizarra-visual' && isFeatureBlocked('pizarra')) {
         alert("La función de Pizarra Terapéutica está suspendida por administración.");
         return;
     }
-    if (viewId === 'agenda' && isFeatureBlocked('agenda')) {
-        alert("La función de Agenda y Calendario está suspendida por administración.");
+    if (viewId === 'examen-mental' && isFeatureBlocked('examen_mental')) {
+        alert("La función de Examen Mental está suspendida por administración.");
+        return;
+    }
+    if (viewId === 'tests-psicologicos' && isFeatureBlocked('tests')) {
+        alert("La función de Tests Psicológicos está suspendida por administración.");
         return;
     }
     if (viewId === 'therapist-tools' && isFeatureBlocked('herramientas')) {
         alert("La función de Herramientas Terapéuticas está suspendida por administración.");
         return;
+    }
+
+    if (viewId === 'tests-psicologicos' && typeof renderTestsCatalog === 'function') {
+        renderTestsCatalog();
     }
 
     // Ocultar cualquier modal abierto al cambiar de vista
@@ -1156,6 +1160,10 @@ function isFeatureBlocked(feature) {
     }
 }
 
+function isNoSolvente() {
+    return sessionStorage.getItem('aviso_pago') === '1';
+}
+
 let notificationIntervalId = null;
 let patientNotificationIntervalId = null;
 
@@ -1403,36 +1411,56 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         });
     }
     
-    // Guardar bloqueos en memoria para verificación dinámica
+    // Guardar estado de solvencia (aviso_pago) y bloqueos en sessionStorage
+    sessionStorage.setItem('aviso_pago', (avisoPago === 1) ? '1' : '0');
+    
+    // Banner de Aviso de Pago
+    const avisoBanner = document.getElementById('dashboard-aviso-pago');
+    if (avisoBanner) {
+        if (avisoPago === 1) {
+            avisoBanner.classList.remove('hide');
+        } else {
+            avisoBanner.classList.add('hide');
+        }
+    }
+
     if (bloqueos) {
         sessionStorage.setItem('bloqueos', JSON.stringify(bloqueos));
-        // Ocultar items del menú según bloqueos
-        if (bloqueos.registro === 1) {
-            const link = document.querySelector('[data-view="register-patient"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.evoluciones === 1) {
-            const link = document.querySelector('[data-view="sessions"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.finanzas === 1) {
-            const link = document.querySelector('[data-view="finance"]');
+    } else {
+        sessionStorage.removeItem('bloqueos');
+    }
+
+    // 1. Reglas por falta de solvencia (aviso_pago = 1)
+    if (avisoPago === 1) {
+        const linkFinanzas = document.querySelector('[data-view="finance"]');
+        if (linkFinanzas) linkFinanzas.classList.add('hide');
+        const linkConfirmaciones = document.querySelector('[data-view="manual-confirmations"]');
+        if (linkConfirmaciones) linkConfirmaciones.classList.add('hide');
+
+        // Ocultar pestañas de Horarios, Google y WhatsApp en Ajustes
+        const tabHorarios = document.getElementById('set-tab-horarios');
+        if (tabHorarios) tabHorarios.classList.add('hide');
+        const tabGoogle = document.getElementById('set-tab-google');
+        if (tabGoogle) tabGoogle.classList.add('hide');
+        const tabWhatsapp = document.getElementById('set-tab-whatsapp');
+        if (tabWhatsapp) tabWhatsapp.classList.add('hide');
+    } else {
+        const tabHorarios = document.getElementById('set-tab-horarios');
+        if (tabHorarios) tabHorarios.classList.remove('hide');
+        const tabGoogle = document.getElementById('set-tab-google');
+        if (tabGoogle) tabGoogle.classList.remove('hide');
+        const tabWhatsapp = document.getElementById('set-tab-whatsapp');
+        if (tabWhatsapp) tabWhatsapp.classList.remove('hide');
+    }
+
+    // 2. Reglas por bloqueos de casillas de SuperAdmin
+    if (bloqueos) {
+        if (bloqueos.confirmaciones === 1) {
+            const link = document.querySelector('[data-view="manual-confirmations"]');
             if (link) link.classList.add('hide');
         }
         if (bloqueos.pizarra === 1) {
             const link = document.querySelector('[data-view="pizarra-visual"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.agenda === 1) {
-            const link = document.querySelector('[data-view="agenda"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.herramientas === 1) {
-            const link = document.querySelector('[data-view="therapist-tools"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.confirmaciones === 1) {
-            const link = document.querySelector('[data-view="manual-confirmations"]');
             if (link) link.classList.add('hide');
         }
         if (bloqueos.examen_mental === 1) {
@@ -1440,11 +1468,13 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
             if (link) link.classList.add('hide');
         }
         if (bloqueos.tests === 1) {
-            const testEl = document.getElementById('s-test-aplicados');
-            if (testEl && testEl.parentElement) testEl.parentElement.classList.add('hide');
+            const link = document.querySelector('[data-view="tests-psicologicos"]');
+            if (link) link.classList.add('hide');
         }
-    } else {
-        sessionStorage.removeItem('bloqueos');
+        if (bloqueos.herramientas === 1) {
+            const link = document.querySelector('[data-view="therapist-tools"]');
+            if (link) link.classList.add('hide');
+        }
     }
     
     if (isPureSuperadmin) {
@@ -5182,6 +5212,10 @@ async function loadAgenda() {
 }
 
 async function openNewEventModal(defaultPaid = false, initialType = 'consulta') {
+    if (isNoSolvente()) {
+        alert("⚠️ Cuenta No Solvente 🔒\n\nEl agendamiento de citas y servicios de la agenda se encuentra suspendido. Por favor regulariza tu suscripción con la administración.");
+        return;
+    }
     document.getElementById('event-form').reset();
     document.getElementById('event-form-id').value = '';
     
@@ -9585,19 +9619,14 @@ function renderSuperadminTherapistsTable() {
                             <button type="button" class="btn btn-sm btn-secondary" onclick="toggleTherapistAccordion(${p.id}, 'perm')" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700; border-radius: 6px;">✖ Cerrar</button>
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.6rem; font-size: 0.82rem; margin-bottom: 1rem;">
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-evoluciones" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''}> Bloquear Evoluciones</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-finanzas" ${p.bloqueo_finanzas === 1 ? 'checked' : ''}> Bloquear Finanzas</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-agenda" ${p.bloqueo_agenda === 1 ? 'checked' : ''}> Bloquear Agenda</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-mensajes" ${p.bloqueo_mensajes === 1 ? 'checked' : ''}> Bloquear Recordatorios</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear C. Confirmaciones</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; font-size: 0.84rem; margin-bottom: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-confirmaciones" ${p.bloqueo_confirmaciones === 1 ? 'checked' : ''}> Bloquear Centro de Confirmaciones</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-pizarra" ${p.bloqueo_pizarra === 1 ? 'checked' : ''}> Bloquear Pizarra Terapéutica</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-examen-mental" ${p.bloqueo_examen_mental === 1 ? 'checked' : ''}> Bloquear Examen Mental</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-tests" ${p.bloqueo_tests === 1 ? 'checked' : ''}> Bloquear Tests Psicológicos</label>
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.5rem; margin-top: 0.25rem;">
-                            <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> ⚠️ Activar Aviso de Pago (Notificar No Solvente en su pantalla)
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas Terapéuticas</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.6rem; margin-top: 0.25rem;">
+                            <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> ⚠️ Activar Aviso de Pago (Marcar No Solvente)
                         </label>
                     </div>
                     <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
