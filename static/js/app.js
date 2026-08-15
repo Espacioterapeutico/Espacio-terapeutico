@@ -18719,11 +18719,29 @@ function switchTestsTab(tab) {
     }
 }
 
-// 2. FILTRADO Y PAGINACIÓN 5x2 DEL CATÁLOGO DE TESTS
+// 2. FILTRADO Y PAGINACIÓN DEL CATÁLOGO DE TESTS (TARJETAS COLAPSABLES Y SELECTOR DESPLEGABLE)
+let expandedTestDetailsMap = {};
+
+function toggleTestDetails(testCode, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    expandedTestDetailsMap[testCode] = !expandedTestDetailsMap[testCode];
+    renderCatalogViewWithFiltersAndPagination();
+}
+
 function filterTestsByCategory(catName) {
     currentCatalogCategory = catName || 'TODAS';
     currentCatalogPage = 1;
 
+    // Sincronizar selector desplegable si existe
+    const selectCat = document.getElementById('select-test-category-dropdown');
+    if (selectCat) {
+        selectCat.value = currentCatalogCategory;
+    }
+
+    // Sincronizar botones rápidos
     document.querySelectorAll('#container-tests-category-filters button').forEach(btn => {
         const btnTxt = btn.textContent.trim();
         if (btnTxt.toLowerCase() === catName.toLowerCase() || (catName === 'TODAS' && btnTxt === 'Todas')) {
@@ -18782,42 +18800,57 @@ function renderCatalogViewWithFiltersAndPagination() {
     let html = '';
     pageItems.forEach(test => {
         const isSelected = selectedTestCodeForApplication === test.code;
-        const borderStyle = isSelected ? '2.5px solid #702e5e' : '2.5px solid #e2e8f0';
+        const isExpanded = expandedTestDetailsMap[test.code] === true;
+        const borderStyle = isSelected ? '2.5px solid #702e5e' : '2px solid #e2e8f0';
         const bgStyle = isSelected ? '#fdf4ff' : '#ffffff';
         const checkDisplay = isSelected ? 'inline' : 'none';
         const boxShadow = isSelected ? '0 8px 25px rgba(112, 46, 94, 0.15)' : '0 2px 8px rgba(0,0,0,0.03)';
 
         html += `
-            <div id="card-test-choice-${test.code}" onclick="selectTestForApplication('${test.code}')" 
-                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.15rem; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow}; min-height: 320px; box-sizing: border-box;"
-                 onmouseover="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#702e5e'; this.style.transform='translateY(-2px)'; }"
-                 onmouseout="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#e2e8f0'; this.style.transform='none'; }">
+            <div id="card-test-choice-${test.code}" 
+                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1rem 1.15rem; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow}; box-sizing: border-box;"
+                 onmouseover="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#702e5e'; }"
+                 onmouseout="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#e2e8f0'; }">
                 
                 <span class="test-card-check" style="display: ${checkDisplay}; position: absolute; top: 12px; right: 14px; font-weight: 900; color: #702e5e; font-size: 1.2rem;">✓</span>
 
                 <div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 8px;">
-                        <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 3px 10px; border-radius: 12px;">${test.siglas}</span>
-                        <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 10px;">${test.itemsCount} ítems</span>
+                    <!-- BADGES SUPERIORES -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 8px; padding-right: 20px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 3px 10px; border-radius: 12px; white-space: nowrap;">${test.siglas}</span>
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 10px; white-space: nowrap;">${test.itemsCount} ítems</span>
+                        </div>
                     </div>
 
-                    <h4 style="margin: 0 0 6px 0; font-size: 0.98rem; font-weight: 800; color: #0f172a; line-height: 1.35;">${test.name}</h4>
-                    <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: #64748b; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
-                        ${test.desc}
-                    </p>
+                    <!-- TÍTULO DE TEST -->
+                    <div style="cursor: pointer;" onclick="selectTestForApplication('${test.code}')">
+                        <h4 style="margin: 0 0 6px 0; font-size: 0.98rem; font-weight: 800; color: #0f172a; line-height: 1.35;">${test.name}</h4>
+                    </div>
                 </div>
 
-                <div>
+                <!-- DETALLES DESPLEGABLES (DESCRIPCIÓN + AUTOR + POBLACIÓN + VALIDEZ) -->
+                <div id="test-details-block-${test.code}" style="display: ${isExpanded ? 'block' : 'none'}; margin-top: 8px; transition: all 0.2s ease;">
+                    <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: #64748b; line-height: 1.45;">
+                        ${test.desc}
+                    </p>
                     <div style="background: #f8fafc; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; font-size: 0.73rem; color: #475569; display: flex; flex-direction: column; gap: 3px;">
                         <div><strong>👨‍⚕️ Autor:</strong> ${test.autor}</div>
                         <div><strong>👥 Población:</strong> ${test.poblacion}</div>
                         <div><strong>📊 Validez/Confiabilidad:</strong> ${test.validez}</div>
                     </div>
+                </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
-                        <span style="font-size: 0.73rem; font-weight: 800; color: #702e5e;">${test.cat}</span>
-                        <span style="font-size: 0.82rem; font-weight: 900; color: #702e5e;">Seleccionar ➔</span>
-                    </div>
+                <!-- FOOTER DE TARJETA CON BOTÓN FLECHITA Y SELECCIONAR -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 8px; margin-top: 8px;">
+                    <button type="button" onclick="toggleTestDetails('${test.code}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.15s;">
+                        <span>${isExpanded ? 'Ver menos' : 'Ver detalles'}</span>
+                        <span style="font-size: 0.7rem;">${isExpanded ? '▲' : '▼'}</span>
+                    </button>
+
+                    <button type="button" onclick="selectTestForApplication('${test.code}')" style="background: transparent; border: none; font-size: 0.82rem; font-weight: 900; color: #702e5e; cursor: pointer; padding: 4px 8px;">
+                        Seleccionar ➔
+                    </button>
                 </div>
             </div>
         `;
@@ -18882,16 +18915,16 @@ async function loadAllAppliedTestsHistory() {
         }
 
         let html = `
-            <div style="overflow-x: auto; background: white; border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; background: white; border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
                     <thead>
-                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">
-                            <th style="padding: 12px 16px;">Fecha</th>
-                            <th style="padding: 12px 16px;">Consultante</th>
-                            <th style="padding: 12px 16px;">Evaluación</th>
-                            <th style="padding: 12px 16px;">Modo</th>
-                            <th style="padding: 12px 16px;">Estado</th>
-                            <th style="padding: 12px 16px; text-align: right;">Acciones</th>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; white-space: nowrap;">
+                            <th style="padding: 12px 14px; white-space: nowrap;">Fecha</th>
+                            <th style="padding: 12px 14px; min-width: 140px;">Consultante</th>
+                            <th style="padding: 12px 14px; min-width: 160px;">Evaluación</th>
+                            <th style="padding: 12px 14px; white-space: nowrap;">Modo</th>
+                            <th style="padding: 12px 14px; white-space: nowrap;">Estado</th>
+                            <th style="padding: 12px 14px; text-align: right; white-space: nowrap;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -18904,19 +18937,19 @@ async function loadAllAppliedTestsHistory() {
             
             const isCompleted = t.estado === 'completado';
             const statusBadge = isCompleted 
-                ? '<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">✓ Completado</span>'
-                : '<span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f5d0fe; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">⏳ Pendiente</span>';
+                ? '<span style="display: inline-block; white-space: nowrap; background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 12px; border-radius: 14px; font-size: 0.75rem; font-weight: 800;">✓ Completado</span>'
+                : '<span style="display: inline-block; white-space: nowrap; background: #fdf4ff; color: #702e5e; border: 1px solid #f5d0fe; padding: 4px 12px; border-radius: 14px; font-size: 0.75rem; font-weight: 800;">⏳ Pendiente</span>';
 
             const modoBadge = t.modo_aplicacion === 'presencial' ? '💻 Presencial' : (t.modo_aplicacion === 'online' ? '📲 App Online' : '🔗 Enlace / Link');
 
             html += `
                 <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='white'">
-                    <td style="padding: 12px 16px; font-weight: 700; color: #64748b; font-size: 0.82rem;">${dateStr}</td>
-                    <td style="padding: 12px 16px; font-weight: 800; color: #0f172a;">${patientName} <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${ciStr}</span></td>
-                    <td style="padding: 12px 16px; font-weight: 800; color: #702e5e;">${t.test_siglas || t.test_code} <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">- ${t.test_nombre || ''}</span></td>
-                    <td style="padding: 12px 16px; font-weight: 700; color: #475569; font-size: 0.82rem;">${modoBadge}</td>
-                    <td style="padding: 12px 16px;">${statusBadge}</td>
-                    <td style="padding: 12px 16px; text-align: right;">
+                    <td style="padding: 12px 14px; font-weight: 700; color: #64748b; font-size: 0.82rem; white-space: nowrap;">${dateStr}</td>
+                    <td style="padding: 12px 14px; font-weight: 800; color: #0f172a;">${patientName} <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${ciStr}</span></td>
+                    <td style="padding: 12px 14px; font-weight: 800; color: #702e5e;">${t.test_siglas || t.test_code} <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">- ${t.test_nombre || ''}</span></td>
+                    <td style="padding: 12px 14px; font-weight: 700; color: #475569; font-size: 0.82rem; white-space: nowrap;">${modoBadge}</td>
+                    <td style="padding: 12px 14px; white-space: nowrap;">${statusBadge}</td>
+                    <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                         <button type="button" onclick="copyTestLink('${t.url_test}')" title="Copiar Enlace" style="background: #f1f5f9; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #334155; margin-right: 4px;">📋 Link</button>
                         ${isCompleted ? `<button type="button" onclick="window.open('/api/tests/asignacion/${t.id}/export/pdf', '_blank')" title="Descargar PDF" style="background: #15803d; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800; margin-right: 4px;">📄 PDF</button>` : ''}
                         <button type="button" onclick="deleteTestAssignment('${t.id}')" title="Eliminar Asignación" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800;">🗑️</button>
@@ -18973,6 +19006,7 @@ window.changeCatalogPage = changeCatalogPage;
 window.loadTestsCatalogCards = loadTestsCatalogCards;
 window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;
 window.deleteTestAssignment = deleteTestAssignment;
+window.toggleTestDetails = toggleTestDetails;
 
 function initTestsModule() {
     renderCatalogViewWithFiltersAndPagination();

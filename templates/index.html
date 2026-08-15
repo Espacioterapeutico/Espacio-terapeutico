@@ -2958,15 +2958,32 @@
                             </div>
                         </div>
 
-                        <!-- FILTRO POR CATEGORÍAS -->
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; background: #f8fafc; padding: 10px 14px; border-radius: 14px; border: 1px solid #e2e8f0;" id="container-tests-category-filters">
-                            <button type="button" class="btn-test-cat-filter active" onclick="filterTestsByCategory('TODAS')" style="background: #702e5e; color: white; border: none; font-size: 0.78rem; font-weight: 800; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Todas</button>
-                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Depresión y Ansiedad')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Depresión y Ansiedad</button>
-                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Neurodivergencia y Autismo')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Neurodivergencia y Autismo</button>
-                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Personalidad y Psicopatología')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Personalidad</button>
-                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Capacidad Intelectual')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Capacidad Intelectual</button>
-                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Orientación Vocacional')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Orientación Vocacional</button>
-                            <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Identidad de Género')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Identidad de Género</button>
+                        <!-- FILTRO POR CATEGORÍAS (DESPLEGABLE RESPONSIVO Y BOTONES) -->
+                        <div style="margin-bottom: 1.25rem;">
+                            <!-- Selector Desplegable (Optimizado para móvil y escritorio) -->
+                            <div style="margin-bottom: 0.75rem;">
+                                <label for="select-test-category-dropdown" style="font-size: 0.8rem; font-weight: 800; color: #475569; margin-bottom: 4px; display: block;">📂 Filtrar por Categoría de Evaluación:</label>
+                                <select id="select-test-category-dropdown" onchange="filterTestsByCategory(this.value)" style="width: 100%; padding: 0.7rem 1rem; border-radius: 12px; border: 2px solid #702e5e; background: #ffffff; color: #702e5e; font-weight: 800; font-size: 0.88rem; outline: none; cursor: pointer; box-shadow: 0 2px 8px rgba(112,46,94,0.06);">
+                                    <option value="TODAS">📚 Todas las Categorías</option>
+                                    <option value="Depresión y Ansiedad">Depresión y Ansiedad</option>
+                                    <option value="Neurodivergencia y Autismo">Neurodivergencia y Autismo</option>
+                                    <option value="Personalidad y Psicopatología">Personalidad y Psicopatología</option>
+                                    <option value="Capacidad Intelectual">Capacidad Intelectual</option>
+                                    <option value="Orientación Vocacional">Orientación Vocacional</option>
+                                    <option value="Identidad de Género">Identidad de Género</option>
+                                </select>
+                            </div>
+
+                            <!-- Botones Rápidos -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; background: #f8fafc; padding: 10px 14px; border-radius: 14px; border: 1px solid #e2e8f0;" id="container-tests-category-filters">
+                                <button type="button" class="btn-test-cat-filter active" onclick="filterTestsByCategory('TODAS')" style="background: #702e5e; color: white; border: none; font-size: 0.78rem; font-weight: 800; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Todas</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Depresión y Ansiedad')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Depresión y Ansiedad</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Neurodivergencia y Autismo')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Neurodivergencia y Autismo</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Personalidad y Psicopatología')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Personalidad</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Capacidad Intelectual')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Capacidad Intelectual</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Orientación Vocacional')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Orientación Vocacional</button>
+                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Identidad de Género')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Identidad de Género</button>
+                            </div>
                         </div>
 
                         <!-- UNICO CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 EXACTA -->
@@ -2975,13 +2992,13 @@
                                 display: grid;
                                 grid-template-columns: repeat(5, 1fr) !important;
                                 gap: 1rem !important;
-                                min-height: 380px;
+                                min-height: 250px;
                                 align-items: stretch;
                                 width: 100%;
                                 box-sizing: border-box;
                             }
                             .tests-catalog-grid-5x2 > div {
-                                min-height: 320px;
+                                min-height: auto;
                                 box-sizing: border-box;
                             }
                             @media (max-width: 1300px) {
@@ -2991,12 +3008,7 @@
                             }
                             @media (max-width: 768px) {
                                 .tests-catalog-grid-5x2 {
-                                    grid-template-columns: repeat(2, 1fr) !important;
-                                }
-                            }
-                            @media (max-width: 480px) {
-                                .tests-catalog-grid-5x2 {
-                                    grid-template-columns: 1fr !important;
+                                    grid-template-columns: repeat(1, 1fr) !important;
                                 }
                             }
                         </style>
