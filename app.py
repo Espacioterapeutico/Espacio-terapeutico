@@ -1441,8 +1441,15 @@ def auto_send_appointment_reminders(db):
     tanto al psicologo como al paciente (Firebase + SQLite).
     No se ejecutan fuera del horario laboral (10:00 PM a 7:59 AM).
     """
-    from datetime import datetime
-    now_dt = datetime.now()
+    from datetime import datetime, timezone, timedelta
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_dt = datetime.now(tz)
+    except Exception:
+        tz = timezone(timedelta(hours=-4))
+        now_dt = datetime.now(tz)
+
     if now_dt.hour < 8 or now_dt.hour >= 22:
         return
 
@@ -1515,8 +1522,15 @@ def auto_send_confirmation_requests(db):
     configurada por el psicólogo (alerta_confirmacion, ej: 24h antes) y aún no está confirmada.
     No se ejecutan fuera del horario laboral (10:00 PM a 7:59 AM).
     """
-    from datetime import datetime
-    now_dt = datetime.now()
+    from datetime import datetime, timezone, timedelta
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_dt = datetime.now(tz)
+    except Exception:
+        tz = timezone(timedelta(hours=-4))
+        now_dt = datetime.now(tz)
+
     if now_dt.hour < 8 or now_dt.hour >= 22:
         return
 
@@ -1606,8 +1620,15 @@ def auto_check_patient_birthdays(db):
     """
     cursor = db.cursor()
     try:
-        from datetime import datetime
-        now_dt = datetime.now()
+        from datetime import datetime, timezone, timedelta
+        try:
+            import zoneinfo
+            tz = zoneinfo.ZoneInfo("America/Caracas")
+            now_dt = datetime.now(tz)
+        except Exception:
+            tz = timezone(timedelta(hours=-4))
+            now_dt = datetime.now(tz)
+
         today_md = now_dt.strftime("%m-%d")
         today_str = now_dt.strftime("%Y-%m-%d")
         now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
