@@ -3189,7 +3189,9 @@ def ensure_usuarios_columns(db=None):
         ('especialidades', 'TEXT DEFAULT \'\''),
         ('poblaciones_json', 'TEXT DEFAULT \'["Adultos", "Adolescentes"]\''),
         ('pais_ubicacion', 'TEXT DEFAULT \'\''),
-        ('recordatorio_expiracion_enviado', 'TEXT DEFAULT \'\'')
+        ('recordatorio_expiracion_enviado', 'TEXT DEFAULT \'\''),
+        ('clinica_id', 'INTEGER'),
+        ('tipo_clinica', 'INTEGER DEFAULT 0')
     ]
     for col_name, col_type in columns:
         try:
