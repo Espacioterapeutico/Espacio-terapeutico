@@ -736,21 +736,20 @@ function switchDashboardTab(tabKey) {
     });
 
     if (tabKey === 'calendario') {
-        const calContainer = document.getElementById('full-calendar-dash');
-        const calSource = document.getElementById('full-calendar-agenda');
-        if (calSource && calContainer && calSource.children.length > 0 && calContainer.children.length === 0) {
-            calContainer.appendChild(calSource.children[0]);
+        if (typeof renderFullCalendar === 'function') {
+            renderFullCalendar();
         }
         setTimeout(() => {
-            if (window.calendarObj) {
+            if (window.calendarObj && typeof window.calendarObj.updateSize === 'function') {
                 window.calendarObj.updateSize();
-            } else if (typeof initAgendaCalendar === 'function') {
-                initAgendaCalendar();
             }
         }, 100);
     } else if (tabKey === 'historial') {
-        if (typeof loadDashHistoryData === 'function') {
-            loadDashHistoryData();
+        if (typeof initTherapistAgendaHistoryFilters === 'function') {
+            initTherapistAgendaHistoryFilters();
+        }
+        if (typeof loadTherapistConsultationHistory === 'function') {
+            loadTherapistConsultationHistory();
         }
     } else if (tabKey === 'proximas') {
         if (typeof loadDashboardStats === 'function') {
@@ -4829,7 +4828,7 @@ async function deleteConsultationFromHistory(eventId) {
 window.deleteConsultationFromHistory = deleteConsultationFromHistory;
 
 async function renderFullCalendar() {
-    const calendarEl = document.getElementById('full-calendar-agenda');
+    const calendarEl = document.getElementById('full-calendar-dash') || document.getElementById('full-calendar-agenda');
     if (!calendarEl) return;
     
     try {
@@ -4933,6 +4932,7 @@ async function renderFullCalendar() {
         });
         
         fullCalendarInstance.render();
+        window.calendarObj = fullCalendarInstance;
     } catch (err) {
         console.error("Error al renderizar FullCalendar:", err);
     }
