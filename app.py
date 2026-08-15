@@ -2587,8 +2587,8 @@ def register():
             r2_hash = generate_password_hash(r2) if r2 else None
 
             cursor.execute("""
-                INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug, configuracion_horarios_visual, metodos_pago, primer_inicio, pregunta_seguridad_1, respuesta_seguridad_1_hash, pregunta_seguridad_2, respuesta_seguridad_2_hash, mostrar_en_directorio, bloqueo_herramientas, bloqueo_confirmaciones)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1, ?, ?, ?, ?, 0, 1, 1)
+                INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug, configuracion_horarios_visual, metodos_pago, primer_inicio, pregunta_seguridad_1, respuesta_seguridad_1_hash, pregunta_seguridad_2, respuesta_seguridad_2_hash, mostrar_en_directorio, bloqueo_herramientas, bloqueo_confirmaciones, bloqueo_examen_mental, bloqueo_tests)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1, ?, ?, ?, ?, 1, 0, 0, 1, 1)
             """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug, default_visual_cfg, default_pm_str, p1, r1_hash, p2, r2_hash))
             db.commit()
             
