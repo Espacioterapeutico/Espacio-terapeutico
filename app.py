@@ -16198,48 +16198,69 @@ def api_clinica_mi_equipo():
 
 @app.route('/api/clinica/registrar', methods=['POST'])
 def api_clinica_registrar():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'No autorizado.'}), 401
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'No autorizado.'}), 401
 
-    data = request.json or {}
-    nombre = (data.get('nombre') or '').strip()
-    descripcion = (data.get('descripcion') or '').strip()
+        data = request.json or {}
+        nombre = (data.get('nombre') or '').strip()
+        descripcion = (data.get('descripcion') or '').strip()
 
-    if not nombre:
-        return jsonify({'error': 'El nombre de la clínica es obligatorio.'}), 400
+        if not nombre:
+            return jsonify({'error': 'El nombre de la clínica es obligatorio.'}), 400
 
-    db = get_db()
-    cursor = db.cursor()
+        db = get_db()
+        ensure_usuarios_columns(db)
+        cursor = db.cursor()
 
-    # Generar código y slug único
-    import random, string, unicodedata
-    code_rnd = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-    prefix = re.sub(r'[^A-Z]', '', unicodedata.normalize('NFD', nombre.upper()))[:5] or 'CLIN'
-    codigo_clinica = f"{prefix}-{code_rnd}"
-    
-    slug_base = re.sub(r'[^a-z0-9\-]', '', unicodedata.normalize('NFD', nombre.lower().replace(" ", "-")))
-    if not slug_base:
-        slug_base = f"clinica-{user_id}"
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS clinicas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL,
+                slug TEXT UNIQUE NOT NULL,
+                codigo_clinica TEXT UNIQUE NOT NULL,
+                logo TEXT,
+                descripcion TEXT,
+                admin_id INTEGER NOT NULL,
+                modo_whatsapp TEXT DEFAULT 'centralizado',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
-    cursor.execute("SELECT id FROM clinicas WHERE slug = ?", (slug_base,))
-    if cursor.fetchone():
-        slug_base = f"{slug_base}-{code_rnd.lower()}"
+        # Generar código y slug único
+        import random, string, unicodedata, re
+        code_rnd = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        prefix = re.sub(r'[^A-Z]', '', unicodedata.normalize('NFD', nombre.upper()))[:5] or 'CLIN'
+        codigo_clinica = f"{prefix}-{code_rnd}"
+        
+        slug_base = re.sub(r'[^a-z0-9\-]', '', unicodedata.normalize('NFD', nombre.lower().replace(" ", "-")))
+        if not slug_base:
+            slug_base = f"clinica-{user_id}"
 
-    cursor.execute("""
-        INSERT INTO clinicas (nombre, slug, codigo_clinica, descripcion, admin_id, modo_whatsapp)
-        VALUES (?, ?, ?, ?, ?, 'centralizado')
-    """, (nombre, slug_base, codigo_clinica, descripcion, user_id))
-    clinica_id = cursor.lastrowid
+        cursor.execute("SELECT id FROM clinicas WHERE slug = ?", (slug_base,))
+        if cursor.fetchone():
+            slug_base = f"{slug_base}-{code_rnd.lower()}"
 
-    cursor.execute("UPDATE usuarios SET clinica_id = ?, tipo_clinica = 1 WHERE id = ?", (clinica_id, user_id))
-    db.commit()
+        cursor.execute("""
+            INSERT INTO clinicas (nombre, slug, codigo_clinica, descripcion, admin_id, modo_whatsapp)
+            VALUES (?, ?, ?, ?, ?, 'centralizado')
+        """, (nombre, slug_base, codigo_clinica, descripcion, user_id))
+        clinica_id = cursor.lastrowid
 
-    return jsonify({
-        'success': 'Clínica registrada exitosamente.',
-        'codigo_clinica': codigo_clinica,
-        'slug': slug_base
-    })
+        cursor.execute("UPDATE usuarios SET clinica_id = ?, tipo_clinica = 1 WHERE id = ?", (clinica_id, user_id))
+        db.commit()
+
+        return jsonify({
+            'success': 'Clínica registrada exitosamente.',
+            'nombre': nombre,
+            'codigo_clinica': codigo_clinica,
+            'slug': slug_base
+        })
+    except Exception as e:
+        import traceback
+        print("ERROR EN API_CLINICA_REGISTRAR:", traceback.format_exc())
+        return jsonify({'error': f'Error al registrar clínica: {str(e)}'}), 500
 
 
 @app.route('/api/clinica/vincular-miembro', methods=['POST'])
