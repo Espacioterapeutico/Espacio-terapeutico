@@ -1617,10 +1617,10 @@ def auto_send_confirmation_requests(db):
     except Exception as e:
         print("Error en auto_send_confirmation_requests:", e)
 
-def auto_check_patient_birthdays(db):
+def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
     """
     Verifica si algún consultante cumple años el día de hoy y genera
-    una notificación en el panel del psicólogo asignado.
+    una notificación en el panel del psicólogo asignado y mensaje por WhatsApp.
     """
     cursor = db.cursor()
     try:
@@ -1636,6 +1636,22 @@ def auto_check_patient_birthdays(db):
         today_md = now_dt.strftime("%m-%d")
         today_str = now_dt.strftime("%Y-%m-%d")
         now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        if force:
+            if target_patient_id:
+                cursor.execute("""
+                    DELETE FROM notificaciones
+                    WHERE tipo IN ('cumpleanos', 'cumpleanos_wa')
+                    AND (fecha LIKE ? OR fecha IS NULL)
+                    AND (mensaje LIKE ? OR mensaje LIKE '%Venuska%')
+                """, (f"{today_str}%", f"%ID: {target_patient_id}%"))
+            else:
+                cursor.execute("""
+                    DELETE FROM notificaciones
+                    WHERE tipo IN ('cumpleanos', 'cumpleanos_wa')
+                    AND (fecha LIKE ? OR fecha IS NULL)
+                """, (f"{today_str}%",))
+            db.commit()
 
         cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_cumpleanos', 'auto_cumpleanos_activo')")
         cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
@@ -11423,7 +11439,13 @@ def send_whatsapp_message():
 def trigger_birthday_messages_route():
     try:
         db = get_db()
-        auto_check_patient_birthdays(db)
+        patient_id = None
+        if request.is_json and request.json:
+            patient_id = request.json.get('patient_id')
+        elif request.args.get('patient_id'):
+            patient_id = request.args.get('patient_id')
+            
+        auto_check_patient_birthdays(db, force=True, target_patient_id=patient_id)
         return jsonify({'success': 'Revisión y envío de notificaciones de cumpleaños ejecutada correctamente.'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
