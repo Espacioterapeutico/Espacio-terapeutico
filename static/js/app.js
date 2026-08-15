@@ -8887,7 +8887,10 @@ function toggleRegisterFields() {
         return;
     }
     
-    if (role === 'psicologo') {
+    const clinicaGroup = document.getElementById('reg-clinica-info-group');
+    if (clinicaGroup) clinicaGroup.classList.toggle('hide', role !== 'clinica');
+
+    if (role === 'psicologo' || role === 'clinica') {
         commonFields.classList.remove('hide');
         psicologoFields.classList.remove('hide');
         pacienteFields.classList.add('hide');
@@ -8991,7 +8994,17 @@ async function submitRegister(e) {
         payload.pregunta_seguridad_2 = getVal('reg-pregunta-2');
         payload.respuesta_seguridad_2 = getVal('reg-respuesta-2');
         
-        if (tipo_usuario === 'psicologo') {
+        if (tipo_usuario === 'psicologo' || tipo_usuario === 'clinica') {
+            if (tipo_usuario === 'clinica') {
+                payload.tipo_usuario = 'psicologo';
+                payload.nombre_clinica = getVal('reg-nombre-clinica');
+                if (!payload.nombre_clinica) {
+                    const msg = "Por favor, ingresa el nombre de tu clínica u organización.";
+                    if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                    alert(msg);
+                    return;
+                }
+            }
             payload.estudios = getVal('reg-estudios');
             payload.federacion = getVal('reg-federacion');
             payload.foto_titulo = await readFileAsBase64(document.getElementById('reg-foto-titulo'));
@@ -12885,7 +12898,7 @@ function switchSettingsTab(tabName) {
     }
 
     if (tabName === 'contrasena') tabName = 'password';
-    const tabs = ['perfil', 'backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
+    const tabs = ['perfil', 'equipo', 'backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
     tabs.forEach(t => {
         const btn = document.getElementById(`set-tab-${t}`);
         const card = document.getElementById(`set-card-${t}`);
@@ -12898,7 +12911,11 @@ function switchSettingsTab(tabName) {
             }
         }
     });
-    if (tabName === 'perfil') {
+    if (tabName === 'equipo') {
+        if (typeof loadEquipoSettings === 'function') {
+            loadEquipoSettings();
+        }
+    } else if (tabName === 'perfil') {
         if (typeof loadPublicProfileSettings === 'function') {
             loadPublicProfileSettings();
         }
@@ -19069,3 +19086,353 @@ if (document.readyState === 'loading') {
 } else {
     initTestsModule();
 }
+
+/* ==============================================================================
+   MÓDULO CORPORATIVO / EQUIPO DE TRABAJO (FRONTEND)
+   ============================================================================== */
+
+async function loadEquipoSettings() {
+    const mainContainer = document.getElementById('equipo-main-content');
+    const headerActions = document.getElementById('equipo-header-actions');
+    if (!mainContainer) return;
+
+    try {
+        mainContainer.innerHTML = `<div style="text-align: center; padding: 2rem; color: #64748b;"><div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div><div>Cargando datos del equipo...</div></div>`;
+        if (headerActions) headerActions.innerHTML = '';
+
+        const [resEquipo, resSolicitudes] = await Promise.all([
+            fetch('/api/clinica/mi-equipo'),
+            fetch('/api/clinica/mis-solicitudes')
+        ]);
+
+        const dataEquipo = resEquipo.ok ? await resEquipo.json() : { pertenece: false };
+        const dataSol = resSolicitudes.ok ? await resSolicitudes.json() : { invitaciones_recibidas: [], solicitudes_para_admin: [] };
+
+        let html = '';
+
+        if (dataEquipo.pertenece) {
+            // CASO A: Pertenece a una clínica registrada
+            const esAdmin = dataEquipo.es_admin;
+
+            if (esAdmin && headerActions) {
+                headerActions.innerHTML = `
+                    <button type="button" class="btn btn-sm" style="background: #702e5e; color: #ffffff; font-weight: 700; border-radius: 20px; padding: 0.5rem 1.25rem; box-shadow: 0 4px 12px rgba(112,46,94,0.25);" onclick="invitarMiembroClinicaPrompt()">
+                        ➕ Invitar Miembro por Cédula/ID
+                    </button>
+                `;
+            }
+
+            html += `
+                <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                            <span style="font-size: 1.25rem; font-weight: 800; color: #702e5e;">🏢 ${dataEquipo.nombre}</span>
+                            <span class="badge" style="background: #702e5e; color: #fff; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px;">${esAdmin ? 'Director Administrador' : 'Integrante del Equipo'}</span>
+                        </div>
+                        <div style="color: #64748b; font-size: 0.88rem;">
+                            🔑 Código de Clínica: <strong style="color: #1e293b; background: #fff; padding: 0.15rem 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0; font-family: monospace;">${dataEquipo.codigo_clinica}</strong>
+                            <span style="margin: 0 0.5rem;">•</span>
+                            🌐 Portal Público: <a href="/clinica/${dataEquipo.slug}" target="_blank" style="color: #702e5e; font-weight: 700; text-decoration: underline;">/clinica/${dataEquipo.slug}</a>
+                        </div>
+                    </div>
+                    ${!esAdmin ? `
+                        <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-weight: 700; padding: 0.45rem 1rem;" onclick="salirClinicaPrompt()">
+                            🚪 Salir del Equipo
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+
+            if (esAdmin) {
+                // Configuración de WhatsApp de la Clínica
+                const modoWa = dataEquipo.modo_whatsapp || 'centralizado';
+                html += `
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-weight: 700; color: #1e293b;">💬 Configuración de Notificaciones WhatsApp del Equipo</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1rem;">Determina si las notificaciones de WhatsApp de tu equipo saldrán desde el WhatsApp de la clínica o de forma independiente por cada psicólogo.</p>
+                        
+                        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #334155;">
+                                <input type="radio" name="modo_wa_option" value="centralizado" ${modoWa === 'centralizado' ? 'checked' : ''} onchange="actualizarModoWaClinica('centralizado')">
+                                🏢 Centralizado (WhatsApp Empresarial de la Clínica)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #334155;">
+                                <input type="radio" name="modo_wa_option" value="independiente" ${modoWa === 'independiente' ? 'checked' : ''} onchange="actualizarModoWaClinica('independiente')">
+                                🟢 Independiente (Cada terapeuta conecta su propio WhatsApp)
+                            </label>
+                        </div>
+                    </div>
+                `;
+
+                // Solicitudes pendientes enviadas por terapeutas para unirse a la clínica
+                const solAdmin = dataSol.solicitudes_para_admin || [];
+                if (solAdmin.length > 0) {
+                    html += `
+                        <div style="background: #fffbe6; border: 1.5px solid #ffe58f; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                            <h4 style="margin: 0 0 0.75rem 0; color: #d48806; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                                📥 Solicitudes de Ingreso Pendientes (${solAdmin.length})
+                            </h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                ${solAdmin.map(s => `
+                                    <div style="background: #ffffff; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #ffe58f; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                                        <div>
+                                            <strong style="color: #111827;">Psic. ${s.solicitante_nombres} ${s.solicitante_apellidos}</strong>
+                                            <div style="color: #6b7280; font-size: 0.8rem;">Cédula: ${s.solicitante_cedula || 'N/D'} | Usuario: @${s.solicitante_username}</div>
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button type="button" class="btn btn-sm btn-success" style="font-weight: 700; border-radius: 8px;" onclick="responderSolicitudEquipo(${s.id}, 'aceptar')">✓ Aprobar Ingreso</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" style="font-weight: 700; border-radius: 8px;" onclick="responderSolicitudEquipo(${s.id}, 'rechazar')">✕ Rechazar</button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Lista de miembros del equipo
+            const miembros = dataEquipo.miembros || [];
+            html += `
+                <div style="margin-top: 1rem;">
+                    <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 0.75rem;">👥 Integrantes del Equipo de Trabajo (${miembros.length})</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+                        ${miembros.map(m => `
+                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                                <div style="width: 48px; height: 48px; border-radius: 50%; background: #702e5e; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; overflow: hidden;">
+                                    ${m.foto_titulo ? `<img src="${m.foto_titulo}" style="width:100%; height:100%; object-fit:cover;">` : (m.nombres ? m.nombres[0].toUpperCase() : 'P')}
+                                </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.nomenclatura || 'Psic.'} ${m.nombres} ${m.apellidos}</div>
+                                    <div style="font-size: 0.78rem; color: #64748b;">Cédula: ${m.cedula || 'N/D'} | ID: #${m.id}</div>
+                                    <div style="margin-top: 0.25rem;">
+                                        <span class="badge" style="font-size: 0.7rem; background: ${m.tipo_clinica === 1 ? '#fdf4ff' : '#f1f5f9'}; color: ${m.tipo_clinica === 1 ? '#702e5e' : '#475569'}; border: 1px solid ${m.tipo_clinica === 1 ? '#f0abfc' : '#cbd5e1'};">
+                                            ${m.tipo_clinica === 1 ? '👑 Director Administrador' : '🩺 Terapeuta de Equipo'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            // CASO B: Usuario Independiente (No pertenece a ninguna clínica)
+            const invitaciones = dataSol.invitaciones_recibidas || [];
+
+            if (invitaciones.length > 0) {
+                html += `
+                    <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 0.75rem 0; color: #166534; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                            📩 Invitaciones de Equipo Recibidas (${invitaciones.length})
+                        </h4>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            ${invitaciones.map(inv => `
+                                <div style="background: #ffffff; padding: 1rem; border-radius: 10px; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+                                    <div>
+                                        <strong style="color: #111827; font-size: 1rem;">🏢 ${inv.organizacion_nombre}</strong>
+                                        <div style="color: #4b5563; font-size: 0.85rem; margin-top: 0.15rem;">Director: Psic. ${inv.admin_nombres} ${inv.admin_apellidos} (Código: ${inv.codigo_clinica})</div>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button type="button" class="btn btn-sm btn-success" style="font-weight: 700; border-radius: 8px; padding: 0.45rem 1.1rem;" onclick="responderSolicitudEquipo(${inv.id}, 'aceptar')">✓ Aceptar e Ingresar</button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" style="font-weight: 700; border-radius: 8px; padding: 0.45rem 0.9rem;" onclick="responderSolicitudEquipo(${inv.id}, 'rechazar')">✕ Rechazar</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+                    <!-- Opción 1: Crear una Clínica -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #702e5e; font-size: 1.1rem; font-weight: 800;">🏢 Registrar mi Clínica / Equipo de Trabajo</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">Crea una organización para invitar a tus colegas, supervisar agendas, ver ingresos consolidados y disponer de un portal público corporativo.</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155;">Nombre de la Clínica u Organización:</label>
+                                <input type="text" id="reg-clinica-nombre" class="form-control" placeholder="Ej: Centro Terapéutico Mente Sana" style="border-radius: 8px;">
+                            </div>
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155;">Descripción corta (Opcional):</label>
+                                <textarea id="reg-clinica-desc" class="form-control" rows="2" placeholder="Breve reseña sobre el centro médico..." style="border-radius: 8px; font-size: 0.85rem;"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-primary" style="background: #702e5e; border: none; font-weight: 700; border-radius: 8px; padding: 0.65rem; margin-top: 0.25rem;" onclick="ejecutarRegistroClinica()">
+                                🚀 Registrar Clínica
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Opción 2: Unirme a una Clínica Existente -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 800;">🔗 Unirme a un Equipo Existente</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">Si tu Director o Administrador ya creó la clínica, introduce el Código de Clínica para solicitar tu vinculación.</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155;">Código de Clínica (Entregado por tu Admin):</label>
+                                <input type="text" id="join-clinica-code" class="form-control" placeholder="Ej: MSANA-8921" style="border-radius: 8px; text-transform: uppercase; font-family: monospace; font-weight: 700;">
+                            </div>
+                            <button type="button" class="btn btn-secondary" style="font-weight: 700; border-radius: 8px; padding: 0.65rem; margin-top: 1.25rem;" onclick="ejecutarSolicitudUnirseClinica()">
+                                📥 Solicitar Ingreso al Equipo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        mainContainer.innerHTML = html;
+    } catch (e) {
+        console.error("Error al cargar ajustes de equipo:", e);
+        mainContainer.innerHTML = `<div style="color: #ef4444; padding: 1rem; text-align: center;">Error al cargar la información del equipo: ${e.message}</div>`;
+    }
+}
+
+async function invitarMiembroClinicaPrompt() {
+    const busqueda = prompt("Ingrese la Cédula (ej: V-12345678) o el ID de Psicólogo del terapeuta que desea invitar a su equipo:");
+    if (!busqueda || !busqueda.trim()) return;
+
+    try {
+        const res = await fetch('/api/clinica/vincular-miembro', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ busqueda: busqueda.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "No se pudo enviar la invitación."));
+        }
+    } catch (e) {
+        alert("Error de conexión al enviar invitación.");
+    }
+}
+
+async function responderSolicitudEquipo(solicitudId, accion) {
+    try {
+        const res = await fetch('/api/clinica/solicitud/responder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ solicitud_id: solicitudId, accion: accion })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "No se pudo procesar la solicitud."));
+        }
+    } catch (e) {
+        alert("Error de conexión al responder solicitud.");
+    }
+}
+
+async function salirClinicaPrompt() {
+    if (!confirm("¿Estás seguro de que deseas desvincularte de esta clínica? Tu perfil volverá a ser de Psicólogo Independiente.")) return;
+
+    try {
+        const res = await fetch('/api/clinica/salir', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "No se pudo desvincular de la clínica."));
+        }
+    } catch (e) {
+        alert("Error al intentar salir de la clínica.");
+    }
+}
+
+async function ejecutarRegistroClinica() {
+    const nombre = (document.getElementById('reg-clinica-nombre')?.value || '').trim();
+    const desc = (document.getElementById('reg-clinica-desc')?.value || '').strip ? (document.getElementById('reg-clinica-desc')?.value || '').trim() : '';
+
+    if (!nombre) {
+        alert("Por favor ingrese el nombre de su clínica u organización.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/clinica/registrar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nombre, descripcion: desc })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(`🎉 ¡Felicidades! Se ha registrado la clínica "${data.nombre}". Tu código único es: ${data.codigo_clinica}`);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "No se pudo registrar la clínica."));
+        }
+    } catch (e) {
+        alert("Error de conexión al registrar clínica.");
+    }
+}
+
+async function ejecutarSolicitudUnirseClinica() {
+    const code = (document.getElementById('join-clinica-code')?.value || '').trim();
+    if (!code) {
+        alert("Por favor ingrese el Código de la Clínica.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/clinica/solicitar-ingreso', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo_clinica: code })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "No se pudo enviar la solicitud."));
+        }
+    } catch (e) {
+        alert("Error al enviar solicitud de ingreso.");
+    }
+}
+
+async function actualizarModoWaClinica(modo) {
+    try {
+        const resEquipo = await fetch('/api/clinica/mi-equipo');
+        if (!resEquipo.ok) return;
+        const eqData = await resEquipo.json();
+        if (!eqData.pertenece || !eqData.es_admin) return;
+
+        const res = await fetch('/api/clinica/ajustes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nombre: eqData.nombre,
+                descripcion: eqData.descripcion,
+                logo: eqData.logo,
+                modo_whatsapp: modo
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("💬 Modo de WhatsApp de la clínica actualizado a: " + (modo === 'centralizado' ? 'Centralizado (WhatsApp de la Clínica)' : 'Independiente (WhatsApp por Terapeuta)'));
+        }
+    } catch (e) {
+        console.error("Error al actualizar modo de WhatsApp:", e);
+    }
+}
+
+window.loadEquipoSettings = loadEquipoSettings;
+window.invitarMiembroClinicaPrompt = invitarMiembroClinicaPrompt;
+window.responderSolicitudEquipo = responderSolicitudEquipo;
+window.salirClinicaPrompt = salirClinicaPrompt;
+window.ejecutarRegistroClinica = ejecutarRegistroClinica;
+window.ejecutarSolicitudUnirseClinica = ejecutarSolicitudUnirseClinica;
+window.actualizarModoWaClinica = actualizarModoWaClinica;
+

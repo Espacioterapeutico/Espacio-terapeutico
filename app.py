@@ -51,6 +51,13 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True if IS_PA else False
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
 
+# Registrar Blueprint del Módulo Corporativo / Clínicas
+try:
+    from routes_clinica import clinica_bp, ensure_clinica_tables
+    app.register_blueprint(clinica_bp)
+except Exception as _e:
+    print("Aviso al registrar Blueprint de Clínicas:", _e)
+
 import gzip
 
 @app.after_request
@@ -364,6 +371,12 @@ def init_db():
     except Exception as _e:
         print("Aviso al verificar usuario demo:", _e)
 
+    try:
+        from routes_clinica import ensure_clinica_tables
+        ensure_clinica_tables(db)
+    except Exception as _e:
+        print("Aviso al asegurar tablas de clínica:", _e)
+
     # Verificar si la tabla principal 'usuarios' existe
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
     exists = cursor.fetchone()
@@ -479,7 +492,37 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN poblaciones_json TEXT DEFAULT '[\"Adultos\", \"Adolescentes\"]'")
         if 'pais_ubicacion' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN pais_ubicacion TEXT DEFAULT ''")
+        if 'clinica_id' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN clinica_id INTEGER")
+        if 'tipo_clinica' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN tipo_clinica INTEGER DEFAULT 0")
         db.commit()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS clinicas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            codigo_clinica TEXT UNIQUE NOT NULL,
+            logo TEXT,
+            descripcion TEXT,
+            admin_id INTEGER NOT NULL,
+            modo_whatsapp TEXT DEFAULT 'centralizado',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS solicitudes_clinica (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clinica_id INTEGER NOT NULL,
+            usuario_id INTEGER NOT NULL,
+            tipo_solicitud TEXT NOT NULL, -- 'invitacion' o 'solicitud'
+            estado TEXT DEFAULT 'pendiente', -- 'pendiente', 'aceptado', 'rechazado'
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
         
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS fcm_subscriptions (
@@ -2590,6 +2633,26 @@ def register():
                 INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug, configuracion_horarios_visual, metodos_pago, primer_inicio, pregunta_seguridad_1, respuesta_seguridad_1_hash, pregunta_seguridad_2, respuesta_seguridad_2_hash, mostrar_en_directorio, bloqueo_herramientas, bloqueo_confirmaciones, bloqueo_examen_mental, bloqueo_tests)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1, ?, ?, ?, ?, 1, 0, 0, 1, 1)
             """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug, default_visual_cfg, default_pm_str, p1, r1_hash, p2, r2_hash))
+            new_user_id = cursor.lastrowid
+
+            nombre_clinica = data.get('nombre_clinica')
+            if nombre_clinica:
+                import random, string
+                code_rnd = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+                prefix = re.sub(r'[^A-Z]', '', unicodedata.normalize('NFD', nombre_clinica.upper()))[:5] or 'CLIN'
+                codigo_clinica = f"{prefix}-{code_rnd}"
+                slug_clinica = re.sub(r'[^a-z0-9\-]', '', unicodedata.normalize('NFD', nombre_clinica.lower().replace(" ", "-")))
+                if not slug_clinica:
+                    slug_clinica = f"clinica-{new_user_id}"
+
+                cursor.execute("""
+                    INSERT INTO clinicas (nombre, slug, codigo_clinica, admin_id, modo_whatsapp)
+                    VALUES (?, ?, ?, ?, 'centralizado')
+                """, (nombre_clinica, slug_clinica, codigo_clinica, new_user_id))
+                new_clinica_id = cursor.lastrowid
+
+                cursor.execute("UPDATE usuarios SET clinica_id = ?, tipo_clinica = 1 WHERE id = ?", (new_clinica_id, new_user_id))
+
             db.commit()
             
             # Enviar correo de bienvenida con credenciales y preguntas de seguridad
@@ -2598,7 +2661,7 @@ def register():
                 full_name_psic = f"Psic. {nombres} {apellidos}".strip()
                 send_welcome_credentials_email('psicologo', email_target, full_name_psic, username, password, p1, r1, p2, r2)
 
-            return jsonify({'success': 'Cuenta de psicólogo creada con éxito. Tienes 1 mes (30 días) de prueba gratuita.'})
+            return jsonify({'success': 'Cuenta de psicólogo creada con éxito.' + (' ¡Tu clínica ha sido registrada!' if nombre_clinica else '')})
             
         elif tipo_usuario == 'paciente':
             nombres = data.get('nombres')
@@ -16025,6 +16088,353 @@ def api_patient_portal_tests():
         tests_list.append(d)
 
     return jsonify({'tests': tests_list})
+
+
+# ==========================================
+# ENDPOINTS Y RUTAS DEL MÓDULO CORPORATIVO / CLÍNICAS
+# ==========================================
+
+@app.route('/clinica/<slug>', methods=['GET'])
+def clinica_publica(slug):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM clinicas WHERE slug = ?", (slug,))
+    clinica_row = cursor.fetchone()
+    if not clinica_row:
+        return "Clínica u Organización no encontrada", 404
+    
+    clinica = dict(clinica_row)
+    
+    # Obtener psicólogos integrantes de la clínica
+    cursor.execute("""
+        SELECT id, nombres, apellidos, nomenclatura, especialidades, foto_titulo, foto_documento,
+               descripcion_biografia, modalidades_json, email_publico, whatsapp_publico, slug
+        FROM usuarios
+        WHERE clinica_id = ? AND role = 'psicologo' AND (activo = 1 OR activo IS NULL)
+        ORDER BY tipo_clinica DESC, apellidos ASC
+    """, (clinica['id'],))
+    
+    psicologos_rows = cursor.fetchall()
+    psicologos = []
+    for p in psicologos_rows:
+        p_dict = dict(p)
+        psicologos.append(p_dict)
+        
+    return render_template('clinica_publica.html', clinica=clinica, psicologos=psicologos)
+
+
+@app.route('/api/clinica/mi-equipo', methods=['GET'])
+def api_clinica_mi_equipo():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT id, clinica_id, tipo_clinica FROM usuarios WHERE id = ?", (user_id,))
+    u_row = cursor.fetchone()
+    if not u_row:
+        return jsonify({'error': 'Usuario no encontrado.'}), 404
+
+    c_id = u_row['clinica_id']
+    tipo_clinica = u_row['tipo_clinica'] or 0
+
+    if not c_id:
+        return jsonify({'pertenece_clinica': False, 'tipo_clinica': 0})
+
+    cursor.execute("SELECT * FROM clinicas WHERE id = ?", (c_id,))
+    c_row = cursor.fetchone()
+    if not c_row:
+        return jsonify({'pertenece_clinica': False, 'tipo_clinica': 0})
+
+    clinica = dict(c_row)
+    es_admin = (clinica['admin_id'] == user_id)
+
+    # Miembros de la clínica
+    cursor.execute("""
+        SELECT id, nombres, apellidos, nomenclatura, username, cedula, telefono, tipo_clinica, especialidades, foto_titulo
+        FROM usuarios WHERE clinica_id = ? ORDER BY tipo_clinica DESC, apellidos ASC
+    """, (c_id,))
+    miembros = [dict(m) for m in cursor.fetchall()]
+
+    # Solicitudes pendientes
+    solicitudes = []
+    if es_admin:
+        cursor.execute("""
+            SELECT s.id, s.tipo_solicitud, s.estado, s.created_at,
+                   u.id as usuario_id, u.nombres, u.apellidos, u.username, u.cedula, u.especialidades
+            FROM solicitudes_clinica s
+            JOIN usuarios u ON s.usuario_id = u.id
+            WHERE s.clinica_id = ? AND s.estado = 'pendiente' AND s.tipo_solicitud = 'solicitud'
+            ORDER BY s.created_at DESC
+        """, (c_id,))
+        solicitudes = [dict(sol) for sol in cursor.fetchall()]
+
+    return jsonify({
+        'pertenece_clinica': True,
+        'es_admin': es_admin,
+        'tipo_clinica': tipo_clinica,
+        'clinica': clinica,
+        'miembros': miembros,
+        'solicitudes': solicitudes
+    })
+
+
+@app.route('/api/clinica/registrar', methods=['POST'])
+def api_clinica_registrar():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    data = request.json or {}
+    nombre = (data.get('nombre') or '').strip()
+    descripcion = (data.get('descripcion') or '').strip()
+
+    if not nombre:
+        return jsonify({'error': 'El nombre de la clínica es obligatorio.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # Generar código y slug único
+    import random, string, unicodedata
+    code_rnd = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    prefix = re.sub(r'[^A-Z]', '', unicodedata.normalize('NFD', nombre.upper()))[:5] or 'CLIN'
+    codigo_clinica = f"{prefix}-{code_rnd}"
+    
+    slug_base = re.sub(r'[^a-z0-9\-]', '', unicodedata.normalize('NFD', nombre.lower().replace(" ", "-")))
+    if not slug_base:
+        slug_base = f"clinica-{user_id}"
+
+    cursor.execute("SELECT id FROM clinicas WHERE slug = ?", (slug_base,))
+    if cursor.fetchone():
+        slug_base = f"{slug_base}-{code_rnd.lower()}"
+
+    cursor.execute("""
+        INSERT INTO clinicas (nombre, slug, codigo_clinica, descripcion, admin_id, modo_whatsapp)
+        VALUES (?, ?, ?, ?, ?, 'centralizado')
+    """, (nombre, slug_base, codigo_clinica, descripcion, user_id))
+    clinica_id = cursor.lastrowid
+
+    cursor.execute("UPDATE usuarios SET clinica_id = ?, tipo_clinica = 1 WHERE id = ?", (clinica_id, user_id))
+    db.commit()
+
+    return jsonify({
+        'success': 'Clínica registrada exitosamente.',
+        'codigo_clinica': codigo_clinica,
+        'slug': slug_base
+    })
+
+
+@app.route('/api/clinica/vincular-miembro', methods=['POST'])
+def api_clinica_vincular_miembro():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    data = request.json or {}
+    identificador = (data.get('identificador') or '').strip() # Cédula o ID de psicólogo
+
+    if not identificador:
+        return jsonify({'error': 'Por favor ingresa la Cédula o ID del terapeuta.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT id, clinica_id FROM usuarios WHERE id = ?", (user_id,))
+    u_row = cursor.fetchone()
+    if not u_row or not u_row['clinica_id']:
+        return jsonify({'error': 'No posees una clínica registrada.'}), 400
+
+    c_id = u_row['clinica_id']
+    cursor.execute("SELECT admin_id FROM clinicas WHERE id = ?", (c_id,))
+    c_row = cursor.fetchone()
+    if not c_row or c_row['admin_id'] != user_id:
+        return jsonify({'error': 'Solo el Director de la clínica puede invitar miembros.'}), 403
+
+    # Buscar al usuario por cédula o id
+    cursor.execute("SELECT id, nombres, apellidos, clinica_id FROM usuarios WHERE (cedula = ? OR id = ?) AND role = 'psicologo'", (identificador, identificador))
+    target_user = cursor.fetchone()
+    if not target_user:
+        return jsonify({'error': 'No se encontró ningún psicólogo registrado con esa Cédula o ID.'}), 444
+
+    if target_user['clinica_id'] == c_id:
+        return jsonify({'error': 'El profesional ya pertenece a esta clínica.'}), 400
+
+    # Crear invitación o vincular
+    cursor.execute("""
+        INSERT INTO solicitudes_clinica (clinica_id, usuario_id, tipo_solicitud, estado)
+        VALUES (?, ?, 'invitacion', 'pendiente')
+    """, (c_id, target_user['id']))
+    db.commit()
+
+    return jsonify({'success': f"Invitación enviada a {target_user['nombres']} {target_user['apellidos']}."})
+
+
+@app.route('/api/clinica/solicitar-ingreso', methods=['POST'])
+def api_clinica_solicitar_ingreso():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    data = request.json or {}
+    codigo_clinica = (data.get('codigo_clinica') or '').strip().upper()
+
+    if not codigo_clinica:
+        return jsonify({'error': 'Ingresa el código de la clínica.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT id, nombre FROM clinicas WHERE codigo_clinica = ?", (codigo_clinica,))
+    c_row = cursor.fetchone()
+    if not c_row:
+        return jsonify({'error': 'Código de clínica no válido.'}), 404
+
+    c_id = c_row['id']
+
+    # Verificar si ya existe solicitud
+    cursor.execute("SELECT id FROM solicitudes_clinica WHERE clinica_id = ? AND usuario_id = ? AND estado = 'pendiente'", (c_id, user_id))
+    if cursor.fetchone():
+        return jsonify({'error': 'Ya posees una solicitud pendiente para esta clínica.'}), 400
+
+    cursor.execute("""
+        INSERT INTO solicitudes_clinica (clinica_id, usuario_id, tipo_solicitud, estado)
+        VALUES (?, ?, 'solicitud', 'pendiente')
+    """, (c_id, user_id))
+    db.commit()
+
+    return jsonify({'success': f"Solicitud de ingreso a '{c_row['nombre']}' enviada con éxito."})
+
+
+@app.route('/api/clinica/mis-solicitudes', methods=['GET'])
+def api_clinica_mis_solicitudes():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT s.id, s.tipo_solicitud, s.estado, s.created_at, c.nombre as clinica_nombre, c.codigo_clinica
+        FROM solicitudes_clinica s
+        JOIN clinicas c ON s.clinica_id = c.id
+        WHERE s.usuario_id = ? AND s.estado = 'pendiente' AND s.tipo_solicitud = 'invitacion'
+        ORDER BY s.created_at DESC
+    """, (user_id,))
+    
+    solicitudes = [dict(sol) for sol in cursor.fetchall()]
+    return jsonify({'invitaciones': solicitudes})
+
+
+@app.route('/api/clinica/solicitud/responder', methods=['POST'])
+def api_clinica_solicitud_responder():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    data = request.json or {}
+    solicitud_id = data.get('solicitud_id')
+    accion = data.get('accion') # 'aceptar' o 'rechazar'
+
+    if not solicitud_id or accion not in ('aceptar', 'rechazar'):
+        return jsonify({'error': 'Datos incompletos.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM solicitudes_clinica WHERE id = ?", (solicitud_id,))
+    sol_row = cursor.fetchone()
+    if not sol_row:
+        return jsonify({'error': 'Solicitud no encontrada.'}), 404
+
+    sol = dict(sol_row)
+    c_id = sol['clinica_id']
+    u_target_id = sol['usuario_id']
+
+    cursor.execute("SELECT admin_id FROM clinicas WHERE id = ?", (c_id,))
+    c_row = cursor.fetchone()
+    es_admin = (c_row and c_row['admin_id'] == user_id)
+
+    # Validar permisos
+    if sol['tipo_solicitud'] == 'solicitud' and not es_admin:
+        return jsonify({'error': 'Solo el administrador puede responder a solicitudes de ingreso.'}), 403
+    if sol['tipo_solicitud'] == 'invitacion' and u_target_id != user_id:
+        return jsonify({'error': 'No estás autorizado para responder esta invitación.'}), 403
+
+    nuevo_estado = 'aceptado' if accion == 'aceptar' else 'rechazado'
+    cursor.execute("UPDATE solicitudes_clinica SET estado = ? WHERE id = ?", (nuevo_estado, solicitud_id))
+
+    if accion == 'aceptar':
+        # Asignar usuario a clínica como Terapeuta (tipo_clinica = 2)
+        cursor.execute("UPDATE usuarios SET clinica_id = ?, tipo_clinica = 2 WHERE id = ?", (c_id, u_target_id))
+
+    db.commit()
+    return jsonify({'success': f"Solicitud {nuevo_estado} correctamente."})
+
+
+@app.route('/api/clinica/salir', methods=['POST'])
+def api_clinica_salir():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT clinica_id, tipo_clinica FROM usuarios WHERE id = ?", (user_id,))
+    u_row = cursor.fetchone()
+    if not u_row or not u_row['clinica_id']:
+        return jsonify({'error': 'No perteneces a ninguna clínica.'}), 400
+
+    if u_row['tipo_clinica'] == 1:
+        return jsonify({'error': 'El Director Administrador no puede desvincularse sin transferir el mando.'}), 400
+
+    cursor.execute("UPDATE usuarios SET clinica_id = NULL, tipo_clinica = 0 WHERE id = ?", (user_id,))
+    db.commit()
+
+    return jsonify({'success': 'Te has desvinculado de la clínica exitosamente.'})
+
+
+@app.route('/api/clinica/ajustes', methods=['PUT', 'POST'])
+def api_clinica_ajustes():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT clinica_id FROM usuarios WHERE id = ?", (user_id,))
+    u_row = cursor.fetchone()
+    if not u_row or not u_row['clinica_id']:
+        return jsonify({'error': 'No perteneces a ninguna clínica.'}), 400
+
+    c_id = u_row['clinica_id']
+    cursor.execute("SELECT admin_id FROM clinicas WHERE id = ?", (c_id,))
+    c_row = cursor.fetchone()
+    if not c_row or c_row['admin_id'] != user_id:
+        return jsonify({'error': 'Solo el Director Administrador puede modificar los ajustes.'}), 403
+
+    data = request.json or {}
+    modo_wa = data.get('modo_whatsapp')
+    nombre = data.get('nombre')
+    descripcion = data.get('descripcion')
+
+    if modo_wa in ('centralizado', 'independiente'):
+        cursor.execute("UPDATE clinicas SET modo_whatsapp = ? WHERE id = ?", (modo_wa, c_id))
+
+    if nombre:
+        cursor.execute("UPDATE clinicas SET nombre = ? WHERE id = ?", (nombre, c_id))
+
+    if descripcion is not None:
+        cursor.execute("UPDATE clinicas SET descripcion = ? WHERE id = ?", (descripcion, c_id))
+
+    db.commit()
+    return jsonify({'success': 'Ajustes de la clínica actualizados correctamente.'})
+
 
 
 
