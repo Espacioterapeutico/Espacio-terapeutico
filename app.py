@@ -1639,7 +1639,7 @@ def auto_check_patient_birthdays(db):
 
         cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_cumpleanos', 'auto_cumpleanos_activo')")
         cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
-        auto_cumple_activo = cfg_rows.get('auto_cumpleanos_activo', '0') == '1'
+        auto_cumple_activo = cfg_rows.get('auto_cumpleanos_activo', '1') == '1'
         tmpl_cumple_default = cfg_rows.get('msg_cumpleanos') or "¡Feliz cumpleaños, *{nombre}*! 🎉🎂\n\nDesde Espacio Terapéutico te deseamos un excelente día lleno de bienestar, paz y alegría. ¡Gracias por acompañarnos!"
 
         cursor.execute("""
@@ -11417,6 +11417,16 @@ def send_whatsapp_message():
         return jsonify(r.json()), r.status_code
     except Exception as e:
         return jsonify({'error': f'Error al comunicarse con el microservicio WhatsApp: {str(e)}'}), 500
+
+@app.route('/api/whatsapp/trigger-birthdays', methods=['POST'])
+@login_required
+def trigger_birthday_messages_route():
+    try:
+        db = get_db()
+        auto_check_patient_birthdays(db)
+        return jsonify({'success': 'Revisión y envío de notificaciones de cumpleaños ejecutada correctamente.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/whatsapp/logout', methods=['POST'])
 @login_required
