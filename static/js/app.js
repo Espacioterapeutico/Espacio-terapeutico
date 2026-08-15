@@ -7781,9 +7781,9 @@ function renderWaQueueTablePage() {
             badgeBg = '#ef4444';
         } else if (item.pipeline_status.includes('en_cola')) {
             badgeBg = '#2563eb';
-        } else if (item.pipeline_status === 'enviado_conf' || item.pipeline_status === 'enviado_rec') {
+        } else if (item.pipeline_status.includes('enviado')) {
             badgeBg = '#059669';
-        } else if (item.pipeline_status === 'esperando_fecha') {
+        } else if (item.pipeline_status.includes('esperando')) {
             badgeBg = '#8b5cf6';
         } else if (item.pipeline_status.includes('reagendar')) {
             badgeBg = '#f59e0b';

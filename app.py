@@ -12162,6 +12162,8 @@ def get_whatsapp_queue_status():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
         if 'recordatorio_enviado_wa' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+        if 'cierre_enviado_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN cierre_enviado_wa INTEGER DEFAULT 0")
 
         cursor.execute("PRAGMA table_info(citas)")
         cols_citas = [r[1] for r in cursor.fetchall()]
@@ -12171,6 +12173,8 @@ def get_whatsapp_queue_status():
             cursor.execute("ALTER TABLE citas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
         if 'recordatorio_enviado_wa' not in cols_citas:
             cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+        if 'cierre_enviado_wa' not in cols_citas:
+            cursor.execute("ALTER TABLE citas ADD COLUMN cierre_enviado_wa INTEGER DEFAULT 0")
         db.commit()
     except Exception as ex_col:
         print("Aviso al migrar columnas de cola de WhatsApp:", ex_col)
@@ -12185,6 +12189,7 @@ def get_whatsapp_queue_status():
 
     today_str = now_local.strftime('%Y-%m-%d')
     yesterday_str = (now_local - timedelta(days=1)).strftime('%Y-%m-%d')
+    current_time_str = now_local.strftime('%H:%M')
 
     queue = []
     try:
@@ -12198,12 +12203,15 @@ def get_whatsapp_queue_status():
             estado_col = "'Agendada' as estado_cita"
 
         user_id = session.get('user_id', 1)
+        
+        # --- 1. MENSAJES DE CITAS (CONFIRMACIONES, RECORDATORIOS, CIERRE Y REAGENDAMIENTOS) ---
         if user_id == 1:
             sql = f"""
                 SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
                        COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
                        COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                       COALESCE(af.cierre_enviado_wa, 0) as cierre_enviado,
                        {estado_col},
                        p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
                 FROM agenda_finanzas af
@@ -12220,6 +12228,7 @@ def get_whatsapp_queue_status():
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
                        COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
                        COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                       COALESCE(af.cierre_enviado_wa, 0) as cierre_enviado,
                        {estado_col},
                        p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
                 FROM agenda_finanzas af
@@ -12273,10 +12282,19 @@ def get_whatsapp_queue_status():
                     priority = 2
             elif fecha_cita == today_str:
                 if is_confirmada:
-                    if r['recordatorio_enviado'] == 1:
-                        pipeline_status = 'enviado_rec'
-                        pipeline_label = '🚀 Recordatorio Enviado Hoy'
+                    if r['cierre_enviado'] == 1:
+                        pipeline_status = 'enviado_cierre'
+                        pipeline_label = '🚀 Mensaje de Cierre Enviado'
                         priority = 4
+                    elif r['recordatorio_enviado'] == 1:
+                        if hora_cita <= current_time_str:
+                            pipeline_status = 'en_cola_cierre'
+                            pipeline_label = '📥 En Cola (Mensaje de Cierre)'
+                            priority = 1
+                        else:
+                            pipeline_status = 'enviado_rec'
+                            pipeline_label = '🚀 Recordatorio Enviado Hoy'
+                            priority = 4
                     else:
                         pipeline_status = 'en_cola'
                         pipeline_label = '📥 En Cola (Recordatorio Hoy)'
@@ -12295,14 +12313,18 @@ def get_whatsapp_queue_status():
                         pipeline_label = '📥 En Cola (Reagendamiento Fin de Día)'
                         priority = 1
             else:
-                if r['reagendamiento_enviado'] == 1:
+                if r['cierre_enviado'] == 1:
+                    pipeline_status = 'enviado_cierre'
+                    pipeline_label = '🚀 Mensaje de Cierre Enviado'
+                    priority = 4
+                elif r['reagendamiento_enviado'] == 1:
                     pipeline_status = 'reagendar_enviado'
                     pipeline_label = '🔄 Reagendamiento Enviado'
                     priority = 4
                 elif is_confirmada:
-                    pipeline_status = 'completada'
-                    pipeline_label = '✅ Cita Realizada'
-                    priority = 5
+                    pipeline_status = 'en_cola_cierre'
+                    pipeline_label = '📥 En Cola (Mensaje de Cierre Pendiente)'
+                    priority = 1
                 else:
                     pipeline_status = 'pendiente_reagendar'
                     pipeline_label = '📥 Pendiente Reagendar'
@@ -12319,6 +12341,74 @@ def get_whatsapp_queue_status():
                 'pipeline_label': pipeline_label,
                 'priority': priority
             })
+
+        # --- 2. MENSAJES DE CUMPLEAEÑOS EN PROGRAMACIÓN / COLA ---
+        if user_id == 1:
+            sql_dob = """
+                SELECT id, nombres, apellidos, fecha_nacimiento, telefono
+                FROM pacientes
+                WHERE fecha_nacimiento IS NOT NULL AND fecha_nacimiento != '' AND (psicologo_id = 1 OR psicologo_id IS NULL)
+            """
+            cursor.execute(sql_dob)
+        else:
+            sql_dob = """
+                SELECT id, nombres, apellidos, fecha_nacimiento, telefono
+                FROM pacientes
+                WHERE fecha_nacimiento IS NOT NULL AND fecha_nacimiento != '' AND psicologo_id = ?
+            """
+            cursor.execute(sql_dob, (user_id,))
+        
+        dob_patients = cursor.fetchall()
+        for p_dob in dob_patients:
+            dob_raw = str(p_dob['fecha_nacimiento']).strip()
+            dob_norm = normalize_date_str(dob_raw)
+            if len(dob_norm) >= 10:
+                m_str, d_str = dob_norm[5:7], dob_norm[8:10]
+                try:
+                    m_int, d_int = int(m_str), int(d_str)
+                    target_bday = datetime(now_local.year, m_int, d_int).date()
+                    today_date = now_local.date()
+                    delta_days = (target_bday - today_date).days
+
+                    # Si el cumpleaños fue a principios de año y faltan muchos meses, ignorar para cola próxima
+                    if 0 <= delta_days <= 7:
+                        pat_dob_name = f"{p_dob['nombres']} {p_dob['apellidos']}".strip()
+                        pat_phone = p_dob['telefono'] or ''
+                        
+                        if delta_days == 0:
+                            # Verificar si fue enviado hoy en notificaciones
+                            cursor.execute("""
+                                SELECT id FROM notificaciones
+                                WHERE user_id = ? AND tipo = 'cumpleanos_wa' AND mensaje LIKE ? AND fecha LIKE ?
+                            """, (user_id, f"%ID: {p_dob['id']}%", f"{today_str}%"))
+                            already_sent = cursor.fetchone() is not None
+                            
+                            queue.append({
+                                'cita_id': f"dob_{p_dob['id']}",
+                                'paciente_nombre': pat_dob_name,
+                                'telefono': pat_phone,
+                                'fecha': today_str,
+                                'hora': '09:00 AM',
+                                'tipo_consulta': '🎉 Cumpleaños',
+                                'pipeline_status': 'enviado_cumpleanos' if already_sent else 'en_cola_cumpleanos',
+                                'pipeline_label': '🎂 Felicitación de Cumpleaños Enviada' if already_sent else '🎉 En Cola (Felicitación de Cumpleaños Hoy)',
+                                'priority': 4 if already_sent else 1
+                            })
+                        else:
+                            bday_str = target_bday.strftime('%Y-%m-%d')
+                            queue.append({
+                                'cita_id': f"dob_{p_dob['id']}",
+                                'paciente_nombre': pat_dob_name,
+                                'telefono': pat_phone,
+                                'fecha': bday_str,
+                                'hora': '09:00 AM',
+                                'tipo_consulta': '🎉 Cumpleaños',
+                                'pipeline_status': 'esperando_cumpleanos',
+                                'pipeline_label': f'🎂 Programado (Cumpleaños en {delta_days} días)',
+                                'priority': 2
+                            })
+                except Exception:
+                    pass
 
         # Ordenar cola: Primero los pendientes/en cola (prioridad 1 y 2), al final los enviados y realizados
         queue.sort(key=lambda x: (x['priority'], x['fecha'], x['hora']))
