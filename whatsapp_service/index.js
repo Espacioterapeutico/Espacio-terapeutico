@@ -318,12 +318,22 @@ app.post('/send', async (req, res) => {
             return res.status(400).json({ error: `El número '${phone}' es inválido` });
         }
 
-        if (!cleanPhone.endsWith('@s.whatsapp.net')) {
-            cleanPhone = `${cleanPhone}@s.whatsapp.net`;
+        let targetJid = cleanPhone.endsWith('@s.whatsapp.net') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+        const rawNum = cleanPhone.replace('@s.whatsapp.net', '');
+        
+        try {
+            const onWa = await session.sock.onWhatsApp(rawNum);
+            if (Array.isArray(onWa) && onWa.length > 0 && onWa[0].exists) {
+                targetJid = onWa[0].jid;
+            } else {
+                return res.status(400).json({ error: `El número ${phone} (+${rawNum}) no está registrado en WhatsApp.` });
+            }
+        } catch (eWa) {
+            console.warn(`[User ${userId}] ADVERTENCIA en onWhatsApp check:`, eWa.message);
         }
 
-        await session.sock.sendMessage(cleanPhone, { text: text });
-        res.json({ success: true, message: `Mensaje enviado a ${phone} desde cuenta de usuario ${userId}` });
+        await session.sock.sendMessage(targetJid, { text: text });
+        res.json({ success: true, message: `Mensaje enviado a ${phone} (${targetJid}) desde cuenta de usuario ${userId}` });
     } catch (err) {
         console.error(`[User ${userId}] Error enviando mensaje por WhatsApp:`, err);
         res.status(500).json({ error: `Error al enviar mensaje: ${err.message}` });
