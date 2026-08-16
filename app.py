@@ -15486,16 +15486,17 @@ def api_get_public_evaluacion(token):
         ensure_tests_tables(db)
         cursor = db.cursor()
 
-        clean_token = (token or '').strip()
+        raw_token = (token or '').strip()
+        clean_token = raw_token.replace('-', '').lower()
 
         cursor.execute("""
             SELECT a.*, p.nombres as pac_nombres, p.apellidos as pac_apellidos,
                    u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.nomenclatura as psic_titulo, u.foto_titulo as psic_foto
             FROM test_asignaciones a
-            JOIN pacientes p ON a.patient_id = p.id
-            JOIN usuarios u ON a.user_id = u.id
-            WHERE a.uuid_token = ?
-        """, (clean_token,))
+            LEFT JOIN pacientes p ON a.patient_id = p.id
+            LEFT JOIN usuarios u ON a.user_id = u.id
+            WHERE a.uuid_token = ? OR LOWER(REPLACE(a.uuid_token, '-', '')) = ?
+        """, (raw_token, clean_token))
         row = cursor.fetchone()
         if not row:
             return jsonify({'error': 'Evaluación no encontrada o token inválido.'}), 404
@@ -15503,20 +15504,34 @@ def api_get_public_evaluacion(token):
         assign = dict(row)
         tcode = (assign.get('test_code') or '').strip()
 
-        # Búsqueda inteligente por código exacto, siglas o patrón
+        # Búsqueda súper flexible por código, siglas o coincidencia parcial
         cursor.execute("SELECT * FROM tests_definiciones WHERE LOWER(code) = LOWER(?) OR LOWER(siglas) = LOWER(?)", (tcode, tcode))
         test_def_row = cursor.fetchone()
         if not test_def_row:
-            cursor.execute("SELECT * FROM tests_definiciones WHERE LOWER(code) LIKE LOWER(?) OR LOWER(siglas) LIKE LOWER(?)", (f"%{tcode}%", f"%{tcode}%"))
+            cursor.execute("SELECT * FROM tests_definiciones WHERE LOWER(code) LIKE LOWER(?) OR LOWER(siglas) LIKE LOWER(?) OR LOWER(nombre) LIKE LOWER(?)", (f"%{tcode}%", f"%{tcode}%", f"%{tcode}%"))
             test_def_row = cursor.fetchone()
 
         if test_def_row:
             test_def = dict(test_def_row)
-            try: test_def['escala_opciones'] = json.loads(test_def['escala_opciones_json'])
-            except: test_def['escala_opciones'] = []
+            try:
+                test_def['escala_opciones'] = json.loads(test_def['escala_opciones_json']) if test_def.get('escala_opciones_json') else []
+            except:
+                test_def['escala_opciones'] = []
 
-            try: test_def['items'] = json.loads(test_def['items_json'])
-            except: test_def['items'] = []
+            try:
+                test_def['items'] = json.loads(test_def['items_json']) if test_def.get('items_json') else []
+            except:
+                test_def['items'] = []
+
+            if not test_def.get('items'):
+                test_def['items'] = [{'num': i, 'txt': f'Ítem {i}'} for i in range(1, 21)]
+            if not test_def.get('escala_opciones'):
+                test_def['escala_opciones'] = [
+                    {'val': 0, 'txt': '0 = En absoluto / Nunca'},
+                    {'val': 1, 'txt': '1 = Levemente / A veces'},
+                    {'val': 2, 'txt': '2 = Moderadamente / Frecuentemente'},
+                    {'val': 3, 'txt': '3 = Severamente / Casi siempre'}
+                ]
         else:
             # Fallback dinámico automático para asegurar que NINGUNA evaluación falle jamás al cargar
             test_def = {
@@ -15574,7 +15589,10 @@ def api_responder_public_evaluacion(token):
     ensure_tests_tables(db)
     cursor = db.cursor()
 
-    cursor.execute("SELECT * FROM test_asignaciones WHERE uuid_token = ?", (token,))
+    raw_token = (token or '').strip()
+    clean_token = raw_token.replace('-', '').lower()
+
+    cursor.execute("SELECT * FROM test_asignaciones WHERE uuid_token = ? OR LOWER(REPLACE(uuid_token, '-', '')) = ?", (raw_token, clean_token))
     row = cursor.fetchone()
     if not row:
         return jsonify({'error': 'Evaluación no encontrada.'}), 404
