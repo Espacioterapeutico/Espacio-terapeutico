@@ -10438,6 +10438,44 @@ def export_word(patient_id):
             row_cells[4].text = fe['estado_pago']
             row_cells[5].text = fe['control_uso']
             
+    # Sección 5: Registro de Evaluaciones y Pruebas Psicológicas
+    cursor.execute("""
+        SELECT * FROM test_asignaciones 
+        WHERE patient_id = ? 
+        ORDER BY fecha_asignacion ASC
+    """, (patient_id,))
+    applied_tests = [dict(r) for r in cursor.fetchall()]
+
+    if applied_tests:
+        doc.add_page_break()
+        h5 = doc.add_heading(level=1)
+        h5_run = h5.add_run("5. Registro de Evaluaciones y Pruebas Psicológicas")
+        h5_run.font.color.rgb = docx.shared.RGBColor(0x3D, 0x1E, 0x3F)
+
+        table_t = doc.add_table(rows=1, cols=5)
+        table_t.style = 'Light Shading Accent 1'
+        t_hdr = table_t.rows[0].cells
+        t_hdr[0].text = 'Fecha'
+        t_hdr[1].text = 'Prueba / Test'
+        t_hdr[2].text = 'Puntaje Total'
+        t_hdr[3].text = 'Clasificación / Severidad'
+        t_hdr[4].text = 'Estado'
+
+        for t_row in applied_tests:
+            t_def = PSYCHOLOGICAL_TESTS.get(t_row.get('test_code'), {})
+            t_name = t_def.get('siglas') or t_def.get('nombre') or t_row.get('test_code')
+            t_date = t_row.get('fecha_completado') or t_row.get('fecha_asignacion') or '—'
+            t_score = str(t_row.get('puntaje_total')) if t_row.get('puntaje_total') is not None else '—'
+            t_clasif = t_row.get('clasificacion_resultado') or ('Completado' if t_row.get('estado') == 'completado' else 'Pendiente')
+            t_status = '✓ Completado' if t_row.get('estado') == 'completado' else '⏳ Pendiente'
+
+            r_cells = table_t.add_row().cells
+            r_cells[0].text = str(t_date)
+            r_cells[1].text = str(t_name)
+            r_cells[2].text = str(t_score)
+            r_cells[3].text = str(t_clasif)
+            r_cells[4].text = str(t_status)
+
     # Guardar en archivo temporal
     filename = f"expediente_{pac['cedula']}.docx"
     filepath = os.path.join(os.getcwd(), filename)
@@ -15620,6 +15658,45 @@ def api_responder_public_evaluacion(token):
                 interpretacion_clinica = ?
             WHERE uuid_token = ?
         """, (json.dumps(answers), total_score, json.dumps(subscales), classification, interpretation, token))
+
+        # Registrar automáticamente como Evolución Clínica en la historia del consultante
+        if assign.get('patient_id'):
+            test_def = PSYCHOLOGICAL_TESTS.get(assign['test_code'], {})
+            test_name = test_def.get('nombre') or test_def.get('siglas') or assign['test_code']
+            test_siglas = test_def.get('siglas') or assign['test_code']
+
+            subscales_txt = ""
+            if subscales and isinstance(subscales, dict):
+                sub_lines = []
+                for s_key, s_val in subscales.items():
+                    if isinstance(s_val, dict):
+                        sub_lines.append(f"  • {s_key} ({s_val.get('nombre', '')}): TB {s_val.get('tb', '-')}")
+                    else:
+                        sub_lines.append(f"  • {s_key}: {s_val} pts")
+                if sub_lines:
+                    subscales_txt = "\nDesglose por Subescalas:\n" + "\n".join(sub_lines) + "\n"
+
+            resumen_texto = (
+                f"📋 EVALUACIÓN PSICOMÉTRICA COMPLETADA: {test_siglas} - {test_name}\n"
+                f"• Puntaje Total: {total_score} pts\n"
+                f"• Clasificación / Severidad: {classification or 'Completado'}\n"
+                f"{subscales_txt}\n"
+                f"Análisis e Interpretación Clinica:\n{interpretation or 'Sin interpretación adicional.'}"
+            )
+
+            resumen_enc = encrypt_clinical_text(resumen_texto)
+            tests_enc = encrypt_clinical_text(f"{test_siglas} ({total_score} pts - {classification or 'Completado'})")
+            diag_enc = encrypt_clinical_text(f"{classification or 'Test Psicológico'}")
+
+            from datetime import datetime
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+            cursor.execute("""
+                INSERT INTO sesiones (
+                    paciente_id, fecha, modalidad, estado, resumen, diagnostico, test_aplicados
+                ) VALUES (?, ?, 'Evaluación Psicológica', 'Realizada', ?, ?, ?)
+            """, (assign['patient_id'], now_str, resumen_enc, diag_enc, tests_enc))
+
         db.commit()
 
         return jsonify({
