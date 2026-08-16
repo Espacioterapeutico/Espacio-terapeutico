@@ -723,16 +723,16 @@ async function loadAllAppliedTestsHistory() {
         }
 
         let html = `
-            <div style="overflow-x: auto; background: white; border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; background: white; border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                <table style="width: 100%; min-width: 720px; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
                     <thead>
-                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">
-                            <th style="padding: 12px 16px;">Fecha</th>
-                            <th style="padding: 12px 16px;">Consultante</th>
-                            <th style="padding: 12px 16px;">Evaluación</th>
-                            <th style="padding: 12px 16px;">Modo</th>
-                            <th style="padding: 12px 16px;">Estado</th>
-                            <th style="padding: 12px 16px; text-align: right;">Acciones</th>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; white-space: nowrap;">
+                            <th style="padding: 14px 16px; white-space: nowrap; width: 130px;">Fecha</th>
+                            <th style="padding: 14px 16px; min-width: 140px;">Consultante</th>
+                            <th style="padding: 14px 16px; min-width: 200px;">Evaluación</th>
+                            <th style="padding: 14px 16px; white-space: nowrap; width: 120px;">Modo</th>
+                            <th style="padding: 14px 16px; white-space: nowrap; width: 110px;">Estado</th>
+                            <th style="padding: 14px 16px; text-align: center; white-space: nowrap; min-width: 220px;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -742,25 +742,41 @@ async function loadAllAppliedTestsHistory() {
             const dateStr = t.fecha_asignacion ? new Date(t.fecha_asignacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
             const patientName = `${t.patient_nombres || ''} ${t.patient_apellidos || ''}`.trim() || 'Consultante';
             const ciStr = t.patient_cedula ? ` (${t.patient_cedula})` : '';
+            const testUrl = t.url_test || (t.uuid_token ? `/evaluacion/${t.uuid_token}` : '');
             
             const isCompleted = t.estado === 'completado';
             const statusBadge = isCompleted 
-                ? '<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">✓ Completado</span>'
-                : '<span style="background: #fdf4ff; color: #702e5e; border: 1px solid #f5d0fe; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">⏳ Pendiente</span>';
+                ? '<span style="display: inline-block; white-space: nowrap; background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 12px; border-radius: 14px; font-size: 0.75rem; font-weight: 800;">✓ Completado</span>'
+                : '<span style="display: inline-block; white-space: nowrap; background: #fdf4ff; color: #702e5e; border: 1px solid #f5d0fe; padding: 4px 12px; border-radius: 14px; font-size: 0.75rem; font-weight: 800;">⏳ Pendiente</span>';
 
             const modoBadge = t.modo_aplicacion === 'presencial' ? '💻 Presencial' : (t.modo_aplicacion === 'online' ? '📲 App Online' : '🔗 Enlace / Link');
 
             html += `
                 <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='white'">
-                    <td style="padding: 12px 16px; font-weight: 700; color: #64748b; font-size: 0.82rem;">${dateStr}</td>
-                    <td style="padding: 12px 16px; font-weight: 800; color: #0f172a;">${patientName} <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${ciStr}</span></td>
-                    <td style="padding: 12px 16px; font-weight: 800; color: #702e5e;">${t.test_siglas || t.test_code} <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">- ${t.test_nombre || ''}</span></td>
-                    <td style="padding: 12px 16px; font-weight: 700; color: #475569; font-size: 0.82rem;">${modoBadge}</td>
-                    <td style="padding: 12px 16px;">${statusBadge}</td>
-                    <td style="padding: 12px 16px; text-align: right;">
-                        <button type="button" onclick="copyTestLink('${t.url_test}')" title="Copiar Enlace" style="background: #f1f5f9; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #334155; margin-right: 4px;">📋 Link</button>
-                        ${isCompleted ? `<button type="button" onclick="window.open('/api/tests/asignacion/${t.id}/export/pdf', '_blank')" title="Descargar PDF" style="background: #15803d; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800; margin-right: 4px;">📄 PDF</button>` : ''}
-                        <button type="button" onclick="deleteTestAssignment('${t.id}')" title="Eliminar Asignación" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800;">🗑️</button>
+                    <td style="padding: 14px 16px; font-weight: 700; color: #64748b; font-size: 0.82rem; white-space: nowrap;">${dateStr}</td>
+                    <td style="padding: 14px 16px; font-weight: 800; color: #0f172a; min-width: 140px;">
+                        <div>${patientName}</div>
+                        ${ciStr ? `<div style="font-size: 0.78rem; color: #64748b; font-weight: 600; margin-top: 2px;">${ciStr}</div>` : ''}
+                    </td>
+                    <td style="padding: 14px 16px; min-width: 200px;">
+                        <div style="font-weight: 800; color: #702e5e;">${t.test_siglas || t.test_code}</div>
+                        ${t.test_nombre ? `<div style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-top: 2px; line-height: 1.35;">${t.test_nombre}</div>` : ''}
+                    </td>
+                    <td style="padding: 14px 16px; font-weight: 700; color: #475569; font-size: 0.82rem; white-space: nowrap;">${modoBadge}</td>
+                    <td style="padding: 14px 16px; white-space: nowrap;">${statusBadge}</td>
+                    <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
+                        <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                            ${testUrl ? `
+                                <a href="${testUrl}" target="_blank" title="Abrir Evaluación en nueva pestaña" style="display: inline-flex; align-items: center; gap: 4px; background: #702e5e; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; text-decoration: none; box-shadow: 0 2px 6px rgba(112,46,94,0.25);">
+                                    🚀 Abrir
+                                </a>
+                                <button type="button" onclick="copyTestLink('${testUrl}')" title="Copiar Enlace al Portapapeles" style="display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border: 1.5px solid #cbd5e1; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #334155;">
+                                    📋 Link
+                                </button>
+                            ` : ''}
+                            ${isCompleted ? `<button type="button" onclick="window.open('/api/tests/asignacion/${t.id}/export/pdf', '_blank')" title="Descargar Informe PDF" style="display: inline-flex; align-items: center; gap: 4px; background: #15803d; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800; box-shadow: 0 2px 6px rgba(21,128,61,0.25);">📄 PDF</button>` : ''}
+                            <button type="button" onclick="deleteTestAssignment('${t.id}')" title="Eliminar Asignación" style="display: inline-flex; align-items: center; justify-content: center; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 9px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800;">🗑️</button>
+                        </div>
                     </td>
                 </tr>
             `;
