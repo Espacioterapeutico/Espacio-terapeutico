@@ -10440,9 +10440,11 @@ def export_word(patient_id):
             
     # Sección 5: Registro de Evaluaciones y Pruebas Psicológicas
     cursor.execute("""
-        SELECT * FROM test_asignaciones 
-        WHERE patient_id = ? 
-        ORDER BY fecha_asignacion ASC
+        SELECT a.*, td.siglas as test_siglas, td.nombre as test_nombre
+        FROM test_asignaciones a
+        LEFT JOIN tests_definiciones td ON a.test_code = td.code
+        WHERE a.patient_id = ? 
+        ORDER BY a.fecha_asignacion ASC
     """, (patient_id,))
     applied_tests = [dict(r) for r in cursor.fetchall()]
 
@@ -10462,8 +10464,7 @@ def export_word(patient_id):
         t_hdr[4].text = 'Estado'
 
         for t_row in applied_tests:
-            t_def = PSYCHOLOGICAL_TESTS.get(t_row.get('test_code'), {})
-            t_name = t_def.get('siglas') or t_def.get('nombre') or t_row.get('test_code')
+            t_name = t_row.get('test_siglas') or t_row.get('test_nombre') or t_row.get('test_code')
             t_date = t_row.get('fecha_completado') or t_row.get('fecha_asignacion') or '—'
             t_score = str(t_row.get('puntaje_total')) if t_row.get('puntaje_total') is not None else '—'
             t_clasif = t_row.get('clasificacion_resultado') or ('Completado' if t_row.get('estado') == 'completado' else 'Pendiente')
@@ -15661,9 +15662,13 @@ def api_responder_public_evaluacion(token):
 
         # Registrar automáticamente como Evolución Clínica en la historia del consultante
         if assign.get('patient_id'):
-            test_def = PSYCHOLOGICAL_TESTS.get(assign['test_code'], {})
-            test_name = test_def.get('nombre') or test_def.get('siglas') or assign['test_code']
-            test_siglas = test_def.get('siglas') or assign['test_code']
+            test_name = assign['test_code']
+            test_siglas = assign['test_code']
+            cursor.execute("SELECT nombre, siglas FROM tests_definiciones WHERE code = ?", (assign['test_code'],))
+            td_row = cursor.fetchone()
+            if td_row:
+                test_name = td_row[0] or assign['test_code']
+                test_siglas = td_row[1] or assign['test_code']
 
             subscales_txt = ""
             if subscales and isinstance(subscales, dict):
