@@ -17433,6 +17433,15 @@ async function loadAndRenderPublicTest(token) {
 
     try {
         const resp = await fetch(`/api/public/evaluacion/${token}`);
+        if (!resp.ok) {
+            let errorMsg = `Evaluación no encontrada o token inválido (Código ${resp.status}).`;
+            try {
+                const dataErr = await resp.json();
+                if (dataErr.error) errorMsg = dataErr.error;
+            } catch(e) {}
+            alert(errorMsg);
+            return;
+        }
         const data = await resp.json();
 
         if (data.error) {
@@ -17440,8 +17449,8 @@ async function loadAndRenderPublicTest(token) {
             return;
         }
 
-        const assign = data.assignment;
-        const testDef = data.test_definition;
+        const assign = data.assignment || {};
+        const testDef = data.test_definition || {};
         currentPublicTestDefinition = testDef;
 
         const displayTitle = getPublicTestDisplayTitle(testDef);
@@ -17454,11 +17463,11 @@ async function loadAndRenderPublicTest(token) {
             headerTherapist.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; color: #334155;">
                     <img src="${assign.psicologo_foto || '/static/logo.png'}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;">
-                    <span>${assign.psicologo_nombre} <span style="color: #64748b; font-weight: 500;">(${assign.psicologo_titulo})</span></span>
+                    <span>${assign.psicologo_nombre || 'Psicólogo Clínico'} <span style="color: #64748b; font-weight: 500;">(${assign.psicologo_titulo || 'Consulta'})</span></span>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 6px; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; color: #702e5e;">
-                    <span>👤 Consultante: <strong>${assign.paciente_nombre}</strong></span>
+                    <span>👤 Consultante: <strong>${assign.paciente_nombre || 'Consultante'}</strong></span>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 6px; background: #f1f5f9; border: 1.5px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; color: #475569;" title="Token de asignación: ${displayToken}">
@@ -17468,31 +17477,44 @@ async function loadAndRenderPublicTest(token) {
         }
 
         if (assign.estado === 'completado') {
-            document.getElementById('pub-test-form-card').style.display = 'none';
+            const formCard = document.getElementById('pub-test-form-card');
+            if (formCard) formCard.style.display = 'none';
             const successCard = document.getElementById('pub-test-success-card');
-            successCard.style.display = 'block';
-            successCard.classList.remove('hide');
+            if (successCard) {
+                successCard.style.display = 'block';
+                successCard.classList.remove('hide');
+            }
 
-            document.getElementById('pub-test-success-summary').innerHTML = `
-                <div style="color: #047857; margin-bottom: 0.4rem; font-size: 0.95rem;">✓ Instrumento: <strong>${displayTitle}</strong></div>
-                <div style="font-size: 0.88rem; color: #475569; margin-bottom: 0.4rem;">Consultante: <strong>${assign.paciente_nombre}</strong></div>
-                <div style="font-size: 0.85rem; color: #059669; font-weight: 700;">✓ Estado: Respuestas enviadas al expediente del psicólogo</div>
-                ${assign.fecha_completado ? `<div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.4rem;">Fecha de envío: ${assign.fecha_completado}</div>` : ''}
-            `;
+            const successSummary = document.getElementById('pub-test-success-summary');
+            if (successSummary) {
+                successSummary.innerHTML = `
+                    <div style="color: #047857; margin-bottom: 0.4rem; font-size: 0.95rem;">✓ Instrumento: <strong>${displayTitle}</strong></div>
+                    <div style="font-size: 0.88rem; color: #475569; margin-bottom: 0.4rem;">Consultante: <strong>${assign.paciente_nombre || 'Consultante'}</strong></div>
+                    <div style="font-size: 0.85rem; color: #059669; font-weight: 700;">✓ Estado: Respuestas enviadas al expediente del psicólogo</div>
+                    ${assign.fecha_completado ? `<div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.4rem;">Fecha de envío: ${assign.fecha_completado}</div>` : ''}
+                `;
+            }
             return;
         }
 
-        document.getElementById('pub-test-badge-categoria').textContent = 'Evaluación Clínica';
-        document.getElementById('pub-test-title').textContent = displayTitle;
-        document.getElementById('pub-test-patient-info').innerHTML = `Consultante: <strong>${assign.paciente_nombre}</strong> &nbsp;•&nbsp; <span style="font-size: 0.85rem; color: #64748b; background: #f1f5f9; padding: 3px 10px; border-radius: 8px; font-weight: 700;">ID Aplicación: ${assign.token}</span>`;
-        document.getElementById('pub-test-instructions').textContent = testDef.instrucciones || 'Lea atentamente y seleccione su respuesta.';
+        const badgeCat = document.getElementById('pub-test-badge-categoria');
+        if (badgeCat) badgeCat.textContent = testDef.categoria || 'Evaluación Clínica';
+
+        const testTitleEl = document.getElementById('pub-test-title');
+        if (testTitleEl) testTitleEl.textContent = displayTitle;
+
+        const patientInfoEl = document.getElementById('pub-test-patient-info');
+        if (patientInfoEl) patientInfoEl.innerHTML = `Consultante: <strong>${assign.paciente_nombre || 'Consultante'}</strong> &nbsp;•&nbsp; <span style="font-size: 0.85rem; color: #64748b; background: #f1f5f9; padding: 3px 10px; border-radius: 8px; font-weight: 700;">ID Aplicación: ${assign.token || token}</span>`;
+
+        const testInstEl = document.getElementById('pub-test-instructions');
+        if (testInstEl) testInstEl.textContent = testDef.instrucciones || 'Lea atentamente y seleccione su respuesta.';
 
         renderPublicTestItems(testDef);
         updatePublicTestProgressBar();
 
     } catch (err) {
         console.error("Error al cargar test público:", err);
-        alert("Error de conexión al cargar la evaluación.");
+        alert("Error al cargar la evaluación: " + (err.message || err));
     } finally {
         hideLoadingScreen();
     }
@@ -17747,24 +17769,36 @@ function renderPublicTestItems(testDef) {
 
         if (isBdi2 && item.opciones) {
             html += `<div style="display: flex; flex-direction: column; gap: 0.6rem;">`;
-            item.opciones.forEach(op => {
-                const checked = (selectedVal !== undefined && String(selectedVal) === String(op.val)) ? 'checked' : '';
+            item.opciones.forEach((op, opIdx) => {
+                let opVal = opIdx;
+                let opTxt = String(op);
+                if (typeof op === 'object' && op !== null) {
+                    opVal = (op.val !== undefined) ? op.val : opIdx;
+                    opTxt = op.txt || op.texto || op.label || String(opVal);
+                }
+                const checked = (selectedVal !== undefined && String(selectedVal) === String(opVal)) ? 'checked' : '';
                 html += `
                     <label style="display: flex; align-items: flex-start; gap: 10px; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
-                        <input type="radio" name="item_${itemNum}" value="${op.val}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" style="margin-top: 3px; accent-color: #702e5e;">
-                        <span style="font-size: 0.92rem; color: #334155; line-height: 1.45;">${op.txt}</span>
+                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="margin-top: 3px; accent-color: #702e5e;">
+                        <span style="font-size: 0.92rem; color: #334155; line-height: 1.45;">${opTxt}</span>
                     </label>`;
             });
             html += `</div>`;
         } else {
             const escala = testDef.escala_opciones || [];
             html += `<div style="display: flex; flex-wrap: wrap; gap: 0.6rem;">`;
-            escala.forEach(op => {
-                const checked = (selectedVal !== undefined && String(selectedVal) === String(op.val)) ? 'checked' : '';
+            escala.forEach((op, opIdx) => {
+                let opVal = opIdx;
+                let opTxt = String(op);
+                if (typeof op === 'object' && op !== null) {
+                    opVal = (op.val !== undefined) ? op.val : opIdx;
+                    opTxt = op.txt || op.texto || op.label || String(opVal);
+                }
+                const checked = (selectedVal !== undefined && String(selectedVal) === String(opVal)) ? 'checked' : '';
                 html += `
                     <label style="flex: 1; min-width: 140px; text-align: center; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 0.65rem 0.85rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
-                        <input type="radio" name="item_${itemNum}" value="${op.val}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" style="margin-right: 6px; accent-color: #702e5e;">
-                        <span style="font-size: 0.88rem; font-weight: 700; color: #334155;">${op.txt}</span>
+                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="margin-right: 6px; accent-color: #702e5e;">
+                        <span style="font-size: 0.88rem; font-weight: 700; color: #334155;">${opTxt}</span>
                     </label>`;
             });
             html += `</div>`;
