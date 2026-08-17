@@ -359,7 +359,7 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-CURRENT_SCHEMA_VER = "14"
+CURRENT_SCHEMA_VER = "15"
 
 def init_db():
     db = sqlite3.connect(DATABASE, timeout=30.0)
@@ -496,6 +496,8 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN clinica_id INTEGER")
         if 'tipo_clinica' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN tipo_clinica INTEGER DEFAULT 0")
+        if 'consultorios_nombres' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN consultorios_nombres TEXT DEFAULT ''")
         db.commit()
 
     cursor.execute("""
@@ -655,6 +657,8 @@ def init_db():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
         if 'cierre_enviado_wa' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN cierre_enviado_wa INTEGER DEFAULT 0")
+        if 'consultorio_nombre' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN consultorio_nombre TEXT")
         db.commit()
         
     # Crear tabla de tarifas por país
@@ -4563,17 +4567,21 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                         while curr + duration_td <= end_time:
                             h_str = curr.strftime("%H:%M")
                             mod_label = perf_nombre or perf_modalidad or 'Online'
+                            perf_consultorio = str(perf.get('consultorio') or '').strip()
                             if h_str not in seen_hours:
                                 seen_hours.add(h_str)
                                 candidate_slots.append({
                                     "hora": h_str,
-                                    "modalidades": [mod_label]
+                                    "modalidades": [mod_label],
+                                    "consultorio": perf_consultorio
                                 })
                             else:
                                 for c in candidate_slots:
                                     if c["hora"] == h_str:
                                         if mod_label and mod_label not in c["modalidades"]:
                                             c["modalidades"].append(mod_label)
+                                        if perf_consultorio and not c.get("consultorio"):
+                                            c["consultorio"] = perf_consultorio
                             curr += duration_td + recess_td
                     except Exception as ex_r:
                         pass
@@ -4591,9 +4599,9 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     except:
         pass
 
-    # Filtrar slots ocupados en agenda_finanzas para ese psicólogo en CUALQUIER modalidad
+    # 1. Horas ocupadas para este psicólogo en particular
     query = """
-        SELECT af.hora FROM agenda_finanzas af
+        SELECT af.hora, af.consultorio_nombre FROM agenda_finanzas af
         LEFT JOIN pacientes p ON af.paciente_id = p.id
         WHERE (af.fecha = ? OR af.fecha = ?)
           AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
@@ -4607,6 +4615,23 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     cursor.execute(query, params)
     booked_rows = cursor.fetchall()
     booked_hours = set(normalize_time_str(row['hora']) for row in booked_rows if row['hora'])
+
+    # 2. Consultorios físicos ocupados globalmente en la misma fecha (por cualquier profesional)
+    query_cons = """
+        SELECT af.hora, LOWER(TRIM(af.consultorio_nombre)) as cons FROM agenda_finanzas af
+        WHERE (af.fecha = ? OR af.fecha = ?)
+          AND af.consultorio_nombre IS NOT NULL AND TRIM(af.consultorio_nombre) != ''
+          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+    """
+    params_cons = [target_date_norm, alt_date_str]
+    if exclude_appt_id:
+        query_cons += " AND af.id != ?"
+        params_cons.append(exclude_appt_id)
+
+    cursor.execute(query_cons, params_cons)
+    booked_cons_rows = cursor.fetchall()
+    booked_consultorios = set((row['cons'], normalize_time_str(row['hora'])) for row in booked_cons_rows if row['hora'] and row['cons'])
+
 
     # Filtrar bloqueos de agenda específicos (Eventos Personales / Convocatorias)
     cursor.execute("""
@@ -4626,6 +4651,11 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     for slot_obj in candidate_slots:
         h = normalize_time_str(slot_obj["hora"])
         if h in booked_hours or slot_obj["hora"] in booked_hours:
+            continue
+
+        # Descartar si el consultorio físico asignado a este bloque está ocupado en esa hora
+        c_assigned = slot_obj.get("consultorio", "").strip().lower()
+        if c_assigned and (c_assigned, h) in booked_consultorios:
             continue
 
         # Verificar si la hora cae dentro de un rango bloqueado
@@ -9154,17 +9184,34 @@ def delete_agenda_block(block_id):
 @app.route('/api/agenda', methods=['POST'])
 @login_required
 def add_agenda_event():
-    data = request.json
+    data = request.json or {}
     db = get_db()
     cursor = db.cursor()
     
     paciente_id = data.get('paciente_id')
     fecha = data.get('fecha')
     hora = data.get('hora')
-    tipo_consulta = data.get('tipo_consulta') # 'Presencial', 'Online'
+    tipo_consulta = data.get('tipo_consulta', 'Presencial') # 'Presencial', 'Online'
+    consultorio_nombre = data.get('consultorio_nombre')
+    creado_por_user_id = data.get('creado_por_user_id') or session.get('user_id')
     
     if not paciente_id or not fecha or not hora or not tipo_consulta:
         return jsonify({'error': 'Paciente, Fecha, Hora y Tipo de consulta son obligatorios.'}), 400
+
+    # Validar sobreposición de consultorio / espacio físico
+    if consultorio_nombre and str(consultorio_nombre).strip():
+        cursor.execute("""
+            SELECT id FROM agenda_finanzas 
+            WHERE (fecha = ? OR fecha LIKE ?) 
+              AND (hora = ? OR hora LIKE ?) 
+              AND LOWER(TRIM(consultorio_nombre)) = LOWER(?)
+              AND (estado_pago IS NULL OR (estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'))
+        """, (fecha, f"%{fecha}%", hora, f"{hora}%", str(consultorio_nombre).strip()))
+        ocupado = cursor.fetchone()
+        if ocupado:
+            return jsonify({
+                'error': f'🚫 El consultorio "{str(consultorio_nombre).strip()}" ya se encuentra reservado el {fecha} a las {hora}. Por favor selecciona otro espacio físico o cambia el horario.'
+            }), 400
         
     estado_pago = data.get('estado_pago', 'Agendada')
     monto = float(data.get('monto', 0.0) or 0.0)
@@ -9227,12 +9274,12 @@ def add_agenda_event():
             INSERT INTO agenda_finanzas (
                 paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
                 estado_pago, control_uso, google_event_id, cantidad_sesiones,
-                referencia, metodo_pago, fecha_pago, confirmada
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             paciente_id, fecha, hora, tipo_consulta, monto, moneda,
             estado_pago, control_uso, google_event_id, cantidad_sesiones,
-            referencia, metodo_pago, fecha_pago, confirmada
+            referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id
         ))
         db.commit()
         
@@ -9558,15 +9605,32 @@ def update_agenda_event(event_id):
                 except Exception as ge:
                     print("Error al actualizar evento de Google Calendar:", ge)
                     
+        consultorio_nombre = data.get('consultorio_nombre') if 'consultorio_nombre' in data else (local_event['consultorio_nombre'] if (local_event and 'consultorio_nombre' in local_event.keys()) else None)
+
+        if consultorio_nombre and str(consultorio_nombre).strip() and (estado_pago is None or (not str(estado_pago).startswith('Cancelada') and estado_pago != 'Reprogramada')):
+            cursor.execute("""
+                SELECT id FROM agenda_finanzas 
+                WHERE (fecha = ? OR fecha LIKE ?) 
+                  AND (hora = ? OR hora LIKE ?) 
+                  AND LOWER(TRIM(consultorio_nombre)) = LOWER(?)
+                  AND id != ?
+                  AND (estado_pago IS NULL OR (estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'))
+            """, (fecha, f"%{fecha}%", hora, f"{hora}%", str(consultorio_nombre).strip(), event_id))
+            ocupado = cursor.fetchone()
+            if ocupado:
+                return jsonify({
+                    'error': f'🚫 El consultorio "{str(consultorio_nombre).strip()}" ya se encuentra reservado el {fecha} a las {hora}. Por favor selecciona otro espacio físico o cambia el horario.'
+                }), 400
+
         monto = data.get('monto') if ('monto' in data and data.get('monto') is not None) else (local_event['monto'] if (local_event and local_event['monto'] is not None) else 0.0)
         moneda = data.get('moneda') if ('moneda' in data and data.get('moneda') is not None) else (local_event['moneda'] if (local_event and local_event['moneda']) else 'USD')
         
         cursor.execute("""
             UPDATE agenda_finanzas SET 
-                fecha = ?, hora = ?, tipo_consulta = ?, estado_pago = ?, monto = ?, moneda = ?, confirmada = ?
+                fecha = ?, hora = ?, tipo_consulta = ?, estado_pago = ?, monto = ?, moneda = ?, confirmada = ?, consultorio_nombre = ?
             WHERE id = ?
         """, (
-            fecha, hora, tipo_consulta, estado_pago, monto, moneda, confirmada, event_id
+            fecha, hora, tipo_consulta, estado_pago, monto, moneda, confirmada, consultorio_nombre, event_id
         ))
         cursor.execute("SELECT paciente_id FROM agenda_finanzas WHERE id = ?", (event_id,))
         row = cursor.fetchone()
@@ -10499,7 +10563,11 @@ def create_backup():
         
     dt = datetime.datetime.now()
     now_str = dt.strftime("%Y-%m-%d_%H-%M")
-    backup_filename = f"copia_seguridad_clinica_{now_str}.db"
+    
+    user_id = session.get('user_id')
+    role = session.get('role', '')
+    
+    backup_filename = f"copia_seguridad_sistema_{now_str}.db" if (role in ['admin', 'superadmin'] or user_id == 1) else f"copia_seguridad_usuario_{user_id}_{now_str}.db"
     
     try:
         db = getattr(g, '_database', None)

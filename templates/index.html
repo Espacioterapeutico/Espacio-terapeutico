@@ -1074,6 +1074,10 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span>Control de Finanzas</span>
                 </a>
+                <a href="#" class="nav-item hide" id="nav-item-clinica" data-view="clinica-dashboard" onclick="switchView('clinica-dashboard')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+                    <span id="nav-clinica-nombre">Mi Clínica</span>
+                </a>
                 <a href="#" class="nav-item" data-view="settings" onclick="switchView('settings')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     <span>Ajustes</span>
@@ -2021,6 +2025,62 @@
                             <p class="text-muted">Cargando consultas para confirmación...</p>
                         </div>
                     </div>
+                <!-- VISTA PORTAL CORPORATIVO Y CLINICA -->
+                <section id="view-clinica-dashboard" class="app-view hide">
+                    <div class="view-header-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <h2 style="font-size: 1.5rem; font-weight: 800; color: #702e5e; margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                                <span id="clinica-dash-titulo">🏥 Portal de Clínica</span>
+                                <span id="clinica-dash-badge-rol" class="badge" style="background: #702e5e; color: #fff; font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 12px;">Cargando...</span>
+                            </h2>
+                            <p id="clinica-dash-subtitulo" class="text-secondary text-sm" style="margin: 4px 0 0 0;">Gestión de agenda colectiva, consultorios físicos, supervisión de casos e ingresos de equipo.</p>
+                        </div>
+                        <div style="display: flex; gap: 0.6rem; align-items: center;">
+                            <button type="button" class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 20px; border: 1.5px solid #702e5e; color: #702e5e;" onclick="abrirModalConfigEspaciosFisicos()">
+                                🚪 Espacios Físicos / Consultorios
+                            </button>
+                            <button type="button" class="btn btn-sm" style="background: #702e5e; color: #fff; font-weight: 700; border-radius: 20px; box-shadow: 0 4px 12px rgba(112,46,94,0.25);" onclick="abrirModalNuevaCitaClinica()">
+                                📅 Nueva Cita Corporativa
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sub-pestañas del Portal de Clínica -->
+                    <div class="sub-nav-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <button type="button" id="cdash-tab-agenda" class="btn btn-sm btn-primary" onclick="switchClinicaDashboardTab('agenda')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">📅 Agenda Colectiva & Consultorios</button>
+                        <button type="button" id="cdash-tab-evoluciones" class="btn btn-sm btn-secondary" onclick="switchClinicaDashboardTab('evoluciones')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">🩺 Psicólogos & Evoluciones (Director)</button>
+                        <button type="button" id="cdash-tab-ingresos" class="btn btn-sm btn-secondary" onclick="switchClinicaDashboardTab('ingresos')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">💰 Ingresos Consolidados (Director)</button>
+                    </div>
+
+                    <!-- Contenedor Pestaña 1: Agenda Colectiva & Consultorios -->
+                    <div id="cdash-content-agenda" class="clinica-tab-content">
+                        <div id="clinica-agenda-container">
+                            <div style="text-align: center; padding: 3rem; color: #64748b;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div>
+                                <div>Cargando agenda colectiva y disponibilidad de consultorios...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor Pestaña 2: Psicólogos & Evoluciones Clínicas -->
+                    <div id="cdash-content-evoluciones" class="clinica-tab-content hide">
+                        <div id="clinica-evoluciones-container">
+                            <div style="text-align: center; padding: 3rem; color: #64748b;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div>
+                                <div>Cargando evoluciones clínicas del equipo...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor Pestaña 3: Ingresos Consolidados -->
+                    <div id="cdash-content-ingresos" class="clinica-tab-content hide">
+                        <div id="clinica-ingresos-container">
+                            <div style="text-align: center; padding: 3rem; color: #64748b;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div>
+                                <div>Cargando finanzas e ingresos consolidados de la clínica...</div>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- 6. VISTA CONFIGURACIÓN Y COPIAS DE SEGURIDAD -->
@@ -2502,71 +2562,112 @@
                     <div id="set-card-horarios" class="settings-tab-content hide">
                         <!-- Horarios de Atención -->
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header" style="display: flex; flex-direction: column; gap: 0.75rem;">
                                 <h3>Horarios de Atención (Disponibilidad PWA)</h3>
+                                <div id="horarios-subtabs-bar" class="hide" style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                                    <button type="button" id="subtab-btn-horario-personal" class="btn btn-sm btn-primary" onclick="switchHorariosSubtab('personal')" style="font-weight: 700;">👤 Horario Personal</button>
+                                    <button type="button" id="subtab-btn-horario-equipo" class="btn btn-sm btn-secondary" onclick="switchHorariosSubtab('equipo')" style="font-weight: 700;">👥 Horario del Equipo</button>
+                                </div>
                             </div>
                             <div class="card-body">
-                                <p class="text-secondary mb-4">Define los días laborables y las horas exactas en los que tus pacientes pueden solicitar consultas:</p>
-                                
-                                <form id="admin-availability-form" onsubmit="handleSaveAvailability(event)">
-                                    <div class="form-row mb-4">
-                                        <div class="form-group col-6">
-                                            <label for="avail-duracion">Duración de la Sesión (minutos)</label>
-                                            <input type="number" id="avail-duracion" value="60" min="15" max="180" required>
-                                        </div>
-                                        <div class="form-group col-6">
-                                            <label for="avail-receso">Receso entre Sesiones (minutos)</label>
-                                            <input type="number" id="avail-receso" value="15" min="0" max="120" required>
-                                        </div>
-                                    </div>
+                                <!-- Pestaña Horario Personal -->
+                                <div id="horarios-subtab-container-personal">
+                                    <p class="text-secondary mb-4">Define tus días laborables y las horas exactas en los que tus pacientes pueden solicitar consultas personales:</p>
                                     
-                                    <h4 class="mb-3" style="font-size: 1rem; font-weight: 700; color: var(--text-dark); border-top: 1.5px dashed var(--border-color); padding-top: 1.5rem; margin-top: 1rem;">Parámetros de Agenda y Tiempos de Alerta:</h4>
-                                    <div class="form-row mb-3">
-                                        <div class="form-group col-6">
-                                            <label for="avail-antelacion">Antelación mínima para agendar (horas)</label>
-                                            <input type="number" id="avail-antelacion" value="24" min="0" max="168" required>
+                                    <form id="admin-availability-form" onsubmit="handleSaveAvailability(event)">
+                                        <div class="form-row mb-4">
+                                            <div class="form-group col-6">
+                                                <label for="avail-duracion">Duración de la Sesión (minutos)</label>
+                                                <input type="number" id="avail-duracion" value="60" min="15" max="180" required>
+                                            </div>
+                                            <div class="form-group col-6">
+                                                <label for="avail-receso">Receso entre Sesiones (minutos)</label>
+                                                <input type="number" id="avail-receso" value="15" min="0" max="120" required>
+                                            </div>
                                         </div>
-                                        <div class="form-group col-6">
-                                            <label for="avail-tiempo-confirmacion">Alerta de Confirmación (horas antes)</label>
-                                            <input type="number" id="avail-tiempo-confirmacion" value="24" min="1" max="168" required>
+                                        
+                                        <h4 class="mb-3" style="font-size: 1rem; font-weight: 700; color: var(--text-dark); border-top: 1.5px dashed var(--border-color); padding-top: 1.5rem; margin-top: 1rem;">Parámetros de Agenda y Tiempos de Alerta:</h4>
+                                        <div class="form-row mb-3">
+                                            <div class="form-group col-6">
+                                                <label for="avail-antelacion">Antelación mínima para agendar (horas)</label>
+                                                <input type="number" id="avail-antelacion" value="24" min="0" max="168" required>
+                                            </div>
+                                            <div class="form-group col-6">
+                                                <label for="avail-tiempo-confirmacion">Alerta de Confirmación (horas antes)</label>
+                                                <input type="number" id="avail-tiempo-confirmacion" value="24" min="1" max="168" required>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="form-row mb-3">
-                                        <div class="form-group col-6">
-                                            <label for="avail-tiempo-recordatorio">Alerta de Recordatorio (horas antes)</label>
-                                            <input type="number" id="avail-tiempo-recordatorio" value="2" min="1" max="72" required>
+                                        <div class="form-row mb-3">
+                                            <div class="form-group col-6">
+                                                <label for="avail-tiempo-recordatorio">Alerta de Recordatorio (horas antes)</label>
+                                                <input type="number" id="avail-tiempo-recordatorio" value="2" min="1" max="72" required>
+                                            </div>
+                                            <div class="form-group col-6">
+                                                <label for="avail-tiempo-cierre">Alerta de Cierre (horas después)</label>
+                                                <input type="number" id="avail-tiempo-cierre" value="2" min="1" max="72" required>
+                                            </div>
                                         </div>
-                                        <div class="form-group col-6">
-                                            <label for="avail-tiempo-cierre">Alerta de Cierre (horas después)</label>
-                                            <input type="number" id="avail-tiempo-cierre" value="2" min="1" max="72" required>
+                                        <div class="form-row mb-4">
+                                            <div class="form-group col-6">
+                                                <label for="avail-limite-cancelacion-tipo" style="font-weight: 600;">Límite para Cancelar sin Cobro (Regla) *</label>
+                                                <select id="avail-limite-cancelacion-tipo" required onchange="toggleCancelRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
+                                                    <option value="horas">Cantidad de horas antes de la cita</option>
+                                                    <option value="previo">Condición: El día previo a la hora especificada</option>
+                                                    <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group col-6" id="cancel-rule-value-hours-group">
+                                                <label for="avail-limite-cancelacion" style="font-weight: 600;">Cantidad de Horas *</label>
+                                                <input type="number" id="avail-limite-cancelacion" value="24" min="0" max="168">
+                                            </div>
+                                            <div class="form-group col-6 hide" id="cancel-rule-value-time-group">
+                                                <label for="avail-limite-cancelacion-time" style="font-weight: 600;">Hora de Cierre (Límite) *</label>
+                                                <input type="time" id="avail-limite-cancelacion-time" value="08:00">
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="form-row mb-4">
-                                        <div class="form-group col-6">
-                                            <label for="avail-limite-cancelacion-tipo" style="font-weight: 600;">Límite para Cancelar sin Cobro (Regla) *</label>
-                                            <select id="avail-limite-cancelacion-tipo" required onchange="toggleCancelRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
-                                                <option value="horas">Cantidad de horas antes de la cita</option>
-                                                <option value="previo">Condición: El día previo a la hora especificada</option>
-                                                <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
-                                            </select>
+                                        
+                                        <h4 class="mb-3" style="font-size: 1rem; font-weight: 700; color: var(--text-dark);">Días y Bloques de Atención:</h4>
+                                        <div id="availability-days-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                                            <!-- Generado dinámicamente -->
                                         </div>
-                                        <div class="form-group col-6" id="cancel-rule-value-hours-group">
-                                            <label for="avail-limite-cancelacion" style="font-weight: 600;">Cantidad de Horas *</label>
-                                            <input type="number" id="avail-limite-cancelacion" value="24" min="0" max="168">
-                                        </div>
-                                        <div class="form-group col-6 hide" id="cancel-rule-value-time-group">
-                                            <label for="avail-limite-cancelacion-time" style="font-weight: 600;">Hora de Cierre (Límite) *</label>
-                                            <input type="time" id="avail-limite-cancelacion-time" value="08:00">
-                                        </div>
-                                    </div>
+                                        <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Guardar Horarios y Bloques</button>
+                                    </form>
+                                    <div id="availability-status-msg" class="status-msg hide mt-2"></div>
+                                </div>
+
+                                <!-- Pestaña Horario del Equipo (Administrador de Clínica) -->
+                                <div id="horarios-subtab-container-equipo" class="hide">
+                                    <p class="text-secondary mb-4">Como Director Administrador, asigna aquí los horarios laborables y consultorios físicos a cada miembro de tu equipo:</p>
                                     
-                                    <h4 class="mb-3" style="font-size: 1rem; font-weight: 700; color: var(--text-dark);">Días y Bloques de Atención:</h4>
-                                    <div id="availability-days-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
-                                        <!-- Generado dinámicamente -->
+                                    <div class="form-group mb-4" style="background: var(--bg-body); padding: 1.25rem; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+                                        <label for="select-equipo-miembro-horario" style="font-weight: 700; font-size: 1rem; color: var(--primary-color);">Seleccionar Terapeuta del Equipo *</label>
+                                        <select id="select-equipo-miembro-horario" onchange="loadTeamMemberAvailability(this.value)" style="width: 100%; padding: 0.75rem; border-radius: 8px; font-weight: 700; font-size: 1rem; border: 1.5px solid var(--primary-color); background-color: var(--card-bg);">
+                                            <option value="">Cargando equipo...</option>
+                                        </select>
                                     </div>
-                                    <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Guardar Horarios y Bloques</button>
-                                </form>
-                                <div id="availability-status-msg" class="status-msg hide mt-2"></div>
+
+                                    <div id="team-member-availability-editor" class="hide">
+                                        <form id="team-availability-form" onsubmit="handleSaveTeamAvailability(event)">
+                                            <div class="form-row mb-4">
+                                                <div class="form-group col-6">
+                                                    <label for="team-avail-duracion">Duración de Sesión (minutos)</label>
+                                                    <input type="number" id="team-avail-duracion" value="60" min="15" max="180" required>
+                                                </div>
+                                                <div class="form-group col-6">
+                                                    <label for="team-avail-receso">Receso entre Sesiones (minutos)</label>
+                                                    <input type="number" id="team-avail-receso" value="15" min="0" max="120" required>
+                                                </div>
+                                            </div>
+
+                                            <h4 class="mb-3" style="font-size: 1rem; font-weight: 700; color: var(--text-dark);">Días, Bloques y Consultorios del Terapeuta:</h4>
+                                            <div id="team-availability-days-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                                                <!-- Generado dinámicamente para el miembro del equipo -->
+                                            </div>
+                                            <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; padding: 0.75rem;">Guardar Horario de Terapeuta</button>
+                                        </form>
+                                        <div id="team-availability-status-msg" class="status-msg hide mt-2"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6845,6 +6946,102 @@
 
             <div id="test-detail-body" style="display: flex; flex-direction: column; gap: 1.25rem;">
                 <!-- Contenido dinámico del reporte de resultados -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVA CITA CORPORATIVA (CON SELECCIÓN DE PSICÓLOGO Y CONSULTORIO) -->
+    <div id="modal-cita-clinica" class="modal hide" style="z-index: 3700;">
+        <div class="modal-content" style="max-width: 600px; width: 95%; border-radius: 20px; padding: 1.75rem; background: #ffffff; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #702e5e;">📅 Agendar Cita Corporativa de Clínica</h3>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-cita-clinica')" style="border-radius: 8px;">✖ Cerrar</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Psicólogo Tratante *</label>
+                    <select id="mcita-clinica-psicologo" class="form-control" style="border-radius: 8px; font-weight: 700; color: #0f172a;"></select>
+                </div>
+                <div>
+                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Espacio Físico / Consultorio *</label>
+                    <select id="mcita-clinica-consultorio" class="form-control" style="border-radius: 8px; font-weight: 700; color: #0f172a;"></select>
+                </div>
+                <div>
+                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Seleccionar Paciente *</label>
+                    <select id="mcita-clinica-paciente" class="form-control" style="border-radius: 8px;"></select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Fecha *</label>
+                        <input type="date" id="mcita-clinica-fecha" class="form-control" style="border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Hora *</label>
+                        <input type="time" id="mcita-clinica-hora" class="form-control" style="border-radius: 8px;">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Monto de Consulta ($) *</label>
+                        <input type="number" step="0.01" id="mcita-clinica-monto" class="form-control" placeholder="Ej: 40.00" value="40.00" style="border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Estado de Pago</label>
+                        <select id="mcita-clinica-estado-pago" class="form-control" style="border-radius: 8px;">
+                            <option value="Pendiente">⏳ Pendiente de Pago</option>
+                            <option value="Pagado">✓ Pagado / Cobrado</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary" style="background: #702e5e; border: none; font-weight: 800; border-radius: 10px; padding: 0.75rem; font-size: 1rem; margin-top: 0.5rem;" onclick="guardarCitaClinica()">
+                    💾 Confirmar y Agendar en Clínica
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ASIGNAR / DERIVAR PACIENTE A PSICÓLOGO -->
+    <div id="modal-asignar-paciente-clinica" class="modal hide" style="z-index: 3700;">
+        <div class="modal-content" style="max-width: 520px; width: 95%; border-radius: 20px; padding: 1.75rem; background: #ffffff; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #702e5e;">👤 Asignar Paciente a Psicólogo</h3>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-asignar-paciente-clinica')" style="border-radius: 8px;">✖ Cerrar</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 1.1rem;">
+                <div>
+                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Seleccionar Paciente a Derivar *</label>
+                    <select id="masignar-paciente-id" class="form-control" style="border-radius: 8px;"></select>
+                </div>
+                <div>
+                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Asignar a Psicólogo del Equipo *</label>
+                    <select id="masignar-psicologo-id" class="form-control" style="border-radius: 8px; font-weight: 700; color: #0f172a;"></select>
+                </div>
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.85rem; border-radius: 10px; font-size: 0.82rem; color: #1e40af;">
+                    ℹ️ Al asignar el paciente, este aparecerá inmediatamente en los Expedientes Clínicos del psicólogo seleccionado.
+                </div>
+                <button type="button" class="btn btn-primary" style="background: #702e5e; border: none; font-weight: 800; border-radius: 10px; padding: 0.75rem; font-size: 1rem;" onclick="ejecutarAsignacionPacienteClinica()">
+                    🔄 Confirmar Asignación de Paciente
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIGURAR ESPACIOS FÍSICOS / CONSULTORIOS -->
+    <div id="modal-espacios-fisicos-clinica" class="modal hide" style="z-index: 3700;">
+        <div class="modal-content" style="max-width: 520px; width: 95%; border-radius: 20px; padding: 1.75rem; background: #ffffff; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #702e5e;">🚪 Configurar Consultorios Físicos</h3>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-espacios-fisicos-clinica')" style="border-radius: 8px;">✖ Cerrar</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Ingresa los nombres de las salas o consultorios de tu clínica separados por comas para evitar sobreposición en las citas.</p>
+                <div>
+                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Nombres de Consultorios / Espacios:</label>
+                    <textarea id="mespacios-fisicos-text" class="form-control" rows="3" placeholder="Ej: Consultorio 1, Consultorio 2, Sala Infanto-Juvenil" style="border-radius: 8px; font-weight: 600;"></textarea>
+                </div>
+                <button type="button" class="btn btn-primary" style="background: #702e5e; border: none; font-weight: 800; border-radius: 10px; padding: 0.75rem;" onclick="guardarEspaciosFisicosClinica()">
+                    💾 Guardar Espacios Físicos
+                </button>
             </div>
         </div>
     </div>
