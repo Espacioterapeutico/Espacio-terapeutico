@@ -1493,6 +1493,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         switchView('dashboard');
     }
     clearAllNotificationIntervals();
+    if (typeof checkAndInitClinicaNav === 'function') checkAndInitClinicaNav();
     loadNotifications();
     notificationIntervalId = setInterval(loadNotifications, 30000);
     loadMessageTemplates();
