@@ -2025,6 +2025,8 @@
                             <p class="text-muted">Cargando consultas para confirmación...</p>
                         </div>
                     </div>
+                </section>
+
                 <!-- VISTA PORTAL CORPORATIVO Y CLINICA -->
                 <section id="view-clinica-dashboard" class="app-view hide">
                     <div class="view-header-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
@@ -6195,6 +6197,7 @@
                 </button>
             </div>
         </div>
+    </div>
     <!-- MODAL DE CONFIRMACIÓN: BORRAR TODOS LOS DATOS -->
     <div id="modal-clear-data" class="modal hide">
         <div class="modal-content" style="max-width: 480px; border-top: 5px solid #dc2626;">
@@ -6354,8 +6357,9 @@
 
     <!-- MODAL "ASISTENTE DE CONFIGURACIÓN INICIAL (ONBOARDING) PSICÓLOGO" -->
     <div id="psychologist-onboarding-modal" class="modal hide" style="z-index: 10000; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px);">
-        <div class="modal-content modal-lg" style="max-width: 620px; border-radius: 16px; border: none; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1); overflow: hidden; padding: 0;">
-            <div style="background: linear-gradient(135deg, var(--primary-color) 0%, #6366f1 100%); padding: 1.5rem 1.75rem; color: #ffffff; text-align: center;">
+        <div class="modal-content modal-lg" style="max-width: 620px; border-radius: 16px; border: none; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1); overflow: hidden; padding: 0; position: relative;">
+            <div style="background: linear-gradient(135deg, var(--primary-color) 0%, #6366f1 100%); padding: 1.5rem 1.75rem; color: #ffffff; text-align: center; position: relative;">
+                <button type="button" onclick="skipOnboardingWizard()" title="Terminar más tarde" style="position: absolute; right: 1rem; top: 1rem; background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">✕</button>
                 <div style="font-size: 2.2rem; margin-bottom: 0.25rem;">📱✨</div>
                 <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #ffffff;">Bienvenido a tu Consultorio</h2>
                 <p style="margin: 0.3rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">Asistente de Configuración Inicial (Paso <span id="onboarding-step-num">1</span> de 4)</p>
@@ -6473,17 +6477,23 @@
                     <div id="onboarding-error-msg" class="status-msg error-msg hide mb-3"></div>
 
                     <!-- BOTONES DE NAVEGACIÓN -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; padding-top: 0.85rem; border-top: 1.5px solid var(--border-color);">
-                        <button type="button" id="ob-prev-btn" onclick="prevOnboardingStep()" class="btn btn-secondary hide" style="padding: 0.6rem 1.1rem; font-weight: 600;">
-                            ← Anterior
-                        </button>
-                        <div id="ob-spacer"></div>
-                        <button type="button" id="ob-next-btn" onclick="nextOnboardingStep()" class="btn btn-primary" style="padding: 0.6rem 1.4rem; font-weight: 700;">
-                            Siguiente →
-                        </button>
-                        <button type="submit" id="ob-submit-btn" class="btn btn-primary hide" style="padding: 0.6rem 1.4rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
-                            ✓ Finalizar e Ingresar
-                        </button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; padding-top: 0.85rem; border-top: 1.5px solid var(--border-color); gap: 0.5rem; flex-wrap: wrap;">
+                        <div>
+                            <button type="button" id="ob-prev-btn" onclick="prevOnboardingStep()" class="btn btn-secondary hide" style="padding: 0.6rem 1.1rem; font-weight: 600;">
+                                ← Anterior
+                            </button>
+                            <button type="button" onclick="skipOnboardingWizard()" class="btn btn-secondary" style="padding: 0.6rem 1.1rem; font-weight: 600; color: var(--text-muted);">
+                                ⏳ Terminar más tarde
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button type="button" id="ob-next-btn" onclick="nextOnboardingStep()" class="btn btn-primary" style="padding: 0.6rem 1.4rem; font-weight: 700;">
+                                Siguiente →
+                            </button>
+                            <button type="submit" id="ob-submit-btn" class="btn btn-primary hide" style="padding: 0.6rem 1.4rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                                ✓ Finalizar e Ingresar
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

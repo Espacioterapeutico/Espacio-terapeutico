@@ -13,4 +13,6 @@ __pycache__/
 credentials.json
 firebase_service_account.json
 *.json.secret
-
+Back up*/
+BACKUP_VERSION_ESCRITORIO/
+Espacio Terapeutico V.*/

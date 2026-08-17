@@ -2388,6 +2388,10 @@ def sync_patient_to_firebase(patient_id):
             "tipo_consulta": next_session_row["tipo_consulta"] if next_session_row else None
         }
         
+        # 6. Sincronizar mapa ligero de IDs de citas evolucionadas/completadas para conciliar en restauraciones de respaldos
+        cursor.execute("SELECT DISTINCT agenda_id FROM sesiones WHERE paciente_id = ? AND agenda_id IS NOT NULL", (patient_id,))
+        completed_agenda_ids = [row[0] for row in cursor.fetchall()]
+
         conn.close()
         
         # 1. Guardar en /usuarios_pacientes/<username> para inicio de sesión rápido
@@ -2409,9 +2413,6 @@ def sync_patient_to_firebase(patient_id):
         # 5. Guardar próxima cita en /pacientes/<id>/proxima_cita
         requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/proxima_cita.json", json=proxima_cita, timeout=3.0)
         
-        # 6. Sincronizar mapa ligero de IDs de citas evolucionadas/completadas para conciliar en restauraciones de respaldos
-        cursor.execute("SELECT DISTINCT agenda_id FROM sesiones WHERE paciente_id = ? AND agenda_id IS NOT NULL", (patient_id,))
-        completed_agenda_ids = [row[0] for row in cursor.fetchall()]
         requests.put(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/citas_completadas.json", json=completed_agenda_ids, timeout=3.0)
 
         return True
@@ -11453,6 +11454,18 @@ def complete_onboarding():
         return jsonify({'success': '¡Bienvenido a tu consultorio! Configuración inicial completada.', 'slug': cleaned_slug})
     except Exception as e:
         return jsonify({'error': f'Error al guardar configuración inicial: {str(e)}'}), 500
+
+@app.route('/api/onboarding/skip', methods=['POST'])
+@login_required
+def skip_onboarding():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Sesión no válida.'}), 401
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("UPDATE usuarios SET primer_inicio = 0 WHERE id = ?", (user_id,))
+    db.commit()
+    return jsonify({'success': 'Asistente pospuesto. Puedes configurar tus datos más tarde en Ajustes.'})
 
 @app.route('/api/superadmin/therapists/<int:user_id>', methods=['DELETE'])
 @login_required

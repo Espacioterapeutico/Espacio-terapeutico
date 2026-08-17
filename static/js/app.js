@@ -1166,7 +1166,7 @@ async function execLogout(withBackup = false) {
 window.execLogout = execLogout;
 
 function isFeatureBlocked(feature) {
-    const role = (window.currentUser && window.currentUser.role) || sessionStorage.getItem('role') || '';
+    const role = (window.currentUser && window.currentUser.role) || sessionStorage.getItem('user_role') || sessionStorage.getItem('role') || '';
     const cleanRole = (role || '').toString().toLowerCase();
     if (cleanRole === 'psicologo' || cleanRole === 'admin') {
         const clinicalFeatures = ['examen_mental', 'tests', 'herramientas', 'pizarra', 'confirmaciones'];
@@ -1335,7 +1335,10 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     }
     
     window.currentUser = { username, role, id: userId };
-    if (role) sessionStorage.setItem('user_role', role);
+    if (role) {
+        sessionStorage.setItem('user_role', role);
+        sessionStorage.setItem('role', role);
+    }
     if (username) sessionStorage.setItem('username', username);
     if (userId) {
         sessionStorage.setItem('user_id', userId);
@@ -1387,7 +1390,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
                 link.classList.add('hide');
             }
         } else if (isPureSuperadmin) {
-            const clinicalViews = ['dashboard', 'agenda', 'confirmations', 'manual-confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'therapist-tools', 'finance', 'patient-details'];
+            const clinicalViews = ['dashboard', 'agenda', 'confirmations', 'manual-confirmations', 'register-patient', 'patient-list', 'sessions', 'pizarra-visual', 'examen-mental', 'tests-psicologicos', 'therapist-tools', 'finance', 'patient-details'];
             if (clinicalViews.includes(v)) {
                 link.classList.add('hide');
             } else {
@@ -1488,26 +1491,20 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
         sessionStorage.setItem('bloqueos', JSON.stringify(bloqueos));
 
-        if (bloqueos.confirmaciones === 1) {
-            const link = document.querySelector('[data-view="manual-confirmations"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.pizarra === 1) {
-            const link = document.querySelector('[data-view="pizarra-visual"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.examen_mental === 1) {
-            const link = document.querySelector('[data-view="examen-mental"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.tests === 1) {
-            const link = document.querySelector('[data-view="tests-psicologicos"]');
-            if (link) link.classList.add('hide');
-        }
-        if (bloqueos.herramientas === 1) {
-            const link = document.querySelector('[data-view="therapist-tools"]');
-            if (link) link.classList.add('hide');
-        }
+        const linkConf = document.querySelector('[data-view="manual-confirmations"]');
+        if (linkConf) { if (bloqueos.confirmaciones === 1) linkConf.classList.add('hide'); else linkConf.classList.remove('hide'); }
+
+        const linkPizarra = document.querySelector('[data-view="pizarra-visual"]');
+        if (linkPizarra) { if (bloqueos.pizarra === 1) linkPizarra.classList.add('hide'); else linkPizarra.classList.remove('hide'); }
+
+        const linkExamen = document.querySelector('[data-view="examen-mental"]');
+        if (linkExamen) { if (bloqueos.examen_mental === 1) linkExamen.classList.add('hide'); else linkExamen.classList.remove('hide'); }
+
+        const linkTests = document.querySelector('[data-view="tests-psicologicos"]');
+        if (linkTests) { if (bloqueos.tests === 1) linkTests.classList.add('hide'); else linkTests.classList.remove('hide'); }
+
+        const linkHerram = document.querySelector('[data-view="therapist-tools"]');
+        if (linkHerram) { if (bloqueos.herramientas === 1) linkHerram.classList.add('hide'); else linkHerram.classList.remove('hide'); }
     }
     
     if (isPureSuperadmin) {
@@ -12759,6 +12756,20 @@ async function handleOnboardingSubmit(e) {
         }
     }
 }
+
+async function skipOnboardingWizard() {
+    const modal = document.getElementById('psychologist-onboarding-modal');
+    if (modal) {
+        modal.classList.add('hide');
+        modal.style.display = 'none';
+    }
+    try {
+        await fetch('/api/onboarding/skip', { method: 'POST' });
+    } catch (e) {
+        console.error('Error al posponer asistente:', e);
+    }
+}
+window.skipOnboardingWizard = skipOnboardingWizard;
 
 async function deleteTherapistAccount(userId, therapistName) {
     const confirmMsg = `⚠️ ¿ESTÁS ABSOLUTAMENTE SEGURO de eliminar al psicólogo "${therapistName}"?\n\nEsta acción borrará PERMANENTEMENTE su cuenta, pacientes, historias clínicas, citas y finanzas de la plataforma. Esta acción no se puede deshacer.`;
