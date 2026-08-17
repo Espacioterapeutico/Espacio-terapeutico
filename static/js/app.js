@@ -709,6 +709,12 @@ function switchView(viewId) {
         checkGoogleStatus();
         loadAdminAvailability();
         loadPatientLinks();
+        if (typeof switchSettingsTab === 'function') {
+            const activeSetTab = document.querySelector('.settings-tab-content:not(.hide)');
+            if (!activeSetTab) {
+                switchSettingsTab('perfil');
+            }
+        }
     } else if (viewId === 'pizarra-visual') {
         loadPizarraPatients();
         loadPizarraVisual();

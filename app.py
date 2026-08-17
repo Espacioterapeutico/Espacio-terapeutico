@@ -451,12 +451,10 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_agenda INTEGER DEFAULT 0")
         if 'bloqueo_mensajes' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_mensajes INTEGER DEFAULT 0")
-        if 'bloqueo_pizarra' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_pizarra INTEGER DEFAULT 0")
         if 'bloqueo_herramientas' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 1")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_herramientas INTEGER DEFAULT 0")
         if 'bloqueo_confirmaciones' not in cols_usr:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_confirmaciones INTEGER DEFAULT 1")
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_confirmaciones INTEGER DEFAULT 0")
         if 'bloqueo_examen_mental' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_examen_mental INTEGER DEFAULT 0")
         if 'bloqueo_tests' not in cols_usr:
@@ -464,6 +462,8 @@ def init_db():
         
         cursor.execute("UPDATE usuarios SET bloqueo_tests = 0 WHERE bloqueo_tests IS NULL OR bloqueo_tests = 1")
         cursor.execute("UPDATE usuarios SET bloqueo_examen_mental = 0 WHERE bloqueo_examen_mental IS NULL OR bloqueo_examen_mental = 1")
+        cursor.execute("UPDATE usuarios SET bloqueo_herramientas = 0 WHERE bloqueo_herramientas IS NULL OR bloqueo_herramientas = 1")
+        cursor.execute("UPDATE usuarios SET bloqueo_confirmaciones = 0 WHERE bloqueo_confirmaciones IS NULL OR bloqueo_confirmaciones = 1")
         if 'terminos_condiciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
         if 'nomenclatura' not in cols_usr:
