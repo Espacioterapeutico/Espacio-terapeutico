@@ -573,7 +573,7 @@ function switchView(viewId) {
     const cleanUser = (username || '').toString().toLowerCase();
     const cleanRole = (role || '').toString().toLowerCase();
 
-    const isPureSuperadmin = (cleanRole === 'superadmin' || cleanRole === 'admin') && (cleanUser !== 'pamoraro') && (userId !== 1);
+    const isPureSuperadmin = (cleanRole === 'superadmin') && (cleanUser !== 'pamoraro') && (userId !== 1);
 
     let subTabToActivate = null;
     if (viewId === 'agenda') {
@@ -1342,7 +1342,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
     }
 
-    const isPureSuperadmin = (cleanRole === 'superadmin' || cleanRole === 'admin') && (cleanUser !== 'pamoraro') && (cleanId !== 1);
+    const isPureSuperadmin = (cleanRole === 'superadmin') && (cleanUser !== 'pamoraro') && (cleanId !== 1);
     const isSuperadminUser = isPureSuperadmin || (cleanUser === 'pamoraro') || (cleanId === 1);
 
     const formattedTitle = fullPersonName.toLowerCase().startsWith('psic') ? fullPersonName : `Psic. ${fullPersonName}`;
