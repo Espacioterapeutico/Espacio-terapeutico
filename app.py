@@ -3813,11 +3813,11 @@ def login():
                     'finanzas': u_dict.get('bloqueo_finanzas', 0),
                     'agenda': u_dict.get('bloqueo_agenda', 0),
                     'mensajes': u_dict.get('bloqueo_mensajes', 0),
-                    'pizarra': u_dict.get('bloqueo_pizarra', 0),
-                    'herramientas': u_dict.get('bloqueo_herramientas', 1),
-                    'confirmaciones': u_dict.get('bloqueo_confirmaciones', 1),
-                    'examen_mental': u_dict.get('bloqueo_examen_mental', 1),
-                    'tests': u_dict.get('bloqueo_tests', 1)
+                    'pizarra': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_pizarra') or 0),
+                    'herramientas': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_herramientas') or 0),
+                    'confirmaciones': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_confirmaciones') or 0),
+                    'examen_mental': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_examen_mental') or 0),
+                    'tests': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_tests') or 0)
                 }
             })
         
@@ -3938,11 +3938,11 @@ def check_session():
                 'finanzas': r_dict.get('bloqueo_finanzas', 0),
                 'agenda': r_dict.get('bloqueo_agenda', 0),
                 'mensajes': r_dict.get('bloqueo_mensajes', 0),
-                'pizarra': r_dict.get('bloqueo_pizarra', 0),
-                'herramientas': r_dict.get('bloqueo_herramientas', 0),
-                'confirmaciones': r_dict.get('bloqueo_confirmaciones', 0),
-                'examen_mental': r_dict.get('bloqueo_examen_mental', 0),
-                'tests': r_dict.get('bloqueo_tests', 0)
+                'pizarra': 0 if role in ['psicologo', 'admin'] else (r_dict.get('bloqueo_pizarra') or 0),
+                'herramientas': 0 if role in ['psicologo', 'admin'] else (r_dict.get('bloqueo_herramientas') or 0),
+                'confirmaciones': 0 if role in ['psicologo', 'admin'] else (r_dict.get('bloqueo_confirmaciones') or 0),
+                'examen_mental': 0 if role in ['psicologo', 'admin'] else (r_dict.get('bloqueo_examen_mental') or 0),
+                'tests': 0 if role in ['psicologo', 'admin'] else (r_dict.get('bloqueo_tests') or 0)
             }
         })
     elif 'patient_id' in session:

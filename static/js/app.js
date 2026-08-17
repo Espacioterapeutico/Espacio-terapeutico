@@ -1166,6 +1166,14 @@ async function execLogout(withBackup = false) {
 window.execLogout = execLogout;
 
 function isFeatureBlocked(feature) {
+    const role = (window.currentUser && window.currentUser.role) || sessionStorage.getItem('role') || '';
+    const cleanRole = (role || '').toString().toLowerCase();
+    if (cleanRole === 'psicologo' || cleanRole === 'admin') {
+        const clinicalFeatures = ['examen_mental', 'tests', 'herramientas', 'pizarra', 'confirmaciones'];
+        if (clinicalFeatures.includes(feature)) {
+            return false;
+        }
+    }
     const blocksStr = sessionStorage.getItem('bloqueos');
     if (!blocksStr) return false;
     try {
@@ -1471,6 +1479,15 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
 
     // 2. Reglas por bloqueos de casillas de SuperAdmin
     if (bloqueos) {
+        if (cleanRole === 'psicologo' || cleanRole === 'admin') {
+            bloqueos.examen_mental = 0;
+            bloqueos.tests = 0;
+            bloqueos.herramientas = 0;
+            bloqueos.pizarra = 0;
+            bloqueos.confirmaciones = 0;
+        }
+        sessionStorage.setItem('bloqueos', JSON.stringify(bloqueos));
+
         if (bloqueos.confirmaciones === 1) {
             const link = document.querySelector('[data-view="manual-confirmations"]');
             if (link) link.classList.add('hide');
