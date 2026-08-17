@@ -3940,7 +3940,9 @@ def check_session():
                 'mensajes': r_dict.get('bloqueo_mensajes', 0),
                 'pizarra': r_dict.get('bloqueo_pizarra', 0),
                 'herramientas': r_dict.get('bloqueo_herramientas', 0),
-                'confirmaciones': r_dict.get('bloqueo_confirmaciones', 0)
+                'confirmaciones': r_dict.get('bloqueo_confirmaciones', 0),
+                'examen_mental': r_dict.get('bloqueo_examen_mental', 0),
+                'tests': r_dict.get('bloqueo_tests', 0)
             }
         })
     elif 'patient_id' in session:
