@@ -191,7 +191,7 @@ def make_wa_http_request(method, endpoint, json_data=None, timeout=5, user_id=No
 def get_whatsapp_status():
     try:
         user_id = session.get('user_id')
-        r = make_wa_http_request('GET', '/status', timeout=3, user_id=user_id)
+        r = make_wa_http_request('GET', '/status', timeout=15, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'error': 'Microservicio de WhatsApp no disponible', 'details': str(e)})
@@ -201,7 +201,7 @@ def get_whatsapp_status():
 def get_whatsapp_qr():
     try:
         user_id = session.get('user_id')
-        r = make_wa_http_request('GET', '/qr', timeout=12, user_id=user_id)
+        r = make_wa_http_request('GET', '/qr', timeout=25, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'qr': None, 'error': str(e)})
@@ -211,7 +211,7 @@ def get_whatsapp_qr():
 def force_whatsapp_qr():
     try:
         user_id = session.get('user_id')
-        r = make_wa_http_request('POST', '/force-qr', timeout=10, user_id=user_id)
+        r = make_wa_http_request('POST', '/force-qr', timeout=25, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
