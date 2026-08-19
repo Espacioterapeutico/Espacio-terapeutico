@@ -347,7 +347,11 @@ def get_agenda():
             ORDER BY af.fecha ASC, af.hora ASC
         """)
     events = [dict(row) for row in cursor.fetchall()]
-    return jsonify(events)
+    resp = jsonify(events)
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @agenda_bp.route('/api/agenda/blocks', methods=['GET', 'POST'])
 @login_required

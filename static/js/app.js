@@ -4679,7 +4679,7 @@ async function loadAgendaCompact() {
     if (!listContainer || !nextConsultation) return;
     
     try {
-        const res = await fetch('/api/agenda');
+        const res = await fetch('/api/agenda?_t=' + Date.now());
         const events = await res.json();
         
         listContainer.innerHTML = '';
@@ -4699,7 +4699,17 @@ async function loadAgendaCompact() {
         await renderUpcomingConsultationPage(_upcomingCurrentIndex);
         
         // 2. Mostrar Evoluciones Clínicas Pendientes (Citas pasadas o de hoy que no tienen evolución cargada y no son prepagos de paquetes)
-        const pendingEvolutions = events.filter(e => !e.has_session && e.estado_pago !== 'Prepagada' && e.fecha <= todayStr);
+        let pendingEvolutions = events.filter(e => !e.has_session && e.estado_pago !== 'Prepagada' && e.fecha <= todayStr);
+
+        // Deduplicar eventos por id y combinacion de paciente, fecha y hora
+        const seenEvKeys = new Set();
+        pendingEvolutions = pendingEvolutions.filter(e => {
+            const key = `${e.id || ''}_${e.paciente_id || ''}_${e.fecha || ''}_${e.hora || ''}`;
+            if (seenEvKeys.has(key)) return false;
+            seenEvKeys.add(key);
+            return true;
+        });
+
         if (pendingEvolutions.length === 0) {
             listContainer.innerHTML = `
                 <div class="empty-state">
