@@ -10,6 +10,9 @@ __pycache__/
 *.zip
 *.docx
 *.pdf
+!static/test_materials/*.pdf
+!static/test_materials/*.doc
+!static/test_materials/*.docx
 credentials.json
 firebase_service_account.json
 *.json.secret

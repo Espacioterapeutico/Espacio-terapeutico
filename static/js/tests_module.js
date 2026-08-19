@@ -883,8 +883,9 @@ function renderCatalogViewWithFiltersAndPagination() {
             ? `<span style="font-size: 0.65rem; font-weight: 800; color: #d97706; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 8px; white-space: nowrap;">📄 Material Físico</span>`
             : `<span style="font-size: 0.65rem; font-weight: 800; color: #16a34a; background: #dcfce7; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 8px; white-space: nowrap;">⚡ Digital</span>`;
 
+        const matFileName = test.downloadUrl ? test.downloadUrl.replace(/^.*[\\\/]/, '') : '';
         const downloadBtn = test.downloadUrl
-            ? `<a href="${test.downloadUrl}" target="_blank" onclick="event.stopPropagation();" title="Descargar material/protocolo para imprimir" style="background: #fff7ed; border: 1px solid #ffedd5; color: #c2410c; font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; margin-right: 4px;">
+            ? `<a href="/api/tests/materials/${matFileName}" target="_blank" onclick="event.stopPropagation();" title="Descargar material/protocolo para imprimir" style="background: #fff7ed; border: 1px solid #ffedd5; color: #c2410c; font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; margin-right: 4px;">
                 📥 Descargar
                </a>`
             : '';
