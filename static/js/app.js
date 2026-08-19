@@ -6013,7 +6013,7 @@ async function handleEventSubmit(e) {
             });
             const data = await res.json();
             if (res.ok) {
-                let msg = data.success;
+                let msg = data.success || data.message || "Evento personal registrado correctamente.";
                 if (data.google_synced) {
                     msg += " (Sincronizado con Google Calendar)";
                 }
@@ -6062,7 +6062,7 @@ async function handleEventSubmit(e) {
         const data = await res.json();
         
         if (res.ok) {
-            let msg = data.success;
+            let msg = data.success || data.message || "Cita agendada exitosamente.";
             if (data.google_synced) {
                 msg += " (Sincronizado con Google Calendar)";
             }

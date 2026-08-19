@@ -314,6 +314,31 @@ def manage_agenda_blocks():
         if not fecha:
             return jsonify({'error': 'La fecha es obligatoria para agendar un evento personal / bloqueo.'}), 400
 
+        google_event_id = None
+        try:
+            from routes_admin import get_calendar_service
+            service = get_calendar_service(target_psic_id)
+            if service:
+                if todo_el_dia or not hora_inicio:
+                    start_dict = {'date': fecha}
+                    end_dict = {'date': fecha}
+                else:
+                    h_start = hora_inicio if len(hora_inicio) == 5 else f"{hora_inicio}:00"
+                    h_end = hora_fin if hora_fin and len(hora_fin) == 5 else f"{h_start[:2]}:59"
+                    start_dict = {'dateTime': f"{fecha}T{h_start}:00-04:00", 'timeZone': 'America/Caracas'}
+                    end_dict = {'dateTime': f"{fecha}T{h_end}:00-04:00", 'timeZone': 'America/Caracas'}
+                
+                event_body = {
+                    'summary': f"⛔ {motivo}",
+                    'description': "Bloqueo de agenda / Evento personal en Espacio Terapéutico",
+                    'start': start_dict,
+                    'end': end_dict
+                }
+                g_event = service.events().insert(calendarId='primary', body=event_body).execute()
+                google_event_id = g_event.get('id')
+        except Exception as ge:
+            print("Error sincronizando bloqueo con Google Calendar:", ge)
+
         cursor.execute("""
             INSERT INTO bloqueos_agenda_especificos (psicologo_id, fecha, hora_inicio, hora_fin, motivo, todo_el_dia)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -321,8 +346,9 @@ def manage_agenda_blocks():
         db.commit()
         block_id = cursor.lastrowid
         return jsonify({
-            'success': True,
+            'success': 'Evento personal / bloqueo registrado correctamente.',
             'message': 'Evento personal / bloqueo registrado correctamente.',
+            'google_synced': bool(google_event_id),
             'block': {
                 'id': block_id,
                 'psicologo_id': target_psic_id,
@@ -353,7 +379,7 @@ def delete_agenda_block(block_id):
 
     cursor.execute("DELETE FROM bloqueos_agenda_especificos WHERE id = ? AND psicologo_id = ?", (block_id, target_psic_id))
     db.commit()
-    return jsonify({'success': True, 'message': 'Bloqueo eliminado correctamente.'})
+    return jsonify({'success': 'Bloqueo eliminado correctamente.', 'message': 'Bloqueo eliminado correctamente.'})
 
 @agenda_bp.route('/api/agenda', methods=['POST'])
 @login_required
@@ -395,6 +421,34 @@ def add_agenda_event():
     metodo_pago = data.get('metodo_pago')
     fecha_pago = data.get('fecha_pago')
     confirmada = int(data.get('confirmada', 0) or 0)
+
+    google_event_id = None
+    try:
+        from routes_admin import get_calendar_service
+        service = get_calendar_service(creado_por_user_id)
+        if service and paciente_id:
+            cursor.execute("SELECT nombres, apellidos, email FROM pacientes WHERE id = ?", (paciente_id,))
+            pac_row = cursor.fetchone()
+            if pac_row:
+                pac_nombre = f"{pac_row['nombres']} {pac_row['apellidos']}".strip()
+                start_dt = f"{fecha}T{hora}:00-04:00"
+                h_int = int(hora.split(':')[0]) + 1
+                end_h = str(h_int).zfill(2) if h_int < 24 else "23"
+                end_dt = f"{fecha}T{end_h}:{hora.split(':')[1]}:00-04:00"
+                
+                event_body = {
+                    'summary': f"Consulta Psicológica - {pac_nombre}",
+                    'description': f"Modalidad: {tipo_consulta}",
+                    'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},
+                    'end': {'dateTime': end_dt, 'timeZone': 'America/Caracas'}
+                }
+                if pac_row['email']:
+                    event_body['attendees'] = [{'email': pac_row['email'], 'displayName': pac_nombre}]
+                
+                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
+                google_event_id = g_event.get('id')
+    except Exception as ge:
+        print("Error creando cita en Google Calendar:", ge)
     
     cursor.execute("""
         INSERT INTO agenda_finanzas (
@@ -404,14 +458,16 @@ def add_agenda_event():
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         paciente_id, fecha, hora, tipo_consulta, monto, moneda,
-        estado_pago, control_uso, None, cantidad_sesiones,
+        estado_pago, control_uso, google_event_id, cantidad_sesiones,
         referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id
     ))
     db.commit()
     event_id = cursor.lastrowid
     
     return jsonify({
+        'success': 'Cita agendada exitosamente.',
         'message': 'Cita agendada exitosamente.',
+        'google_synced': bool(google_event_id),
         'id': event_id
     })
 
