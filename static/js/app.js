@@ -17515,19 +17515,65 @@ document.addEventListener('DOMContentLoaded', () => {
     initLandingRouteHandling();
 });
 
-function closeFastBookingScreen() {
+function closeFastBookingScreen(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
     const fastScreen = document.getElementById('fast-booking-screen');
     if (fastScreen) {
         fastScreen.classList.add('hide');
         fastScreen.style.display = 'none';
     }
-    const path = window.location.pathname.toLowerCase();
-    if (!path.includes('/login') && !path.startsWith('/psic.') && !path.startsWith('/agendar/')) {
-        const pubLanding = document.getElementById('public-landing-screen');
-        if (pubLanding) {
-            pubLanding.classList.remove('hide');
-            pubLanding.style.display = 'block';
+
+    const pubLanding = document.getElementById('public-landing-screen');
+    const profScreen = document.getElementById('public-therapist-profile-screen');
+    const authScreen = document.getElementById('auth-screen');
+    const appLayout = document.getElementById('app-layout');
+
+    // Si la sesión de usuario/paciente ya está activa en appLayout, no mostrar portadas públicas
+    if (appLayout && !appLayout.classList.contains('hide')) {
+        return;
+    }
+
+    // Determinar si hay un psicólogo asociado (desde fastBookingTherapistId o la URL actual)
+    let targetSlug = typeof fastBookingTherapistId !== 'undefined' ? fastBookingTherapistId : null;
+    const path = window.location.pathname;
+
+    if (!targetSlug) {
+        if (path.startsWith('/agendar/')) {
+            targetSlug = path.replace('/agendar/', '');
+        } else if (path.startsWith('/psic.')) {
+            targetSlug = path.replace('/psic.', '');
+        } else if (path.startsWith('/psicologo/')) {
+            targetSlug = path.replace('/psicologo/', '');
+        } else if (path.startsWith('/psic/')) {
+            targetSlug = path.replace('/psic/', '');
         }
+    }
+
+    if (targetSlug && String(targetSlug).trim() !== '' && String(targetSlug) !== 'null' && String(targetSlug) !== 'undefined') {
+        let cleanSlug = String(targetSlug).split('?')[0].split('#')[0].replace(/^\/|\/$/g, '');
+        cleanSlug = cleanSlug.replace(/^(psicologo|psic|agendar|registro)\//i, '').replace(/^psic\./i, '');
+
+        const profileUrl = `/psic.${cleanSlug}`;
+        if (window.history && window.history.pushState) {
+            window.history.pushState(null, '', profileUrl);
+        }
+
+        if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
+        if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
+        if (profScreen) { profScreen.classList.remove('hide'); profScreen.style.display = 'block'; }
+
+        loadDedicatedTherapistProfile(profileUrl);
+    } else {
+        if (window.history && window.history.pushState) {
+            window.history.pushState(null, '', '/');
+        }
+
+        if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
+        if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
+        if (pubLanding) { pubLanding.classList.remove('hide'); pubLanding.style.display = 'block'; }
+
+        loadLandingPageContent();
     }
 }
 
