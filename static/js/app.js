@@ -793,12 +793,42 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
+// PERSISTENCIA DE SESIÓN (LOCAL & SESSION STORAGE)
+// ==========================================
+function getAuthItem(key) {
+    try {
+        return sessionStorage.getItem(key) || localStorage.getItem(key) || null;
+    } catch(e) {
+        return null;
+    }
+}
+
+function setAuthItem(key, val) {
+    try {
+        if (val !== null && val !== undefined) {
+            sessionStorage.setItem(key, val);
+            localStorage.setItem(key, val);
+        } else {
+            sessionStorage.removeItem(key);
+            localStorage.removeItem(key);
+        }
+    } catch(e) {}
+}
+
+function removeAuthItem(key) {
+    try {
+        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
+    } catch(e) {}
+}
+
+// ==========================================
 // CONTROL DE NAVEGACIÓN Y MENÚ
 // ==========================================
 function switchView(viewId) {
-    const role = (window.currentUser && window.currentUser.role) || sessionStorage.getItem('user_role') || '';
-    const username = (window.currentUser && window.currentUser.username) || sessionStorage.getItem('username') || '';
-    const userId = parseInt((window.currentUser && window.currentUser.id) || sessionStorage.getItem('user_id') || 0);
+    const role = (window.currentUser && window.currentUser.role) || getAuthItem('user_role') || getAuthItem('role') || '';
+    const username = (window.currentUser && window.currentUser.username) || getAuthItem('username') || '';
+    const userId = parseInt((window.currentUser && window.currentUser.id) || getAuthItem('user_id') || 0);
 
     const cleanUser = (username || '').toString().toLowerCase();
     const cleanRole = (role || '').toString().toLowerCase();
@@ -1566,14 +1596,14 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     
     window.currentUser = { username, role, id: userId };
     if (role) {
-        sessionStorage.setItem('user_role', role);
-        sessionStorage.setItem('role', role);
+        setAuthItem('user_role', role);
+        setAuthItem('role', role);
     }
-    if (username) sessionStorage.setItem('username', username);
+    if (username) setAuthItem('username', username);
     if (userId) {
-        sessionStorage.setItem('user_id', userId);
+        setAuthItem('user_id', userId);
     } else {
-        sessionStorage.removeItem('user_id');
+        removeAuthItem('user_id');
     }
 
     const cleanUser = (username || '').toString().toLowerCase();
@@ -1755,9 +1785,9 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
 }
 
 function showPatientLayout(username, patientId) {
-    sessionStorage.setItem('patient_id', patientId);
-    sessionStorage.setItem('patient_username', username);
-    sessionStorage.setItem('role', 'paciente');
+    setAuthItem('patient_id', patientId);
+    setAuthItem('patient_username', username);
+    setAuthItem('role', 'paciente');
     
     document.body.classList.add('is-patient');
     const authScr = document.getElementById('auth-screen');
