@@ -208,7 +208,35 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     valid_slots.sort(key=lambda x: x['hora_literal'])
     return valid_slots
 
-# --- RUTAS DE API DE AGENDA Y FAST BOOKING ---
+def get_psychologist_by_id_or_slug(cursor, identifier):
+    """
+    Busca un psicólogo en la tabla usuarios por ID (int) o por slug / username.
+    """
+    if not identifier:
+        return None
+    ident_str = str(identifier).strip()
+    if ident_str.isdigit():
+        cursor.execute("SELECT * FROM usuarios WHERE id = ?", (int(ident_str),))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+    clean_slug = ident_str.lower().replace('psic.', '').replace('psic-', '').strip()
+    cursor.execute("SELECT * FROM usuarios")
+    rows = cursor.fetchall()
+    for r in rows:
+        r_dict = dict(r)
+        uid = str(r_dict.get('id', ''))
+        u_slug = str(r_dict.get('slug') or '').lower().replace('psic.', '').replace('psic-', '').strip()
+        u_user = str(r_dict.get('username') or '').lower().replace('psic.', '').replace('psic-', '').strip()
+        if ident_str == uid or clean_slug == u_slug or clean_slug == u_user:
+            return r_dict
+    for r in rows:
+        r_dict = dict(r)
+        u_slug = str(r_dict.get('slug') or '').lower()
+        u_user = str(r_dict.get('username') or '').lower()
+        if clean_slug and (clean_slug in u_slug or clean_slug in u_user or u_slug in clean_slug):
+            return r_dict
+    return None
 
 @agenda_bp.route('/api/agenda/disponibilidad', methods=['GET'])
 def get_agenda_disponibilidad():

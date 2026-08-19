@@ -659,6 +659,11 @@ async function executeMainApplyTest(modoParam) {
             return;
         }
 
+        // Actualizar historial inmediatamente
+        if (typeof loadAllAppliedTestsHistory === 'function') {
+            loadAllAppliedTestsHistory();
+        }
+
         const successPanel = document.getElementById('panel-apply-success-result');
         const successDetails = document.getElementById('text-apply-success-details') || document.getElementById('panel-apply-success-details');
         const successActions = document.getElementById('container-apply-success-actions') || document.getElementById('panel-apply-success-actions');
@@ -672,12 +677,24 @@ async function executeMainApplyTest(modoParam) {
         const whatsappUrl = data.whatsapp_url || '';
         const modoLabelHtml = modo === 'presencial' ? '💻 Presencial' : (modo === 'online' ? '📲 Portal del Paciente' : '🔗 Enlace / WhatsApp');
 
+        let statusNoticeHtml = '';
+        if (data.whatsapp_sent) {
+            statusNoticeHtml = '<div style="margin-top: 6px; font-size: 0.84rem; color: #16a34a; font-weight: 700;">✅ Notificación enviada por WhatsApp al consultante de forma automática.</div>';
+        } else if (modo === 'online') {
+            statusNoticeHtml = '<div style="margin-top: 6px; font-size: 0.84rem; color: #0284c7; font-weight: 700;">📲 La prueba ha sido asignada al portal del paciente y estará visible al iniciar sesión en su app.</div>';
+        } else {
+            statusNoticeHtml = '<div style="margin-top: 6px; font-size: 0.84rem; color: #702e5e; font-weight: 700;">🔗 Enlace generado y listo para compartir.</div>';
+        }
+
         if (successDetails) {
             successDetails.innerHTML = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.6rem 0.85rem; margin-bottom: 0.75rem; color: #166534; font-weight: 700; font-size: 0.86rem;">
+                    ✓ ¡Solicitud registrada y guardada con éxito en el historial!
+                </div>
                 <div><strong>Token ID:</strong> <code>${data.token || ''}</code></div>
                 <div><strong>Modo de Aplicación:</strong> <span style="font-weight:800; color:#702e5e;">${modoLabelHtml}</span></div>
                 <div><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all; font-weight: 700;">${testUrl}</a></div>
-                ${modo === 'online' ? '<div style="margin-top: 6px; font-size: 0.84rem; color: #0284c7; font-weight: 700;">📲 La prueba ha sido asignada a la cuenta del paciente y estará visible al iniciar sesión en su app.</div>' : ''}
+                ${statusNoticeHtml}
             `;
         }
 
@@ -701,7 +718,7 @@ async function executeMainApplyTest(modoParam) {
 
             actionsHtml += `
                 <button type="button" class="btn btn-sm" style="background: #0284c7; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2,132,199,0.3);" onclick="resetTestApplicationModule()">
-                    💾 Guardar e Iniciar Nueva Solicitud
+                    ✨ Solicitud Guardada - Iniciar Nueva Solicitud
                 </button>
             `;
 
@@ -720,6 +737,10 @@ async function executeMainApplyTest(modoParam) {
 
 function resetTestApplicationModule() {
     selectedTestCodeForApplication = null;
+
+    if (typeof loadAllAppliedTestsHistory === 'function') {
+        loadAllAppliedTestsHistory();
+    }
 
     const panelApply = document.getElementById('panel-apply-selected-test');
     if (panelApply) {
@@ -751,7 +772,7 @@ function resetTestApplicationModule() {
     }
 
     if (typeof showToast === 'function') {
-        showToast('✨ Listo para iniciar una nueva solicitud de evaluación.', 'success');
+        showToast('✅ Evaluación guardada en el historial. Listo para iniciar nueva solicitud.', 'success');
     }
 }
 window.resetTestApplicationModule = resetTestApplicationModule;
@@ -955,7 +976,7 @@ async function loadAllAppliedTestsHistory() {
         }
 
         const data = await resp.json();
-        const tests = data.tests || (Array.isArray(data) ? data : []);
+        const tests = data.asignaciones || data.tests || (Array.isArray(data) ? data : []);
 
         if (tests.length === 0) {
             container.innerHTML = `

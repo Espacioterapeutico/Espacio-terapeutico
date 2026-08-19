@@ -1061,10 +1061,21 @@ def api_asignar_test():
             print("Aviso al notificar test a paciente:", _ne)
 
         whatsapp_url = None
+        whatsapp_sent = False
         if clean_phone:
             import urllib.parse
             msg_text = f"Hola {pac['nombres']}, te comparto el enlace para responder tu evaluación psicológica: {url_test}"
             whatsapp_url = f"https://api.whatsapp.com/send?phone={clean_phone}&text={urllib.parse.quote(msg_text)}"
+            
+            try:
+                from routes_notificaciones import make_wa_http_request
+                wa_res = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_text, 'user_id': user_id}, timeout=4, user_id=user_id)
+                if wa_res and getattr(wa_res, 'status_code', 0) == 200:
+                    res_data = wa_res.json()
+                    if res_data.get('success'):
+                        whatsapp_sent = True
+            except Exception as _wa_err:
+                print("Aviso al intentar enviar WhatsApp automático de test:", _wa_err)
 
         return jsonify({
             'success': 'Test asignado exitosamente.',
@@ -1074,6 +1085,7 @@ def api_asignar_test():
             'url_test': url_test,
             'whatsapp_phone': clean_phone,
             'whatsapp_url': whatsapp_url,
+            'whatsapp_sent': whatsapp_sent,
             'paciente_nombre': f"{pac['nombres']} {pac['apellidos']}".strip()
         })
     except Exception as e:
@@ -1283,7 +1295,8 @@ def api_get_tests_historial():
             """, (user_id,))
 
     rows = cursor.fetchall()
-    return jsonify({'asignaciones': [dict(r) for r in rows]})
+    data_list = [dict(r) for r in rows]
+    return jsonify({'asignaciones': data_list, 'tests': data_list, 'success': True})
 
 @tests_bp.route('/api/tests/paciente/<int:patient_id>', methods=['GET'])
 @login_required

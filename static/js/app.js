@@ -2427,6 +2427,7 @@ let patDiarySaveTimeout = null;
 async function loadPatientPortalData(patientId) {
     try {
         checkPatientActiveModulesNav();
+        loadPatientPortalTests();
         const res = await fetch(`/api/patient/portal-data`);
         if (!res.ok) return;
         const data = await res.json();
@@ -7860,19 +7861,23 @@ async function rejectNotifiedPayment(e) {
 }
 
 // Cargar y mostrar historial de pagos notificados en el portal del paciente
+// Cargar y mostrar historial de pagos notificados en el portal del paciente
 async function loadPatientNotifiedPayments(patientId) {
     const tbody = document.getElementById('pat-notified-payments-list');
     if (!tbody) return;
     
     try {
         const res = await fetch(`/api/patient/payments/notified`);
-        if (!res.ok) return;
+        if (!res.ok) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">No hay pagos notificados aún.</td></tr>';
+            return;
+        }
         const list = await res.json();
         
         tbody.innerHTML = '';
         
-        if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-secondary">No hay pagos notificados aún.</td></tr>';
+        if (!list || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">No hay pagos notificados aún.</td></tr>';
             return;
         }
         
@@ -7889,8 +7894,10 @@ async function loadPatientNotifiedPayments(patientId) {
             }
             
             tr.innerHTML = `
-                <td>${p.fecha}</td>
-                <td><strong>${p.monto} ${p.moneda}</strong></td>
+                <td>${p.fecha || ''}</td>
+                <td><strong>${p.monto || 0} ${p.moneda || 'USD'}</strong></td>
+                <td><code style="font-size:0.8rem;">${p.referencia || 'N/A'}</code></td>
+                <td>${p.metodo || 'N/A'}</td>
                 <td>
                     <span class="badge ${badgeClass}" style="font-size:0.72rem; padding: 0.15rem 0.4rem; border-radius: var(--radius-sm); font-weight: 600; display: inline-block;">
                         ${statusText}
@@ -7901,7 +7908,57 @@ async function loadPatientNotifiedPayments(patientId) {
         });
     } catch (err) {
         console.error("Error al cargar historial de pagos notificados:", err);
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-secondary" style="color:red;">Error de conexión.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary" style="color:#dc2626;">Error de conexión.</td></tr>';
+    }
+}
+
+async function loadPatientPortalTests() {
+    const container = document.getElementById('pat-assigned-tests-list');
+    const wrapper = document.getElementById('pat-sec-tests-wrapper');
+    if (!container) return;
+    
+    try {
+        const res = await fetch('/api/patient-portal/tests');
+        if (!res.ok) {
+            if (wrapper) wrapper.style.display = 'none';
+            return;
+        }
+        const list = await res.json();
+        const pendingList = (list || []).filter(t => t.estado !== 'completado');
+        
+        if (!pendingList || pendingList.length === 0) {
+            if (wrapper) wrapper.style.display = 'none';
+            return;
+        }
+        
+        if (wrapper) wrapper.style.display = 'block';
+        
+        let html = '';
+        pendingList.forEach(t => {
+            const badge = '<span style="background:#fef3c7; color:#b45309; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px;">⏳ Pendiente</span>';
+            const actionBtn = `<a href="${t.url_evaluacion}" target="_blank" class="btn btn-sm btn-primary" style="padding:0.35rem 0.85rem; font-weight:700; font-size:0.8rem; border-radius:6px; text-decoration:none;">▶ Responder Test</a>`;
+                
+            html += `
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 0.65rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                            ${badge}
+                            <strong style="color: var(--text-dark); font-size: 0.92rem;">${t.test_nombre} (${t.test_siglas})</strong>
+                        </div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">
+                            Categoría: ${t.test_categoria || 'Psicológica'} | Asignado por: ${t.psicologo_nombre} (${t.fecha_asignacion || ''})
+                        </div>
+                    </div>
+                    <div>
+                        ${actionBtn}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Error cargando tests asignados al paciente:", e);
+        if (wrapper) wrapper.style.display = 'none';
     }
 }
 
@@ -18807,7 +18864,7 @@ function openTestDetailModalById(assignmentId) {
         fetch(`/api/tests/historial`)
             .then(r => r.json())
             .then(d => {
-                const found = (d.tests || []).find(x => x.id === assignmentId);
+                const found = (d.asignaciones || d.tests || []).find(x => x.id === assignmentId);
                 if (found) openTestDetailModal(found);
             });
     }
@@ -19396,6 +19453,10 @@ async function executeMainApplyTest(modoParam) {
             return;
         }
 
+        if (typeof loadAllAppliedTestsHistory === 'function') {
+            loadAllAppliedTestsHistory();
+        }
+
         const successPanel = document.getElementById('panel-apply-success-result');
         const successDetails = document.getElementById('text-apply-success-details') || document.getElementById('panel-apply-success-details');
         const successActions = document.getElementById('container-apply-success-actions') || document.getElementById('panel-apply-success-actions');
@@ -19409,12 +19470,24 @@ async function executeMainApplyTest(modoParam) {
         const whatsappUrl = data.whatsapp_url || '';
         const modoLabelHtml = modo === 'presencial' ? '💻 Presencial' : (modo === 'online' ? '📲 Portal del Paciente' : '🔗 Enlace / WhatsApp');
 
+        let statusNoticeHtml = '';
+        if (data.whatsapp_sent) {
+            statusNoticeHtml = '<div style="margin-top: 6px; font-size: 0.84rem; color: #16a34a; font-weight: 700;">✅ Notificación enviada por WhatsApp al consultante de forma automática.</div>';
+        } else if (modo === 'online') {
+            statusNoticeHtml = '<div style="margin-top: 6px; font-size: 0.84rem; color: #0284c7; font-weight: 700;">📲 La prueba ha sido asignada al portal del paciente y estará visible al iniciar sesión en su app.</div>';
+        } else {
+            statusNoticeHtml = '<div style="margin-top: 6px; font-size: 0.84rem; color: #702e5e; font-weight: 700;">🔗 Enlace generado y listo para compartir.</div>';
+        }
+
         if (successDetails) {
             successDetails.innerHTML = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.6rem 0.85rem; margin-bottom: 0.75rem; color: #166534; font-weight: 700; font-size: 0.86rem;">
+                    ✓ ¡Solicitud registrada y guardada con éxito en el historial!
+                </div>
                 <div><strong>Token ID:</strong> <code>${data.token || ''}</code></div>
                 <div><strong>Modo de Aplicación:</strong> <span style="font-weight:800; color:#702e5e;">${modoLabelHtml}</span></div>
                 <div><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all; font-weight: 700;">${testUrl}</a></div>
-                ${modo === 'online' ? '<div style="margin-top: 6px; font-size: 0.84rem; color: #0284c7; font-weight: 700;">📲 La prueba ha sido asignada a la cuenta del paciente y estará visible al iniciar sesión en su app.</div>' : ''}
+                ${statusNoticeHtml}
             `;
         }
 
@@ -19438,7 +19511,7 @@ async function executeMainApplyTest(modoParam) {
 
             actionsHtml += `
                 <button type="button" class="btn btn-sm" style="background: #0284c7; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2,132,199,0.3);" onclick="resetTestApplicationModule()">
-                    💾 Guardar e Iniciar Nueva Solicitud
+                    ✨ Solicitud Guardada - Iniciar Nueva Solicitud
                 </button>
             `;
 
@@ -19685,7 +19758,7 @@ async function loadAllAppliedTestsHistory() {
         }
 
         const data = await resp.json();
-        const tests = data.tests || (Array.isArray(data) ? data : []);
+        const tests = data.asignaciones || data.tests || (Array.isArray(data) ? data : []);
 
         if (tests.length === 0) {
             container.innerHTML = `

@@ -7,9 +7,12 @@ búsqueda dinámica por cédula e integración con Firebase Realtime DB.
 
 import os
 import sqlite3
+import json
 from functools import wraps
 from flask import Blueprint, request, jsonify, session, g
 from werkzeug.security import generate_password_hash, check_password_hash
+
+from routes_finanzas import auto_settle_patient_debts
 
 pacientes_bp = Blueprint('pacientes', __name__)
 
@@ -34,8 +37,12 @@ def login_required(f):
 def patient_login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'patient_id' not in session:
+        pid = session.get('patient_id') or request.args.get('patient_id')
+        if not pid and 'user_id' in session:
+            pid = session.get('last_viewed_patient_id')
+        if not pid:
             return jsonify({'error': 'Sesión expirada o no iniciada.'}), 401
+        session['patient_id'] = int(pid)
         return f(*args, **kwargs)
     return decorated_function
 
@@ -596,6 +603,36 @@ def patient_appointments():
     return jsonify([dict(r) for r in rows])
 
 
+
+def get_psychologist_by_id_or_slug(cursor, identifier):
+    """
+    Busca un psicólogo en la tabla usuarios por ID (int) o por slug / username.
+    """
+    if not identifier:
+        return None
+    ident_str = str(identifier).strip()
+    if ident_str.isdigit():
+        cursor.execute("SELECT * FROM usuarios WHERE id = ?", (int(ident_str),))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+    clean_slug = ident_str.lower().replace('psic.', '').replace('psic-', '').strip()
+    cursor.execute("SELECT * FROM usuarios")
+    rows = cursor.fetchall()
+    for r in rows:
+        r_dict = dict(r)
+        uid = str(r_dict.get('id', ''))
+        u_slug = str(r_dict.get('slug') or '').lower().replace('psic.', '').replace('psic-', '').strip()
+        u_user = str(r_dict.get('username') or '').lower().replace('psic.', '').replace('psic-', '').strip()
+        if ident_str == uid or clean_slug == u_slug or clean_slug == u_user:
+            return r_dict
+    for r in rows:
+        r_dict = dict(r)
+        u_slug = str(r_dict.get('slug') or '').lower()
+        u_user = str(r_dict.get('username') or '').lower()
+        if clean_slug and (clean_slug in u_slug or clean_slug in u_user or u_slug in clean_slug):
+            return r_dict
+    return None
 
 @pacientes_bp.route('/api/patient/available-dates', methods=['GET'])
 def get_available_dates():
@@ -1340,6 +1377,60 @@ def _ensure_pizarra_columns(cursor):
     except Exception as _e:
         print("Error al asegurar columnas de pizarra:", _e)
 
+
+def get_patient_portal_data_dict(patient_id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT p.*, u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos,
+               u.metodos_pago as psicologo_metodos_pago, u.terminos_condiciones as psicologo_terminos,
+               u.modalidades_json as psicologo_modalidades_json
+        FROM pacientes p
+        LEFT JOIN usuarios u ON p.psicologo_id = u.id
+        WHERE p.id = ?
+    """, (patient_id,))
+    row = cursor.fetchone()
+    if not row:
+        return None
+        
+    p_dict = dict(row)
+    p_dict.pop('password_hash', None)
+    
+    psic_nom = f"Psic. {p_dict.get('psicologo_nombres') or ''} {p_dict.get('psicologo_apellidos') or ''}".strip()
+    if psic_nom == "Psic.":
+        psic_nom = "Psic. Paulo Mora"
+    p_dict['psicologo_asignado'] = psic_nom
+    
+    modalidades = ["Online", "Presencial"]
+    if p_dict.get('psicologo_modalidades_json'):
+        try:
+            m_raw = json.loads(p_dict['psicologo_modalidades_json'])
+            if isinstance(m_raw, list):
+                modalidades = m_raw
+            elif isinstance(m_raw, dict):
+                m_list = []
+                if m_raw.get('online'): m_list.append("Online")
+                if m_raw.get('presencial'): m_list.append("Presencial")
+                if m_raw.get('domicilio'): m_list.append("Domicilio")
+                if m_list: modalidades = m_list
+        except Exception:
+            pass
+            
+    terms = (p_dict.get('psicologo_terminos') or '').strip()
+    if not terms:
+        terms = DEFAULT_TERMS_TEXT
+        
+    metodos = (p_dict.get('psicologo_metodos_pago') or '').strip()
+    if not metodos:
+        metodos = "Contacta a tu psicólogo para conocer los métodos de pago disponibles."
+        
+    return {
+        'perfil': p_dict,
+        'modalidades': modalidades,
+        'metodos_pago': metodos,
+        'terminos_texto': terms,
+        'terminos_requeridos': (p_dict.get('terminos_aceptados') != 1)
+    }
 
 
 @pacientes_bp.route('/api/patient/portal-data', methods=['GET'])
