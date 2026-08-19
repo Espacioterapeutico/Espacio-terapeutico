@@ -1356,3 +1356,74 @@ def api_get_clinica_dashboard_data():
         'finanzas_consolidadas': finanzas_consolidadas
     })
 
+
+@clinica_bp.route('/api/clinica/eliminar', methods=['POST'])
+def api_eliminar_clinica():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_clinica_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    usr = cursor.fetchone()
+    if not usr or not usr['organizacion_id']:
+        return jsonify({'error': 'No perteneces a ninguna clínica.'}), 400
+
+    org_id = usr['organizacion_id']
+    cursor.execute("SELECT * FROM organizaciones WHERE id = ?", (org_id,))
+    org = cursor.fetchone()
+    if not org or org['admin_id'] != user_id:
+        return jsonify({'error': 'Solo el Director Administrador de la clínica puede eliminarla.'}), 403
+
+    try:
+        # Desvincular todos los usuarios de la organización
+        cursor.execute("UPDATE usuarios SET organizacion_id = NULL WHERE organizacion_id = ?", (org_id,))
+        # Desvincular solicitudes
+        cursor.execute("DELETE FROM clinica_solicitudes WHERE organizacion_id = ?", (org_id,))
+        # Eliminar la organización
+        cursor.execute("DELETE FROM organizaciones WHERE id = ?", (org_id,))
+        db.commit()
+
+        return jsonify({
+            'success': 'La clínica ha sido disuelta correctamente. Tu perfil y el de tu equipo se han restablecido a Psicólogos Independientes.'
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al eliminar la clínica: {str(e)}'}), 500
+
+
+@clinica_bp.route('/api/clinica/pacientes/<int:patient_id>/costo', methods=['POST'])
+def api_update_clinica_patient_costo(patient_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    data = request.json or {}
+    costo = data.get('costo')
+    moneda = data.get('moneda', 'USD')
+
+    if costo is None:
+        return jsonify({'error': 'Debe proporcionar el costo de la consulta.'}), 400
+
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("""
+            UPDATE pacientes
+            SET tarifa = ?, moneda_tarifa = ?
+            WHERE id = ?
+        """, (costo, moneda, patient_id))
+        db.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Costo de consulta actualizado correctamente.'
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al actualizar tarifa: {str(e)}'}), 500
+
+

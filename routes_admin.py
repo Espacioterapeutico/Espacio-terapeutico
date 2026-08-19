@@ -1748,7 +1748,18 @@ def get_public_therapist_profile(slug):
     db = get_db()
     ensure_usuarios_columns(db)
     cursor = db.cursor()
-    psych = get_psychologist_by_id_or_slug(cursor, slug)
+    from app import get_psychologist_by_id_or_slug
+    
+    clean_slug = str(slug).strip()
+    for prefix in ['psicologo/', 'psic/', 'psic.', 'agendar/', 'registro/']:
+        if clean_slug.lower().startswith(prefix):
+            clean_slug = clean_slug[len(prefix):]
+            
+    psych = get_psychologist_by_id_or_slug(cursor, clean_slug)
+    if not psych:
+        # Re-try with original raw slug just in case
+        psych = get_psychologist_by_id_or_slug(cursor, slug)
+        
     if not psych:
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
 
@@ -1782,6 +1793,12 @@ def get_public_therapist_profile(slug):
         redes = json.loads(redes_raw) if redes_raw else {}
     except Exception:
         redes = {}
+
+    try:
+        poblaciones_raw = psych.get('poblaciones_json')
+        poblaciones = json.loads(poblaciones_raw) if poblaciones_raw else []
+    except Exception:
+        poblaciones = []
         
     clean_slug = psych.get('slug') or generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
@@ -1794,6 +1811,9 @@ def get_public_therapist_profile(slug):
         'slug': clean_slug,
         'nomenclatura': psych.get('nomenclatura') or psych.get('estudios') or 'Psicólogo Clínico',
         'descripcion_biografia': psych.get('descripcion_biografia') or '',
+        'especialidades': psych.get('especialidades') or '',
+        'pais': psych.get('pais_ubicacion') or '',
+        'poblaciones': poblaciones,
         'foto': foto_url,
         'modalidades': modalidades_list,
         'modalidades_data': modalidades_data,
@@ -2429,7 +2449,7 @@ def google_authorize():
         if not os.path.exists(CLIENT_SECRETS_FILE):
             return "Error: Falta el archivo credentials.json en el servidor.", 400
             
-        redirect_uri = url_for('google_callback', _external=True)
+        redirect_uri = url_for('admin.google_callback', _external=True)
         if not redirect_uri.startswith('https://') and 'localhost' not in redirect_uri and '127.0.0.1' not in redirect_uri:
             redirect_uri = redirect_uri.replace('http://', 'https://')
             
@@ -2468,7 +2488,7 @@ def google_callback():
 
         state = session.get('state') or request.args.get('state')
         
-        redirect_uri = url_for('google_callback', _external=True)
+        redirect_uri = url_for('admin.google_callback', _external=True)
         if not redirect_uri.startswith('https://') and 'localhost' not in redirect_uri and '127.0.0.1' not in redirect_uri:
             redirect_uri = redirect_uri.replace('http://', 'https://')
             

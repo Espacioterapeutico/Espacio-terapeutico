@@ -1110,10 +1110,12 @@ def api_get_public_evaluacion(token):
                    p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
                    td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
                    td.descripcion as test_descripcion, td.instrucciones as test_instrucciones,
-                   td.escala_opciones_json, td.items_json
+                   td.escala_opciones_json, td.items_json,
+                   u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.foto_perfil as psicologo_foto, u.estudios as psicologo_titulo
             FROM test_asignaciones a
             JOIN pacientes p ON a.patient_id = p.id
-            JOIN tests_definiciones td ON a.test_code = td.code
+            LEFT JOIN tests_definiciones td ON a.test_code = td.code
+            LEFT JOIN usuarios u ON a.user_id = u.id
             WHERE LOWER(REPLACE(a.uuid_token, '-', '')) = ?
         """, (clean_token,))
 
@@ -1122,19 +1124,48 @@ def api_get_public_evaluacion(token):
             return jsonify({'error': 'Enlace de evaluación no válido o inexistente.'}), 404
 
         data = dict(row)
+        patient_nombre = f"{data.get('patient_nombres') or ''} {data.get('patient_apellidos') or ''}".strip()
+        psicologo_nombre = f"Psic. {data.get('psicologo_nombres') or ''} {data.get('psicologo_apellidos') or ''}".strip()
+
+        assignment = {
+            'id': data['id'],
+            'assignment_id': data['id'],
+            'token': data['uuid_token'],
+            'uuid_token': data['uuid_token'],
+            'estado': data['estado'],
+            'test_code': data['test_code'],
+            'paciente_nombre': patient_nombre,
+            'psicologo_nombre': psicologo_nombre or 'Psicólogo Clínico',
+            'psicologo_foto': data.get('psicologo_foto') or '/static/logo.png',
+            'psicologo_titulo': data.get('psicologo_titulo') or 'Consulta',
+            'fecha_asignacion': data['fecha_asignacion'],
+            'fecha_completado': data['fecha_completado']
+        }
+        test_definition = {
+            'code': data['test_code'],
+            'nombre': data['test_nombre'] or data['test_code'],
+            'siglas': data['test_siglas'] or data['test_code'],
+            'categoria': data['test_categoria'] or 'Evaluación Clínica',
+            'descripcion': data['test_instrucciones'] or 'Por favor responde con sinceridad cada una de las siguientes afirmaciones.',
+            'instrucciones': data['test_instrucciones'] or '',
+            'escala_opciones': json.loads(data['escala_opciones_json']) if data.get('escala_opciones_json') else [],
+            'items': json.loads(data['items_json']) if data.get('items_json') else []
+        }
         return jsonify({
+            'assignment': assignment,
+            'test_definition': test_definition,
             'assignment_id': data['id'],
             'token': data['uuid_token'],
             'estado': data['estado'],
             'test_code': data['test_code'],
-            'test_nombre': data['test_siglas'], # Mostramos solo las siglas al paciente para evitar sesgos
-            'test_siglas': data['test_siglas'],
-            'test_categoria': data['test_categoria'],
+            'test_nombre': data['test_siglas'] or data['test_code'],
+            'test_siglas': data['test_siglas'] or data['test_code'],
+            'test_categoria': data['test_categoria'] or 'Evaluación Clínica',
             'test_descripcion': data['test_instrucciones'] or 'Por favor responde con sinceridad cada una de las siguientes afirmaciones.',
             'test_instrucciones': data['test_instrucciones'],
             'escala_opciones': json.loads(data['escala_opciones_json']) if data.get('escala_opciones_json') else [],
             'items': json.loads(data['items_json']) if data.get('items_json') else [],
-            'patient_nombre': f"{data['patient_nombres']} {data['patient_apellidos']}".strip(),
+            'patient_nombre': patient_nombre,
             'fecha_asignacion': data['fecha_asignacion'],
             'fecha_completado': data['fecha_completado']
         })
@@ -1256,20 +1287,24 @@ def api_get_tests_historial():
         if is_admin:
             cursor.execute("""
                 SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
-                       td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria
+                       COALESCE(td.nombre, a.test_code) as test_nombre,
+                       COALESCE(td.siglas, a.test_code) as test_siglas,
+                       COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
                 FROM test_asignaciones a
-                JOIN pacientes p ON a.patient_id = p.id
-                JOIN tests_definiciones td ON a.test_code = td.code
+                LEFT JOIN pacientes p ON a.patient_id = p.id
+                LEFT JOIN tests_definiciones td ON a.test_code = td.code
                 WHERE a.patient_id = ?
                 ORDER BY a.fecha_asignacion DESC
             """, (patient_id,))
         else:
             cursor.execute("""
                 SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
-                       td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria
+                       COALESCE(td.nombre, a.test_code) as test_nombre,
+                       COALESCE(td.siglas, a.test_code) as test_siglas,
+                       COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
                 FROM test_asignaciones a
-                JOIN pacientes p ON a.patient_id = p.id
-                JOIN tests_definiciones td ON a.test_code = td.code
+                LEFT JOIN pacientes p ON a.patient_id = p.id
+                LEFT JOIN tests_definiciones td ON a.test_code = td.code
                 WHERE a.patient_id = ? AND a.user_id = ?
                 ORDER BY a.fecha_asignacion DESC
             """, (patient_id, user_id))
@@ -1277,25 +1312,34 @@ def api_get_tests_historial():
         if is_admin:
             cursor.execute("""
                 SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
-                       td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria
+                       COALESCE(td.nombre, a.test_code) as test_nombre,
+                       COALESCE(td.siglas, a.test_code) as test_siglas,
+                       COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
                 FROM test_asignaciones a
-                JOIN pacientes p ON a.patient_id = p.id
-                JOIN tests_definiciones td ON a.test_code = td.code
+                LEFT JOIN pacientes p ON a.patient_id = p.id
+                LEFT JOIN tests_definiciones td ON a.test_code = td.code
                 ORDER BY a.fecha_asignacion DESC LIMIT 100
             """)
         else:
             cursor.execute("""
                 SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
-                       td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria
+                       COALESCE(td.nombre, a.test_code) as test_nombre,
+                       COALESCE(td.siglas, a.test_code) as test_siglas,
+                       COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
                 FROM test_asignaciones a
-                JOIN pacientes p ON a.patient_id = p.id
-                JOIN tests_definiciones td ON a.test_code = td.code
+                LEFT JOIN pacientes p ON a.patient_id = p.id
+                LEFT JOIN tests_definiciones td ON a.test_code = td.code
                 WHERE a.user_id = ?
                 ORDER BY a.fecha_asignacion DESC LIMIT 100
             """, (user_id,))
 
     rows = cursor.fetchall()
-    data_list = [dict(r) for r in rows]
+    data_list = []
+    for r in rows:
+        item = dict(r)
+        if item.get('uuid_token'):
+            item['url_test'] = f"/evaluacion/{item['uuid_token']}"
+        data_list.append(item)
     return jsonify({'asignaciones': data_list, 'tests': data_list, 'success': True})
 
 @tests_bp.route('/api/tests/paciente/<int:patient_id>', methods=['GET'])
@@ -1311,23 +1355,35 @@ def api_get_tests_paciente(patient_id):
 
     if is_admin:
         cursor.execute("""
-            SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria
+            SELECT a.*,
+                   COALESCE(td.nombre, a.test_code) as test_nombre,
+                   COALESCE(td.siglas, a.test_code) as test_siglas,
+                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
             FROM test_asignaciones a
-            JOIN tests_definiciones td ON a.test_code = td.code
+            LEFT JOIN tests_definiciones td ON a.test_code = td.code
             WHERE a.patient_id = ?
             ORDER BY a.fecha_asignacion DESC
         """, (patient_id,))
     else:
         cursor.execute("""
-            SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria
+            SELECT a.*,
+                   COALESCE(td.nombre, a.test_code) as test_nombre,
+                   COALESCE(td.siglas, a.test_code) as test_siglas,
+                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
             FROM test_asignaciones a
-            JOIN tests_definiciones td ON a.test_code = td.code
+            LEFT JOIN tests_definiciones td ON a.test_code = td.code
             WHERE a.patient_id = ? AND a.user_id = ?
             ORDER BY a.fecha_asignacion DESC
         """, (patient_id, user_id))
 
     rows = cursor.fetchall()
-    return jsonify({'asignaciones': [dict(r) for r in rows]})
+    data_list = []
+    for r in rows:
+        item = dict(r)
+        if item.get('uuid_token'):
+            item['url_test'] = f"/evaluacion/{item['uuid_token']}"
+        data_list.append(item)
+    return jsonify({'asignaciones': data_list, 'tests': data_list, 'success': True})
 
 @tests_bp.route('/api/tests/asignacion/<int:assignment_id>', methods=['DELETE'])
 @login_required
@@ -1421,4 +1477,130 @@ def api_guardar_resultado_manual_test(assignment_id):
     except Exception as e:
         db.rollback()
         return jsonify({'error': f'Error al registrar resultado: {str(e)}'}), 500
+
+
+@tests_bp.route('/api/tests/asignacion/<int:assignment_id>/export/pdf', methods=['GET'])
+@login_required
+def api_export_test_pdf(assignment_id):
+    try:
+        db = get_db()
+        ensure_tests_tables(db)
+        cursor = db.cursor()
+
+        cursor.execute("""
+            SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
+                   td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
+                   u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.estudios as psicologo_titulo
+            FROM test_asignaciones a
+            LEFT JOIN pacientes p ON a.patient_id = p.id
+            LEFT JOIN tests_definiciones td ON a.test_code = td.code
+            LEFT JOIN usuarios u ON a.user_id = u.id
+            WHERE a.id = ?
+        """, (assignment_id,))
+
+        row = cursor.fetchone()
+        if not row:
+            return "Error: Asignación de test no encontrada.", 404
+
+        data = dict(row)
+        pac_nombre = f"{data.get('patient_nombres') or ''} {data.get('patient_apellidos') or ''}".strip()
+        psic_nombre = f"Psic. {data.get('psicologo_nombres') or ''} {data.get('psicologo_apellidos') or ''}".strip()
+
+        subescalas = {}
+        if data.get('subescalas_json'):
+            try:
+                subescalas = json.loads(data['subescalas_json'])
+            except Exception:
+                subescalas = {}
+
+        sub_html = ""
+        if isinstance(subescalas, dict) and subescalas:
+            sub_html = "<h3 style='color:#334155; margin-top:20px;'>Subescalas y Dimensiones</h3><table style='width:100%; border-collapse:collapse; margin-top:10px;'><tr style='background:#f1f5f9;'><th style='padding:8px; border:1px solid #cbd5e1; text-align:left;'>Escala / Dimensión</th><th style='padding:8px; border:1px solid #cbd5e1; text-align:center;'>Puntaje</th></tr>"
+            for k, v in subescalas.items():
+                sub_html += f"<tr><td style='padding:8px; border:1px solid #cbd5e1;'>{k}</td><td style='padding:8px; border:1px solid #cbd5e1; text-align:center; font-weight:bold;'>{v}</td></tr>"
+            sub_html += "</table>"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Informe de Evaluación Psicológica - {data.get('test_siglas') or data.get('test_code')}</title>
+            <style>
+                body {{ font-family: 'Helvetica Neue', Arial, sans-serif; margin: 40px; color: #1e293b; font-size: 14px; line-height: 1.6; }}
+                .header {{ border-bottom: 3px solid #702e5e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }}
+                .title {{ font-size: 22px; font-weight: bold; color: #702e5e; margin: 0; }}
+                .subtitle {{ font-size: 13px; color: #64748b; margin-top: 4px; }}
+                .info-box {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; }}
+                .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
+                .result-box {{ background: #fdf4ff; border: 2px solid #f0abfc; border-radius: 10px; padding: 20px; margin: 20px 0; text-align: center; }}
+                .score {{ font-size: 32px; font-weight: bold; color: #702e5e; }}
+                .badge {{ display: inline-block; background: #702e5e; color: white; padding: 4px 14px; border-radius: 20px; font-weight: bold; font-size: 13px; margin-top: 5px; }}
+                .section {{ margin-top: 25px; }}
+                .section-title {{ font-size: 16px; font-weight: bold; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }}
+                .footer {{ margin-top: 50px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px; }}
+                @media print {{
+                    body {{ margin: 20px; }}
+                    .no-print {{ display: none; }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="no-print" style="text-align: right; margin-bottom: 20px;">
+                <button onclick="window.print()" style="background:#702e5e; color:white; border:none; padding:8px 18px; border-radius:6px; font-weight:bold; cursor:pointer;">🖨️ Imprimir / Guardar como PDF</button>
+            </div>
+            <div class="header">
+                <div>
+                    <h1 class="title">INFORME DE EVALUACIÓN PSICOMÉTRICA</h1>
+                    <div class="subtitle">Espacio Terapéutico — Sistema de Gestión Clínica</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-grid">
+                    <div><strong>Consultante:</strong> {pac_nombre}</div>
+                    <div><strong>Cédula / ID:</strong> {data.get('patient_cedula') or 'N/A'}</div>
+                    <div><strong>Evaluación:</strong> {data.get('test_nombre') or data.get('test_code')} ({data.get('test_siglas') or data.get('test_code')})</div>
+                    <div><strong>Categoría:</strong> {data.get('test_categoria') or 'Psicometría'}</div>
+                    <div><strong>Especialista:</strong> {psic_nombre}</div>
+                    <div><strong>Fecha de Evaluación:</strong> {data.get('fecha_completado') or data.get('fecha_asignacion') or 'N/A'}</div>
+                </div>
+            </div>
+
+            <div class="result-box">
+                <div style="font-size: 13px; font-weight: bold; color: #702e5e; text-transform: uppercase;">Puntaje Global Obtenido</div>
+                <div class="score">{data.get('puntaje_total') if data.get('puntaje_total') is not None else 'N/A'} pts</div>
+                <div class="badge">{data.get('clasificacion_resultado') or 'Completado'}</div>
+            </div>
+
+            {sub_html}
+
+            <div class="section">
+                <div class="section-title">Interpretación Clínica / Juicio Profesional</div>
+                <div style="background: white; padding: 12px; border-left: 4px solid #702e5e; background: #fafafa;">
+                    {data.get('interpretacion_clinica') or 'Respuestas evaluadas satisfactoriamente.'}
+                </div>
+            </div>
+
+            {f'<div class="section"><div class="section-title">Observaciones del Terapeuta</div><div>{data.get("notas_terapeuta")}</div></div>' if data.get('notas_terapeuta') else ''}
+
+            <div class="footer">
+                Documento confidencial emitido por {psic_nombre} a través de la plataforma Espacio Terapéutico.<br>
+                Válido para fines clínicos y de seguimiento terapéutico.
+            </div>
+        </body>
+        </html>
+        """
+        response = make_response(html_content)
+        response.headers["Content-Type"] = "text/html; charset=utf-8"
+        return response
+    except Exception as e:
+        return f"Error al generar informe PDF: {str(e)}", 500
+
+
+@tests_bp.route('/api/tests/asignacion/<int:assignment_id>/export/word', methods=['GET'])
+@login_required
+def api_export_test_word(assignment_id):
+    return api_export_test_pdf(assignment_id)
+
 

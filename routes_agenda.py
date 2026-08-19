@@ -208,6 +208,21 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     valid_slots.sort(key=lambda x: x['hora_literal'])
     return valid_slots
 
+def generate_default_slug_for_user(u):
+    if not u:
+        return 'psic.profesional'
+    if isinstance(u, sqlite3.Row):
+        u = dict(u)
+    if u.get('slug'):
+        return u.get('slug')
+    nombres = u.get('nombres') or ''
+    apellidos = u.get('apellidos') or ''
+    full = f"{nombres} {apellidos}".strip().lower()
+    if not full:
+        full = u.get('username') or f"user{u.get('id', '1')}"
+    clean = re.sub(r'[^a-z0-9]+', '.', full.lower()).strip('.')
+    return f"psic.{clean}"
+
 def get_psychologist_by_id_or_slug(cursor, identifier):
     """
     Busca un psicólogo en la tabla usuarios por ID (int) o por slug / username.
@@ -500,6 +515,7 @@ def add_agenda_event():
     })
 
 @agenda_bp.route('/api/agenda/<int:event_id>', methods=['DELETE'])
+@agenda_bp.route('/api/agenda/events/<int:event_id>', methods=['DELETE'])
 @login_required
 def delete_agenda_event(event_id):
     db = get_db()

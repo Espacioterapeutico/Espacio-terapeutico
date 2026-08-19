@@ -2663,6 +2663,8 @@ def inject_asset_version():
 @app.route('/login')
 @app.route('/para-psicologos')
 @app.route('/psic.<path:slug>')
+@app.route('/psic/<path:slug>')
+@app.route('/psicologo/<path:slug>')
 @app.route('/agendar/<path:slug>')
 @app.route('/registro/<path:slug>')
 def index(slug=None):
@@ -2682,6 +2684,10 @@ def index(slug=None):
     identifier = None
     if path.startswith('agendar/'):
         identifier = path.replace('agendar/', '').strip()
+    elif path.startswith('psicologo/'):
+        identifier = path.replace('psicologo/', '').strip()
+    elif path.startswith('psic/'):
+        identifier = path.replace('psic/', '').strip()
     elif path.startswith('psic.'):
         identifier = path.strip()
     elif path.startswith('registro/'):

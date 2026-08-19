@@ -562,6 +562,8 @@ def get_therapist_module_report(modulo_clave):
     elif modulo_clave in ('medicacion', 'adherencia'):
         modulo_clave = 'adherencia'
 
+
+
     try:
         if modulo_clave == 'sueno':
             cursor.execute("""
@@ -631,21 +633,38 @@ def get_therapist_module_report(modulo_clave):
             """, (user_id,))
         else:
             return jsonify({'error': 'Módulo desconocido'}), 400
-        
+
         rows = [dict(r) for r in cursor.fetchall()]
         return jsonify(rows)
     except Exception as e:
-        # Tables may not exist yet - return empty array gracefully
         print(f"[WARN] Error fetching report for {modulo_clave}: {e}")
         return jsonify([])
 
-# --- ENDPOINTS ADHERENCIA AL TRATAMIENTO ---
 
+@herramientas_bp.route('/api/herramientas/consumo-pantalla', methods=['POST'])
+def api_log_consumo_pantalla():
+    try:
+        from routes_pacientes import log_patient_screen_time
+        return log_patient_screen_time()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
+@herramientas_bp.route('/api/herramientas/consumo-pantalla/<int:patient_id>', methods=['GET'])
+def api_get_consumo_pantalla(patient_id):
+    try:
+        from routes_pacientes import get_patient_screen_time_history
+        return get_patient_screen_time_history()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @herramientas_bp.route('/api/therapist/patients/<int:patient_id>/activation/activities', methods=['GET', 'POST'])
+@herramientas_bp.route('/api/therapist/activation/activities/<int:patient_id>', methods=['GET', 'POST'])
+@herramientas_bp.route('/api/therapist/activation/activities', methods=['GET', 'POST'])
 @login_required
-def therapist_patient_activation_activities(patient_id):
+def therapist_patient_activation_activities(patient_id=None):
+    if not patient_id:
+        patient_id = request.args.get('patient_id') or session.get('last_viewed_patient_id') or 1
+    patient_id = int(patient_id)
     user_id = session.get('user_id')
     db = get_db()
     cursor = db.cursor()
@@ -676,7 +695,6 @@ def therapist_patient_activation_activities(patient_id):
     return jsonify(rows)
 
 
-
 @herramientas_bp.route('/api/therapist/activation/activities/<int:act_id>/toggle', methods=['POST'])
 @login_required
 def toggle_activation_activity(act_id):
@@ -687,5 +705,3 @@ def toggle_activation_activity(act_id):
     cursor.execute("UPDATE activacion_actividades SET activa = ? WHERE id = ?", (activa, act_id))
     db.commit()
     return jsonify({'success': True, 'activa': activa})
-
-

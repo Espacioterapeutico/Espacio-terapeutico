@@ -9429,7 +9429,7 @@ window.handleSaveSaText = handleSaveSaText;
 // ==========================================
 let regPsychologists = [];
 
-async function loadActivePsychologists() {
+async function loadActivePsychologists(preselectId = null) {
     try {
         const res = await fetch('/api/active-psychologists');
         if (!res.ok) return;
@@ -9438,11 +9438,11 @@ async function loadActivePsychologists() {
         const select = document.getElementById('reg-psicologo-id');
         if (select) {
             const urlParams = new URLSearchParams(window.location.search);
-            let refId = urlParams.get('ref_psicologo');
+            let refId = preselectId || select.value || urlParams.get('ref_psicologo');
             
             // Si refId es un slug o username, buscar el id numérico correspondiente
             if (refId && isNaN(parseInt(refId))) {
-                const cleanRef = refId.toLowerCase().replace('psic.', '').replace('psic-', '');
+                const cleanRef = String(refId).toLowerCase().replace('psic.', '').replace('psic-', '').replace('psicologo/', '');
                 const found = regPsychologists.find(p => 
                     (p.slug && p.slug.toLowerCase().includes(cleanRef)) || 
                     (p.username && p.username.toLowerCase().includes(cleanRef))
@@ -9450,7 +9450,7 @@ async function loadActivePsychologists() {
                 if (found) refId = found.id;
             }
 
-            const currentVal = select.value || refId;
+            const currentVal = refId;
             select.innerHTML = '<option value="" disabled selected>Selecciona tu psicólogo...</option>';
             regPsychologists.forEach(p => {
                 const isSelected = currentVal && String(p.id) === String(currentVal);
@@ -9470,7 +9470,11 @@ let isPreRegisteredPatient = false;
 
 function openRegisterModal(e) {
     if (e) e.preventDefault();
-    document.getElementById('register-modal').classList.remove('hide');
+    const modal = document.getElementById('register-modal');
+    if (modal) {
+        modal.classList.remove('hide');
+        modal.style.display = 'flex';
+    }
     document.getElementById('register-form').reset();
     
     // Configurar visibilidad inicial de los pasos de registro
@@ -9484,7 +9488,7 @@ function openRegisterModal(e) {
     document.getElementById('reg-apellidos').disabled = false;
     document.getElementById('reg-cedula').disabled = false;
     
-    // Restablecer visibilidades de sub-campos del formulario
+    // Restablecer visabilidades de sub-campos del formulario
     document.getElementById('reg-tipo-usuario-group').classList.remove('hide');
     document.getElementById('reg-common-fields').classList.add('hide');
     document.getElementById('reg-paciente-fields').classList.add('hide');
@@ -9503,7 +9507,11 @@ function openRegisterModal(e) {
 }
 
 function closeRegisterModal() {
-    document.getElementById('register-modal').classList.add('hide');
+    const modal = document.getElementById('register-modal');
+    if (modal) {
+        modal.classList.add('hide');
+        modal.style.display = 'none';
+    }
 }
 
 async function validateRegisterCedula() {
@@ -17253,12 +17261,15 @@ async function loadDedicatedTherapistProfile(slug) {
     window.scrollTo({ top: 0, behavior: 'instant' });
 
     try {
-        const cleanSlug = slug.replace('/psic.', '').replace('psic.', '').replace('/agendar/', '').replace('/registro/', '').replace('/', '');
-        const res = await fetch(`/api/public/therapist/${cleanSlug}`);
+        let rawStr = typeof slug === 'string' ? slug : window.location.pathname;
+        let cleanSlug = rawStr.split('?')[0].split('#')[0].replace(/^\/+|\/+$/g, '');
+        cleanSlug = cleanSlug.replace(/^(psicologo|psic|agendar|registro)\//i, '').replace(/^psic\./i, '');
+        
+        const res = await fetch(`/api/public/therapist/${encodeURIComponent(cleanSlug)}`);
         if (!res.ok) {
             if (profScreen) {
-                document.getElementById('pub-profile-name').textContent = "Psicólogo no encontrado";
-                document.getElementById('pub-profile-bio').textContent = "El perfil solicitado no existe o no se encuentra activo actualmente.";
+                if (document.getElementById('pub-profile-name')) document.getElementById('pub-profile-name').textContent = "Psicólogo no encontrado";
+                if (document.getElementById('pub-profile-bio')) document.getElementById('pub-profile-bio').textContent = "El perfil solicitado no existe o no se encuentra activo actualmente.";
             }
             return;
         }
@@ -17360,8 +17371,11 @@ async function loadDedicatedTherapistProfile(slug) {
         const regBtn = document.getElementById('pub-profile-reg-btn');
         if (regBtn) {
             regBtn.onclick = (e) => {
-                e.preventDefault();
-                window.location.href = `/registro/${cleanSlug}`;
+                if (e) e.preventDefault();
+                openRegisterModal(e);
+                if (t && t.id) {
+                    loadActivePsychologists(t.id);
+                }
             };
         }
 
@@ -17370,7 +17384,7 @@ async function loadDedicatedTherapistProfile(slug) {
             agendarBtn.href = '#';
             agendarBtn.style.display = 'inline-flex';
             agendarBtn.onclick = async (e) => {
-                e.preventDefault();
+                if (e) e.preventDefault();
                 // Ocultar el perfil y mostrar directamente la pantalla de agenda rápida
                 const pubLanding = document.getElementById('public-landing-screen');
                 const profScreen = document.getElementById('public-therapist-profile-screen');
@@ -17383,34 +17397,12 @@ async function loadDedicatedTherapistProfile(slug) {
                 if (fastScreen) { fastScreen.classList.remove('hide'); fastScreen.style.display = 'flex'; }
 
                 window.scrollTo({ top: 0, behavior: 'instant' });
-                fastBookingTherapistId = cleanSlug;
-
-                // Nombre del terapeuta
-                const titleEl = document.getElementById('fast-booking-therapist-name');
-                if (titleEl) titleEl.textContent = t.nombre_completo || `Psic. ${cleanSlug}`;
-
-                // Cargar modalidades
-                try {
-                    const mRes = await fetch(`/api/psychologists/${cleanSlug}/modalities`);
-                    if (mRes.ok) {
-                        const modalities = await mRes.json();
-                        const selectElement = document.getElementById('fast-modalidad');
-                        if (selectElement) {
-                            selectElement.innerHTML = '';
-                            modalities.forEach(m => {
-                                const opt = document.createElement('option');
-                                opt.value = m;
-                                opt.textContent = m;
-                                selectElement.appendChild(opt);
-                            });
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error al cargar modalidades para agenda rápida:', e);
+                fastBookingTherapistId = (t && (t.slug || t.id)) || cleanSlug;
+                const targetSlug = (t && t.slug) || cleanSlug;
+                if (window.history && window.history.pushState) {
+                    window.history.pushState(null, '', `/agendar/${targetSlug}`);
                 }
-
-                initFastTimeZoneSelector();
-                renderFastCalendar();
+                await checkFastBookingQuery();
             };
         }
 
@@ -17455,6 +17447,13 @@ async function loadDedicatedTherapistProfile(slug) {
             contactList.innerHTML = cHtml;
         }
 
+        if (window.location.pathname.toLowerCase().startsWith('/registro/') || String(slug).startsWith('/registro/')) {
+            openRegisterModal();
+            if (t && t.id) {
+                loadActivePsychologists(t.id);
+            }
+        }
+
     } catch(e) {
         console.error("Error al cargar perfil de psicólogo:", e);
     }
@@ -17474,6 +17473,7 @@ function initLandingRouteHandling() {
         if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
         if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
         if (fastScreen) { fastScreen.classList.remove('hide'); fastScreen.style.display = 'flex'; }
+        checkFastBookingQuery();
         return;
     }
 
@@ -17488,7 +17488,7 @@ function initLandingRouteHandling() {
         return;
     }
 
-    if (path.startsWith('/psic.') || path.startsWith('/registro/')) {
+    if (path.startsWith('/psic.') || path.startsWith('/psicologo/') || path.startsWith('/psic/') || path.startsWith('/registro/')) {
         if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
         if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
         if (profScreen) { profScreen.classList.remove('hide'); profScreen.style.display = 'block'; }

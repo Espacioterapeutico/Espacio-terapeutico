@@ -13,6 +13,7 @@ from flask import Blueprint, request, jsonify, session, g
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from routes_finanzas import auto_settle_patient_debts
+from routes_agenda import generate_dynamic_slots
 
 pacientes_bp = Blueprint('pacientes', __name__)
 
