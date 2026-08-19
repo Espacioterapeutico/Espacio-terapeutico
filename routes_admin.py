@@ -41,6 +41,13 @@ def patient_login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def sync_patient_to_firebase(patient_id):
+    try:
+        from app import sync_patient_to_firebase as _sync
+        _sync(patient_id)
+    except Exception as _e:
+        print(f"[WARN] Error en sync_patient_to_firebase({patient_id}): {_e}")
+
 def check_is_superadmin():
     return session.get('role') in ['superadmin', 'admin']
 

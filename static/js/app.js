@@ -6174,7 +6174,7 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     // Grid de días de la semana
     const daysList = document.createElement('div');
     daysList.className = 'profile-days-list';
-    daysList.style.display = 'flex'; // Desplegado por defecto para visualización clara
+    daysList.style.display = 'none'; // Recogido por defecto
     daysList.style.flexDirection = 'column';
     daysList.style.gap = '0.75rem';
     daysList.style.marginTop = '0.75rem';
@@ -6205,7 +6205,7 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     toggleBtn.style.padding = '0.25rem 0.5rem';
     toggleBtn.style.fontSize = '0.8rem';
     toggleBtn.style.color = 'var(--text-muted)';
-    toggleBtn.style.transform = 'rotate(0deg)';
+    toggleBtn.style.transform = 'rotate(-90deg)'; // Recogido por defecto
     toggleBtn.style.transition = 'transform 0.2s';
     
     toggleBtn.onclick = () => {
@@ -11024,6 +11024,8 @@ async function checkFastBookingQuery() {
         paramVal = urlParams.get('fast_booking');
     } else if (path.startsWith('/agendar/')) {
         paramVal = path.replace('/agendar/', '').trim();
+    } else if (path.endsWith('/agendar')) {
+        paramVal = path.replace(/\/agendar$/, '').replace(/^\//, '').trim();
     }
     
     if (paramVal) {
@@ -17471,7 +17473,7 @@ function initLandingRouteHandling() {
     const fastScreen = document.getElementById('fast-booking-screen');
     const appLayout = document.getElementById('app-layout');
     
-    if (urlParams.has('fast_booking') || path.startsWith('/agendar/')) {
+    if (urlParams.has('fast_booking') || path.startsWith('/agendar/') || path.endsWith('/agendar')) {
         if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
         if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
         if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
@@ -17544,6 +17546,8 @@ function closeFastBookingScreen(e) {
     if (!targetSlug) {
         if (path.startsWith('/agendar/')) {
             targetSlug = path.replace('/agendar/', '');
+        } else if (path.endsWith('/agendar')) {
+            targetSlug = path.replace(/\/agendar$/, '').replace(/^\//, '');
         } else if (path.startsWith('/psic.')) {
             targetSlug = path.replace('/psic.', '');
         } else if (path.startsWith('/psicologo/')) {

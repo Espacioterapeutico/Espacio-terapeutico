@@ -34,6 +34,13 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def sync_patient_to_firebase(patient_id):
+    try:
+        from app import sync_patient_to_firebase as _sync
+        _sync(patient_id)
+    except Exception as _e:
+        print(f"[WARN] Error en sync_patient_to_firebase({patient_id}): {_e}")
+
 def get_psicologo_id_filter():
     role = session.get('role')
     user_id = session.get('user_id')
@@ -317,10 +324,12 @@ def get_agenda():
     if psic_id is not None:
         cursor.execute("""
             SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,
-                   (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
+                   (CASE WHEN EXISTS (
+                       SELECT 1 FROM sesiones s 
+                       WHERE s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha)
+                   ) THEN 1 ELSE 0 END) as has_session
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
-            LEFT JOIN sesiones s ON (s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha))
             WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
               AND p.psicologo_id = ?
             ORDER BY af.fecha ASC, af.hora ASC
@@ -328,10 +337,12 @@ def get_agenda():
     else:
         cursor.execute("""
             SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,
-                   (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
+                   (CASE WHEN EXISTS (
+                       SELECT 1 FROM sesiones s 
+                       WHERE s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha)
+                   ) THEN 1 ELSE 0 END) as has_session
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
-            LEFT JOIN sesiones s ON (s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha))
             WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
             ORDER BY af.fecha ASC, af.hora ASC
         """)
@@ -514,6 +525,44 @@ def add_agenda_event():
         'google_synced': bool(google_event_id),
         'id': event_id
     })
+
+@agenda_bp.route('/api/agenda/<int:event_id>', methods=['PUT', 'POST'])
+@agenda_bp.route('/api/agenda/events/<int:event_id>', methods=['PUT', 'POST'])
+@login_required
+def update_agenda_event_status(event_id):
+    data = request.json or {}
+    db = get_db()
+    cursor = db.cursor()
+    
+    estado = data.get('estado')
+    confirmada = data.get('confirmada')
+    estado_pago = data.get('estado_pago')
+    
+    updates = []
+    params = []
+    
+    if confirmada is not None:
+        updates.append("confirmada = ?")
+        params.append(int(confirmada))
+        
+    if estado_pago is not None:
+        updates.append("estado_pago = ?")
+        params.append(estado_pago)
+    elif estado == 'Confirmada':
+        updates.append("confirmada = 1")
+    elif estado == 'Cancelada':
+        updates.append("estado_pago = 'Cancelada'")
+        updates.append("confirmada = 0")
+        
+    if not updates:
+        return jsonify({'success': True, 'message': 'Sin cambios'}), 200
+        
+    params.append(event_id)
+    sql = f"UPDATE agenda_finanzas SET {', '.join(updates)} WHERE id = ?"
+    cursor.execute(sql, params)
+    db.commit()
+    
+    return jsonify({'success': True, 'message': 'Cita actualizada exitosamente.'})
 
 @agenda_bp.route('/api/agenda/<int:event_id>', methods=['DELETE'])
 @agenda_bp.route('/api/agenda/events/<int:event_id>', methods=['DELETE'])

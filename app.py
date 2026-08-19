@@ -2666,6 +2666,7 @@ def inject_asset_version():
 @app.route('/psic/<path:slug>')
 @app.route('/psicologo/<path:slug>')
 @app.route('/agendar/<path:slug>')
+@app.route('/<path:slug>/agendar')
 @app.route('/registro/<path:slug>')
 def index(slug=None):
     path = request.path.strip('/')
