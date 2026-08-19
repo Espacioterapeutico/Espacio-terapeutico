@@ -2079,7 +2079,8 @@ async function fetchAvailableHours(dateStr) {
         const localSlots = [];
         if (data.slots && data.slots.length > 0) {
             data.slots.forEach(slotObj => {
-                const d = new Date(slotObj.iso);
+                const isoVal = slotObj.iso || slotObj.iso_timestamp || `${dateStr}T${slotObj.hora_literal || '00:00'}:00-04:00`;
+                const d = new Date(isoVal);
                 const yr = d.getFullYear();
                 const mo = String(d.getMonth() + 1).padStart(2, '0');
                 const dy = String(d.getDate()).padStart(2, '0');
@@ -2088,8 +2089,8 @@ async function fetchAvailableHours(dateStr) {
                 if (localDateStr === dateStr) {
                     const localTimeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
                     
-                    const therapistDate = slotObj.iso.substring(0, 10);
-                    const therapistHour = slotObj.iso.substring(11, 16);
+                    const therapistDate = isoVal.substring(0, 10);
+                    const therapistHour = slotObj.hora_literal || isoVal.substring(11, 16);
                     
                     localSlots.push({
                         displayTime: localTimeStr,
@@ -11267,8 +11268,9 @@ async function fetchFastAvailableHours(dateStr) {
         
         if (data.slots && data.slots.length > 0) {
             data.slots.forEach(slotObj => {
-                const hourStr = slotObj.hora_literal || slotObj.iso.substring(11, 16);
-                const therapistDate = slotObj.iso.substring(0, 10);
+                const isoVal = slotObj.iso || slotObj.iso_timestamp || `${dateStr}T${slotObj.hora_literal || '00:00'}:00-04:00`;
+                const hourStr = slotObj.hora_literal || isoVal.substring(11, 16);
+                const therapistDate = isoVal.substring(0, 10);
                 
                 const converted = convertTimeFromVETToZone(therapistDate, hourStr, targetTz);
                 
@@ -12138,8 +12140,9 @@ async function fetchRescheduleAvailableHours(dateStr) {
         
         const localSlots = [];
         slots.forEach(slotObj => {
-            const therapistDate = slotObj.iso.substring(0, 10);
-            const therapistHour = slotObj.hora_literal || slotObj.iso.substring(11, 16);
+            const isoVal = slotObj.iso || slotObj.iso_timestamp || `${dateStr}T${slotObj.hora_literal || '00:00'}:00-04:00`;
+            const therapistDate = isoVal.substring(0, 10);
+            const therapistHour = slotObj.hora_literal || isoVal.substring(11, 16);
 
             if (therapistDate === dateStr) {
                 localSlots.push({

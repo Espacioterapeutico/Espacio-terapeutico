@@ -203,6 +203,7 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
             continue
 
         slot['iso_timestamp'] = slot_dt.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+        slot['iso'] = slot['iso_timestamp']
         valid_slots.append(slot)
 
     valid_slots.sort(key=lambda x: x['hora_literal'])
