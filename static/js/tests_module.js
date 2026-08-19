@@ -6,10 +6,11 @@ var allTestPatientsCache = [];
 var selectedTestCodeForApplication = null;
 var currentCatalogCategory = 'TODAS';
 var currentCatalogPage = 1;
-var CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
+var CATALOG_PER_PAGE = 9; // Vista cuadrícula 3x3 (9 por página)
 
 // BASE DE DATOS DE EVALUACIONES PSICOMÉTRICAS CON METADATOS COMPLETOS
 var testsCatalogDatabase = [
+    // 1. NEURODIVERGENCIA Y AUTISMO
     { 
         code: 'AQ', 
         name: 'AQ — Cociente de Espectro Autista', 
@@ -19,7 +20,8 @@ var testsCatalogDatabase = [
         autor: 'Simon Baron-Cohen et al.', 
         poblacion: 'Adolescentes y Adultos (16+ años)', 
         validez: 'α = 0.82 | Punto de corte: ≥ 32', 
-        itemsCount: 50 
+        itemsCount: 50,
+        isPhysical: false
     },
     { 
         code: 'RAADS-R', 
@@ -30,7 +32,8 @@ var testsCatalogDatabase = [
         autor: 'Riva Ariella Ritvo et al.', 
         poblacion: 'Adultos (18+ años)', 
         validez: 'α = 0.92 | Umbral diagnóstico: ≥ 65', 
-        itemsCount: 80 
+        itemsCount: 80,
+        isPhysical: false
     },
     { 
         code: 'CAT-Q', 
@@ -41,7 +44,8 @@ var testsCatalogDatabase = [
         autor: 'Laura Hull et al.', 
         poblacion: 'Adolescentes y Adultos (16+ años)', 
         validez: 'α = 0.90 | Medición de Camuflaje', 
-        itemsCount: 25 
+        itemsCount: 25,
+        isPhysical: false
     },
     { 
         code: 'ASRS-ADHD', 
@@ -52,8 +56,24 @@ var testsCatalogDatabase = [
         autor: 'OMS / Adler et al.', 
         poblacion: 'Adultos (18+ años)', 
         validez: 'α = 0.87 | Criterios DSM / OMS', 
-        itemsCount: 18 
+        itemsCount: 18,
+        isPhysical: false
     },
+    {
+        code: 'ADOS-2',
+        name: 'ADOS-2 — Escala de Observación para el Diagnóstico del Autismo',
+        siglas: 'ADOS-2',
+        cat: 'Neurodivergencia y Autismo',
+        desc: 'Protocolo estandarizado de observación clínica y algoritmo de afecto social (AS) y conductas repetitivas (CRR).',
+        autor: 'Catherine Lord et al. (2012)',
+        poblacion: 'Niños y Adultos (Módulos T, 1, 2, 3, 4)',
+        validez: 'Sensibilidad 91% | Estándar de Oro Diagnóstico TEA',
+        itemsCount: 14,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/ados2_protocolo_observacion.pdf'
+    },
+
+    // 2. DEPRESIÓN Y ANSIEDAD
     { 
         code: 'BDI-II', 
         name: 'BDI-II — Inventario de Depresión de Beck', 
@@ -63,7 +83,8 @@ var testsCatalogDatabase = [
         autor: 'Aaron T. Beck et al.', 
         poblacion: 'Adolescentes y Adultos (13+ años)', 
         validez: 'α = 0.92 | Validez Clínica Estandarizada', 
-        itemsCount: 21 
+        itemsCount: 21,
+        isPhysical: false
     },
     { 
         code: 'BAI', 
@@ -74,8 +95,103 @@ var testsCatalogDatabase = [
         autor: 'Aaron T. Beck et al.', 
         poblacion: 'Adolescentes y Adultos (13+ años)', 
         validez: 'α = 0.92 | Alta Especificidad Ansiosa', 
-        itemsCount: 21 
+        itemsCount: 21,
+        isPhysical: false
     },
+    {
+        code: 'ZUNG-SDS',
+        name: 'ZUNG-SDS — Escala Autoaplicada de Depresión de Zung',
+        siglas: 'ZUNG-SDS',
+        cat: 'Depresión y Ansiedad',
+        desc: 'Evaluación cuantitativa de 20 reactivos orientada a cuantificar los síntomas afectivos, fisiológicos y psicológicos de la depresión.',
+        autor: 'William W.K. Zung',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'α = 0.88 | Índice de Depresión',
+        itemsCount: 20,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/zung_depresion_escala.pdf'
+    },
+    {
+        code: 'HAMILTON-D',
+        name: 'HAMILTON-D — Escala de Depresión de Hamilton (HDRS)',
+        siglas: 'HAM-D',
+        cat: 'Depresión y Ansiedad',
+        desc: 'Escala heteroaplicada de 17 ítems para la evaluación cuantitativa de la severidad del cuadro depresivo y respuesta terapéutica.',
+        autor: 'Max Hamilton',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'α = 0.90 | Estándar Clínico Heteroaplicado',
+        itemsCount: 17,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/hamilton_depresion_cuestionario.pdf'
+    },
+    {
+        code: 'IDARE-STAI',
+        name: 'IDARE / STAI — Inventario de Ansiedad Rasgo-Estado',
+        siglas: 'IDARE',
+        cat: 'Depresión y Ansiedad',
+        desc: 'Evaluación dual de 40 reactivos que distingue la ansiedad transitoria (Estado) de la predisposición ansiosa permanente (Rasgo).',
+        autor: 'Spielberger, Gorsuch y Lushene',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'α = 0.91 | Evaluación Rasgo / Estado',
+        itemsCount: 40,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/idare_stai_instrumento.pdf'
+    },
+    {
+        code: 'BECK-BHS',
+        name: 'BHS — Escala de Desesperanza de Beck',
+        siglas: 'BHS',
+        cat: 'Depresión y Ansiedad',
+        desc: 'Inventario de 20 frases Verdadero/Falso diseñado para evaluar las actitudes negativas y desesperanza hacia el futuro (indicador de riesgo).',
+        autor: 'Aaron T. Beck et al.',
+        poblacion: 'Adolescentes y Adultos (13+ años)',
+        validez: 'α = 0.93 | Factor de Riesgo Clínico',
+        itemsCount: 20,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/beck_desesperanza.pdf'
+    },
+
+    // 3. PSICOPATOLOGÍA Y SÍNTOMAS GENERALES
+    {
+        code: 'SCL-90-R',
+        name: 'SCL-90-R — Cuestionario de 90 Síntomas Revisado',
+        siglas: 'SCL-90-R',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Evaluación autoadministrada de 90 ítems en escala Likert que explora 9 dimensiones sintomáticas de malestar psicológico.',
+        autor: 'Leonard R. Derogatis',
+        poblacion: 'Adolescentes y Adultos (13+ años)',
+        validez: 'α = 0.95 | Perfil Sintomático 9 Dimensiones',
+        itemsCount: 90,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/scl90r_cuestionario.pdf'
+    },
+    { 
+        code: 'MCMI-II', 
+        name: 'MCMI-II — Inventario Multiaxial Clínico de Millon', 
+        siglas: 'MCMI-II', 
+        cat: 'Personalidad y Psicopatología', 
+        desc: 'Instrumento multiaxial psicométrico de 175 ítems para la evaluación de patrones de personalidad clínica y síndromes severos.', 
+        autor: 'Theodore Millon', 
+        poblacion: 'Adultos (18+ años)', 
+        validez: 'Estandarizado TB | 24 Escalones Clínicos', 
+        itemsCount: 175,
+        isPhysical: false
+    },
+    {
+        code: 'MMPI-2',
+        name: 'MMPI-2 — Inventario Multifásico de Personalidad de Minnesota',
+        siglas: 'MMPI-2',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Inventario clínico de 567 reactivos V/F para evaluación multiaxial de personalidad, validez y psicopatología.',
+        autor: 'Hathaway & McKinley',
+        poblacion: 'Adultos (18+ años)',
+        validez: '10 Escalas Clínicas | L, F, K',
+        itemsCount: 567,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/mmpi-2_cuadernillo.pdf'
+    },
+
+    // 4. CAPACIDAD INTELECTUAL Y NEUROPSICOLOGÍA
     { 
         code: 'RAVEN', 
         name: 'RAVEN — Test de Matrices Progresivas de Raven', 
@@ -85,19 +201,130 @@ var testsCatalogDatabase = [
         autor: 'John C. Raven', 
         poblacion: 'Adolescentes y Adultos (12+ años)', 
         validez: 'α = 0.90 | Razonamiento No Verbal', 
-        itemsCount: 60 
+        itemsCount: 60,
+        isPhysical: false
     },
-    { 
-        code: 'MCMI-II', 
-        name: 'MCMI-II — Inventario Multiaxial Clínico de Millon', 
-        siglas: 'MCMI-II', 
-        cat: 'Personalidad', 
-        desc: 'Instrumento multiaxial psicométrico de 175 ítems para la evaluación de patrones de personalidad clínica y síndromes severos.', 
-        autor: 'Theodore Millon', 
-        poblacion: 'Adultos (18+ años)', 
-        validez: 'Estandarizado TB | 24 Escalones Clínicos', 
-        itemsCount: 175 
+    {
+        code: 'MMSE',
+        name: 'MMSE — Mini-Mental State Examination (Folstein)',
+        siglas: 'MMSE',
+        cat: 'Capacidad Intelectual',
+        desc: 'Prueba neuropsicológica de 30 puntos ampliamente utilizada para el tamizaje de deterioro cognitivo y memoria.',
+        autor: 'Folstein, Folstein & McHugh',
+        poblacion: 'Adultos Mayores (18+ años)',
+        validez: 'Sensibilidad 87% | Tamizaje Cognitivo',
+        itemsCount: 30,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/minimental_hoja_respuesta.pdf'
     },
+    {
+        code: 'MOCA-TEST',
+        name: 'MoCA — Montreal Cognitive Assessment',
+        siglas: 'MoCA',
+        cat: 'Capacidad Intelectual',
+        desc: 'Evaluación cognitiva breve de 30 puntos diseñada para la detección precoz de Deterioro Cognitivo Leve (DCL).',
+        autor: 'Ziad Nasreddine et al.',
+        poblacion: 'Adultos y Adultos Mayores (55+ años)',
+        validez: 'Sensibilidad 90% para DCL',
+        itemsCount: 30,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/moca_test_espanol.pdf'
+    },
+    {
+        code: 'INECO-IFS',
+        name: 'INECO — Frontal Screening (Versión Venezuela)',
+        siglas: 'INECO',
+        cat: 'Capacidad Intelectual',
+        desc: 'Batería neuropsicológica breve validada con baremos de Venezuela para la evaluación de funciones ejecutivas frontales.',
+        autor: 'Teresa Torralva et al.',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'Baremos Venezuela | Funciones Ejecutivas',
+        itemsCount: 8,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/ineco_venezuela_protocolo.pdf'
+    },
+    {
+        code: 'TMT-AB',
+        name: 'TMT — Trail Making Test (Partes A y B)',
+        siglas: 'TMT A/B',
+        cat: 'Capacidad Intelectual',
+        desc: 'Prueba papel y lápiz de atención dividida, velocidad de procesamiento motor y flexibilidad cognitiva.',
+        autor: 'Army Individual Test Battery',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'Estandarizado | Funciones Ejecutivas',
+        itemsCount: 2,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/trail_making_test_tmt.pdf'
+    },
+
+    // 5. MATERIALES PROYECTIVOS Y GRÁFICOS (DESCARGABLES / IMPRIMIBLES)
+    {
+        code: 'HTP-TEST',
+        name: 'HTP — Test de Dibujo Casa-Árbol-Persona',
+        siglas: 'HTP',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Técnica proyectiva gráfica de dibujo libre para la evaluación de la personalidad, autoimagen y mecanismos de defensa.',
+        autor: 'John N. Buck',
+        poblacion: 'Niños, Adolescentes y Adultos',
+        validez: 'Técnica Proyectiva Cualitativa',
+        itemsCount: 3,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/htp_manual_protocolo.pdf'
+    },
+    {
+        code: 'WARTEGG-TEST',
+        name: 'WARTEGG — Test de Dibujo de 8/16 Campos',
+        siglas: 'WARTEGG',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Prueba proyectiva de dibujo sobre cuadros de estímulos para la evaluación de la estructura de personalidad e integración del Yo.',
+        autor: 'Ehrig Wartegg',
+        poblacion: 'Adolescentes y Adultos',
+        validez: 'Técnica Proyectiva Estructurada',
+        itemsCount: 8,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/wartegg_protocolo.pdf'
+    },
+    {
+        code: 'SACKS-TEST',
+        name: 'SACKS — Test de Frases Incompletas para Adultos',
+        siglas: 'SACKS',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Inventario proyectivo verbal de 60 frases incompletas que explora 4 áreas del sujeto: familia, sexo, relaciones y concepto de sí mismo.',
+        autor: 'Joseph M. Sacks',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'Análisis Cualitativo de Actitudes',
+        itemsCount: 60,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/sacks_adultos_protocolo.doc'
+    },
+    {
+        code: 'TAT-TEST',
+        name: 'TAT — Test de Apercepción Temática (Manual Corto)',
+        siglas: 'TAT',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Técnica proyectiva narrativa a través de láminas estructuradas para el análisis de necesidades, presiones y conflictos inconscientes.',
+        autor: 'Henry A. Murray',
+        poblacion: 'Adolescentes y Adultos',
+        validez: 'Análisis Dinámico de la Personalidad',
+        itemsCount: 20,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/tat_manual_protocolo.doc'
+    },
+    {
+        code: 'REY-OSTERRIETH',
+        name: 'REY-O — Figura Compleja de Rey-Osterrieth',
+        siglas: 'REY-O',
+        cat: 'Capacidad Intelectual',
+        desc: 'Prueba viso-constructiva de copia y reproducción de memoria para evaluar organización perceptual y memoria visual.',
+        autor: 'André Rey & Paul-Alexandre Osterrieth',
+        poblacion: 'Niños (8+) y Adultos',
+        validez: 'Estandarizada | Evaluación Neuropsicológica',
+        itemsCount: 18,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/figura_rey_osterrieth.pdf'
+    },
+
+    // 6. ORIENTACIÓN VOCACIONAL E IDENTIDAD DE GÉNERO
     { 
         code: 'HOLLAND', 
         name: 'HOLLAND — Test de Intereses Vocacionales (RIASEC)', 
@@ -107,7 +334,8 @@ var testsCatalogDatabase = [
         autor: 'John L. Holland', 
         poblacion: 'Adolescentes y Adultos (14+ años)', 
         validez: 'α = 0.86 | Perfil Tipológico RIASEC', 
-        itemsCount: 60 
+        itemsCount: 60,
+        isPhysical: false
     },
     { 
         code: 'TCS', 
@@ -118,7 +346,8 @@ var testsCatalogDatabase = [
         autor: 'Kozee, Reisner et al.', 
         poblacion: 'Jóvenes y Adultos (16+ años)', 
         validez: 'α = 0.89 | Afirmación e Identidad', 
-        itemsCount: 12 
+        itemsCount: 12,
+        isPhysical: false
     },
     { 
         code: 'UGDS-GS', 
@@ -129,7 +358,8 @@ var testsCatalogDatabase = [
         autor: 'McGuire et al. / Utrecht', 
         poblacion: 'Adolescentes y Adultos (12+ años)', 
         validez: 'α = 0.91 | Medición de Disforia', 
-        itemsCount: 18 
+        itemsCount: 18,
+        isPhysical: false
     }
 ];
 
@@ -628,36 +858,52 @@ function renderCatalogViewWithFiltersAndPagination() {
         const checkDisplay = isSelected ? 'inline' : 'none';
         const boxShadow = isSelected ? '0 8px 25px rgba(112, 46, 94, 0.15)' : '0 2px 8px rgba(0,0,0,0.03)';
 
+        const typeBadge = test.isPhysical
+            ? `<span style="font-size: 0.65rem; font-weight: 800; color: #d97706; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 8px; white-space: nowrap;">📄 Material Físico</span>`
+            : `<span style="font-size: 0.65rem; font-weight: 800; color: #16a34a; background: #dcfce7; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 8px; white-space: nowrap;">⚡ Digital</span>`;
+
+        const downloadBtn = test.downloadUrl
+            ? `<a href="${test.downloadUrl}" target="_blank" onclick="event.stopPropagation();" title="Descargar material/protocolo para imprimir" style="background: #fff7ed; border: 1px solid #ffedd5; color: #c2410c; font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; margin-right: 4px;">
+                📥 Descargar
+               </a>`
+            : '';
+
         html += `
             <div id="card-test-choice-${test.code}" onclick="selectTestForApplication('${test.code}')" 
-                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1.15rem; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow}; min-height: 320px; box-sizing: border-box;"
+                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 14px; padding: 0.8rem 0.9rem; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow}; box-sizing: border-box;"
                  onmouseover="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#702e5e'; this.style.transform='translateY(-2px)'; }"
                  onmouseout="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#e2e8f0'; this.style.transform='none'; }">
                 
-                <span class="test-card-check" style="display: ${checkDisplay}; position: absolute; top: 12px; right: 14px; font-weight: 900; color: #702e5e; font-size: 1.2rem;">✓</span>
+                <span class="test-card-check" style="display: ${checkDisplay}; position: absolute; top: 10px; right: 12px; font-weight: 900; color: #702e5e; font-size: 1.1rem;">✓</span>
 
                 <div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 8px;">
-                        <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 3px 10px; border-radius: 12px;">${test.siglas}</span>
-                        <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 10px;">${test.itemsCount} ítems</span>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
+                        <span style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 2px 7px; border-radius: 10px;">${test.siglas}</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 0.68rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 7px; border-radius: 8px;">${test.itemsCount} ítems</span>
+                            ${typeBadge}
+                        </div>
                     </div>
 
-                    <h4 style="margin: 0 0 6px 0; font-size: 0.98rem; font-weight: 800; color: #0f172a; line-height: 1.35;">${test.name}</h4>
-                    <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: #64748b; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                    <h4 style="margin: 0 0 4px 0; font-size: 0.88rem; font-weight: 800; color: #0f172a; line-height: 1.3;">${test.name}</h4>
+                    <p style="margin: 0 0 8px 0; font-size: 0.74rem; color: #64748b; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                         ${test.desc}
                     </p>
                 </div>
 
                 <div>
-                    <div style="background: #f8fafc; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; font-size: 0.73rem; color: #475569; display: flex; flex-direction: column; gap: 3px;">
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 6px 8px; margin-bottom: 6px; font-size: 0.68rem; color: #475569; display: flex; flex-direction: column; gap: 2px;">
                         <div><strong>👨‍⚕️ Autor:</strong> ${test.autor}</div>
                         <div><strong>👥 Población:</strong> ${test.poblacion}</div>
-                        <div><strong>📊 Validez/Confiabilidad:</strong> ${test.validez}</div>
+                        <div><strong>📊 Validez:</strong> ${test.validez}</div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
-                        <span style="font-size: 0.73rem; font-weight: 800; color: #702e5e;">${test.cat}</span>
-                        <span style="font-size: 0.82rem; font-weight: 900; color: #702e5e;">Seleccionar ➔</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 6px;">
+                        <span style="font-size: 0.68rem; font-weight: 800; color: #702e5e;">${test.cat}</span>
+                        <div style="display: flex; align-items: center;">
+                            ${downloadBtn}
+                            <span style="font-size: 0.78rem; font-weight: 900; color: #702e5e;">${test.isPhysical ? 'Registrar ➔' : 'Seleccionar ➔'}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -681,7 +927,7 @@ function renderCatalogViewWithFiltersAndPagination() {
         </button>
     `;
 
-    if (topCtrl) topCtrl.innerHTML = controlsHtml;
+    if (topCtrl) topCtrl.innerHTML = '';
     if (btmCtrl) btmCtrl.innerHTML = controlsHtml;
 }
 

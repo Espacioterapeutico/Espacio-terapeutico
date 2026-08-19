@@ -1,0 +1,861 @@
+# -*- coding: utf-8 -*-
+"""
+Módulo de Agenda, Citas y Gestión de Disponibilidad (routes_agenda.py)
+Encapsula el calendario de citas, eventos personales/bloqueos horarios,
+cálculo de slots dinámicos de disponibilidad por modalidad (Presencial/Online),
+reserva rápida pública (Fast Booking) y sincronización con Google Calendar.
+"""
+
+import os
+import re
+import json
+import sqlite3
+from datetime import datetime, timedelta
+from functools import wraps
+from flask import Blueprint, request, jsonify, session, g
+
+agenda_bp = Blueprint('agenda', __name__)
+
+def get_db():
+    """Obtiene la conexión a la base de datos desde el contexto global g de Flask."""
+    db = getattr(g, '_database', None)
+    if db is None:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(base_dir, 'clinica.db')
+        db = g._database = sqlite3.connect(db_path, timeout=30.0)
+        db.row_factory = sqlite3.Row
+    return db
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'No autorizado. Por favor inicia sesión.'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_psicologo_id_filter():
+    role = session.get('role')
+    user_id = session.get('user_id')
+    username = session.get('username', '')
+    
+    if (role in ['admin', 'superadmin']) and (username.lower() != 'pamoraro' and user_id != 1):
+        return -1
+        
+    return user_id if user_id else 1
+
+def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_modality='all', exclude_appt_id=None):
+    """
+    Genera dinámicamente los slots de disponibilidad a partir de configuracion_horarios_visual.
+    """
+    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+    u_row = cursor.fetchone()
+    
+    config = {}
+    if u_row and u_row['configuracion_horarios_visual']:
+        try:
+            config = json.loads(u_row['configuracion_horarios_visual'])
+        except: pass
+
+    if not config:
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'configuracion_horarios_visual'")
+        row = cursor.fetchone()
+        if row and row['valor']:
+            try:
+                config = json.loads(row['valor'])
+            except: pass
+
+    duracion = int(config.get('duracion', 60))
+    receso = int(config.get('receso', 0))
+    antelacion = int(config.get('antelacion', 24))
+    raw_perfiles = config.get('perfiles', [])
+    perfiles = []
+    if isinstance(raw_perfiles, dict):
+        for k, v in raw_perfiles.items():
+            if isinstance(v, dict):
+                v_copy = dict(v)
+                if 'nombre' not in v_copy: v_copy['nombre'] = k
+                perfiles.append(v_copy)
+    elif isinstance(raw_perfiles, list):
+        perfiles = raw_perfiles
+
+    try:
+        target_dt = datetime.strptime(target_date_str, "%Y-%m-%d")
+    except:
+        return []
+
+    day_num = (target_dt.weekday() + 1) % 7
+    candidate_slots = []
+    seen_hours = set()
+    req_mod_clean = str(requested_modality or 'all').strip().lower()
+
+    for perf in perfiles:
+        perf_modalidad = str(perf.get('modalidad') or perf.get('nombre') or '').strip()
+        perf_nombre = str(perf.get('nombre') or perf.get('modalidad') or '').strip()
+        perf_mod_clean = perf_modalidad.lower()
+        perf_nom_clean = perf_nombre.lower()
+
+        if req_mod_clean not in ('all', ''):
+            is_match = False
+            if (req_mod_clean in perf_mod_clean or perf_mod_clean in req_mod_clean or
+                req_mod_clean in perf_nom_clean or perf_nom_clean in req_mod_clean):
+                is_match = True
+            elif 'online' in req_mod_clean and ('online' in perf_mod_clean or 'online' in perf_nom_clean):
+                is_match = True
+            elif 'presencial' in req_mod_clean and ('presencial' in perf_mod_clean or 'presencial' in perf_nom_clean):
+                is_match = True
+            elif not any(restrictive in perf_nom_clean or restrictive in perf_mod_clean for restrictive in ['online', 'presencial', 'uptaeb']):
+                is_match = True
+            
+            if not is_match:
+                continue
+
+        dias_list = perf.get('dias', [])
+        for d in dias_list:
+            d_num = int(d.get('dia', -1))
+            is_today = (d_num == day_num) or (d_num in (0, 7) and day_num in (0, 7))
+            if is_today and d.get('activo', False):
+                rangos = d.get('rangos', [])
+                for r in rangos:
+                    inicio_str = r.get('inicio')
+                    fin_str = r.get('fin')
+                    if not inicio_str or not fin_str: continue
+                    try:
+                        start_time = datetime.strptime(inicio_str, "%H:%M")
+                        end_time = datetime.strptime(fin_str, "%H:%M")
+
+                        if start_time.hour < 7 and end_time.hour <= 12 and start_time.hour < end_time.hour:
+                            start_time = start_time.replace(hour=start_time.hour + 12)
+                            if end_time.hour < 12:
+                                end_time = end_time.replace(hour=end_time.hour + 12)
+
+                        curr = start_time
+                        duration_td = timedelta(minutes=duracion)
+                        recess_td = timedelta(minutes=receso)
+
+                        while curr + duration_td <= end_time:
+                            h_str = curr.strftime("%H:%M")
+                            mod_label = perf_nombre or perf_modalidad or 'Online'
+                            if h_str not in seen_hours:
+                                seen_hours.add(h_str)
+                                candidate_slots.append({
+                                    'hora_literal': h_str,
+                                    'hora_inicio': h_str,
+                                    'hora_fin': (curr + duration_td).strftime("%H:%M"),
+                                    'modalidad': mod_label,
+                                    'perfil': perf_nombre
+                                })
+                            curr = curr + duration_td + recess_td
+                    except Exception as _re:
+                        print("Error calculando rango horario:", _re)
+
+    # Filtrar horas ocupadas en la base de datos
+    alt_date_str = target_date_str
+    try:
+        alt_date_str = target_dt.strftime("%d/%m/%Y")
+    except: pass
+
+    query_busy = """
+        SELECT af.hora, af.id FROM agenda_finanzas af
+        LEFT JOIN pacientes p ON af.paciente_id = p.id
+        WHERE (af.fecha = ? OR af.fecha = ?)
+          AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
+          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+    """
+    cursor.execute(query_busy, (target_date_str, alt_date_str, psicologo_id, psicologo_id))
+    busy_rows = cursor.fetchall()
+    busy_hours = set()
+    for br in busy_rows:
+        if exclude_appt_id and br['id'] == exclude_appt_id:
+            continue
+        h_val = (br['hora'] or '').strip()
+        if h_val:
+            busy_hours.add(h_val[:5])
+
+    # Bloqueos personales del psicólogo
+    cursor.execute("""
+        SELECT hora_inicio, hora_fin, todo_el_dia FROM bloqueos_agenda_especificos
+        WHERE psicologo_id = ? AND fecha = ?
+    """, (psicologo_id, target_date_str))
+    blocks = cursor.fetchall()
+    
+    for blk in blocks:
+        if blk['todo_el_dia'] == 1:
+            return []
+        b_in = blk['hora_inicio']
+        b_fi = blk['hora_fin']
+        if b_in and b_fi:
+            for s in list(candidate_slots):
+                if b_in <= s['hora_inicio'] < b_fi:
+                    busy_hours.add(s['hora_literal'])
+
+    now_dt = datetime.now()
+    min_allowed_dt = now_dt + timedelta(hours=antelacion)
+
+    valid_slots = []
+    for slot in candidate_slots:
+        h_lit = slot['hora_literal']
+        if h_lit in busy_hours:
+            continue
+            
+        slot_dt = datetime.strptime(f"{target_date_str} {h_lit}", "%Y-%m-%d %H:%M")
+        if slot_dt < min_allowed_dt:
+            continue
+
+        slot['iso_timestamp'] = slot_dt.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+        valid_slots.append(slot)
+
+    valid_slots.sort(key=lambda x: x['hora_literal'])
+    return valid_slots
+
+# --- RUTAS DE API DE AGENDA Y FAST BOOKING ---
+
+@agenda_bp.route('/api/agenda/disponibilidad', methods=['GET'])
+def get_agenda_disponibilidad():
+    psicologo_id = request.args.get('psicologo_id')
+    fecha_str = request.args.get('fecha')
+    modalidad = request.args.get('modalidad', 'all')
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    if psicologo_id:
+        try:
+            from app import get_psychologist_by_id_or_slug
+            psych = get_psychologist_by_id_or_slug(cursor, psicologo_id)
+            if psych: psicologo_id = psych['id']
+        except Exception: pass
+
+    if not psicologo_id and 'patient_id' in session:
+        cursor.execute("SELECT psicologo_id FROM pacientes WHERE id = ?", (session['patient_id'],))
+        p_row = cursor.fetchone()
+        if p_row and p_row['psicologo_id']: psicologo_id = p_row['psicologo_id']
+    if not psicologo_id and 'user_id' in session:
+        psicologo_id = session['user_id']
+    if not psicologo_id:
+        cursor.execute("SELECT id FROM usuarios WHERE role != 'superadmin' AND activo = 1 ORDER BY id ASC LIMIT 1")
+        first_u = cursor.fetchone()
+        psicologo_id = first_u[0] if first_u else 1
+        
+    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+    u_row = cursor.fetchone()
+    modalidades_list = ["Online", "Presencial"]
+    if u_row and u_row[0]:
+        try:
+            config = json.loads(u_row[0])
+            raw_perfiles = config.get('perfiles', [])
+            if isinstance(raw_perfiles, dict):
+                modalidades_list = list(raw_perfiles.keys())
+            elif isinstance(raw_perfiles, list):
+                m_found = [p.get('nombre') or p.get('modalidad') for p in raw_perfiles if (p.get('nombre') or p.get('modalidad'))]
+                if m_found: modalidades_list = list(set(m_found))
+        except: pass
+            
+    horas_disponibles = []
+    slots = []
+    if fecha_str:
+        slots = generate_dynamic_slots(cursor, psicologo_id, fecha_str, modalidad)
+        horas_disponibles = [s['hora_literal'] for s in slots]
+        
+    return jsonify({
+        "modalidades": modalidades_list,
+        "horas_disponibles": horas_disponibles,
+        "slots": slots,
+        "psicologo_timezone": "America/Caracas"
+    })
+
+@agenda_bp.route('/api/agenda', methods=['GET'])
+@login_required
+def get_agenda():
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
+    if psic_id is not None:
+        cursor.execute("""
+            SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,
+                   (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            LEFT JOIN sesiones s ON (s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha))
+            WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
+              AND p.psicologo_id = ?
+            ORDER BY af.fecha ASC, af.hora ASC
+        """, (psic_id,))
+    else:
+        cursor.execute("""
+            SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,
+                   (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as has_session
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            LEFT JOIN sesiones s ON (s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha))
+            WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
+            ORDER BY af.fecha ASC, af.hora ASC
+        """)
+    events = [dict(row) for row in cursor.fetchall()]
+    return jsonify(events)
+
+@agenda_bp.route('/api/agenda/blocks', methods=['GET', 'POST'])
+@login_required
+def manage_agenda_blocks():
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
+    user_id = session.get('user_id')
+    target_psic_id = psic_id if psic_id is not None else user_id
+
+    if request.method == 'POST':
+        data = request.json or {}
+        fecha = (data.get('fecha') or '').strip()
+        hora_inicio = (data.get('hora_inicio') or '').strip()
+        hora_fin = (data.get('hora_fin') or '').strip()
+        motivo = (data.get('motivo') or 'Evento Personal / Bloqueo').strip()
+        todo_el_dia = 1 if data.get('todo_el_dia') else 0
+
+        if not fecha:
+            return jsonify({'error': 'La fecha es obligatoria para agendar un evento personal / bloqueo.'}), 400
+
+        cursor.execute("""
+            INSERT INTO bloqueos_agenda_especificos (psicologo_id, fecha, hora_inicio, hora_fin, motivo, todo_el_dia)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (target_psic_id, fecha, hora_inicio, hora_fin, motivo, todo_el_dia))
+        db.commit()
+        block_id = cursor.lastrowid
+        return jsonify({
+            'success': True,
+            'message': 'Evento personal / bloqueo registrado correctamente.',
+            'block': {
+                'id': block_id,
+                'psicologo_id': target_psic_id,
+                'fecha': fecha,
+                'hora_inicio': hora_inicio,
+                'hora_fin': hora_fin,
+                'motivo': motivo,
+                'todo_el_dia': todo_el_dia
+            }
+        })
+
+    cursor.execute("""
+        SELECT * FROM bloqueos_agenda_especificos
+        WHERE psicologo_id = ?
+        ORDER BY fecha ASC, hora_inicio ASC
+    """, (target_psic_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+@agenda_bp.route('/api/agenda/blocks/<int:block_id>', methods=['DELETE'])
+@login_required
+def delete_agenda_block(block_id):
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
+    user_id = session.get('user_id')
+    target_psic_id = psic_id if psic_id is not None else user_id
+
+    cursor.execute("DELETE FROM bloqueos_agenda_especificos WHERE id = ? AND psicologo_id = ?", (block_id, target_psic_id))
+    db.commit()
+    return jsonify({'success': True, 'message': 'Bloqueo eliminado correctamente.'})
+
+@agenda_bp.route('/api/agenda', methods=['POST'])
+@login_required
+def add_agenda_event():
+    data = request.json or {}
+    db = get_db()
+    cursor = db.cursor()
+    
+    paciente_id = data.get('paciente_id')
+    fecha = data.get('fecha')
+    hora = data.get('hora')
+    tipo_consulta = data.get('tipo_consulta', 'Presencial')
+    consultorio_nombre = data.get('consultorio_nombre')
+    creado_por_user_id = data.get('creado_por_user_id') or session.get('user_id')
+    
+    if not paciente_id or not fecha or not hora or not tipo_consulta:
+        return jsonify({'error': 'Paciente, Fecha, Hora y Tipo de consulta son obligatorios.'}), 400
+
+    if consultorio_nombre and str(consultorio_nombre).strip():
+        cursor.execute("""
+            SELECT id FROM agenda_finanzas 
+            WHERE (fecha = ? OR fecha LIKE ?) 
+              AND (hora = ? OR hora LIKE ?) 
+              AND LOWER(TRIM(consultorio_nombre)) = LOWER(?)
+              AND (estado_pago IS NULL OR (estado_pago NOT LIKE 'Cancelada%' AND estado_pago != 'Reprogramada'))
+        """, (fecha, f"%{fecha}%", hora, f"{hora}%", str(consultorio_nombre).strip()))
+        ocupado = cursor.fetchone()
+        if ocupado:
+            return jsonify({
+                'error': f'🚫 El consultorio "{str(consultorio_nombre).strip()}" ya se encuentra reservado el {fecha} a las {hora}.'
+            }), 400
+        
+    estado_pago = data.get('estado_pago', 'Agendada')
+    monto = float(data.get('monto', 0.0) or 0.0)
+    moneda = data.get('moneda', 'USD')
+    control_uso = data.get('control_uso', 'Consumida')
+    cantidad_sesiones = int(data.get('cantidad_sesiones', 1) or 1)
+    referencia = data.get('referencia')
+    metodo_pago = data.get('metodo_pago')
+    fecha_pago = data.get('fecha_pago')
+    confirmada = int(data.get('confirmada', 0) or 0)
+    
+    cursor.execute("""
+        INSERT INTO agenda_finanzas (
+            paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
+            estado_pago, control_uso, google_event_id, cantidad_sesiones,
+            referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        paciente_id, fecha, hora, tipo_consulta, monto, moneda,
+        estado_pago, control_uso, None, cantidad_sesiones,
+        referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id
+    ))
+    db.commit()
+    event_id = cursor.lastrowid
+    
+    return jsonify({
+        'message': 'Cita agendada exitosamente.',
+        'id': event_id
+    })
+
+@agenda_bp.route('/api/agenda/<int:event_id>', methods=['DELETE'])
+@login_required
+def delete_agenda_event(event_id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
+    db.commit()
+    return jsonify({'message': 'Cita eliminada correctamente.'})
+
+@agenda_bp.route('/api/admin/availability', methods=['GET', 'POST'])
+@login_required
+def admin_availability():
+    db = get_db()
+    cursor = db.cursor()
+    import json
+    
+    default_visual = {
+        "duracion": 60,
+        "receso": 15,
+        "antelacion": 24,
+        "alerta_confirmacion": 24,
+        "alerta_recordatorio": 2,
+        "alerta_cierre": 2,
+        "limite_cancelacion_tipo": "horas",
+        "limite_cancelacion_valor": 24,
+        "perfiles": [
+            {
+                "id": "default_online",
+                "nombre": "Horario Online",
+                "modalidad": "Online",
+                "dias": [
+                    {"dia": 1, "nombre": "Lunes", "activo": True, "rangos": [{"inicio": "12:00", "fin": "16:00"}, {"inicio": "18:00", "fin": "22:00"}]},
+                    {"dia": 2, "nombre": "Martes", "activo": True, "rangos": [{"inicio": "18:00", "fin": "22:00"}]},
+                    {"dia": 3, "nombre": "Miércoles", "activo": False, "rangos": []},
+                    {"dia": 4, "nombre": "Jueves", "activo": False, "rangos": []},
+                    {"dia": 5, "nombre": "Viernes", "activo": False, "rangos": []},
+                    {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
+                    {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
+                ]
+            },
+            {
+                "id": "default_presencial",
+                "nombre": "Horario Presencial",
+                "modalidad": "Presencial",
+                "dias": [
+                    {"dia": 1, "nombre": "Lunes", "activo": False, "rangos": []},
+                    {"dia": 2, "nombre": "Martes", "activo": False, "rangos": []},
+                    {"dia": 3, "nombre": "Miércoles", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 4, "nombre": "Jueves", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 5, "nombre": "Viernes", "activo": True, "rangos": [{"inicio": "08:00", "fin": "12:00"}]},
+                    {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
+                    {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
+                ]
+            }
+        ]
+    }
+
+    if request.method == 'GET':
+        cursor.execute("SELECT configuracion_horarios_visual, tipo_clinica, suscripcion_paga, organizacion_id FROM usuarios WHERE id = ?", (session.get('user_id'),))
+        u_row = cursor.fetchone()
+
+        org_name = ""
+        if u_row and u_row['organizacion_id']:
+            cursor.execute("SELECT nombre FROM organizaciones WHERE id = ?", (u_row['organizacion_id'],))
+            o_row = cursor.fetchone()
+            if o_row and o_row['nombre']:
+                org_name = o_row['nombre']
+
+        config = {}
+        if u_row and u_row['configuracion_horarios_visual']:
+            try:
+                config = json.loads(u_row['configuracion_horarios_visual'])
+            except Exception:
+                pass
+
+        if not isinstance(config, dict):
+            config = {}
+
+        perfiles = config.get('perfiles', [])
+        if not isinstance(perfiles, list) or len(perfiles) == 0:
+            perfiles = list(default_visual['perfiles'])
+
+        # Si el usuario pertenece a una clínica/organización, garantizar que el perfil de clínica esté presente al inicio
+        if u_row and u_row['organizacion_id']:
+            org_id = u_row['organizacion_id']
+            cursor.execute("SELECT nombre FROM organizaciones WHERE id = ?", (org_id,))
+            o_row = cursor.fetchone()
+            org_name = o_row['nombre'] if o_row and o_row['nombre'] else "Clínica"
+
+            clinic_prof_id = f"perf_clinica_{org_id}"
+            clinic_index = -1
+            for idx, p in enumerate(perfiles):
+                if p.get('id') == clinic_prof_id or p.get('es_horario_clinica'):
+                    clinic_index = idx
+                    break
+
+            # Construir/Actualizar perfil de clínica desde la configuración visual
+            DAY_MAP = [('domingo', 0, 'Domingo'), ('lunes', 1, 'Lunes'), ('martes', 2, 'Martes'), ('miercoles', 3, 'Miércoles'), ('jueves', 4, 'Jueves'), ('viernes', 5, 'Viernes'), ('sabado', 6, 'Sábado')]
+            profile_dias = []
+            primary_consultorio = "Consultorio 1"
+            for key, dia_num, dia_name in DAY_MAP:
+                day_cfg = config.get(key, {})
+                is_active = bool(day_cfg.get('activo', False))
+                inicio = day_cfg.get('inicio', '08:00')
+                fin = day_cfg.get('fin', '17:00')
+                if is_active and day_cfg.get('consultorio'):
+                    primary_consultorio = day_cfg.get('consultorio')
+                rangos = [{'inicio': inicio, 'fin': fin}] if is_active and inicio and fin else []
+                profile_dias.append({'dia': dia_num, 'nombre': dia_name, 'activo': is_active, 'rangos': rangos})
+
+            clinic_prof = {
+                'id': clinic_prof_id,
+                'nombre': f"Horario {org_name}",
+                'modalidad': 'Presencial',
+                'consultorio': primary_consultorio,
+                'dias': profile_dias,
+                'es_horario_clinica': True
+            }
+
+            if clinic_index >= 0:
+                perfiles[clinic_index] = clinic_prof
+            else:
+                perfiles.insert(0, clinic_prof)
+
+            # Si faltan los perfiles por defecto (Online/Presencial), asegurar que existan
+            has_online = any(p.get('modalidad') == 'Online' or 'online' in (p.get('nombre') or '').lower() for p in perfiles)
+            if not has_online:
+                perfiles.append(default_visual['perfiles'][0])
+
+            has_presencial_indep = any(not p.get('es_horario_clinica') and (p.get('modalidad') == 'Presencial' or 'presencial' in (p.get('nombre') or '').lower()) for p in perfiles)
+            if not has_presencial_indep:
+                perfiles.append(default_visual['perfiles'][1])
+
+        config['perfiles'] = perfiles
+        config['tipo_clinica'] = u_row['tipo_clinica'] if u_row else 0
+        config['suscripcion_paga'] = u_row['suscripcion_paga'] if u_row else 0
+        config['organizacion_nombre'] = org_name
+
+        return jsonify(config)
+    else:
+        data = request.json or {}
+        try:
+            cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (json.dumps(data), session.get('user_id')))
+            db.commit()
+            return jsonify({'success': 'Horarios y disponibilidad guardados con éxito.'})
+        except Exception as e:
+            return jsonify({'error': f'Error al guardar horarios: {str(e)}'}), 500
+
+@agenda_bp.route('/api/active-psychologists', methods=['GET'])
+def get_active_psychologists():
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT id, nombres, apellidos, username, slug, role
+        FROM usuarios
+        WHERE role IN ('psicologo', 'admin', 'superadmin', 'psicologo_admin') AND COALESCE(activo, 1) = 1
+        ORDER BY id ASC
+    """)
+    raw_rows = cursor.fetchall()
+    result = []
+    for r in raw_rows:
+        r_dict = dict(r)
+        slug = r_dict.get('slug') or generate_default_slug_for_user(r_dict)
+        result.append({
+            'id': r_dict['id'],
+            'nombres': r_dict['nombres'],
+            'apellidos': r_dict['apellidos'],
+            'username': r_dict.get('username') or '',
+            'slug': slug
+        })
+    return jsonify(result)
+
+@agenda_bp.route('/api/psychologists/<identifier>/modalities', methods=['GET'])
+def get_psychologist_modalities(identifier):
+    db = get_db()
+    cursor = db.cursor()
+    psych = get_psychologist_by_id_or_slug(cursor, identifier)
+    psic_id = psych['id'] if psych else 1
+    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
+    u_row = cursor.fetchone()
+    modalities = ["Online", "Presencial"] # Default fallback
+    if u_row and u_row[0]:
+        try:
+            import json
+            config = json.loads(u_row[0])
+            raw_perfiles = config.get('perfiles', [])
+            if isinstance(raw_perfiles, dict):
+                m_names = list(raw_perfiles.keys())
+                if m_names:
+                    modalities = m_names
+            elif isinstance(raw_perfiles, list):
+                m_names = [p.get('nombre') or p.get('modalidad') for p in raw_perfiles if (p.get('nombre') or p.get('modalidad'))]
+                if m_names:
+                    modalities = list(set(m_names))
+        except:
+            pass
+    return jsonify(modalities)
+
+@agenda_bp.route('/api/fast-booking/book', methods=['POST'])
+def fast_booking_book():
+    data = request.json
+    psicologo_id = data.get('psicologo_id')
+    fecha = data.get('fecha')
+    hora = data.get('hora')
+    modalidad = data.get('modalidad', 'Online')
+    cedula = data.get('cedula', '').strip()
+    nombres = data.get('nombres', '').strip()
+    apellidos = data.get('apellidos', '').strip()
+    telefono = data.get('telefono', '').strip()
+    email = data.get('email', '').strip() or data.get('correo', '').strip()
+    
+    if not psicologo_id or not fecha or not hora or not cedula or not nombres:
+        return jsonify({'error': 'Faltan campos requeridos para agendar.'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+
+    psych = get_psychologist_by_id_or_slug(cursor, psicologo_id)
+    if psych:
+        psicologo_id = psych['id']
+
+    fecha_norm = normalize_date_str(fecha)
+    hora_norm = normalize_time_str(hora)
+    alt_fecha = fecha_norm
+    try:
+        dt_tmp = datetime.strptime(fecha_norm, "%Y-%m-%d")
+        alt_fecha = dt_tmp.strftime("%d/%m/%Y")
+    except:
+        pass
+
+    # 0. Verificar si el horario seleccionado ya está reservado por cualquier consultante en ese psicólogo
+    cursor.execute("""
+        SELECT af.id FROM agenda_finanzas af
+        LEFT JOIN pacientes p ON af.paciente_id = p.id
+        WHERE (af.fecha = ? OR af.fecha = ?) 
+          AND (af.hora = ? OR af.hora LIKE ?)
+          AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
+          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+    """, (fecha_norm, alt_fecha, hora_norm, f"{hora_norm}%", psicologo_id, psicologo_id))
+    if cursor.fetchone():
+        return jsonify({'error': 'El horario seleccionado ya fue reservado. Por favor elige otro horario.'}), 400
+    
+    # 1. Verificar si el paciente existe por cédula limpia (dígitos), usuario o teléfono
+    clean_cedula = cedula.strip()
+    digits_cedula = clean_digits_only(clean_cedula)
+    digits_telefono = clean_digits_only(telefono)
+
+    cursor.execute("""
+        SELECT id, nombres, apellidos, telefono, email 
+        FROM pacientes 
+        WHERE (LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
+           OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', '')))
+           OR (LOWER(username) = LOWER(?) AND username != '')
+    """, (digits_cedula, digits_cedula, clean_cedula, clean_cedula.lower()))
+    patient = cursor.fetchone()
+    
+    is_new_patient = False
+    if not patient:
+        is_new_patient = True
+        try:
+            cursor.execute("""
+                INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (nombres, apellidos, cedula, telefono, email, psicologo_id))
+            patient_id = cursor.lastrowid
+            pac_nombre = f"{nombres} {apellidos}"
+        except Exception as ex:
+            return jsonify({'error': f'Error al registrar paciente automáticamente: {str(ex)}'}), 500
+    else:
+        patient_id = patient['id']
+        pac_nombre = f"{patient['nombres']} {patient['apellidos']}"
+        if email and not patient['email']:
+            cursor.execute("UPDATE pacientes SET email = ? WHERE id = ?", (email, patient_id))
+        
+    try:
+        google_event_id = None
+        service = get_calendar_service(psicologo_id)
+        if service:
+            start_datetime = f"{fecha}T{hora}:00-04:00"
+            end_hour = str(int(hora.split(':')[0]) + 1).zfill(2)
+            end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00-04:00"
+            
+            # Obtener datos del psicólogo
+            cursor.execute("SELECT nombres FROM usuarios WHERE id = ?", (psicologo_id,))
+            u_row = cursor.fetchone()
+            therapist_name = u_row['nombres'] if u_row else "Paulo Mora"
+            
+            event_body = {
+                'summary': f"Consulta Psicológica - {pac_nombre}",
+                'description': f"Modalidad: {modalidad}\nPsicólogo: Psic. {therapist_name}",
+                'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
+                'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
+                'guestsCanInviteOthers': False,
+                'reminders': {
+                    'useDefault': False,
+                    'overrides': [
+                        { 'method': 'email', 'minutes': 1440 },
+                        { 'method': 'popup', 'minutes': 60 }
+                    ]
+                }
+            }
+            # Agregar al paciente como invitado en Google Calendar para enviar invitación por correo
+            email_paciente = data.get('email', '').strip() or data.get('correo', '').strip()
+            if not email_paciente and patient:
+                try:
+                    email_paciente = patient['email'] if isinstance(patient, dict) and 'email' in patient else (patient[14] if len(patient) > 14 else None)
+                except:
+                    pass
+            
+            if email_paciente:
+                event_body['attendees'] = [
+                    {
+                        'email': email_paciente,
+                        'displayName': pac_nombre
+                    }
+                ]
+            try:
+                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
+                google_event_id = g_event.get('id')
+            except Exception as ge:
+                print("Error creando evento en Google Calendar desde fast-booking:", ge)
+                
+        monto, moneda = get_appointment_fee(cursor, patient_id, psicologo_id, modalidad)
+        
+        cursor.execute("""
+            INSERT INTO agenda_finanzas (
+                paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
+                estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, 1, ?)
+        """, (patient_id, fecha, hora, modalidad, monto, moneda, google_event_id, f"Auto-agendada rápida por paciente. Cédula: {cedula}"))
+        
+        # Enviar notificación al psicólogo en SQLite
+        from datetime import datetime
+        fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, ?, ?, ?, ?, 0, ?)
+        """, (psicologo_id, 'cita', 'Nueva Cita Agendada (Rápida)', f"{pac_nombre} ha auto-agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
+        
+        db.commit()
+
+        # Enviar notificación WebPush al psicólogo
+        try:
+            send_webpush_notification(
+                user_id=psicologo_id,
+                title="Nueva Cita Auto-Agendada",
+                body=f"{pac_nombre} ha reservado una consulta para el {fecha} a las {hora}.",
+                url="/?view=agenda"
+            )
+        except Exception as wp_ex:
+            print("Error al enviar WebPush de auto-agendamiento:", wp_ex)
+        
+        # Sincronización en Firebase
+        import threading
+        threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        
+        return jsonify({'success': 'Tu consulta ha sido agendada con éxito automáticamente.', 'google_synced': google_event_id is not None})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al agendar consulta: {str(e)}'}), 500
+
+
+
+@agenda_bp.route('/api/admin/consultation-history', methods=['GET'])
+@login_required
+def get_admin_consultation_history():
+    try:
+        user_id = session.get('user_id')
+        month = request.args.get('month')
+        year = request.args.get('year')
+        
+        if not month or not year:
+            now = get_now_vet()
+            month = f"{now.month:02d}"
+            year = str(now.year)
+        else:
+            month = f"{int(month):02d}"
+            year = str(year)
+            
+        date_prefix = f"{year}-{month}%"
+        
+        db = get_db()
+        cursor = db.cursor()
+        
+        cursor.execute("""
+            SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.monto, af.moneda,
+                   af.estado_pago, af.control_uso, af.metodo_pago, af.referencia, af.fecha_liquidacion,
+                   p.id as paciente_id, p.nombres, p.apellidos, p.cedula, p.telefono
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE p.psicologo_id = ? AND (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?)
+            ORDER BY af.fecha DESC, af.hora DESC
+        """, (user_id, date_prefix, date_prefix))
+        
+        rows = [dict(r) for r in cursor.fetchall()]
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener historial de consultas: {str(e)}'}), 500
+
+
+
+@agenda_bp.route('/api/admin/consultation-history/<int:event_id>', methods=['DELETE'])
+@login_required
+def delete_admin_consultation_history_event(event_id):
+    try:
+        user_id = session.get('user_id')
+        db = get_db()
+        cursor = db.cursor()
+
+        cursor.execute("""
+            SELECT af.id, af.google_event_id, af.paciente_id 
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            WHERE af.id = ? AND p.psicologo_id = ?
+        """, (event_id, user_id))
+        row = cursor.fetchone()
+
+        if not row:
+            return jsonify({'error': 'Consulta no encontrada o sin permiso para eliminar.'}), 404
+
+        google_event_id = row['google_event_id']
+        paciente_id = row['paciente_id']
+
+        if google_event_id:
+            service = get_calendar_service()
+            if service:
+                try:
+                    service.events().delete(calendarId='primary', eventId=google_event_id).execute()
+                except Exception as ge:
+                    print("Error al eliminar evento en Google Calendar:", ge)
+
+        cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
+        cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
+        db.commit()
+
+        if paciente_id:
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(paciente_id,)).start()
+
+        return jsonify({'success': 'Consulta de prueba eliminada con éxito.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al eliminar consulta: {str(e)}'}), 500
+
+

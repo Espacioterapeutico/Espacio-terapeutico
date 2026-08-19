@@ -13,6 +13,12 @@ __pycache__/
 credentials.json
 firebase_service_account.json
 *.json.secret
+espacio-terapeutico-firebase-*.json
 Back up*/
 BACKUP_VERSION_ESCRITORIO/
 Espacio Terapeutico V.*/
+Test psicologicos/
+archivos_adjuntos/
+auditoria ellie morles/
+scratch/
+build/

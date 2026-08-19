@@ -1046,6 +1046,10 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
                     <span>Inicio</span>
                 </a>
+                <a href="#" class="nav-item hide" id="nav-item-clinica" data-view="clinica-dashboard" onclick="switchView('clinica-dashboard')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+                    <span id="nav-clinica-nombre">Mi Clínica</span>
+                </a>
                 <a href="#" class="nav-item" data-view="expedientes-clinicos" onclick="switchView('expedientes-clinicos')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     <span>Expedientes Clínicos</span>
@@ -1073,10 +1077,6 @@
                 <a href="#" class="nav-item" data-view="finance" onclick="switchView('finance')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span>Control de Finanzas</span>
-                </a>
-                <a href="#" class="nav-item hide" id="nav-item-clinica" data-view="clinica-dashboard" onclick="switchView('clinica-dashboard')">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
-                    <span id="nav-clinica-nombre">Mi Clínica</span>
                 </a>
                 <a href="#" class="nav-item" data-view="settings" onclick="switchView('settings')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -2032,26 +2032,18 @@
                     <div class="view-header-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
                         <div>
                             <h2 style="font-size: 1.5rem; font-weight: 800; color: #702e5e; margin: 0; display: flex; align-items: center; gap: 0.6rem;">
-                                <span id="clinica-dash-titulo">🏥 Portal de Clínica</span>
+                                <span id="clinica-dash-titulo">Portal de Clínica</span>
                                 <span id="clinica-dash-badge-rol" class="badge" style="background: #702e5e; color: #fff; font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 12px;">Cargando...</span>
                             </h2>
                             <p id="clinica-dash-subtitulo" class="text-secondary text-sm" style="margin: 4px 0 0 0;">Gestión de agenda colectiva, consultorios físicos, supervisión de casos e ingresos de equipo.</p>
-                        </div>
-                        <div style="display: flex; gap: 0.6rem; align-items: center;">
-                            <button type="button" class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 20px; border: 1.5px solid #702e5e; color: #702e5e;" onclick="abrirModalConfigEspaciosFisicos()">
-                                🚪 Espacios Físicos / Consultorios
-                            </button>
-                            <button type="button" class="btn btn-sm" style="background: #702e5e; color: #fff; font-weight: 700; border-radius: 20px; box-shadow: 0 4px 12px rgba(112,46,94,0.25);" onclick="abrirModalNuevaCitaClinica()">
-                                📅 Nueva Cita Corporativa
-                            </button>
                         </div>
                     </div>
 
                     <!-- Sub-pestañas del Portal de Clínica -->
                     <div class="sub-nav-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                        <button type="button" id="cdash-tab-agenda" class="btn btn-sm btn-primary" onclick="switchClinicaDashboardTab('agenda')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">📅 Agenda Colectiva & Consultorios</button>
-                        <button type="button" id="cdash-tab-evoluciones" class="btn btn-sm btn-secondary" onclick="switchClinicaDashboardTab('evoluciones')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">🩺 Psicólogos & Evoluciones (Director)</button>
-                        <button type="button" id="cdash-tab-ingresos" class="btn btn-sm btn-secondary" onclick="switchClinicaDashboardTab('ingresos')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">💰 Ingresos Consolidados (Director)</button>
+                        <button type="button" id="cdash-tab-agenda" class="btn btn-sm btn-primary" onclick="switchClinicaDashboardTab('agenda')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">Agenda Colectiva & Consultorios</button>
+                        <button type="button" id="cdash-tab-evoluciones" class="btn btn-sm btn-secondary" onclick="switchClinicaDashboardTab('evoluciones')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">Psicólogos & Evoluciones (Director)</button>
+                        <button type="button" id="cdash-tab-ingresos" class="btn btn-sm btn-secondary" onclick="switchClinicaDashboardTab('ingresos')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: 20px;">Ingresos Consolidados (Director)</button>
                     </div>
 
                     <!-- Contenedor Pestaña 1: Agenda Colectiva & Consultorios -->
@@ -2902,9 +2894,9 @@
                                 <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">1. Selección de Consultante y Datos de Sesión</h3>
                             </div>
                             <div class="card-body" style="padding: 1.25rem;">
-                                <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                                    <div style="position: relative;">
-                                        <label for="mse-patient-search" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Buscar Consultante (Cédula, Nombre o Apellido) *</label>
+                                <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem; align-items: end;">
+                                    <div style="position: relative; display: flex; flex-direction: column; justify-content: flex-end;">
+                                        <label for="mse-patient-search" style="font-weight: 700; color: var(--text-dark); display: flex; align-items: flex-end; min-height: 2.6rem; margin-bottom: 0.35rem;">Buscar Consultante (Cédula, Nombre o Apellido) *</label>
                                         <div style="position: relative;">
                                             <input type="text" id="mse-patient-search" placeholder="🔍 Escribe cédula o nombre del consultante..." autocomplete="off" oninput="onMseSearchInput()" onfocus="onMseSearchInput()" style="width: 100%; padding: 0.65rem 2.2rem 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; outline: none; background: #ffffff;">
                                             <span id="mse-clear-patient-btn" onclick="clearMseSelectedPatient()" class="hide" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 1.1rem; font-weight: 700; padding: 2px 6px;">✕</span>
@@ -2915,12 +2907,12 @@
                                         <div id="mse-patient-dropdown-list" class="hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: #ffffff; border: 1.5px solid var(--primary-color); border-radius: 10px; margin-top: 4px; max-height: 240px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
                                         </div>
                                     </div>
-                                    <div>
-                                        <label for="mse-eval-date" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Fecha de Evaluación *</label>
+                                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                                        <label for="mse-eval-date" style="font-weight: 700; color: var(--text-dark); display: flex; align-items: flex-end; min-height: 2.6rem; margin-bottom: 0.35rem;">Fecha de Evaluación *</label>
                                         <input type="date" id="mse-eval-date" style="width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
                                     </div>
-                                    <div>
-                                        <label for="mse-eval-medio" style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">Medio de Evaluación *</label>
+                                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                                        <label for="mse-eval-medio" style="font-weight: 700; color: var(--text-dark); display: flex; align-items: flex-end; min-height: 2.6rem; margin-bottom: 0.35rem;">Medio de Evaluación *</label>
                                         <select id="mse-eval-medio" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; cursor: pointer;">
                                             <option value="Presencial">Presencial (Consultorio)</option>
                                             <option value="Online">Online (Teleconsulta)</option>
@@ -3069,21 +3061,18 @@
                             </div>
                         </div>
 
-                        <!-- ENCABEZADO DEL CATÁLOGO Y BOTONES DE FILTRO DE CATEGORÍAS -->
+                        <!-- ENCABEZADO DEL CATÁLOGO -->
                         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 1rem;">
                             <div>
                                 <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">Seleccionar la Prueba a Aplicar</h3>
                                 <p style="font-size: 0.83rem; color: #64748b; margin: 2px 0 0 0;">Haga clic en la tarjeta de la evaluación psicológica que desea aplicar al paciente seleccionado.</p>
                             </div>
-                            <div id="catalog-pagination-top-controls" style="display: flex; align-items: center; gap: 8px;">
-                                <!-- Paginación superior -->
-                            </div>
                         </div>
 
-                        <!-- FILTRO POR CATEGORÍAS (DESPLEGABLE RESPONSIVO Y BOTONES) -->
+                        <!-- FILTRO POR CATEGORÍAS (ÚNICO DESPLEGABLE) -->
                         <div style="margin-bottom: 1.25rem;">
-                            <!-- Selector Desplegable (Optimizado para móvil y escritorio) -->
-                            <div style="margin-bottom: 0.75rem;">
+                            <!-- Selector Desplegable -->
+                            <div>
                                 <label for="select-test-category-dropdown" style="font-size: 0.8rem; font-weight: 800; color: #475569; margin-bottom: 4px; display: block;">📂 Filtrar por Categoría de Evaluación:</label>
                                 <select id="select-test-category-dropdown" onchange="filterTestsByCategory(this.value)" style="width: 100%; padding: 0.7rem 1rem; border-radius: 12px; border: 2px solid #702e5e; background: #ffffff; color: #702e5e; font-weight: 800; font-size: 0.88rem; outline: none; cursor: pointer; box-shadow: 0 2px 8px rgba(112,46,94,0.06);">
                                     <option value="TODAS">📚 Todas las Categorías</option>
@@ -3095,40 +3084,25 @@
                                     <option value="Identidad de Género">Identidad de Género</option>
                                 </select>
                             </div>
-
-                            <!-- Botones Rápidos -->
-                            <div style="display: flex; flex-wrap: wrap; gap: 8px; background: #f8fafc; padding: 10px 14px; border-radius: 14px; border: 1px solid #e2e8f0;" id="container-tests-category-filters">
-                                <button type="button" class="btn-test-cat-filter active" onclick="filterTestsByCategory('TODAS')" style="background: #702e5e; color: white; border: none; font-size: 0.78rem; font-weight: 800; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Todas</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Depresión y Ansiedad')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Depresión y Ansiedad</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Neurodivergencia y Autismo')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Neurodivergencia y Autismo</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Personalidad y Psicopatología')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Personalidad</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Capacidad Intelectual')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Capacidad Intelectual</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Orientación Vocacional')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Orientación Vocacional</button>
-                                <button type="button" class="btn-test-cat-filter" onclick="filterTestsByCategory('Identidad de Género')" style="background: white; color: #475569; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;">Identidad de Género</button>
-                            </div>
                         </div>
 
                         <!-- UNICO CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 EXACTA -->
                         <style>
                             .tests-catalog-grid-5x2 {
                                 display: grid;
-                                grid-template-columns: repeat(5, 1fr) !important;
-                                gap: 1rem !important;
+                                grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important;
+                                gap: 0.85rem !important;
                                 min-height: 250px;
                                 align-items: stretch;
                                 width: 100%;
+                                max-width: 100%;
                                 box-sizing: border-box;
                             }
                             .tests-catalog-grid-5x2 > div {
                                 min-height: auto;
                                 box-sizing: border-box;
                             }
-                            @media (max-width: 1300px) {
-                                .tests-catalog-grid-5x2 {
-                                    grid-template-columns: repeat(3, 1fr) !important;
-                                }
-                            }
-                            @media (max-width: 768px) {
+                            @media (max-width: 640px) {
                                 .tests-catalog-grid-5x2 {
                                     grid-template-columns: repeat(1, 1fr) !important;
                                 }
@@ -4851,6 +4825,16 @@
 
                     <!-- TAB A: DATOS PERSONALES -->
                     <div id="tab-personal" class="form-tab-content">
+                        <div class="form-row" id="p-origen-container" style="background: #faf4f8; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #f3e0ed; margin-bottom: 1.25rem;">
+                            <div class="form-group col-12" style="margin-bottom: 0;">
+                                <label for="p-organizacion-id" style="font-weight: 800; color: #702e5e;">🏛️ Pertenencia / Origen del Consultante</label>
+                                <select id="p-organizacion-id" class="form-control" style="font-weight: 700; border-color: #f0abfc;" onchange="onPatientOrigenChange()">
+                                    <option value="null">👤 Consulta Privada (Independiente)</option>
+                                </select>
+                                <small id="p-origen-help" class="form-text text-muted" style="font-size: 0.78rem; display: block; margin-top: 5px; color: #64748b;"></small>
+                            </div>
+                        </div>
+
                         <div class="form-row">
                             <div class="form-group col-6">
                                 <label for="p-nombres">Nombres *</label>
@@ -6961,50 +6945,50 @@
     </div>
 
     <!-- MODAL NUEVA CITA CORPORATIVA (CON SELECCIÓN DE PSICÓLOGO Y CONSULTORIO) -->
-    <div id="modal-cita-clinica" class="modal hide" style="z-index: 3700;">
-        <div class="modal-content" style="max-width: 600px; width: 95%; border-radius: 20px; padding: 1.75rem; background: #ffffff; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
-                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #702e5e;">📅 Agendar Cita Corporativa de Clínica</h3>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-cita-clinica')" style="border-radius: 8px;">✖ Cerrar</button>
+    <div id="modal-cita-clinica" class="modal hide" style="z-index: 3700; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-content" style="max-width: 540px; width: 92%; border-radius: 16px; padding: 1.75rem; background: #ffffff; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border: 1px solid #e2e8f0; margin: 2rem auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.25rem;">
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #702e5e;">Agendar Cita Corporativa de Clínica</h3>
+                <button type="button" class="btn btn-sm" onclick="closeModal('modal-cita-clinica')" style="background: #f1f5f9; color: #64748b; border: none; border-radius: 8px; font-weight: 700; padding: 0.35rem 0.75rem;">Cerrar</button>
             </div>
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div>
-                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Psicólogo Tratante *</label>
-                    <select id="mcita-clinica-psicologo" class="form-control" style="border-radius: 8px; font-weight: 700; color: #0f172a;"></select>
+                    <label style="font-weight: 700; font-size: 0.82rem; color: #475569; margin-bottom: 0.35rem; display: block;">Psicólogo Tratante *</label>
+                    <select id="mcita-clinica-psicologo" class="form-select" style="border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.6rem 0.85rem; font-size: 0.9rem; color: #1e293b; width: 100%; font-weight: 600;"></select>
                 </div>
                 <div>
-                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Espacio Físico / Consultorio *</label>
-                    <select id="mcita-clinica-consultorio" class="form-control" style="border-radius: 8px; font-weight: 700; color: #0f172a;"></select>
+                    <label style="font-weight: 700; font-size: 0.82rem; color: #475569; margin-bottom: 0.35rem; display: block;">Espacio Físico / Consultorio *</label>
+                    <select id="mcita-clinica-consultorio" class="form-select" style="border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.6rem 0.85rem; font-size: 0.9rem; color: #1e293b; width: 100%; font-weight: 600;"></select>
                 </div>
                 <div>
-                    <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Seleccionar Paciente *</label>
-                    <select id="mcita-clinica-paciente" class="form-control" style="border-radius: 8px;"></select>
+                    <label style="font-weight: 700; font-size: 0.82rem; color: #475569; margin-bottom: 0.35rem; display: block;">Seleccionar Paciente *</label>
+                    <select id="mcita-clinica-paciente" class="form-select" style="border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.6rem 0.85rem; font-size: 0.9rem; color: #1e293b; width: 100%; font-weight: 600;"></select>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
-                        <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Fecha *</label>
-                        <input type="date" id="mcita-clinica-fecha" class="form-control" style="border-radius: 8px;">
+                        <label style="font-weight: 700; font-size: 0.82rem; color: #475569; margin-bottom: 0.35rem; display: block;">Fecha *</label>
+                        <input type="date" id="mcita-clinica-fecha" class="form-control" style="border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.55rem 0.85rem; font-size: 0.9rem;">
                     </div>
                     <div>
-                        <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Hora *</label>
-                        <input type="time" id="mcita-clinica-hora" class="form-control" style="border-radius: 8px;">
+                        <label style="font-weight: 700; font-size: 0.82rem; color: #475569; margin-bottom: 0.35rem; display: block;">Hora *</label>
+                        <input type="time" id="mcita-clinica-hora" class="form-control" style="border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.55rem 0.85rem; font-size: 0.9rem;">
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
-                        <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Monto de Consulta ($) *</label>
-                        <input type="number" step="0.01" id="mcita-clinica-monto" class="form-control" placeholder="Ej: 40.00" value="40.00" style="border-radius: 8px;">
+                        <label style="font-weight: 700; font-size: 0.82rem; color: #475569; margin-bottom: 0.35rem; display: block;">Monto de Consulta ($) *</label>
+                        <input type="number" step="0.01" id="mcita-clinica-monto" class="form-control" placeholder="Ej: 40.00" value="40.00" style="border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.55rem 0.85rem; font-size: 0.9rem;">
                     </div>
                     <div>
-                        <label style="font-weight: 700; font-size: 0.88rem; color: #334155;">Estado de Pago</label>
-                        <select id="mcita-clinica-estado-pago" class="form-control" style="border-radius: 8px;">
-                            <option value="Pendiente">⏳ Pendiente de Pago</option>
-                            <option value="Pagado">✓ Pagado / Cobrado</option>
+                        <label style="font-weight: 700; font-size: 0.82rem; color: #475569; margin-bottom: 0.35rem; display: block;">Estado de Pago</label>
+                        <select id="mcita-clinica-estado-pago" class="form-select" style="border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.6rem 0.85rem; font-size: 0.9rem; color: #1e293b; width: 100%;">
+                            <option value="Pendiente">Pendiente de Pago</option>
+                            <option value="Pagado">Pagado / Cobrado</option>
                         </select>
                     </div>
                 </div>
-                <button type="button" class="btn btn-primary" style="background: #702e5e; border: none; font-weight: 800; border-radius: 10px; padding: 0.75rem; font-size: 1rem; margin-top: 0.5rem;" onclick="guardarCitaClinica()">
-                    💾 Confirmar y Agendar en Clínica
+                <button type="button" class="btn btn-primary" style="background: #702e5e; border: none; font-weight: 700; border-radius: 12px; padding: 0.75rem; font-size: 0.95rem; margin-top: 0.5rem; box-shadow: 0 4px 12px rgba(112, 46, 94, 0.25);" onclick="guardarCitaClinica()">
+                    Confirmar y Agendar en Clínica
                 </button>
             </div>
         </div>

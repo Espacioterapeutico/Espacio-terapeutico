@@ -76,12 +76,29 @@ def ensure_clinica_tables(db):
             cursor.execute("ALTER TABLE usuarios ADD COLUMN especialidades TEXT DEFAULT NULL")
         if 'biografia_corta' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN biografia_corta TEXT DEFAULT NULL")
+        if 'configuracion_horarios_visual' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN configuracion_horarios_visual TEXT DEFAULT NULL")
 
     # 4. Migración de columnas en `organizaciones`
     cursor.execute("PRAGMA table_info(organizaciones)")
     cols_org = [r[1] for r in cursor.fetchall()]
-    if cols_org and 'espacios_fisicos' not in cols_org:
-        cursor.execute("ALTER TABLE organizaciones ADD COLUMN espacios_fisicos TEXT DEFAULT 'Consultorio 1, Consultorio 2'")
+    if cols_org:
+        if 'espacios_fisicos' not in cols_org:
+            cursor.execute("ALTER TABLE organizaciones ADD COLUMN espacios_fisicos TEXT DEFAULT 'Consultorio 1, Consultorio 2'")
+        if 'direccion' not in cols_org:
+            cursor.execute("ALTER TABLE organizaciones ADD COLUMN direccion TEXT DEFAULT NULL")
+        if 'telefono' not in cols_org:
+            cursor.execute("ALTER TABLE organizaciones ADD COLUMN telefono TEXT DEFAULT NULL")
+        if 'email' not in cols_org:
+            cursor.execute("ALTER TABLE organizaciones ADD COLUMN email TEXT DEFAULT NULL")
+        if 'redes_sociales_json' not in cols_org:
+            cursor.execute("ALTER TABLE organizaciones ADD COLUMN redes_sociales_json TEXT DEFAULT NULL")
+        if 'mision' not in cols_org:
+            cursor.execute("ALTER TABLE organizaciones ADD COLUMN mision TEXT DEFAULT NULL")
+        if 'pais' not in cols_org:
+            cursor.execute("ALTER TABLE organizaciones ADD COLUMN pais TEXT DEFAULT NULL")
+        if 'instagram' not in cols_org:
+            cursor.execute("ALTER TABLE organizaciones ADD COLUMN instagram TEXT DEFAULT NULL")
 
     # 5. Migración de columna `notas_supervision` en `sesiones`
     cursor.execute("PRAGMA table_info(sesiones)")
@@ -121,6 +138,18 @@ def generate_unique_clinic_code(db, name):
             return code
     return f"CLINIC-{uuid.uuid4().hex[:6].upper()}"
 
+def crear_notificacion_interna_clinica(db, target_user_id, tipo, titulo, mensaje, link='#equipo'):
+    """Registra una notificación en la base de datos para la campanita del usuario."""
+    try:
+        c = db.cursor()
+        c.execute("""
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, ?, ?, ?, datetime('now', 'localtime'), 0, ?)
+        """, (target_user_id, tipo, titulo, mensaje, link))
+    except Exception as e:
+        print(f"Error al crear notificación interna de clínica para user #{target_user_id}: {e}")
+
+
 def generate_unique_slug(db, name):
     """Genera un slug web único para la URL pública de la clínica."""
     cursor = db.cursor()
@@ -155,6 +184,9 @@ def api_registrar_clinica():
     data = request.json or {}
     nombre = (data.get('nombre') or '').strip()
     descripcion = (data.get('descripcion') or '').strip()
+    mision = (data.get('mision') or '').strip()
+    pais = (data.get('pais') or '').strip()
+    instagram = (data.get('instagram') or '').strip()
     logo = (data.get('logo') or '').strip()
 
     if not nombre:
@@ -170,9 +202,9 @@ def api_registrar_clinica():
 
     try:
         cursor.execute("""
-            INSERT INTO organizaciones (nombre, slug, logo, descripcion, admin_user_id, codigo_clinica)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (nombre, slug, logo, descripcion, user_id, code))
+            INSERT INTO organizaciones (nombre, slug, logo, descripcion, mision, pais, instagram, admin_user_id, codigo_clinica)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (nombre, slug, logo, descripcion, mision, pais, instagram, user_id, code))
         org_id = cursor.lastrowid
 
         cursor.execute("""
@@ -225,12 +257,16 @@ def api_get_mi_equipo():
 
     # Miembros activos del equipo (tipo_clinica 1 y 2)
     cursor.execute("""
-        SELECT id, nombres, apellidos, cedula, username, foto_titulo, nomenclatura, especialidades, biografia_corta, tipo_clinica, activo
+        SELECT id, nombres, apellidos, cedula, username, foto_titulo, nomenclatura, especialidades, biografia_corta, tipo_clinica, activo, slug
         FROM usuarios
         WHERE organizacion_id = ?
         ORDER BY tipo_clinica ASC, nombres ASC
     """, (org_id,))
-    miembros = [dict(r) for r in cursor.fetchall()]
+    miembros = []
+    for r in cursor.fetchall():
+        m = dict(r)
+        m['perfil_url'] = f"/directorio/psicologo/{m['slug']}" if m.get('slug') else f"/perfil/{m['id']}"
+        miembros.append(m)
     org_dict['miembros'] = miembros
 
     return jsonify(org_dict)
@@ -257,22 +293,31 @@ def api_vincular_miembro():
     if not busqueda:
         return jsonify({'error': 'Por favor ingrese la Cédula o el ID de Psicólogo a invitar.'}), 400
 
-    # Buscar usuario por Cédula, ID o username
+    clean_busqueda = busqueda.replace('.', '').replace('-', '').replace(' ', '').lower()
+    clean_busqueda_num = clean_busqueda[1:] if (clean_busqueda.startswith('v') or clean_busqueda.startswith('e') or clean_busqueda.startswith('j')) else clean_busqueda
+
+    # Buscar usuario por Cédula, ID, username o email
     cursor.execute("""
         SELECT * FROM usuarios
-        WHERE id = ? OR LOWER(cedula) = LOWER(?) OR LOWER(username) = LOWER(?)
-    """, (busqueda, busqueda, busqueda))
+        WHERE id = ? 
+           OR LOWER(cedula) = LOWER(?)
+           OR REPLACE(REPLACE(REPLACE(LOWER(cedula), '.', ''), '-', ''), ' ', '') = ?
+           OR REPLACE(REPLACE(REPLACE(LOWER(cedula), '.', ''), '-', ''), ' ', '') = ?
+           OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(cedula), 'v-', ''), 'e-', ''), '.', ''), '-', ''), ' ', '') = ?
+           OR LOWER(username) = LOWER(?)
+           OR LOWER(email) = LOWER(?)
+    """, (busqueda, busqueda, clean_busqueda, clean_busqueda_num, clean_busqueda_num, busqueda, busqueda))
     target_usr = cursor.fetchone()
 
     if not target_usr:
-        return jsonify({'error': f'No se encontró ningún psicólogo registrado con la Cédula/ID "{busqueda}".'}), 404
+        return jsonify({'error': f'No se encontró ningún psicólogo registrado con la Cédula/ID "{busqueda}". El profesional debe haberse registrado previamente en la plataforma. También puedes invitarlo usando el "Enlace de Registro Dirigido".'}), 404
 
     target_id = target_usr['id']
     if target_id == user_id:
-        return jsonify({'error': 'No puedes invitarte a ti mismo.'}), 400
+        return jsonify({'error': f'¡La Cédula/ID "{busqueda}" pertenece a tu propio usuario ({target_usr["nombres"]} {target_usr["apellidos"]})! Ya eres la Directora Administradora de esta clínica.'}), 400
 
     if target_usr['organizacion_id'] == admin_usr['organizacion_id']:
-        return jsonify({'error': 'Este psicólogo ya pertenece a tu equipo.'}), 400
+        return jsonify({'error': f'El Psic. {target_usr["nombres"]} {target_usr["apellidos"]} (#${target_id}) ya es parte de tu equipo de clínica.'}), 400
 
     # Verificar si ya existe una solicitud pendiente
     cursor.execute("""
@@ -281,12 +326,18 @@ def api_vincular_miembro():
     """, (admin_usr['organizacion_id'], target_id))
     sol_exist = cursor.fetchone()
     if sol_exist:
-        return jsonify({'error': 'Ya existe una invitación pendiente enviada a este psicólogo.'}), 400
+        return jsonify({'error': f'Ya existe una invitación pendiente enviada a {target_usr["nombres"]} {target_usr["apellidos"]}.'}), 400
 
     cursor.execute("""
         INSERT INTO equipo_solicitudes (organizacion_id, user_id, solicitante_id, tipo_solicitud, estado)
         VALUES (?, ?, ?, 'invitacion', 'pendiente')
     """, (admin_usr['organizacion_id'], target_id, user_id))
+    
+    crear_notificacion_interna_clinica(
+        db, target_id, 'invitacion_clinica', '🏢 Invitación a Clínica',
+        f"El Psic. {admin_usr['nombres']} {admin_usr['apellidos']} te ha invitado a unirte a su equipo de clínica. Revisa Ajustes -> Equipo de Trabajo para responder.",
+        '#equipo'
+    )
     db.commit()
 
     return jsonify({
@@ -332,6 +383,13 @@ def api_solicitar_ingreso():
         INSERT INTO equipo_solicitudes (organizacion_id, user_id, solicitante_id, tipo_solicitud, estado)
         VALUES (?, ?, ?, 'solicitud', 'pendiente')
     """, (org['id'], user_id, user_id))
+
+    if org and org['admin_user_id']:
+        crear_notificacion_interna_clinica(
+            db, org['admin_user_id'], 'solicitud_clinica', '📩 Solicitud de Ingreso a Clínica',
+            f"Un terapeuta ha ingresado tu código para solicitar unirse a tu clínica '{org['nombre']}'. Revisa Ajustes -> Equipo de Trabajo para responder.",
+            '#equipo'
+        )
     db.commit()
 
     return jsonify({'success': f"Solicitud enviada a la clínica '{org['nombre']}'. El Director Administrador debe aprobar tu ingreso."})
@@ -437,6 +495,25 @@ def api_responder_solicitud():
                 WHERE id = ?
             """, (org_id, org['codigo_clinica'], target_user_id))
 
+        if sol['tipo_solicitud'] == 'invitacion':
+            admin_id = org['admin_user_id']
+            if admin_id:
+                crear_notificacion_interna_clinica(
+                    db, admin_id, 'respuesta_clinica',
+                    f"{'🎉 Invitación Aceptada' if accion == 'aceptar' else '❌ Invitación Rechazada'}",
+                    f"El terapeuta ha {accion}do tu invitación para unirse a '{org['nombre']}'.",
+                    '#equipo'
+                )
+        else:
+            solicitante_id = sol['user_id']
+            if solicitante_id:
+                crear_notificacion_interna_clinica(
+                    db, solicitante_id, 'respuesta_clinica',
+                    f"{'🎉 Solicitud Aprobada' if accion == 'aceptar' else '❌ Solicitud Rechazada'}",
+                    f"La clínica '{org['nombre']}' ha {accion}do tu solicitud de ingreso.",
+                    '#equipo'
+                )
+
         db.commit()
         msg = f"Vinculación aceptada exitosamente con la clínica '{org['nombre']}'." if accion == 'aceptar' else "Solicitud rechazada."
         return jsonify({'success': msg, 'accion': accion})
@@ -475,7 +552,7 @@ def api_salir_clinica():
 
 @clinica_bp.route('/api/clinica/ajustes', methods=['PUT'])
 def api_actualizar_ajustes_clinica():
-    """Permite al Administrador actualizar nombre, descripción, logo y modo_whatsapp de la clínica."""
+    """Permite al Administrador actualizar nombre, descripción, logo, dirección, teléfono, email y modo_whatsapp de la clínica."""
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'error': 'No autorizado.'}), 401
@@ -492,6 +569,12 @@ def api_actualizar_ajustes_clinica():
     data = request.json or {}
     nombre = (data.get('nombre') or '').strip()
     descripcion = (data.get('descripcion') or '').strip()
+    mision = (data.get('mision') or '').strip()
+    pais = (data.get('pais') or '').strip()
+    direccion = (data.get('direccion') or '').strip()
+    telefono = (data.get('telefono') or '').strip()
+    email = (data.get('email') or '').strip()
+    instagram = (data.get('instagram') or '').strip()
     logo = (data.get('logo') or '').strip()
     modo_wa = (data.get('modo_whatsapp') or 'centralizado').strip().lower()
 
@@ -505,13 +588,54 @@ def api_actualizar_ajustes_clinica():
         UPDATE organizaciones SET
             nombre = ?,
             descripcion = ?,
+            mision = ?,
+            pais = ?,
+            direccion = ?,
+            telefono = ?,
+            email = ?,
+            instagram = ?,
             logo = ?,
             modo_whatsapp = ?
         WHERE id = ?
-    """, (nombre, descripcion, logo, modo_wa, usr['organizacion_id']))
+    """, (nombre, descripcion, mision, pais, direccion, telefono, email, instagram, logo, modo_wa, usr['organizacion_id']))
     db.commit()
 
     return jsonify({'success': 'Ajustes de la clínica actualizados exitosamente.'})
+
+
+@clinica_bp.route('/api/clinica/miembro/<int:target_user_id>/remover', methods=['POST'])
+def api_remover_miembro_clinica(target_user_id):
+    """Permite al Psicólogo Administrador remover a un psicólogo afiliado del equipo."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT tipo_clinica, organizacion_id FROM usuarios WHERE id = ?", (user_id,))
+    admin_usr = cursor.fetchone()
+    if not admin_usr or admin_usr['tipo_clinica'] != 1 or not admin_usr['organizacion_id']:
+        return jsonify({'error': 'Solo el Director Administrador puede desvincular miembros.'}), 403
+
+    if target_user_id == user_id:
+        return jsonify({'error': 'No puedes eliminarte a ti mismo. Para desmantelar la clínica usa la opción Eliminar Clínica.'}), 400
+
+    cursor.execute("SELECT id, nombres, apellidos, organizacion_id FROM usuarios WHERE id = ?", (target_user_id,))
+    target_usr = cursor.fetchone()
+    if not target_usr or target_usr['organizacion_id'] != admin_usr['organizacion_id']:
+        return jsonify({'error': 'El terapeuta no pertenece a esta clínica.'}), 404
+
+    cursor.execute("""
+        UPDATE usuarios SET
+            tipo_clinica = 0,
+            organizacion_id = NULL,
+            codigo_clinica = NULL
+        WHERE id = ?
+    """, (target_user_id,))
+    db.commit()
+
+    return jsonify({'success': f"Psicólogo '{target_usr['nombres']} {target_usr['apellidos']}' ha sido desvinculado de la clínica."})
+
 
 
 # ==============================================================================
@@ -646,9 +770,119 @@ def api_espacios_fisicos():
     return jsonify({'espacios_fisicos': espacios_list, 'es_admin': es_admin})
 
 
+@clinica_bp.route('/api/clinica/espacios-fisicos/agregar', methods=['POST'])
+def api_espacios_fisicos_agregar():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_clinica_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    usr = cursor.fetchone()
+    if not usr or usr['tipo_clinica'] != 1 or not usr['organizacion_id']:
+        return jsonify({'error': 'Solo el Director Administrador puede modificar los espacios físicos.'}), 403
+
+    org_id = usr['organizacion_id']
+    data = request.json or {}
+    nuevo_nombre = (data.get('nombre') or '').strip()
+    if not nuevo_nombre:
+        return jsonify({'error': 'Ingrese el nombre del nuevo consultorio.'}), 400
+
+    cursor.execute("SELECT espacios_fisicos FROM organizaciones WHERE id = ?", (org_id,))
+    org = cursor.fetchone()
+    raw_espacios = (org['espacios_fisicos'] if org and org['espacios_fisicos'] else '')
+    espacios = [e.strip() for e in raw_espacios.split(',') if e.strip()]
+
+    if nuevo_nombre in espacios:
+        return jsonify({'error': f'El consultorio "{nuevo_nombre}" ya existe.'}), 400
+
+    espacios.append(nuevo_nombre)
+    espacios_str = ", ".join(espacios)
+    cursor.execute("UPDATE organizaciones SET espacios_fisicos = ? WHERE id = ?", (espacios_str, org_id))
+    db.commit()
+
+    return jsonify({'success': f'Consultorio "{nuevo_nombre}" agregado exitosamente.', 'espacios_fisicos': espacios})
+
+
+@clinica_bp.route('/api/clinica/espacios-fisicos/renombrar', methods=['POST'])
+def api_espacios_fisicos_renombrar():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_clinica_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    usr = cursor.fetchone()
+    if not usr or usr['tipo_clinica'] != 1 or not usr['organizacion_id']:
+        return jsonify({'error': 'Solo el Director Administrador puede modificar los espacios físicos.'}), 403
+
+    org_id = usr['organizacion_id']
+    data = request.json or {}
+    nombre_anterior = (data.get('nombre_anterior') or '').strip()
+    nombre_nuevo = (data.get('nombre_nuevo') or '').strip()
+
+    if not nombre_anterior or not nombre_nuevo:
+        return jsonify({'error': 'Debe especificar el nombre actual y el nuevo nombre.'}), 400
+
+    cursor.execute("SELECT espacios_fisicos FROM organizaciones WHERE id = ?", (org_id,))
+    org = cursor.fetchone()
+    raw_espacios = (org['espacios_fisicos'] if org and org['espacios_fisicos'] else '')
+    espacios = [e.strip() for e in raw_espacios.split(',') if e.strip()]
+
+    if nombre_anterior not in espacios:
+        return jsonify({'error': f'No se encontró el consultorio "{nombre_anterior}".'}), 404
+
+    nuevos_espacios = [nombre_nuevo if e == nombre_anterior else e for e in espacios]
+    espacios_str = ", ".join(nuevos_espacios)
+    cursor.execute("UPDATE organizaciones SET espacios_fisicos = ? WHERE id = ?", (espacios_str, org_id))
+    db.commit()
+
+    return jsonify({'success': f'Consultorio renombrado de "{nombre_anterior}" a "{nombre_nuevo}".', 'espacios_fisicos': nuevos_espacios})
+
+
+@clinica_bp.route('/api/clinica/espacios-fisicos/eliminar', methods=['POST'])
+def api_espacios_fisicos_eliminar():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_clinica_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    usr = cursor.fetchone()
+    if not usr or usr['tipo_clinica'] != 1 or not usr['organizacion_id']:
+        return jsonify({'error': 'Solo el Director Administrador puede modificar los espacios físicos.'}), 403
+
+    org_id = usr['organizacion_id']
+    data = request.json or {}
+    nombre = (data.get('nombre') or '').strip()
+    if not nombre:
+        return jsonify({'error': 'Debe especificar el consultorio a eliminar.'}), 400
+
+    cursor.execute("SELECT espacios_fisicos FROM organizaciones WHERE id = ?", (org_id,))
+    org = cursor.fetchone()
+    raw_espacios = (org['espacios_fisicos'] if org and org['espacios_fisicos'] else '')
+    espacios = [e.strip() for e in raw_espacios.split(',') if e.strip()]
+
+    nuevos_espacios = [e for e in espacios if e != nombre]
+    espacios_str = ", ".join(nuevos_espacios)
+    cursor.execute("UPDATE organizaciones SET espacios_fisicos = ? WHERE id = ?", (espacios_str, org_id))
+    db.commit()
+
+    return jsonify({'success': f'Consultorio "{nombre}" eliminado exitosamente.', 'espacios_fisicos': nuevos_espacios})
+
+
 @clinica_bp.route('/api/clinica/miembro/<int:miembro_id>/horarios', methods=['GET', 'POST'])
 def api_miembro_horarios(miembro_id):
-    """Permite al Director Administrador consultar o guardar la disponibilidad y asignación de consultorios de un terapeuta de su equipo."""
+    """Permite al Director Administrador o al propio terapeuta consultar o guardar su disponibilidad y asignación de consultorios."""
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'error': 'No autorizado.'}), 401
@@ -663,8 +897,7 @@ def api_miembro_horarios(miembro_id):
         return jsonify({'error': 'No perteneces a ninguna clínica.'}), 400
 
     org_id = usr['organizacion_id']
-    if usr['tipo_clinica'] != 1:
-        return jsonify({'error': 'Solo el Director Administrador puede gestionar los horarios del equipo.'}), 403
+    es_admin = (usr['tipo_clinica'] == 1)
 
     # Verificar que el miembro pertenece a la misma clínica
     cursor.execute("SELECT * FROM usuarios WHERE id = ? AND organizacion_id = ?", (miembro_id, org_id))
@@ -678,16 +911,107 @@ def api_miembro_horarios(miembro_id):
     espacios_list = [e.strip() for e in raw_espacios.split(',') if e.strip()]
 
     if request.method == 'POST':
+        if not es_admin and user_id != miembro_id:
+            return jsonify({'error': 'Solo el Director Administrador o el propio terapeuta pueden modificar este horario.'}), 403
+
         import json
         data = request.json or {}
-        vis_json = json.dumps(data)
 
-        # Generar disponibilidad legacy si es necesario
+        # Mapeo para generar perfil de disponibilidad autómata para la autoagenda
+        DAY_MAP = [
+            ('domingo', 0, 'Domingo'),
+            ('lunes', 1, 'Lunes'),
+            ('martes', 2, 'Martes'),
+            ('miercoles', 3, 'Miércoles'),
+            ('jueves', 4, 'Jueves'),
+            ('viernes', 5, 'Viernes'),
+            ('sabado', 6, 'Sábado')
+        ]
+
+        profile_dias = []
+        for key, dia_num, dia_name in DAY_MAP:
+            day_cfg = data.get(key, {})
+            is_active = bool(day_cfg.get('activo', False))
+            inicio = day_cfg.get('inicio', '08:00')
+            fin = day_cfg.get('fin', '17:00')
+            
+            rangos = []
+            if is_active and inicio and fin:
+                rangos.append({'inicio': inicio, 'fin': fin})
+                
+            profile_dias.append({
+                'dia': dia_num,
+                'nombre': dia_name,
+                'activo': is_active,
+                'rangos': rangos
+            })
+
+        primary_consultorio = "Consultorio 1"
+        for key in ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']:
+            if data.get(key, {}).get('activo'):
+                primary_consultorio = data.get(key, {}).get('consultorio', 'Consultorio 1')
+                break
+
+        cursor.execute("SELECT nombre FROM organizaciones WHERE id = ?", (org_id,))
+        org_row = cursor.fetchone()
+        org_name = org_row['nombre'] if org_row and org_row['nombre'] else "Clínica"
+
+        clinic_profile = {
+            'id': 'perf_clinica_' + str(org_id),
+            'nombre': f"Horario {org_name}",
+            'modalidad': 'Presencial',
+            'consultorio': primary_consultorio,
+            'dias': profile_dias,
+            'es_horario_clinica': True
+        }
+
+        # Preservar o actualizar la estructura combinada (días + perfiles)
+        existing_other_perfiles = []
+        if m_usr['configuracion_horarios_visual']:
+            try:
+                old_cfg = json.loads(m_usr['configuracion_horarios_visual'])
+                if isinstance(old_cfg.get('perfiles'), list):
+                    existing_other_perfiles = [p for p in old_cfg['perfiles'] if not p.get('es_horario_clinica') and p.get('id') != clinic_profile['id']]
+            except Exception:
+                pass
+
+        if not existing_other_perfiles:
+            existing_other_perfiles = [
+                {
+                    "id": "default_online",
+                    "nombre": "Horario Online",
+                    "modalidad": "Online",
+                    "dias": [
+                        {"dia": 1, "nombre": "Lunes", "activo": True, "rangos": [{"inicio": "12:00", "fin": "16:00"}, {"inicio": "18:00", "fin": "22:00"}]},
+                        {"dia": 2, "nombre": "Martes", "activo": True, "rangos": [{"inicio": "18:00", "fin": "22:00"}]},
+                        {"dia": 3, "nombre": "Miércoles", "activo": False, "rangos": []},
+                        {"dia": 4, "nombre": "Jueves", "activo": False, "rangos": []},
+                        {"dia": 5, "nombre": "Viernes", "activo": False, "rangos": []},
+                        {"dia": 6, "nombre": "Sábado", "activo": False, "rangos": []},
+                        {"dia": 0, "nombre": "Domingo", "activo": False, "rangos": []}
+                    ]
+                }
+            ]
+
+        final_config = {
+            'lunes': data.get('lunes', {}),
+            'martes': data.get('martes', {}),
+            'miercoles': data.get('miercoles', {}),
+            'jueves': data.get('jueves', {}),
+            'viernes': data.get('viernes', {}),
+            'sabado': data.get('sabado', {}),
+            'domingo': data.get('domingo', {}),
+            'perfiles': [clinic_profile] + existing_other_perfiles,
+            'duracion': 60,
+            'receso': 15
+        }
+
+        vis_json = json.dumps(final_config)
+
         cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (vis_json, miembro_id))
         db.commit()
-        return jsonify({'success': 'Horarios del terapeuta actualizados exitosamente.'})
+        return jsonify({'success': 'Horarios y consultorios del terapeuta actualizados exitosamente.'})
 
-    # GET
     import json
     cfg = {}
     if m_usr['configuracion_horarios_visual']:
@@ -695,6 +1019,53 @@ def api_miembro_horarios(miembro_id):
             cfg = json.loads(m_usr['configuracion_horarios_visual'])
         except:
             pass
+
+    return jsonify({
+        'miembro_id': miembro_id,
+        'miembro_nombre': f"{m_usr['nombres']} {m_usr['apellidos']}".strip(),
+        'configuracion': cfg,
+        'espacios_fisicos': espacios_list
+    })
+
+
+@clinica_bp.route('/api/clinica/horarios-equipo', methods=['GET'])
+def api_horarios_equipo():
+    """Retorna los horarios y consultorios asignados de todos los miembros del equipo de la clínica."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado.'}), 401
+
+    db = get_db()
+    ensure_clinica_tables(db)
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    usr = cursor.fetchone()
+    if not usr or not usr['organizacion_id']:
+        return jsonify({'error': 'No perteneces a ninguna clínica.'}), 400
+
+    org_id = usr['organizacion_id']
+    cursor.execute("""
+        SELECT id, nombres, apellidos, nomenclatura, configuracion_horarios_visual
+        FROM usuarios
+        WHERE organizacion_id = ?
+        ORDER BY nombres ASC
+    """, (org_id,))
+    
+    import json
+    resultado = []
+    for r in cursor.fetchall():
+        m = dict(r)
+        cfg = {}
+        if m['configuracion_horarios_visual']:
+            try:
+                cfg = json.loads(m['configuracion_horarios_visual'])
+            except:
+                pass
+        m['configuracion'] = cfg
+        resultado.append(m)
+
+    return jsonify({'horarios_equipo': resultado})
 
     return jsonify({
         'miembro_id': miembro_id,
@@ -801,23 +1172,23 @@ def api_get_clinica_dashboard_data():
     # Map de nombres de psicólogos
     psych_names = {m['id']: f"{m.get('nomenclatura') or 'Psic.'} {m['nombres']} {m['apellidos']}".strip() for m in miembros}
 
-    # 2. Agenda Colectiva (Eventos de la clínica o creados por sus miembros)
+    # 2. Agenda Colectiva (Eventos de la clínica o asignados a pacientes de la clínica)
     if miembros_ids:
         placeholders = ','.join(['?'] * len(miembros_ids))
         cursor.execute(f"""
             SELECT a.*, p.nombres as paciente_nombres, p.apellidos as paciente_apellidos, p.cedula as paciente_cedula
             FROM agenda_finanzas a
             LEFT JOIN pacientes p ON a.paciente_id = p.id
-            WHERE a.creado_por_user_id IN ({placeholders}) OR a.user_id IN ({placeholders}) OR a.organizacion_id = ?
+            WHERE a.organizacion_id = ? OR (p.organizacion_id = ? AND a.creado_por_user_id IN ({placeholders}))
             ORDER BY a.fecha ASC, a.hora ASC
-        """, (*miembros_ids, *miembros_ids, org_id))
+        """, (org_id, org_id, *miembros_ids))
         agenda_raw = [dict(r) for r in cursor.fetchall()]
     else:
         agenda_raw = []
 
     agenda_colectiva = []
     for item in agenda_raw:
-        creator_id = item.get('creado_por_user_id') or item.get('user_id')
+        creator_id = item.get('creado_por_user_id')
         psych_name = psych_names.get(creator_id, 'Terapeuta de Equipo')
         consultorio = item.get('consultorio_nombre') or 'Consultorio 1'
 
@@ -855,8 +1226,9 @@ def api_get_clinica_dashboard_data():
                 'es_propia': False
             })
 
-    # 3. Datos exclusivos para el Director Administrador (Evoluciones Clínicas & Finanzas)
+    # 3. Datos exclusivos para el Director Administrador (Evoluciones Clínicas, Pacientes Activos & Finanzas de la Clínica)
     evoluciones_clinicas = []
+    pacientes_activos = []
     finanzas_consolidadas = {
         'total_ingresos_percibidos': 0.0,
         'total_citas_realizadas': 0,
@@ -872,18 +1244,55 @@ def api_get_clinica_dashboard_data():
         except:
             def decrypt_clinical_text(txt): return txt or ''
 
-        # Evoluciones Clínicas (Sesiones registradas por miembros de la clínica)
+        # Pacientes Activos de la Clínica (EXCLUSIVAMENTE pacientes cuya organizacion_id coincida con la clínica)
+        cursor.execute("""
+            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.telefono, p.costo_personalizado, p.moneda_personalizada, p.psicologo_id,
+                   u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.nomenclatura as psic_nomenclatura
+            FROM pacientes p
+            LEFT JOIN usuarios u ON p.psicologo_id = u.id
+            WHERE p.organizacion_id = ?
+            ORDER BY p.nombres ASC, p.apellidos ASC
+        """, (org_id,))
+        pac_rows = cursor.fetchall()
+        for pr in pac_rows:
+            p_dict = dict(pr)
+            pac_id = p_dict['id']
+            psych_name = f"{p_dict.get('psic_nomenclatura') or 'Psic.'} {p_dict.get('psic_nombres') or ''} {p_dict.get('psic_apellidos') or ''}".strip()
+            if not psych_name or psych_name == 'Psic.':
+                psych_name = 'Sin Psicólogo Asignado'
+
+            costo = float(p_dict.get('costo_personalizado') or 0)
+            moneda = p_dict.get('moneda_personalizada') or 'USD'
+
+            if costo == 0:
+                cursor.execute("SELECT monto, moneda FROM agenda_finanzas WHERE paciente_id = ? AND monto > 0 ORDER BY fecha DESC LIMIT 1", (pac_id,))
+                last_fee = cursor.fetchone()
+                if last_fee:
+                    costo = float(last_fee['monto'] or 0)
+                    moneda = last_fee['moneda'] or 'USD'
+
+            pacientes_activos.append({
+                'id': pac_id,
+                'nombre_completo': f"{p_dict['nombres']} {p_dict['apellidos']}".strip(),
+                'cedula': p_dict.get('cedula') or 'Sin Cédula',
+                'telefono': p_dict.get('telefono') or '',
+                'psicologo_id': p_dict.get('psicologo_id'),
+                'psicologo_asignado': psych_name,
+                'costo_consulta': costo,
+                'moneda': moneda
+            })
+
+        # Evoluciones Clínicas (Sesiones registradas EXCLUSIVAMENTE para pacientes de la clínica)
         if miembros_ids:
-            placeholders = ','.join(['?'] * len(miembros_ids))
-            cursor.execute(f"""
+            cursor.execute("""
                 SELECT s.*, p.nombres as paciente_nombres, p.apellidos as paciente_apellidos, u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.nomenclatura as psic_nomenclatura
                 FROM sesiones s
                 JOIN pacientes p ON s.paciente_id = p.id
                 JOIN usuarios u ON p.psicologo_id = u.id
-                WHERE p.psicologo_id IN ({placeholders}) OR p.organizacion_id = ?
+                WHERE p.organizacion_id = ?
                 ORDER BY s.fecha DESC
                 LIMIT 50
-            """, (*miembros_ids, org_id))
+            """, (org_id,))
             sesiones_rows = cursor.fetchall()
 
             for s_row in sesiones_rows:
@@ -941,6 +1350,7 @@ def api_get_clinica_dashboard_data():
         },
         'es_admin': es_admin,
         'miembros': miembros,
+        'pacientes_activos': pacientes_activos,
         'agenda_colectiva': agenda_colectiva,
         'evoluciones_clinicas': evoluciones_clinicas,
         'finanzas_consolidadas': finanzas_consolidadas

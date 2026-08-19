@@ -6,9 +6,10 @@ var allTestPatientsCache = [];
 var selectedTestCodeForApplication = null;
 var currentCatalogCategory = 'TODAS';
 var currentCatalogPage = 1;
-var CATALOG_PER_PAGE = 10;
+var CATALOG_PER_PAGE = 9;
 
 var testsCatalogDatabase = [
+    // 1. NEURODIVERGENCIA Y AUTISMO
     { 
         code: 'AQ', 
         name: 'AQ — Cociente de Espectro Autista', 
@@ -18,7 +19,8 @@ var testsCatalogDatabase = [
         autor: 'Simon Baron-Cohen et al.', 
         poblacion: 'Adolescentes y Adultos (16+ años)', 
         validez: 'α = 0.82 | Punto de corte: ≥ 32', 
-        itemsCount: 50 
+        itemsCount: 50,
+        isPhysical: false
     },
     { 
         code: 'RAADS-R', 
@@ -29,7 +31,8 @@ var testsCatalogDatabase = [
         autor: 'Riva Ariella Ritvo et al.', 
         poblacion: 'Adultos (18+ años)', 
         validez: 'α = 0.92 | Umbral diagnóstico: ≥ 65', 
-        itemsCount: 80 
+        itemsCount: 80,
+        isPhysical: false
     },
     { 
         code: 'CAT-Q', 
@@ -40,7 +43,8 @@ var testsCatalogDatabase = [
         autor: 'Laura Hull et al.', 
         poblacion: 'Adolescentes y Adultos (16+ años)', 
         validez: 'α = 0.90 | Medición de Camuflaje', 
-        itemsCount: 25 
+        itemsCount: 25,
+        isPhysical: false
     },
     { 
         code: 'ASRS-ADHD', 
@@ -51,8 +55,24 @@ var testsCatalogDatabase = [
         autor: 'OMS / Adler et al.', 
         poblacion: 'Adultos (18+ años)', 
         validez: 'α = 0.87 | Criterios DSM / OMS', 
-        itemsCount: 18 
+        itemsCount: 18,
+        isPhysical: false
     },
+    {
+        code: 'ADOS-2',
+        name: 'ADOS-2 — Escala de Observación para el Diagnóstico del Autismo',
+        siglas: 'ADOS-2',
+        cat: 'Neurodivergencia y Autismo',
+        desc: 'Protocolo estandarizado de observación clínica y algoritmo de afecto social (AS) y conductas repetitivas (CRR).',
+        autor: 'Catherine Lord et al. (2012)',
+        poblacion: 'Niños y Adultos (Módulos T, 1, 2, 3, 4)',
+        validez: 'Sensibilidad 91% | Estándar de Oro Diagnóstico TEA',
+        itemsCount: 14,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/ados2_protocolo_observacion.pdf'
+    },
+
+    // 2. DEPRESIÓN Y ANSIEDAD
     { 
         code: 'BDI-II', 
         name: 'BDI-II — Inventario de Depresión de Beck', 
@@ -62,7 +82,8 @@ var testsCatalogDatabase = [
         autor: 'Aaron T. Beck et al.', 
         poblacion: 'Adolescentes y Adultos (13+ años)', 
         validez: 'α = 0.92 | Validez Clínica Estandarizada', 
-        itemsCount: 21 
+        itemsCount: 21,
+        isPhysical: false
     },
     { 
         code: 'BAI', 
@@ -73,8 +94,103 @@ var testsCatalogDatabase = [
         autor: 'Aaron T. Beck et al.', 
         poblacion: 'Adolescentes y Adultos (13+ años)', 
         validez: 'α = 0.92 | Alta Especificidad Ansiosa', 
-        itemsCount: 21 
+        itemsCount: 21,
+        isPhysical: false
     },
+    {
+        code: 'ZUNG-SDS',
+        name: 'ZUNG-SDS — Escala Autoaplicada de Depresión de Zung',
+        siglas: 'ZUNG-SDS',
+        cat: 'Depresión y Ansiedad',
+        desc: 'Evaluación cuantitativa de 20 reactivos orientada a cuantificar los síntomas afectivos, fisiológicos y psicológicos de la depresión.',
+        autor: 'William W.K. Zung',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'α = 0.88 | Índice de Depresión',
+        itemsCount: 20,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/zung_depresion_escala.pdf'
+    },
+    {
+        code: 'HAMILTON-D',
+        name: 'HAMILTON-D — Escala de Depresión de Hamilton (HDRS)',
+        siglas: 'HAM-D',
+        cat: 'Depresión y Ansiedad',
+        desc: 'Escala heteroaplicada de 17 ítems para la evaluación cuantitativa de la severidad del cuadro depresivo y respuesta terapéutica.',
+        autor: 'Max Hamilton',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'α = 0.90 | Estándar Clínico Heteroaplicado',
+        itemsCount: 17,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/hamilton_depresion_cuestionario.pdf'
+    },
+    {
+        code: 'IDARE-STAI',
+        name: 'IDARE / STAI — Inventario de Ansiedad Rasgo-Estado',
+        siglas: 'IDARE',
+        cat: 'Depresión y Ansiedad',
+        desc: 'Evaluación dual de 40 reactivos que distingue la ansiedad transitoria (Estado) de la predisposición ansiosa permanente (Rasgo).',
+        autor: 'Spielberger, Gorsuch y Lushene',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'α = 0.91 | Evaluación Rasgo / Estado',
+        itemsCount: 40,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/idare_stai_instrumento.pdf'
+    },
+    {
+        code: 'BECK-BHS',
+        name: 'BHS — Escala de Desesperanza de Beck',
+        siglas: 'BHS',
+        cat: 'Depresión y Ansiedad',
+        desc: 'Inventario de 20 frases Verdadero/Falso diseñado para evaluar las actitudes negativas y desesperanza hacia el futuro (indicador de riesgo).',
+        autor: 'Aaron T. Beck et al.',
+        poblacion: 'Adolescentes y Adultos (13+ años)',
+        validez: 'α = 0.93 | Factor de Riesgo Clínico',
+        itemsCount: 20,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/beck_desesperanza.pdf'
+    },
+
+    // 3. PSICOPATOLOGÍA Y SÍNTOMAS GENERALES
+    {
+        code: 'SCL-90-R',
+        name: 'SCL-90-R — Cuestionario de 90 Síntomas Revisado',
+        siglas: 'SCL-90-R',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Evaluación autoadministrada de 90 ítems en escala Likert que explora 9 dimensiones sintomáticas de malestar psicológico.',
+        autor: 'Leonard R. Derogatis',
+        poblacion: 'Adolescentes y Adultos (13+ años)',
+        validez: 'α = 0.95 | Perfil Sintomático 9 Dimensiones',
+        itemsCount: 90,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/scl90r_cuestionario.pdf'
+    },
+    { 
+        code: 'MCMI-II', 
+        name: 'MCMI-II — Inventario Multiaxial Clínico de Millon', 
+        siglas: 'MCMI-II', 
+        cat: 'Personalidad y Psicopatología', 
+        desc: 'Instrumento multiaxial psicométrico de 175 ítems para la evaluación de patrones de personalidad clínica y síndromes severos.', 
+        autor: 'Theodore Millon', 
+        poblacion: 'Adultos (18+ años)', 
+        validez: 'Estandarizado TB | 24 Escalones Clínicos', 
+        itemsCount: 175,
+        isPhysical: false
+    },
+    {
+        code: 'MMPI-2',
+        name: 'MMPI-2 — Inventario Multifásico de Personalidad de Minnesota',
+        siglas: 'MMPI-2',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Inventario clínico de 567 reactivos V/F para evaluación multiaxial de personalidad, validez y psicopatología.',
+        autor: 'Hathaway & McKinley',
+        poblacion: 'Adultos (18+ años)',
+        validez: '10 Escalas Clínicas | L, F, K',
+        itemsCount: 567,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/mmpi-2_cuadernillo.pdf'
+    },
+
+    // 4. CAPACIDAD INTELECTUAL Y NEUROPSICOLOGÍA
     { 
         code: 'RAVEN', 
         name: 'RAVEN — Test de Matrices Progresivas de Raven', 
@@ -84,19 +200,130 @@ var testsCatalogDatabase = [
         autor: 'John C. Raven', 
         poblacion: 'Adolescentes y Adultos (12+ años)', 
         validez: 'α = 0.90 | Razonamiento No Verbal', 
-        itemsCount: 60 
+        itemsCount: 60,
+        isPhysical: false
     },
-    { 
-        code: 'MCMI-II', 
-        name: 'MCMI-II — Inventario Multiaxial Clínico de Millon', 
-        siglas: 'MCMI-II', 
-        cat: 'Personalidad', 
-        desc: 'Instrumento multiaxial psicométrico de 175 ítems para la evaluación de patrones de personalidad clínica y síndromes severos.', 
-        autor: 'Theodore Millon', 
-        poblacion: 'Adultos (18+ años)', 
-        validez: 'Estandarizado TB | 24 Escalones Clínicos', 
-        itemsCount: 175 
+    {
+        code: 'MMSE',
+        name: 'MMSE — Mini-Mental State Examination (Folstein)',
+        siglas: 'MMSE',
+        cat: 'Capacidad Intelectual',
+        desc: 'Prueba neuropsicológica de 30 puntos ampliamente utilizada para el tamizaje de deterioro cognitivo y memoria.',
+        autor: 'Folstein, Folstein & McHugh',
+        poblacion: 'Adultos Mayores (18+ años)',
+        validez: 'Sensibilidad 87% | Tamizaje Cognitivo',
+        itemsCount: 30,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/minimental_hoja_respuesta.pdf'
     },
+    {
+        code: 'MOCA-TEST',
+        name: 'MoCA — Montreal Cognitive Assessment',
+        siglas: 'MoCA',
+        cat: 'Capacidad Intelectual',
+        desc: 'Evaluación cognitiva breve de 30 puntos diseñada para la detección precoz de Deterioro Cognitivo Leve (DCL).',
+        autor: 'Ziad Nasreddine et al.',
+        poblacion: 'Adultos y Adultos Mayores (55+ años)',
+        validez: 'Sensibilidad 90% para DCL',
+        itemsCount: 30,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/moca_test_espanol.pdf'
+    },
+    {
+        code: 'INECO-IFS',
+        name: 'INECO — Frontal Screening (Versión Venezuela)',
+        siglas: 'INECO',
+        cat: 'Capacidad Intelectual',
+        desc: 'Batería neuropsicológica breve validada con baremos de Venezuela para la evaluación de funciones ejecutivas frontales.',
+        autor: 'Teresa Torralva et al.',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'Baremos Venezuela | Funciones Ejecutivas',
+        itemsCount: 8,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/ineco_venezuela_protocolo.pdf'
+    },
+    {
+        code: 'TMT-AB',
+        name: 'TMT — Trail Making Test (Partes A y B)',
+        siglas: 'TMT A/B',
+        cat: 'Capacidad Intelectual',
+        desc: 'Prueba papel y lápiz de atención dividida, velocidad de procesamiento motor y flexibilidad cognitiva.',
+        autor: 'Army Individual Test Battery',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'Estandarizado | Funciones Ejecutivas',
+        itemsCount: 2,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/trail_making_test_tmt.pdf'
+    },
+
+    // 5. MATERIALES PROYECTIVOS Y GRÁFICOS (DESCARGABLES / IMPRIMIBLES)
+    {
+        code: 'HTP-TEST',
+        name: 'HTP — Test de Dibujo Casa-Árbol-Persona',
+        siglas: 'HTP',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Técnica proyectiva gráfica de dibujo libre para la evaluación de la personalidad, autoimagen y mecanismos de defensa.',
+        autor: 'John N. Buck',
+        poblacion: 'Niños, Adolescentes y Adultos',
+        validez: 'Técnica Proyectiva Cualitativa',
+        itemsCount: 3,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/htp_manual_protocolo.pdf'
+    },
+    {
+        code: 'WARTEGG-TEST',
+        name: 'WARTEGG — Test de Dibujo de 8/16 Campos',
+        siglas: 'WARTEGG',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Prueba proyectiva de dibujo sobre cuadros de estímulos para la evaluación de la estructura de personalidad e integración del Yo.',
+        autor: 'Ehrig Wartegg',
+        poblacion: 'Adolescentes y Adultos',
+        validez: 'Técnica Proyectiva Estructurada',
+        itemsCount: 8,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/wartegg_protocolo.pdf'
+    },
+    {
+        code: 'SACKS-TEST',
+        name: 'SACKS — Test de Frases Incompletas para Adultos',
+        siglas: 'SACKS',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Inventario proyectivo verbal de 60 frases incompletas que explora 4 áreas del sujeto: familia, sexo, relaciones y concepto de sí mismo.',
+        autor: 'Joseph M. Sacks',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'Análisis Cualitativo de Actitudes',
+        itemsCount: 60,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/sacks_adultos_protocolo.doc'
+    },
+    {
+        code: 'TAT-TEST',
+        name: 'TAT — Test de Apercepción Temática (Manual Corto)',
+        siglas: 'TAT',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Técnica proyectiva narrativa a través de láminas estructuradas para el análisis de necesidades, presiones y conflictos inconscientes.',
+        autor: 'Henry A. Murray',
+        poblacion: 'Adolescentes y Adultos',
+        validez: 'Análisis Dinámico de la Personalidad',
+        itemsCount: 20,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/tat_manual_protocolo.doc'
+    },
+    {
+        code: 'REY-OSTERRIETH',
+        name: 'REY-O — Figura Compleja de Rey-Osterrieth',
+        siglas: 'REY-O',
+        cat: 'Capacidad Intelectual',
+        desc: 'Prueba viso-constructiva de copia y reproducción de memoria para evaluar organización perceptual y memoria visual.',
+        autor: 'André Rey & Paul-Alexandre Osterrieth',
+        poblacion: 'Niños (8+) y Adultos',
+        validez: 'Estandarizada | Evaluación Neuropsicológica',
+        itemsCount: 18,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/figura_rey_osterrieth.pdf'
+    },
+
+    // 6. ORIENTACIÓN VOCACIONAL E IDENTIDAD DE GÉNERO
     { 
         code: 'HOLLAND', 
         name: 'HOLLAND — Test de Intereses Vocacionales (RIASEC)', 
@@ -106,7 +333,8 @@ var testsCatalogDatabase = [
         autor: 'John L. Holland', 
         poblacion: 'Adolescentes y Adultos (14+ años)', 
         validez: 'α = 0.86 | Perfil Tipológico RIASEC', 
-        itemsCount: 60 
+        itemsCount: 60,
+        isPhysical: false
     },
     { 
         code: 'TCS', 
@@ -117,7 +345,8 @@ var testsCatalogDatabase = [
         autor: 'Kozee, Reisner et al.', 
         poblacion: 'Jóvenes y Adultos (16+ años)', 
         validez: 'α = 0.89 | Afirmación e Identidad', 
-        itemsCount: 12 
+        itemsCount: 12,
+        isPhysical: false
     },
     { 
         code: 'UGDS-GS', 
@@ -128,7 +357,8 @@ var testsCatalogDatabase = [
         autor: 'McGuire et al. / Utrecht', 
         poblacion: 'Adolescentes y Adultos (12+ años)', 
         validez: 'α = 0.91 | Medición de Disforia', 
-        itemsCount: 18 
+        itemsCount: 18,
+        isPhysical: false
     }
 ];
 
@@ -3160,9 +3390,13 @@ function renderPatientsTable(list) {
     pageRecords.forEach(p => {
         const tr = document.createElement('tr');
         const loc = typeof formatPatientLocation === 'function' ? formatPatientLocation(p) : (p.residencia_actual || 'N/A');
+        const badgeOrigen = p.organizacion_id 
+            ? `<span style="display: inline-block; background: #faf4f8; color: #984b80; border: 1px solid #f3e0ed; font-size: 0.72rem; font-weight: 800; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">🏥 ${p.organizacion_nombre || 'Clínica'}</span>`
+            : `<span style="display: inline-block; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">👤 Privado</span>`;
+
         tr.innerHTML = `
             <td><strong>${p.cedula || 'N/A'}</strong></td>
-            <td>${p.nombres || ''} ${p.apellidos || ''}</td>
+            <td><strong>${p.nombres || ''} ${p.apellidos || ''}</strong> ${badgeOrigen}</td>
             <td>${p.edad || 'N/A'}</td>
             <td>${p.genero || 'N/A'}</td>
             <td>${loc}</td>
@@ -3297,6 +3531,7 @@ function openNewPatientModal() {
     
     if (typeof switchFormTab === 'function') switchFormTab(null, 'tab-personal');
     
+    setupPatientOrigenDropdown(null);
     openModal('patient-modal');
 }
 
@@ -3349,9 +3584,82 @@ async function openEditPatientModal(patientId) {
         document.getElementById('patient-modal-title').textContent = "Editar Historia Clínica";
         closeModal('summary-modal');
         switchFormTab(null, 'tab-personal');
+        setupPatientOrigenDropdown(p);
         openModal('patient-modal');
     } catch (err) {
         alert(err.message);
+    }
+}
+
+async function setupPatientOrigenDropdown(p) {
+    const sel = document.getElementById('p-organizacion-id');
+    const container = document.getElementById('p-origen-container');
+    if (!sel) return;
+
+    sel.innerHTML = '<option value="null">👤 Consulta Privada (Independiente)</option>';
+    
+    try {
+        const res = await fetch('/api/clinica/mi-equipo');
+        if (res.ok) {
+            const data = await res.json();
+            const orgId = (data.organizacion && data.organizacion.id) || (data.pertenece ? data.id : null);
+            const orgNombre = (data.organizacion && data.organizacion.nombre) || data.nombre || 'Clínica';
+            const esAdmin = data.es_admin || (data.tipo_clinica === 1);
+
+            if (orgId) {
+                const opt = document.createElement('option');
+                opt.value = String(orgId);
+                opt.textContent = `🏥 ${orgNombre} (Clínica)`;
+                sel.appendChild(opt);
+
+                if (p && p.organizacion_id) {
+                    sel.value = String(p.organizacion_id);
+                } else if (!p) {
+                    // Si el usuario es Director Admin de la clínica, por defecto es Clínica. Si es terapeuta de equipo, por defecto es Privado.
+                    sel.value = esAdmin ? String(orgId) : 'null';
+                } else {
+                    sel.value = 'null';
+                }
+                
+                sel.dataset.tipoClinica = data.tipo_clinica !== undefined ? data.tipo_clinica : (esAdmin ? 1 : 2);
+                sel.dataset.suscripcionPaga = data.suscripcion_paga !== undefined ? data.suscripcion_paga : 1;
+                sel.dataset.orgNombre = orgNombre;
+                if (container) container.style.display = 'block';
+            } else {
+                if (container) container.style.display = 'none';
+            }
+        } else {
+            if (container) container.style.display = 'none';
+        }
+    } catch(e) {
+        console.warn("No se pudo cargar información de clínica para el consultante:", e);
+        if (container) container.style.display = 'none';
+    }
+    
+    onPatientOrigenChange();
+}
+
+function onPatientOrigenChange() {
+    const sel = document.getElementById('p-organizacion-id');
+    const help = document.getElementById('p-origen-help');
+    if (!sel || !help) return;
+
+    const val = sel.value;
+    const tipoClinica = parseInt(sel.dataset.tipoClinica || 0);
+    const subPaga = parseInt(sel.dataset.suscripcionPaga || 0);
+    const orgNombre = sel.dataset.orgNombre || 'la Clínica';
+
+    if (val === 'null') {
+        if (tipoClinica === 2 && subPaga !== 1) {
+            help.style.color = '#c53030';
+            help.innerHTML = `🔒 <strong>Consulta Privada:</strong> Eres terapeuta de clínica. Para agendar y gestionar pacientes independientes propios, activa tu <strong>Suscripción Individual</strong>.`;
+        } else {
+            help.style.color = '#475569';
+            help.innerHTML = `👤 El expediente pertenecerá a tu Consulta Privada personal.`;
+        }
+    } else {
+        help.style.color = '#702e5e';
+        help.innerHTML = `🏥 El expediente quedará asociado a <strong>${orgNombre}</strong> y estará disponible para el equipo clínico.`;
     }
 }
 
@@ -3395,7 +3703,8 @@ async function handlePatientSubmit(e) {
         costo_personalizado: document.getElementById('p-costo-personalizado').value,
         moneda_personalizada: document.getElementById('p-moneda-personalizada').value,
         costo_paquete_personalizado: document.getElementById('p-ofrecer-paquete-personalizado').checked ? document.getElementById('p-costo-paquete-personalizado').value : '',
-        sesiones_paquete_personalizado: document.getElementById('p-ofrecer-paquete-personalizado').checked ? document.getElementById('p-sesiones-paquete-personalizado').value : ''
+        sesiones_paquete_personalizado: document.getElementById('p-ofrecer-paquete-personalizado').checked ? document.getElementById('p-sesiones-paquete-personalizado').value : '',
+        organizacion_id: document.getElementById('p-organizacion-id') ? document.getElementById('p-organizacion-id').value : 'null'
     };
     
     const method = id ? 'PUT' : 'POST';
@@ -5964,7 +6273,9 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     leftPart.appendChild(nameInput);
     leftPart.appendChild(editIcon);
     leftPart.appendChild(modSelect);
-    leftPart.appendChild(consSelect);
+    if (cList && cList.length > 0) {
+        leftPart.appendChild(consSelect);
+    }
     
     const delProfileBtn = document.createElement('button');
     delProfileBtn.type = 'button';
@@ -6136,48 +6447,96 @@ async function loadAdminAvailability() {
         toggleCancelRuleInputs();
         
         listContainer.innerHTML = '';
+
+        const esMiembroClinica = (data.tipo_clinica === 2);
+        const tieneSubPersonal = (data.suscripcion_paga === 1);
+
+        if (esMiembroClinica) {
+            const bannerDiv = document.createElement('div');
+            bannerDiv.style.background = '#faf4f8';
+            bannerDiv.style.border = '1.5px solid #f3e0ed';
+            bannerDiv.style.borderRadius = '14px';
+            bannerDiv.style.padding = '1.25rem';
+            bannerDiv.style.marginBottom = '1.25rem';
+            bannerDiv.style.boxShadow = '0 4px 14px rgba(0,0,0,0.02)';
+            bannerDiv.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; color: #984b80; font-weight: 800; font-size: 1.05rem;">🏥 Horario Sincronizado con ${data.organizacion_nombre || 'tu Clínica'}</h4>
+                        <p style="margin: 0; color: #64748b; font-size: 0.88rem;">Tus días, rango de horas y consultorio asignados en la clínica se reflejan automáticamente para la autoagenda.</p>
+                    </div>
+                </div>
+            `;
+            listContainer.appendChild(bannerDiv);
+        }
         
         const perfiles = (data && Array.isArray(data.perfiles)) ? data.perfiles : [];
-        perfiles.forEach(perf => {
+        let perfilesAMostrar = perfiles;
+        if (esMiembroClinica && !tieneSubPersonal) {
+            perfilesAMostrar = perfiles.filter(p => p.es_horario_clinica);
+        }
+
+        perfilesAMostrar.forEach(perf => {
             renderProfileBlock(listContainer, perf, data.espacios_fisicos);
         });
         
-        // Agregar botón de "+ Crear Perfil de Horario" al final
-        const addProfileBtn = document.createElement('button');
-        addProfileBtn.type = 'button';
-        addProfileBtn.className = 'btn';
-        addProfileBtn.style.width = '100%';
-        addProfileBtn.style.marginTop = '1rem';
-        addProfileBtn.style.border = '2px dashed var(--primary-color)';
-        addProfileBtn.style.color = 'var(--primary-color)';
-        addProfileBtn.style.backgroundColor = 'transparent';
-        addProfileBtn.style.fontWeight = '700';
-        addProfileBtn.style.padding = '0.75rem';
-        addProfileBtn.style.cursor = 'pointer';
-        addProfileBtn.textContent = '+ Crear Perfil de Horario';
-        
-        addProfileBtn.onclick = () => {
-            const newPerf = {
-                id: 'perf_' + Date.now(),
-                nombre: 'Nuevo Horario',
-                modalidad: 'Presencial',
-                consultorio: '',
-                dias: [
-                    {"dia": 1, "nombre": "Lunes", "activo": false, "rangos": []},
-                    {"dia": 2, "nombre": "Martes", "activo": false, "rangos": []},
-                    {"dia": 3, "nombre": "Miércoles", "activo": false, "rangos": []},
-                    {"dia": 4, "nombre": "Jueves", "activo": false, "rangos": []},
-                    {"dia": 5, "nombre": "Viernes", "activo": false, "rangos": []},
-                    {"dia": 6, "nombre": "Sábado", "activo": false, "rangos": []},
-                    {"dia": 0, "nombre": "Domingo", "activo": false, "rangos": []}
-                ]
+        if (esMiembroClinica && !tieneSubPersonal) {
+            const lockMsg = document.createElement('div');
+            lockMsg.style.textAlign = 'center';
+            lockMsg.style.padding = '1.25rem';
+            lockMsg.style.marginTop = '1.25rem';
+            lockMsg.style.background = '#faf4f8';
+            lockMsg.style.border = '1.5px dashed #e4c2da';
+            lockMsg.style.borderRadius = '14px';
+            lockMsg.style.color = '#475569';
+            lockMsg.style.fontSize = '0.9rem';
+            lockMsg.innerHTML = `
+                <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">✨</div>
+                <strong style="color: #984b80; font-size: 0.98rem; display: block; margin-bottom: 0.35rem;">¿Atiendes consulta privada o independiente fuera de la clínica?</strong>
+                <p style="margin: 0 0 1rem 0; color: #64748b; line-height: 1.4; font-size: 0.88rem;">
+                    Para habilitar la creación de horarios privados, consultorios propios y agendas independientes, puedes activar tu suscripción individual.
+                </p>
+                <button type="button" class="btn" style="background: #984b80; color: #ffffff; font-weight: 700; border-radius: 10px; padding: 0.65rem 1.35rem; border: none; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 14px rgba(152,75,128,0.25);" onclick="abrirModalSuscripcionPersonalPrompt()">
+                    💎 Activar Suscripción Individual
+                </button>
+            `;
+            listContainer.appendChild(lockMsg);
+        } else {
+            const addProfileBtn = document.createElement('button');
+            addProfileBtn.type = 'button';
+            addProfileBtn.className = 'btn';
+            addProfileBtn.style.width = '100%';
+            addProfileBtn.style.marginTop = '1rem';
+            addProfileBtn.style.border = '2px dashed var(--primary-color)';
+            addProfileBtn.style.color = 'var(--primary-color)';
+            addProfileBtn.style.backgroundColor = 'transparent';
+            addProfileBtn.style.fontWeight = '700';
+            addProfileBtn.style.padding = '0.75rem';
+            addProfileBtn.style.cursor = 'pointer';
+            addProfileBtn.textContent = '+ Crear Perfil de Horario';
+                
+            addProfileBtn.onclick = () => {
+                const newPerf = {
+                    id: 'perf_' + Date.now(),
+                    nombre: 'Nuevo Horario',
+                    modalidad: 'Presencial',
+                    consultorio: '',
+                    dias: [
+                        {"dia": 1, "nombre": "Lunes", "activo": false, "rangos": []},
+                        {"dia": 2, "nombre": "Martes", "activo": false, "rangos": []},
+                        {"dia": 3, "nombre": "Miércoles", "activo": false, "rangos": []},
+                        {"dia": 4, "nombre": "Jueves", "activo": false, "rangos": []},
+                        {"dia": 5, "nombre": "Viernes", "activo": false, "rangos": []},
+                        {"dia": 6, "nombre": "Sábado", "activo": false, "rangos": []},
+                        {"dia": 0, "nombre": "Domingo", "activo": false, "rangos": []}
+                    ]
+                };
+                renderProfileBlock(listContainer, newPerf, data.espacios_fisicos);
+                listContainer.appendChild(addProfileBtn);
             };
-            renderProfileBlock(listContainer, newPerf, data.espacios_fisicos);
+            
             listContainer.appendChild(addProfileBtn);
-        };
-        
-        listContainer.appendChild(addProfileBtn);
-        
+        }
     } catch (err) {
         listContainer.innerHTML = '<span class="text-secondary text-sm" style="color:red;">Error al cargar disponibilidad.</span>';
     }
@@ -7559,10 +7918,13 @@ async function handlePatientCancelAppointment(apptId, tiempoRestante, limiteCanc
 
 // --- Rol Psicólogo ---
 function toggleNotificationsDropdown() {
-    requestNotificationPermission();
     const dropdown = document.getElementById('notifications-dropdown');
     if (!dropdown) return;
+    const isHiding = dropdown.classList.contains('hide');
     dropdown.classList.toggle('hide');
+    if (isHiding) {
+        loadNotifications();
+    }
 }
 
 async function loadNotifications() {
@@ -7593,7 +7955,6 @@ async function loadNotifications() {
         list.innerHTML = '';
         if (data.notifications && data.notifications.length > 0) {
             data.notifications.forEach(n => {
-                // Disparar notificación nativa en la barra del OS si no está leída
                 if (!n.leida) {
                     triggerNativeNotification(n.titulo || 'Mi Consultorio', n.mensaje || '', `n_${n.id}`, n.link);
                 }
@@ -7603,7 +7964,7 @@ async function loadNotifications() {
                 item.style.borderBottom = '1px solid var(--border-color)';
                 item.style.cursor = 'pointer';
                 item.style.transition = 'background-color 0.2s';
-                item.style.backgroundColor = n.leida ? 'transparent' : 'rgba(169, 89, 147, 0.03)';
+                item.style.backgroundColor = n.leida ? 'transparent' : 'rgba(169, 89, 147, 0.05)';
                 
                 // Iconos por tipo
                 let icon = '🔔';
@@ -7611,6 +7972,7 @@ async function loadNotifications() {
                 if (n.tipo === 'pizarra') icon = '✏️';
                 if (n.tipo === 'pago') icon = '💵';
                 if (n.tipo === 'paciente') icon = '👤';
+                if (n.tipo === 'invitacion_clinica' || n.tipo === 'solicitud_clinica' || n.tipo === 'respuesta_clinica') icon = '🏢';
                 
                 item.innerHTML = `
                     <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
@@ -7618,7 +7980,7 @@ async function loadNotifications() {
                         <div style="flex: 1;">
                             <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-dark); margin-bottom: 0.15rem; display: flex; justify-content: space-between; align-items: center;">
                                 <span>${n.titulo}</span>
-                                ${!n.leida ? '<span style="width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; display: inline-block;"></span>' : ''}
+                                ${!n.leida ? '<span style="width: 7px; height: 7px; background-color: #ef4444; border-radius: 50%; display: inline-block;"></span>' : ''}
                             </div>
                             <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.3; margin-bottom: 0.25rem;">${n.mensaje}</div>
                             <div style="font-size: 0.7rem; color: var(--text-muted); font-style: italic;">${n.fecha}</div>
@@ -7652,15 +8014,18 @@ async function markNotificationAsRead(id, link) {
             body: JSON.stringify({ notification_id: id })
         });
         
-        // Cerrar dropdown y recargar
         const dropdown = document.getElementById('notifications-dropdown');
         if (dropdown) dropdown.classList.add('hide');
         
         loadNotifications();
         
-        // Redireccionar
         if (link) {
-            switchView(link);
+            if (link === '#equipo' || link === 'equipo' || link === '#ajustes' || link === 'ajustes') {
+                if (typeof switchView === 'function') switchView('settings');
+                if (typeof switchSettingsTab === 'function') switchSettingsTab('equipo');
+            } else {
+                if (typeof switchView === 'function') switchView(link);
+            }
         }
     } catch (err) {
         console.error("Error al marcar notificación:", err);
@@ -9604,6 +9969,23 @@ async function loadSuperadminData() {
     }
 }
 
+let _superadminFilter = 'todos';
+
+function setSuperadminFilter(type) {
+    _superadminFilter = type;
+    document.querySelectorAll('.sa-filter-btn').forEach(btn => {
+        btn.classList.remove('btn-primary', 'active');
+        btn.classList.add('btn-outline-secondary');
+    });
+    const targetBtn = document.getElementById(`btn-sa-filter-${type}`);
+    if (targetBtn) {
+        targetBtn.classList.remove('btn-outline-secondary');
+        targetBtn.classList.add('btn-primary', 'active');
+    }
+    _superadminCurrentPage = 1;
+    renderSuperadminTherapistsTable();
+}
+
 function onSuperadminSearchInput(query) {
     _superadminSearchQuery = (query || '').toLowerCase().trim();
     _superadminCurrentPage = 1;
@@ -9623,21 +10005,25 @@ function renderSuperadminTherapistsTable() {
     
     tbody.innerHTML = '';
     
-    // 1. Filtrar lista por Búsqueda (Nombres, Apellidos, Username, Cédula, Correo)
+    // 1. Filtrar lista por Búsqueda y Filtro de Clínica/Independiente
     let filtered = _superadminTherapistsList.filter(p => {
+        if (_superadminFilter === 'clinicas' && !p.organizacion_nombre && !p.organizacion_id) return false;
+        if (_superadminFilter === 'independientes' && (p.organizacion_nombre || p.organizacion_id)) return false;
+
         if (!_superadminSearchQuery) return true;
         const q = _superadminSearchQuery;
         const full = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
         const user = (p.username || '').toLowerCase();
         const ced = (p.cedula || p.cedula_identidad || '').toString().toLowerCase();
         const email = (p.email || p.email_publico || '').toLowerCase();
-        return full.includes(q) || user.includes(q) || ced.includes(q) || email.includes(q);
+        const org = (p.organizacion_nombre || '').toLowerCase();
+        return full.includes(q) || user.includes(q) || ced.includes(q) || email.includes(q) || org.includes(q);
     });
 
     const totalFiltered = filtered.length;
     
     if (totalFiltered === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-secondary" style="padding: 2rem;">🔍 No se encontraron psicólogos que coincidan con "${_superadminSearchQuery}".</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-secondary" style="padding: 2rem;">🔍 No se encontraron psicólogos para la búsqueda/filtro seleccionado.</td></tr>`;
         if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
@@ -9731,8 +10117,24 @@ function renderSuperadminTherapistsTable() {
                         ${(p.nombres || p.username || 'P')[0].toUpperCase()}
                     </div>
                     <div>
-                        <div style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">${fullName}</div>
-                        <div style="font-size: 0.78rem; color: #64748b; font-weight: 600;">@${p.username} ${p.role === 'superadmin' ? '👑 Admin' : ''}</div>
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+                            ${fullName}
+                            ${p.role === 'superadmin' ? '<span class="badge" style="background: #fbbf24; color: #78350f; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px;">👑 Admin</span>' : ''}
+                        </div>
+                        <div style="font-size: 0.78rem; color: #64748b; font-weight: 600; margin-bottom: 2px;">@${p.username}</div>
+                        ${p.organizacion_nombre ? `
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <span class="badge" style="background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                                    🏢 ${p.organizacion_nombre} ${p.tipo_clinica === 1 || String(p.org_admin_user_id) === String(p.id) ? '(👑 Director Admin)' : '(🏥 Equipo)'}
+                                </span>
+                            </div>
+                        ` : `
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 0.70rem; font-weight: 600; padding: 2px 6px; border-radius: 6px;">
+                                    👤 Práctica Independiente
+                                </span>
+                            </div>
+                        `}
                     </div>
                 </div>
             </td>
@@ -19144,51 +19546,65 @@ function renderCatalogViewWithFiltersAndPagination() {
         const checkDisplay = isSelected ? 'inline' : 'none';
         const boxShadow = isSelected ? '0 8px 25px rgba(112, 46, 94, 0.15)' : '0 2px 8px rgba(0,0,0,0.03)';
 
+        const typeBadge = test.isPhysical
+            ? `<span style="font-size: 0.65rem; font-weight: 800; color: #d97706; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 8px; white-space: nowrap;">📄 Material Físico</span>`
+            : `<span style="font-size: 0.65rem; font-weight: 800; color: #16a34a; background: #dcfce7; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 8px; white-space: nowrap;">⚡ Digital</span>`;
+
+        const downloadBtn = test.downloadUrl
+            ? `<a href="${test.downloadUrl}" target="_blank" onclick="event.stopPropagation();" title="Descargar material/protocolo para imprimir" style="background: #fff7ed; border: 1px solid #ffedd5; color: #c2410c; font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; margin-right: 4px;">
+                📥 Descargar
+               </a>`
+            : '';
+
         html += `
             <div id="card-test-choice-${test.code}" 
-                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 16px; padding: 1rem 1.15rem; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow}; box-sizing: border-box;"
+                 style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 14px; padding: 0.8rem 0.9rem; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: ${boxShadow}; box-sizing: border-box;"
                  onmouseover="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#702e5e'; }"
                  onmouseout="if(selectedTestCodeForApplication !== '${test.code}') { this.style.borderColor='#e2e8f0'; }">
                 
-                <span class="test-card-check" style="display: ${checkDisplay}; position: absolute; top: 12px; right: 14px; font-weight: 900; color: #702e5e; font-size: 1.2rem;">✓</span>
+                <span class="test-card-check" style="display: ${checkDisplay}; position: absolute; top: 10px; right: 12px; font-weight: 900; color: #702e5e; font-size: 1.1rem;">✓</span>
 
                 <div>
                     <!-- BADGES SUPERIORES -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 8px; padding-right: 20px;">
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 3px 10px; border-radius: 12px; white-space: nowrap;">${test.siglas}</span>
-                            <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 10px; white-space: nowrap;">${test.itemsCount} ítems</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; margin-bottom: 6px; padding-right: 18px;">
+                        <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                            <span style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 2px 7px; border-radius: 10px; white-space: nowrap;">${test.siglas}</span>
+                            <span style="font-size: 0.68rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 7px; border-radius: 8px; white-space: nowrap;">${test.itemsCount} ítems</span>
+                            ${typeBadge}
                         </div>
                     </div>
 
                     <!-- TÍTULO DE TEST -->
                     <div style="cursor: pointer;" onclick="selectTestForApplication('${test.code}')">
-                        <h4 style="margin: 0 0 6px 0; font-size: 0.98rem; font-weight: 800; color: #0f172a; line-height: 1.35;">${test.name}</h4>
+                        <h4 style="margin: 0 0 4px 0; font-size: 0.88rem; font-weight: 800; color: #0f172a; line-height: 1.3;">${test.name}</h4>
                     </div>
                 </div>
 
                 <!-- DETALLES DESPLEGABLES (DESCRIPCIÓN + AUTOR + POBLACIÓN + VALIDEZ) -->
-                <div id="test-details-block-${test.code}" style="display: ${isExpanded ? 'block' : 'none'}; margin-top: 8px; transition: all 0.2s ease;">
-                    <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: #64748b; line-height: 1.45;">
+                <div id="test-details-block-${test.code}" style="display: ${isExpanded ? 'block' : 'none'}; margin-top: 6px; transition: all 0.2s ease;">
+                    <p style="margin: 0 0 8px 0; font-size: 0.74rem; color: #64748b; line-height: 1.35;">
                         ${test.desc}
                     </p>
-                    <div style="background: #f8fafc; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; font-size: 0.73rem; color: #475569; display: flex; flex-direction: column; gap: 3px;">
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; font-size: 0.68rem; color: #475569; display: flex; flex-direction: column; gap: 2px;">
                         <div><strong>👨‍⚕️ Autor:</strong> ${test.autor}</div>
                         <div><strong>👥 Población:</strong> ${test.poblacion}</div>
                         <div><strong>📊 Validez/Confiabilidad:</strong> ${test.validez}</div>
                     </div>
                 </div>
 
-                <!-- FOOTER DE TARJETA CON BOTÓN FLECHITA Y SELECCIONAR -->
-                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 8px; margin-top: 8px;">
-                    <button type="button" onclick="toggleTestDetails('${test.code}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.15s;">
+                <!-- FOOTER DE TARJETA CON BOTÓN FLECHITA, DESCARGAR Y SELECCIONAR -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 6px;">
+                    <button type="button" onclick="toggleTestDetails('${test.code}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; transition: all 0.15s;">
                         <span>${isExpanded ? 'Ver menos' : 'Ver detalles'}</span>
-                        <span style="font-size: 0.7rem;">${isExpanded ? '▲' : '▼'}</span>
+                        <span style="font-size: 0.65rem;">${isExpanded ? '▲' : '▼'}</span>
                     </button>
 
-                    <button type="button" onclick="selectTestForApplication('${test.code}')" style="background: transparent; border: none; font-size: 0.82rem; font-weight: 900; color: #702e5e; cursor: pointer; padding: 4px 8px;">
-                        Seleccionar ➔
-                    </button>
+                    <div style="display: flex; align-items: center;">
+                        ${downloadBtn}
+                        <button type="button" onclick="selectTestForApplication('${test.code}')" style="background: transparent; border: none; font-size: 0.78rem; font-weight: 900; color: #702e5e; cursor: pointer; padding: 3px 6px;">
+                            ${test.isPhysical ? 'Registrar ➔' : 'Seleccionar ➔'}
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -19211,7 +19627,7 @@ function renderCatalogViewWithFiltersAndPagination() {
         </button>
     `;
 
-    if (topCtrl) topCtrl.innerHTML = controlsHtml;
+    if (topCtrl) topCtrl.innerHTML = '';
     if (btmCtrl) btmCtrl.innerHTML = controlsHtml;
 }
 
@@ -19428,13 +19844,57 @@ if (document.readyState === 'loading') {
    MÓDULO CORPORATIVO / EQUIPO DE TRABAJO (FRONTEND)
    ============================================================================== */
 
+function switchClinicaSubTab(tabName) {
+    window.currentClinicaSubTab = tabName;
+    const tabs = ['datos', 'psicologos', 'horarios'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`clinica-subtab-${t}`);
+        const content = document.getElementById(`clinica-subcontent-${t}`);
+        if (btn) {
+            if (t === tabName) {
+                btn.className = 'btn btn-sm';
+                btn.style.background = '#984b80';
+                btn.style.color = '#ffffff';
+                btn.style.border = 'none';
+                btn.style.boxShadow = '0 4px 14px rgba(152,75,128,0.25)';
+            } else {
+                btn.className = 'btn btn-sm';
+                btn.style.background = '#ffffff';
+                btn.style.color = '#64748b';
+                btn.style.border = '1.5px solid #e2e8f0';
+                btn.style.boxShadow = 'none';
+            }
+        }
+        if (content) {
+            if (t === tabName) {
+                content.classList.remove('hide');
+                content.style.setProperty('display', 'block', 'important');
+            } else {
+                content.classList.add('hide');
+                content.style.setProperty('display', 'none', 'important');
+            }
+        }
+    });
+
+    if (tabName === 'horarios') {
+        const selectElem = document.getElementById('select-clinica-miembro-schedule');
+        const miembroId = selectElem ? selectElem.value : (window.globalClinicaMiembros?.[0]?.id);
+        if (miembroId && typeof cargarEditorHorarioMiembro === 'function') {
+            cargarEditorHorarioMiembro(miembroId);
+        }
+        if (typeof cargarResumenHorariosEquipo === 'function') {
+            cargarResumenHorariosEquipo();
+        }
+    }
+}
+
 async function loadEquipoSettings() {
     const mainContainer = document.getElementById('equipo-main-content');
     const headerActions = document.getElementById('equipo-header-actions');
     if (!mainContainer) return;
 
     try {
-        mainContainer.innerHTML = `<div style="text-align: center; padding: 2rem; color: #64748b;"><div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div><div>Cargando datos del equipo...</div></div>`;
+        mainContainer.innerHTML = `<div style="text-align: center; padding: 2rem; color: #64748b;"><div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div><div>Cargando datos de la clínica...</div></div>`;
         if (headerActions) headerActions.innerHTML = '';
 
         const [resEquipo, resSolicitudes] = await Promise.all([
@@ -19453,127 +19913,349 @@ async function loadEquipoSettings() {
         if (pertenece) {
             // CASO A: Pertenece a una clínica registrada
             const esAdmin = dataEquipo.es_admin;
+            const miembros = dataEquipo.miembros || [];
 
-            if (esAdmin && headerActions) {
-                headerActions.innerHTML = `
-                    <button type="button" class="btn btn-sm" style="background: #702e5e; color: #ffffff; font-weight: 700; border-radius: 20px; padding: 0.5rem 1.25rem; box-shadow: 0 4px 12px rgba(112,46,94,0.25);" onclick="invitarMiembroClinicaPrompt()">
-                        ➕ Invitar Miembro por Cédula/ID
-                    </button>
-                `;
-            }
+            if (headerActions) headerActions.innerHTML = '';
+
+            // BARRA DE PESTAÑAS SUPERIOR DESPLAZABLE CON ESTILO MODERNO
+            html += `
+                <div class="sub-nav-tabs mb-4" style="display: flex; gap: 0.6rem; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 0.85rem; margin-bottom: 1.75rem; flex-wrap: wrap;">
+                    <button type="button" id="clinica-subtab-datos" class="btn btn-sm" onclick="switchClinicaSubTab('datos')" style="font-weight: 700; padding: 0.65rem 1.4rem; border-radius: 10px; background: #984b80; color: #fff; border: none; box-shadow: 0 4px 14px rgba(152,75,128,0.25);">🏢 Datos de la Clínica</button>
+                    <button type="button" id="clinica-subtab-psicologos" class="btn btn-sm" onclick="switchClinicaSubTab('psicologos')" style="font-weight: 700; padding: 0.65rem 1.4rem; border-radius: 10px; background: #ffffff; color: #64748b; border: 1.5px solid #e2e8f0;">👥 Psicólogos Afiliados (${miembros.length})</button>
+                    <button type="button" id="clinica-subtab-horarios" class="btn btn-sm" onclick="switchClinicaSubTab('horarios')" style="font-weight: 700; padding: 0.65rem 1.4rem; border-radius: 10px; background: #ffffff; color: #64748b; border: 1.5px solid #e2e8f0;">🗓️ Horarios y Consultorios</button>
+                </div>
+            `;
+
+            // ─────────────────────────────────────────────────────────────
+            // PESTAÑA 1: DATOS DE LA CLÍNICA
+            // ─────────────────────────────────────────────────────────────
+            const modoWa = clinica.modo_whatsapp || 'centralizado';
+            const publicUrl = `${location.origin}/clinica/${clinica.slug || ''}`;
+            const inviteUrl = `${location.origin}/registro-psicologo?codigo=${clinica.codigo_clinica || ''}`;
+            const adminMember = miembros.find(m => m.tipo_clinica === 1) || miembros[0] || {};
+            const perfilPsicologoUrl = adminMember.perfil_url || `/perfil/${adminMember.id || ''}`;
 
             html += `
-                <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                            <span style="font-size: 1.25rem; font-weight: 800; color: #702e5e;">🏢 ${clinica.nombre || 'Mi Clínica'}</span>
-                            <span class="badge" style="background: #702e5e; color: #fff; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px;">${esAdmin ? 'Director Administrador' : 'Integrante del Equipo'}</span>
+                <div id="clinica-subcontent-datos" class="clinica-subtab-content">
+                    <div style="background: #faf4f8; border: 1.5px solid #f3e0ed; border-radius: 14px; padding: 1.25rem; margin-bottom: 1.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem;">
+                                <span style="font-size: 1.25rem; font-weight: 800; color: #3b192e;">🏢 ${clinica.nombre || 'Mi Clínica'}</span>
+                                <span class="badge" style="background: #984b80; color: #fff; font-size: 0.75rem; padding: 0.25rem 0.7rem; border-radius: 10px; font-weight: 700;">${esAdmin ? 'Director Administrador' : 'Integrante del Equipo'}</span>
+                            </div>
+                            <div style="color: #64748b; font-size: 0.88rem;">
+                                🔑 Código de Clínica: <strong style="color: #1e293b; background: #fff; padding: 0.2rem 0.6rem; border-radius: 8px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 0.95rem;">${clinica.codigo_clinica || ''}</strong>
+                            </div>
                         </div>
-                        <div style="color: #64748b; font-size: 0.88rem; margin-bottom: 0.5rem;">
-                            🔑 Código de Clínica: <strong style="color: #1e293b; background: #fff; padding: 0.15rem 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0; font-family: monospace;">${clinica.codigo_clinica || ''}</strong>
-                            <span style="margin: 0 0.5rem;">•</span>
-                            🌐 Portal Público: <a href="/clinica/${clinica.slug || ''}" target="_blank" style="color: #702e5e; font-weight: 700; text-decoration: underline;">/clinica/${clinica.slug || ''}</a>
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                            <a href="${perfilPsicologoUrl}" target="_blank" class="btn btn-sm" style="border-radius: 10px; font-weight: 700; padding: 0.55rem 1.1rem; background: #ffffff; color: #984b80; border: 1.5px solid #984b80; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                👤 Ver Perfil de Psicólogo
+                            </a>
                             ${esAdmin ? `
-                                <button type="button" class="btn btn-sm btn-primary" style="background: #702e5e; border: none; font-weight: 700; border-radius: 8px;" onclick="invitarMiembroClinicaPrompt()">
-                                    ➕ Invitar Terapeuta por Cédula/ID
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" style="font-weight: 700; border-radius: 8px; background: #fff;" onclick="copyClinicCodeToClipboard('${clinica.codigo_clinica || ''}')">
-                                    📋 Copiar Código
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 8px; background: #fff;" onclick="abrirModalConfigEspaciosFisicos()">
-                                    🚪 Espacios Físicos
+                                <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 10px; font-weight: 700; padding: 0.55rem 1.1rem;" onclick="eliminarClinicaPrompt()">
+                                    🗑️ Eliminar Clínica
                                 </button>
                             ` : `
-                                <button type="button" class="btn btn-sm btn-outline-secondary" style="font-weight: 700; border-radius: 8px; background: #fff;" onclick="copyClinicCodeToClipboard('${clinica.codigo_clinica || ''}')">
-                                    📋 Copiar Código
+                                <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 10px; font-weight: 700; padding: 0.55rem 1.1rem;" onclick="salirClinicaPrompt()">
+                                    🚪 Salir del Equipo
                                 </button>
                             `}
                         </div>
                     </div>
+
+                    <!-- PERFIL EN EL DIRECTORIO PÚBLICO -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.75rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                        <h4 style="margin: 0 0 0.35rem 0; font-weight: 800; color: #3b192e; font-size: 1.15rem;">📝 Perfil Institucional para Directorio Público</h4>
+                        <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 1.5rem; line-height: 1.4;">Personaliza los datos públicos que verán tus consultantes en la página web institucional de la clínica.</p>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.4rem; display: block;">Nombre de la Clínica *</label>
+                                <input type="text" id="clinica-edit-nombre" class="form-control" value="${clinica.nombre || ''}" ${!esAdmin ? 'disabled' : ''} style="border-radius: 10px; border: 1.5px solid #e2e8f0; font-weight: 600; padding: 0.65rem 0.9rem; font-size: 0.9rem;">
+                            </div>
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.4rem; display: block;">Ubicación (País)</label>
+                                <input type="text" id="clinica-edit-pais" class="form-control" placeholder="Ej. Venezuela, Colombia, México..." value="${clinica.pais || ''}" ${!esAdmin ? 'disabled' : ''} style="border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 0.65rem 0.9rem; font-size: 0.9rem;">
+                            </div>
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.4rem; display: block;">Dirección Física / Ciudad</label>
+                                <input type="text" id="clinica-edit-direccion" class="form-control" placeholder="Ej. Av. Principal, Edif. Centro Médico, Piso 3" value="${clinica.direccion || ''}" ${!esAdmin ? 'disabled' : ''} style="border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 0.65rem 0.9rem; font-size: 0.9rem;">
+                            </div>
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.4rem; display: block;">Teléfono / WhatsApp de Contacto</label>
+                                <input type="text" id="clinica-edit-telefono" class="form-control" placeholder="+58 412 1234567" value="${clinica.telefono || ''}" ${!esAdmin ? 'disabled' : ''} style="border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 0.65rem 0.9rem; font-size: 0.9rem;">
+                            </div>
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.4rem; display: block;">Correo Electrónico Institucional</label>
+                                <input type="email" id="clinica-edit-email" class="form-control" placeholder="contacto@sanandomentes.com" value="${clinica.email || ''}" ${!esAdmin ? 'disabled' : ''} style="border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 0.65rem 0.9rem; font-size: 0.9rem;">
+                            </div>
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.4rem; display: block;">Instagram Institucional</label>
+                                <input type="text" id="clinica-edit-instagram" class="form-control" placeholder="@sanandomentes" value="${clinica.instagram || ''}" ${!esAdmin ? 'disabled' : ''} style="border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 0.65rem 0.9rem; font-size: 0.9rem;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.4rem; display: block;">Reseña / Descripción Institucional</label>
+                                <textarea id="clinica-edit-desc" class="form-control" rows="3" placeholder="Descripción de servicios y enfoque clínico..." ${!esAdmin ? 'disabled' : ''} style="border-radius: 10px; border: 1.5px solid #e2e8f0; font-size: 0.9rem; padding: 0.75rem; min-height: 90px;">${clinica.descripcion || ''}</textarea>
+                            </div>
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.4rem; display: block;">Misión de la Clínica</label>
+                                <textarea id="clinica-edit-mision" class="form-control" rows="3" placeholder="Nuestra misión es proporcionar atención psicológica integral de excelencia..." ${!esAdmin ? 'disabled' : ''} style="border-radius: 10px; border: 1.5px solid #e2e8f0; font-size: 0.9rem; padding: 0.75rem; min-height: 90px;">${clinica.mision || ''}</textarea>
+                            </div>
+                        </div>
+
+                        ${esAdmin ? `
+                            <button type="button" class="btn" style="background: #984b80; color: #ffffff; font-weight: 700; border-radius: 10px; padding: 0.7rem 1.6rem; border: none; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 12px rgba(152,75,128,0.25);" onclick="guardarAjustesClinica()">
+                                Guardar Perfil
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <!-- ENLACES DE ACCESO INSTITUCIONALES -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.75rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                        <h4 style="margin: 0 0 0.35rem 0; font-weight: 800; color: #3b192e; font-size: 1.15rem;">Enlaces de Acceso para Pacientes y Terapeutas</h4>
+                        <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 1.5rem; line-height: 1.4;">Envía estos enlaces a tus colegas o pacientes para agilizar el registro y agendamiento clínico.</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                            <!-- OPCIÓN 1 -->
+                            <div style="background: #ffffff; border: 1.5px solid #f3e0ed; border-radius: 14px; padding: 1.25rem;">
+                                <div style="font-weight: 800; font-size: 0.95rem; color: #984b80; margin-bottom: 0.35rem;">1. Enlace para Registro Dirigido de Psicólogos</div>
+                                <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 0.85rem; line-height: 1.4;">Permite que un psicólogo se registre e ingrese automáticamente a tu equipo con tu código de clínica prepoblado.</p>
+                                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                                    <input type="text" readonly value="${inviteUrl}" class="form-control" style="flex: 1; min-width: 260px; height: 44px; background: #fff; font-family: monospace; font-size: 0.9rem; border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 0.6rem 0.9rem; color: #334155;">
+                                    <button type="button" class="btn" style="height: 44px; background: #984b80; color: #ffffff; font-weight: 700; font-size: 0.88rem; padding: 0 1.5rem; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(152,75,128,0.25);" onclick="copyClinicCodeToClipboard('${inviteUrl}')">
+                                        Copiar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- OPCIÓN 2 -->
+                            <div style="background: #ffffff; border: 1.5px solid #f3e0ed; border-radius: 14px; padding: 1.25rem;">
+                                <div style="font-weight: 800; font-size: 0.95rem; color: #984b80; margin-bottom: 0.35rem;">2. Enlace de Auto-agenda Rápida Colectiva</div>
+                                <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 0.85rem; line-height: 1.4;">Enlace público para que tus pacientes agenden citas rápidas directamente con el equipo de la clínica.</p>
+                                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                                    <input type="text" readonly value="${publicUrl}" class="form-control" style="flex: 1; min-width: 260px; height: 44px; background: #fff; font-family: monospace; font-size: 0.9rem; border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 0.6rem 0.9rem; color: #334155;">
+                                    <button type="button" class="btn" style="height: 44px; background: #984b80; color: #ffffff; font-weight: 700; font-size: 0.88rem; padding: 0 1.5rem; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(152,75,128,0.25);" onclick="copyClinicCodeToClipboard('${publicUrl}')">
+                                        Copiar
+                                    </button>
+                                    <a href="/clinica/${clinica.slug || ''}" target="_blank" class="btn" style="height: 44px; background: #ffffff; color: #984b80; border: 1.5px solid #984b80; font-weight: 700; font-size: 0.88rem; padding: 0 1.4rem; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                                        Abrir Portal
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONFIGURACIÓN DE NOTIFICACIONES WHATSAPP -->
                     ${esAdmin ? `
-                        <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-weight: 700; padding: 0.45rem 1rem;" onclick="eliminarClinicaPrompt()">
-                            🗑️ Eliminar Clínica
-                        </button>
-                    ` : `
-                        <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-weight: 700; padding: 0.45rem 1rem;" onclick="salirClinicaPrompt()">
-                            🚪 Salir del Equipo
-                        </button>
-                    `}
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.75rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                            <h4 style="margin: 0 0 0.35rem 0; font-weight: 800; color: #3b192e; font-size: 1.15rem;">💬 Configuración de Notificaciones WhatsApp del Equipo</h4>
+                            <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 1.25rem; line-height: 1.4;">Determina si los recordatorios y confirmaciones automáticas saldrán desde el WhatsApp central de la clínica o de forma independiente por cada terapeuta.</p>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                                    <input type="radio" name="modo_wa_option" value="centralizado" ${modoWa === 'centralizado' ? 'checked' : ''} onchange="actualizarModoWaClinica('centralizado')" style="accent-color: #984b80; width: 18px; height: 18px; margin-top: 3px;">
+                                    <div>
+                                        <div>🏢 Centralizado (WhatsApp Empresarial de la Clínica)</div>
+                                        <div style="font-weight: 400; font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+                                            Usa el número telefónico institucional de la clínica (<strong>${clinica.telefono || 'Ver en Teléfono de Contacto'}</strong>) para enviar todas las notificaciones del equipo.
+                                        </div>
+                                    </div>
+                                </label>
+                                <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                                    <input type="radio" name="modo_wa_option" value="independiente" ${modoWa === 'independiente' ? 'checked' : ''} onchange="actualizarModoWaClinica('independiente')" style="accent-color: #984b80; width: 18px; height: 18px; margin-top: 3px;">
+                                    <div>
+                                        <div>🟢 Independiente (Cada terapeuta conecta su propio WhatsApp)</div>
+                                        <div style="font-weight: 400; font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+                                            Cada psicólogo envía las notificaciones a sus pacientes directamente desde su número personal de WhatsApp.
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- ZONA DE ACCIONES INSTITUCIONALES / PELIGRO -->
+                    <div style="background: #fff5f5; border: 1.5px solid #fecaca; border-radius: 16px; padding: 1.5rem; margin-top: 1.75rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-weight: 800; color: #991b1b; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+                            ⚠️ Acciones Institucionales de la Clínica
+                        </h4>
+                        <p style="color: #7f1d1d; font-size: 0.88rem; margin-bottom: 1.25rem;">
+                            ${esAdmin ? 'Como Director Administrador, puedes eliminar la clínica de forma permanente. Todos los psicólogos afiliados volverán al estado independiente.' : 'Puedes desvincularte de esta clínica en cualquier momento y volver a trabajar de forma independiente.'}
+                        </p>
+
+                        ${esAdmin ? `
+                            <button type="button" class="btn" style="font-weight: 700; border-radius: 10px; padding: 0.65rem 1.4rem; background: #dc2626; color: #fff; border: none; cursor: pointer; font-size: 0.9rem;" onclick="eliminarClinicaPrompt()">
+                                🗑️ Eliminar Clínica Definitivamente
+                            </button>
+                        ` : `
+                            <button type="button" class="btn btn-outline-danger" style="font-weight: 700; border-radius: 10px; padding: 0.65rem 1.4rem; font-size: 0.9rem;" onclick="salirClinicaPrompt()">
+                                🚪 Salir del Equipo de la Clínica
+                            </button>
+                        `}
+                    </div>
                 </div>
             `;
 
-            if (esAdmin) {
-                // Configuración de WhatsApp de la Clínica
-                const modoWa = clinica.modo_whatsapp || 'centralizado';
-                html += `
-                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0 0 0.5rem 0; font-weight: 700; color: #1e293b;">💬 Configuración de Notificaciones WhatsApp del Equipo</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1rem;">Determina si las notificaciones de WhatsApp de tu equipo saldrán desde el WhatsApp de la clínica o de forma independiente por cada psicólogo.</p>
-                        
-                        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #334155;">
-                                <input type="radio" name="modo_wa_option" value="centralizado" ${modoWa === 'centralizado' ? 'checked' : ''} onchange="actualizarModoWaClinica('centralizado')">
-                                🏢 Centralizado (WhatsApp Empresarial de la Clínica)
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #334155;">
-                                <input type="radio" name="modo_wa_option" value="independiente" ${modoWa === 'independiente' ? 'checked' : ''} onchange="actualizarModoWaClinica('independiente')">
-                                🟢 Independiente (Cada terapeuta conecta su propio WhatsApp)
-                            </label>
+            // ─────────────────────────────────────────────────────────────
+            // PESTAÑA 2: PSICÓLOGOS AFILIADOS
+            // ─────────────────────────────────────────────────────────────
+            const solAdmin = dataEquipo.solicitudes || dataSol.solicitudes_para_admin || [];
+            html += `
+                <div id="clinica-subcontent-psicologos" class="clinica-subtab-content hide">
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.75rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+                            <div>
+                                <h4 style="font-weight: 800; color: #3b192e; margin: 0; font-size: 1.15rem;">👥 Psicólogos Integrantes del Equipo (${miembros.length})</h4>
+                                <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">Terapeutas afiliados que colaboran en la clínica.</p>
+                            </div>
+                            ${esAdmin ? `
+                                <button type="button" class="btn" style="background: #984b80; color: #ffffff; font-weight: 700; border-radius: 10px; padding: 0.65rem 1.4rem; border: none; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 12px rgba(152,75,128,0.25);" onclick="invitarMiembroClinicaPrompt()">
+                                    ➕ Agregar Psicólogo por Cédula / ID
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        ${solAdmin.length > 0 ? `
+                            <div style="background: #fffbe6; border: 1.5px solid #ffe58f; border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                                <h4 style="margin: 0 0 0.75rem 0; color: #d48806; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+                                    📥 Solicitudes de Ingreso Pendientes (${solAdmin.length})
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                    ${solAdmin.map(s => `
+                                        <div style="background: #ffffff; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid #ffe58f; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                                            <div>
+                                                <strong style="color: #111827;">Psic. ${s.nombres || s.solicitante_nombres || ''} ${s.apellidos || s.solicitante_apellidos || ''}</strong>
+                                                <div style="color: #6b7280; font-size: 0.8rem;">Cédula: ${s.cedula || s.solicitante_cedula || 'N/D'} | Usuario: @${s.username || s.solicitante_username || ''}</div>
+                                            </div>
+                                            <div style="display: flex; gap: 0.5rem;">
+                                                <button type="button" class="btn btn-sm btn-success" style="font-weight: 700; border-radius: 8px;" onclick="responderSolicitudEquipo(${s.id}, 'aceptar')">✓ Aprobar Ingreso</button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" style="font-weight: 700; border-radius: 8px;" onclick="responderSolicitudEquipo(${s.id}, 'rechazar')">✕ Rechazar</button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem;">
+                            ${miembros.map(m => `
+                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 0.85rem; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                                    <div style="display: flex; align-items: center; gap: 0.85rem; min-width: 0;">
+                                        <div style="width: 52px; height: 52px; border-radius: 50%; background: #984b80; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.15rem; flex-shrink: 0; overflow: hidden; border: 2px solid #f3e0ed;">
+                                            ${m.foto_titulo ? `<img src="${m.foto_titulo}" style="width:100%; height:100%; object-fit:cover;">` : (m.nombres ? m.nombres[0].toUpperCase() : 'P')}
+                                        </div>
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">${m.nomenclatura || 'Psic.'} ${m.nombres} ${m.apellidos}</div>
+                                            <div style="font-size: 0.78rem; color: #64748b;">Cédula: ${m.cedula || 'N/D'} | ID: #${m.id}</div>
+                                            <div style="margin-top: 0.35rem;">
+                                                <span class="badge" style="font-size: 0.72rem; background: ${m.tipo_clinica === 1 ? '#faf4f8' : '#f1f5f9'}; color: ${m.tipo_clinica === 1 ? '#984b80' : '#475569'}; border: 1px solid ${m.tipo_clinica === 1 ? '#f3e0ed' : '#cbd5e1'}; font-weight: 700; padding: 3px 8px; border-radius: 8px;">
+                                                    ${m.tipo_clinica === 1 ? '👑 Director Administrador' : '🩺 Terapeuta de Equipo'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                        <a href="${m.perfil_url || `/perfil/${m.id}`}" target="_blank" class="btn btn-sm" style="border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #984b80; border: 1.5px solid #984b80; text-decoration: none; text-align: center;">
+                                            👤 Perfil
+                                        </a>
+                                        ${esAdmin && m.tipo_clinica !== 1 ? `
+                                            <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700;" onclick="removerMiembroClinicaPrompt(${m.id}, '${m.nombres} ${m.apellidos}')" title="Desvincular del equipo">
+                                                🗑️ Borrar
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                `;
+                </div>
+            `;
 
-                // Solicitudes pendientes enviadas por terapeutas para unirse a la clínica
-                const solAdmin = dataEquipo.solicitudes || dataSol.solicitudes_para_admin || [];
-                if (solAdmin.length > 0) {
-                    html += `
-                        <div style="background: #fffbe6; border: 1.5px solid #ffe58f; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
-                            <h4 style="margin: 0 0 0.75rem 0; color: #d48806; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
-                                📥 Solicitudes de Ingreso Pendientes (${solAdmin.length})
-                            </h4>
-                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                                ${solAdmin.map(s => `
-                                    <div style="background: #ffffff; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #ffe58f; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                                        <div>
-                                            <strong style="color: #111827;">Psic. ${s.nombres || s.solicitante_nombres || ''} ${s.apellidos || s.solicitante_apellidos || ''}</strong>
-                                            <div style="color: #6b7280; font-size: 0.8rem;">Cédula: ${s.cedula || s.solicitante_cedula || 'N/D'} | Usuario: @${s.username || s.solicitante_username || ''}</div>
-                                        </div>
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <button type="button" class="btn btn-sm btn-success" style="font-weight: 700; border-radius: 8px;" onclick="responderSolicitudEquipo(${s.id}, 'aceptar')">✓ Aprobar Ingreso</button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" style="font-weight: 700; border-radius: 8px;" onclick="responderSolicitudEquipo(${s.id}, 'rechazar')">✕ Rechazar</button>
-                                        </div>
+            // ─────────────────────────────────────────────────────────────
+            // PESTAÑA 3: HORARIOS Y CONSULTORIOS
+            // ─────────────────────────────────────────────────────────────
+            const rawEspacios = dataEquipo.espacios_fisicos || clinica.espacios_fisicos;
+            const cList = Array.isArray(rawEspacios) ? rawEspacios : (typeof rawEspacios === 'string' ? rawEspacios.split(',').map(s=>s.trim()).filter(Boolean) : ['Consultorio 1', 'Consultorio 2']);
+            window.globalClinicaEspaciosFisicos = cList;
+            window.globalClinicaMiembros = miembros;
+
+            html += `
+                <div id="clinica-subcontent-horarios" class="clinica-subtab-content hide">
+                    <!-- SECCIÓN 1: CONSULTORIOS FÍSICOS DETERMINADOS -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.75rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+                            <div>
+                                <h4 style="margin: 0; font-weight: 800; color: #3b192e; font-size: 1.15rem;">🚪 Consultorios Físicos Determinados (${cList.length})</h4>
+                                <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">Espacios físicos registrados para la atención presencial.</p>
+                            </div>
+                            ${esAdmin ? `
+                                <button type="button" class="btn" style="height: 44px; background: #984b80; color: #ffffff; font-weight: 700; font-size: 0.88rem; padding: 0 1.4rem; border-radius: 10px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(152,75,128,0.25);" onclick="agregarConsultorioFisicoPrompt()">
+                                    ➕ Agregar Consultorio
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.1rem;">
+                            ${cList.map(c => `
+                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                                    <div>
+                                        <strong style="color: #0f172a; font-size: 0.98rem; display: flex; align-items: center; gap: 0.4rem;">
+                                            🏛️ ${c}
+                                        </strong>
+                                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 3px;">Consultorio Habilitado</div>
                                     </div>
-                                `).join('')}
+                                    ${esAdmin ? `
+                                        <div style="display: flex; gap: 0.35rem;">
+                                            <button type="button" class="btn btn-sm" style="border-radius: 8px; padding: 0.35rem 0.6rem; font-size: 0.78rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;" onclick="renombrarConsultorioFisicoPrompt('${c}')" title="Modificar Nombre">
+                                                ✏️ Editar
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 8px; padding: 0.35rem 0.6rem; font-size: 0.78rem; font-weight: 700;" onclick="eliminarConsultorioFisicoPrompt('${c}')" title="Eliminar Consultorio">
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    ` : `
+                                        <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 8px;">Activo</span>
+                                    `}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                        <!-- SECCIÓN 2: CUADRO GENERAL DE HORARIOS Y CONSULTORIOS DEL EQUIPO (PRIMERO) -->
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.75rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                            <h4 style="margin: 0 0 0.35rem 0; font-weight: 800; color: #3b192e; font-size: 1.15rem;">📋 Horarios y Consultorios Asignados al Equipo</h4>
+                            <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 1.25rem;">Vista consolidada de los espacios y disponibilidades de todos los terapeutas de la clínica.</p>
+                            
+                            <div id="container-resumen-horarios-equipo">
+                                <div style="text-align: center; color: #64748b; padding: 1rem;">Cargando resumen de equipo...</div>
                             </div>
                         </div>
-                    `;
-                }
-            }
 
-            // Lista de miembros del equipo
-            const miembros = dataEquipo.miembros || [];
-            html += `
-                <div style="margin-top: 1rem;">
-                    <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 0.75rem;">👥 Integrantes del Equipo de Trabajo (${miembros.length})</h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
-                        ${miembros.map(m => `
-                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                                <div style="width: 48px; height: 48px; border-radius: 50%; background: #702e5e; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; overflow: hidden;">
-                                    ${m.foto_titulo ? `<img src="${m.foto_titulo}" style="width:100%; height:100%; object-fit:cover;">` : (m.nombres ? m.nombres[0].toUpperCase() : 'P')}
-                                </div>
-                                <div style="flex: 1; min-width: 0;">
-                                    <div style="font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.nomenclatura || 'Psic.'} ${m.nombres} ${m.apellidos}</div>
-                                    <div style="font-size: 0.78rem; color: #64748b;">Cédula: ${m.cedula || 'N/D'} | ID: #${m.id}</div>
-                                    <div style="margin-top: 0.25rem;">
-                                        <span class="badge" style="font-size: 0.7rem; background: ${m.tipo_clinica === 1 ? '#fdf4ff' : '#f1f5f9'}; color: ${m.tipo_clinica === 1 ? '#702e5e' : '#475569'}; border: 1px solid ${m.tipo_clinica === 1 ? '#f0abfc' : '#cbd5e1'};">
-                                            ${m.tipo_clinica === 1 ? '👑 Director Administrador' : '🩺 Terapeuta de Equipo'}
-                                        </span>
-                                    </div>
-                                </div>
+                        <!-- SECCIÓN 3: ASIGNACIÓN Y EDICIÓN DE HORARIOS POR PSICÓLOGO (SEGUNDO) -->
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                            <h4 style="margin: 0 0 0.35rem 0; font-weight: 800; color: #3b192e; font-size: 1.15rem;">🗓️ Asignación y Edición de Horario por Psicólogo</h4>
+                            <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 1.25rem;">Selecciona un terapeuta de tu equipo para establecer sus días, horas de atención y consultorio físico asignado.</p>
+
+                            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; background: #faf4f8; padding: 1.25rem; border-radius: 12px; border: 1.5px solid #f3e0ed;">
+                                <label style="font-weight: 700; color: #3b192e; font-size: 0.9rem;">Psicólogo Afiliado:</label>
+                                ${(() => {
+                                    const currentUsrId = (dataEquipo.miembro_actual && dataEquipo.miembro_actual.id) || (window.currentUser && window.currentUser.id) || (miembros[0] && miembros[0].id);
+                                    return `
+                                        <select id="select-clinica-miembro-schedule" class="form-control" style="max-width: 340px; height: 44px; font-weight: 700; border-radius: 10px; border: 1.5px solid #e2e8f0;" onchange="cargarEditorHorarioMiembro(this.value)">
+                                            ${miembros.map(m => `<option value="${m.id}" ${String(m.id) === String(currentUsrId) ? 'selected' : ''}>${m.nomenclatura || 'Psic.'} ${m.nombres} ${m.apellidos} (#${m.id})</option>`).join('')}
+                                        </select>
+                                    `;
+                                })()}
                             </div>
-                        `).join('')}
+
+                            <!-- GESTOR INTERACTIVO DE HORARIO Y CONSULTORIOS POR DÍA -->
+                            <div id="container-editor-horarios-miembro" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.5rem;">
+                                <div style="text-align: center; color: #64748b; padding: 1rem;">Cargando horario del terapeuta...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -19647,9 +20329,69 @@ async function loadEquipoSettings() {
         }
 
         mainContainer.innerHTML = html;
+        if (pertenece) {
+            const activeTab = window.currentClinicaSubTab || 'datos';
+            switchClinicaSubTab(activeTab);
+        }
     } catch (e) {
         console.error("Error al cargar ajustes de equipo:", e);
         mainContainer.innerHTML = `<div style="color: #ef4444; padding: 1rem; text-align: center;">Error al cargar la información del equipo: ${e.message}</div>`;
+    }
+}
+
+async function guardarAjustesClinica() {
+    const nombre = (document.getElementById('clinica-edit-nombre')?.value || '').trim();
+    const desc = (document.getElementById('clinica-edit-desc')?.value || '').trim();
+    const direccion = (document.getElementById('clinica-edit-direccion')?.value || '').trim();
+    const telefono = (document.getElementById('clinica-edit-telefono')?.value || '').trim();
+    const email = (document.getElementById('clinica-edit-email')?.value || '').trim();
+
+    if (!nombre) {
+        alert("El nombre de la clínica es obligatorio.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/clinica/ajustes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nombre: nombre,
+                descripcion: desc,
+                direccion: direccion,
+                telefono: telefono,
+                email: email
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ Perfil de la clínica actualizado con éxito.");
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "No se pudo actualizar el perfil de la clínica."));
+        }
+    } catch (e) {
+        alert("Error de conexión al guardar el perfil de la clínica.");
+    }
+}
+
+async function removerMiembroClinicaPrompt(targetUserId, nombreTerapeuta) {
+    if (!confirm(`¿Estás seguro de que deseas desvincular a "${nombreTerapeuta}" de tu equipo de trabajo?`)) return;
+
+    try {
+        const res = await fetch(`/api/clinica/miembro/${targetUserId}/remover`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "No se pudo desvincular al terapeuta."));
+        }
+    } catch (e) {
+        alert("Error de conexión al desvincular al terapeuta.");
     }
 }
 
@@ -19685,6 +20427,7 @@ async function responderSolicitudEquipo(solicitudId, accion) {
         const data = await res.json();
         if (res.ok) {
             alert(data.success);
+            await checkAndInitClinicaNav();
             loadEquipoSettings();
         } else {
             alert("⚠️ " + (data.error || "No se pudo procesar la solicitud."));
@@ -19702,6 +20445,7 @@ async function salirClinicaPrompt() {
         const data = await res.json();
         if (res.ok) {
             alert("✅ " + data.success);
+            await checkAndInitClinicaNav();
             loadEquipoSettings();
         } else {
             alert("⚠️ " + (data.error || "No se pudo desvincular de la clínica."));
@@ -19719,6 +20463,7 @@ async function eliminarClinicaPrompt() {
         const data = await res.json();
         if (res.ok) {
             alert("✅ " + data.success);
+            await checkAndInitClinicaNav();
             loadEquipoSettings();
         } else {
             alert("⚠️ " + (data.error || "No se pudo eliminar la clínica."));
@@ -19746,6 +20491,7 @@ async function ejecutarRegistroClinica() {
         const data = await res.json();
         if (res.ok) {
             alert(`🎉 ¡Felicidades! Se ha registrado la clínica "${data.nombre}". Tu código único es: ${data.codigo_clinica}`);
+            await checkAndInitClinicaNav();
             loadEquipoSettings();
         } else {
             alert("⚠️ " + (data.error || "No se pudo registrar la clínica."));
@@ -19830,7 +20576,7 @@ async function checkAndInitClinicaNav() {
 
         if (pertenece && navItem && navNombre) {
             const clinica = data.clinica || data;
-            navNombre.innerHTML = `🏥 ${clinica.nombre || 'Mi Clínica'}`;
+            navNombre.innerHTML = `${clinica.nombre || 'Mi Clínica'}`;
             navItem.classList.remove('hide');
         } else if (navItem) {
             navItem.classList.add('hide');
@@ -19863,9 +20609,9 @@ async function loadClinicaDashboard() {
         cachedClinicaData = data;
 
         // Actualizar Cabecera
-        if (dashTitulo) dashTitulo.innerHTML = `🏥 ${data.clinica.nombre || 'Portal de Clínica'}`;
+        if (dashTitulo) dashTitulo.innerHTML = `${data.clinica.nombre || 'Portal de Clínica'}`;
         if (dashBadgeRol) {
-            dashBadgeRol.innerHTML = data.es_admin ? '👑 Director Administrador' : '👥 Terapeuta del Equipo';
+            dashBadgeRol.innerHTML = data.es_admin ? 'Director Administrador' : 'Terapeuta del Equipo';
             dashBadgeRol.style.background = data.es_admin ? '#702e5e' : '#2563eb';
         }
 
@@ -19910,83 +20656,191 @@ function switchClinicaDashboardTab(tabName) {
     });
 }
 
+let clinicaFullCalendarInstance = null;
+let currentClinicaAgendaSubView = 'lista';
+
+function switchClinicaAgendaSubView(mode) {
+    currentClinicaAgendaSubView = mode;
+    const btnList = document.getElementById('btn-clinica-subview-lista');
+    const btnCal = document.getElementById('btn-clinica-subview-calendar');
+    const wrapperList = document.getElementById('clinica-lista-wrapper');
+    const wrapperCal = document.getElementById('clinica-calendar-wrapper');
+
+    if (mode === 'lista') {
+        if (btnList) { btnList.style.background = '#702e5e'; btnList.style.color = '#fff'; }
+        if (btnCal) { btnCal.style.background = 'transparent'; btnCal.style.color = '#64748b'; }
+        if (wrapperList) wrapperList.classList.remove('hide');
+        if (wrapperCal) wrapperCal.classList.add('hide');
+    } else {
+        if (btnCal) { btnCal.style.background = '#702e5e'; btnCal.style.color = '#fff'; }
+        if (btnList) { btnList.style.background = 'transparent'; btnList.style.color = '#64748b'; }
+        if (wrapperCal) wrapperCal.classList.remove('hide');
+        if (wrapperList) wrapperList.classList.add('hide');
+
+        if (cachedClinicaData) {
+            setTimeout(() => renderClinicaFullCalendar(cachedClinicaData), 100);
+        }
+    }
+}
+
+function renderClinicaFullCalendar(data) {
+    const calendarEl = document.getElementById('clinica-calendar-el');
+    if (!calendarEl || typeof FullCalendar === 'undefined') return;
+
+    if (clinicaFullCalendarInstance) {
+        clinicaFullCalendarInstance.destroy();
+    }
+
+    const agenda = data.agenda_colectiva || [];
+    const events = agenda.map(a => {
+        let startStr = a.fecha || new Date().toISOString().split('T')[0];
+        if (a.hora) {
+            const cleanHora = a.hora.trim();
+            startStr += 'T' + (cleanHora.length === 5 ? cleanHora + ':00' : cleanHora);
+        }
+        return {
+            id: String(a.id),
+            title: `${a.consultorio}: ${a.psicologo_nombre} (${a.paciente_nombre})`,
+            start: startStr,
+            backgroundColor: a.es_propia ? '#702e5e' : '#2563eb',
+            borderColor: a.es_propia ? '#58244a' : '#1d4ed8',
+            textColor: '#ffffff',
+            extendedProps: a
+        };
+    });
+
+    clinicaFullCalendarInstance = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            day: 'Día'
+        },
+        events: events,
+        eventClick: function(info) {
+            const props = info.event.extendedProps;
+            alert(`Cita Corporativa (${props.consultorio})\nFecha: ${props.fecha} ${props.hora}\nPsicólogo: ${props.psicologo_nombre}\nPaciente: ${props.paciente_nombre}\nEstado Pago: ${props.estado_pago}`);
+        }
+    });
+
+    clinicaFullCalendarInstance.render();
+}
+
 function renderClinicaAgenda(data) {
     const container = document.getElementById('clinica-agenda-container');
     if (!container) return;
 
     const agenda = data.agenda_colectiva || [];
-    const espacios = data.clinica.espacios_fisicos || ['Consultorio 1', 'Consultorio 2'];
+    const espacios = (data.clinica && data.clinica.espacios_fisicos) || ['Consultorio 1', 'Consultorio 2'];
 
     let html = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.15rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">📅 TOTAL CITAS EN AGENDA</div>
+                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">TOTAL CITAS EN AGENDA</div>
                 <div style="font-size: 1.8rem; font-weight: 800; color: #702e5e; margin-top: 0.2rem;">${agenda.length}</div>
             </div>
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.15rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">🚪 CONSULTORIOS REGISTRADOS</div>
+                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">CONSULTORIOS REGISTRADOS</div>
                 <div style="font-size: 1.8rem; font-weight: 800; color: #2563eb; margin-top: 0.2rem;">${espacios.length}</div>
                 <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">${espacios.join(', ')}</div>
             </div>
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.15rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">👥 PSICÓLOGOS EN EQUIPO</div>
+                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">PSICÓLOGOS EN EQUIPO</div>
                 <div style="font-size: 1.8rem; font-weight: 800; color: #16a34a; margin-top: 0.2rem;">${(data.miembros || []).length}</div>
             </div>
         </div>
+
+        <!-- MÓDULO DESLIZABLE / SUB-PESTAÑAS DE VISTA Y ACCIÓN DE CITA -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; gap: 8px; background: #e2e8f0; padding: 5px; border-radius: 12px; width: max-content;">
+                <button id="btn-clinica-subview-lista" type="button" onclick="switchClinicaAgendaSubView('lista')" class="btn btn-sm" style="background: ${currentClinicaAgendaSubView === 'lista' ? '#702e5e' : 'transparent'}; color: ${currentClinicaAgendaSubView === 'lista' ? '#fff' : '#475569'}; border-radius: 9px; font-weight: 800; border: none; padding: 7px 18px; transition: all 0.2s ease;">
+                    Próximas Consultas (Lista)
+                </button>
+                <button id="btn-clinica-subview-calendar" type="button" onclick="switchClinicaAgendaSubView('calendar')" class="btn btn-sm" style="background: ${currentClinicaAgendaSubView === 'calendar' ? '#702e5e' : 'transparent'}; color: ${currentClinicaAgendaSubView === 'calendar' ? '#fff' : '#475569'}; border-radius: 9px; font-weight: 800; border: none; padding: 7px 18px; transition: all 0.2s ease;">
+                    Calendario Colectivo (Mes / Semana / Día)
+                </button>
+            </div>
+            <button type="button" class="btn btn-sm" style="background: #702e5e; color: #fff; font-weight: 700; border-radius: 20px; box-shadow: 0 4px 12px rgba(112,46,94,0.25); padding: 0.5rem 1.15rem;" onclick="abrirModalNuevaCitaClinica()">
+                + Nueva Cita Corporativa
+            </button>
+        </div>
+
+        <!-- VISTA 1: LISTA DE PRÓXIMAS CONSULTAS -->
+        <div id="clinica-lista-wrapper" class="${currentClinicaAgendaSubView === 'lista' ? '' : 'hide'}">
+            ${agenda.length === 0 ? `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 3rem; text-align: center; color: #64748b;">
+                    <h4 style="color: #334155; margin-bottom: 0.25rem;">No hay citas agendadas aún en la clínica</h4>
+                    <p style="font-size: 0.9rem;">Usa el botón "Nueva Cita Corporativa" para agendar seleccionando el psicólogo y el consultorio físico.</p>
+                </div>
+            ` : `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                    <div style="padding: 1rem 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #1e293b; display: flex; align-items: center; justify-content: space-between;">
+                        <span>Agenda Colectiva & Distribución de Consultorios</span>
+                        <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Los datos de pacientes de otros psicólogos permanecen anonimizados</span>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="table" style="width: 100%; margin: 0; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f1f5f9; text-align: left; font-size: 0.82rem; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                                    <th style="padding: 0.75rem 1rem;">Fecha</th>
+                                    <th style="padding: 0.75rem 1rem;">Hora</th>
+                                    <th style="padding: 0.75rem 1rem;">Espacio Físico</th>
+                                    <th style="padding: 0.75rem 1rem;">Psicólogo Tratante</th>
+                                    <th style="padding: 0.75rem 1rem;">Paciente / Estado</th>
+                                    <th style="padding: 0.75rem 1rem;">Estado Pago</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${agenda.map(a => `
+                                    <tr style="border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; ${a.es_propia ? 'background: #fdf4ff;' : ''}">
+                                        <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a;">${a.fecha || 'N/D'}</td>
+                                        <td style="padding: 0.75rem 1rem; font-weight: 700; color: #702e5e;">${a.hora || 'N/D'}</td>
+                                        <td style="padding: 0.75rem 1rem;">
+                                            <span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px;">${a.consultorio}</span>
+                                        </td>
+                                        <td style="padding: 0.75rem 1rem; font-weight: 700; color: #1e293b;">${a.psicologo_nombre}</td>
+                                        <td style="padding: 0.75rem 1rem;">
+                                            ${a.paciente_nombre === '🔒 Horario Ocupado' ? `<span style="color: #64748b; font-style: italic; font-weight: 600;">Horario Ocupado</span>` : `<span style="font-weight: 700; color: #0f172a;">${a.paciente_nombre}</span>`}
+                                        </td>
+                                        <td style="padding: 0.75rem 1rem;">
+                                            <span class="badge" style="background: ${a.estado_pago === 'Pagado' ? '#dcfce7' : '#fef3c7'}; color: ${a.estado_pago === 'Pagado' ? '#166534' : '#92400e'}; padding: 0.2rem 0.5rem; border-radius: 6px; font-weight: 700;">${a.estado_pago}</span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `}
+        </div>
+
+        <!-- VISTA 2: CALENDARIO COLECTIVO INTERACTIVO (MES / SEMANA / DÍA) -->
+        <div id="clinica-calendar-wrapper" class="${currentClinicaAgendaSubView === 'calendar' ? '' : 'hide'}" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+            <div id="clinica-calendar-el" style="min-height: 550px;"></div>
+        </div>
     `;
 
-    if (agenda.length === 0) {
-        html += `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 3rem; text-align: center; color: #64748b;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📅</div>
-                <h4 style="color: #334155; margin-bottom: 0.25rem;">No hay citas agendadas aún en la clínica</h4>
-                <p style="font-size: 0.9rem;">Usa el botón "📅 Nueva Cita Corporativa" para agendar seleccionando el psicólogo y el consultorio físico.</p>
-            </div>
-        `;
-    } else {
-        html += `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                <div style="padding: 1rem 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #1e293b; display: flex; align-items: center; justify-content: space-between;">
-                    <span>📋 Agenda Colectiva & Distribución de Consultorios</span>
-                    <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">🔒 Los datos de pacientes de otros psicólogos permanecen anonimizados</span>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="table" style="width: 100%; margin: 0; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: #f1f5f9; text-align: left; font-size: 0.82rem; color: #475569; border-bottom: 1px solid #e2e8f0;">
-                                <th style="padding: 0.75rem 1rem;">Fecha</th>
-                                <th style="padding: 0.75rem 1rem;">Hora</th>
-                                <th style="padding: 0.75rem 1rem;">Espacio Físico</th>
-                                <th style="padding: 0.75rem 1rem;">Psicólogo Tratante</th>
-                                <th style="padding: 0.75rem 1rem;">Paciente / Estado</th>
-                                <th style="padding: 0.75rem 1rem;">Estado Pago</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${agenda.map(a => `
-                                <tr style="border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; ${a.es_propia ? 'background: #fdf4ff;' : ''}">
-                                    <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a;">📆 ${a.fecha || 'N/D'}</td>
-                                    <td style="padding: 0.75rem 1rem; font-weight: 700; color: #702e5e;">⏰ ${a.hora || 'N/D'}</td>
-                                    <td style="padding: 0.75rem 1rem;">
-                                        <span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px;">🚪 ${a.consultorio}</span>
-                                    </td>
-                                    <td style="padding: 0.75rem 1rem; font-weight: 700; color: #1e293b;">${a.psicologo_nombre}</td>
-                                    <td style="padding: 0.75rem 1rem;">
-                                        ${a.paciente_nombre === '🔒 Horario Ocupado' ? `<span style="color: #64748b; font-style: italic; font-weight: 600;">🔒 Horario Ocupado</span>` : `<span style="font-weight: 700; color: #0f172a;">👤 ${a.paciente_nombre}</span>`}
-                                    </td>
-                                    <td style="padding: 0.75rem 1rem;">
-                                        <span class="badge" style="background: ${a.estado_pago === 'Pagado' ? '#dcfce7' : '#fef3c7'}; color: ${a.estado_pago === 'Pagado' ? '#166534' : '#92400e'}; padding: 0.2rem 0.5rem; border-radius: 6px; font-weight: 700;">${a.estado_pago}</span>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    }
-
     container.innerHTML = html;
+
+    if (currentClinicaAgendaSubView === 'calendar') {
+        setTimeout(() => renderClinicaFullCalendar(data), 100);
+    }
+}
+
+let currentClinicaSubTab = 'psicologos';
+
+function cambiarSubTabClinica(subTab) {
+    currentClinicaSubTab = subTab;
+    if (cachedClinicaData) {
+        renderClinicaEvoluciones(cachedClinicaData);
+    }
 }
 
 function renderClinicaEvoluciones(data) {
@@ -19996,7 +20850,6 @@ function renderClinicaEvoluciones(data) {
     if (!data.es_admin) {
         container.innerHTML = `
             <div style="background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 14px; padding: 2.5rem; text-align: center; color: #c2410c;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
                 <h3 style="font-weight: 800; margin-bottom: 0.5rem; color: #9a3412;">Acceso Reservado al Director Administrador</h3>
                 <p style="max-width: 500px; margin: 0 auto; color: #64748b;">Las evoluciones clínicas consolidadas de todo el equipo solo pueden ser visualizadas por el Director de la Clínica por políticas de ética y supervisión institucional.</p>
             </div>
@@ -20005,79 +20858,162 @@ function renderClinicaEvoluciones(data) {
     }
 
     const miembros = data.miembros || [];
+    const pacientes = data.pacientes_activos || [];
     const evoluciones = data.evoluciones_clinicas || [];
 
     let html = `
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
             <div>
-                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">🩺 Supervisión de Casos & Evoluciones Clínicas</h3>
-                <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.85rem;">Consolidado de intervenciones, diagnósticos y tests aplicados por los terapeutas del equipo.</p>
+                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">Gestión de Equipo & Expedientes de Clínica</h3>
+                <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.85rem;">Supervisión de psicólogos activos, pacientes asignados y evoluciones clínicas consolidadas.</p>
             </div>
-            <button type="button" class="btn btn-sm btn-primary" style="background: #702e5e; border: none; font-weight: 700; border-radius: 20px; padding: 0.5rem 1.15rem;" onclick="abrirModalAsignarPacienteClinica()">
-                👤 Derivar / Asignar Paciente a Psicólogo
-            </button>
-        </div>
-
-        <div style="margin-bottom: 1.5rem;">
-            <h4 style="font-size: 0.95rem; font-weight: 800; color: #334155; margin-bottom: 0.75rem;">👥 Terapeutas Activos en Clínica (${miembros.length})</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem;">
-                ${miembros.map(m => `
-                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.85rem; display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="width: 40px; height: 40px; border-radius: 50%; background: #702e5e; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
-                            ${m.nombres ? m.nombres[0].toUpperCase() : 'P'}
-                        </div>
-                        <div>
-                            <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">${m.nomenclatura || 'Psic.'} ${m.nombres} ${m.apellidos}</div>
-                            <div style="font-size: 0.75rem; color: #64748b;">${m.especialidades || 'Psicología Clínica'}</div>
-                        </div>
-                    </div>
-                `).join('')}
+            <!-- BARRA DE SUBPESTAÑAS -->
+            <div style="display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; gap: 4px;">
+                <button type="button" class="btn btn-sm ${currentClinicaSubTab === 'psicologos' ? 'btn-primary' : 'btn-light'}" 
+                        style="${currentClinicaSubTab === 'psicologos' ? 'background: #702e5e; color: #ffffff;' : 'background: transparent; color: #475569;'} border: none; font-weight: 700; border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.85rem;"
+                        onclick="cambiarSubTabClinica('psicologos')">
+                    Psicólogos Activos (${miembros.length})
+                </button>
+                <button type="button" class="btn btn-sm ${currentClinicaSubTab === 'pacientes' ? 'btn-primary' : 'btn-light'}" 
+                        style="${currentClinicaSubTab === 'pacientes' ? 'background: #702e5e; color: #ffffff;' : 'background: transparent; color: #475569;'} border: none; font-weight: 700; border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.85rem;"
+                        onclick="cambiarSubTabClinica('pacientes')">
+                    Pacientes Activos (${pacientes.length})
+                </button>
+                <button type="button" class="btn btn-sm ${currentClinicaSubTab === 'evoluciones' ? 'btn-primary' : 'btn-light'}" 
+                        style="${currentClinicaSubTab === 'evoluciones' ? 'background: #702e5e; color: #ffffff;' : 'background: transparent; color: #475569;'} border: none; font-weight: 700; border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.85rem;"
+                        onclick="cambiarSubTabClinica('evoluciones')">
+                    Evoluciones (${evoluciones.length})
+                </button>
             </div>
         </div>
     `;
 
-    if (evoluciones.length === 0) {
+    // SUBPESTAÑA 1: PSICÓLOGOS ACTIVOS
+    if (currentClinicaSubTab === 'psicologos') {
         html += `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 3rem; text-align: center; color: #64748b;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📋</div>
-                <h4 style="color: #334155; margin-bottom: 0.25rem;">No hay evoluciones clínicas registradas recientemente</h4>
-                <p style="font-size: 0.88rem;">A medida que tus psicólogos registren sesiones y notas clínicas, aparecerán en este panel de supervisión.</p>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem;">
+                <h4 style="font-size: 0.95rem; font-weight: 800; color: #334155; margin-bottom: 1rem;">Terapeutas en la Organización</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+                    ${miembros.map(m => `
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 0.85rem;">
+                            <div style="width: 44px; height: 44px; border-radius: 50%; background: #702e5e; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                                ${m.nombres ? m.nombres[0].toUpperCase() : 'P'}
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 800; color: #0f172a; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.nomenclatura || 'Psic.'} ${m.nombres} ${m.apellidos}</div>
+                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 1px;">${m.especialidades || 'Psicología Clínica'}</div>
+                                <div style="margin-top: 6px;">
+                                    <span class="badge" style="${m.tipo_clinica === 1 ? 'background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc;' : 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;'} font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.5rem;">
+                                        ${m.tipo_clinica === 1 ? 'Director Administrador' : 'Terapeuta de Equipo'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         `;
-    } else {
-        html += `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-                <div style="padding: 1rem 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #1e293b;">
-                    📋 Historial Consolidado de Evoluciones Clínicas
+    } 
+    // SUBPESTAÑA 2: PACIENTES ACTIVOS
+    else if (currentClinicaSubTab === 'pacientes') {
+        if (pacientes.length === 0) {
+            html += `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 3rem; text-align: center; color: #64748b;">
+                    <h4 style="color: #334155; margin-bottom: 0.25rem;">No hay pacientes registrados en la clínica</h4>
+                    <p style="font-size: 0.88rem;">A medida que agregues o asignes pacientes al equipo de psicólogos, aparecerán consolidados en esta lista.</p>
                 </div>
-                <div style="overflow-x: auto;">
-                    <table class="table" style="width: 100%; margin: 0; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: #f1f5f9; text-align: left; font-size: 0.82rem; color: #475569; border-bottom: 1px solid #e2e8f0;">
-                                <th style="padding: 0.75rem 1rem;">Fecha</th>
-                                <th style="padding: 0.75rem 1rem;">Psicólogo Tratante</th>
-                                <th style="padding: 0.75rem 1rem;">Paciente</th>
-                                <th style="padding: 0.75rem 1rem;">Resumen / Tema Abordado</th>
-                                <th style="padding: 0.75rem 1rem;">Tests Aplicados</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${evoluciones.map(e => `
-                                <tr style="border-bottom: 1px solid #f1f5f9; font-size: 0.88rem;">
-                                    <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a; white-space: nowrap;">📆 ${e.fecha || ''}</td>
-                                    <td style="padding: 0.75rem 1rem; font-weight: 700; color: #702e5e;">${e.psicologo_nombre}</td>
-                                    <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a;">👤 ${e.paciente_nombre}</td>
-                                    <td style="padding: 0.75rem 1rem; color: #334155;">${e.resumen_tema || 'Nota confidencial'}</td>
-                                    <td style="padding: 0.75rem 1rem;">
-                                        ${e.tests_aplicados ? `<span class="badge" style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-weight: 700;">📊 ${e.tests_aplicados}</span>` : '<span style="color: #94a3b8;">Ninguno</span>'}
-                                    </td>
+            `;
+        } else {
+            html += `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden;">
+                    <div style="padding: 1rem 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #1e293b; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Consolidado de Pacientes Activos</span>
+                        <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Conexión directa con tarifas e historial financiero</span>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="table" style="width: 100%; margin: 0; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f1f5f9; text-align: left; font-size: 0.82rem; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                                    <th style="padding: 0.85rem 1.15rem;">Nombre y Apellido</th>
+                                    <th style="padding: 0.85rem 1.15rem;">Cédula / Identificación</th>
+                                    <th style="padding: 0.85rem 1.15rem;">Psicólogo Asignado</th>
+                                    <th style="padding: 0.85rem 1.15rem; text-align: right;">Costo de la Consulta</th>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                ${pacientes.map(p => `
+                                    <tr style="border-bottom: 1px solid #f1f5f9; font-size: 0.88rem;">
+                                        <td style="padding: 0.85rem 1.15rem; font-weight: 800; color: #0f172a;">${p.nombre_completo}</td>
+                                        <td style="padding: 0.85rem 1.15rem; color: #64748b; font-weight: 600;">${p.cedula}</td>
+                                        <td style="padding: 0.85rem 1.15rem;">
+                                            <span class="badge" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">
+                                                ${p.psicologo_asignado}
+                                            </span>
+                                        </td>
+                                        <td style="padding: 0.85rem 1.15rem; text-align: right; font-weight: 800; color: #702e5e;">
+                                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                                                <span>$${p.costo_consulta.toFixed(2)} ${p.moneda}</span>
+                                                <button type="button" class="btn btn-sm" 
+                                                        style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-weight: 700; padding: 3px 8px; font-size: 0.75rem; border-radius: 8px; cursor: pointer;" 
+                                                        onclick="editarCostoPacienteClinica(${p.id}, ${p.costo_consulta}, '${p.moneda}')" 
+                                                        title="Modificar Costo de Consulta">
+                                                    ✏️ Modificar
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
+    } 
+    // SUBPESTAÑA 3: EVOLUCIONES CLÍNICAS
+    else if (currentClinicaSubTab === 'evoluciones') {
+        if (evoluciones.length === 0) {
+            html += `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 3rem; text-align: center; color: #64748b;">
+                    <h4 style="color: #334155; margin-bottom: 0.25rem;">No hay evoluciones clínicas registradas recientemente</h4>
+                    <p style="font-size: 0.88rem;">A medida que tus psicólogos registren sesiones y notas clínicas, aparecerán en este panel de supervisión.</p>
+                </div>
+            `;
+        } else {
+            html += `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden;">
+                    <div style="padding: 1rem 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #1e293b;">
+                        Historial Consolidado de Evoluciones Clínicas
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="table" style="width: 100%; margin: 0; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f1f5f9; text-align: left; font-size: 0.82rem; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                                    <th style="padding: 0.75rem 1rem;">Fecha</th>
+                                    <th style="padding: 0.75rem 1rem;">Psicólogo Tratante</th>
+                                    <th style="padding: 0.75rem 1rem;">Paciente</th>
+                                    <th style="padding: 0.75rem 1rem;">Resumen / Tema Abordado</th>
+                                    <th style="padding: 0.75rem 1rem;">Tests Aplicados</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${evoluciones.map(e => `
+                                    <tr style="border-bottom: 1px solid #f1f5f9; font-size: 0.88rem;">
+                                        <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a; white-space: nowrap;">${e.fecha || ''}</td>
+                                        <td style="padding: 0.75rem 1rem; font-weight: 700; color: #702e5e;">${e.psicologo_nombre}</td>
+                                        <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a;">${e.paciente_nombre}</td>
+                                        <td style="padding: 0.75rem 1rem; color: #334155;">${e.resumen_tema || 'Nota confidencial'}</td>
+                                        <td style="padding: 0.75rem 1rem;">
+                                            ${e.tests_aplicados ? `<span class="badge" style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-weight: 700;">${e.tests_aplicados}</span>` : '<span style="color: #94a3b8;">Ninguno</span>'}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     container.innerHTML = html;
@@ -20090,7 +21026,6 @@ function renderClinicaIngresos(data) {
     if (!data.es_admin) {
         container.innerHTML = `
             <div style="background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 14px; padding: 2.5rem; text-align: center; color: #c2410c;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
                 <h3 style="font-weight: 800; margin-bottom: 0.5rem; color: #9a3412;">Acceso Reservado al Director Administrador</h3>
                 <p style="max-width: 500px; margin: 0 auto; color: #64748b;">El control consolidado de finanzas e ingresos de la clínica está reservado exclusivamente para el Director Administrador.</p>
             </div>
@@ -20104,22 +21039,22 @@ function renderClinicaIngresos(data) {
     let html = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
             <div style="background: linear-gradient(135deg, #702e5e 0%, #8b5cf6 100%); border-radius: 14px; padding: 1.25rem; color: white; box-shadow: 0 4px 15px rgba(112,46,94,0.25);">
-                <div style="font-size: 0.85rem; font-weight: 700; opacity: 0.9;">💰 INGRESOS TOTALES PERCIBIDOS</div>
+                <div style="font-size: 0.85rem; font-weight: 700; opacity: 0.9;">INGRESOS TOTALES PERCIBIDOS</div>
                 <div style="font-size: 2.1rem; font-weight: 800; margin-top: 0.25rem;">$${(fin.total_ingresos_percibidos || 0).toFixed(2)}</div>
                 <div style="font-size: 0.78rem; opacity: 0.85; margin-top: 0.25rem;">Citas cobradas exitosamente</div>
             </div>
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">✅ CITAS REALIZADAS & COBRADAS</div>
+                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">CITAS REALIZADAS & COBRADAS</div>
                 <div style="font-size: 2.1rem; font-weight: 800; color: #16a34a; margin-top: 0.25rem;">${fin.total_citas_realizadas || 0}</div>
             </div>
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">⏳ CUENTAS PENDIENTES POR COBRAR</div>
+                <div style="color: #64748b; font-size: 0.85rem; font-weight: 700;">CUENTAS PENDIENTES POR COBRAR</div>
                 <div style="font-size: 2.1rem; font-weight: 800; color: #d97706; margin-top: 0.25rem;">$${(fin.total_pendiente_cobro || 0).toFixed(2)}</div>
             </div>
         </div>
 
         <div style="margin-bottom: 1.5rem;">
-            <h4 style="font-size: 0.95rem; font-weight: 800; color: #334155; margin-bottom: 0.75rem;">📊 Desglose de Ingresos por Psicólogo Tratante</h4>
+            <h4 style="font-size: 0.95rem; font-weight: 800; color: #334155; margin-bottom: 0.75rem;">Desglose de Ingresos por Psicólogo Tratante</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem;">
                 ${Object.keys(porPsych).length > 0 ? Object.entries(porPsych).map(([pName, monto]) => `
                     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; align-items: center; justify-content: space-between;">
@@ -20139,7 +21074,7 @@ function renderClinicaIngresos(data) {
         html += `
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
                 <div style="padding: 1rem 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #1e293b;">
-                    💳 Registros Financieros Consolidados de la Clínica
+                    Registros Financieros Consolidados de la Clínica
                 </div>
                 <div style="overflow-x: auto;">
                     <table class="table" style="width: 100%; margin: 0; border-collapse: collapse;">
@@ -20155,7 +21090,7 @@ function renderClinicaIngresos(data) {
                         <tbody>
                             ${registros.map(r => `
                                 <tr style="border-bottom: 1px solid #f1f5f9; font-size: 0.88rem;">
-                                    <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a;">📆 ${r.fecha || ''}</td>
+                                    <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a;">${r.fecha || ''}</td>
                                     <td style="padding: 0.75rem 1rem; font-weight: 700; color: #702e5e;">${r.psicologo_nombre}</td>
                                     <td style="padding: 0.75rem 1rem; font-weight: 700; color: #0f172a;">${r.paciente_concepto}</td>
                                     <td style="padding: 0.75rem 1rem; font-weight: 800; color: #16a34a;">$${(r.monto || 0).toFixed(2)} ${r.moneda}</td>
@@ -20205,7 +21140,7 @@ async function abrirModalNuevaCitaClinica() {
     // Poblar Consultorios
     const espacios = (cachedClinicaData.clinica && cachedClinicaData.clinica.espacios_fisicos) || ['Consultorio 1', 'Consultorio 2'];
     selRoom.innerHTML = espacios.map(e => `
-        <option value="${e}">🚪 ${e}</option>
+        <option value="${e}">${e}</option>
     `).join('');
 
     // Poblar Pacientes
@@ -20400,12 +21335,367 @@ function copyClinicCodeToClipboard(code) {
     });
 }
 
+async function agregarConsultorioFisicoPrompt() {
+    const nombre = prompt("Ingresa el nombre del nuevo consultorio presencial (Ej: Consultorio 3, Sala B):");
+    if (!nombre || !nombre.trim()) return;
+    try {
+        const res = await fetch('/api/clinica/espacios-fisicos/agregar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nombre.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "Error al agregar consultorio."));
+        }
+    } catch (e) {
+        console.error("Error agregando consultorio:", e);
+        alert("Error de conexión.");
+    }
+}
+
+async function renombrarConsultorioFisicoPrompt(nombreAnterior) {
+    const nombreNuevo = prompt(`Ingresa el nuevo nombre para "${nombreAnterior}":`, nombreAnterior);
+    if (!nombreNuevo || !nombreNuevo.trim() || nombreNuevo.trim() === nombreAnterior) return;
+    try {
+        const res = await fetch('/api/clinica/espacios-fisicos/renombrar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre_anterior: nombreAnterior, nombre_nuevo: nombreNuevo.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "Error al renombrar consultorio."));
+        }
+    } catch (e) {
+        console.error("Error al renombrar consultorio:", e);
+        alert("Error de conexión.");
+    }
+}
+
+async function eliminarConsultorioFisicoPrompt(nombre) {
+    if (!confirm(`¿Seguro que deseas eliminar el consultorio "${nombre}" de la clínica?`)) return;
+    try {
+        const res = await fetch('/api/clinica/espacios-fisicos/eliminar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nombre })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.success);
+            loadEquipoSettings();
+        } else {
+            alert("⚠️ " + (data.error || "Error al eliminar consultorio."));
+        }
+    } catch (e) {
+        console.error("Error eliminando consultorio:", e);
+        alert("Error de conexión.");
+    }
+}
+
+async function cargarEditorHorarioMiembro(miembroId) {
+    const container = document.getElementById('container-editor-horarios-miembro');
+    if (!container || !miembroId) return;
+
+    container.innerHTML = `<div style="text-align: center; color: #64748b; padding: 1rem;">⏳ Cargando horario del terapeuta...</div>`;
+
+    try {
+        const res = await fetch(`/api/clinica/miembro/${miembroId}/horarios`);
+        if (!res.ok) throw new Error("Error al obtener disponibilidad.");
+        const data = await res.json();
+
+        const cfg = data.configuracion || {};
+        const espacios = window.globalClinicaEspaciosFisicos || data.espacios_fisicos || ['Consultorio 1', 'Consultorio 2'];
+        const dias = [
+            { key: 'lunes', label: 'Lunes' },
+            { key: 'martes', label: 'Martes' },
+            { key: 'miercoles', label: 'Miércoles' },
+            { key: 'jueves', label: 'Jueves' },
+            { key: 'viernes', label: 'Viernes' },
+            { key: 'sabado', label: 'Sábado' },
+            { key: 'domingo', label: 'Domingo' }
+        ];
+
+        let html = `
+            <form id="form-horarios-miembro-${miembroId}" onsubmit="guardarHorarioMiembroClinica(event, ${miembroId})">
+                <!-- BARRA DE CONTROL GLOBAL DE LISTA DE HORARIOS -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: #f8fafc; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 0.88rem; font-weight: 800; color: #3b192e; display: flex; align-items: center; gap: 8px;">
+                        <span>📋</span> Horarios Semanales (Formato Lista)
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" class="btn btn-sm" onclick="toggleAllDayScheduleDetails(true)" 
+                                style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.78rem; border-radius: 8px; padding: 0.3rem 0.75rem; cursor: pointer;">
+                            📂 Ampliar Todos
+                        </button>
+                        <button type="button" class="btn btn-sm" onclick="toggleAllDayScheduleDetails(false)" 
+                                style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.78rem; border-radius: 8px; padding: 0.3rem 0.75rem; cursor: pointer;">
+                            📁 Recoger Todos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONTENEDOR DE FILAS DE DÍAS EN LISTA -->
+                <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.5rem;">
+        `;
+
+        dias.forEach(d => {
+            const dayData = cfg[d.key] || { activo: (d.key !== 'sabado' && d.key !== 'domingo'), inicio: '08:00', fin: '17:00', consultorio: espacios[0] || 'Consultorio 1' };
+            const isActivo = !!dayData.activo;
+            html += `
+                <div class="schedule-day-row" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s ease;">
+                    <!-- CABECERA DE LA FILA DE LISTA -->
+                    <div style="padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; background: #ffffff; cursor: pointer; user-select: none;" 
+                         onclick="toggleDayScheduleDetails('${d.key}')">
+                        
+                        <!-- LADO IZQUIERDO: CHECKBOX, DÍA Y BADGE -->
+                        <div style="display: flex; align-items: center; gap: 0.85rem;">
+                            <input type="checkbox" id="mday-${d.key}-activo" ${isActivo ? 'checked' : ''} 
+                                   onclick="event.stopPropagation(); updateDayStatusBadge('${d.key}');" 
+                                   style="accent-color: #984b80; width: 18px; height: 18px; cursor: pointer;">
+                            
+                            <strong style="color: #3b192e; font-size: 0.95rem; min-width: 100px; display: flex; align-items: center; gap: 6px;">
+                                <span>📅</span> ${d.label}
+                            </strong>
+                            
+                            <span id="mday-badge-${d.key}" class="badge" 
+                                  style="${isActivo ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;'} font-weight: 700; font-size: 0.76rem; padding: 0.25rem 0.65rem; border-radius: 6px;">
+                                ${isActivo ? '✓ Atiende' : '✕ No atiende'}
+                            </span>
+                        </div>
+
+                        <!-- LADO DERECHO: RESUMEN CORTO Y BOTÓN AMPLIAR / RECOGER -->
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div id="mday-summary-${d.key}" style="font-size: 0.83rem; color: #475569; font-weight: 600; text-align: right;">
+                                ${isActivo ? `⏰ ${dayData.inicio || '08:00'} - ${dayData.fin || '17:00'} &nbsp;|&nbsp; 🏛️ ${dayData.consultorio || 'Consultorio 1'}` : 'Sin atención'}
+                            </div>
+                            
+                            <button type="button" id="mday-btn-${d.key}" class="btn btn-sm" 
+                                    style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.78rem; border-radius: 8px; padding: 0.35rem 0.8rem; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease;" 
+                                    onclick="event.stopPropagation(); toggleDayScheduleDetails('${d.key}');">
+                                <span id="mday-icon-${d.key}">▼</span> <span id="mday-text-${d.key}">Configurar</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PANEL DESPLEGABLE CON CONFIGURACIÓN DETALLADA -->
+                    <div id="mday-detail-${d.key}" style="display: none; padding: 1rem 1.15rem; background: #faf5f8; border-top: 1px dashed #e2e8f0;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: flex-end;">
+                            <div>
+                                <label style="font-size: 0.78rem; color: #64748b; font-weight: 700; display: block; margin-bottom: 4px;">🕒 Hora Inicio:</label>
+                                <input type="time" id="mday-${d.key}-inicio" value="${dayData.inicio || '08:00'}" class="form-control" 
+                                       onchange="updateDayScheduleSummary('${d.key}')" style="height: 40px; font-size: 0.88rem; border-radius: 8px; background: #ffffff;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.78rem; color: #64748b; font-weight: 700; display: block; margin-bottom: 4px;">🕒 Hora Fin:</label>
+                                <input type="time" id="mday-${d.key}-fin" value="${dayData.fin || '17:00'}" class="form-control" 
+                                       onchange="updateDayScheduleSummary('${d.key}')" style="height: 40px; font-size: 0.88rem; border-radius: 8px; background: #ffffff;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.78rem; color: #64748b; font-weight: 700; display: block; margin-bottom: 4px;">🏛️ Consultorio Asignado:</label>
+                                <select id="mday-${d.key}-consultorio" class="form-control" 
+                                        onchange="updateDayScheduleSummary('${d.key}')" style="height: 40px; font-size: 0.88rem; font-weight: 700; border-radius: 8px; background: #ffffff;">
+                                    ${espacios.map(esp => `<option value="${esp}" ${dayData.consultorio === esp ? 'selected' : ''}>🏛️ ${esp}</option>`).join('')}
+                                    <option value="Atención Virtual/Online" ${dayData.consultorio === 'Atención Virtual/Online' ? 'selected' : ''}>🌐 Atención Virtual/Online</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+                <div style="text-align: right;">
+                    <button type="submit" class="btn" style="background: #984b80; color: #ffffff; font-weight: 700; padding: 0.75rem 2rem; border-radius: 10px; border: none; font-size: 0.92rem; cursor: pointer; box-shadow: 0 4px 14px rgba(152,75,128,0.25);">
+                        💾 Guardar Horarios y Consultorios del Terapeuta
+                    </button>
+                </div>
+            </form>
+        `;
+
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Error al cargar editor de horarios de miembro:", e);
+        container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 1rem;">No se pudo cargar la configuración de horarios.</div>`;
+    }
+}
+
+async function guardarHorarioMiembroClinica(event, miembroId) {
+    if (event) event.preventDefault();
+    const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    const payload = {};
+
+    dias.forEach(d => {
+        const activo = document.getElementById(`mday-${d}-activo`)?.checked || false;
+        const inicio = document.getElementById(`mday-${d}-inicio`)?.value || '08:00';
+        const fin = document.getElementById(`mday-${d}-fin`)?.value || '17:00';
+        const consultorio = document.getElementById(`mday-${d}-consultorio`)?.value || 'Consultorio 1';
+        payload[d] = { activo, inicio, fin, consultorio };
+    });
+
+    try {
+        const res = await fetch(`/api/clinica/miembro/${miembroId}/horarios`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ Horario y asignación de consultorio guardados exitosamente.");
+            cargarResumenHorariosEquipo();
+        } else {
+            alert("⚠️ " + (data.error || "Error al guardar el horario."));
+        }
+    } catch (e) {
+        console.error("Error guardando horario:", e);
+        alert("Error de conexión al guardar.");
+    }
+}
+
+async function cargarResumenHorariosEquipo() {
+    const container = document.getElementById('container-resumen-horarios-equipo');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/clinica/horarios-equipo');
+        if (!res.ok) throw new Error("Error al obtener resumen de horarios del equipo.");
+        const data = await res.json();
+        const equipo = data.horarios_equipo || [];
+
+        if (equipo.length === 0) {
+            container.innerHTML = `<div style="text-align: center; color: #64748b; padding: 1.5rem;">No hay terapeutas registrados en el equipo.</div>`;
+            return;
+        }
+
+        const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+        const diasNombres = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom' };
+
+        let html = `
+            <div style="overflow-x: auto;">
+                <table class="table" style="width: 100%; border-collapse: separate; border-spacing: 0; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background: #faf4f8; color: #3b192e;">
+                            <th style="padding: 10px 14px; border-bottom: 1.5px solid #e2e8f0; font-weight: 800;">Psicólogo</th>
+                            ${dias.map(d => `<th style="padding: 10px 14px; border-bottom: 1.5px solid #e2e8f0; font-weight: 800; text-align: center;">${diasNombres[d]}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        equipo.forEach(m => {
+            const cfg = m.configuracion || {};
+            html += `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 12px 14px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #f1f5f9;">
+                        ${m.nomenclatura || 'Psic.'} ${m.nombres} ${m.apellidos}
+                    </td>
+            `;
+
+            dias.forEach(d => {
+                const dayData = cfg[d] || {};
+                if (dayData.activo) {
+                    html += `
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: center;">
+                            <div style="font-weight: 800; color: #984b80; font-size: 0.78rem;">${dayData.inicio || ''} - ${dayData.fin || ''}</div>
+                            <div style="font-size: 0.72rem; color: #475569; margin-top: 2px; background: #f1f5f9; padding: 2px 6px; border-radius: 6px; display: inline-block;">🏛️ ${dayData.consultorio || 'Consultorio 1'}</div>
+                        </td>
+                    `;
+                } else {
+                    html += `
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: center; color: #cbd5e1; font-size: 0.78rem;">
+                            No atiende
+                        </td>
+                    `;
+                }
+            });
+
+            html += `</tr>`;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Error al cargar resumen de horarios de equipo:", e);
+        container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 1rem;">No se pudo cargar el resumen de horarios del equipo.</div>`;
+    }
+}
+
 // Inicializar la comprobación del menú de clínica al cargar la app
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(checkAndInitClinicaNav, 1000);
 });
 
+function abrirModalSuscripcionPersonalPrompt() {
+    alert("💎 Activa tu Suscripción Individual\n\n¿Atiendes pacientes de forma independiente fuera de tu clínica?\n\nAl adquirir tu suscripción individual desbloqueas:\n• Creación de perfiles y horarios de atención privados ilimitados.\n• Portal web PWA personal propio para agendamiento.\n• Control de finanzas independiente de tus consultas privadas.\n\nContáctanos o solicita tu activación desde tu panel para comenzar.");
+}
+
+window.abrirModalSuscripcionPersonalPrompt = abrirModalSuscripcionPersonalPrompt;
+
 // Exportar globalmente
+async function editarCostoPacienteClinica(patientId, currentCosto, currentMoneda) {
+    const inputCosto = prompt(`Ingresa el nuevo costo de consulta para este paciente (Moneda: ${currentMoneda}):`, currentCosto);
+    if (inputCosto === null) return;
+
+    const numCosto = parseFloat(inputCosto);
+    if (isNaN(numCosto) || numCosto < 0) {
+        if (window.Swal) {
+            Swal.fire({ icon: 'error', title: 'Monto inválido', text: 'Ingresa un costo válido mayor o igual a 0.' });
+        } else {
+            alert('Monto inválido.');
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/clinica/pacientes/${patientId}/costo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ costo: numCosto, moneda: currentMoneda })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tarifa Actualizada',
+                    text: 'El costo de la consulta ha sido modificado exitosamente.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+            if (typeof loadClinicaDashboard === 'function') {
+                loadClinicaDashboard();
+            }
+        } else {
+            if (window.Swal) {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo actualizar el costo.' });
+            } else {
+                alert(data.error || 'Error al actualizar.');
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        if (window.Swal) {
+            Swal.fire({ icon: 'error', title: 'Error de Red', text: 'No se pudo conectar con el servidor.' });
+        }
+    }
+}
+window.editarCostoPacienteClinica = editarCostoPacienteClinica;
+
 window.loadClinicaDashboard = loadClinicaDashboard;
 window.switchClinicaDashboardTab = switchClinicaDashboardTab;
 window.abrirModalNuevaCitaClinica = abrirModalNuevaCitaClinica;
@@ -20415,6 +21705,104 @@ window.ejecutarAsignacionPacienteClinica = ejecutarAsignacionPacienteClinica;
 window.abrirModalConfigEspaciosFisicos = abrirModalConfigEspaciosFisicos;
 window.guardarEspaciosFisicosClinica = guardarEspaciosFisicosClinica;
 window.copyClinicCodeToClipboard = copyClinicCodeToClipboard;
+window.switchClinicaSubTab = switchClinicaSubTab;
 window.checkAndInitClinicaNav = checkAndInitClinicaNav;
+window.switchClinicaSubTab = switchClinicaSubTab;
+window.guardarAjustesClinica = guardarAjustesClinica;
+window.removerMiembroClinicaPrompt = removerMiembroClinicaPrompt;
+window.agregarConsultorioFisicoPrompt = agregarConsultorioFisicoPrompt;
+window.renombrarConsultorioFisicoPrompt = renombrarConsultorioFisicoPrompt;
+window.eliminarConsultorioFisicoPrompt = eliminarConsultorioFisicoPrompt;
+window.cargarEditorHorarioMiembro = cargarEditorHorarioMiembro;
+window.guardarHorarioMiembroClinica = guardarHorarioMiembroClinica;
+window.cargarResumenHorariosEquipo = cargarResumenHorariosEquipo;
+window.switchClinicaAgendaSubView = switchClinicaAgendaSubView;
+function toggleDayScheduleDetails(key) {
+    const detailEl = document.getElementById(`mday-detail-${key}`);
+    const iconEl = document.getElementById(`mday-icon-${key}`);
+    const textEl = document.getElementById(`mday-text-${key}`);
+    const btnEl = document.getElementById(`mday-btn-${key}`);
+
+    if (!detailEl) return;
+
+    const isHidden = detailEl.style.display === 'none' || detailEl.style.display === '';
+    if (isHidden) {
+        detailEl.style.display = 'block';
+        if (iconEl) iconEl.innerText = '▲';
+        if (textEl) textEl.innerText = 'Recoger';
+        if (btnEl) {
+            btnEl.style.background = '#702e5e';
+            btnEl.style.color = '#ffffff';
+            btnEl.style.borderColor = '#702e5e';
+        }
+    } else {
+        detailEl.style.display = 'none';
+        if (iconEl) iconEl.innerText = '▼';
+        if (textEl) textEl.innerText = 'Configurar';
+        if (btnEl) {
+            btnEl.style.background = '#f8fafc';
+            btnEl.style.color = '#475569';
+            btnEl.style.borderColor = '#cbd5e1';
+        }
+    }
+}
+
+function toggleAllDayScheduleDetails(expand) {
+    const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    dias.forEach(key => {
+        const detailEl = document.getElementById(`mday-detail-${key}`);
+        if (!detailEl) return;
+        const isHidden = detailEl.style.display === 'none' || detailEl.style.display === '';
+        if (expand && isHidden) {
+            toggleDayScheduleDetails(key);
+        } else if (!expand && !isHidden) {
+            toggleDayScheduleDetails(key);
+        }
+    });
+}
+
+function updateDayStatusBadge(key) {
+    const chk = document.getElementById(`mday-${key}-activo`);
+    const badge = document.getElementById(`mday-badge-${key}`);
+    if (chk && badge) {
+        if (chk.checked) {
+            badge.style.background = '#f0fdf4';
+            badge.style.color = '#166534';
+            badge.style.borderColor = '#bbf7d0';
+            badge.innerText = '✓ Atiende';
+        } else {
+            badge.style.background = '#f1f5f9';
+            badge.style.color = '#64748b';
+            badge.style.borderColor = '#cbd5e1';
+            badge.innerText = '✕ No atiende';
+        }
+    }
+    updateDayScheduleSummary(key);
+}
+
+function updateDayScheduleSummary(key) {
+    const chk = document.getElementById(`mday-${key}-activo`);
+    const inicio = document.getElementById(`mday-${key}-inicio`)?.value || '08:00';
+    const fin = document.getElementById(`mday-${key}-fin`)?.value || '17:00';
+    const consultorio = document.getElementById(`mday-${key}-consultorio`)?.value || '';
+    const summaryEl = document.getElementById(`mday-summary-${key}`);
+
+    if (summaryEl) {
+        if (chk && chk.checked) {
+            summaryEl.innerHTML = `⏰ ${inicio} - ${fin} &nbsp;|&nbsp; 🏛️ ${consultorio}`;
+        } else {
+            summaryEl.innerHTML = `Sin atención`;
+        }
+    }
+}
+
+window.toggleDayScheduleDetails = toggleDayScheduleDetails;
+window.toggleAllDayScheduleDetails = toggleAllDayScheduleDetails;
+window.updateDayStatusBadge = updateDayStatusBadge;
+window.updateDayScheduleSummary = updateDayScheduleSummary;
+
+window.renderClinicaFullCalendar = renderClinicaFullCalendar;
+
+
 
 

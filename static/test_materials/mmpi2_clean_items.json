@@ -1,0 +1,2270 @@
+[
+  {
+    "id": 1,
+    "texto": "1. Me gustan las revistas de mecánica"
+  },
+  {
+    "id": 2,
+    "texto": "2. Tengo buen apetito."
+  },
+  {
+    "id": 3,
+    "texto": "3. Casi siempre me levanto por las mañanas descansado y como nuevo."
+  },
+  {
+    "id": 4,
+    "texto": "4. Creo que me gustaría trabajar como bibliotecario."
+  },
+  {
+    "id": 5,
+    "texto": "5. El ruido me despierta fácilmente."
+  },
+  {
+    "id": 6,
+    "texto": "6. Mi padre es un buen hombre, (o lo fue en caso de haber fallecido)."
+  },
+  {
+    "id": 7,
+    "texto": "7. Me gusta leer artículos sobre crímenes en los periódicos."
+  },
+  {
+    "id": 8,
+    "texto": "8. Normalmente tengo bastant e calientes los pies y las manos."
+  },
+  {
+    "id": 9,
+    "texto": "9. En mi vida diaria hay muchas cosas que me resultan interesantes."
+  },
+  {
+    "id": 10,
+    "texto": "10. Actualmente, tengo tanta capacidad de trabajo como antes."
+  },
+  {
+    "id": 11,
+    "texto": "11. La mayor parte del tiempo me parece tener un nudo en la garganta."
+  },
+  {
+    "id": 12,
+    "texto": "12. Mi vida sexual es satisfactoria."
+  },
+  {
+    "id": 13,
+    "texto": "13. La gente debería intentar comprender sus sueños y guiarse por ellos o tomarlos como avisos."
+  },
+  {
+    "id": 14,
+    "texto": "14. Me divierten las historias de detectives y de misterio."
+  },
+  {
+    "id": 15,
+    "texto": "15. Trabajo bajo una tensión muy grande."
+  },
+  {
+    "id": 16,
+    "texto": "16. De vez en cuando pienso en cosas demasiado malas como para hablar de ellas."
+  },
+  {
+    "id": 17,
+    "texto": "17. Estoy seguro de que la vida es dura para mí."
+  },
+  {
+    "id": 18,
+    "texto": "18. Sufro ataques de náuseas y vómitos."
+  },
+  {
+    "id": 19,
+    "texto": "19. Cuando acepto un nuevo empleo, me gusta descubrir a quien debo “caerle bien”."
+  },
+  {
+    "id": 20,
+    "texto": "20. Muy rara vez sufro de constipación (sequedad de vientre)"
+  },
+  {
+    "id": 21,
+    "texto": "21. A veces he deseado muchísimo abandonar el hogar."
+  },
+  {
+    "id": 22,
+    "texto": "22. Nadie parece comprenderme."
+  },
+  {
+    "id": 23,
+    "texto": "23. A veces tengo accesos de risa y llanto que no puedo controlar."
+  },
+  {
+    "id": 24,
+    "texto": "24. A veces estoy poseído por espíritus diabólicos."
+  },
+  {
+    "id": 25,
+    "texto": "25. Me gustaría ser cantante."
+  },
+  {
+    "id": 26,
+    "texto": "26. Cuando estoy en dificultades o problemas creo que lo mejor es callarme."
+  },
+  {
+    "id": 27,
+    "texto": "27. Cuando alguien me hace algún daño, siento deseos de devolvérselo si me es posible, y esto, por cuestión de principios."
+  },
+  {
+    "id": 28,
+    "texto": "28. Varias veces a la semana me molesta la acidez de estómago."
+  },
+  {
+    "id": 29,
+    "texto": "29. A veces siento deseos de maldecir."
+  },
+  {
+    "id": 30,
+    "texto": "30. A menudo tengo pesadillas."
+  },
+  {
+    "id": 31,
+    "texto": "31. Me cuesta bastante concentrarme en una tarea o trabajo."
+  },
+  {
+    "id": 32,
+    "texto": "32. He tenido muy peculiares y extrañas experiencias."
+  },
+  {
+    "id": 33,
+    "texto": "33. Raras veces me preocupo por mi salud."
+  },
+  {
+    "id": 34,
+    "texto": "34. Nunca me he visto en dificultades a causa de mi conducta sexual."
+  },
+  {
+    "id": 35,
+    "texto": "35. Durante algún tiempo, cuando era joven, participé en pequeños robos."
+  },
+  {
+    "id": 36,
+    "texto": "36. Tengo tos la mayor parte del tiempo."
+  },
+  {
+    "id": 37,
+    "texto": "37. A veces siento deseos de romper cosas."
+  },
+  {
+    "id": 38,
+    "texto": "38. He tenido períodos de días, semanas o meses en los que no podía preocuparme por las cosas, porque no tenía ánimo para nada."
+  },
+  {
+    "id": 39,
+    "texto": "39. Mi sueño es irregular, inquieto."
+  },
+  {
+    "id": 40,
+    "texto": "40. La mayor parte del tiempo parece dolerme la cabeza por todas partes."
+  },
+  {
+    "id": 41,
+    "texto": "41. No digo siempre la verdad."
+  },
+  {
+    "id": 42,
+    "texto": "42. Si los demás no se la hubieran tomado conmigo, hubiese tenido más éxito."
+  },
+  {
+    "id": 43,
+    "texto": "43. Mis razonamientos son ahora mejores que nunca."
+  },
+  {
+    "id": 44,
+    "texto": "44. Una vez a la semana, o más a menudo, siento calor por todo el cuerpo sin causa aparente."
+  },
+  {
+    "id": 45,
+    "texto": "45. Tengo tan buena salud física como la mayor parte de mis amigos."
+  },
+  {
+    "id": 46,
+    "texto": "46. Prefiero hacerme el desentendido con amigos del colegio, o personas conocidas que no veo desde hace tiempo, a menos que ellos me hablen primero."
+  },
+  {
+    "id": 47,
+    "texto": "47. Casi nunca he sufrido de dolores en el pecho o en el corazón."
+  },
+  {
+    "id": 48,
+    "texto": "48. En muchas ocasiones me gustaría más sentarme y soñar despierto que hacer cualquier cosa."
+  },
+  {
+    "id": 49,
+    "texto": "49. Soy una persona sociable."
+  },
+  {
+    "id": 50,
+    "texto": "50. A menudo he recibido órdenes de alguien que no sabía tanto como yo."
+  },
+  {
+    "id": 51,
+    "texto": "51. No leo diariamente todos los artículos principales del diario."
+  },
+  {
+    "id": 52,
+    "texto": "52. No he llevado un tipo de vida adecuado y normal."
+  },
+  {
+    "id": 53,
+    "texto": "53. A menudo algunas partes de mi cuerpo tienen sensaciones de hormigueo, quemazón, picazón o bien de quedarse “dormidas”."
+  },
+  {
+    "id": 54,
+    "texto": "54. A mi familia no le gusta el trabajo que he elegido (o el trabajo que pienso elegir para mi futuro)."
+  },
+  {
+    "id": 55,
+    "texto": "55. Algunas veces persisto en una cosa o tema hasta que los demás pierden la paciencia conmigo."
+  },
+  {
+    "id": 56,
+    "texto": "56. Me gustaría ser tan feliz como parecen ser los otros."
+  },
+  {
+    "id": 57,
+    "texto": "57. Muy raras veces siento dolor en la nuca."
+  },
+  {
+    "id": 58,
+    "texto": "58. Pienso que una gran mayoría de gente exagera sus desgracias para lograr la simpatía y ayuda de los demás."
+  },
+  {
+    "id": 59,
+    "texto": "59. Tengo molestias en la boca del estómago casi a diario."
+  },
+  {
+    "id": 60,
+    "texto": "60. Cuando estoy con gente escucho cosas extrañas."
+  },
+  {
+    "id": 61,
+    "texto": "61. Soy una persona importante."
+  },
+  {
+    "id": 62,
+    "texto": "62. A menudo he deseado ser mujer. (O si usted es mujer: nunca me ha molestado ser mujer)"
+  },
+  {
+    "id": 63,
+    "texto": "63. Mis sentimientos no son heridos con facilidad."
+  },
+  {
+    "id": 64,
+    "texto": "64. Me gusta leer novelas de amor."
+  },
+  {
+    "id": 65,
+    "texto": "65. La mayor parte del tiempo siento melancolía."
+  },
+  {
+    "id": 66,
+    "texto": "66. Se viviría mejor sin leyes."
+  },
+  {
+    "id": 67,
+    "texto": "67. Me gusta la poesía."
+  },
+  {
+    "id": 68,
+    "texto": "68. A veces hago rabiar (jugando) a los animales."
+  },
+  {
+    "id": 69,
+    "texto": "69. Creo que me gustaría el trabajo de guardabosques."
+  },
+  {
+    "id": 70,
+    "texto": "70. En una discusión o debate, me dejo vencer fácilmente."
+  },
+  {
+    "id": 71,
+    "texto": "71. En el momento actual me es difícil tener la esperanza de llegar a ser alguien."
+  },
+  {
+    "id": 72,
+    "texto": "72. A veces mi alma abandona mi cuerpo."
+  },
+  {
+    "id": 73,
+    "texto": "73. Decididamente no tengo confianza en mí mismo."
+  },
+  {
+    "id": 74,
+    "texto": "74. Me gustaría ser florista."
+  },
+  {
+    "id": 75,
+    "texto": "75. Normalmente siento que la vida vale la pena vivirla."
+  },
+  {
+    "id": 76,
+    "texto": "76. Se necesita discutir mucho para con-vencer a la mayor parte de la gente de la verdad."
+  },
+  {
+    "id": 77,
+    "texto": "77. De vez en cuando dejo para mañana lo que debería hacer hoy."
+  },
+  {
+    "id": 78,
+    "texto": "78. Le agrado a la mayor parte de la gente que me conoce."
+  },
+  {
+    "id": 79,
+    "texto": "79. No me importa que se diviertan haciéndome bromas."
+  },
+  {
+    "id": 80,
+    "texto": "80. Me gustaría ser enfermero."
+  },
+  {
+    "id": 81,
+    "texto": "81. Creo que la mayor parte de la gente mentiría para conseguir lo que busca."
+  },
+  {
+    "id": 82,
+    "texto": "82. Hago muchas cosas de las que me arrepiento luego. (Me arrepiento de más cosas o con más frecuencia que otras personas)."
+  },
+  {
+    "id": 83,
+    "texto": "83. Tengo pocas peleas con las personas de mi familia."
+  },
+  {
+    "id": 84,
+    "texto": "84. Siendo joven me echaron de clase, una o más veces, por portarme mal."
+  },
+  {
+    "id": 85,
+    "texto": "85. A veces siento grandes deseos de hacer algo dañino o chocante."
+  },
+  {
+    "id": 86,
+    "texto": "86. Me gustaría asistir a reuniones o fiestas donde haya mucha alegría y ruido."
+  },
+  {
+    "id": 87,
+    "texto": "87. Me he encontrado con problemas tan llenos de posibilidades que no he podido llegar a una decisión."
+  },
+  {
+    "id": 88,
+    "texto": "88. Creo que las mujeres deben tener tanta libertad sexual como los hombres."
+  },
+  {
+    "id": 89,
+    "texto": "89. Las luchas más encarnizadas las tengo conmigo mismo."
+  },
+  {
+    "id": 90,
+    "texto": "90. Yo quiero mucho a mi padre. (O lo quise, si falleció)."
+  },
+  {
+    "id": 91,
+    "texto": "91. Tengo pocas o ninguna molestia a causa de espasmos o contracciones musculares."
+  },
+  {
+    "id": 92,
+    "texto": "92. No parece importarme lo que me suceda."
+  },
+  {
+    "id": 93,
+    "texto": "93. A veces, cuando no me siento bien, estoy irritable."
+  },
+  {
+    "id": 94,
+    "texto": "94. La mayor parte del tiempo me parece haber hecho algo malo o equivocado."
+  },
+  {
+    "id": 95,
+    "texto": "95. Soy feliz la mayor parte del tiempo."
+  },
+  {
+    "id": 96,
+    "texto": "96. Veo a mi alrededor cosas, animales o personas que otros no ven."
+  },
+  {
+    "id": 97,
+    "texto": "97. Parece como si la mayor parte del tiempo tuviera la cabeza cargada o llena de ruidos."
+  },
+  {
+    "id": 98,
+    "texto": "98. Hay algunas personas tan mandonas que me dan ganas de hacer lo contrario de lo que quieren, aunque sepa que tienen razón."
+  },
+  {
+    "id": 99,
+    "texto": "99. Alguien me la tiene jurada."
+  },
+  {
+    "id": 100,
+    "texto": "100. Nunca he hecho algo peligroso solo por el placer de hacerlo."
+  },
+  {
+    "id": 101,
+    "texto": "101. A menudo siento como si tuviera una venda puesta fuertemente alrededor de mi cabeza."
+  },
+  {
+    "id": 102,
+    "texto": "102. Alguna vez me enojo."
+  },
+  {
+    "id": 103,
+    "texto": "103. Me divierte mas un juego cuando yo apuesto."
+  },
+  {
+    "id": 104,
+    "texto": "104. La mayoría de la gente es honrada por temor a ser descubierta."
+  },
+  {
+    "id": 105,
+    "texto": "105. En el colegio, algunas veces, fui enviado al director a causa de mi mala conducta."
+  },
+  {
+    "id": 106,
+    "texto": "106. Mi manera de hablar es como siempre (ni más rápida, ni más lenta, ni más atropellada, no tengo carraspera)."
+  },
+  {
+    "id": 107,
+    "texto": "107. Mis modales en la mesa no son tan correctos en mi casa como cuando salgo a comer afuera."
+  },
+  {
+    "id": 108,
+    "texto": "108. Cualquier persona capacitada y dispuesta a trabajar fuerte, tiene muchas probabilidades de tener éxito."
+  },
+  {
+    "id": 109,
+    "texto": "109. Me parece ser tan capaz y despierto como la mayor parte de los que me rodean."
+  },
+  {
+    "id": 110,
+    "texto": "110. Para no perder un beneficio o ventaja, la mayoría de la gente está dispuesta a hacer cualquier cosa."
+  },
+  {
+    "id": 111,
+    "texto": "111. Tengo bastantes trastornos digestivos."
+  },
+  {
+    "id": 112,
+    "texto": "112. Me gustan el teatro y el cine."
+  },
+  {
+    "id": 113,
+    "texto": "113. Sé quien es el responsable de muchos de mis problemas."
+  },
+  {
+    "id": 114,
+    "texto": "114. A veces me siento tan atraído por las cosas de otros (zapatos, reloj), que tengo ganas de robarlas."
+  },
+  {
+    "id": 115,
+    "texto": "115. Ver sangre no me da miedo ni me hace mal."
+  },
+  {
+    "id": 116,
+    "texto": "116. Frecuentemente no puedo comprender porque he estado tan gruñón y mal-humorado."
+  },
+  {
+    "id": 117,
+    "texto": "117. Nunca he vomitado sangre, ni sangrado al toser."
+  },
+  {
+    "id": 118,
+    "texto": "118. No me preocupa contraer una enfer-medad."
+  },
+  {
+    "id": 119,
+    "texto": "119. Me gusta recoger flores o cultivar plantas en casa."
+  },
+  {
+    "id": 120,
+    "texto": "120. Frecuentemente encuentro necesario defender lo que es justo."
+  },
+  {
+    "id": 121,
+    "texto": "121. Nunca me he entregado a prácticas sexuales fuera de lo común."
+  },
+  {
+    "id": 122,
+    "texto": "122. A veces mi pensamiento ha ido más rápido y delante de mis palabras."
+  },
+  {
+    "id": 123,
+    "texto": "123. Si pudiera entrar en un espectáculo sin pagar y estuviera seguro de no ser visto, probablemente lo haría."
+  },
+  {
+    "id": 124,
+    "texto": "124. Generalmente me pregunto que razón oculta puede tener otra persona cuando me hace un favor."
+  },
+  {
+    "id": 125,
+    "texto": "125. Creo que mi vida hogareña es tan agradable como la de mucha gente que conozco."
+  },
+  {
+    "id": 126,
+    "texto": "126. Es necesario reforzar las leyes vigentes."
+  },
+  {
+    "id": 127,
+    "texto": "127. Me hieren profundamente las críticas y los retos."
+  },
+  {
+    "id": 128,
+    "texto": "128. Me gusta cocinar."
+  },
+  {
+    "id": 129,
+    "texto": "129. Mi conducta es ampliamente controlada por las costumbres que me rodean."
+  },
+  {
+    "id": 130,
+    "texto": "130. A veces siento que verdaderamente soy un inútil."
+  },
+  {
+    "id": 131,
+    "texto": "131. Cuando era pertenecía a una banda que intentaba mantenerse unida como “carne y uña”."
+  },
+  {
+    "id": 132,
+    "texto": "132. Creo en la vida del allá."
+  },
+  {
+    "id": 133,
+    "texto": "133. Me gustaría ser soldado."
+  },
+  {
+    "id": 134,
+    "texto": "134. A veces siento deseos de tomarme a puñetazos con alguien."
+  },
+  {
+    "id": 135,
+    "texto": "135. Frecuentemente he perdido o desaprovechado cosas por no saber decidirme a tiempo."
+  },
+  {
+    "id": 136,
+    "texto": "136. Me molesta que me pidan consejo o que me interrumpan cuando estoy trabajando en algo importante."
+  },
+  {
+    "id": 137,
+    "texto": "137. Solía llevar un diario personal."
+  },
+  {
+    "id": 138,
+    "texto": "138. Creo que se trama algo contra mí."
+  },
+  {
+    "id": 139,
+    "texto": "139. En un juego o partida suelo más ganar que perder."
+  },
+  {
+    "id": 140,
+    "texto": "140. Casi todas las noches me duermo con ideas o pensamientos molestos."
+  },
+  {
+    "id": 141,
+    "texto": "141. Durante los últimos años he estado sano casi siempre."
+  },
+  {
+    "id": 142,
+    "texto": "142. Nunca he tenido un ataque o convulsión."
+  },
+  {
+    "id": 143,
+    "texto": "143. Ahora no estoy subiendo o bajando de peso."
+  },
+  {
+    "id": 144,
+    "texto": "144. Creo que me siguen."
+  },
+  {
+    "id": 145,
+    "texto": "145. Creo que frecuentemente he sido castigado sin causa."
+  },
+  {
+    "id": 146,
+    "texto": "146. Lloro con facilidad."
+  },
+  {
+    "id": 147,
+    "texto": "147. Actualmente no comprendo lo que leo con la facilidad que tenía antes."
+  },
+  {
+    "id": 148,
+    "texto": "148. Nunca me he sentido mejor que ahora."
+  },
+  {
+    "id": 149,
+    "texto": "149. A veces siento dolores en la parte superior de la cabeza."
+  },
+  {
+    "id": 150,
+    "texto": "150. A veces siento que tengo que hacerme daño a mi mismo o a alguien."
+  },
+  {
+    "id": 151,
+    "texto": "151. Me molesta que alguien se haya burlado tan inteligentemente de mi que yo haya tenido que admitir que lo logró."
+  },
+  {
+    "id": 152,
+    "texto": "152. No me canso fácilmente."
+  },
+  {
+    "id": 153,
+    "texto": "153. Me gusta conocer alguna gente importante porque esto me hace sentir importante."
+  },
+  {
+    "id": 154,
+    "texto": "154. Siento miedo cuando miro hacia abajo desde un lugar alto."
+  },
+  {
+    "id": 155,
+    "texto": "155. No me sentiría nervioso si algún familiar tuviera problemas con la ley."
+  },
+  {
+    "id": 156,
+    "texto": "156. Solo me siento feliz cuando viajo de un lado para otro."
+  },
+  {
+    "id": 157,
+    "texto": "157. Me es indiferente lo que los demás piensen de mi."
+  },
+  {
+    "id": 158,
+    "texto": "158. Me siento incómodo cuando tengo que hacer una payasada en una reunión, incluso aunque otros la estén haciendo."
+  },
+  {
+    "id": 159,
+    "texto": "159. Nunca he tenido un desmayo o desvanecimiento."
+  },
+  {
+    "id": 160,
+    "texto": "160. Me gustaba ir al colegio."
+  },
+  {
+    "id": 161,
+    "texto": "161. Frecuentemente tengo que esforzarme para no demostrar que soy tímido."
+  },
+  {
+    "id": 162,
+    "texto": "162. Alguien ha intentado envenenarme."
+  },
+  {
+    "id": 163,
+    "texto": "163. Las serpientes no me dan mucho miedo."
+  },
+  {
+    "id": 164,
+    "texto": "164. Nunca o rara vez tengo mareos."
+  },
+  {
+    "id": 165,
+    "texto": "165. Mi memoria parece ser normal."
+  },
+  {
+    "id": 166,
+    "texto": "166. Me preocupan los temas sexuales."
+  },
+  {
+    "id": 167,
+    "texto": "167. Me es difícil entablar una conversación cuando recién conozco a alguien."
+  },
+  {
+    "id": 168,
+    "texto": "168. He tenido épocas durante las cuales ha realizado actividades que luego no recordaba haber hecho."
+  },
+  {
+    "id": 169,
+    "texto": "169. Cuando estoy aburrido me gusta promover algo excitante."
+  },
+  {
+    "id": 170,
+    "texto": "170. Tengo miedo de volverme loco."
+  },
+  {
+    "id": 171,
+    "texto": "171. Estoy en contra de dar dinero a los mendigos."
+  },
+  {
+    "id": 172,
+    "texto": "172. Frecuentemente noto temblar mis manos cuando intento hacer algo."
+  },
+  {
+    "id": 173,
+    "texto": "173. Puedo leer mucho tiempo sin que se me canse la vista."
+  },
+  {
+    "id": 174,
+    "texto": "174. Me gusta leer y estudiar acerca de lo que estoy trabajando."
+  },
+  {
+    "id": 175,
+    "texto": "175. Siento debilidad general la mayor parte del tiempo."
+  },
+  {
+    "id": 176,
+    "texto": "176. Muy pocas veces me duele la cabeza."
+  },
+  {
+    "id": 177,
+    "texto": "177. Mis manos siguen siendo hábiles."
+  },
+  {
+    "id": 178,
+    "texto": "178. A veces, cuando estoy preocupado, comienzo a sudar, lo que me molesta mucho."
+  },
+  {
+    "id": 179,
+    "texto": "179. No he tenido dificultades para mantener el equilibrio al caminar."
+  },
+  {
+    "id": 180,
+    "texto": "180. Algo no anda bien en mi cabeza."
+  },
+  {
+    "id": 181,
+    "texto": "181. No tengo accesos de alergia o asma."
+  },
+  {
+    "id": 182,
+    "texto": "182. He tenido ataques en los que perdía el control de mis movimientos o de la palabra, pero sabía lo que pasaba a mi alrededor."
+  },
+  {
+    "id": 183,
+    "texto": "183. Me desagradan algunas personas que conozco."
+  },
+  {
+    "id": 184,
+    "texto": "184. Muy pocas veces sueño despierto."
+  },
+  {
+    "id": 185,
+    "texto": "185. Me gustaría ser menos tímido."
+  },
+  {
+    "id": 186,
+    "texto": "186. No me da miedo manejar dinero."
+  },
+  {
+    "id": 187,
+    "texto": "187. Si fuera periodista me gustaría mucho informar sobre teatro."
+  },
+  {
+    "id": 188,
+    "texto": "188. Disfruto con muy diferentes clases de juegos o diversiones."
+  },
+  {
+    "id": 189,
+    "texto": "189. Me gusta flirtear (coquetear)."
+  },
+  {
+    "id": 190,
+    "texto": "190. Los niños me tratan más como a un niño que como a un adulto."
+  },
+  {
+    "id": 191,
+    "texto": "191. Me gustaría ser periodista."
+  },
+  {
+    "id": 192,
+    "texto": "192. Mi madre es una buena mujer, (o lo fue, si falleció)."
+  },
+  {
+    "id": 193,
+    "texto": "193. Cuando camino por la vereda evito cuidadosa- mente pisar las baldosas flojas."
+  },
+  {
+    "id": 194,
+    "texto": "194. Nunca he tenido erupciones en la piel que me hayan preocupado."
+  },
+  {
+    "id": 195,
+    "texto": "195. Comparando con otros hogares, en el mío hay poco amor o unión."
+  },
+  {
+    "id": 196,
+    "texto": "196. Con frecuencia, estoy preocupado por algo."
+  },
+  {
+    "id": 197,
+    "texto": "197. Creo que me gustaría el trabajo de contratista de obras."
+  },
+  {
+    "id": 198,
+    "texto": "198. Normalmente oigo voces sin saber de donde vienen."
+  },
+  {
+    "id": 199,
+    "texto": "199. Me gusta la ciencia."
+  },
+  {
+    "id": 200,
+    "texto": "200. No me cuesta pedir ayuda a mis amigos, incluso aunque no pueda devolverles el favor."
+  },
+  {
+    "id": 201,
+    "texto": "201. Me gusta mucho cazar."
+  },
+  {
+    "id": 202,
+    "texto": "202. A menudo a mis padres les molestó el tipo de amigos que tenía."
+  },
+  {
+    "id": 203,
+    "texto": "203. A veces soy un poco chismoso."
+  },
+  {
+    "id": 204,
+    "texto": "204. Escucho tan bien como las demás personas."
+  },
+  {
+    "id": 205,
+    "texto": "205. Alguno de mis familiares tiene costumbres que me molestan y fastidian muchísimo."
+  },
+  {
+    "id": 206,
+    "texto": "206. A veces me siento capaz de tomar decisiones con extraordinaria facilidad."
+  },
+  {
+    "id": 207,
+    "texto": "207. Me gustaría pertenecer a varios clubes o asociaciones."
+  },
+  {
+    "id": 208,
+    "texto": "208. Raramente noto los latidos de mi corazón y pocas veces se me corta la respiración."
+  },
+  {
+    "id": 209,
+    "texto": "209. Me gusta hablar sobre temas sexuales."
+  },
+  {
+    "id": 210,
+    "texto": "210. Me gusta visitar lugares donde nunca he estado."
+  },
+  {
+    "id": 211,
+    "texto": "211. Me han sugerido una forma de vida basada en el deber y desde entonces la he seguido cuida- dosamente."
+  },
+  {
+    "id": 212,
+    "texto": "212. A veces traté de que alguien no hiciera algo, porque eso estaba en contra de mis principios."
+  },
+  {
+    "id": 213,
+    "texto": "213. Me enojo fácilmente, pero se me pasa pronto."
+  },
+  {
+    "id": 214,
+    "texto": "214. He vivido bastante libre e independiente de las normas familiares."
+  },
+  {
+    "id": 215,
+    "texto": "215. Me preocupo muchísimo."
+  },
+  {
+    "id": 216,
+    "texto": "216. Alguien ha tratado de robarme."
+  },
+  {
+    "id": 217,
+    "texto": "217. Casi todos mis familiares simpatizan conmigo."
+  },
+  {
+    "id": 218,
+    "texto": "218. Hay momentos en que estoy tan nervioso que no puedo estar sentado mucho tiempo."
+  },
+  {
+    "id": 219,
+    "texto": "219. He tenido desengaños amorosos."
+  },
+  {
+    "id": 220,
+    "texto": "220. Nunca me preocupo por mi apariencia."
+  },
+  {
+    "id": 221,
+    "texto": "221. Sueño frecuentemente con cosas que es mejor guardarlas para mí mismo."
+  },
+  {
+    "id": 222,
+    "texto": "222. Debería enseñarse a los niños lo principal acerca de la vida sexual."
+  },
+  {
+    "id": 223,
+    "texto": "223. Creo que no soy más nervioso que la mayoría."
+  },
+  {
+    "id": 224,
+    "texto": "224. Tengo pocos o ningún dolor."
+  },
+  {
+    "id": 225,
+    "texto": "225. Mi modo de hacer las cosas tiende a ser mal interpretado por los demás."
+  },
+  {
+    "id": 226,
+    "texto": "226. Algunas veces, sin razón alguna, incluso cuando las cosas van mal, me siento feliz, “flotando entre nubes”."
+  },
+  {
+    "id": 227,
+    "texto": "227. No culpo a nadie por tratar de apoderarse de todo lo que pueda en este mundo."
+  },
+  {
+    "id": 228,
+    "texto": "228. Hay personas que están intentando apoderarse de mis ideas y proyectos."
+  },
+  {
+    "id": 229,
+    "texto": "229. He tenido momentos de nerviosismo que interrumpieron mis actividades, y en los que no sabía que ocurría a mí alrededor."
+  },
+  {
+    "id": 230,
+    "texto": "230. Puedo mostrarme amistoso con la gente que hace cosas que yo considero incorrectas."
+  },
+  {
+    "id": 231,
+    "texto": "231. Me gusta estar en un grupo en el que se hacen bromas mutuamente."
+  },
+  {
+    "id": 232,
+    "texto": "232. En las elecciones, algunas veces, voto candidatos que conozco muy poco."
+  },
+  {
+    "id": 233,
+    "texto": "233. Me cuesta empezar a hacer cualquier cosa."
+  },
+  {
+    "id": 234,
+    "texto": "234. Siento que soy una persona condenada."
+  },
+  {
+    "id": 235,
+    "texto": "235. En el colegio era lento para aprender."
+  },
+  {
+    "id": 236,
+    "texto": "236. Si fuera artista me gustaría dibujar flores."
+  },
+  {
+    "id": 237,
+    "texto": "237. No me molesta ser poco elegante."
+  },
+  {
+    "id": 238,
+    "texto": "238. Transpiro muy fácilmente, incluso en días fríos."
+  },
+  {
+    "id": 239,
+    "texto": "239. Soy una persona plenamente segura de sí misma."
+  },
+  {
+    "id": 240,
+    "texto": "240. A veces me es imposible vencer la tentación de robar."
+  },
+  {
+    "id": 241,
+    "texto": "241. Es más seguro no confiar en nadie."
+  },
+  {
+    "id": 242,
+    "texto": "242. Me excito mucho una vez por semana o con más frecuencia."
+  },
+  {
+    "id": 243,
+    "texto": "243. Cuando estoy con un grupo de gente, me altera tener que pensar temas adecuados de conversación."
+  },
+  {
+    "id": 244,
+    "texto": "244. Cuando estoy abatido (bajoneado), algo emocio- nante me saca casi siempre de ese estado."
+  },
+  {
+    "id": 245,
+    "texto": "245. Cuando salgo de casa no me preocupa si la puerta y las ventanas quedan bien cerradas."
+  },
+  {
+    "id": 246,
+    "texto": "246. Creo que mis pecados son imperdonables."
+  },
+  {
+    "id": 247,
+    "texto": "247. Tengo entumecimientos en una o más partes de mi piel."
+  },
+  {
+    "id": 248,
+    "texto": "248. No culpo a aquel que se aprovecha de otro que deja que se aprovechen de él."
+  },
+  {
+    "id": 249,
+    "texto": "249. Mi vista es tan buena como lo ha sido durante años."
+  },
+  {
+    "id": 250,
+    "texto": "250. A veces me ha divertido tanto el ingenio de un delincuente, que he deseado que le fuera bien."
+  },
+  {
+    "id": 251,
+    "texto": "251. A menudo me ha dado la sensación de que gente extraña me ha estado mirando con ojos críticos."
+  },
+  {
+    "id": 252,
+    "texto": "252. Para mí todo tiene el mismo sabor o gusto."
+  },
+  {
+    "id": 253,
+    "texto": "253. Todos los días tomo una cantidad excesivamente grande de agua."
+  },
+  {
+    "id": 254,
+    "texto": "254. La mayor parte de la gente hace amigos porque es probable que le sean útiles."
+  },
+  {
+    "id": 255,
+    "texto": "255. No noto que me zumben o me chillen los oídos frecuentemente."
+  },
+  {
+    "id": 256,
+    "texto": "256. De vez en cuando siento fastidio hacia familiares que normalmente quiero."
+  },
+  {
+    "id": 257,
+    "texto": "257. Si fuera periodista me gustaría mucho informar sobre deportes."
+  },
+  {
+    "id": 258,
+    "texto": "258. Puedo dormir de día, pero no de noche."
+  },
+  {
+    "id": 259,
+    "texto": "259. Estoy seguro de que la gente habla de mí."
+  },
+  {
+    "id": 260,
+    "texto": "260. De cuando en cuando me divierten las bromas o chistes “verdes”."
+  },
+  {
+    "id": 261,
+    "texto": "261. Comparado con mis amigos, tengo muy pocos miedos."
+  },
+  {
+    "id": 262,
+    "texto": "262. Puedo iniciar una discusión, en un grupo de personas, sobre un tema que conozco."
+  },
+  {
+    "id": 263,
+    "texto": "263. Siento siempre aversión por la ley cuando un criminal sale libre gracias a la habilidad de un abogado astuto."
+  },
+  {
+    "id": 264,
+    "texto": "264. He abusado del alcohol."
+  },
+  {
+    "id": 265,
+    "texto": "265. Por lo general no le hablo a las personas hasta que ellas me hablan a mí."
+  },
+  {
+    "id": 266,
+    "texto": "266. Nunca he tenido problemas con la ley."
+  },
+  {
+    "id": 267,
+    "texto": "267. Tengo épocas en las que me he sentido más animado que de costumbre sin que exista una razón especial."
+  },
+  {
+    "id": 268,
+    "texto": "268. Me gustaría no ser perturbado por pensamientos sexuales."
+  },
+  {
+    "id": 269,
+    "texto": "269. Si varias personas se encuentran inculpadas, lo mejor que pueden hacer es ponerse de acuerdo en lo que van a decir y no cambiarlo después."
+  },
+  {
+    "id": 270,
+    "texto": "270. No me molesta ver sufrir a los animales."
+  },
+  {
+    "id": 271,
+    "texto": "271. Creo que mi sensibilidad es más intensa que la de la mayor parte de la gente."
+  },
+  {
+    "id": 272,
+    "texto": "272. En ningún momento de mi vida me ha gustado jugar con muñecos."
+  },
+  {
+    "id": 273,
+    "texto": "273. Para mí, la vida es tensión la mayor parte del tiempo."
+  },
+  {
+    "id": 274,
+    "texto": "274. Soy tan susceptible en algunos asuntos que no puedo hablar de ellos."
+  },
+  {
+    "id": 275,
+    "texto": "275. Me costaba mucho hablar delante de todos en el colegio."
+  },
+  {
+    "id": 276,
+    "texto": "276. Quero a mi madre (o la quise sí falleció)."
+  },
+  {
+    "id": 277,
+    "texto": "277. Incluso cuando estoy con gente, me siento solo la mayor parte del tiempo."
+  },
+  {
+    "id": 278,
+    "texto": "278. Consigo todas las simpatías que debería."
+  },
+  {
+    "id": 279,
+    "texto": "279. Me niego a participar en algunos juegos porque no soy hábil en ellos."
+  },
+  {
+    "id": 280,
+    "texto": "280. Me parece que hago amigos tan rápido como los demás."
+  },
+  {
+    "id": 281,
+    "texto": "281. Me desagrada tener gente a mí alrededor."
+  },
+  {
+    "id": 282,
+    "texto": "282. Dicen que hablo cuando duermo."
+  },
+  {
+    "id": 283,
+    "texto": "283. Quien provoca la tentación dejando una cosa valiosa sin protegerla es tan culpable del robo como quien la roba."
+  },
+  {
+    "id": 284,
+    "texto": "284. Pienso que casi todo el mundo diría una mentira para evitar problemas."
+  },
+  {
+    "id": 285,
+    "texto": "285. Soy más sensible que la mayoría de la gente."
+  },
+  {
+    "id": 286,
+    "texto": "286. A la mayor parte de la gente le desagrada interiormente dejar lo suyo para ayudar a los demás."
+  },
+  {
+    "id": 287,
+    "texto": "287. Muchos de mis sueños son sobre temas sexuales."
+  },
+  {
+    "id": 288,
+    "texto": "288. Mis padres y familiares encuentran más defectos en mí de lo que deberían."
+  },
+  {
+    "id": 289,
+    "texto": "289. Me aturdo fácilmente."
+  },
+  {
+    "id": 290,
+    "texto": "290. Me preocupan el dinero y los negocios."
+  },
+  {
+    "id": 291,
+    "texto": "291. Nunca he estado enamorado de alguien."
+  },
+  {
+    "id": 292,
+    "texto": "292. Me han asustado ciertas cosas que han hecho algunos de mis familiares."
+  },
+  {
+    "id": 293,
+    "texto": "293. Casi nunca sueño."
+  },
+  {
+    "id": 294,
+    "texto": "294. A menudo me salen manchas rojas en el cuello."
+  },
+  {
+    "id": 295,
+    "texto": "295. Nunca he tenido parálisis ni sufrido una debilidad desacostumbrada en alguno de mis músculos."
+  },
+  {
+    "id": 296,
+    "texto": "296. Algunas veces pierdo o se me cambia la voz, incluso sin estar resfriado."
+  },
+  {
+    "id": 297,
+    "texto": "297. Mi padre o mi madre me obligaron frecuentemente a obedecer, incluso cuando yo pensaba que ello no era razonable."
+  },
+  {
+    "id": 298,
+    "texto": "298. A veces percibo olores extraños."
+  },
+  {
+    "id": 299,
+    "texto": "299. No puedo concentrarme en una sola cosa."
+  },
+  {
+    "id": 300,
+    "texto": "300. Tengo razones para sentirme celoso de uno o más de mis familiares."
+  },
+  {
+    "id": 301,
+    "texto": "301. Casi todo el tiempo siento ansiedad a causa de algo o alguien."
+  },
+  {
+    "id": 302,
+    "texto": "302. Me impaciento fácilmente con la gente."
+  },
+  {
+    "id": 303,
+    "texto": "303. Muchísimas veces me gustaría estar muerto."
+  },
+  {
+    "id": 304,
+    "texto": "304. Muchísimas veces me excito tanto que me cuesta dormirme por las noches."
+  },
+  {
+    "id": 305,
+    "texto": "305. Sin duda he tenido que preocuparme por más cosas que las que me correspondían."
+  },
+  {
+    "id": 306,
+    "texto": "306. Nadie parece comprenderme."
+  },
+  {
+    "id": 307,
+    "texto": "307. A veces oigo tan bien que me molesta."
+  },
+  {
+    "id": 308,
+    "texto": "308. Olvido enseguida lo que la gente me dice."
+  },
+  {
+    "id": 309,
+    "texto": "309. Normalmente tengo que pararme a pensar antes de actuar, incluso en asuntos sin importancia."
+  },
+  {
+    "id": 310,
+    "texto": "310. A menudo cruzo la calle para no encontrarme con alguna persona."
+  },
+  {
+    "id": 311,
+    "texto": "311. Con frecuencia siento como si las cosas no fueran reales."
+  },
+  {
+    "id": 312,
+    "texto": "312. La única parte interesante de los diarios es las páginas de los chistes."
+  },
+  {
+    "id": 313,
+    "texto": "313. Tengo la costumbre de contar con objetos sin importancia, como las bombillas de  un letrero luminoso o cosas similares."
+  },
+  {
+    "id": 314,
+    "texto": "314. Carezco de enemigos que deseen realmente hacerme daño."
+  },
+  {
+    "id": 315,
+    "texto": "315. Tiendo a ponerme en guardia con aquellos que se muestran algo más amables de lo que yo esperaba."
+  },
+  {
+    "id": 316,
+    "texto": "316. Tengo pensamientos extraños y originales."
+  },
+  {
+    "id": 317,
+    "texto": "317. Me pongo ansioso e inquieto cuando tengo que hacer un viaje corto."
+  },
+  {
+    "id": 318,
+    "texto": "318. Normalmente espero tener éxito en las cosas que hago."
+  },
+  {
+    "id": 319,
+    "texto": "319. Oigo cosas extrañas cuando estoy solo."
+  },
+  {
+    "id": 320,
+    "texto": "320. He tenido miedo de cosas o personas que sabía que no podían hacerme daño."
+  },
+  {
+    "id": 321,
+    "texto": "321. No me da miedo entrar solo a una habitación donde hay gente reunida hablando."
+  },
+  {
+    "id": 322,
+    "texto": "322. Me da miedo utilizar cuchillos u objetos muy afilados o puntiagudos."
+  },
+  {
+    "id": 323,
+    "texto": "323. Algunas veces gozo con herir a personas que amo."
+  },
+  {
+    "id": 324,
+    "texto": "324. Me resulta fácil lograr que la gente me tenga miedo y eso me divierte."
+  },
+  {
+    "id": 325,
+    "texto": "325. Tengo más dificultad para concentrarme que la que otros parecen tener."
+  },
+  {
+    "id": 326,
+    "texto": "326. Varias veces he dejado de hacer algo por considerar insuficiente mi habilidad."
+  },
+  {
+    "id": 327,
+    "texto": "327. Se me ocurren palabras feas, a veces horribles, y no puedo dejarlas de lado."
+  },
+  {
+    "id": 328,
+    "texto": "328. Algunas veces me ronda en la cabeza un pensamiento sin importancia y me molesta durante días."
+  },
+  {
+    "id": 329,
+    "texto": "329. Casi a diario ocurre algo que me asusta."
+  },
+  {
+    "id": 330,
+    "texto": "330. A veces siento que me sobran energías."
+  },
+  {
+    "id": 331,
+    "texto": "331. Me inclino a tomar las cosas muy en serio."
+  },
+  {
+    "id": 332,
+    "texto": "332. A veces me ha gustado ser herido por una persona querida."
+  },
+  {
+    "id": 333,
+    "texto": "333. La gente dice de mi cosas insultantes y vulgares."
+  },
+  {
+    "id": 334,
+    "texto": "334. Me siento incómodo cuando estoy “bajo techo” (dentro de un edificio o habitación)."
+  },
+  {
+    "id": 335,
+    "texto": "335. Soy poco conciente de mi mismo."
+  },
+  {
+    "id": 336,
+    "texto": "336. Estoy seguro de que alguien controla mi mente."
+  },
+  {
+    "id": 337,
+    "texto": "337. En las fiestas y reuniones, en vez de unirme al grupo, es más probable que me siente solo o con otra persona."
+  },
+  {
+    "id": 338,
+    "texto": "338. La gente me decepciona con frecuencia."
+  },
+  {
+    "id": 339,
+    "texto": "339. Frecuentemente mis proyectos me han parecido tan llenos de dificultades que he tenido que abandonarlos."
+  },
+  {
+    "id": 340,
+    "texto": "340. Me gusta mucho ir a bailar."
+  },
+  {
+    "id": 341,
+    "texto": "341. Durante ciertos períodos mi mente parece trabajar más despacio que de costumbre."
+  },
+  {
+    "id": 342,
+    "texto": "342. En micros, trenes, suelo conversar con extraños."
+  },
+  {
+    "id": 343,
+    "texto": "343. Me gustan los niños."
+  },
+  {
+    "id": 344,
+    "texto": "344. Me gusta jugar y apostar."
+  },
+  {
+    "id": 345,
+    "texto": "345. Si me dieran la oportunidad, podría hacer cosas que beneficiarían mucho al mundo."
+  },
+  {
+    "id": 346,
+    "texto": "346. Con frecuencia me he encontrado con personas con reputación de expertas, pero que no eran mejores que yo."
+  },
+  {
+    "id": 347,
+    "texto": "347. Me siento fracasado cuando me hablan del éxito de alguien que conozco bien."
+  },
+  {
+    "id": 348,
+    "texto": "348. Con frecuencia pienso: “Me gustaría volver a ser niño”."
+  },
+  {
+    "id": 349,
+    "texto": "349. Nada me hace más feliz que estar solo."
+  },
+  {
+    "id": 350,
+    "texto": "350. Si me dieran la oportunidad podría ser un buen líder."
+  },
+  {
+    "id": 351,
+    "texto": "351. Me molestan las anécdotas indecentes."
+  },
+  {
+    "id": 352,
+    "texto": "352. Normalmente la gente pide para sus propios derechos más respeto que el que da a los de otras personas."
+  },
+  {
+    "id": 353,
+    "texto": "353. Me gustan las reuniones sociales porque puedo estar con gente."
+  },
+  {
+    "id": 354,
+    "texto": "354. Trato de memorizar los cuentos divertidos para poder contárselos a otros."
+  },
+  {
+    "id": 355,
+    "texto": "355. Una o más veces en mi vida sentí que alguien me obligó a hacer cosas hipnotizándome."
+  },
+  {
+    "id": 356,
+    "texto": "356. Me resulta difícil abandonar una tarea una vez que la empecé."
+  },
+  {
+    "id": 357,
+    "texto": "357. Generalmente no me involucro en los chismes que cuentan los que me rodean."
+  },
+  {
+    "id": 358,
+    "texto": "358. A menudo han sentido celos de mis ideas porque no las pensaron antes."
+  },
+  {
+    "id": 359,
+    "texto": "359. Me encanta estar con mucha gente (recitales, manifestaciones)."
+  },
+  {
+    "id": 360,
+    "texto": "360. No me preocupa encontrarme con extraños."
+  },
+  {
+    "id": 361,
+    "texto": "361. Alguien ha tratado de influenciar mi mente."
+  },
+  {
+    "id": 362,
+    "texto": "362. He fingido “estar enfermo” para evitar hacer algo."
+  },
+  {
+    "id": 363,
+    "texto": "363. Mis preocupaciones tienden a desaparecer cuando me junto con amigos."
+  },
+  {
+    "id": 364,
+    "texto": "364. Tiendo a abandonar lo que estoy haciendo si me sale mal."
+  },
+  {
+    "id": 365,
+    "texto": "365. Me gusta que la gente conozca lo que realmente pienso."
+  },
+  {
+    "id": 366,
+    "texto": "366. He tenido períodos en los que me sentí tan lleno de fuerzas que no necesitaba dormir."
+  },
+  {
+    "id": 367,
+    "texto": "367. Siempre que sea posible evito estar en una multitud."
+  },
+  {
+    "id": 368,
+    "texto": "368. Trato de evitar situaciones de crisis o dificultad."
+  },
+  {
+    "id": 369,
+    "texto": "369. Me considero capaz de lograr lo que me propongo cuando otros creen que no vale la pena."
+  },
+  {
+    "id": 370,
+    "texto": "370. Me gustan las fiestas y reuniones sociales."
+  },
+  {
+    "id": 371,
+    "texto": "371. Muchas veces desee pertenecer al sexo opuesto."
+  },
+  {
+    "id": 372,
+    "texto": "372. No me enojo fácilmente."
+  },
+  {
+    "id": 373,
+    "texto": "373. He hecho algunas cosas malas en el pasado que no se las conté a nadie."
+  },
+  {
+    "id": 374,
+    "texto": "374. La mayoría de la gente puede hacer cosas incorrectas con tal de lograr su propósito."
+  },
+  {
+    "id": 375,
+    "texto": "375. Me pongo nervioso cuando la gente me hace preguntas personales."
+  },
+  {
+    "id": 376,
+    "texto": "376. Me siento incapaz de planificar mi futuro."
+  },
+  {
+    "id": 377,
+    "texto": "377. Me desagrada mi forma de ser."
+  },
+  {
+    "id": 378,
+    "texto": "378. Generalmente me enojo cuando amigos o fami- liares me dan consejos."
+  },
+  {
+    "id": 379,
+    "texto": "379. Me golpearon mucho cuando era chico."
+  },
+  {
+    "id": 380,
+    "texto": "380. Me molesto cuando la gente me elogia."
+  },
+  {
+    "id": 381,
+    "texto": "381. Me disgusta escuchar a la gente que da sus opiniones acerca de la vida."
+  },
+  {
+    "id": 382,
+    "texto": "382. A menudo he tenido desacuerdos serios con gente amiga."
+  },
+  {
+    "id": 383,
+    "texto": "383. Sé que puedo contar con la ayuda de mi familia cuando las cosas me van mal."
+  },
+  {
+    "id": 384,
+    "texto": "384. Me gustaba jugar “a la mamá” o “al papá” cuando era niño."
+  },
+  {
+    "id": 385,
+    "texto": "385. No le tengo miedo al fuego."
+  },
+  {
+    "id": 386,
+    "texto": "386. Muchas veces me he alejado de alguna persona por temor de decir o hacer algo de lo que después podría arrepentirme."
+  },
+  {
+    "id": 387,
+    "texto": "387. Sólo puedo expresar lo que realmente siento cuando bebo."
+  },
+  {
+    "id": 388,
+    "texto": "388. Rara vez tengo momentos de depresión (de bajoneo)."
+  },
+  {
+    "id": 389,
+    "texto": "389. Me han dicho con frecuencia que tengo mal carácter."
+  },
+  {
+    "id": 390,
+    "texto": "390. Desearía haber podido dejar de preocuparme por cosas que dije y que pudieron lastimar los sen- timientos de algunas personas."
+  },
+  {
+    "id": 391,
+    "texto": "391. Me siento incapaz de contarle a alguien todas mis cosas."
+  },
+  {
+    "id": 392,
+    "texto": "392. Le tengo miedo a los relámpagos."
+  },
+  {
+    "id": 393,
+    "texto": "393. Me gusta que los demás estén intrigados acerca de lo que voy a hacer."
+  },
+  {
+    "id": 394,
+    "texto": "394. Algunas veces me ha parecido que las dificultades se acumulaban de tal modo que no podía superarlas."
+  },
+  {
+    "id": 395,
+    "texto": "395. Me da miedo estar solo en la oscuridad."
+  },
+  {
+    "id": 396,
+    "texto": "396. Muchas veces me ha caído mal ser incomprendido cuando trataba de evitar que alguien se equivocara."
+  },
+  {
+    "id": 397,
+    "texto": "397. Le tengo miedo a las tormentas con mucho viento."
+  },
+  {
+    "id": 398,
+    "texto": "398. Frecuentemente pido consejos a otras personas."
+  },
+  {
+    "id": 399,
+    "texto": "399. El futuro es demasiado incierto para que una persona haga planes importantes."
+  },
+  {
+    "id": 400,
+    "texto": "400. A menudo, incluso cuando todo me sale bien, siento que nada me importa."
+  },
+  {
+    "id": 401,
+    "texto": "401. No le tengo miedo al agua."
+  },
+  {
+    "id": 402,
+    "texto": "402. A menudo tengo que “consultar con la almohada” antes de tomar una decisión."
+  },
+  {
+    "id": 403,
+    "texto": "403. A menudo la gente ha interpretado mal mis intenciones cuando trataba de ayudarla."
+  },
+  {
+    "id": 404,
+    "texto": "404. No tengo dificultad al tragar."
+  },
+  {
+    "id": 405,
+    "texto": "405. Soy una persona tranquila y no me altero fácilmente."
+  },
+  {
+    "id": 406,
+    "texto": "406. Me gusta combatir a los criminales con sus propias armas."
+  },
+  {
+    "id": 407,
+    "texto": "407. Merezco un castigo severo por mis pecados."
+  },
+  {
+    "id": 408,
+    "texto": "408. Me tomo tan en serio las preocupaciones que me cuesta sacármelas de la cabeza."
+  },
+  {
+    "id": 409,
+    "texto": "409. Me molesta que alguien me observe cuando trabajo aunque sepa que lo hago bien."
+  },
+  {
+    "id": 410,
+    "texto": "410. A menudo me molesta tanto que alguien trate de “colarse” delante de mí en una cola, que tengo que decirle algo."
+  },
+  {
+    "id": 411,
+    "texto": "411. A veces pienso que no valgo para nada."
+  },
+  {
+    "id": 412,
+    "texto": "412. Cuando era chico me hacía “la rabona” en la escuela."
+  },
+  {
+    "id": 413,
+    "texto": "413. Uno o varios de mis familiares son muy nerviosos."
+  },
+  {
+    "id": 414,
+    "texto": "414. A veces he tenido que ser duro con personas groseras o inoportunas."
+  },
+  {
+    "id": 415,
+    "texto": "415. Me preocupo bastante por posibles desgracias."
+  },
+  {
+    "id": 416,
+    "texto": "416. Tengo opiniones políticas muy definidas."
+  },
+  {
+    "id": 417,
+    "texto": "417. Me gustaría ser corredor de automovilismo."
+  },
+  {
+    "id": 418,
+    "texto": "418. Es correcto bordear los límites de la Ley con tal de no violarla claramente."
+  },
+  {
+    "id": 419,
+    "texto": "419. Me desagradan tanto algunas personas, que me alegro interiormente cuando les llaman la atención por algo que han hecho."
+  },
+  {
+    "id": 420,
+    "texto": "420. Me pone nervioso tener que esperar."
+  },
+  {
+    "id": 421,
+    "texto": "421. Tiendo a dejar algo que deseo hacer porque otros piensan que lo encaro incorrectamente."
+  },
+  {
+    "id": 422,
+    "texto": "422. Cuando era joven me apasionaba lo emocionante."
+  },
+  {
+    "id": 423,
+    "texto": "423. Con frecuencia me esf uerzo para triunfar sobre alguien que se enfrenta a mí."
+  },
+  {
+    "id": 424,
+    "texto": "424. Me molesta que me mire gente desconocida, en el colectivo, en los negocios."
+  },
+  {
+    "id": 425,
+    "texto": "425. El hombre que más tuvo que ver conmigo cuando era niño (como mi padre, mi padrastro, etc.) fue muy rígido."
+  },
+  {
+    "id": 426,
+    "texto": "426. Cuando era chico, me gustaba jugar al rango y a la soga."
+  },
+  {
+    "id": 427,
+    "texto": "427. Nunca he tenido una “visión”."
+  },
+  {
+    "id": 428,
+    "texto": "428. Varias veces he cambiado de modo de pensar acerca de mi trabajo."
+  },
+  {
+    "id": 429,
+    "texto": "429. Nunca tomo drogas o pastillas para dormir, a no ser por orden del médico."
+  },
+  {
+    "id": 430,
+    "texto": "430. Frecuentemente lamento tener mal carácter o ser tan protestón."
+  },
+  {
+    "id": 431,
+    "texto": "431. En la escuela, mis calificaciones en conducta fueron generalmente malas."
+  },
+  {
+    "id": 432,
+    "texto": "432. Me fascina el fuego."
+  },
+  {
+    "id": 433,
+    "texto": "433. Cuando estoy en una situación difícil sólo digo aquella parte de la verdad que probablemente no me va a perjudicar."
+  },
+  {
+    "id": 434,
+    "texto": "434. Si estuviera en dificultades junto con varios amigos que fueran tan culpables como yo, preferiría echarme la culpa antes que descubrirlos."
+  },
+  {
+    "id": 435,
+    "texto": "435. A menudo tengo miedo a la oscuridad."
+  },
+  {
+    "id": 436,
+    "texto": "436. Cuando un hombre está con una mujer, generalmente está pensando cosas relacionadas con el sexo de ella."
+  },
+  {
+    "id": 437,
+    "texto": "437. Generalmente “le hablo claro” a la gente que estoy intentando corregir o mejorar."
+  },
+  {
+    "id": 438,
+    "texto": "438. Me aterroriza la idea de un terremoto."
+  },
+  {
+    "id": 439,
+    "texto": "439. Rápidamente me convenzo por completo de una buena idea."
+  },
+  {
+    "id": 440,
+    "texto": "440. Generalmente hago las cosas por mí mismo, en vez de buscar a alguien que me diga como hacerlas."
+  },
+  {
+    "id": 441,
+    "texto": "441. Siento miedo cuando estoy en un lugar pequeño y cerrado."
+  },
+  {
+    "id": 442,
+    "texto": "442. Admito que a veces me he preocupado sin motivo alguno por cosas que no valían la pena."
+  },
+  {
+    "id": 443,
+    "texto": "443. No trato de disimular mi pobre opinión o lástima sobre algunas personas."
+  },
+  {
+    "id": 444,
+    "texto": "444. Soy una persona de una gran tensión."
+  },
+  {
+    "id": 445,
+    "texto": "445. Frecuentemente he trabajado a las órdenes de personas que parecen haber arreglado las cosas de tal modo, que ellas son las que reciben el reconocimiento de una buena labor y, en cambio, atribuyen los errores a sus subordinados."
+  },
+  {
+    "id": 446,
+    "texto": "446. A veces me es difícil defender mis derechos por ser tan reservado."
+  },
+  {
+    "id": 447,
+    "texto": "447. La suciedad me espanta o me disgusta."
+  },
+  {
+    "id": 448,
+    "texto": "448. Vivo una vida de ensueños, acerca de la cual no digo nada a nadie."
+  },
+  {
+    "id": 449,
+    "texto": "449. Algunos de mis familiares tienen mal carácter."
+  },
+  {
+    "id": 450,
+    "texto": "450. No puedo hacer bien ninguna cosa."
+  },
+  {
+    "id": 451,
+    "texto": "451. A menudo me he sentido culpable porque he fingido mayor sufrimiento del que realmente sentía."
+  },
+  {
+    "id": 452,
+    "texto": "452. Por regla general defiendo con tenacidad mis opiniones."
+  },
+  {
+    "id": 453,
+    "texto": "453. No temo a las arañas."
+  },
+  {
+    "id": 454,
+    "texto": "454. Para mí el futuro carece de esperanza."
+  },
+  {
+    "id": 455,
+    "texto": "455. Mis familiares y parientes más cercanos se llevan bastante bien."
+  },
+  {
+    "id": 456,
+    "texto": "456. Me gustaría tener ropa cara."
+  },
+  {
+    "id": 457,
+    "texto": "457. La gente puede hacerme cambiar de opinión muy fácilmente, incluso en materias en las que creía tener ya un criterio firme."
+  },
+  {
+    "id": 458,
+    "texto": "458. Ciertos animales me ponen nervioso."
+  },
+  {
+    "id": 459,
+    "texto": "459. Puedo soportar tanto dolor como los demás."
+  },
+  {
+    "id": 460,
+    "texto": "460. Varias veces he sido el último en darme por vencido al tratar de hacer algo."
+  },
+  {
+    "id": 461,
+    "texto": "461. Me pone de mal humor que la gente me apure."
+  },
+  {
+    "id": 462,
+    "texto": "462. No tengo miedo a los ratones."
+  },
+  {
+    "id": 463,
+    "texto": "463. Varias veces a la semana siento como si fuera a suceder algo espantoso."
+  },
+  {
+    "id": 464,
+    "texto": "464. Me siento cansado una buena parte del tiempo."
+  },
+  {
+    "id": 465,
+    "texto": "465. Me gusta arreglar las cerraduras de las puertas."
+  },
+  {
+    "id": 466,
+    "texto": "466. Algunas veces estoy seguro de que otro puede decir lo que estoy pensando."
+  },
+  {
+    "id": 467,
+    "texto": "467. Me gusta leer temas científicos."
+  },
+  {
+    "id": 468,
+    "texto": "468. Temo estar solo en lugares amplios y abiertos."
+  },
+  {
+    "id": 469,
+    "texto": "469. Algunas veces me siento al borde de una crisis nerviosa."
+  },
+  {
+    "id": 470,
+    "texto": "470. Muchas personas tienen mala conducta sexual."
+  },
+  {
+    "id": 471,
+    "texto": "471. A menudo he sentido miedo en plena noche."
+  },
+  {
+    "id": 472,
+    "texto": "472. Me molesta mucho olvidarme donde pongo las cosas."
+  },
+  {
+    "id": 473,
+    "texto": "473. La persona hacia quien sentía más afecto y admiración cuando era niño, fue una mujer (madre, hermana, tía u otra mujer)."
+  },
+  {
+    "id": 474,
+    "texto": "474. Me gustan más las historias de aventuras que las románticas."
+  },
+  {
+    "id": 475,
+    "texto": "475. A veces  me confundo y no sé que decir."
+  },
+  {
+    "id": 476,
+    "texto": "476. Soy una persona poco agradable."
+  },
+  {
+    "id": 477,
+    "texto": "477. Me gustan los deportes fuertes como el fútbol o rugby."
+  },
+  {
+    "id": 478,
+    "texto": "478. Detesto a mi familia."
+  },
+  {
+    "id": 479,
+    "texto": "479. Algunas personas piensan que es difícil conocerme, saber como soy."
+  },
+  {
+    "id": 480,
+    "texto": "480. Paso mucho tiempo a solas."
+  },
+  {
+    "id": 481,
+    "texto": "481. Me gusta que la gente conozca mi punto de vista cuando hacen cosas que me enojan."
+  },
+  {
+    "id": 482,
+    "texto": "482. Me cuesta tomar decisiones."
+  },
+  {
+    "id": 483,
+    "texto": "483. Soy una persona poco atractiva."
+  },
+  {
+    "id": 484,
+    "texto": "484. La gente es poco amable conmigo."
+  },
+  {
+    "id": 485,
+    "texto": "485. A veces siento que no soy tan bueno como los demás."
+  },
+  {
+    "id": 486,
+    "texto": "486. Soy “cabeza dura”."
+  },
+  {
+    "id": 487,
+    "texto": "487. Me gustó fumar marihuana."
+  },
+  {
+    "id": 488,
+    "texto": "488. La enfermedad mental es signo de debilidad."
+  },
+  {
+    "id": 489,
+    "texto": "489. Tengo problemas con la droga o el alcohol."
+  },
+  {
+    "id": 490,
+    "texto": "490. Los fantasmas o espíritus influyen en la vida de las personas, para bien o para mal."
+  },
+  {
+    "id": 491,
+    "texto": "491. Me siento desamparado cuando tengo que decidir algo importante."
+  },
+  {
+    "id": 492,
+    "texto": "492. Trato de ser paciente aún cuando me critican."
+  },
+  {
+    "id": 493,
+    "texto": "493. Cuando tengo un problema me ayuda el contárselo a otra persona."
+  },
+  {
+    "id": 494,
+    "texto": "494. Creo que puedo lograr concretar mis proyectos."
+  },
+  {
+    "id": 495,
+    "texto": "495. Creo que la gente debe “guardarse” sus problemas personales."
+  },
+  {
+    "id": 496,
+    "texto": "496. En esta etapa de mi vida me siento poco tenso o estresado."
+  },
+  {
+    "id": 497,
+    "texto": "497. Me molesta pensar en hacer cambios en mi vida."
+  },
+  {
+    "id": 498,
+    "texto": "498. Mis mayores problemas son causados por la forma de ser de alguien con quien convivo."
+  },
+  {
+    "id": 499,
+    "texto": "499. Detesto ir al médico aún cuando estoy enfermo."
+  },
+  {
+    "id": 500,
+    "texto": "500. Aunque soy poco feliz, no puedo hacer nada para modificarlo."
+  },
+  {
+    "id": 501,
+    "texto": "501. Conversar acerca de los problemas es más útil que tomar remedios para resolverlos."
+  },
+  {
+    "id": 502,
+    "texto": "502. Tengo tan arraigados uno o varios malos hábitos que es inútil luchar contra ellos."
+  },
+  {
+    "id": 503,
+    "texto": "503. Si hay que resolver un problema, le dejo la iniciativa a los demás."
+  },
+  {
+    "id": 504,
+    "texto": "504. Reconozco que cometo errores pero no puedo cambiar."
+  },
+  {
+    "id": 505,
+    "texto": "505. Me disgusta tanto lo que hago diariamente que quisiera dejar de hacerlo."
+  },
+  {
+    "id": 506,
+    "texto": "506. He pensado en suicidarme."
+  },
+  {
+    "id": 507,
+    "texto": "507. Realmente me enojo cuando interrumpen mi trabajo."
+  },
+  {
+    "id": 508,
+    "texto": "508. A menudo siento que puedo leer lo que otros están pensando."
+  },
+  {
+    "id": 509,
+    "texto": "509. Me pongo nervioso cuando tengo que tomar una decisión importante."
+  },
+  {
+    "id": 510,
+    "texto": "510. Dicen que como muy rápido."
+  },
+  {
+    "id": 511,
+    "texto": "511. Por lo menos una vez por semana me emborracho o me drogo."
+  },
+  {
+    "id": 512,
+    "texto": "512. Tuve una pérdida afectiva importante en mi vida que no puedo olvidar."
+  },
+  {
+    "id": 513,
+    "texto": "513. A veces me enojo tanto que no sé lo que digo o hago."
+  },
+  {
+    "id": 514,
+    "texto": "514. Me cuesta decir que “no” cuando me piden que haga algo."
+  },
+  {
+    "id": 515,
+    "texto": "515. Sólo soy feliz cuando estoy solo."
+  },
+  {
+    "id": 516,
+    "texto": "516. Mi vida es vacía y sin sentido."
+  },
+  {
+    "id": 517,
+    "texto": "517. Me cuesta conservar un trabajo."
+  },
+  {
+    "id": 518,
+    "texto": "518. Cometí muchos errores en mi vida."
+  },
+  {
+    "id": 519,
+    "texto": "519. Me enojo conmigo mismo por ser tan generoso con los demás."
+  },
+  {
+    "id": 520,
+    "texto": "520. Últimamente he pensado mucho en quitarme la vida."
+  },
+  {
+    "id": 521,
+    "texto": "521. Me agrada ayudar a los demás."
+  },
+  {
+    "id": 522,
+    "texto": "522. Aunque me quedara sin familia siempre hay alguien que puede ayudarme."
+  },
+  {
+    "id": 523,
+    "texto": "523. Me disgusta tener que hacer colas en cines teatros o restaurantes."
+  },
+  {
+    "id": 524,
+    "texto": "524. Nadie sabe que intenté suicidarme."
+  },
+  {
+    "id": 525,
+    "texto": "525. Todo pasa muy rápido a mi alrededor."
+  },
+  {
+    "id": 526,
+    "texto": "526. Sé que le resulto “pesado” a la gente."
+  },
+  {
+    "id": 527,
+    "texto": "527. Después de un mal día, necesito tomar unos tragos para poder relajarme."
+  },
+  {
+    "id": 528,
+    "texto": "528. Muchos de mis problemas se deben a mi mala suerte."
+  },
+  {
+    "id": 529,
+    "texto": "529. A veces me resulta difícil dejar de hablar."
+  },
+  {
+    "id": 530,
+    "texto": "530. A veces me hago daño a mí mismo sin saber por qué."
+  },
+  {
+    "id": 531,
+    "texto": "531. Trabajo muchas horas sin que ello sea necesario."
+  },
+  {
+    "id": 532,
+    "texto": "532. Generalmente me siento mejor después de llorar."
+  },
+  {
+    "id": 533,
+    "texto": "533. Me olvido donde dejo las cosas."
+  },
+  {
+    "id": 534,
+    "texto": "534. Si volviera a nacer haría las cosas de la misma manera."
+  },
+  {
+    "id": 535,
+    "texto": "535. Me pone de mal humor que la gente con la que trabajo no haga las cosas a tiempo."
+  },
+  {
+    "id": 536,
+    "texto": "536. Cuando estoy enojado me duele la cabeza."
+  },
+  {
+    "id": 537,
+    "texto": "537. Me gusta manejar autos viejos."
+  },
+  {
+    "id": 538,
+    "texto": "538. Muchos hombres son infieles a sus parejas."
+  },
+  {
+    "id": 539,
+    "texto": "539. Últimamente, perdí las ganas de preocuparme por mis problemas."
+  },
+  {
+    "id": 540,
+    "texto": "540. Hubo ocasiones en las que me enojé y rompí cosas por haber bebido mucho."
+  },
+  {
+    "id": 541,
+    "texto": "541. Trabajo mejor cuando tengo plazos bien definidos."
+  },
+  {
+    "id": 542,
+    "texto": "542. He llegado a enfurecerme tanto con alguien que creí que iba a estallar."
+  },
+  {
+    "id": 543,
+    "texto": "543. A veces tengo malos pensamientos sobre mi familia."
+  },
+  {
+    "id": 544,
+    "texto": "544. La gente me dice que tengo problemas con el alcohol, pero yo no estoy de acuerdo."
+  },
+  {
+    "id": 545,
+    "texto": "545. Tengo poco tiempo para poder hacer las cosas que debo."
+  },
+  {
+    "id": 546,
+    "texto": "546. Últimamente, pienso mucho en la muerte y “el más allá”."
+  },
+  {
+    "id": 547,
+    "texto": "547. Guardo cosas que nunca uso."
+  },
+  {
+    "id": 548,
+    "texto": "548. He estado tan enojado que llegué a golpear y lastimar a una persona."
+  },
+  {
+    "id": 549,
+    "texto": "549. En todo lo que hago, siento que me están tomando examen."
+  },
+  {
+    "id": 550,
+    "texto": "550. Estoy bastante alejado de mis familiares actualmente."
+  },
+  {
+    "id": 551,
+    "texto": "551. A veces siento que escuchan los que estoy pensando."
+  },
+  {
+    "id": 552,
+    "texto": "552. Cuando estoy triste, me hace bien visitar amigos."
+  },
+  {
+    "id": 553,
+    "texto": "553. Siento que lo que me está pasando ahora ya me sucedió antes."
+  },
+  {
+    "id": 554,
+    "texto": "554. Cuando tengo problemas serios, siento ganas de salir corriendo."
+  },
+  {
+    "id": 555,
+    "texto": "555. Me da miedo entrar a una habitación oscura, aún en mi propia casa."
+  },
+  {
+    "id": 556,
+    "texto": "556. Me preocupo mucho por el dinero."
+  },
+  {
+    "id": 557,
+    "texto": "557. El hombre debe ser la cabeza de la familia."
+  },
+  {
+    "id": 558,
+    "texto": "558. Sólo me siento relajado en mi casa."
+  },
+  {
+    "id": 559,
+    "texto": "559. Mis compañeros de trabajo entienden muy poco mis problemas."
+  },
+  {
+    "id": 560,
+    "texto": "560. Estoy conforme con el dinero que gano."
+  },
+  {
+    "id": 561,
+    "texto": "561. Generalmente tengo suficiente energía para cumplir con mis tareas."
+  },
+  {
+    "id": 562,
+    "texto": "562. Me resulta difícil aceptar elogios."
+  },
+  {
+    "id": 563,
+    "texto": "563. En la mayoría de los matrimonios, una de las personas o ambas son poco felices."
+  },
+  {
+    "id": 564,
+    "texto": "564. Casi nunca pierdo el control."
+  },
+  {
+    "id": 565,
+    "texto": "565. Me cuesta mucho esfuerzo recordar lo que me dicen."
+  },
+  {
+    "id": 566,
+    "texto": "566. Si me siento triste, trabajo mal."
+  },
+  {
+    "id": 567,
+    "texto": "567. La mayor parte de los matrimonios no muestran que están enamorados uno del otro."
+  }
+]
