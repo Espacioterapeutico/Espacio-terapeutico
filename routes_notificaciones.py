@@ -153,8 +153,30 @@ def admin_notifications_mark_read():
 
 WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'https://espacio-terapeutico-whatsapp.onrender.com')
 
+_wa_keepalive_started = False
+
+def _start_wa_keepalive_thread():
+    global _wa_keepalive_started
+    if _wa_keepalive_started:
+        return
+    _wa_keepalive_started = True
+
+    def _keepalive_loop():
+        import time, requests
+        while True:
+            try:
+                url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/status"
+                requests.get(url, params={'user_id': '1'}, timeout=15)
+            except Exception:
+                pass
+            time.sleep(480) # Ping cada 8 minutos para evitar que Render hiberne
+
+    t = threading.Thread(target=_keepalive_loop, daemon=True)
+    t.start()
+
 def make_wa_http_request(method, endpoint, json_data=None, timeout=5, user_id=None):
     import requests
+    _start_wa_keepalive_thread()
     url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/{endpoint.lstrip('/')}"
     
     if not user_id:
