@@ -1238,8 +1238,8 @@ async function checkSession() {
         clearTimeout(timeoutId);
         const data = await res.json();
         
-        if (data.logged_in) {
-            if (data.role === 'paciente') {
+        if (res.ok && (data.logged_in || data.authenticated)) {
+            if (data.role === 'paciente' || data.user_type === 'patient') {
                 showPatientLayout(data.username, data.patient_id);
             } else {
                 showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos);

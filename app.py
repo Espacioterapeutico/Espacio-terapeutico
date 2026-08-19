@@ -1648,6 +1648,7 @@ def auto_send_appointment_reminders(db):
                 now_str,
                 notif_link
             ))
+            db.commit()
             
             # 2. Notificación al paciente en Firebase
             try:
@@ -2359,11 +2360,20 @@ def send_hourly_patient_tool_reminders(db=None):
 
     return reminders_sent
 
+_last_cleanup_timestamp = 0
+
 @app.before_request
 def before_request_cleanup():
+    global _last_cleanup_timestamp
     # Evitar ejecutar en llamadas de archivos estáticos
     if request.path.startswith('/static/'):
         return
+    import time
+    now_ts = time.time()
+    if now_ts - _last_cleanup_timestamp < 60:
+        return
+    _last_cleanup_timestamp = now_ts
+
     db = get_db()
     auto_cancel_unconfirmed_sessions(db)
     auto_send_appointment_reminders(db)

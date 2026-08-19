@@ -192,6 +192,7 @@ def check_session():
 
         return jsonify({
             'authenticated': True,
+            'logged_in': True,
             'user_type': 'therapist',
             'user_id': session['user_id'],
             'username': session.get('username'),
@@ -219,6 +220,7 @@ def check_session():
     elif 'patient_id' in session:
         return jsonify({
             'authenticated': True,
+            'logged_in': True,
             'user_type': 'patient',
             'patient_id': session['patient_id'],
             'username': session.get('patient_username')
