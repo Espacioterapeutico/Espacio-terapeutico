@@ -9,7 +9,7 @@ import os
 import sqlite3
 from functools import wraps
 from flask import Blueprint, request, jsonify, session, g
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 pacientes_bp = Blueprint('pacientes', __name__)
 
