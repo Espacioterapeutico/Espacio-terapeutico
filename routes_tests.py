@@ -13,7 +13,7 @@ import json
 import sqlite3
 from datetime import datetime
 from functools import wraps
-from flask import Blueprint, request, jsonify, session, g, render_template, render_template_string, make_response
+from flask import Blueprint, request, jsonify, session, g, render_template, render_template_string, make_response, send_file
 
 tests_bp = Blueprint('tests', __name__)
 
@@ -1479,9 +1479,23 @@ def api_guardar_resultado_manual_test(assignment_id):
         return jsonify({'error': f'Error al registrar resultado: {str(e)}'}), 500
 
 
+@tests_bp.route('/api/tests/materials/<path:filename>', methods=['GET'])
+def download_test_material_file(filename):
+    try:
+        from app import get_resource_path
+        static_folder = get_resource_path('static')
+        materials_dir = os.path.join(static_folder, 'test_materials')
+        file_path = os.path.join(materials_dir, filename)
+        if os.path.exists(file_path):
+            return send_file(file_path, as_attachment=False)
+        return "Archivo de test no encontrado.", 404
+    except Exception as e:
+        return f"Error al servir archivo: {str(e)}", 500
+
 @tests_bp.route('/api/tests/asignacion/<int:assignment_id>/export/pdf', methods=['GET'])
-@login_required
 def api_export_test_pdf(assignment_id):
+    if 'user_id' not in session and 'patient_id' not in session:
+        return "Debe iniciar sesión para exportar el test.", 401
     try:
         db = get_db()
         ensure_tests_tables(db)

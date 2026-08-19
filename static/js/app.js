@@ -937,7 +937,6 @@ function switchView(viewId) {
     // Cargar datos dinámicos según vista
     if (viewId === 'dashboard') {
         loadDashboardStats();
-        loadAgendaCompact();
         try { checkWhatsAppGlobalStatus(); } catch(e) {}
         if (subTabToActivate) {
             switchDashboardTab(subTabToActivate);
@@ -4673,11 +4672,14 @@ async function loadDashboardStats() {
     }
 }
 
+let _isLoadingAgendaCompactLock = false;
 async function loadAgendaCompact() {
     const listContainer = document.getElementById('pending-evolutions-list');
     const nextConsultation = document.getElementById('next-consultation-content');
     if (!listContainer || !nextConsultation) return;
+    if (_isLoadingAgendaCompactLock) return;
     
+    _isLoadingAgendaCompactLock = true;
     try {
         const res = await fetch('/api/agenda?_t=' + Date.now());
         const events = await res.json();
@@ -4710,6 +4712,7 @@ async function loadAgendaCompact() {
             return true;
         });
 
+        listContainer.innerHTML = '';
         if (pendingEvolutions.length === 0) {
             listContainer.innerHTML = `
                 <div class="empty-state">
@@ -4744,6 +4747,8 @@ async function loadAgendaCompact() {
         });
     } catch (err) {
         listContainer.innerHTML = '<p class="text-danger">Error al cargar evoluciones pendientes.</p>';
+    } finally {
+        _isLoadingAgendaCompactLock = false;
     }
 }
 window.loadDashboardStats = loadDashboardStats;
