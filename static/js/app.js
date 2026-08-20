@@ -9057,6 +9057,32 @@ async function loadMessageTemplates() {
     }
 }
 
+function adminResetPatientCredentials(patientId) {
+    document.getElementById('reset-credentials-patient-id').value = patientId;
+    openModal('reset-credentials-modal');
+}
+
+async function executeResetPatientCredentials() {
+    const patientId = document.getElementById('reset-credentials-patient-id').value;
+    if (!patientId) return;
+    
+    try {
+        const res = await fetch(`/api/patients/${patientId}/reset-credentials`, {
+            method: 'POST'
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || 'Credenciales restablecidas correctamente.');
+            closeModal('reset-credentials-modal');
+        } else {
+            alert(data.error || 'Error al restablecer credenciales.');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        alert('Error de conexión.');
+    }
+}
+
 async function handleSaveMessageTemplates(e) {
     e.preventDefault();
     const msgConfirmacion = document.getElementById('template-confirmacion').value;
