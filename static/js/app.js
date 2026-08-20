@@ -9266,6 +9266,11 @@ async function loadWhatsAppMonitoringQueue() {
     }
 }
 
+function escapeJsQuotes(str) {
+    if (!str) return '';
+    return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
 function renderWaQueueTablePage() {
     const tbody = document.getElementById('wa-monitoring-queue-tbody');
     if (!tbody) return;
