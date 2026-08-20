@@ -2010,7 +2010,7 @@ function showPatientLayout(username, patientId) {
     hideLoadingScreen();
 }
 
-function showPatientWizard(patientId, username) {
+async function showPatientWizard(patientId, username) {
     sessionStorage.setItem('patient_id', patientId);
     sessionStorage.setItem('patient_username', username);
     sessionStorage.setItem('role', 'paciente');
@@ -2024,6 +2024,54 @@ function showPatientWizard(patientId, username) {
     
     document.getElementById('wizard-patient-id').value = patientId;
     document.getElementById('wiz-username').value = username;
+
+    try {
+        const res = await fetch('/api/patient/portal-data');
+        if (res.ok) {
+            const data = await res.json();
+            
+            // Helper para asignar valor si existe el elemento
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val !== undefined && val !== null) el.value = val;
+            };
+
+            // Personales
+            setVal('wiz-pronombre', data.pronombre);
+            setVal('wiz-genero', data.genero);
+            if (data.fecha_nacimiento) {
+                setVal('wiz-fecha-nac', data.fecha_nacimiento);
+                if (typeof wizCalculateAge === 'function') wizCalculateAge();
+            }
+            setVal('wiz-edad', data.edad);
+            setVal('wiz-lugar-nac', data.lugar_nacimiento);
+            setVal('wiz-pais', data.residencia_actual);
+            setVal('wiz-residencia', data.residencia_actual);
+            setVal('wiz-ciudad', data.ciudad);
+            setVal('wiz-telefono', data.telefono);
+            setVal('wiz-email', data.email);
+            
+            // Anamnesis
+            setVal('wiz-con-quien-reside', data.con_quien_reside);
+            setVal('wiz-nivel-acad', data.nivel_academico);
+            setVal('wiz-ocupacion', data.ocupacion);
+            setVal('wiz-estado-civil', data.estado_civil);
+            setVal('wiz-ant-med-pers', data.antecedentes_medicos_personales);
+            setVal('wiz-ant-med-fam', data.antecedentes_medicos_familiares);
+            setVal('wiz-ant-psic-pers', data.antecedentes_psicologicos_personales);
+            setVal('wiz-ant-psic-fam', data.antecedentes_psicologicos_familiares);
+            setVal('wiz-asistencia-previa', data.asistencia_previa_psicologo);
+            setVal('wiz-motivo-consulta', data.motivo_consulta);
+            setVal('wiz-expectativas', data.expectativas);
+            setVal('wiz-farmacologia', data.farmacologia);
+            
+            // Emergencia
+            setVal('wiz-emergencia-nombre', data.contacto_emergencia_nombre);
+            setVal('wiz-emergencia-parentesco', data.contacto_emergencia_parentesco);
+        }
+    } catch (e) {
+        console.error('Error pre-cargando datos en el wizard:', e);
+    }
     
     // Ocultar todas las vistas y mostrar solo la de primer acceso
     document.querySelectorAll('.app-view').forEach(v => v.classList.add('hide'));
