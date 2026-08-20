@@ -4672,83 +4672,86 @@ async function loadDashboardStats() {
     }
 }
 
-let _isLoadingAgendaCompactLock = false;
 async function loadAgendaCompact() {
     const listContainer = document.getElementById('pending-evolutions-list');
     const nextConsultation = document.getElementById('next-consultation-content');
     if (!listContainer || !nextConsultation) return;
-    if (_isLoadingAgendaCompactLock) return;
-    
-    _isLoadingAgendaCompactLock = true;
+
     try {
         const res = await fetch('/api/agenda?_t=' + Date.now());
+        if (!res.ok) throw new Error("HTTP error " + res.status);
         const events = await res.json();
-        
-        listContainer.innerHTML = '';
-        nextConsultation.innerHTML = '';
         
         const _nowDate = new Date();
         const todayStr = `${_nowDate.getFullYear()}-${String(_nowDate.getMonth() + 1).padStart(2, '0')}-${String(_nowDate.getDate()).padStart(2, '0')}`;
-        
-        // Buscar las próximas citas agendadas desde hoy en adelante (no canceladas y no evolucionadas)
-        let upcomingEvents = events.filter(e => e.fecha >= todayStr && e.estado_pago !== 'Cancelada' && e.estado_pago !== 'Prepagada' && !e.has_session);
-        upcomingEvents.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
-        
-        _upcomingEventsCache = upcomingEvents;
-        if (_upcomingCurrentIndex >= _upcomingEventsCache.length) {
-            _upcomingCurrentIndex = Math.max(0, _upcomingEventsCache.length - 1);
-        }
-        await renderUpcomingConsultationPage(_upcomingCurrentIndex);
-        
-        // 2. Mostrar Evoluciones Clínicas Pendientes (Citas pasadas o de hoy que no tienen evolución cargada y no son prepagos de paquetes)
-        let pendingEvolutions = events.filter(e => !e.has_session && e.estado_pago !== 'Prepagada' && e.fecha <= todayStr);
 
-        // Deduplicar eventos por id y combinacion de paciente, fecha y hora
-        const seenEvKeys = new Set();
-        pendingEvolutions = pendingEvolutions.filter(e => {
-            const key = `${e.id || ''}_${e.paciente_id || ''}_${e.fecha || ''}_${e.hora || ''}`;
-            if (seenEvKeys.has(key)) return false;
-            seenEvKeys.add(key);
-            return true;
-        });
+        // 1. Renderizar Próximas Consultas
+        try {
+            let upcomingEvents = (events || []).filter(e => e.fecha >= todayStr && e.estado_pago !== 'Cancelada' && e.estado_pago !== 'Prepagada' && !e.has_session);
+            upcomingEvents.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
 
-        listContainer.innerHTML = '';
-        if (pendingEvolutions.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state">
-                    <p>🎉 ¡Al día! No tienes evoluciones pendientes por redactar.</p>
-                </div>
-            `;
-            return;
+            _upcomingEventsCache = upcomingEvents;
+            if (_upcomingCurrentIndex >= _upcomingEventsCache.length) {
+                _upcomingCurrentIndex = Math.max(0, _upcomingEventsCache.length - 1);
+            }
+            renderUpcomingConsultationPage(_upcomingCurrentIndex);
+        } catch (eUpcoming) {
+            console.error("Error al renderizar próxima consulta:", eUpcoming);
+            nextConsultation.innerHTML = '<p class="text-danger" style="font-size:0.85rem; padding: 1rem;">No se pudo cargar la próxima consulta.</p>';
         }
-        
-        // Ordenar de más antiguas a más nuevas
-        pendingEvolutions.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
-        
-        pendingEvolutions.forEach(e => {
-            const item = document.createElement('div');
-            item.className = 'agenda-compact-item';
-            
-            const isToday = e.fecha === todayStr;
-            const fechaLabel = isToday ? 'Hoy' : e.fecha;
-            
-            item.innerHTML = `
-                <div class="agenda-compact-info">
-                    <span class="agenda-compact-time">${fechaLabel} a las ${e.hora}</span>
-                    <span class="agenda-compact-patient">${e.nombres} ${e.apellidos}</span>
-                    <span class="agenda-compact-type" style="color: var(--danger-color); font-weight: 500;">Pendiente por Evolucionar</span>
-                </div>
-                <div style="display: flex; gap: 0.35rem;">
-                    <button class="btn btn-primary btn-sm" onclick="openRegisterSessionFromEvent(${e.id})">Evolucionar</button>
-                    <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${e.paciente_id})">Ficha</button>
-                </div>
-            `;
-            listContainer.appendChild(item);
-        });
+
+        // 2. Renderizar Evoluciones Clínicas Pendientes
+        try {
+            let pendingEvolutions = (events || []).filter(e => !e.has_session && e.estado_pago !== 'Prepagada' && e.fecha <= todayStr);
+
+            // Deduplicar eventos por id y combinacion de paciente, fecha y hora
+            const seenEvKeys = new Set();
+            pendingEvolutions = pendingEvolutions.filter(e => {
+                const key = `${e.id || ''}_${e.paciente_id || ''}_${e.fecha || ''}_${e.hora || ''}`;
+                if (seenEvKeys.has(key)) return false;
+                seenEvKeys.add(key);
+                return true;
+            });
+
+            listContainer.innerHTML = '';
+            if (pendingEvolutions.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>🎉 ¡Al día! No tienes evoluciones pendientes por redactar.</p>
+                    </div>
+                `;
+            } else {
+                pendingEvolutions.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
+                pendingEvolutions.forEach(e => {
+                    const item = document.createElement('div');
+                    item.className = 'agenda-compact-item';
+
+                    const isToday = e.fecha === todayStr;
+                    const fechaLabel = isToday ? 'Hoy' : e.fecha;
+
+                    item.innerHTML = `
+                        <div class="agenda-compact-info">
+                            <span class="agenda-compact-time">${fechaLabel} a las ${e.hora}</span>
+                            <span class="agenda-compact-patient">${e.nombres} ${e.apellidos}</span>
+                            <span class="agenda-compact-type" style="color: var(--danger-color); font-weight: 500;">Pendiente por Evolucionar</span>
+                        </div>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button class="btn btn-primary btn-sm" onclick="openRegisterSessionFromEvent(${e.id})">Evolucionar</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${e.paciente_id})">Ficha</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+        } catch (ePending) {
+            console.error("Error al renderizar evoluciones pendientes:", ePending);
+            listContainer.innerHTML = '<p class="text-danger" style="font-size:0.85rem; padding: 1rem;">Error al cargar evoluciones pendientes.</p>';
+        }
+
     } catch (err) {
-        listContainer.innerHTML = '<p class="text-danger">Error al cargar evoluciones pendientes.</p>';
-    } finally {
-        _isLoadingAgendaCompactLock = false;
+        console.error("Error al cargar la agenda compacta:", err);
+        nextConsultation.innerHTML = '<p class="text-danger" style="font-size:0.85rem; padding: 1rem;">Error al conectar con la agenda.</p>';
+        listContainer.innerHTML = '<p class="text-danger" style="font-size:0.85rem; padding: 1rem;">Error al conectar con la agenda.</p>';
     }
 }
 window.loadDashboardStats = loadDashboardStats;
@@ -4757,7 +4760,7 @@ window.loadDashboardData = loadDashboardStats;
 let _upcomingEventsCache = [];
 let _upcomingCurrentIndex = 0;
 
-async function renderUpcomingConsultationPage(idx) {
+function renderUpcomingConsultationPage(idx) {
     const nextConsultation = document.getElementById('next-consultation-content') || document.getElementById('dashboard-next-consultation');
     if (!nextConsultation) return;
 
@@ -4789,15 +4792,6 @@ async function renderUpcomingConsultationPage(idx) {
         ? `<span class="badge" style="background:#10b981; color:#fff; padding:2px 6px; font-size:0.7rem; border-radius:4px; font-weight:700;">✓ Confirmada</span>` 
         : `<span class="badge" style="background:#f59e0b; color:#fff; padding:2px 6px; font-size:0.7rem; border-radius:4px; font-weight:700;">⏳ Pendiente</span>`;
 
-    let lastSes = null;
-    try {
-        const summaryRes = await fetch(`/api/patients/${nextE.paciente_id}/summary`);
-        if (summaryRes.ok) {
-            const summary = await summaryRes.json();
-            lastSes = summary.last_session;
-        }
-    } catch(e) {}
-
     const btnEvolucionar = !nextE.has_session 
         ? `<button class="btn btn-primary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: var(--primary-color); border: none;" onclick="openRegisterSessionFromEvent(${nextE.id})">💜 Evolucionar</button>` 
         : '';
@@ -4816,6 +4810,7 @@ async function renderUpcomingConsultationPage(idx) {
         </div>
     `;
 
+    // Renderizar la tarjeta de la consulta inmediatamente
     nextConsultation.innerHTML = `
         ${paginationControls}
         <div class="next-patient-card" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap: wrap; gap: 0.65rem;">
@@ -4834,15 +4829,37 @@ async function renderUpcomingConsultationPage(idx) {
                 ${btnEliminar}
             </div>
         </div>
-        <div class="recap-box" style="margin-top: 0.85rem; padding: 0.75rem; background: rgba(0,0,0,0.02); border-radius: var(--radius-sm);">
+        <div id="upcoming-recap-box-${nextE.id}" class="recap-box" style="margin-top: 0.85rem; padding: 0.75rem; background: rgba(0,0,0,0.02); border-radius: var(--radius-sm);">
             <h5 style="margin: 0 0 0.4rem 0; font-size: 0.85rem; color: var(--primary-color);">Recapitulación de Sesión Anterior:</h5>
-            ${lastSes ? `
-                <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Fecha:</strong> ${lastSes.fecha}</p>
-                <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Resumen:</strong> ${lastSes.resumen}</p>
-                ${lastSes.tareas_asignadas ? `<p style="font-size:0.8rem; margin:0;"><strong>Tareas de paciente:</strong> ${lastSes.tareas_asignadas}</p>` : ''}
-            ` : '<p class="text-secondary" style="font-size:0.8rem; margin:0;">No hay evoluciones previas registradas.</p>'}
+            <p class="text-secondary" style="font-size:0.8rem; margin:0;">Cargando historial...</p>
         </div>
     `;
+
+    // Cargar la recapitulación de forma asíncrona no bloqueante
+    fetch(`/api/patients/${nextE.paciente_id}/summary`)
+        .then(res => res.ok ? res.json() : null)
+        .then(summary => {
+            const recapBox = document.getElementById(`upcoming-recap-box-${nextE.id}`);
+            if (!recapBox) return;
+            const lastSes = summary ? summary.last_session : null;
+            recapBox.innerHTML = `
+                <h5 style="margin: 0 0 0.4rem 0; font-size: 0.85rem; color: var(--primary-color);">Recapitulación de Sesión Anterior:</h5>
+                ${lastSes ? `
+                    <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Fecha:</strong> ${lastSes.fecha}</p>
+                    <p style="font-size:0.8rem; margin-bottom: 0.25rem;"><strong>Resumen:</strong> ${lastSes.resumen}</p>
+                    ${lastSes.tareas_asignadas ? `<p style="font-size:0.8rem; margin:0;"><strong>Tareas de paciente:</strong> ${lastSes.tareas_asignadas}</p>` : ''}
+                ` : '<p class="text-secondary" style="font-size:0.8rem; margin:0;">No hay evoluciones previas registradas.</p>'}
+            `;
+        })
+        .catch(() => {
+            const recapBox = document.getElementById(`upcoming-recap-box-${nextE.id}`);
+            if (recapBox) {
+                recapBox.innerHTML = `
+                    <h5 style="margin: 0 0 0.4rem 0; font-size: 0.85rem; color: var(--primary-color);">Recapitulación de Sesión Anterior:</h5>
+                    <p class="text-secondary" style="font-size:0.8rem; margin:0;">No hay evoluciones previas registradas.</p>
+                `;
+            }
+        });
 }
 window.renderUpcomingConsultationPage = renderUpcomingConsultationPage;
 
