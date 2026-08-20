@@ -228,54 +228,174 @@ def adjust_patient_prepay_balance(patient_id):
 
 # --- ENDPOINTS DE GESTIÓN DE SESIONES / EVOLUCIONES ---
 
-@evoluciones_bp.route('/api/sessions', methods=['GET'])
+@evoluciones_bp.route('/api/sessions', methods=['GET', 'POST'])
 @login_required
-def get_sessions():
-    patient_id = request.args.get('patient_id')
+def manage_sessions():
     db = get_db()
     cursor = db.cursor()
     psic_id = get_psicologo_id_filter()
-    
-    if patient_id:
-        if psic_id is not None:
-            cursor.execute("""
-                SELECT s.* 
-                FROM sesiones s 
-                JOIN pacientes p ON s.paciente_id = p.id 
-                WHERE s.paciente_id = ? AND p.psicologo_id = ? 
-                ORDER BY s.fecha DESC, s.id DESC
-            """, (patient_id, psic_id))
+    from app import decrypt_clinical_text, encrypt_clinical_text, sync_patient_to_firebase
+
+    if request.method == 'GET':
+        patient_id = request.args.get('patient_id')
+        if patient_id:
+            if psic_id is not None:
+                cursor.execute("""
+                    SELECT s.* 
+                    FROM sesiones s 
+                    JOIN pacientes p ON s.paciente_id = p.id 
+                    WHERE s.paciente_id = ? AND p.psicologo_id = ? 
+                    ORDER BY s.fecha DESC, s.id DESC
+                """, (patient_id, psic_id))
+            else:
+                cursor.execute("SELECT * FROM sesiones WHERE paciente_id = ? ORDER BY fecha DESC, id DESC", (patient_id,))
         else:
-            cursor.execute("SELECT * FROM sesiones WHERE paciente_id = ? ORDER BY fecha DESC, id DESC", (patient_id,))
-    else:
-        if psic_id is not None:
-            cursor.execute("""
-                SELECT s.*, p.nombres, p.apellidos 
-                FROM sesiones s 
-                JOIN pacientes p ON s.paciente_id = p.id 
-                WHERE p.psicologo_id = ?
-                ORDER BY s.fecha DESC, s.id DESC
-            """, (psic_id,))
+            if psic_id is not None:
+                cursor.execute("""
+                    SELECT s.*, p.nombres, p.apellidos 
+                    FROM sesiones s 
+                    JOIN pacientes p ON s.paciente_id = p.id 
+                    WHERE p.psicologo_id = ?
+                    ORDER BY s.fecha DESC, s.id DESC
+                """, (psic_id,))
+            else:
+                cursor.execute("""
+                    SELECT s.*, p.nombres, p.apellidos 
+                    FROM sesiones s 
+                    JOIN pacientes p ON s.paciente_id = p.id 
+                    ORDER BY s.fecha DESC, s.id DESC
+                """)
+            
+        raw_sessions = [dict(row) for row in cursor.fetchall()]
+        sessions = []
+        for s in raw_sessions:
+            s['resumen'] = decrypt_clinical_text(s.get('resumen'))
+            s['resumen_paciente'] = decrypt_clinical_text(s.get('resumen_paciente'))
+            s['anotaciones_proxima'] = decrypt_clinical_text(s.get('anotaciones_proxima'))
+            s['compromisos_psicologo'] = decrypt_clinical_text(s.get('compromisos_psicologo'))
+            s['diagnostico'] = decrypt_clinical_text(s.get('diagnostico'))
+            s['test_aplicados'] = decrypt_clinical_text(s.get('test_aplicados'))
+            sessions.append(s)
+        return jsonify(sessions)
+
+    # --- CREAR NUEVA EVOLUCIÓN CLÍNICA (POST) ---
+    data = request.json or {}
+    try:
+        paciente_id = data.get('paciente_id')
+        if not paciente_id:
+            return jsonify({'error': 'Debe seleccionar un consultante para guardar la evolución.'}), 400
+
+        agenda_id = data.get('agenda_id')
+        fecha = data.get('fecha') or datetime.datetime.now().strftime('%Y-%m-%d')
+        modalidad = data.get('modalidad', 'Online')
+        estado = data.get('estado', 'Realizada')
+
+        resumen = encrypt_clinical_text(data.get('resumen'))
+        resumen_paciente = encrypt_clinical_text(data.get('resumen_paciente'))
+        tareas_asignadas = data.get('tareas_asignadas', '')
+        recursos_entregados = data.get('recursos_entregados', '')
+        anotaciones_proxima = encrypt_clinical_text(data.get('anotaciones_proxima'))
+        compromisos_psicologo = encrypt_clinical_text(data.get('compromisos_psicologo'))
+        diagnostico = encrypt_clinical_text(data.get('diagnostico'))
+        test_aplicados = encrypt_clinical_text(data.get('test_aplicados'))
+        archivo_adjunto = data.get('archivo_adjunto', '')
+
+        cursor.execute("""
+            INSERT INTO sesiones (
+                paciente_id, agenda_id, fecha, modalidad, estado,
+                resumen, resumen_paciente, tareas_asignadas, recursos_entregados,
+                anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            paciente_id, agenda_id, fecha, modalidad, estado,
+            resumen, resumen_paciente, tareas_asignadas, recursos_entregados,
+            anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto
+        ))
+        session_id = cursor.lastrowid
+
+        # Liquidación de finanzas
+        tipo_liq = data.get('tipo_liquidacion')
+        raw_monto = data.get('monto', 0.0)
+        try:
+            monto = float(str(raw_monto).replace(',', '.')) if raw_monto is not None else 0.0
+        except Exception:
+            monto = 0.0
+
+        moneda = data.get('moneda', 'USD')
+        metodo_pago = data.get('metodo_pago', '')
+        referencia = data.get('referencia', '')
+        fecha_pago = data.get('fecha_pago') or fecha
+
+        if agenda_id:
+            if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada']:
+                cursor.execute("""
+                    UPDATE agenda_finanzas 
+                    SET estado_pago = 'Paga', monto = ?, moneda = ?, metodo_pago = ?, referencia = ?, fecha_pago = ?, has_session = 1
+                    WHERE id = ?
+                """, (monto, moneda, metodo_pago, referencia, fecha_pago, agenda_id))
+            elif tipo_liq in ['Prepagada', 'Descontar de saldo prepagado', 'Ya prepagada en paquete']:
+                cursor.execute("""
+                    UPDATE agenda_finanzas 
+                    SET estado_pago = 'Prepagada', control_uso = 'Consumida', has_session = 1
+                    WHERE id = ?
+                """, (agenda_id,))
+            elif tipo_liq in ['Cancelada sin aviso - Paga']:
+                cursor.execute("""
+                    UPDATE agenda_finanzas 
+                    SET estado_pago = 'Cancelada sin aviso - Paga', monto = ?, moneda = ?, has_session = 1
+                    WHERE id = ?
+                """, (monto, moneda, agenda_id))
+            elif tipo_liq in ['Cancelada sin aviso']:
+                cursor.execute("""
+                    UPDATE agenda_finanzas 
+                    SET estado_pago = 'Cancelada sin aviso', monto = ?, moneda = ?, has_session = 1
+                    WHERE id = ?
+                """, (monto, moneda, agenda_id))
+            else:
+                cursor.execute("""
+                    UPDATE agenda_finanzas 
+                    SET estado_pago = 'Pendiente', monto = ?, moneda = ?, has_session = 1
+                    WHERE id = ?
+                """, (monto, moneda, agenda_id))
         else:
+            # Crear entrada en agenda_finanzas si no venía de una cita pre-existente
+            estado_pago = 'Pendiente'
+            if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada']:
+                estado_pago = 'Paga'
+            elif tipo_liq in ['Prepagada', 'Descontar de saldo prepagado', 'Ya prepagada en paquete']:
+                estado_pago = 'Prepagada'
+            elif tipo_liq in ['Cancelada sin aviso - Paga']:
+                estado_pago = 'Cancelada sin aviso - Paga'
+            elif tipo_liq in ['Cancelada sin aviso']:
+                estado_pago = 'Cancelada sin aviso'
+
             cursor.execute("""
-                SELECT s.*, p.nombres, p.apellidos 
-                FROM sesiones s 
-                JOIN pacientes p ON s.paciente_id = p.id 
-                ORDER BY s.fecha DESC, s.id DESC
-            """)
-        
-    raw_sessions = [dict(row) for row in cursor.fetchall()]
-    sessions = []
-    from app import decrypt_clinical_text
-    for s in raw_sessions:
-        s['resumen'] = decrypt_clinical_text(s.get('resumen'))
-        s['resumen_paciente'] = decrypt_clinical_text(s.get('resumen_paciente'))
-        s['anotaciones_proxima'] = decrypt_clinical_text(s.get('anotaciones_proxima'))
-        s['compromisos_psicologo'] = decrypt_clinical_text(s.get('compromisos_psicologo'))
-        s['diagnostico'] = decrypt_clinical_text(s.get('diagnostico'))
-        s['test_aplicados'] = decrypt_clinical_text(s.get('test_aplicados'))
-        sessions.append(s)
-    return jsonify(sessions)
+                INSERT INTO agenda_finanzas (
+                    paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
+                    metodo_pago, referencia, fecha_pago, confirmada, has_session
+                ) VALUES (?, ?, '00:00', ?, ?, ?, ?, ?, ?, ?, 1, 1)
+            """, (paciente_id, fecha, modalidad, monto, moneda, estado_pago, metodo_pago, referencia, fecha_pago))
+
+        db.commit()
+
+        try:
+            from routes_finanzas import auto_settle_patient_debts
+            auto_settle_patient_debts(db, paciente_id)
+            db.commit()
+        except Exception:
+            pass
+
+        try:
+            sync_patient_to_firebase(paciente_id)
+        except Exception as _fb_err:
+            print(f"Aviso al sincronizar paciente #{paciente_id} a Firebase: {_fb_err}")
+
+        return jsonify({'success': 'Evolución clínica registrada exitosamente.', 'session_id': session_id}), 201
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error al guardar evolución clínica: {e}")
+        return jsonify({'error': f'Error al guardar evolución clínica: {str(e)}'}), 500
 
 @evoluciones_bp.route('/api/sessions/<int:session_id>', methods=['GET', 'PUT'])
 @login_required

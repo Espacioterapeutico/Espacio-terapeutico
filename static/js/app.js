@@ -4481,7 +4481,7 @@ async function handleSessionSubmit(e) {
         
         // Campos financieros
         tipo_liquidacion: (estado === 'Realizada' || estado === 'Cancelada sin aviso') ? document.getElementById('s-tipo-liq').value : null,
-        monto: parseFloat(document.getElementById('s-monto').value || 0.0),
+        monto: parseFloat((document.getElementById('s-monto').value || '0').toString().replace(',', '.')) || 0.0,
         moneda: document.getElementById('s-moneda').value,
         metodo_pago: document.getElementById('s-metodo').value,
         referencia: document.getElementById('s-referencia').value,
@@ -4500,7 +4500,7 @@ async function handleSessionSubmit(e) {
         const data = await res.json();
         
         if (res.ok) {
-            alert(data.success);
+            alert(data.success || "Evolución clínica registrada exitosamente.");
             closeModal('session-modal');
             
             // Recargar datos en las distintas vistas
@@ -4510,9 +4510,10 @@ async function handleSessionSubmit(e) {
             loadFinanceData();
             if (activeView === 'dashboard') loadAgendaCompact();
         } else {
-            alert(data.error);
+            alert(data.error || "Ocurrió un error al guardar la evolución clínica.");
         }
     } catch (err) {
+        console.error("Error de conexión al guardar evolución:", err);
         alert("Error de conexión al guardar evolución clínica.");
     }
 }
