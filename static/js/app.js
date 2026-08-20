@@ -8870,34 +8870,12 @@ async function submitPizarraReply(patientId, updateId) {
 async function handleForgotPassword(e) {
     e.preventDefault();
     const loginUser = document.getElementById('auth-username').value.trim();
-    if (!loginUser) {
-        alert("Por favor, escribe tu usuario o cédula en el campo de acceso antes de hacer clic en recuperar.");
-        return;
-    }
     
-    try {
-        const res = await fetch(`/api/check-username-role?username=${encodeURIComponent(loginUser)}`);
-        const data = await res.json();
-        
-        if (!res.ok) {
-            alert(data.error || "Usuario no encontrado.");
-            return;
-        }
-        
-        if (data.role === 'psicologo') {
-            alert("Si eres Terapeuta, por favor ejecuta el script seguro en tu servidor o contacta con soporte para restablecer tus credenciales.");
-        } else {
-            // Mostrar Paso 1 con el nombre ya puesto y auto-consultar preguntas
-            document.getElementById('recovery-step-1').classList.remove('hide');
-            document.getElementById('recovery-step-2').classList.add('hide');
-            document.getElementById('recovery-username').value = loginUser;
-            openModal('recovery-modal');
-            await fetchRecoveryQuestions();
-        }
-    } catch (err) {
-        console.error("Error al verificar usuario de recuperación:", err);
-        alert("Error de conexión con el servidor.");
-    }
+    // Abrir siempre el modal
+    document.getElementById('recovery-step-1').classList.remove('hide');
+    document.getElementById('recovery-step-2').classList.add('hide');
+    document.getElementById('recovery-username').value = loginUser; // Pre-llenar si ya escribió algo
+    openModal('recovery-modal');
 }
 
 async function fetchRecoveryQuestions() {
@@ -8908,6 +8886,19 @@ async function fetchRecoveryQuestions() {
     }
     
     try {
+        const roleRes = await fetch(`/api/check-username-role?username=${encodeURIComponent(username)}`);
+        const roleData = await roleRes.json();
+        
+        if (!roleRes.ok) {
+            alert(roleData.error || "Usuario no encontrado.");
+            return;
+        }
+        
+        if (roleData.role === 'psicologo') {
+            alert("Si eres Terapeuta, por favor ejecuta el script seguro en tu servidor o contacta con soporte para restablecer tus credenciales.");
+            return;
+        }
+
         const res = await fetch('/api/auth/get-security-questions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
