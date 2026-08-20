@@ -1264,7 +1264,7 @@ def api_get_public_evaluacion(token):
                    td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
                    td.descripcion as test_descripcion, td.instrucciones as test_instrucciones,
                    td.escala_opciones_json, td.items_json,
-                   u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.foto_perfil as psicologo_foto, u.estudios as psicologo_titulo
+                   u.username as psicologo_username
             FROM test_asignaciones a
             JOIN pacientes p ON a.patient_id = p.id
             LEFT JOIN tests_definiciones td ON a.test_code = td.code
@@ -1278,7 +1278,7 @@ def api_get_public_evaluacion(token):
 
         data = dict(row)
         patient_nombre = f"{data.get('patient_nombres') or ''} {data.get('patient_apellidos') or ''}".strip()
-        psicologo_nombre = f"Psic. {data.get('psicologo_nombres') or ''} {data.get('psicologo_apellidos') or ''}".strip()
+        psicologo_nombre = f"Psic. {data.get('psicologo_username') or 'Clínico'}".strip()
 
         assignment = {
             'id': data['id'],
@@ -1314,8 +1314,8 @@ def api_get_public_evaluacion(token):
             'test_nombre': data['test_siglas'] or data['test_code'],
             'test_siglas': data['test_siglas'] or data['test_code'],
             'test_categoria': data['test_categoria'] or 'Evaluación Clínica',
-            'test_descripcion': data['test_instrucciones'] or 'Por favor responde con sinceridad cada una de las siguientes afirmaciones.',
-            'test_instrucciones': data['test_instrucciones'],
+            'test_descripcion': data.get('test_instrucciones') or 'Por favor responde con sinceridad cada una de las siguientes afirmaciones.',
+            'test_instrucciones': data.get('test_instrucciones') or '',
             'escala_opciones': json.loads(data['escala_opciones_json']) if data.get('escala_opciones_json') else [],
             'items': json.loads(data['items_json']) if data.get('items_json') else [],
             'patient_nombre': patient_nombre,
