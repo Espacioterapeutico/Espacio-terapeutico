@@ -912,6 +912,54 @@
                     </a>
                 </div>
             </form>
+
+            <!-- VISTA DE RECUPERACIÓN (Mismo Card) -->
+            <div id="auth-recovery-view" class="hide" style="display: none; flex-direction: column;">
+                <h3 style="color: #702e5e; font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; text-align: center;">Recuperar Contraseña</h3>
+                
+                <div class="modal-body" style="padding: 0;">
+                    <!-- Paso 1: Pedir Username -->
+                    <div id="recovery-step-1">
+                        <div class="form-group mb-4">
+                            <label for="recovery-username">Tu Usuario o Cédula</label>
+                            <input type="text" id="recovery-username" placeholder="Introduce tu usuario o cédula" style="width: 100%;">
+                        </div>
+                        <button type="button" class="btn btn-primary btn-block" style="width: 100%;" onclick="fetchRecoveryQuestions()">Obtener Preguntas</button>
+                    </div>
+                    
+                    <!-- Paso 2: Responder preguntas y elegir método de recuperación -->
+                    <div id="recovery-step-2" class="hide">
+                        <p class="text-secondary mb-3" style="font-size: 0.85rem; line-height: 1.4;">Responde a tus preguntas de seguridad para continuar:</p>
+                        
+                        <div class="form-group mb-3">
+                            <label id="recovery-q1-label" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Pregunta 1</label>
+                            <input type="text" id="recovery-a1" placeholder="Introduce tu respuesta" style="width: 100%;">
+                        </div>
+                        <div class="form-group mb-4">
+                            <label id="recovery-q2-label" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Pregunta 2</label>
+                            <input type="text" id="recovery-a2" placeholder="Introduce tu respuesta" style="width: 100%;">
+                        </div>
+
+                        <div style="border-top: 1.5px dashed var(--border-color); padding-top: 1rem; margin-top: 1rem;">
+                            <div class="form-group mb-3">
+                                <label for="recovery-new-password" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Nueva Contraseña (Opc. si usas correo)</label>
+                                <input type="password" id="recovery-new-password" placeholder="Mínimo 6 caracteres" style="width: 100%;">
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1rem;">
+                                <button type="button" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; padding: 0.65rem;" onclick="submitPasswordReset(false)">
+                                    🔐 Restablecer Ahora
+                                </button>
+                                <button type="button" class="btn btn-block" style="width: 100%; background: #0284c7; color: white; border: none; font-weight: 700; padding: 0.65rem; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="submitPasswordReset(true)">
+                                    📧 Enviar a mi Correo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="#" onclick="cancelForgotPassword(event)" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-decoration: none; margin-top: 1.5rem; text-align: center;">← Volver al Inicio de Sesión</a>
+            </div>
         </div>
     </div>
 
@@ -5806,54 +5854,6 @@
     </div>
     
     <!-- MODAL DE RECUPERACIÓN DE CONTRASEÑA -->
-    <div id="recovery-modal" class="modal hide">
-        <div class="modal-content" style="max-width: 450px;">
-            <div class="modal-header">
-                <h3>Recuperar Contraseña (Pacientes)</h3>
-                <button class="btn-close-modal" onclick="closeModal('recovery-modal')">✕</button>
-            </div>
-            <div class="modal-body" style="padding-top: 1rem;">
-                <!-- Paso 1: Pedir Username -->
-                <div id="recovery-step-1">
-                    <div class="form-group mb-4">
-                        <label for="recovery-username">Tu Usuario o Cédula</label>
-                        <input type="text" id="recovery-username" placeholder="Introduce tu usuario o cédula" style="width: 100%;">
-                    </div>
-                    <button type="button" class="btn btn-primary btn-block" style="width: 100%;" onclick="fetchRecoveryQuestions()">Obtener Preguntas de Seguridad</button>
-                </div>
-                
-                <!-- Paso 2: Responder preguntas y elegir método de recuperación -->
-                <div id="recovery-step-2" class="hide">
-                    <p class="text-secondary mb-3" style="font-size: 0.85rem; line-height: 1.4;">Responde a tus preguntas de seguridad para continuar:</p>
-                    
-                    <div class="form-group mb-3">
-                        <label id="recovery-q1-label" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Pregunta 1</label>
-                        <input type="text" id="recovery-a1" placeholder="Introduce tu respuesta" style="width: 100%;">
-                    </div>
-                    <div class="form-group mb-4">
-                        <label id="recovery-q2-label" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Pregunta 2</label>
-                        <input type="text" id="recovery-a2" placeholder="Introduce tu respuesta" style="width: 100%;">
-                    </div>
-
-                    <div style="border-top: 1.5px dashed var(--border-color); padding-top: 1rem; margin-top: 1rem;">
-                        <div class="form-group mb-3">
-                            <label for="recovery-new-password" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Nueva Contraseña (Opcional si usas envío a correo)</label>
-                            <input type="password" id="recovery-new-password" placeholder="Mínimo 6 caracteres" style="width: 100%;">
-                        </div>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1rem;">
-                            <button type="button" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; padding: 0.65rem;" onclick="submitPasswordReset(false)">
-                                🔐 Restablecer Contraseña Ahora
-                            </button>
-                            <button type="button" class="btn btn-block" style="width: 100%; background: #0284c7; color: white; border: none; font-weight: 700; padding: 0.65rem; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="submitPasswordReset(true)">
-                                📧 Enviar Credenciales a mi Correo
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- MODAL: REGISTRO DE CUENTA -->
     <div id="register-modal" class="modal hide">

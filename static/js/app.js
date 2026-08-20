@@ -8871,11 +8871,23 @@ async function handleForgotPassword(e) {
     e.preventDefault();
     const loginUser = document.getElementById('auth-username').value.trim();
     
-    // Abrir siempre el modal
+    // Ocultar form de login y mostrar vista de recuperación
+    document.getElementById('auth-form').style.display = 'none';
+    const recoveryView = document.getElementById('auth-recovery-view');
+    recoveryView.style.display = 'flex';
+    recoveryView.classList.remove('hide');
+    
     document.getElementById('recovery-step-1').classList.remove('hide');
     document.getElementById('recovery-step-2').classList.add('hide');
     document.getElementById('recovery-username').value = loginUser; // Pre-llenar si ya escribió algo
-    openModal('recovery-modal');
+}
+
+function cancelForgotPassword(e) {
+    if (e) e.preventDefault();
+    const recoveryView = document.getElementById('auth-recovery-view');
+    recoveryView.style.display = 'none';
+    recoveryView.classList.add('hide');
+    document.getElementById('auth-form').style.display = 'block';
 }
 
 async function fetchRecoveryQuestions() {
@@ -8956,7 +8968,7 @@ async function submitPasswordReset(sendViaEmail = false) {
         
         if (res.ok) {
             alert(data.success || "Operación realizada con éxito.");
-            closeModal('recovery-modal');
+            cancelForgotPassword();
         } else {
             alert(data.error || "Error al procesar la solicitud.");
         }
