@@ -1957,7 +1957,11 @@ def add_transaction():
     fecha = data.get('fecha')
     hora = data.get('hora')
     tipo_consulta = data.get('tipo_consulta') # 'Presencial', 'Online'
-    monto = data.get('monto', 0.0)
+    raw_monto = data.get('monto', 0.0)
+    try:
+        monto = float(str(raw_monto).replace(',', '.')) if raw_monto is not None else 0.0
+    except Exception:
+        monto = 0.0
     moneda = data.get('moneda') # 'USD', 'EUR', 'BSD'
     estado_pago = data.get('estado_pago') # 'Paga', 'Pendiente', 'Prepagada'
     control_uso = data.get('control_uso', 'Consumida') # 'Consumida', 'No consumida'
