@@ -722,16 +722,21 @@ def get_whatsapp_queue_status():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
         if 'recordatorio_enviado_wa' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+        db.commit()
+    except Exception as ex_col:
+        print("Aviso al migrar columnas de cola de WhatsApp en agenda_finanzas:", ex_col)
 
+    try:
         cursor.execute("PRAGMA table_info(citas)")
         cols_citas = [r[1] for r in cursor.fetchall()]
-        if 'reagendamiento_enviado_wa' not in cols_citas:
-            cursor.execute("ALTER TABLE citas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
-        if 'confirmacion_enviada_wa' not in cols_citas:
-            cursor.execute("ALTER TABLE citas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
-        if 'recordatorio_enviado_wa' not in cols_citas:
-            cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
-        db.commit()
+        if cols_citas:
+            if 'reagendamiento_enviado_wa' not in cols_citas:
+                cursor.execute("ALTER TABLE citas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
+            if 'confirmacion_enviada_wa' not in cols_citas:
+                cursor.execute("ALTER TABLE citas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
+            if 'recordatorio_enviado_wa' not in cols_citas:
+                cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+            db.commit()
     except Exception as ex_col:
         print("Aviso al migrar columnas de cola de WhatsApp:", ex_col)
 
