@@ -921,20 +921,8 @@ function renderCatalogViewWithFiltersAndPagination() {
         const catNorm = currentCatalogCategory.toLowerCase();
         filtered = testsCatalogDatabase.filter(t => {
             const tCat = (t.cat || '').toLowerCase();
-            if (catNorm.includes('depresión') || catNorm.includes('ansiedad')) {
-                return tCat.includes('depresión') || tCat.includes('ansiedad') || t.code === 'BDI-II' || t.code === 'BAI';
-            } else if (catNorm.includes('neurodivergencia') || catNorm.includes('autismo')) {
-                return tCat.includes('neurodivergencia') || tCat.includes('autismo') || tCat.includes('tdah') || ['AQ', 'RAADS-R', 'CAT-Q', 'ASRS-ADHD'].includes(t.code);
-            } else if (catNorm.includes('personalidad')) {
-                return tCat.includes('personalidad') || t.code === 'MCMI-II';
-            } else if (catNorm.includes('intelectual') || catNorm.includes('inteligencia')) {
-                return tCat.includes('intelectual') || t.code === 'RAVEN';
-            } else if (catNorm.includes('vocacional')) {
-                return tCat.includes('vocacional') || t.code === 'HOLLAND';
-            } else if (catNorm.includes('identidad') || catNorm.includes('género')) {
-                return tCat.includes('identidad') || tCat.includes('género') || t.code === 'TCS' || t.code === 'UGDS-GS';
-            }
-            return true;
+            const tCode = (t.code || '').toLowerCase();
+            return tCat.includes(catNorm) || catNorm.includes(tCat) || tCode.includes(catNorm);
         });
     }
 
