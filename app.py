@@ -2415,7 +2415,8 @@ def send_hourly_patient_tool_reminders(db=None):
                     )
                     
                     try:
-                        from routes_notificaciones import make_wa_http_request, clean_phone_number
+                        from routes_notificaciones import make_wa_http_request
+                        from routes_herramientas import clean_phone_number
                         clean_phone = clean_phone_number(p['telefono'])
                         res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
                         

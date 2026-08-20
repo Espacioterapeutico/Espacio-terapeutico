@@ -162,7 +162,7 @@ def _start_wa_keepalive_thread():
     _wa_keepalive_started = True
 
     def _keepalive_loop():
-        import time, requests
+        import time, requests, threading
         while True:
             try:
                 url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/status"
@@ -372,30 +372,6 @@ def admin_message_templates_render():
         })
     except Exception as e:
         return jsonify({'error': f'Error al renderizar mensaje: {str(e)}'}), 500
-    import json
-    db = get_db()
-    cursor = db.cursor()
-    if request.method == 'DELETE':
-        cursor.execute("DELETE FROM configuracion WHERE clave = 'wa_auth_session'")
-        db.commit()
-        return jsonify({'status': 'cleared'})
-    elif request.method == 'POST':
-        data = request.json or {}
-        session_json = json.dumps(data)
-        cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('wa_auth_session', ?)", (session_json,))
-        db.commit()
-        return jsonify({'status': 'saved'})
-    else:
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'wa_auth_session'")
-        row = cursor.fetchone()
-        if row and row['valor']:
-            try:
-                return jsonify(json.loads(row['valor']))
-            except:
-                return jsonify({})
-        return jsonify({})
-
-
 
 @notificaciones_bp.route('/api/whatsapp/send-reminder/<int:cita_id>', methods=['POST'])
 @login_required

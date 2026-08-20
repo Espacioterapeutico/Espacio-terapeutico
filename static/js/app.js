@@ -14049,6 +14049,7 @@ async function fetchWithTimeout(resource, options = {}) {
 // Flag global: evita que checkWhatsAppQRStatus resetee la UI a "Desconectado"
 // mientras estamos esperando activamente un QR nuevo tras llamar a /force-qr
 let _waWaitingForQR = false;
+let waPollInterval = null;
 
 async function checkWhatsAppQRStatus(wantQR = false) {
     const badge = document.getElementById('wa-connection-status-badge');
@@ -14278,6 +14279,12 @@ function switchSettingsTab(tabName) {
             }
         }
     });
+
+    if (tabName !== 'whatsapp' && typeof waPollInterval !== 'undefined' && waPollInterval) {
+        clearInterval(waPollInterval);
+        waPollInterval = null;
+    }
+
     if (tabName === 'equipo') {
         if (typeof loadEquipoSettings === 'function') {
             loadEquipoSettings();
