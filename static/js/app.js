@@ -359,6 +359,80 @@ var testsCatalogDatabase = [
         validez: 'α = 0.91 | Medición de Disforia', 
         itemsCount: 18,
         isPhysical: false
+    },
+
+    // 7. PRUEBAS CLÍNICAS, SALUD SEXUAL Y AFRONTAMIENTO (VALIDADAS EN POBLACIÓN HISPANA)
+    {
+        code: 'RCMAS-2',
+        name: 'RCMAS-2 — Escala de Ansiedad Manifiesta en Niños Revisada',
+        siglas: 'RCMAS-2',
+        cat: 'Clínica e Infantil',
+        desc: 'Evaluación estandarizada de 49 ítems para detectar niveles de ansiedad fisiológica, inquietud, hipersensibilidad y defensividad en niños y adolescentes.',
+        autor: 'Cecil R. Reynolds & Bert O. Richmond (TEA Ediciones)',
+        poblacion: 'Niños y Adolescentes (6 a 19 años)',
+        validez: 'Validez Clínica Estandarizada Hispana (Baremos T)',
+        itemsCount: 49,
+        isPhysical: false
+    },
+    {
+        code: 'CDS-CTI',
+        name: 'CDS / CTI — Cuestionario de Distorsiones Cognitivas',
+        siglas: 'CDS',
+        cat: 'Cognición y Estrés',
+        desc: 'Evaluación autoadministrada de pensamientos automáticos y errores del procesamiento cognitivo (Catastrofización, Filtro Mental, Lectura de Mente, etc.).',
+        autor: 'Yurica & DiTomasso / Adaptación Hispana',
+        poblacion: 'Adolescentes y Adultos (14+ años)',
+        validez: 'Terapia Cognitivo-Conductual (TCC)',
+        itemsCount: 20,
+        isPhysical: false
+    },
+    {
+        code: 'CSI',
+        name: 'CSI — Cuestionario de Estrategias de Afrontamiento',
+        siglas: 'CSI',
+        cat: 'Cognición y Estrés',
+        desc: 'Evaluación de 40 ítems Likert para cuantificar 8 estilos de afrontamiento (Solución de Problemas, Apoyo Social, Reestructuración Cognitiva, Evitación, Autocrítica, etc.).',
+        autor: 'Tobin et al. / Adaptación de Cano, Rodríguez y García',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'α = 0.89 | Adaptación Iberoamericana',
+        itemsCount: 40,
+        isPhysical: false
+    },
+    {
+        code: 'DVQ-R',
+        name: 'DVQ-R — Cuestionario de Violencia en el Noviazgo',
+        siglas: 'DVQ-R',
+        cat: 'Pareja y Violencia',
+        desc: 'Evaluación estandarizada de 20 ítems para detectar conductas de abuso físico, verbal, coercitivo, sexual y desapego en relaciones de pareja.',
+        autor: 'Rodríguez-Franco et al.',
+        poblacion: 'Adolescentes y Jóvenes (14 a 30 años)',
+        validez: 'Validado en Población Hispana y Latina',
+        itemsCount: 20,
+        isPhysical: false
+    },
+    {
+        code: 'EAQ',
+        name: 'EAQ — Cuestionario de Conciencia Emocional Infanto-Juvenil',
+        siglas: 'EAQ',
+        cat: 'Clínica e Infantil',
+        desc: 'Evaluación de 30 ítems para identificar diferenciación de emociones, atención a señales emocionales, análisis y ocultación emocional.',
+        autor: 'Rieffe et al. / Adaptación de Gómez-Ortiz et al.',
+        poblacion: 'Niños y Adolescentes (8 a 16 años)',
+        validez: 'Evaluación de Inteligencia Emocional y Auto-conciencia',
+        itemsCount: 30,
+        isPhysical: false
+    },
+    {
+        code: 'CUSES-SAS',
+        name: 'CUSES / SAS — Autoeficacia y Asertividad Sexual',
+        siglas: 'CUSES',
+        cat: 'Salud y Sexología',
+        desc: 'Evaluación de autoeficacia en salud sexual, prevención de ITS y capacidad de negociación/asertividad en la conducta sexual.',
+        autor: 'López-Rosales et al. / Sierra et al.',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'Validación en Psicología de la Salud y Sexología',
+        itemsCount: 20,
+        isPhysical: false
     }
 ];
 

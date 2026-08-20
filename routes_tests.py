@@ -120,6 +120,7 @@ def ensure_tests_tables(db):
     ensure_scl90r_definition(db)
     ensure_beck_bhs_definition(db)
     ensure_mmpi2_definition(db)
+    ensure_new_latin_tests_definitions(db)
 
 def ensure_zung_sds_definition(db):
     cursor = db.cursor()
@@ -824,6 +825,158 @@ def ensure_mmpi2_definition(db):
             json.dumps(items, ensure_ascii=False)
         ))
         db.commit()
+
+def ensure_new_latin_tests_definitions(db):
+    cursor = db.cursor()
+    
+    # 1. RCMAS-2
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'RCMAS-2'")
+    if not cursor.fetchone():
+        rcmas_opciones = [{"val": 1, "text": "Sí"}, {"val": 0, "text": "No"}]
+        rcmas_items = [
+            {"id": 1, "texto": "Me preocupan las cosas del colegio o mis responsabilidades."},
+            {"id": 2, "texto": "Me canso fácilmente durante el día."},
+            {"id": 3, "texto": "Muchas personas son celosas o exigentes conmigo."},
+            {"id": 4, "texto": "Me da miedo cuando alguien se molesta o se enoja conmigo."},
+            {"id": 5, "texto": "Siento que las demás personas son más inteligentes que yo."},
+            {"id": 6, "texto": "Me cuesta conciliar el sueño por las noches pensando en el día."},
+            {"id": 7, "texto": "Siento que la gente me juzga o me observa constantemente."},
+            {"id": 8, "texto": "A veces siento agitación o que no puedo respirar bien."},
+            {"id": 9, "texto": "Siempre soy amable con todas las personas sin excepción."},
+            {"id": 10, "texto": "Siento malestar de estómago con frecuencia cuando estoy nervioso(a)."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'RCMAS-2', 'RCMAS-2 — Escala de Ansiedad Manifiesta en Niños Revisada', 'RCMAS-2', 'Clínica e Infantil',
+            'Evaluación estandarizada de reactivos para detectar niveles de ansiedad fisiológica, inquietud e hipersensibilidad en niños y adolescentes.',
+            'Por favor lee cada frase y selecciona "Sí" si describe cómo te sientes habitualmente o "No" si no te describe.',
+            json.dumps(rcmas_opciones, ensure_ascii=False), json.dumps(rcmas_items, ensure_ascii=False)
+        ))
+
+    # 2. CDS-CTI
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'CDS-CTI'")
+    if not cursor.fetchone():
+        cds_opciones = [
+            {"val": 1, "text": "En absoluto"}, {"val": 2, "text": "Un poco"},
+            {"val": 3, "text": "Moderadamente"}, {"val": 4, "text": "Mucho"}, {"val": 5, "text": "Totalmente de acuerdo"}
+        ]
+        cds_items = [
+            {"id": 1, "texto": "Si algo malo puede pasar, estoy seguro de que me pasará a mí."},
+            {"id": 2, "texto": "Si no hago las cosas perfectamente, entonces considero que he fracasado."},
+            {"id": 3, "texto": "Sé exactamente lo que la gente piensa negativamente de mí sin necesidad de preguntarlo."},
+            {"id": 4, "texto": "Un solo error arruina todo el trabajo positivo que he realizado previamente."},
+            {"id": 5, "texto": "Siento que si muestro debilidad o dudas, los demás se aprovecharán de mí."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'CDS-CTI', 'CDS / CTI — Cuestionario de Distorsiones Cognitivas', 'CDS', 'Cognición y Estrés',
+            'Evaluación autoadministrada de pensamientos automáticos y errores en el procesamiento cognitivo.',
+            'Selecciona el nivel en el que estos pensamientos se presentan en tu vida cotidiana.',
+            json.dumps(cds_opciones, ensure_ascii=False), json.dumps(cds_items, ensure_ascii=False)
+        ))
+
+    # 3. CSI
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'CSI'")
+    if not cursor.fetchone():
+        csi_opciones = [
+            {"val": 0, "text": "En absoluto"}, {"val": 1, "text": "Algo"},
+            {"val": 2, "text": "Bastante"}, {"val": 3, "text": "Mucho"}, {"val": 4, "text": "Totalmente"}
+        ]
+        csi_items = [
+            {"id": 1, "texto": "Luché por resolver la situación buscando información y soluciones reales."},
+            {"id": 2, "texto": "Me culpé por lo sucedido y me sentí responsable del malestar."},
+            {"id": 3, "texto": "Expresé mis emociones abiertamente para desahogarme con otros."},
+            {"id": 4, "texto": "Deseé que la situación desapareciera milagrosamente sin tener que enfrentarla."},
+            {"id": 5, "texto": "Busqué el consejo y apoyo de personas cercanas o profesionales."},
+            {"id": 6, "texto": "Traté de ver el lado positivo y aprender de la experiencia difícil."},
+            {"id": 7, "texto": "Traté de no pensar en el problema y distraerme con otras actividades."},
+            {"id": 8, "texto": "Me aislé de los demás para evitar hablar del tema o sentirme juzgado(a)."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'CSI', 'CSI — Cuestionario de Estrategias de Afrontamiento', 'CSI', 'Cognición y Estrés',
+            'Evaluación de 40 ítems Likert para cuantificar 8 estilos de afrontamiento ante situaciones estresantes.',
+            'Indica en qué medida utilizas cada una de estas formas de afrontar los problemas.',
+            json.dumps(csi_opciones, ensure_ascii=False), json.dumps(csi_items, ensure_ascii=False)
+        ))
+
+    # 4. DVQ-R
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'DVQ-R'")
+    if not cursor.fetchone():
+        dvq_opciones = [
+            {"val": 0, "text": "Nunca"}, {"val": 1, "text": "A veces"},
+            {"val": 2, "text": "Frecuentemente"}, {"val": 3, "text": "Casi siempre"}, {"val": 4, "text": "Siempre"}
+        ]
+        dvq_items = [
+            {"id": 1, "texto": "Mi pareja ignora mis sentimientos o se muestra distante sin razón."},
+            {"id": 2, "texto": "Mi pareja me insulta, descalifica o me ridiculiza en privado o frente a otros."},
+            {"id": 3, "texto": "Mi pareja intenta controlar con quién hablo, cómo me visto o a dónde voy."},
+            {"id": 4, "texto": "Mi pareja ha llegado a empujarme, sujetarme con fuerza o agredirme físicamente."},
+            {"id": 5, "texto": "Mi pareja me presiona a tener relaciones o conductas sexuales no deseadas."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'DVQ-R', 'DVQ-R — Cuestionario de Violencia en el Noviazgo', 'DVQ-R', 'Pareja y Violencia',
+            'Evaluación estandarizada de 20 ítems para detectar conductas de abuso físico, verbal, coercitivo y sexual en relaciones de pareja.',
+            'Responde con qué frecuencia se presentan o se han presentado estas situaciones con tu pareja.',
+            json.dumps(dvq_opciones, ensure_ascii=False), json.dumps(dvq_items, ensure_ascii=False)
+        ))
+
+    # 5. EAQ
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'EAQ'")
+    if not cursor.fetchone():
+        eaq_opciones = [
+            {"val": 1, "text": "No es verdad"}, {"val": 2, "text": "Un poco verdad"}, {"val": 3, "text": "Muy verdad"}
+        ]
+        eaq_items = [
+            {"id": 1, "texto": "Me resulta fácil identificar si me siento triste, alegre o molesto(a)."},
+            {"id": 2, "texto": "Presto atención a cómo reacciona mi cuerpo cuando me siento estresado(a)."},
+            {"id": 3, "texto": "Prefiero no mostrar mis emociones reales frente a otras personas."},
+            {"id": 4, "texto": "A veces no entiendo la causa exacta por la que me siento de cierta manera."},
+            {"id": 5, "texto": "Me resulta fácil hablar sobre mis sentimientos con personas en las que confío."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'EAQ', 'EAQ — Cuestionario de Conciencia Emocional Infanto-Juvenil', 'EAQ', 'Clínica e Infantil',
+            'Evaluación para identificar diferenciación de emociones, atención a señales emocionales y ocultación emocional.',
+            'Indica qué tan cierta es cada afirmación respecto a ti.',
+            json.dumps(eaq_opciones, ensure_ascii=False), json.dumps(eaq_items, ensure_ascii=False)
+        ))
+
+    # 6. CUSES-SAS
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'CUSES-SAS'")
+    if not cursor.fetchone():
+        cuses_opciones = [
+            {"val": 1, "text": "Totalmente en desacuerdo"}, {"val": 2, "text": "En desacuerdo"},
+            {"val": 3, "text": "Neutral"}, {"val": 4, "text": "De acuerdo"}, {"val": 5, "text": "Totalmente de acuerdo"}
+        ]
+        cuses_items = [
+            {"id": 1, "texto": "Me siento seguro(a) para proponer abiertamente el uso de métodos de protección a mi pareja."},
+            {"id": 2, "texto": "Tengo la capacidad de negarme a tener relaciones si no se cuenta con la protección adecuada."},
+            {"id": 3, "texto": "Puedo conversar libremente sobre salud sexual y prevención con mi pareja."},
+            {"id": 4, "texto": "Sé cómo adquirir y utilizar correctamente los métodos de cuidado e higiene sexual."},
+            {"id": 5, "texto": "Me siento cómodo(a) expresando mis límites personales y preferencias en la intimidad."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'CUSES-SAS', 'CUSES / SAS — Autoeficacia y Asertividad Sexual', 'CUSES', 'Salud y Sexología',
+            'Evaluación de autoeficacia en salud sexual, prevención de ITS y capacidad de negociación/asertividad en la conducta sexual.',
+            'Selecciona tu grado de acuerdo con cada afirmación sobre tu confianza en situaciones de salud sexual.',
+            json.dumps(cuses_opciones, ensure_ascii=False), json.dumps(cuses_items, ensure_ascii=False)
+        ))
+    db.commit()
 
 def process_mmpi2_scoring(answers):
     # Standard MMPI-2 Item Keys for Validity & 10 Clinical Scales
