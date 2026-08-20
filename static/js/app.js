@@ -6,7 +6,7 @@ var allTestPatientsCache = [];
 var selectedTestCodeForApplication = null;
 var currentCatalogCategory = 'TODAS';
 var currentCatalogPage = 1;
-var CATALOG_PER_PAGE = 9;
+var CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
 
 var testsCatalogDatabase = [
     // 1. NEURODIVERGENCIA Y AUTISMO

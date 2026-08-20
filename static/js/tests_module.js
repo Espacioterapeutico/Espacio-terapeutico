@@ -6,7 +6,7 @@ var allTestPatientsCache = [];
 var selectedTestCodeForApplication = null;
 var currentCatalogCategory = 'TODAS';
 var currentCatalogPage = 1;
-var CATALOG_PER_PAGE = 9; // Vista cuadrícula 3x3 (9 por página)
+var CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
 
 // BASE DE DATOS DE EVALUACIONES PSICOMÉTRICAS CON METADATOS COMPLETOS
 var testsCatalogDatabase = [
