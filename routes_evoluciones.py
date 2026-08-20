@@ -330,31 +330,31 @@ def manage_sessions():
             if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada']:
                 cursor.execute("""
                     UPDATE agenda_finanzas 
-                    SET estado_pago = 'Paga', monto = ?, moneda = ?, metodo_pago = ?, referencia = ?, fecha_pago = ?, has_session = 1
+                    SET estado_pago = 'Paga', monto = ?, moneda = ?, metodo_pago = ?, referencia = ?, fecha_pago = ?
                     WHERE id = ?
                 """, (monto, moneda, metodo_pago, referencia, fecha_pago, agenda_id))
             elif tipo_liq in ['Prepagada', 'Descontar de saldo prepagado', 'Ya prepagada en paquete']:
                 cursor.execute("""
                     UPDATE agenda_finanzas 
-                    SET estado_pago = 'Prepagada', control_uso = 'Consumida', has_session = 1
+                    SET estado_pago = 'Prepagada', control_uso = 'Consumida'
                     WHERE id = ?
                 """, (agenda_id,))
             elif tipo_liq in ['Cancelada sin aviso - Paga']:
                 cursor.execute("""
                     UPDATE agenda_finanzas 
-                    SET estado_pago = 'Cancelada sin aviso - Paga', monto = ?, moneda = ?, has_session = 1
+                    SET estado_pago = 'Cancelada sin aviso - Paga', monto = ?, moneda = ?
                     WHERE id = ?
                 """, (monto, moneda, agenda_id))
             elif tipo_liq in ['Cancelada sin aviso']:
                 cursor.execute("""
                     UPDATE agenda_finanzas 
-                    SET estado_pago = 'Cancelada sin aviso', monto = ?, moneda = ?, has_session = 1
+                    SET estado_pago = 'Cancelada sin aviso', monto = ?, moneda = ?
                     WHERE id = ?
                 """, (monto, moneda, agenda_id))
             else:
                 cursor.execute("""
                     UPDATE agenda_finanzas 
-                    SET estado_pago = 'Pendiente', monto = ?, moneda = ?, has_session = 1
+                    SET estado_pago = 'Pendiente', monto = ?, moneda = ?
                     WHERE id = ?
                 """, (monto, moneda, agenda_id))
         else:
@@ -372,8 +372,8 @@ def manage_sessions():
             cursor.execute("""
                 INSERT INTO agenda_finanzas (
                     paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
-                    metodo_pago, referencia, fecha_pago, confirmada, has_session
-                ) VALUES (?, ?, '00:00', ?, ?, ?, ?, ?, ?, ?, 1, 1)
+                    metodo_pago, referencia, fecha_pago, confirmada
+                ) VALUES (?, ?, '00:00', ?, ?, ?, ?, ?, ?, ?, 1)
             """, (paciente_id, fecha, modalidad, monto, moneda, estado_pago, metodo_pago, referencia, fecha_pago))
 
         db.commit()
