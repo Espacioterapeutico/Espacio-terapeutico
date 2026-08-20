@@ -15579,7 +15579,7 @@ async function selectPatientForTherapistTools(id, name, code) {
                             </span>
                         </div>
                         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                            <button type="button" class="btn btn-sm btn-info" onclick="toggleInlinePatientHistory(${id}, '${m.clave}', '${inlineId}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
+                            <button type="button" class="btn btn-sm btn-info" onclick="toggleInlinePatientHistory(${id}, '${m.clave}', '${inlineId}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">📄 Historial</button>
                             ${actBtn}
                             ${waBtn}
                             ${progBtn}
