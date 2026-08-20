@@ -1478,6 +1478,39 @@ def auth_reset_password():
 
     return jsonify({'error': 'El usuario no existe o no tiene preguntas de seguridad configuradas.'}), 404
 
+@admin_bp.route('/api/auth/verify-security-answers', methods=['POST'])
+def auth_verify_security_answers():
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    respuesta_1 = (data.get('respuesta_1') or '').strip().lower()
+    respuesta_2 = (data.get('respuesta_2') or '').strip().lower()
+    
+    if not username or not respuesta_1 or not respuesta_2:
+        return jsonify({'error': 'Todos los campos son obligatorios.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # 1. Intentar en usuarios
+    cursor.execute("SELECT respuesta_seguridad_1_hash, respuesta_seguridad_2_hash FROM usuarios WHERE LOWER(username) = ?", (username.lower(),))
+    user_row = cursor.fetchone()
+
+    if user_row and user_row['respuesta_seguridad_1_hash'] and user_row['respuesta_seguridad_2_hash']:
+        if check_password_hash(user_row['respuesta_seguridad_1_hash'], respuesta_1) and check_password_hash(user_row['respuesta_seguridad_2_hash'], respuesta_2):
+            return jsonify({'success': 'Respuestas correctas.'})
+        return jsonify({'error': 'Respuestas a preguntas de seguridad incorrectas.'}), 401
+
+    # 2. Intentar en pacientes
+    cursor.execute("SELECT respuesta_seguridad_1_hash, respuesta_seguridad_2_hash FROM pacientes WHERE LOWER(username) = ? OR cedula = ?", (username.lower(), username))
+    patient_row = cursor.fetchone()
+
+    if patient_row and patient_row['respuesta_seguridad_1_hash'] and patient_row['respuesta_seguridad_2_hash']:
+        if check_password_hash(patient_row['respuesta_seguridad_1_hash'], respuesta_1) and check_password_hash(patient_row['respuesta_seguridad_2_hash'], respuesta_2):
+            return jsonify({'success': 'Respuestas correctas.'})
+        return jsonify({'error': 'Respuestas a preguntas de seguridad incorrectas.'}), 401
+
+    return jsonify({'error': 'El usuario no existe o no tiene preguntas de seguridad configuradas.'}), 404
+
 
 
 @admin_bp.route('/api/admin/reset-test-data', methods=['POST'])

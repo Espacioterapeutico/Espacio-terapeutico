@@ -3923,6 +3923,7 @@ function renderPatientsTable(list) {
             <td>${loc}</td>
             <td class="actions-cell">
                 <button class="btn btn-sm" style="background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc; font-weight: 700;" onclick="openPatientTestsModal(${p.id}, '${(p.nombres || '').replace(/'/g, "\\'")} ${(p.apellidos || '').replace(/'/g, "\\'")}')">📋 Tests</button>
+                <button class="btn btn-sm" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight: 700;" onclick="adminResetPatientCredentials(${p.id})">🔑 Reset Clave</button>
                 <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${p.id})">Ficha Resumen</button>
                 <button class="btn btn-primary btn-sm" onclick="openEditPatientModal(${p.id})">Editar</button>
             </td>
@@ -8888,6 +8889,12 @@ function cancelForgotPassword(e) {
     recoveryView.style.display = 'none';
     recoveryView.classList.add('hide');
     document.getElementById('auth-form').style.display = 'block';
+    
+    // Reset steps
+    document.getElementById('recovery-step-1').classList.remove('hide');
+    document.getElementById('recovery-step-2').classList.add('hide');
+    const step3 = document.getElementById('recovery-step-3');
+    if (step3) step3.classList.add('hide');
 }
 
 async function fetchRecoveryQuestions() {
@@ -8936,20 +8943,61 @@ async function fetchRecoveryQuestions() {
     }
 }
 
-async function submitPasswordReset(sendViaEmail = false) {
+async function verifyRecoveryAnswers() {
     const username = document.getElementById('recovery-username').value.trim();
     const resp1 = document.getElementById('recovery-a1').value.trim();
     const resp2 = document.getElementById('recovery-a2').value.trim();
-    const newPassword = document.getElementById('recovery-new-password').value.trim();
     
     if (!resp1 || !resp2) {
         alert("Por favor responde a ambas preguntas de seguridad.");
         return;
     }
+    
+    try {
+        const res = await fetch('/api/auth/verify-security-answers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username,
+                respuesta_1: resp1,
+                respuesta_2: resp2
+            })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            document.getElementById('recovery-step-2').classList.add('hide');
+            document.getElementById('recovery-step-3').classList.remove('hide');
+        } else {
+            alert(data.error || "Respuestas incorrectas.");
+        }
+    } catch (err) {
+        console.error("Error al verificar respuestas:", err);
+        alert("Error de conexión con el servidor.");
+    }
+}
 
-    if (!sendViaEmail && (!newPassword || newPassword.length < 6)) {
-        alert("La nueva contraseña debe tener al menos 6 caracteres.");
+async function submitPasswordReset(sendViaEmail = false) {
+    const username = document.getElementById('recovery-username').value.trim();
+    const resp1 = document.getElementById('recovery-a1').value.trim();
+    const resp2 = document.getElementById('recovery-a2').value.trim();
+    const newPassword = document.getElementById('recovery-new-password').value.trim();
+    const confirmPassword = document.getElementById('recovery-confirm-password') ? document.getElementById('recovery-confirm-password').value.trim() : '';
+    
+    if (!resp1 || !resp2) {
+        alert("Faltan las respuestas de seguridad.");
         return;
+    }
+
+    if (!sendViaEmail) {
+        if (!newPassword || newPassword.length < 6) {
+            alert("La nueva contraseña debe tener al menos 6 caracteres.");
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            alert("Las contraseñas no coinciden.");
+            return;
+        }
     }
     
     try {

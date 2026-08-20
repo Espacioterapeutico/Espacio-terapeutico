@@ -940,18 +940,30 @@
                             <input type="text" id="recovery-a2" placeholder="Introduce tu respuesta" style="width: 100%;">
                         </div>
 
+                        <button type="button" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; padding: 0.65rem;" onclick="verifyRecoveryAnswers()">
+                            Verificar Respuestas
+                        </button>
+                    </div>
+
+                    <!-- Paso 3: Configurar nueva contraseña -->
+                    <div id="recovery-step-3" class="hide">
+                        <p class="text-secondary mb-3" style="font-size: 0.85rem; line-height: 1.4; color: #166534;">✅ Respuestas verificadas correctamente.</p>
                         <div style="border-top: 1.5px dashed var(--border-color); padding-top: 1rem; margin-top: 1rem;">
                             <div class="form-group mb-3">
-                                <label for="recovery-new-password" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Nueva Contraseña (Opc. si usas correo)</label>
+                                <label for="recovery-new-password" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Nueva Contraseña</label>
                                 <input type="password" id="recovery-new-password" placeholder="Mínimo 6 caracteres" style="width: 100%;">
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="recovery-confirm-password" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Confirmar Contraseña</label>
+                                <input type="password" id="recovery-confirm-password" placeholder="Repite la nueva contraseña" style="width: 100%;">
                             </div>
                             
                             <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1rem;">
                                 <button type="button" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; padding: 0.65rem;" onclick="submitPasswordReset(false)">
-                                    🔐 Restablecer Ahora
+                                    🔐 Guardar y Restablecer
                                 </button>
                                 <button type="button" class="btn btn-block" style="width: 100%; background: #0284c7; color: white; border: none; font-weight: 700; padding: 0.65rem; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="submitPasswordReset(true)">
-                                    📧 Enviar a mi Correo
+                                    📧 O enviar credenciales a mi Correo
                                 </button>
                             </div>
                         </div>
