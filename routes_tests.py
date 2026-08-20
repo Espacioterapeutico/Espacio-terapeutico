@@ -121,6 +121,7 @@ def ensure_tests_tables(db):
     ensure_beck_bhs_definition(db)
     ensure_mmpi2_definition(db)
     ensure_new_latin_tests_definitions(db)
+    ensure_new_sexology_and_cognitive_tests_definitions(db)
 
 def ensure_zung_sds_definition(db):
     cursor = db.cursor()
@@ -978,6 +979,346 @@ def ensure_new_latin_tests_definitions(db):
         ))
     db.commit()
 
+def ensure_new_sexology_and_cognitive_tests_definitions(db):
+    cursor = db.cursor()
+
+    # 1. SWLS — Escala de Satisfacción con la Vida (Diener)
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'SWLS'")
+    if not cursor.fetchone():
+        swls_opciones = [
+            {"val": 1, "text": "1 - Totalmente en desacuerdo"},
+            {"val": 2, "text": "2 - En desacuerdo"},
+            {"val": 3, "text": "3 - Ligeramente en desacuerdo"},
+            {"val": 4, "text": "4 - Ni de acuerdo ni en desacuerdo"},
+            {"val": 5, "text": "5 - Ligeramente de acuerdo"},
+            {"val": 6, "text": "6 - De acuerdo"},
+            {"val": 7, "text": "7 - Totalmente de acuerdo"}
+        ]
+        swls_items = [
+            {"id": 1, "texto": "En la mayoría de los aspectos, mi vida es como yo quiero que sea."},
+            {"id": 2, "texto": "Las condiciones de mi vida son excelentes."},
+            {"id": 3, "texto": "Estoy satisfecho(a) con mi vida."},
+            {"id": 4, "texto": "Hasta ahora, he conseguido las cosas que son importantes para mí en la vida."},
+            {"id": 5, "texto": "Si pudiera vivir mi vida de nuevo, no cambiaría casi nada."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'SWLS', 'SwLS — Escala de Satisfacción con la Vida (Diener)', 'SwLS', 'Bienestar y Calidad de Vida',
+            'Evaluación psicométrica cuantitativa de 5 reactivos para medir el juicio cognitivo global sobre la satisfacción con la propia vida.',
+            'Por favor lea cada una de las 5 afirmaciones y seleccione la opción que mejor refleje su nivel de acuerdo o desacuerdo.',
+            json.dumps(swls_opciones, ensure_ascii=False), json.dumps(swls_items, ensure_ascii=False)
+        ))
+
+    # 2. SHIM / IIEF-5 — Inventario de Salud Sexual para Hombres
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'SHIM'")
+    if not cursor.fetchone():
+        shim_opciones = [
+            {"val": 1, "text": "1 - Muy bajo / Casi nunca o nunca / Extremadamente difícil"},
+            {"val": 2, "text": "2 - Bajo / Pocas veces / Muy difícil"},
+            {"val": 3, "text": "3 - Moderado / A veces / Difícil"},
+            {"val": 4, "text": "4 - Alto / La mayoría de las veces / Algo difícil"},
+            {"val": 5, "text": "5 - Muy alto / Casi siempre o siempre / No fue difícil"}
+        ]
+        shim_items = [
+            {"id": 1, "texto": "¿Cómo calificaría su grado de confianza en poder conseguir y mantener una erección?"},
+            {"id": 2, "texto": "Cuando tuvo erecciones con estímulo sexual, ¿con qué frecuencia fueron lo suficientemente rígidas para la penetración?"},
+            {"id": 3, "texto": "Durante la relación sexual, ¿con qué frecuencia pudo mantener su erección después de haber penetrado a su pareja?"},
+            {"id": 4, "texto": "Durante la relación sexual, ¿qué tan difícil le resultó mantener su erección hasta el final de la relación?"},
+            {"id": 5, "texto": "Cuando intentó la relación sexual, ¿con qué frecuencia se sintió satisfecho en general?"}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'SHIM', 'SHIM / IIEF-5 — Inventario de Salud Sexual para Hombres', 'SHIM', 'Sexología y Salud Sexual',
+            'Herramienta clínica abreviada de 5 reactivos para la evaluación y estadificación de la función eréctil y salud sexual masculina.',
+            'Responda a las siguientes 5 preguntas eligiendo la respuesta que mejor describa su situación durante los últimos 6 meses.',
+            json.dumps(shim_opciones, ensure_ascii=False), json.dumps(shim_items, ensure_ascii=False)
+        ))
+
+    # 3. NSSS-S — Nueva Escala de Satisfacción Sexual (Forma Corta)
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'NSSS-S'")
+    if not cursor.fetchone():
+        nsss_opciones = [
+            {"val": 1, "text": "1 - Nada satisfecho(a)"},
+            {"val": 2, "text": "2 - Poco satisfecho(a)"},
+            {"val": 3, "text": "3 - Moderadamente satisfecho(a)"},
+            {"val": 4, "text": "4 - Muy satisfecho(a)"},
+            {"val": 5, "text": "5 - Extremadamente satisfecho(a)"}
+        ]
+        nsss_items = [
+            {"id": 1, "texto": "La intensidad de mis sensaciones sexuales en el cuerpo."},
+            {"id": 2, "texto": "El nivel y frecuencia de mi deseo sexual."},
+            {"id": 3, "texto": "La frecuencia de mis orgasmos."},
+            {"id": 4, "texto": "Mi capacidad para alcanzar el orgasmo."},
+            {"id": 5, "texto": "Mi grado de libertad e inhibición sexual."},
+            {"id": 6, "texto": "El equilibrio entre lo que doy y recibo en la intimidad."},
+            {"id": 7, "texto": "La variedad de nuestras actividades y prácticas sexuales."},
+            {"id": 8, "texto": "La frecuencia de nuestras relaciones o encuentros sexuales."},
+            {"id": 9, "texto": "El comportamiento y respuesta de mi pareja durante el acto sexual."},
+            {"id": 10, "texto": "La estimulación sexual y placer que le proporciono a mi pareja."},
+            {"id": 11, "texto": "La iniciativa y entusiasmo de mi pareja para la actividad sexual."},
+            {"id": 12, "texto": "El nivel de conexión y cercanía emocional durante la intimidad."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'NSSS-S', 'NSSS-S — Nueva Escala de Satisfacción Sexual (Forma Corta)', 'NSSS-S', 'Sexología y Salud Sexual',
+            'Evaluación psicométrica de 12 ítems Likert para medir la satisfacción sexual en dimensiones egocéntrica y centrada en la pareja.',
+            'Valore el grado de satisfacción que le producen los siguientes aspectos de su vida sexual durante los últimos 6 meses.',
+            json.dumps(nsss_opciones, ensure_ascii=False), json.dumps(nsss_items, ensure_ascii=False)
+        ))
+
+    # 4. FSFI — Índice de Función Sexual Femenina
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'FSFI'")
+    if not cursor.fetchone():
+        fsfi_opciones = [
+            {"val": 1, "text": "1 - Muy bajo / Casi nunca o nunca / Extremadamente difícil"},
+            {"val": 2, "text": "2 - Bajo / Pocas veces / Muy difícil"},
+            {"val": 3, "text": "3 - Moderado / A veces / Difícil"},
+            {"val": 4, "text": "4 - Alto / La mayoría de las veces / Algo difícil"},
+            {"val": 5, "text": "5 - Muy alto / Casi siempre o siempre / No fue difícil"}
+        ]
+        fsfi_items = [
+            {"id": 1, "texto": "¿Con qué frecuencia sintió deseo o interés sexual en las últimas 4 semanas?"},
+            {"id": 2, "texto": "¿Cómo calificaría su nivel de deseo o interés sexual?"},
+            {"id": 3, "texto": "¿Con qué frecuencia se sintió excitada sexualmente durante la actividad sexual?"},
+            {"id": 4, "texto": "¿Cómo calificaría su nivel de excitación sexual durante la actividad sexual?"},
+            {"id": 5, "texto": "¿Qué tan confiada se sintió de lograr la excitación sexual?"},
+            {"id": 6, "texto": "¿Con qué frecuencia estuvo satisfecha con su excitación sexual?"},
+            {"id": 7, "texto": "¿Con qué frecuencia se lubricó (humedeció) durante la actividad sexual?"},
+            {"id": 8, "texto": "¿Qué tan difícil fue mantener la lubricación hasta completar la relación?"},
+            {"id": 9, "texto": "¿Con qué frecuencia mantuvo su lubricación hasta el final?"},
+            {"id": 10, "texto": "¿Con qué frecuencia alcanzó el orgasmo al estar sexualmente estimulada?"},
+            {"id": 11, "texto": "¿Qué tan difícil fue para usted alcanzar el orgasmo?"},
+            {"id": 12, "texto": "¿Qué tan satisfecha estuvo con su capacidad para alcanzar el orgasmo?"},
+            {"id": 13, "texto": "¿Qué tan satisfecha estuvo con el nivel de cercanía emocional con su pareja?"},
+            {"id": 14, "texto": "¿Qué tan satisfecha estuvo con su relación sexual en general?"},
+            {"id": 15, "texto": "¿Qué tan satisfecha estuvo con su vida sexual en general?"},
+            {"id": 16, "texto": "¿Con qué frecuencia sintió dolor o malestar durante o después de la penetración?"},
+            {"id": 17, "texto": "¿Con qué frecuencia sintió dolor intenso durante la penetración?"},
+            {"id": 18, "texto": "¿Cómo calificaría el nivel de dolor o molestia durante la relación sexual?"},
+            {"id": 19, "texto": "¿Con qué frecuencia el dolor impidió continuar con la relación sexual?"}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'FSFI', 'FSFI — Índice de Función Sexual Femenina', 'FSFI', 'Sexología y Salud Sexual',
+            'Cuestionario clínico multidimensional de 19 ítems para evaluar deseo, excitación, lubricación, orgasmo, satisfacción y dolor femenino.',
+            'Por favor responda a las siguientes preguntas según su vivencia sexual durante las últimas 4 semanas.',
+            json.dumps(fsfi_opciones, ensure_ascii=False), json.dumps(fsfi_items, ensure_ascii=False)
+        ))
+
+    # 5. MMSE — Mini-Mental State Examination (Folstein / Lobo)
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'MMSE'")
+    if not cursor.fetchone():
+        mmse_opciones = [
+            {"val": 1, "text": "1 - Correcto / Presente (1 punto)"},
+            {"val": 0, "text": "0 - Incorrecto / Ausente (0 puntos)"}
+        ]
+        mmse_items = [
+            {"id": 1, "texto": "Orientación Temporal: Año correcto."},
+            {"id": 2, "texto": "Orientación Temporal: Estación del año correcta."},
+            {"id": 3, "texto": "Orientación Temporal: Día del mes correcto."},
+            {"id": 4, "texto": "Orientación Temporal: Día de la semana correcto."},
+            {"id": 5, "texto": "Orientación Temporal: Mes correcto."},
+            {"id": 6, "texto": "Orientación Espacial: País correcto."},
+            {"id": 7, "texto": "Orientación Espacial: Provincia / Estado / Región correcta."},
+            {"id": 8, "texto": "Orientación Espacial: Ciudad / Municipio correcto."},
+            {"id": 9, "texto": "Orientación Espacial: Lugar u hospital / consultorio correcto."},
+            {"id": 10, "texto": "Orientación Espacial: Planta / Piso o habitación correcta."},
+            {"id": 11, "texto": "Fijación / Memoria Inmediata: Repite palabra 1 (ej: Peseta / Manzana)."},
+            {"id": 12, "texto": "Fijación / Memoria Inmediata: Repite palabra 2 (ej: Caballo / Mesa)."},
+            {"id": 13, "texto": "Fijación / Memoria Inmediata: Repite palabra 3 (ej: Manzana / Moneda)."},
+            {"id": 14, "texto": "Atención y Cálculo: Resta 100 - 7 (93)."},
+            {"id": 15, "texto": "Atención y Cálculo: Resta 93 - 7 (86)."},
+            {"id": 16, "texto": "Atención y Cálculo: Resta 86 - 7 (79)."},
+            {"id": 17, "texto": "Atención y Cálculo: Resta 79 - 7 (72)."},
+            {"id": 18, "texto": "Atención y Cálculo: Resta 72 - 7 (65)."},
+            {"id": 19, "texto": "Recuerdo Diferido: Recuerda palabra 1."},
+            {"id": 20, "texto": "Recuerdo Diferido: Recuerda palabra 2."},
+            {"id": 21, "texto": "Recuerdo Diferido: Recuerda palabra 3."},
+            {"id": 22, "texto": "Lenguaje (Denominación): Nombrar correctamente un Reloj."},
+            {"id": 23, "texto": "Lenguaje (Denominación): Nombrar correctamente un Lápiz."},
+            {"id": 24, "texto": "Lenguaje (Repetición): Repetir la frase: 'Ni sí, ni no, ni peros'."},
+            {"id": 25, "texto": "Lenguaje (Comprensión 3 Tiempos): Toma el papel con la mano derecha."},
+            {"id": 26, "texto": "Lenguaje (Comprensión 3 Tiempos): Dóblalo por la mitad."},
+            {"id": 27, "texto": "Lenguaje (Comprensión 3 Tiempos): Ponlo en el suelo / mesa."},
+            {"id": 28, "texto": "Lenguaje (Lectura): Lee y ejecuta la orden escrita ('Cierre los ojos')."},
+            {"id": 29, "texto": "Lenguaje (Escritura): Escribe una frase completa con sentido."},
+            {"id": 30, "texto": "Visoconstrucción (Copia): Copia correctamente el dibujo de dos pentágonos intersectados."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'MMSE', 'MMSE — Mini-Mental State Examination (Folstein)', 'MMSE', 'Neuropsicología y Capacidad Intelectual',
+            'Evaluación neuropsicológica cuantitativa de 30 puntos para el cribado y seguimiento del deterioro cognitivo y memoria.',
+            'Coteje el desempeño del consultante en cada uno de los 30 ítems evaluados marcando 1 para respuesta correcta y 0 para incorrecta.',
+            json.dumps(mmse_opciones, ensure_ascii=False), json.dumps(mmse_items, ensure_ascii=False)
+        ))
+
+    # 6. AtAS — Escala de Adaptación al Envejecimiento
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'AtAS'")
+    if not cursor.fetchone():
+        atas_opciones = [
+            {"val": 1, "text": "1 - En total desacuerdo"},
+            {"val": 2, "text": "2 - En desacuerdo"},
+            {"val": 3, "text": "3 - Ni de acuerdo ni en desacuerdo"},
+            {"val": 4, "text": "4 - De acuerdo"},
+            {"val": 5, "text": "5 - Totalmente de acuerdo"}
+        ]
+        atas_items = [
+            {"id": 1, "texto": "Siento que mi vida tiene sentido y metas claras en esta etapa."},
+            {"id": 2, "texto": "Mantengo entusiasmo por aprender y realizar actividades nuevas."},
+            {"id": 3, "texto": "Me siento en paz con los logros y elecciones de mi pasado."},
+            {"id": 4, "texto": "Acepto los cambios naturales de mi cuerpo con tranquilidad."},
+            {"id": 5, "texto": "Cuento con familiares o amigos a quienes puedo recurrir si necesito ayuda."},
+            {"id": 6, "texto": "Mantengo autonomía e independencia en mis decisiones cotidianas."},
+            {"id": 7, "texto": "Siento que la sociedad valora la experiencia de los adultos mayores."},
+            {"id": 8, "texto": "Conservo una perspectiva optimista sobre mi futuro."},
+            {"id": 9, "texto": "Tengo actividades de ocio y convivencia que disfruto plenamente."},
+            {"id": 10, "texto": "Me adapto con flexibilidad a las transformaciones de mi entorno."}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'AtAS', 'AtAS — Escala de Adaptación al Envejecimiento', 'AtAS', 'Psicogerontología y Salud',
+            'Evaluación psicométrica de reactivos Likert para medir propósito, adaptación emocional, salud y apoyo social en adultos mayores.',
+            'Marque su grado de acuerdo con cada afirmación respecto a su vivencia del envejecimiento y etapa actual.',
+            json.dumps(atas_opciones, ensure_ascii=False), json.dumps(atas_items, ensure_ascii=False)
+        ))
+
+    # 7. BSSC — Lista de Chequeo Breve de Síntomas Sexuales
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'BSSC'")
+    if not cursor.fetchone():
+        bssc_opciones = [
+            {"val": 1, "text": "Sí"},
+            {"val": 0, "text": "No"}
+        ]
+        bssc_items = [
+            {"id": 1, "texto": "¿Está satisfecho(a) con su vida sexual actual?"},
+            {"id": 2, "texto": "Si no está satisfecho(a), ¿ha notado alguna dificultad en su deseo, excitación, erección o lubricación?"},
+            {"id": 3, "texto": "¿Ha experimentado dolor o dificultad para alcanzar el orgasmo durante la intimidad?"},
+            {"id": 4, "texto": "¿Le gustaría recibir orientación o abordar estos síntomas en consulta clínica?"}
+        ]
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'BSSC', 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales', 'BSSC', 'Sexología y Salud Sexual',
+            'Herramienta de cribado clínico rápido de 4 ítems para la identificación temprana de inquietudes o síntomas sexuales.',
+            'Seleccione Sí o No para cada una de las 4 preguntas de tamizaje inicial.',
+            json.dumps(bssc_opciones, ensure_ascii=False), json.dumps(bssc_items, ensure_ascii=False)
+        ))
+
+    db.commit()
+
+def process_swls_scoring(answers):
+    score = 0
+    for i in range(1, 6):
+        v = answers.get(str(i)) or answers.get(f"item_{i}") or 0
+        try: score += int(v)
+        except: pass
+    if score >= 30: cls = "Extremadamente Satisfecho(a)"
+    elif score >= 25: cls = "Satisfecho(a)"
+    elif score >= 20: cls = "Ligeramente Satisfecho(a)"
+    elif score >= 15: cls = "Ligeramente por debajo de la media"
+    elif score >= 10: cls = "Insatisfecho(a)"
+    else: cls = "Extremadamente Insatisfecho(a)"
+    interp = f"Puntuación Total SWLS: {score}/35. Clasificación: {cls}."
+    return score, {'Puntuacion_Total': score}, cls, interp
+
+def process_shim_scoring(answers):
+    score = 0
+    for i in range(1, 6):
+        v = answers.get(str(i)) or answers.get(f"item_{i}") or 0
+        try: score += int(v)
+        except: pass
+    if score >= 22: cls = "Sin Disfunción Eréctil (Función Normal)"
+    elif score >= 17: cls = "Disfunción Eréctil Leve"
+    elif score >= 12: cls = "Disfunción Eréctil Leve a Moderada"
+    elif score >= 8: cls = "Disfunción Eréctil Moderada"
+    else: cls = "Disfunción Eréctil Grave"
+    interp = f"Puntuación Total SHIM / IIEF-5: {score}/25. Clasificación: {cls}."
+    return score, {'Puntuacion_Total': score}, cls, interp
+
+def process_nsss_s_scoring(answers):
+    ego_score, partner_score = 0, 0
+    for i in range(1, 7):
+        v = answers.get(str(i)) or answers.get(f"item_{i}") or 0
+        try: ego_score += int(v)
+        except: pass
+    for i in range(7, 13):
+        v = answers.get(str(i)) or answers.get(f"item_{i}") or 0
+        try: partner_score += int(v)
+        except: pass
+    total_score = ego_score + partner_score
+    if total_score >= 48: cls = "Alta Satisfacción Sexual"
+    elif total_score >= 36: cls = "Satisfacción Sexual Moderada"
+    else: cls = "Baja Satisfacción Sexual / Requiere atención"
+    subscales = {'Subescala_Egocentrica': ego_score, 'Subescala_Pareja_Actividad': partner_score, 'Puntuacion_Total': total_score}
+    interp = f"Puntuación Total NSSS-S: {total_score}/60 (Egocéntrica: {ego_score}/30, Pareja/Actividad: {partner_score}/30). Clasificación: {cls}."
+    return total_score, subscales, cls, interp
+
+def process_fsfi_scoring(answers):
+    score = 0
+    for i in range(1, 20):
+        v = answers.get(str(i)) or answers.get(f"item_{i}") or 0
+        try: score += int(v)
+        except: pass
+    if score >= 65: cls = "Función Sexual Adecuada / Sin Disfunción Significativa"
+    elif score >= 45: cls = "Disfunción Sexual Femenina Leve/Moderada"
+    else: cls = "Riesgo / Elevada Probabilidad de Disfunción Sexual Femenina"
+    interp = f"Puntuación Total FSFI: {score}/95. Clasificación: {cls}."
+    return score, {'Puntuacion_Total': score}, cls, interp
+
+def process_mmse_scoring(answers):
+    score = 0
+    for i in range(1, 31):
+        v = answers.get(str(i)) or answers.get(f"item_{i}") or 0
+        try: score += int(v)
+        except: pass
+    if score >= 27: cls = "Función Cognitiva Normal / Sin Deterioro"
+    elif score >= 24: cls = "Deterioro Cognitivo Dudoso o Leve"
+    elif score >= 19: cls = "Deterioro Cognitivo Moderado"
+    elif score >= 10: cls = "Deterioro Cognitivo Moderadamente Grave"
+    else: cls = "Deterioro Cognitivo Grave"
+    interp = f"Puntuación Total MMSE: {score}/30 puntos. Clasificación: {cls}."
+    return score, {'Puntuacion_Total': score}, cls, interp
+
+def process_atas_scoring(answers):
+    score = 0
+    for i in range(1, 11):
+        v = answers.get(str(i)) or answers.get(f"item_{i}") or 0
+        try: score += int(v)
+        except: pass
+    if score >= 40: cls = "Alta Adaptación al Envejecimiento"
+    elif score >= 28: cls = "Adaptación Moderada al Envejecimiento"
+    else: cls = "Baja Adaptación / Dificultades de Ajuste"
+    interp = f"Puntuación Total AtAS: {score}/50. Clasificación: {cls}."
+    return score, {'Puntuacion_Total': score}, cls, interp
+
+def process_bssc_scoring(answers):
+    yes_count = 0
+    for i in range(1, 5):
+        v = answers.get(str(i)) or answers.get(f"item_{i}") or 0
+        try:
+            if int(v) == 1: yes_count += 1
+        except: pass
+    if yes_count > 0:
+        cls = "Tamizaje Positivo para Inquietudes/Síntomas Sexuales"
+        interp = f"Tamizaje BSSC: El consultante identifica {yes_count} área(s) con inquietudes sexuales para abordar en consulta."
+    else:
+        cls = "Sin Inquietudes Sexuales Reportadas"
+        interp = "Tamizaje BSSC: El consultante no reporta inquietudes ni síntomas sexuales en este momento."
+    return yes_count, {'Inquietudes_Detectadas': yes_count}, cls, interp
+
 def process_mmpi2_scoring(answers):
     # Standard MMPI-2 Item Keys for Validity & 10 Clinical Scales
     # Validity
@@ -1202,13 +1543,19 @@ def api_asignar_test():
         clean_phone = (pac['telefono'] or '').replace(' ', '').replace('-', '').replace('+', '')
 
         try:
-            from app import notify_patient_firebase
+            from app import notify_patient_firebase, send_fcm_notification
             notify_patient_firebase(
                 patient_id,
                 "🧪 Nuevo Test Psicológico Asignado",
                 f"Tu psicólogo te ha asignado una evaluación psicológica ({test_code}) para responder.",
                 link=url_test,
                 icon="🧪"
+            )
+            send_fcm_notification(
+                patient_id=patient_id,
+                title="🧪 Nuevo Test Psicológico Asignado",
+                body=f"Tu psicólogo te ha asignado una evaluación psicológica para responder.",
+                url=url_test
             )
         except Exception as _ne:
             print("Aviso al notificar test a paciente:", _ne)
@@ -1367,6 +1714,20 @@ def api_post_public_evaluacion(token):
             total_score, subscales_dict, classification, interpretation = process_beck_bhs_scoring(answers)
         elif assignment['test_code'] in ('MMPI-2', 'MMPI2', 'MMPI'):
             total_score, subscales_dict, classification, interpretation = process_mmpi2_scoring(answers)
+        elif assignment['test_code'] == 'SWLS':
+            total_score, subscales_dict, classification, interpretation = process_swls_scoring(answers)
+        elif assignment['test_code'] in ('SHIM', 'IIEF-5'):
+            total_score, subscales_dict, classification, interpretation = process_shim_scoring(answers)
+        elif assignment['test_code'] == 'NSSS-S':
+            total_score, subscales_dict, classification, interpretation = process_nsss_s_scoring(answers)
+        elif assignment['test_code'] == 'FSFI':
+            total_score, subscales_dict, classification, interpretation = process_fsfi_scoring(answers)
+        elif assignment['test_code'] == 'MMSE':
+            total_score, subscales_dict, classification, interpretation = process_mmse_scoring(answers)
+        elif assignment['test_code'] == 'AtAS':
+            total_score, subscales_dict, classification, interpretation = process_atas_scoring(answers)
+        elif assignment['test_code'] == 'BSSC':
+            total_score, subscales_dict, classification, interpretation = process_bssc_scoring(answers)
         else:
             try:
                 from app import process_test_scoring
@@ -1413,6 +1774,17 @@ def api_post_public_evaluacion(token):
         ))
 
         db.commit()
+
+        try:
+            from app import send_fcm_notification
+            send_fcm_notification(
+                user_id=assignment['user_id'],
+                title="🧪 Test Psicológico Completado",
+                body=f"El consultante {pac_nombre} completó la evaluación {assignment['test_code']}. Puntuación: {total_score} ({classification}).",
+                url="/#tests-psicologicos"
+            )
+        except Exception as _fcm_psic_err:
+            print("Aviso al enviar FCM de test completado a psicólogo:", _fcm_psic_err)
 
         return jsonify({
             'success': '¡Evaluación completada con éxito! Tus respuestas han sido registradas para tu especialista.'
@@ -1564,7 +1936,7 @@ def api_patient_portal_tests():
 
     cursor.execute("""
         SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+               u.username as psic_username
         FROM test_asignaciones a
         JOIN tests_definiciones td ON a.test_code = td.code
         JOIN usuarios u ON a.user_id = u.id
@@ -1576,11 +1948,11 @@ def api_patient_portal_tests():
     tests_list = []
     for r in rows:
         d = dict(r)
-        d['psicologo_nombre'] = f"Psic. {d['psic_nombres']} {d['psic_apellidos']}".strip()
+        d['psicologo_nombre'] = f"Psic. {d.get('psic_username') or 'Clínico'}".strip()
         d['url_evaluacion'] = f"/evaluacion/{d['uuid_token']}"
         tests_list.append(d)
 
-    return jsonify({'tests': tests_list})
+    return jsonify({'tests': tests_list, 'success': True})
 
 @tests_bp.route('/api/tests/asignacion/<int:assignment_id>/resultado-manual', methods=['POST'])
 @login_required

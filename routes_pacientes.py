@@ -6,8 +6,10 @@ búsqueda dinámica por cédula e integración con Firebase Realtime DB.
 """
 
 import os
+import re
 import sqlite3
 import json
+from datetime import datetime
 from functools import wraps
 from flask import Blueprint, request, jsonify, session, g
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -16,6 +18,119 @@ from routes_finanzas import auto_settle_patient_debts
 from routes_agenda import generate_dynamic_slots
 
 pacientes_bp = Blueprint('pacientes', __name__)
+
+def normalize_date_str(d_str):
+    if not d_str:
+        return ""
+    d_str = str(d_str).strip()
+    try:
+        dt = datetime.strptime(d_str, "%Y-%m-%d")
+        return dt.strftime("%Y-%m-%d")
+    except:
+        pass
+    try:
+        dt = datetime.strptime(d_str, "%d/%m/%Y")
+        return dt.strftime("%Y-%m-%d")
+    except:
+        pass
+    try:
+        parts = d_str.split('-')
+        if len(parts) == 3 and len(parts[0]) == 4:
+            return f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+    except:
+        pass
+    return d_str
+
+def normalize_time_str(t_str):
+    if not t_str:
+        return "00:00"
+    t_str = str(t_str).strip().lower()
+    is_pm = 'pm' in t_str
+    is_am = 'am' in t_str
+    clean_t = re.sub(r'[^\d:]', '', t_str)
+    parts = clean_t.split(':')
+    if not parts or not parts[0]:
+        return "00:00"
+    try:
+        h = int(parts[0])
+        m = int(parts[1]) if len(parts) > 1 and parts[1] else 0
+        if is_pm and h < 12:
+            h += 12
+        elif is_am and h == 12:
+            h = 0
+        return f"{h:02d}:{m:02d}"
+    except:
+        return "00:00"
+
+def get_appointment_fee(cursor, patient_id, psicologo_id=None, modalidad=None):
+    """Calcula la tarifa (monto y moneda) para una consulta."""
+    monto = 0.0
+    moneda = '$'
+    if patient_id:
+        cursor.execute("SELECT costo_personalizado, moneda_personalizada FROM pacientes WHERE id = ?", (patient_id,))
+        row = cursor.fetchone()
+        if row:
+            if row['costo_personalizado'] is not None and row['costo_personalizado'] > 0:
+                monto = float(row['costo_personalizado'])
+            if row['moneda_personalizada']:
+                moneda = row['moneda_personalizada']
+    return monto, moneda
+
+def get_deadline_datetime(fecha_str, hora_str, rule_type, rule_value):
+    """Calcula la fecha y hora límite para cancelar/reprogramar una cita según la regla del psicólogo."""
+    from datetime import datetime, timedelta
+    try:
+        f_norm = normalize_date_str(fecha_str)
+        h_norm = normalize_time_str(hora_str)
+        cita_dt = datetime.strptime(f"{f_norm} {h_norm}", "%Y-%m-%d %H:%M")
+    except Exception:
+        return datetime.now() + timedelta(days=365)
+
+    rule_val = float(rule_value or 24)
+    if rule_type == 'dias':
+        return cita_dt - timedelta(days=rule_val)
+    else:
+        return cita_dt - timedelta(hours=rule_val)
+
+def get_rule_description(rule_type, rule_value):
+    rule_val = int(float(rule_value or 24))
+    if rule_type == 'dias':
+        return f"{rule_val} día(s) antes de la cita"
+    return f"{rule_val} hora(s) antes de la cita"
+
+def create_auto_cancellation_session(db, patient_id, appt_id, fecha, modalidad, estado, motivo):
+    """Registra o actualiza el estado de sesión cancelada en la tabla sesiones."""
+    try:
+        cursor = db.cursor()
+        cursor.execute("SELECT id FROM sesiones WHERE paciente_id = ? AND fecha = ?", (patient_id, fecha))
+        s_row = cursor.fetchone()
+        if s_row:
+            cursor.execute("UPDATE sesiones SET estado = ?, resumen_paciente = ? WHERE id = ?", (estado, motivo, s_row['id']))
+        else:
+            cursor.execute("""
+                INSERT INTO sesiones (paciente_id, fecha, modalidad, estado, resumen_paciente)
+                VALUES (?, ?, ?, ?, ?)
+            """, (patient_id, fecha, modalidad, estado, motivo))
+        db.commit()
+    except Exception as ex:
+        print("Error en create_auto_cancellation_session:", ex)
+
+def clean_digits_only(s):
+    if not s:
+        return ""
+    return re.sub(r'\D', '', str(s))
+
+def decrypt_clinical_text(txt):
+    if not txt:
+        return ""
+    return str(txt)
+
+def delete_patient_from_firebase(patient_id):
+    try:
+        from app import delete_patient_from_firebase as _dpf
+        return _dpf(patient_id)
+    except Exception as ex:
+        print("Error borrando paciente de Firebase:", ex)
 
 def get_db():
     """Obtiene la conexión a la base de datos desde el contexto global g de Flask."""
@@ -757,7 +872,7 @@ def patient_add_appointment():
         except:
             pass
 
-        cursor.execute("SELECT nombres, apellidos, cedula, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        cursor.execute("SELECT nombres, apellidos, cedula, email, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         paciente = cursor.fetchone()
         psicologo_id = paciente['psicologo_id'] if paciente else 1
 
@@ -774,7 +889,12 @@ def patient_add_appointment():
             return jsonify({'error': 'El horario seleccionado ya ha sido reservado. Por favor elige otro horario.'}), 400
 
         google_event_id = None
-        service = get_calendar_service(psicologo_id)
+        service = None
+        try:
+            from routes_admin import get_calendar_service
+            service = get_calendar_service(psicologo_id)
+        except Exception:
+            service = None
         
         if service:
             start_datetime = f"{fecha_norm}T{hora_norm}:00-04:00"
@@ -787,8 +907,11 @@ def patient_add_appointment():
                 'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
                 'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
             }
+            if paciente and paciente.get('email'):
+                event_body['attendees'] = [{'email': paciente['email'], 'displayName': f"{paciente['nombres']} {paciente['apellidos']}"}]
+
             try:
-                g_event = service.events().insert(calendarId='primary', body=event_body).execute()
+                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
                 google_event_id = g_event.get('id')
             except Exception as ge:
                 print("Error creando evento en Google Calendar desde portal del paciente:", ge)
@@ -815,6 +938,7 @@ def patient_add_appointment():
 
         # Enviar notificación Push al psicólogo
         try:
+            from app import send_webpush_notification
             send_webpush_notification(
                 user_id=psicologo_id,
                 title="📅 Nueva Cita Auto-Agendada",
@@ -824,8 +948,12 @@ def patient_add_appointment():
         except Exception as wp_ex:
             print("Error al enviar Push de auto-agendamiento por paciente:", wp_ex)
 
-        import threading
-        threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        try:
+            from app import sync_patient_to_firebase
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        except Exception as fb_ex:
+            print("Error sincronizando Firebase:", fb_ex)
         
         return jsonify({'success': 'Tu consulta ha sido agendada automáticamente con éxito.', 'google_synced': google_event_id is not None})
     except Exception as e:
@@ -910,7 +1038,12 @@ def patient_cancel_appointment():
             })
             
         if google_event_id:
-            service = get_calendar_service()
+            service = None
+            try:
+                from routes_admin import get_calendar_service
+                service = get_calendar_service(psicologo_id)
+            except Exception:
+                service = None
             if service:
                 try:
                     service.events().delete(calendarId='primary', eventId=google_event_id).execute()
@@ -995,6 +1128,7 @@ def patient_cancel_appointment():
 
         # Notificar al psicólogo por Push
         try:
+            from app import send_webpush_notification
             send_webpush_notification(
                 user_id=psicologo_id,
                 title=notif_title,
@@ -1004,8 +1138,12 @@ def patient_cancel_appointment():
         except Exception as wp_ex:
             print("Error al enviar WebPush de cancelación por paciente:", wp_ex)
 
-        import threading
-        threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        try:
+            from app import sync_patient_to_firebase
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        except Exception as fb_ex:
+            print("Error al sincronizar Firebase en cancelación:", fb_ex)
 
         return jsonify({'success': 'Cita cancelada con éxito.'})
     except Exception as e:
@@ -1188,7 +1326,12 @@ def patient_reschedule_appointment():
             return jsonify({'error': 'El horario seleccionado ya está reservado.'}), 400
             
         if google_event_id:
-            service = get_calendar_service(psicologo_id)
+            service = None
+            try:
+                from routes_admin import get_calendar_service
+                service = get_calendar_service(psicologo_id)
+            except Exception:
+                service = None
             if service:
                 try:
                     cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
@@ -1424,13 +1567,107 @@ def get_patient_portal_data_dict(patient_id):
     metodos = (p_dict.get('psicologo_metodos_pago') or '').strip()
     if not metodos:
         metodos = "Contacta a tu psicólogo para conocer los métodos de pago disponibles."
-        
+
+    # 1. Citas próximas activas del consultante
+    from datetime import datetime
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    now_time_str = datetime.now().strftime("%H:%M")
+
+    cursor.execute("""
+        SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago, af.referencia
+        FROM agenda_finanzas af
+        WHERE af.paciente_id = ?
+          AND (af.fecha > ? OR (af.fecha = ? AND af.hora >= ?))
+          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+        ORDER BY af.fecha ASC, af.hora ASC
+    """, (patient_id, today_str, today_str, now_time_str))
+    
+    citas_rows = cursor.fetchall()
+    proximas_citas = []
+
+    psicologo_id = p_dict.get('psicologo_id')
+    rule_type = 'horas'
+    rule_value = 24
+    if psicologo_id:
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+        u_row = cursor.fetchone()
+        if u_row and u_row[0]:
+            try:
+                config = json.loads(u_row[0])
+                rule_type = config.get('limite_cancelacion_tipo', 'horas')
+                rule_value = config.get('limite_cancelacion_valor', 24)
+            except:
+                pass
+
+    for c in citas_rows:
+        c_dict = dict(c)
+        try:
+            c_dt = datetime.strptime(f"{c_dict['fecha']} {c_dict['hora']}", "%Y-%m-%d %H:%M")
+            time_diff = (c_dt - datetime.now()).total_seconds() / 3600.0
+        except Exception:
+            time_diff = 48.0
+        c_dict['tiempo_restante_horas'] = time_diff
+        c_dict['limite_cancelacion'] = rule_value if rule_type == 'horas' else rule_value * 24
+        proximas_citas.append(c_dict)
+
+    # 2. Resumen de la última sesión evolucionada del consultante
+    cursor.execute("""
+        SELECT resumen_paciente, anotaciones_proxima, tareas_asignadas, recursos_entregados, archivo_adjunto
+        FROM sesiones
+        WHERE paciente_id = ? AND (estado IS NULL OR estado != 'Cancelada')
+        ORDER BY fecha DESC, id DESC LIMIT 1
+    """, (patient_id,))
+    s_row = cursor.fetchone()
+    compartido = {}
+    if s_row:
+        compartido = {
+            'resumen_sesion': s_row['resumen_paciente'] or '',
+            'temas_proxima_sesion': s_row['anotaciones_proxima'] or '',
+            'tareas_asignadas': s_row['tareas_asignadas'] or '',
+            'recursos_entregados': s_row['recursos_entregados'] or '',
+            'archivo_adjunto': s_row['archivo_adjunto'] or ''
+        }
+
+    # 3. Resumen financiero (prepagadas y deudas)
+    cursor.execute("""
+        SELECT SUM(cantidad_sesiones) as total_prepago
+        FROM agenda_finanzas
+        WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
+    """, (patient_id,))
+    pre_row = cursor.fetchone()
+    prepagadas = (pre_row['total_prepago'] or 0) if pre_row else 0
+
+    cursor.execute("""
+        SELECT id, fecha, hora, tipo_consulta, monto, moneda
+        FROM agenda_finanzas
+        WHERE paciente_id = ? 
+          AND (estado_pago = 'Pendiente' OR estado_pago = 'Agendada' OR estado_pago LIKE 'Cancelada sin aviso%')
+          AND monto > 0
+    """, (patient_id,))
+    debt_rows = cursor.fetchall()
+    deuda = {}
+    deudas_detalle = []
+    for d in debt_rows:
+        d_dict = dict(d)
+        mon = d_dict.get('moneda') or '$'
+        deuda[mon] = deuda.get(mon, 0.0) + float(d_dict.get('monto') or 0)
+        deudas_detalle.append(d_dict)
+
+    finanzas = {
+        'prepagadas': prepagadas,
+        'deuda': deuda,
+        'deudas_detalle': deudas_detalle
+    }
+
     return {
         'perfil': p_dict,
         'modalidades': modalidades,
         'metodos_pago': metodos,
         'terminos_texto': terms,
-        'terminos_requeridos': (p_dict.get('terminos_aceptados') != 1)
+        'terminos_requeridos': (p_dict.get('terminos_aceptados') != 1),
+        'proximas_citas': proximas_citas,
+        'compartido': compartido,
+        'finanzas': finanzas
     }
 
 

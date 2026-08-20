@@ -16,9 +16,10 @@ import os
 import json
 import sqlite3
 import threading
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 from functools import wraps
-from flask import Blueprint, request, jsonify, session, g
+from flask import Blueprint, request, jsonify, session, g, render_template
 
 herramientas_bp = Blueprint('herramientas', __name__)
 
@@ -347,7 +348,13 @@ def get_patient_sobriety_history():
     cursor = db.cursor()
     cursor.execute("SELECT * FROM registros_sobriedad WHERE paciente_id = ? ORDER BY fecha DESC", (patient_id,))
     rows = [dict(r) for r in cursor.fetchall()]
-    return jsonify(rows)
+    streak = 0
+    for l in rows:
+        if l.get('sobrio') == 1:
+            streak += 1
+        else:
+            break
+    return jsonify({'streak': streak, 'history': rows})
 
 @herramientas_bp.route('/api/therapist/modules/catalog', methods=['GET'])
 @login_required
@@ -666,10 +673,15 @@ def therapist_patient_activation_activities(patient_id=None):
         patient_id = request.args.get('patient_id') or session.get('last_viewed_patient_id') or 1
     patient_id = int(patient_id)
     user_id = session.get('user_id')
+    psic_filter = get_psicologo_id_filter()
     db = get_db()
     cursor = db.cursor()
     
-    cursor.execute("SELECT id FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    if psic_filter is not None and psic_filter != -1:
+        cursor.execute("SELECT id FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL OR ? = 1)", (patient_id, psic_filter, psic_filter))
+    else:
+        cursor.execute("SELECT id FROM pacientes WHERE id = ?", (patient_id,))
+        
     if not cursor.fetchone():
         return jsonify({'error': 'Paciente no encontrado o sin permisos.'}), 404
         
@@ -705,3 +717,314 @@ def toggle_activation_activity(act_id):
     cursor.execute("UPDATE activacion_actividades SET activa = ? WHERE id = ?", (activa, act_id))
     db.commit()
     return jsonify({'success': True, 'activa': activa})
+
+
+# =========================================================================
+# RUTAS Y SERVICIOS: ACCESO DIRECTO POR WHATSAPP (SIN LOGIN) Y COLA AUTOMÁTICA
+# =========================================================================
+
+TOOL_NAMES = {
+    'pantalla': 'Registro de Consumo de Pantallas',
+    'cognitivo': 'Registro Cognitivo (TCC)',
+    'ingesta': 'Registro de Ingesta Alimentaria',
+    'activacion': 'Checklist de Activación Conductual',
+    'adherencia': 'Control de Adherencia a Medicamentos',
+    'pizarra': 'Diario / Pizarra Terapéutica',
+    'sueno': 'Higiene del Sueño',
+    'ansiedad': 'Diario de Ansiedad',
+    'sobriedad': 'Registro de Consumo y Sobriedad'
+}
+
+def clean_phone_number(phone_str):
+    if not phone_str:
+        return ""
+    digits = "".join([c for c in phone_str if c.isdigit()])
+    if digits.startswith("0"):
+        digits = "58" + digits[1:]
+    elif not (digits.startswith("58") or digits.startswith("54") or digits.startswith("57") or digits.startswith("34") or digits.startswith("1")):
+        digits = "58" + digits
+    return digits
+
+@herramientas_bp.route('/api/herramientas/generar-link-directo', methods=['POST'])
+@login_required
+def generar_link_directo_herramienta():
+    import urllib.parse
+    data = request.json or {}
+    patient_id = data.get('patient_id')
+    herramienta_tipo = (data.get('herramienta_tipo') or 'pantalla').strip().lower()
+    
+    if not patient_id:
+        return jsonify({'error': 'ID de paciente es requerido.'}), 400
+        
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ?", (patient_id,))
+    paciente = cursor.fetchone()
+    if not paciente:
+        return jsonify({'error': 'Paciente no encontrado.'}), 404
+        
+    token = secrets.token_urlsafe(32)
+    now = datetime.now()
+    expiracion = now + timedelta(days=3)
+    today_str = now.strftime("%Y-%m-%d")
+    
+    # Crear token de único uso
+    cursor.execute("""
+        INSERT INTO tokens_herramientas (
+            token, paciente_id, psicologo_id, herramienta_tipo, fecha_programada, fecha_expiracion, usado
+        ) VALUES (?, ?, ?, ?, ?, ?, 0)
+    """, (token, patient_id, user_id, herramienta_tipo, today_str, expiracion.strftime("%Y-%m-%d %H:%M:%S")))
+    token_id = cursor.lastrowid
+    
+    # Registrar/Actualizar estado en la cola de envíos de hoy
+    cursor.execute("""
+        INSERT INTO cola_recordatorios_herramientas (
+            psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, fecha_envio, token_id
+        ) VALUES (?, ?, ?, ?, '20:00', 'enviado', 1, ?, ?)
+        ON CONFLICT(paciente_id, herramienta_tipo, fecha_programada) DO UPDATE SET
+            estado = 'enviado', enviado = 1, fecha_envio = ?, token_id = ?
+    """, (user_id, patient_id, herramienta_tipo, today_str, now.strftime("%Y-%m-%d %H:%M:%S"), token_id, now.strftime("%Y-%m-%d %H:%M:%S"), token_id))
+    db.commit()
+    
+    # Construir enlace absoluto
+    host_url = request.host_url.rstrip('/')
+    link_directo = f"{host_url}/herramienta/directa?token={token}"
+    
+    pac_nombre = f"{paciente['nombres']} {paciente['apellidos']}".strip()
+    nombre_tool = TOOL_NAMES.get(herramienta_tipo, 'Herramienta Terapéutica')
+    
+    mensaje_wa = (
+        f"Hola *{paciente['nombres']}* 👋 Espero te encuentres muy bien.\n\n"
+        f"Te recuerdo completar tu *{nombre_tool}* del día de hoy. "
+        f"Puedes llenarlo directamente haciendo clic aquí (sin iniciar sesión):\n"
+        f"👉 {link_directo}\n\n"
+        f"¡Gracias por tu compromiso con el proceso terapéutico!"
+    )
+    
+    clean_phone = clean_phone_number(paciente['telefono'])
+    wa_url = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(mensaje_wa)}" if clean_phone else ""
+    
+    return jsonify({
+        'success': True,
+        'token': token,
+        'link': link_directo,
+        'mensaje_wa': mensaje_wa,
+        'phone': paciente['telefono'],
+        'clean_phone': clean_phone,
+        'wa_url': wa_url
+    })
+
+@herramientas_bp.route('/api/herramientas/programar-recordatorio', methods=['POST'])
+@login_required
+def programar_recordatorio_herramienta():
+    data = request.json or {}
+    patient_id = data.get('patient_id')
+    herramienta_tipo = (data.get('herramienta_tipo') or 'pantalla').strip().lower()
+    hora = (data.get('hora_programada') or '20:00').strip()
+    pausado = 1 if data.get('pausado') else 0
+    
+    if not patient_id:
+        return jsonify({'error': 'ID de paciente requerido.'}), 400
+        
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    
+    cursor.execute("""
+        INSERT INTO cola_recordatorios_herramientas (
+            psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, pausado
+        ) VALUES (?, ?, ?, ?, ?, 'programado', 0, ?)
+        ON CONFLICT(paciente_id, herramienta_tipo, fecha_programada) DO UPDATE SET
+            hora_programada = ?, pausado = ?
+    """, (user_id, patient_id, herramienta_tipo, today_str, hora, pausado, hora, pausado))
+    db.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': f'Recordatorio diario para {TOOL_NAMES.get(herramienta_tipo, "Herramienta")} fijado para las {hora}.',
+        'pausado': pausado
+    })
+
+@herramientas_bp.route('/api/herramientas/estado-cola/<int:patient_id>', methods=['GET'])
+@login_required
+def get_estado_cola_herramientas(patient_id):
+    db = get_db()
+    cursor = db.cursor()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    
+    cursor.execute("""
+        SELECT c.*, t.usado, t.fecha_completado
+        FROM cola_recordatorios_herramientas c
+        LEFT JOIN tokens_herramientas t ON c.token_id = t.id
+        WHERE c.paciente_id = ? AND c.fecha_programada = ?
+    """, (patient_id, today_str))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+@herramientas_bp.route('/herramienta/directa', methods=['GET'])
+def render_public_tool_page():
+    token_str = request.args.get('token', '').strip()
+    if not token_str:
+        return render_template('public_tool.html', error_msg="Enlace no válido. Falta el token de acceso.")
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT t.*, p.nombres, p.apellidos, u.nombres as psic_nombres, u.apellidos as psic_apellidos
+        FROM tokens_herramientas t
+        JOIN pacientes p ON t.paciente_id = p.id
+        LEFT JOIN usuarios u ON t.psicologo_id = u.id
+        WHERE t.token = ?
+    """, (token_str,))
+    token_row = cursor.fetchone()
+    
+    if not token_row:
+        return render_template('public_tool.html', error_msg="El enlace no es válido o ha sido eliminado.")
+        
+    t_dict = dict(token_row)
+    
+    if t_dict.get('usado') == 2:
+        return render_template('public_tool.html', error_msg="Esta consulta o herramienta ha sido cancelada o ya no está disponible.")
+
+    if t_dict.get('usado') == 1:
+        return render_template('public_tool.html', 
+                               already_used=True, 
+                               patient_name=t_dict['nombres'],
+                               completed_at=t_dict.get('fecha_completado') or t_dict.get('fecha_registro'),
+                               tool_title=TOOL_NAMES.get(t_dict['herramienta_tipo'], 'Herramienta Terapéutica'))
+                               
+    # Cargar medicamentos o actividades si la herramienta lo requiere
+    extra_data = {}
+    if t_dict['herramienta_tipo'] == 'adherencia':
+        cursor.execute("SELECT id, nombre_medicamento, dosis, hora_prescrita FROM adherencia_medicamentos WHERE paciente_id = ?", (t_dict['paciente_id'],))
+        extra_data['medicamentos'] = [dict(r) for r in cursor.fetchall()]
+    elif t_dict['herramienta_tipo'] == 'activacion':
+        cursor.execute("SELECT id, categoria, nombre_actividad FROM activacion_actividades WHERE paciente_id = ? AND activa = 1", (t_dict['paciente_id'],))
+        extra_data['actividades'] = [dict(r) for r in cursor.fetchall()]
+
+    return render_template('public_tool.html',
+                           valid_tool=True,
+                           token=token_str,
+                           patient_name=t_dict['nombres'],
+                           therapist_name=f"Psic. {t_dict.get('psic_nombres') or ''} {t_dict.get('psic_apellidos') or ''}".strip(),
+                           tool_type=t_dict['herramienta_tipo'],
+                           tool_title=TOOL_NAMES.get(t_dict['herramienta_tipo'], 'Herramienta Terapéutica'),
+                           extra_data=extra_data)
+
+@herramientas_bp.route('/api/public/herramienta/guardar', methods=['POST'])
+def save_public_tool_submission():
+    data = request.json or {}
+    token_str = (data.get('token') or '').strip()
+    payload = data.get('payload') or {}
+    
+    if not token_str or not payload:
+        return jsonify({'error': 'Token y datos del formulario son obligatorios.'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM tokens_herramientas WHERE token = ?", (token_str,))
+    token_row = cursor.fetchone()
+    
+    if not token_row:
+        return jsonify({'error': 'Token no encontrado.'}), 404
+        
+    t = dict(token_row)
+    if t.get('usado') == 1:
+        return jsonify({'error': 'Este enlace ya fue utilizado anteriormente.'}), 400
+        
+    patient_id = t['paciente_id']
+    psic_id = t['psicologo_id']
+    tool_type = t['herramienta_tipo']
+    now_dt = datetime.now()
+    now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    today_str = now_dt.strftime("%Y-%m-%d")
+    
+    # 1. Guardar según tipo de herramienta
+    if tool_type == 'pantalla':
+        dispositivos = json.dumps(payload.get('dispositivos', []))
+        tiempo_uso = payload.get('tiempo_uso', '0')
+        aplicaciones = payload.get('aplicaciones', '')
+        tipo_contenido = payload.get('tipo_contenido', '')
+        estado_emocional = payload.get('estado_emocional_posterior', '')
+        interferencia = payload.get('interferencia_actividad', '')
+        cursor.execute("""
+            INSERT INTO registro_consumo_pantalla (
+                paciente_id, dispositivos, tiempo_uso, aplicaciones, tipo_contenido,
+                estado_emocional_posterior, interferencia_actividad, fecha_registro
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (patient_id, dispositivos, tiempo_uso, aplicaciones, tipo_contenido, estado_emocional, interferencia, now_str))
+
+    elif tool_type == 'cognitivo':
+        cursor.execute("""
+            INSERT INTO registros_cognitivos (
+                paciente_id, fecha, situacion, pensamiento, emocion_sensacion, intensidad_emocion, conducta, fecha_registro
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (patient_id, today_str, payload.get('situacion', ''), payload.get('pensamiento', ''), payload.get('emocion_sensacion', ''), payload.get('intensidad_emocion', 5), payload.get('conducta', ''), now_str))
+
+    elif tool_type == 'ingesta':
+        cursor.execute("""
+            INSERT INTO registros_ingesta (
+                paciente_id, fecha, tipo_comida, descripcion_plato, apetito_previo, saciedad, contexto, afectividad, pensamiento, conductas_json, fecha_registro
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (patient_id, today_str, payload.get('tipo_comida', 'Almuerzo'), payload.get('descripcion_plato', ''), payload.get('apetito_previo', 3), payload.get('saciedad', 3), payload.get('contexto', ''), payload.get('afectividad', ''), payload.get('pensamiento', ''), json.dumps(payload.get('conductas', [])), now_str))
+
+    elif tool_type == 'activacion':
+        for act in payload.get('actividades_log', []):
+            cursor.execute("""
+                INSERT INTO activacion_registros (paciente_id, activacion_id, fecha, completada, notas, fecha_registro)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (patient_id, act.get('id'), today_str, 1 if act.get('completada') else 0, act.get('notas', ''), now_str))
+
+    elif tool_type == 'adherencia':
+        for med in payload.get('medicamentos_log', []):
+            cursor.execute("""
+                INSERT INTO adherencia_registros (paciente_id, medicamento_id, fecha, tomado, hora_tomado, notas, fecha_registro)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (patient_id, med.get('id'), today_str, 1 if med.get('tomado') else 0, med.get('hora_tomado', ''), med.get('notas', ''), now_str))
+
+    elif tool_type == 'pizarra':
+        cursor.execute("""
+            INSERT INTO pizarra_terapeutica (paciente_id, tipo_autor, nota_texto, estado_animo, fecha_registro, leida_psicologo)
+            VALUES (?, 'paciente', ?, ?, ?, 0)
+        """, (patient_id, payload.get('nota_texto', ''), payload.get('estado_animo', 'neutral'), now_str))
+
+    # 2. Marcar Token como Usado
+    cursor.execute("""
+        UPDATE tokens_herramientas SET usado = 1, fecha_completado = ? WHERE id = ?
+    """, (now_str, t['id']))
+    
+    cursor.execute("""
+        UPDATE cola_recordatorios_herramientas SET estado = 'completado' WHERE token_id = ?
+    """, (t['id'],))
+    
+    db.commit()
+
+    # 3. Notificar al Psicólogo Asignado
+    try:
+        cursor.execute("SELECT nombres, apellidos FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip() if pac else "Consultante"
+        nombre_tool = TOOL_NAMES.get(tool_type, 'Herramienta Terapéutica')
+        
+        notif_title = f"📱 {nombre_tool} Completado"
+        notif_msg = f"El consultante {pac_nombre} completó su registro diario de {nombre_tool} mediante enlace directo de WhatsApp."
+        
+        cursor.execute("""
+            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+            VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+        """, (psic_id, notif_title, notif_msg, now_str))
+        db.commit()
+        
+        try:
+            from routes_notificaciones import send_webpush_notification
+            send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
+        except Exception:
+            pass
+    except Exception as _ne:
+        print("Error en notificación de envío público:", _ne)
+
+    return jsonify({'success': True, 'message': 'Registro guardado exitosamente.'})

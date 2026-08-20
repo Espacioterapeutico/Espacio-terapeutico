@@ -1191,6 +1191,39 @@ def init_db():
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tokens_herramientas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token TEXT UNIQUE NOT NULL,
+            paciente_id INTEGER NOT NULL,
+            psicologo_id INTEGER NOT NULL,
+            herramienta_tipo TEXT NOT NULL,
+            fecha_programada DATE DEFAULT CURRENT_DATE,
+            fecha_expiracion DATETIME NOT NULL,
+            usado INTEGER DEFAULT 0,
+            fecha_completado DATETIME NULL,
+            fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
+            FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            psicologo_id INTEGER NOT NULL,
+            paciente_id INTEGER NOT NULL,
+            herramienta_tipo TEXT NOT NULL,
+            fecha_programada DATE NOT NULL,
+            hora_programada TEXT DEFAULT '20:00',
+            estado TEXT DEFAULT 'programado',
+            enviado INTEGER DEFAULT 0,
+            fecha_envio DATETIME NULL,
+            token_id INTEGER NULL,
+            pausado INTEGER DEFAULT 0,
+            fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(paciente_id, herramienta_tipo, fecha_programada)
+        )
+    """)
     
     # Parche automático de migración y normalización de datos para bases de datos viejas o restauradas
     try:
@@ -1530,6 +1563,7 @@ def auto_cancel_unconfirmed_sessions(db):
             # 1. Eliminar de Google Calendar
             if google_event_id:
                 try:
+                    from routes_admin import get_calendar_service
                     service = get_calendar_service(target_psic)
                     if service:
                         service.events().delete(calendarId='primary', eventId=google_event_id).execute()
@@ -2264,28 +2298,31 @@ def auto_check_subscription_expiration_reminders(db):
 def send_hourly_patient_tool_reminders(db=None):
     """
     Revisa la hora local (8:00 PM / 20:00) de cada paciente que tenga herramientas
-    terapéuticas activas en modulos_terapeuticos_paciente y les envía el recordatorio diario.
+    terapéuticas activas en modulos_terapeuticos_paciente y les envía el recordatorio diario por WhatsApp con Link Directo de 1 solo uso.
     """
     if db is None:
         db = get_db()
     cursor = db.cursor()
 
     TOOL_NAME_MAP = {
-        'sobriedad': 'Registro de Sobriedad / Consumo',
-        'sueno': 'Registro de Sueño',
-        'ansiedad': 'Registro de Ansiedad',
-        'medicamentos': 'Adherencia a Medicamentos',
-        'actividades': 'Registro de Actividades',
-        'cognitivos': 'Registro de Pensamientos Cognitivos',
-        'ingesta': 'Registro de Ingesta Alimentaria'
+        'pantalla': 'Registro de Consumo de Pantallas',
+        'cognitivo': 'Registro Cognitivo (TCC)',
+        'ingesta': 'Registro de Ingesta Alimentaria',
+        'activacion': 'Checklist de Activación Conductual',
+        'adherencia': 'Control de Adherencia a Medicamentos',
+        'pizarra': 'Diario / Pizarra Terapéutica',
+        'sueno': 'Higiene del Sueño',
+        'ansiedad': 'Diario de Ansiedad',
+        'sobriedad': 'Registro de Consumo y Sobriedad'
     }
 
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     today_str = now_utc.strftime("%Y-%m-%d")
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
         cursor.execute("""
-            SELECT DISTINCT p.id, p.nombres, p.apellidos, p.cedula, p.username, p.zona_horaria, p.utc_offset
+            SELECT DISTINCT p.id, p.nombres, p.apellidos, p.cedula, p.telefono, p.username, p.psicologo_id, p.zona_horaria, p.utc_offset
             FROM pacientes p
             JOIN modulos_terapeuticos_paciente mt ON p.id = mt.paciente_id
             WHERE mt.activo = 1
@@ -2296,67 +2333,102 @@ def send_hourly_patient_tool_reminders(db=None):
 
     reminders_sent = 0
 
+    # Verificar estado de WhatsApp globalmente
+    wa_connected = False
+    try:
+        from routes_notificaciones import make_wa_http_request
+        r_wa = make_wa_http_request('GET', '/status', timeout=5)
+        if r_wa and r_wa.status_code == 200 and r_wa.json().get('status') == 'connected':
+            wa_connected = True
+    except Exception:
+        wa_connected = False
+
     for p in patients_with_tools:
         p_id = p['id']
+        psic_id = p['psicologo_id'] or 1
         offset_min = p['utc_offset'] if (p['utc_offset'] is not None) else 240
         
         # Calcular hora local del paciente a partir de UTC
         patient_local = now_utc - datetime.timedelta(minutes=offset_min)
         current_hour = patient_local.hour
 
-        # Verificar si en el reloj local del paciente son las 8:00 PM (hora 20)
+        # Ejecutar únicamente cuando en el reloj local del paciente son las 8:00 PM (hora 20)
         if current_hour == 20:
-            unique_link = f"/#herramientas-paciente?daily_reminder={p_id}_{today_str}"
-            cursor.execute("SELECT id FROM notificaciones WHERE link = ?", (unique_link,))
-            if cursor.fetchone():
-                continue # Ya enviado hoy
-
             cursor.execute("SELECT modulo_clave FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND activo = 1", (p_id,))
             active_modules = [r['modulo_clave'] for r in cursor.fetchall()]
             
-            tool_names = [TOOL_NAME_MAP.get(m, m) for m in active_modules if m in TOOL_NAME_MAP]
-            if not tool_names:
-                continue
+            for mod_clave in active_modules:
+                # Comprobar si ya existe registro en la cola para hoy
+                cursor.execute("""
+                    SELECT id, estado, enviado, pausado FROM cola_recordatorios_herramientas
+                    WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
+                """, (p_id, mod_clave, today_str))
+                queue_row = cursor.fetchone()
+                
+                if queue_row:
+                    q_dict = dict(queue_row)
+                    if q_dict.get('enviado') == 1 or q_dict.get('pausado') == 1:
+                        continue # Ya enviado o pausado por el terapeuta
+                else:
+                    # Crear registro inicial en cola
+                    cursor.execute("""
+                        INSERT INTO cola_recordatorios_herramientas (
+                            psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, pausado
+                        ) VALUES (?, ?, ?, ?, '20:00', 'programado', 0, 0)
+                    """, (psic_id, p_id, mod_clave, today_str))
+                    db.commit()
 
-            if len(tool_names) == 1:
-                tools_str = tool_names[0]
-            elif len(tool_names) == 2:
-                tools_str = f"{tool_names[0]} y {tool_names[1]}"
-            else:
-                tools_str = ", ".join(tool_names[:-1]) + f" y {tool_names[-1]}"
+                # Si WhatsApp no está conectado, actualizar estado a 'esperando_wa' y omitir envío por ahora
+                if not wa_connected:
+                    cursor.execute("""
+                        UPDATE cola_recordatorios_herramientas
+                        SET estado = 'esperando_wa'
+                        WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
+                    """, (p_id, mod_clave, today_str))
+                    db.commit()
+                    continue
 
-            first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
-
-            notif_title = "🧠 Recordatorio Terapéutico Diario"
-            notif_body = f"{first_name}, recuerda actualizar tu estatus de {tools_str}"
-            now_str = patient_local.strftime("%Y-%m-%d %H:%M:%S")
-
-            cursor.execute("""
-                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                VALUES (0, 'herramienta_paciente', ?, ?, ?, 0, ?)
-            """, (notif_title, notif_body, now_str, unique_link))
-            db.commit()
-
-            try:
-                if FIREBASE_DB_URL:
-                    fb_payload = {
-                        'titulo': notif_title,
-                        'mensaje': notif_body,
-                        'fecha': now_str,
-                        'leida': False,
-                        'tipo': 'herramienta_paciente',
-                        'link': '/#herramientas-paciente'
-                    }
-                    requests.post(f"{FIREBASE_DB_URL}/pacientes/{p_id}/notificaciones.json", json=fb_payload, timeout=2.0)
-            except Exception:
-                pass
-
-            try:
-                send_fcm_notification(patient_id=p_id, title=notif_title, body=notif_body, url="/#herramientas-paciente")
-            except Exception:
-                pass
-
-            reminders_sent += 1
+                # Si WhatsApp está conectado y no se ha enviado hoy, procesar envío
+                if p['telefono']:
+                    import secrets
+                    token = secrets.token_urlsafe(32)
+                    expiracion = now_utc + datetime.timedelta(days=3)
+                    
+                    cursor.execute("""
+                        INSERT INTO tokens_herramientas (
+                            token, paciente_id, psicologo_id, herramienta_tipo, fecha_programada, fecha_expiracion, usado
+                        ) VALUES (?, ?, ?, ?, ?, ?, 0)
+                    """, (token, p_id, psic_id, mod_clave, today_str, expiracion.strftime("%Y-%m-%d %H:%M:%S")))
+                    token_id = cursor.lastrowid
+                    
+                    domain_host = os.environ.get('APP_URL', 'https://mi-consultorio.onrender.com').rstrip('/')
+                    direct_link = f"{domain_host}/herramienta/directa?token={token}"
+                    first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
+                    tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')
+                    
+                    msg_wa = (
+                        f"Hola *{first_name}* 👋 Espero te encuentres muy bien.\n\n"
+                        f"Te recuerdo completar tu *{tool_title}* del día de hoy. "
+                        f"Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
+                        f"👉 {direct_link}\n\n"
+                        f"¡Gracias por tu constancia!"
+                    )
+                    
+                    try:
+                        from routes_notificaciones import make_wa_http_request, clean_phone_number
+                        clean_phone = clean_phone_number(p['telefono'])
+                        res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
+                        
+                        if res_wa and res_wa.status_code == 200:
+                            cursor.execute("""
+                                UPDATE cola_recordatorios_herramientas
+                                SET estado = 'enviado', enviado = 1, fecha_envio = ?, token_id = ?
+                                WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
+                            """, (now_str, token_id, p_id, mod_clave, today_str))
+                            db.commit()
+                            reminders_sent += 1
+                    except Exception as _ex_wa:
+                        print(f"Error enviando WhatsApp directo a paciente {p_id}:", _ex_wa)
 
     return reminders_sent
 

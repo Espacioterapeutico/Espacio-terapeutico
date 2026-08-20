@@ -66,8 +66,28 @@ def _ensure_pizarra_columns(cursor):
                 cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN respuesta_psicologo TEXT")
             if 'fecha_respuesta' not in cols:
                 cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN fecha_respuesta TEXT")
+            if 'leida_paciente' not in cols:
+                cursor.execute("ALTER TABLE pizarra_terapeutica ADD COLUMN leida_paciente INTEGER DEFAULT 1")
     except Exception as _e:
         print("Error al asegurar columnas de pizarra:", _e)
+
+@pizarra_bp.route('/api/patient/pizarra/marcar-leidas', methods=['POST'])
+@patient_login_required
+def patient_pizarra_marcar_leidas():
+    patient_id = session['patient_id']
+    db = get_db()
+    cursor = db.cursor()
+    _ensure_pizarra_columns(cursor)
+    try:
+        cursor.execute("""
+            UPDATE pizarra_terapeutica
+            SET leida_paciente = 1
+            WHERE paciente_id = ? AND respuesta_psicologo IS NOT NULL AND leida_paciente = 0
+        """, (patient_id,))
+        db.commit()
+        return jsonify({'success': 'Respuestas marcadas como leídas.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @pizarra_bp.route('/api/patient/pizarra', methods=['GET', 'POST'])
 @patient_login_required
@@ -97,8 +117,8 @@ def patient_pizarra():
         
         try:
             cursor.execute("""
-                INSERT INTO pizarra_terapeutica (paciente_id, fecha, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO pizarra_terapeutica (paciente_id, fecha, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo, leida_paciente)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
             """, (patient_id, fecha_actual, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo))
             
             cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
@@ -150,14 +170,18 @@ def patient_pizarra():
     elif request.method == 'GET':
         try:
             cursor.execute("""
-                SELECT id, fecha, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo, respuesta_psicologo, fecha_respuesta FROM pizarra_terapeutica
+                SELECT id, fecha, contenido, archivo_adjunto, estado_animo, comentario_animo, emoji_animo, respuesta_psicologo, fecha_respuesta, leida_paciente FROM pizarra_terapeutica
                 WHERE paciente_id = ?
                 ORDER BY fecha DESC
             """, (patient_id,))
             rows = cursor.fetchall()
             updates = []
+            unread_count = 0
             for r in rows:
                 r_keys = r.keys() if hasattr(r, 'keys') else []
+                is_unread = (('respuesta_psicologo' in r_keys and r['respuesta_psicologo']) and ('leida_paciente' in r_keys and r['leida_paciente'] == 0))
+                if is_unread:
+                    unread_count += 1
                 updates.append({
                     'id': r['id'],
                     'fecha': r['fecha'],
@@ -167,9 +191,10 @@ def patient_pizarra():
                     'comentario_animo': r['comentario_animo'] if 'comentario_animo' in r_keys else None,
                     'emoji_animo': r['emoji_animo'] if 'emoji_animo' in r_keys else None,
                     'respuesta_psicologo': r['respuesta_psicologo'] if 'respuesta_psicologo' in r_keys else None,
-                    'fecha_respuesta': r['fecha_respuesta'] if 'fecha_respuesta' in r_keys else None
+                    'fecha_respuesta': r['fecha_respuesta'] if 'fecha_respuesta' in r_keys else None,
+                    'leida_paciente': r['leida_paciente'] if 'leida_paciente' in r_keys else 1
                 })
-            return jsonify({'updates': updates})
+            return jsonify({'updates': updates, 'unread_replies': unread_count})
         except Exception as e:
             return jsonify({'error': f'Error al obtener pizarra: {str(e)}'}), 500
 
@@ -258,7 +283,7 @@ def admin_pizarra_reply():
     try:
         cursor.execute("""
             UPDATE pizarra_terapeutica
-            SET respuesta_psicologo = ?, fecha_respuesta = ?
+            SET respuesta_psicologo = ?, fecha_respuesta = ?, leida_paciente = 0
             WHERE id = ?
         """, (respuesta, fecha_actual, update_id))
         

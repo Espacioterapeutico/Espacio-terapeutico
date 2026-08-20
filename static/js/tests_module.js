@@ -15,62 +15,67 @@ var testsCatalogDatabase = [
         code: 'AQ', 
         name: 'AQ — Cociente de Espectro Autista', 
         siglas: 'AQ-50', 
-        cat: 'Neurodivergencia y Autismo', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
         desc: 'Evaluación estandarizada de 50 ítems desarrollada por Baron-Cohen et al. Mide rasgos del espectro autista en adultos.', 
         autor: 'Simon Baron-Cohen et al.', 
         poblacion: 'Adolescentes y Adultos (16+ años)', 
         validez: 'α = 0.82 | Punto de corte: ≥ 32', 
         itemsCount: 50,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'El consultante debe leer cada afirmación y seleccionar el grado de acuerdo. Tiempo estimado: 10-15 minutos.'
     },
     { 
         code: 'RAADS-R', 
         name: 'RAADS-R — Escala Revisada para Diagnóstico de Autismo', 
         siglas: 'RAADS-R', 
-        cat: 'Neurodivergencia y Autismo', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
         desc: 'Inventario clínico completo de 80 ítems para el diagnóstico del Espectro Autista / Asperger en población adulta.', 
         autor: 'Riva Ariella Ritvo et al.', 
         poblacion: 'Adultos (18+ años)', 
         validez: 'α = 0.92 | Umbral diagnóstico: ≥ 65', 
         itemsCount: 80,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Cuestionario autoaplicado. Seleccionar la frecuencia con la que se presenta cada comportamiento a lo largo de su vida. Tiempo estimado: 20-30 minutos.'
     },
     { 
         code: 'CAT-Q', 
         name: 'CAT-Q — Cuestionario de Camuflaje Autista', 
         siglas: 'CAT-Q', 
-        cat: 'Neurodivergencia y Autismo', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
         desc: 'Evaluación de 25 ítems desarrollada por Laura Hull et al. Mide estrategias de camuflaje y enmascaramiento social.', 
         autor: 'Laura Hull et al.', 
         poblacion: 'Adolescentes y Adultos (16+ años)', 
         validez: 'α = 0.90 | Medición de Camuflaje', 
         itemsCount: 25,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder considerando cómo se comporta en situaciones sociales. Marcar la opción que mejor describa sus acciones. Tiempo estimado: 10 minutos.'
     },
     { 
         code: 'ASRS-ADHD', 
         name: 'ASRS v1.1 — Sintomatología TDAH en Adultos', 
         siglas: 'ASRS v1.1', 
-        cat: 'Neurodivergencia y Autismo', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
         desc: 'Escala de tamizaje oficial de la OMS de 18 ítems para la detección de Trastorno por Déficit de Atención e Hiperactividad en adultos.', 
         autor: 'OMS / Adler et al.', 
         poblacion: 'Adultos (18+ años)', 
         validez: 'α = 0.87 | Criterios DSM / OMS', 
         itemsCount: 18,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Evaluar la frecuencia de cada síntoma en los últimos 6 meses. Útil para screening. Tiempo estimado: 5-10 minutos.'
     },
     {
         code: 'ADOS-2',
         name: 'ADOS-2 — Escala de Observación para el Diagnóstico del Autismo',
         siglas: 'ADOS-2',
-        cat: 'Neurodivergencia y Autismo',
+        cat: 'Neurodesarrollo y Neuropsicología',
         desc: 'Protocolo estandarizado de observación clínica y algoritmo de afecto social (AS) y conductas repetitivas (CRR).',
         autor: 'Catherine Lord et al. (2012)',
         poblacion: 'Niños y Adultos (Módulos T, 1, 2, 3, 4)',
         validez: 'Sensibilidad 91% | Estándar de Oro Diagnóstico TEA',
         itemsCount: 14,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/ados2_protocolo_observacion.pdf'
+        downloadUrl: '/static/test_materials/ados2_protocolo_observacion.pdf',
+        instrucciones: 'Aplicación estructurada presencial por profesional clínico. Requiere materiales específicos según el módulo. Grabar sesión si es posible.'
     },
 
     // 2. DEPRESIÓN Y ANSIEDAD
@@ -78,77 +83,83 @@ var testsCatalogDatabase = [
         code: 'BDI-II', 
         name: 'BDI-II — Inventario de Depresión de Beck', 
         siglas: 'BDI-II', 
-        cat: 'Depresión y Ansiedad', 
+        cat: 'Afectividad, Depresión y Ansiedad', 
         desc: 'Cuestionario de 21 ítems de autorreporte ampliamente utilizado para evaluar la severidad de los síntomas depresivos.', 
         autor: 'Aaron T. Beck et al.', 
         poblacion: 'Adolescentes y Adultos (13+ años)', 
         validez: 'α = 0.92 | Validez Clínica Estandarizada', 
         itemsCount: 21,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Se entrega al consultante el cuestionario de 21 ítems. Se le pide que lea cada grupo de afirmaciones y seleccione la que mejor describe cómo se ha sentido durante las últimas dos semanas. No hay respuestas correctas ni incorrectas. Tiempo estimado: 5-10 minutos.'
     },
     { 
         code: 'BAI', 
         name: 'BAI — Inventario de Ansiedad de Beck', 
         siglas: 'BAI', 
-        cat: 'Depresión y Ansiedad', 
+        cat: 'Afectividad, Depresión y Ansiedad', 
         desc: 'Evaluación de 21 ítems diseñada para discriminar y medir la intensidad de la sintomatología ansiosa somática y cognitiva.', 
         autor: 'Aaron T. Beck et al.', 
         poblacion: 'Adolescentes y Adultos (13+ años)', 
         validez: 'α = 0.92 | Alta Especificidad Ansiosa', 
         itemsCount: 21,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Pedir al consultante que indique cuánto le ha molestado cada síntoma durante la última semana en una escala de 0 a 3. Tiempo estimado: 5-10 minutos.'
     },
     {
         code: 'ZUNG-SDS',
         name: 'ZUNG-SDS — Escala Autoaplicada de Depresión de Zung',
         siglas: 'ZUNG-SDS',
-        cat: 'Depresión y Ansiedad',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Evaluación cuantitativa de 20 reactivos orientada a cuantificar los síntomas afectivos, fisiológicos y psicológicos de la depresión.',
         autor: 'William W.K. Zung',
         poblacion: 'Adolescentes y Adultos (15+ años)',
         validez: 'α = 0.88 | Índice de Depresión',
         itemsCount: 20,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/zung_depresion_escala.pdf'
+        downloadUrl: '/static/test_materials/zung_depresion_escala.pdf',
+        instrucciones: 'Responder según cómo se ha sentido en los últimos días marcando una de las cuatro opciones. Tiempo estimado: 10 minutos.'
     },
     {
         code: 'HAMILTON-D',
         name: 'HAMILTON-D — Escala de Depresión de Hamilton (HDRS)',
         siglas: 'HAM-D',
-        cat: 'Depresión y Ansiedad',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Escala heteroaplicada de 17 ítems para la evaluación cuantitativa de la severidad del cuadro depresivo y respuesta terapéutica.',
         autor: 'Max Hamilton',
         poblacion: 'Adultos (18+ años)',
         validez: 'α = 0.90 | Estándar Clínico Heteroaplicado',
         itemsCount: 17,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/hamilton_depresion_cuestionario.pdf'
+        downloadUrl: '/static/test_materials/hamilton_depresion_cuestionario.pdf',
+        instrucciones: 'Aplicado mediante entrevista estructurada por un profesional clínico. Evaluar síntomas en la última semana.'
     },
     {
         code: 'IDARE-STAI',
         name: 'IDARE / STAI — Inventario de Ansiedad Rasgo-Estado',
         siglas: 'IDARE',
-        cat: 'Depresión y Ansiedad',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Evaluación dual de 40 reactivos que distingue la ansiedad transitoria (Estado) de la predisposición ansiosa permanente (Rasgo).',
         autor: 'Spielberger, Gorsuch y Lushene',
         poblacion: 'Adolescentes y Adultos (15+ años)',
         validez: 'α = 0.91 | Evaluación Rasgo / Estado',
         itemsCount: 40,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/idare_stai_instrumento.pdf'
+        downloadUrl: '/static/test_materials/idare_stai_instrumento.pdf',
+        instrucciones: 'Contiene dos partes (Estado y Rasgo). Leer instrucciones previas a cada sección. Tiempo estimado: 15-20 minutos.'
     },
     {
         code: 'BECK-BHS',
         name: 'BHS — Escala de Desesperanza de Beck',
         siglas: 'BHS',
-        cat: 'Depresión y Ansiedad',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Inventario de 20 frases Verdadero/Falso diseñado para evaluar las actitudes negativas y desesperanza hacia el futuro (indicador de riesgo).',
         autor: 'Aaron T. Beck et al.',
         poblacion: 'Adolescentes y Adultos (13+ años)',
         validez: 'α = 0.93 | Factor de Riesgo Clínico',
         itemsCount: 20,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/beck_desesperanza.pdf'
+        downloadUrl: '/static/test_materials/beck_desesperanza.pdf',
+        instrucciones: 'Indicar verdadero o falso para cada afirmación pensando en la última semana. Evaluar riesgo suicida según puntaje.'
     },
 
     // 3. PSICOPATOLOGÍA Y SÍNTOMAS GENERALES
@@ -163,7 +174,8 @@ var testsCatalogDatabase = [
         validez: 'α = 0.95 | Perfil Sintomático 9 Dimensiones',
         itemsCount: 90,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/scl90r_cuestionario.pdf'
+        downloadUrl: '/static/test_materials/scl90r_cuestionario.pdf',
+        instrucciones: 'Responder en base al malestar sentido en los últimos 7 días. Escala de 0 (nada) a 4 (mucho). Tiempo estimado: 15-20 minutos.'
     },
     { 
         code: 'MCMI-II', 
@@ -175,7 +187,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adultos (18+ años)', 
         validez: 'Estandarizado TB | 24 Escalones Clínicos', 
         itemsCount: 175,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder verdadero o falso a las afirmaciones. Requiere alta comprensión lectora. Tiempo estimado: 45-60 minutos.'
     },
     {
         code: 'MMPI-2',
@@ -188,7 +201,8 @@ var testsCatalogDatabase = [
         validez: '10 Escalas Clínicas | L, F, K',
         itemsCount: 567,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/mmpi-2_cuadernillo.pdf'
+        downloadUrl: '/static/test_materials/mmpi-2_cuadernillo.pdf',
+        instrucciones: 'Cuestionario extenso de verdadero o falso. Aplicar en ambiente tranquilo sin interrupciones. Imprimir hojas de respuesta o cuadernillo. Tiempo estimado: 60-90 minutos.'
     },
 
     // 4. CAPACIDAD INTELECTUAL Y NEUROPSICOLOGÍA
@@ -196,65 +210,70 @@ var testsCatalogDatabase = [
         code: 'RAVEN', 
         name: 'RAVEN — Test de Matrices Progresivas de Raven', 
         siglas: 'RAVEN', 
-        cat: 'Capacidad Intelectual', 
+        cat: 'Cognición y Capacidad Intelectual', 
         desc: 'Prueba no verbal de 60 matrices estandarizadas para medir el factor g de inteligencia y la capacidad de razonamiento abstracto.', 
         autor: 'John C. Raven', 
         poblacion: 'Adolescentes y Adultos (12+ años)', 
         validez: 'α = 0.90 | Razonamiento No Verbal', 
         itemsCount: 60,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Presentar las matrices progresivas una a una. El consultante debe identificar la pieza que completa cada patrón. No hay límite de tiempo estricto. Tiempo promedio: 30-45 minutos.'
     },
     {
         code: 'MMSE',
         name: 'MMSE — Mini-Mental State Examination (Folstein)',
         siglas: 'MMSE',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Prueba neuropsicológica de 30 puntos ampliamente utilizada para el tamizaje de deterioro cognitivo y memoria.',
         autor: 'Folstein, Folstein & McHugh',
         poblacion: 'Adultos Mayores (18+ años)',
         validez: 'Sensibilidad 87% | Tamizaje Cognitivo',
         itemsCount: 30,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/minimental_hoja_respuesta.pdf'
+        downloadUrl: '/static/test_materials/minimental_hoja_respuesta.pdf',
+        instrucciones: 'Administración individual presencial. Seguir estrictamente las consignas verbales y mostrar materiales gráficos cuando corresponda.'
     },
     {
         code: 'MOCA-TEST',
         name: 'MoCA — Montreal Cognitive Assessment',
         siglas: 'MoCA',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Evaluación cognitiva breve de 30 puntos diseñada para la detección precoz de Deterioro Cognitivo Leve (DCL).',
         autor: 'Ziad Nasreddine et al.',
         poblacion: 'Adultos y Adultos Mayores (55+ años)',
         validez: 'Sensibilidad 90% para DCL',
         itemsCount: 30,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/moca_test_espanol.pdf'
+        downloadUrl: '/static/test_materials/moca_test_espanol.pdf',
+        instrucciones: 'Administración guiada presencial. Usar la hoja impresa y seguir las pautas de puntuación estandarizadas.'
     },
     {
         code: 'INECO-IFS',
         name: 'INECO — Frontal Screening (Versión Venezuela)',
         siglas: 'INECO',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Batería neuropsicológica breve validada con baremos de Venezuela para la evaluación de funciones ejecutivas frontales.',
         autor: 'Teresa Torralva et al.',
         poblacion: 'Adultos (18+ años)',
         validez: 'Baremos Venezuela | Funciones Ejecutivas',
         itemsCount: 8,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/ineco_venezuela_protocolo.pdf'
+        downloadUrl: '/static/test_materials/ineco_venezuela_protocolo.pdf',
+        instrucciones: 'Administración presencial por un clínico entrenado. Entregar consignas paso a paso. Requiere cronómetro y láminas impresas.'
     },
     {
         code: 'TMT-AB',
         name: 'TMT — Trail Making Test (Partes A y B)',
         siglas: 'TMT A/B',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Prueba papel y lápiz de atención dividida, velocidad de procesamiento motor y flexibilidad cognitiva.',
         autor: 'Army Individual Test Battery',
         poblacion: 'Adolescentes y Adultos (15+ años)',
         validez: 'Estandarizado | Funciones Ejecutivas',
         itemsCount: 2,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/trail_making_test_tmt.pdf'
+        downloadUrl: '/static/test_materials/trail_making_test_tmt.pdf',
+        instrucciones: 'El consultante debe unir los puntos lo más rápido posible sin levantar el lápiz. Medir tiempo de ejecución con cronómetro. Requiere hoja impresa.'
     },
 
     // 5. MATERIALES PROYECTIVOS Y GRÁFICOS (DESCARGABLES / IMPRIMIBLES)
@@ -262,66 +281,71 @@ var testsCatalogDatabase = [
         code: 'HTP-TEST',
         name: 'HTP — Test de Dibujo Casa-Árbol-Persona',
         siglas: 'HTP',
-        cat: 'Personalidad y Psicopatología',
+        cat: 'Pruebas Proyectivas',
         desc: 'Técnica proyectiva gráfica de dibujo libre para la evaluación de la personalidad, autoimagen y mecanismos de defensa.',
         autor: 'John N. Buck',
         poblacion: 'Niños, Adolescentes y Adultos',
         validez: 'Técnica Proyectiva Cualitativa',
         itemsCount: 3,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/htp_manual_protocolo.pdf'
+        downloadUrl: '/static/test_materials/htp_manual_protocolo.pdf',
+        instrucciones: 'Entregar hojas en blanco y lápiz. Solicitar dibujo de casa, árbol y persona. Observar secuencia, borraduras y comentarios espontáneos.'
     },
     {
         code: 'WARTEGG-TEST',
         name: 'WARTEGG — Test de Dibujo de 8/16 Campos',
         siglas: 'WARTEGG',
-        cat: 'Personalidad y Psicopatología',
+        cat: 'Pruebas Proyectivas',
         desc: 'Prueba proyectiva de dibujo sobre cuadros de estímulos para la evaluación de la estructura de personalidad e integración del Yo.',
         autor: 'Ehrig Wartegg',
         poblacion: 'Adolescentes y Adultos',
         validez: 'Técnica Proyectiva Estructurada',
         itemsCount: 8,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/wartegg_protocolo.pdf'
+        downloadUrl: '/static/test_materials/wartegg_protocolo.pdf',
+        instrucciones: 'Entregar la hoja de 8/16 campos impresa. Pedir que complete cada dibujo y luego asigne un título y orden. Observar ejecución.'
     },
     {
         code: 'SACKS-TEST',
         name: 'SACKS — Test de Frases Incompletas para Adultos',
         siglas: 'SACKS',
-        cat: 'Personalidad y Psicopatología',
+        cat: 'Pruebas Proyectivas',
         desc: 'Inventario proyectivo verbal de 60 frases incompletas que explora 4 áreas del sujeto: familia, sexo, relaciones y concepto de sí mismo.',
         autor: 'Joseph M. Sacks',
         poblacion: 'Adultos (18+ años)',
         validez: 'Análisis Cualitativo de Actitudes',
         itemsCount: 60,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/sacks_adultos_protocolo.doc'
+        downloadUrl: '/static/test_materials/sacks_adultos_protocolo.doc',
+        instrucciones: 'Pedir que complete cada frase con lo primero que se le venga a la mente. Se puede aplicar por escrito u oral. Entregar impreso.'
     },
     {
         code: 'TAT-TEST',
         name: 'TAT — Test de Apercepción Temática (Manual Corto)',
         siglas: 'TAT',
-        cat: 'Personalidad y Psicopatología',
+        cat: 'Pruebas Proyectivas',
         desc: 'Técnica proyectiva narrativa a través de láminas estructuradas para el análisis de necesidades, presiones y conflictos inconscientes.',
         autor: 'Henry A. Murray',
         poblacion: 'Adolescentes y Adultos',
         validez: 'Análisis Dinámico de la Personalidad',
         itemsCount: 20,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/tat_manual_protocolo.doc'
+        downloadUrl: '/static/test_materials/tat_manual_protocolo.doc',
+        instrucciones: 'Mostrar las láminas impresas una a una. Pedir que narre una historia con pasado, presente y futuro para cada una. Registrar verbatim.'
     },
     {
         code: 'REY-OSTERRIETH',
         name: 'REY-O — Figura Compleja de Rey-Osterrieth',
         siglas: 'REY-O',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Prueba viso-constructiva de copia y reproducción de memoria para evaluar organización perceptual y memoria visual.',
         autor: 'André Rey & Paul-Alexandre Osterrieth',
         poblacion: 'Niños (8+) y Adultos',
         validez: 'Estandarizada | Evaluación Neuropsicológica',
         itemsCount: 18,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/figura_rey_osterrieth.pdf'
+        downloadUrl: '/static/test_materials/figura_rey_osterrieth.pdf',
+        instrucciones: 'Fase 1: Copia de la figura impresa. Fase 2: Reproducción de memoria. Entregar colores distintos para medir proceso de copia.'
     },
 
     // 6. ORIENTACIÓN VOCACIONAL E IDENTIDAD DE GÉNERO
@@ -329,37 +353,40 @@ var testsCatalogDatabase = [
         code: 'HOLLAND', 
         name: 'HOLLAND — Test de Intereses Vocacionales (RIASEC)', 
         siglas: 'HOLLAND', 
-        cat: 'Orientación Vocacional', 
+        cat: 'Cognición y Capacidad Intelectual', 
         desc: 'Inventario vocacional basado en el modelo tipológico RIASEC para la identificación de perfil vocacional y profesional.', 
         autor: 'John L. Holland', 
         poblacion: 'Adolescentes y Adultos (14+ años)', 
         validez: 'α = 0.86 | Perfil Tipológico RIASEC', 
         itemsCount: 60,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'El consultante debe seleccionar las actividades y ocupaciones de su interés. Tiempo estimado: 20 minutos.'
     },
     { 
         code: 'TCS', 
         name: 'TCS — Escala de Congruencia Transgénero', 
         siglas: 'TCS', 
-        cat: 'Identidad de Género', 
+        cat: 'Sexología y Salud Sexual', 
         desc: 'Escala de 12 ítems desarrollada por Kozee et al. para evaluar el nivel de confort y aceptación de la identidad de género.', 
         autor: 'Kozee, Reisner et al.', 
         poblacion: 'Jóvenes y Adultos (16+ años)', 
         validez: 'α = 0.89 | Afirmación e Identidad', 
         itemsCount: 12,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder según su grado de acuerdo con las afirmaciones. Tiempo estimado: 5-10 minutos.'
     },
     { 
         code: 'UGDS-GS', 
         name: 'UGDS-GS — Escala de Disforia de Utrecht', 
         siglas: 'UGDS-GS', 
-        cat: 'Identidad de Género', 
+        cat: 'Sexología y Salud Sexual', 
         desc: 'Evaluación estandarizada de 18 ítems para la medición objetiva del grado de disforia de género clínica.', 
         autor: 'McGuire et al. / Utrecht', 
         poblacion: 'Adolescentes y Adultos (12+ años)', 
         validez: 'α = 0.91 | Medición de Disforia', 
         itemsCount: 18,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder la frecuencia de sentimientos relacionados al género. Tiempo estimado: 10 minutos.'
     },
 
     // 7. PRUEBAS CLÍNICAS, SALUD SEXUAL Y AFRONTAMIENTO (VALIDADAS EN POBLACIÓN HISPANA)
@@ -367,73 +394,163 @@ var testsCatalogDatabase = [
         code: 'RCMAS-2',
         name: 'RCMAS-2 — Escala de Ansiedad Manifiesta en Niños Revisada',
         siglas: 'RCMAS-2',
-        cat: 'Clínica e Infantil',
+        cat: 'Test Infanto-Juvenil',
         desc: 'Evaluación estandarizada de 49 ítems para detectar niveles de ansiedad fisiológica, inquietud, hipersensibilidad y defensividad en niños y adolescentes.',
         autor: 'Cecil R. Reynolds & Bert O. Richmond (TEA Ediciones)',
         poblacion: 'Niños y Adolescentes (6 a 19 años)',
         validez: 'Validez Clínica Estandarizada Hispana (Baremos T)',
         itemsCount: 49,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Cuestionario infantil. Responder "Sí" o "No". Si hay dificultad lectora, el clínico puede leer los ítems en voz alta.'
     },
     {
         code: 'CDS-CTI',
         name: 'CDS / CTI — Cuestionario de Distorsiones Cognitivas',
         siglas: 'CDS',
-        cat: 'Cognición y Estrés',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Evaluación autoadministrada de pensamientos automáticos y errores del procesamiento cognitivo (Catastrofización, Filtro Mental, Lectura de Mente, etc.).',
         autor: 'Yurica & DiTomasso / Adaptación Hispana',
         poblacion: 'Adolescentes y Adultos (14+ años)',
         validez: 'Terapia Cognitivo-Conductual (TCC)',
         itemsCount: 20,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder considerando los pensamientos más frecuentes en situaciones estresantes recientes. Tiempo estimado: 10 minutos.'
     },
     {
         code: 'CSI',
         name: 'CSI — Cuestionario de Estrategias de Afrontamiento',
         siglas: 'CSI',
-        cat: 'Cognición y Estrés',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Evaluación de 40 ítems Likert para cuantificar 8 estilos de afrontamiento (Solución de Problemas, Apoyo Social, Reestructuración Cognitiva, Evitación, Autocrítica, etc.).',
         autor: 'Tobin et al. / Adaptación de Cano, Rodríguez y García',
         poblacion: 'Adolescentes y Adultos (15+ años)',
         validez: 'α = 0.89 | Adaptación Iberoamericana',
         itemsCount: 40,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder cada ítem basándose en una situación estresante reciente y cómo se afrontó. Tiempo estimado: 15-20 minutos.'
     },
     {
         code: 'DVQ-R',
         name: 'DVQ-R — Cuestionario de Violencia en el Noviazgo',
         siglas: 'DVQ-R',
-        cat: 'Pareja y Violencia',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Evaluación estandarizada de 20 ítems para detectar conductas de abuso físico, verbal, coercitivo, sexual y desapego en relaciones de pareja.',
         autor: 'Rodríguez-Franco et al.',
         poblacion: 'Adolescentes y Jóvenes (14 a 30 años)',
         validez: 'Validado en Población Hispana y Latina',
         itemsCount: 20,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder la frecuencia de las situaciones experimentadas en la relación actual o más reciente. Confidencialidad es clave.'
     },
     {
         code: 'EAQ',
         name: 'EAQ — Cuestionario de Conciencia Emocional Infanto-Juvenil',
         siglas: 'EAQ',
-        cat: 'Clínica e Infantil',
+        cat: 'Test Infanto-Juvenil',
         desc: 'Evaluación de 30 ítems para identificar diferenciación de emociones, atención a señales emocionales, análisis y ocultación emocional.',
         autor: 'Rieffe et al. / Adaptación de Gómez-Ortiz et al.',
         poblacion: 'Niños y Adolescentes (8 a 16 años)',
         validez: 'Evaluación de Inteligencia Emocional y Auto-conciencia',
         itemsCount: 30,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Cuestionario autoaplicado para niños/adolescentes. Explicar claramente que no hay respuestas incorrectas.'
     },
     {
         code: 'CUSES-SAS',
         name: 'CUSES / SAS — Autoeficacia y Asertividad Sexual',
         siglas: 'CUSES',
-        cat: 'Salud y Sexología',
+        cat: 'Sexología y Salud Sexual',
         desc: 'Evaluación de autoeficacia en salud sexual, prevención de ITS y capacidad de negociación/asertividad en la conducta sexual.',
         autor: 'López-Rosales et al. / Sierra et al.',
         poblacion: 'Adolescentes y Adultos (15+ años)',
         validez: 'Validación en Psicología de la Salud y Sexología',
         itemsCount: 20,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder de forma honesta basándose en experiencias pasadas o hipotéticas de relaciones íntimas. Tiempo estimado: 10 minutos.'
+    },
+
+    // 8. BIENESTAR Y SATISFACCIÓN
+    {
+        code: 'SWLS',
+        name: 'SwLS — Escala de Satisfacción con la Vida (Diener)',
+        siglas: 'SwLS',
+        cat: 'Afectividad, Depresión y Ansiedad',
+        desc: 'Evaluación psicométrica cuantitativa de 5 reactivos para medir el juicio cognitivo global sobre la satisfacción con la propia vida.',
+        autor: 'Ed Diener et al. / Vázquez et al.',
+        poblacion: 'Adolescentes y Adultos (12+ años)',
+        validez: 'α = 0.78 | Estándar Internacional de Bienestar Subjetivo',
+        itemsCount: 5,
+        isPhysical: false,
+        instrucciones: 'Leer cada afirmación e indicar el grado de acuerdo en escala de 1 a 7. No hay respuestas correctas ni incorrectas. Tiempo estimado: 2-3 minutos.'
+    },
+
+    // 9. SEXOLOGÍA Y SALUD SEXUAL (ADICIONALES)
+    {
+        code: 'SHIM',
+        name: 'SHIM / IIEF-5 — Inventario de Salud Sexual para Hombres (Disfunción Eréctil)',
+        siglas: 'SHIM',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Herramienta clínica abreviada de 5 reactivos para la evaluación y estadificación de la función eréctil y salud sexual masculina. Clasifica severidad: grave, moderada, leve o sin disfunción.',
+        autor: 'Rosen et al. (IIEF-5)',
+        poblacion: 'Hombres Adultos (18+ años)',
+        validez: 'Validación Clínica Internacional',
+        itemsCount: 5,
+        isPhysical: false,
+        instrucciones: 'Responder las 5 preguntas sobre función sexual de los últimos 6 meses. Garantizar privacidad y confidencialidad. Tiempo estimado: 3-5 minutos.'
+    },
+    {
+        code: 'NSSS-S',
+        name: 'NSSS-S — Nueva Escala de Satisfacción Sexual (Forma Corta)',
+        siglas: 'NSSS-S',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Evaluación psicométrica de 12 ítems Likert para medir la satisfacción sexual en dimensiones egocéntrica y centrada en la pareja.',
+        autor: 'Štulhofer et al.',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'α = 0.94 | Subescalas Egocéntrica y Pareja',
+        itemsCount: 12,
+        isPhysical: false,
+        instrucciones: 'Responder cada ítem indicando el nivel de satisfacción en la vida sexual reciente. Asegurar ambiente privado y confidencial. Tiempo estimado: 5-8 minutos.'
+    },
+    {
+        code: 'FSFI',
+        name: 'FSFI — Índice de Función Sexual Femenina (Disfunción Sexual)',
+        siglas: 'FSFI',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Cuestionario clínico multidimensional de 19 ítems estándar de oro que evalúa 6 dominios: deseo, excitación, lubricación, orgasmo, satisfacción y dolor femenino.',
+        autor: 'Rosen et al. / Blümel et al.',
+        poblacion: 'Mujeres Adultas (18+ años)',
+        validez: 'Estándar de Oro en Sexología Femenina',
+        itemsCount: 19,
+        isPhysical: false,
+        instrucciones: 'Responder considerando la actividad sexual de las últimas 4 semanas. Explicar que incluye actividad con o sin pareja. Ambiente privado. Tiempo estimado: 10-15 minutos.'
+    },
+    {
+        code: 'BSSC',
+        name: 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales',
+        siglas: 'BSSC',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Herramienta de cribado clínico ultra-rápido de 4 preguntas para la identificación temprana de inquietudes o síntomas sexuales.',
+        autor: 'Hatzichristou et al. / Medicina Sexual',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'Tamizaje Rápido de 4 Preguntas',
+        itemsCount: 4,
+        isPhysical: false,
+        instrucciones: 'Responder las 4 preguntas de forma breve. Ideal como cribado inicial en consulta. Tiempo estimado: 1-2 minutos.'
+    },
+
+    // 10. ADULTO MAYOR / PSICOGERONTOLOGÍA
+    {
+        code: 'AtAS',
+        name: 'AtAS — Escala de Adaptación al Envejecimiento',
+        siglas: 'AtAS',
+        cat: 'Adulto Mayor',
+        desc: 'Evaluación psicométrica de 10 reactivos Likert para medir propósito, adaptación emocional, salud y apoyo social en adultos mayores.',
+        autor: 'dos Santos et al.',
+        poblacion: 'Adultos Mayores (50+ años)',
+        validez: 'α = 0.891 | Adaptación al Envejecimiento Activo',
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'Responder cada afirmación indicando el grado de acuerdo. Puede leerse en voz alta si hay dificultad de lectura. Tiempo estimado: 5-8 minutos.'
     }
 ];
 
@@ -629,6 +746,38 @@ function selectTestForApplication(testCode) {
     const labelTest = document.getElementById('label-selected-test-name');
     if (labelTest) labelTest.textContent = testNamesMap[testCode] || testCode;
 
+    // Show full test details
+    const infoContainer = document.getElementById('container-selected-test-info');
+    if (infoContainer) {
+        const testObj = testsCatalogDatabase.find(t => t.code === testCode);
+        if (testObj) {
+            infoContainer.innerHTML = `
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 2px 8px; border-radius: 8px;">${testObj.cat}</span>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 8px;">${testObj.itemsCount} ítems</span>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: ${testObj.isPhysical ? '#d97706' : '#16a34a'}; background: ${testObj.isPhysical ? '#fef3c7' : '#dcfce7'}; padding: 2px 8px; border-radius: 8px;">${testObj.isPhysical ? '📄 Material Físico' : '⚡ Digital'}</span>
+                    </div>
+                    <h4 style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: #0f172a;">📋 Descripción Completa</h4>
+                    <p style="margin: 0 0 12px 0; font-size: 0.88rem; color: #334155; line-height: 1.5;">${testObj.desc}</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        <div style="font-size: 0.82rem; color: #475569;"><strong>👨⚕️ Autor:</strong> ${testObj.autor}</div>
+                        <div style="font-size: 0.82rem; color: #475569;"><strong>👥 Población:</strong> ${testObj.poblacion}</div>
+                        <div style="font-size: 0.82rem; color: #475569;"><strong>📊 Validez:</strong> ${testObj.validez}</div>
+                    </div>
+                    ${testObj.instrucciones ? `
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 0.85rem; margin-top: 8px;">
+                            <h5 style="margin: 0 0 6px 0; font-size: 0.9rem; font-weight: 800; color: #92400e;">📝 Instrucciones de Aplicación</h5>
+                            <p style="margin: 0; font-size: 0.82rem; color: #78350f; line-height: 1.5; white-space: pre-line;">${testObj.instrucciones}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        } else {
+            infoContainer.innerHTML = '';
+        }
+    }
+
     updateSelectedPatientLabel();
 
     if (panel) {
@@ -700,6 +849,8 @@ function onSelectMainPatientChange() {
 }
 
 async function executeMainApplyTest(modoParam) {
+    if (window.isApplyingTestInFlight) return;
+
     const select = document.getElementById('select-test-main-patient');
     if (!select || !select.value) {
         alert("Por favor busque o seleccione un paciente primero en la barra superior.");
@@ -715,6 +866,15 @@ async function executeMainApplyTest(modoParam) {
     const patientId = select.value;
     const testCode = selectedTestCodeForApplication;
     const modo = modoParam || 'link';
+
+    // Deshabilitar botones para prevenir doble clic
+    window.isApplyingTestInFlight = true;
+    const applyButtons = document.querySelectorAll("#panel-apply-selected-test button");
+    applyButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+    });
 
     try {
         const res = await fetch('/api/tests/asignar', {
@@ -745,6 +905,7 @@ async function executeMainApplyTest(modoParam) {
         if (successPanel) {
             successPanel.classList.remove('hide');
             successPanel.style.display = 'block';
+            successPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         const testUrl = data.url_test || `${window.location.origin}/evaluacion/${data.token}`;
@@ -765,9 +926,9 @@ async function executeMainApplyTest(modoParam) {
                 <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.6rem 0.85rem; margin-bottom: 0.75rem; color: #166534; font-weight: 700; font-size: 0.86rem;">
                     ✓ ¡Solicitud registrada y guardada con éxito en el historial!
                 </div>
-                <div><strong>Token ID:</strong> <code>${data.token || ''}</code></div>
-                <div><strong>Modo de Aplicación:</strong> <span style="font-weight:800; color:#702e5e;">${modoLabelHtml}</span></div>
-                <div><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all; font-weight: 700;">${testUrl}</a></div>
+                <div style="margin-top: 0.35rem;"><strong>Token ID:</strong> <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${data.token || ''}</code></div>
+                <div style="margin-top: 0.35rem;"><strong>Modo de Aplicación:</strong> <span style="font-weight:800; color:#702e5e;">${modoLabelHtml}</span></div>
+                <div style="margin-top: 0.35rem;"><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all; font-weight: 700;">${testUrl}</a></div>
                 ${statusNoticeHtml}
             `;
         }
@@ -789,23 +950,19 @@ async function executeMainApplyTest(modoParam) {
                     </a>
                 `;
             }
-
-            actionsHtml += `
-                <button type="button" class="btn btn-sm" style="background: #0284c7; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2,132,199,0.3);" onclick="resetTestApplicationModule()">
-                    ✨ Solicitud Guardada - Iniciar Nueva Solicitud
-                </button>
-            `;
-
             successActions.innerHTML = actionsHtml;
-        }
-
-        if (successPanel) {
-            successPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
     } catch (e) {
         console.error("Error al asignar test:", e);
         alert("Error al asignar la evaluación.");
+    } finally {
+        window.isApplyingTestInFlight = false;
+        applyButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+        });
     }
 }
 

@@ -14,7 +14,7 @@ var testsCatalogDatabase = [
         code: 'AQ', 
         name: 'AQ — Cociente de Espectro Autista', 
         siglas: 'AQ-50', 
-        cat: 'Neurodivergencia y Autismo', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
         desc: 'Evaluación estandarizada de 50 ítems desarrollada por Baron-Cohen et al. Mide rasgos del espectro autista en adultos.', 
         autor: 'Simon Baron-Cohen et al.', 
         poblacion: 'Adolescentes y Adultos (16+ años)', 
@@ -26,7 +26,7 @@ var testsCatalogDatabase = [
         code: 'RAADS-R', 
         name: 'RAADS-R — Escala Revisada para Diagnóstico de Autismo', 
         siglas: 'RAADS-R', 
-        cat: 'Neurodivergencia y Autismo', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
         desc: 'Inventario clínico completo de 80 ítems para el diagnóstico del Espectro Autista / Asperger en población adulta.', 
         autor: 'Riva Ariella Ritvo et al.', 
         poblacion: 'Adultos (18+ años)', 
@@ -38,7 +38,7 @@ var testsCatalogDatabase = [
         code: 'CAT-Q', 
         name: 'CAT-Q — Cuestionario de Camuflaje Autista', 
         siglas: 'CAT-Q', 
-        cat: 'Neurodivergencia y Autismo', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
         desc: 'Evaluación de 25 ítems desarrollada por Laura Hull et al. Mide estrategias de camuflaje y enmascaramiento social.', 
         autor: 'Laura Hull et al.', 
         poblacion: 'Adolescentes y Adultos (16+ años)', 
@@ -50,7 +50,7 @@ var testsCatalogDatabase = [
         code: 'ASRS-ADHD', 
         name: 'ASRS v1.1 — Sintomatología TDAH en Adultos', 
         siglas: 'ASRS v1.1', 
-        cat: 'Neurodivergencia y Autismo', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
         desc: 'Escala de tamizaje oficial de la OMS de 18 ítems para la detección de Trastorno por Déficit de Atención e Hiperactividad en adultos.', 
         autor: 'OMS / Adler et al.', 
         poblacion: 'Adultos (18+ años)', 
@@ -62,7 +62,7 @@ var testsCatalogDatabase = [
         code: 'ADOS-2',
         name: 'ADOS-2 — Escala de Observación para el Diagnóstico del Autismo',
         siglas: 'ADOS-2',
-        cat: 'Neurodivergencia y Autismo',
+        cat: 'Neurodesarrollo y Neuropsicología',
         desc: 'Protocolo estandarizado de observación clínica y algoritmo de afecto social (AS) y conductas repetitivas (CRR).',
         autor: 'Catherine Lord et al. (2012)',
         poblacion: 'Niños y Adultos (Módulos T, 1, 2, 3, 4)',
@@ -77,7 +77,7 @@ var testsCatalogDatabase = [
         code: 'BDI-II', 
         name: 'BDI-II — Inventario de Depresión de Beck', 
         siglas: 'BDI-II', 
-        cat: 'Depresión y Ansiedad', 
+        cat: 'Afectividad, Depresión y Ansiedad', 
         desc: 'Cuestionario de 21 ítems de autorreporte ampliamente utilizado para evaluar la severidad de los síntomas depresivos.', 
         autor: 'Aaron T. Beck et al.', 
         poblacion: 'Adolescentes y Adultos (13+ años)', 
@@ -89,7 +89,7 @@ var testsCatalogDatabase = [
         code: 'BAI', 
         name: 'BAI — Inventario de Ansiedad de Beck', 
         siglas: 'BAI', 
-        cat: 'Depresión y Ansiedad', 
+        cat: 'Afectividad, Depresión y Ansiedad', 
         desc: 'Evaluación de 21 ítems diseñada para discriminar y medir la intensidad de la sintomatología ansiosa somática y cognitiva.', 
         autor: 'Aaron T. Beck et al.', 
         poblacion: 'Adolescentes y Adultos (13+ años)', 
@@ -101,7 +101,7 @@ var testsCatalogDatabase = [
         code: 'ZUNG-SDS',
         name: 'ZUNG-SDS — Escala Autoaplicada de Depresión de Zung',
         siglas: 'ZUNG-SDS',
-        cat: 'Depresión y Ansiedad',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Evaluación cuantitativa de 20 reactivos orientada a cuantificar los síntomas afectivos, fisiológicos y psicológicos de la depresión.',
         autor: 'William W.K. Zung',
         poblacion: 'Adolescentes y Adultos (15+ años)',
@@ -114,7 +114,7 @@ var testsCatalogDatabase = [
         code: 'HAMILTON-D',
         name: 'HAMILTON-D — Escala de Depresión de Hamilton (HDRS)',
         siglas: 'HAM-D',
-        cat: 'Depresión y Ansiedad',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Escala heteroaplicada de 17 ítems para la evaluación cuantitativa de la severidad del cuadro depresivo y respuesta terapéutica.',
         autor: 'Max Hamilton',
         poblacion: 'Adultos (18+ años)',
@@ -127,7 +127,7 @@ var testsCatalogDatabase = [
         code: 'IDARE-STAI',
         name: 'IDARE / STAI — Inventario de Ansiedad Rasgo-Estado',
         siglas: 'IDARE',
-        cat: 'Depresión y Ansiedad',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Evaluación dual de 40 reactivos que distingue la ansiedad transitoria (Estado) de la predisposición ansiosa permanente (Rasgo).',
         autor: 'Spielberger, Gorsuch y Lushene',
         poblacion: 'Adolescentes y Adultos (15+ años)',
@@ -140,7 +140,7 @@ var testsCatalogDatabase = [
         code: 'BECK-BHS',
         name: 'BHS — Escala de Desesperanza de Beck',
         siglas: 'BHS',
-        cat: 'Depresión y Ansiedad',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Inventario de 20 frases Verdadero/Falso diseñado para evaluar las actitudes negativas y desesperanza hacia el futuro (indicador de riesgo).',
         autor: 'Aaron T. Beck et al.',
         poblacion: 'Adolescentes y Adultos (13+ años)',
@@ -195,7 +195,7 @@ var testsCatalogDatabase = [
         code: 'RAVEN', 
         name: 'RAVEN — Test de Matrices Progresivas de Raven', 
         siglas: 'RAVEN', 
-        cat: 'Capacidad Intelectual', 
+        cat: 'Cognición y Capacidad Intelectual', 
         desc: 'Prueba no verbal de 60 matrices estandarizadas para medir el factor g de inteligencia y la capacidad de razonamiento abstracto.', 
         autor: 'John C. Raven', 
         poblacion: 'Adolescentes y Adultos (12+ años)', 
@@ -207,7 +207,7 @@ var testsCatalogDatabase = [
         code: 'MMSE',
         name: 'MMSE — Mini-Mental State Examination (Folstein)',
         siglas: 'MMSE',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Prueba neuropsicológica de 30 puntos ampliamente utilizada para el tamizaje de deterioro cognitivo y memoria.',
         autor: 'Folstein, Folstein & McHugh',
         poblacion: 'Adultos Mayores (18+ años)',
@@ -220,7 +220,7 @@ var testsCatalogDatabase = [
         code: 'MOCA-TEST',
         name: 'MoCA — Montreal Cognitive Assessment',
         siglas: 'MoCA',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Evaluación cognitiva breve de 30 puntos diseñada para la detección precoz de Deterioro Cognitivo Leve (DCL).',
         autor: 'Ziad Nasreddine et al.',
         poblacion: 'Adultos y Adultos Mayores (55+ años)',
@@ -233,7 +233,7 @@ var testsCatalogDatabase = [
         code: 'INECO-IFS',
         name: 'INECO — Frontal Screening (Versión Venezuela)',
         siglas: 'INECO',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Batería neuropsicológica breve validada con baremos de Venezuela para la evaluación de funciones ejecutivas frontales.',
         autor: 'Teresa Torralva et al.',
         poblacion: 'Adultos (18+ años)',
@@ -246,7 +246,7 @@ var testsCatalogDatabase = [
         code: 'TMT-AB',
         name: 'TMT — Trail Making Test (Partes A y B)',
         siglas: 'TMT A/B',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Prueba papel y lápiz de atención dividida, velocidad de procesamiento motor y flexibilidad cognitiva.',
         autor: 'Army Individual Test Battery',
         poblacion: 'Adolescentes y Adultos (15+ años)',
@@ -261,7 +261,7 @@ var testsCatalogDatabase = [
         code: 'HTP-TEST',
         name: 'HTP — Test de Dibujo Casa-Árbol-Persona',
         siglas: 'HTP',
-        cat: 'Personalidad y Psicopatología',
+        cat: 'Pruebas Proyectivas',
         desc: 'Técnica proyectiva gráfica de dibujo libre para la evaluación de la personalidad, autoimagen y mecanismos de defensa.',
         autor: 'John N. Buck',
         poblacion: 'Niños, Adolescentes y Adultos',
@@ -274,7 +274,7 @@ var testsCatalogDatabase = [
         code: 'WARTEGG-TEST',
         name: 'WARTEGG — Test de Dibujo de 8/16 Campos',
         siglas: 'WARTEGG',
-        cat: 'Personalidad y Psicopatología',
+        cat: 'Pruebas Proyectivas',
         desc: 'Prueba proyectiva de dibujo sobre cuadros de estímulos para la evaluación de la estructura de personalidad e integración del Yo.',
         autor: 'Ehrig Wartegg',
         poblacion: 'Adolescentes y Adultos',
@@ -287,7 +287,7 @@ var testsCatalogDatabase = [
         code: 'SACKS-TEST',
         name: 'SACKS — Test de Frases Incompletas para Adultos',
         siglas: 'SACKS',
-        cat: 'Personalidad y Psicopatología',
+        cat: 'Pruebas Proyectivas',
         desc: 'Inventario proyectivo verbal de 60 frases incompletas que explora 4 áreas del sujeto: familia, sexo, relaciones y concepto de sí mismo.',
         autor: 'Joseph M. Sacks',
         poblacion: 'Adultos (18+ años)',
@@ -300,7 +300,7 @@ var testsCatalogDatabase = [
         code: 'TAT-TEST',
         name: 'TAT — Test de Apercepción Temática (Manual Corto)',
         siglas: 'TAT',
-        cat: 'Personalidad y Psicopatología',
+        cat: 'Pruebas Proyectivas',
         desc: 'Técnica proyectiva narrativa a través de láminas estructuradas para el análisis de necesidades, presiones y conflictos inconscientes.',
         autor: 'Henry A. Murray',
         poblacion: 'Adolescentes y Adultos',
@@ -313,7 +313,7 @@ var testsCatalogDatabase = [
         code: 'REY-OSTERRIETH',
         name: 'REY-O — Figura Compleja de Rey-Osterrieth',
         siglas: 'REY-O',
-        cat: 'Capacidad Intelectual',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Prueba viso-constructiva de copia y reproducción de memoria para evaluar organización perceptual y memoria visual.',
         autor: 'André Rey & Paul-Alexandre Osterrieth',
         poblacion: 'Niños (8+) y Adultos',
@@ -328,7 +328,7 @@ var testsCatalogDatabase = [
         code: 'HOLLAND', 
         name: 'HOLLAND — Test de Intereses Vocacionales (RIASEC)', 
         siglas: 'HOLLAND', 
-        cat: 'Orientación Vocacional', 
+        cat: 'Cognición y Capacidad Intelectual', 
         desc: 'Inventario vocacional basado en el modelo tipológico RIASEC para la identificación de perfil vocacional y profesional.', 
         autor: 'John L. Holland', 
         poblacion: 'Adolescentes y Adultos (14+ años)', 
@@ -340,7 +340,7 @@ var testsCatalogDatabase = [
         code: 'TCS', 
         name: 'TCS — Escala de Congruencia Transgénero', 
         siglas: 'TCS', 
-        cat: 'Identidad de Género', 
+        cat: 'Sexología y Salud Sexual', 
         desc: 'Escala de 12 ítems desarrollada por Kozee et al. para evaluar el nivel de confort y aceptación de la identidad de género.', 
         autor: 'Kozee, Reisner et al.', 
         poblacion: 'Jóvenes y Adultos (16+ años)', 
@@ -352,7 +352,7 @@ var testsCatalogDatabase = [
         code: 'UGDS-GS', 
         name: 'UGDS-GS — Escala de Disforia de Utrecht', 
         siglas: 'UGDS-GS', 
-        cat: 'Identidad de Género', 
+        cat: 'Sexología y Salud Sexual', 
         desc: 'Evaluación estandarizada de 18 ítems para la medición objetiva del grado de disforia de género clínica.', 
         autor: 'McGuire et al. / Utrecht', 
         poblacion: 'Adolescentes y Adultos (12+ años)', 
@@ -366,7 +366,7 @@ var testsCatalogDatabase = [
         code: 'RCMAS-2',
         name: 'RCMAS-2 — Escala de Ansiedad Manifiesta en Niños Revisada',
         siglas: 'RCMAS-2',
-        cat: 'Clínica e Infantil',
+        cat: 'Test Infanto-Juvenil',
         desc: 'Evaluación estandarizada de 49 ítems para detectar niveles de ansiedad fisiológica, inquietud, hipersensibilidad y defensividad en niños y adolescentes.',
         autor: 'Cecil R. Reynolds & Bert O. Richmond (TEA Ediciones)',
         poblacion: 'Niños y Adolescentes (6 a 19 años)',
@@ -378,7 +378,7 @@ var testsCatalogDatabase = [
         code: 'CDS-CTI',
         name: 'CDS / CTI — Cuestionario de Distorsiones Cognitivas',
         siglas: 'CDS',
-        cat: 'Cognición y Estrés',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Evaluación autoadministrada de pensamientos automáticos y errores del procesamiento cognitivo (Catastrofización, Filtro Mental, Lectura de Mente, etc.).',
         autor: 'Yurica & DiTomasso / Adaptación Hispana',
         poblacion: 'Adolescentes y Adultos (14+ años)',
@@ -390,7 +390,7 @@ var testsCatalogDatabase = [
         code: 'CSI',
         name: 'CSI — Cuestionario de Estrategias de Afrontamiento',
         siglas: 'CSI',
-        cat: 'Cognición y Estrés',
+        cat: 'Cognición y Capacidad Intelectual',
         desc: 'Evaluación de 40 ítems Likert para cuantificar 8 estilos de afrontamiento (Solución de Problemas, Apoyo Social, Reestructuración Cognitiva, Evitación, Autocrítica, etc.).',
         autor: 'Tobin et al. / Adaptación de Cano, Rodríguez y García',
         poblacion: 'Adolescentes y Adultos (15+ años)',
@@ -402,7 +402,7 @@ var testsCatalogDatabase = [
         code: 'DVQ-R',
         name: 'DVQ-R — Cuestionario de Violencia en el Noviazgo',
         siglas: 'DVQ-R',
-        cat: 'Pareja y Violencia',
+        cat: 'Afectividad, Depresión y Ansiedad',
         desc: 'Evaluación estandarizada de 20 ítems para detectar conductas de abuso físico, verbal, coercitivo, sexual y desapego en relaciones de pareja.',
         autor: 'Rodríguez-Franco et al.',
         poblacion: 'Adolescentes y Jóvenes (14 a 30 años)',
@@ -414,7 +414,7 @@ var testsCatalogDatabase = [
         code: 'EAQ',
         name: 'EAQ — Cuestionario de Conciencia Emocional Infanto-Juvenil',
         siglas: 'EAQ',
-        cat: 'Clínica e Infantil',
+        cat: 'Test Infanto-Juvenil',
         desc: 'Evaluación de 30 ítems para identificar diferenciación de emociones, atención a señales emocionales, análisis y ocultación emocional.',
         autor: 'Rieffe et al. / Adaptación de Gómez-Ortiz et al.',
         poblacion: 'Niños y Adolescentes (8 a 16 años)',
@@ -426,12 +426,96 @@ var testsCatalogDatabase = [
         code: 'CUSES-SAS',
         name: 'CUSES / SAS — Autoeficacia y Asertividad Sexual',
         siglas: 'CUSES',
-        cat: 'Salud y Sexología',
+        cat: 'Sexología y Salud Sexual',
         desc: 'Evaluación de autoeficacia en salud sexual, prevención de ITS y capacidad de negociación/asertividad en la conducta sexual.',
         autor: 'López-Rosales et al. / Sierra et al.',
         poblacion: 'Adolescentes y Adultos (15+ años)',
         validez: 'Validación en Psicología de la Salud y Sexología',
         itemsCount: 20,
+        isPhysical: false
+    },
+    {
+        code: 'SWLS',
+        name: 'SwLS — Escala de Satisfacción con la Vida (Diener)',
+        siglas: 'SwLS',
+        cat: 'Afectividad, Depresión y Ansiedad',
+        desc: 'Evaluación psicométrica cuantitativa de 5 reactivos para medir el juicio cognitivo global sobre la satisfacción con la propia vida.',
+        autor: 'Ed Diener et al. / Vázquez et al.',
+        poblacion: 'Adolescentes y Adultos (12+ años)',
+        validez: 'α = 0.78 | Estándar Internacional de Bienestar Subjetivo',
+        itemsCount: 5,
+        isPhysical: false
+    },
+    {
+        code: 'SHIM',
+        name: 'SHIM / IIEF-5 — Inventario de Salud Sexual para Hombres (Disfunción Eréctil)',
+        siglas: 'SHIM',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Herramienta clínica abreviada de 5 reactivos para la evaluación y estadificación de la función eréctil y salud sexual masculina.',
+        autor: 'Rosen et al. (IIEF-5)',
+        poblacion: 'Hombres Adultos (18+ años)',
+        validez: 'Validación Clínica Internacional',
+        itemsCount: 5,
+        isPhysical: false
+    },
+    {
+        code: 'NSSS-S',
+        name: 'NSSS-S — Nueva Escala de Satisfacción Sexual (Forma Corta)',
+        siglas: 'NSSS-S',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Evaluación psicométrica de 12 ítems Likert para medir la satisfacción sexual en dimensiones egocéntrica y centrada en la pareja.',
+        autor: 'Štulhofer et al.',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'α = 0.94 | Subescalas Egocéntrica y Pareja',
+        itemsCount: 12,
+        isPhysical: false
+    },
+    {
+        code: 'FSFI',
+        name: 'FSFI — Índice de Función Sexual Femenina (Disfunción Sexual)',
+        siglas: 'FSFI',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Cuestionario clínico multidimensional de 19 ítems para evaluar deseo, excitación, lubricación, orgasmo, satisfacción y dolor femenino.',
+        autor: 'Rosen et al. / Blümel et al.',
+        poblacion: 'Mujeres Adultas (18+ años)',
+        validez: 'Estándar de Oro en Sexología Femenina',
+        itemsCount: 19,
+        isPhysical: false
+    },
+    {
+        code: 'MMSE',
+        name: 'MMSE — Mini-Mental State Examination (Folstein)',
+        siglas: 'MMSE',
+        cat: 'Cognición y Capacidad Intelectual',
+        desc: 'Evaluación neuropsicológica cuantitativa de 30 puntos para el cribado y seguimiento del deterioro cognitivo y memoria.',
+        autor: 'Folstein, Folstein & McHugh / Lobo et al.',
+        poblacion: 'Adultos Mayores (18+ años)',
+        validez: 'Sensibilidad 87% | Tamizaje Cognitivo Estandarizado',
+        itemsCount: 30,
+        isPhysical: false
+    },
+    {
+        code: 'AtAS',
+        name: 'AtAS — Escala de Adaptación al Envejecimiento',
+        siglas: 'AtAS',
+        cat: 'Adulto Mayor',
+        desc: 'Evaluación psicométrica de reactivos Likert para medir propósito, adaptación emocional, salud y apoyo social en adultos mayores.',
+        autor: 'dos Santos et al.',
+        poblacion: 'Adultos Mayores (50+ años)',
+        validez: 'α = 0.891 | Adaptación al Envejecimiento Activo',
+        itemsCount: 10,
+        isPhysical: false
+    },
+    {
+        code: 'BSSC',
+        name: 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales',
+        siglas: 'BSSC',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Herramienta de cribado clínico rápido de 4 ítems para la identificación temprana de inquietudes o síntomas sexuales.',
+        autor: 'Hatzichristou et al. / Medicina Sexual',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'Tamizaje Rápido de 4 Preguntas',
+        itemsCount: 4,
         isPhysical: false
     }
 ];
@@ -2234,9 +2318,17 @@ async function fetchAvailableHours(dateStr) {
 
 async function handlePatientAppointmentRequest(e) {
     e.preventDefault();
+    const btn = document.getElementById('pat-submit-req-btn');
+    if (btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.dataset.origText = btn.textContent;
+        btn.innerHTML = '⏳ Agendando consulta...';
+    }
+
     const patientId = sessionStorage.getItem('patient_id');
     const statusMsg = document.getElementById('pat-req-status-msg');
-    statusMsg.classList.add('hide');
+    if (statusMsg) statusMsg.classList.add('hide');
     
     const fecha = document.getElementById('pat-req-fecha').value;
     const hora = document.getElementById('pat-req-hora').value;
@@ -2260,13 +2352,16 @@ async function handlePatientAppointmentRequest(e) {
         const data = await res.json();
         
         if (res.ok) {
-            statusMsg.textContent = '¡Tu consulta ha sido agendada automáticamente con éxito!';
-            statusMsg.className = 'status-msg success-msg';
-            statusMsg.classList.remove('hide');
+            if (statusMsg) {
+                statusMsg.textContent = '¡Tu consulta ha sido agendada automáticamente con éxito!';
+                statusMsg.className = 'status-msg success-msg';
+                statusMsg.classList.remove('hide');
+            }
             
-            document.getElementById('pat-appointment-request-form').reset();
-            document.getElementById('pat-hours-container').classList.add('hide');
-            document.getElementById('pat-submit-req-btn').disabled = true;
+            const form = document.getElementById('pat-appointment-request-form');
+            if (form) form.reset();
+            const hoursContainer = document.getElementById('pat-hours-container');
+            if (hoursContainer) hoursContainer.classList.add('hide');
             
             document.querySelectorAll('.pat-cal-day-cell.selected').forEach(c => {
                 c.classList.remove('selected');
@@ -2275,17 +2370,40 @@ async function handlePatientAppointmentRequest(e) {
             });
             
             // Recargar datos y calendario
-            loadPatientPortalData(patientId);
-            initBookingCalendar();
+            await loadPatientPortalData(patientId);
+            if (typeof initBookingCalendar === 'function') {
+                initBookingCalendar();
+            }
+
+            // Cambiar automáticamente a la pestaña "Mi Próxima Consulta" para mostrar la cita agendada
+            if (typeof switchPatientHomeSubView === 'function') {
+                switchPatientHomeSubView('next');
+            }
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.origText || 'Agendar Consulta';
+            }
         } else {
-            statusMsg.textContent = data.error || 'Error al agendar la consulta.';
+            if (statusMsg) {
+                statusMsg.textContent = data.error || 'Error al agendar la consulta.';
+                statusMsg.className = 'status-msg error-msg';
+                statusMsg.classList.remove('hide');
+            }
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.origText || 'Agendar Consulta';
+            }
+        }
+    } catch (err) {
+        if (statusMsg) {
+            statusMsg.textContent = 'Error de red con el servidor.';
             statusMsg.className = 'status-msg error-msg';
             statusMsg.classList.remove('hide');
         }
-    } catch (err) {
-        statusMsg.textContent = 'Error de red con el servidor.';
-        statusMsg.className = 'status-msg error-msg';
-        statusMsg.classList.remove('hide');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = btn.dataset.origText || 'Agendar Consulta';
+        }
     }
 }
 
@@ -2309,6 +2427,28 @@ function selectPatientMenuItem(viewName) {
     switchPatientView(viewName);
 }
 
+function setDefaultToolDates() {
+    const now = new Date();
+    const localToday = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const nowLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+    const ids = ['sleep-fecha', 'anx-fecha', 'sob-fecha', 'adh-fecha', 'act-fecha', 'pat-pay-fecha', 'pantalla-fecha'];
+    ids.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.value = localToday;
+        }
+    });
+
+    ['ingesta-fecha', 'cog-fecha', 'cognitivo-fecha'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.value = nowLocal;
+        }
+    });
+}
+window.setDefaultToolDates = setDefaultToolDates;
+
 function switchPatientView(viewName) {
     // Ocultar todas las secciones
     document.querySelectorAll('.app-view').forEach(view => view.classList.add('hide'));
@@ -2325,6 +2465,9 @@ function switchPatientView(viewName) {
             item.classList.remove('active');
         }
     });
+    
+    // Asegurar fechas por defecto en las herramientas
+    setDefaultToolDates();
     
     // Recargar datos actualizados al cambiar de pestaña
     const patientId = sessionStorage.getItem('patient_id');
@@ -2359,6 +2502,7 @@ function switchPatientView(viewName) {
             setDefaultToolDates();
             loadPatientCognitiveRecordHistory();
         } else if (viewName === 'patient-consumo-pantalla') {
+            setDefaultToolDates();
             initChipContainers();
             loadPatientConsumoPantallaHistory();
         }
@@ -2542,6 +2686,12 @@ async function loadPatientPortalData(patientId) {
             const patMonedaEl = document.getElementById('pat-pay-moneda');
             if (patMonedaEl && data.perfil.moneda_personalizada) {
                 patMonedaEl.value = data.perfil.moneda_personalizada;
+            }
+
+            // Inyectar nombre de usuario en la pantalla de configuración
+            const patUsernameInput = document.getElementById('pat-username-new');
+            if (patUsernameInput && data.perfil.username) {
+                patUsernameInput.value = data.perfil.username;
             }
         }
         
@@ -2782,7 +2932,8 @@ async function loadPatientPortalData(patientId) {
             renderPatientLastSessionDetails(data.compartido);
         } else {
             // Intentar cargar la última sesión si data.compartido no trajo registros directos
-            fetch('/api/patient/sessions')
+            const patId = sessionStorage.getItem('patient_id') || '';
+            fetch('/api/patient/sessions' + (patId ? `?patient_id=${patId}` : ''))
                 .then(r => r.json())
                 .then(sessions => {
                     if (sessions && sessions.length > 0) {
@@ -2848,8 +2999,171 @@ function togglePatientTask(patientId, taskIdx, checkbox) {
     }
 }
 
+// --- Pizarra Terapéutica: Pestañas Deslizantes, Grabadora de Voz y Badge ---
+function switchPizarraTab(tabName) {
+    document.querySelectorAll('.pat-pizarra-tab-btn').forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabName) {
+            btn.style.background = '#702e5e';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#702e5e';
+            btn.classList.add('active');
+        } else {
+            btn.style.background = 'white';
+            btn.style.color = 'var(--text-dark)';
+            btn.style.borderColor = 'var(--border-color)';
+            btn.classList.remove('active');
+        }
+    });
+
+    document.querySelectorAll('.pizarra-tab-content').forEach(panel => {
+        panel.classList.add('hide');
+    });
+
+    const targetPanel = document.getElementById(`pizarra-tab-${tabName}`);
+    if (targetPanel) {
+        targetPanel.classList.remove('hide');
+    }
+
+    if (tabName === 'history') {
+        loadPizarraHistory();
+        markPatientPizarraRepliesAsRead();
+    }
+}
+window.switchPizarraTab = switchPizarraTab;
+
+async function markPatientPizarraRepliesAsRead() {
+    try {
+        await fetch('/api/patient/pizarra/marcar-leidas', { method: 'POST' });
+        const badge = document.getElementById('pat-pizarra-unread-badge');
+        if (badge) {
+            badge.classList.add('hide');
+            badge.textContent = '0';
+        }
+    } catch (e) {
+        console.error("Error al marcar respuestas de pizarra como leídas:", e);
+    }
+}
+
+// MediaRecorder para Grabación de Notas de Voz en Vivo
+let pizarraMediaRecorder = null;
+let pizarraAudioChunks = [];
+let pizarraRecordedAudioBlob = null;
+let pizarraRecordingTimerInterval = null;
+let pizarraRecordingSeconds = 0;
+
+async function toggleVoiceRecording() {
+    const box = document.getElementById('container-voice-recorder-box');
+    const label = document.getElementById('label-voice-record');
+    
+    if (pizarraMediaRecorder && pizarraMediaRecorder.state === 'recording') {
+        stopVoiceRecording();
+        return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Tu navegador no soporta la grabación de notas de voz en vivo.");
+        return;
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        pizarraAudioChunks = [];
+        pizarraRecordedAudioBlob = null;
+        
+        let mimeType = 'audio/webm';
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+            mimeType = 'audio/ogg';
+        }
+
+        pizarraMediaRecorder = new MediaRecorder(stream, { mimeType });
+
+        pizarraMediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+                pizarraAudioChunks.push(event.data);
+            }
+        };
+
+        pizarraMediaRecorder.onstop = () => {
+            stream.getTracks().forEach(track => track.stop());
+            pizarraRecordedAudioBlob = new Blob(pizarraAudioChunks, { type: mimeType });
+            const audioUrl = URL.createObjectURL(pizarraRecordedAudioBlob);
+            const previewEl = document.getElementById('audio-voice-preview');
+            const previewBox = document.getElementById('container-voice-audio-preview');
+            if (previewEl) previewEl.src = audioUrl;
+            if (previewBox) previewBox.classList.remove('hide');
+            
+            const timerTxt = document.getElementById('text-recording-timer');
+            if (timerTxt) timerTxt.textContent = '✅ Nota de voz lista para enviar:';
+            const dot = document.getElementById('indicator-recording-dot');
+            if (dot) dot.style.background = '#166534';
+        };
+
+        pizarraMediaRecorder.start();
+        if (box) box.classList.remove('hide');
+        if (label) label.textContent = 'Detener Grabación';
+
+        pizarraRecordingSeconds = 0;
+        const timerTxt = document.getElementById('text-recording-timer');
+        const dot = document.getElementById('indicator-recording-dot');
+        if (dot) dot.style.background = '#dc2626';
+
+        if (pizarraRecordingTimerInterval) clearInterval(pizarraRecordingTimerInterval);
+        pizarraRecordingTimerInterval = setInterval(() => {
+            pizarraRecordingSeconds++;
+            const mins = String(Math.floor(pizarraRecordingSeconds / 60)).padStart(2, '0');
+            const secs = String(pizarraRecordingSeconds % 60).padStart(2, '0');
+            if (timerTxt) timerTxt.textContent = `🔴 Grabando nota de voz... (${mins}:${secs})`;
+        }, 1000);
+
+    } catch (err) {
+        console.error("Error al iniciar micrófono:", err);
+        alert("No se pudo acceder al micrófono. Por favor permite los permisos de audio en tu navegador.");
+    }
+}
+window.toggleVoiceRecording = toggleVoiceRecording;
+
+function stopVoiceRecording() {
+    if (pizarraRecordingTimerInterval) clearInterval(pizarraRecordingTimerInterval);
+    if (pizarraMediaRecorder && pizarraMediaRecorder.state === 'recording') {
+        pizarraMediaRecorder.stop();
+    }
+    const label = document.getElementById('label-voice-record');
+    if (label) label.textContent = 'Grabar Nota de Voz';
+}
+window.stopVoiceRecording = stopVoiceRecording;
+
+function discardVoiceRecording() {
+    stopVoiceRecording();
+    pizarraRecordedAudioBlob = null;
+    pizarraAudioChunks = [];
+    const box = document.getElementById('container-voice-recorder-box');
+    const previewBox = document.getElementById('container-voice-audio-preview');
+    const previewEl = document.getElementById('audio-voice-preview');
+    if (previewEl) previewEl.src = '';
+    if (previewBox) previewBox.classList.add('hide');
+    if (box) box.classList.add('hide');
+}
+window.discardVoiceRecording = discardVoiceRecording;
+
+function handlePizarraFileSelected(input) {
+    const infoBox = document.getElementById('container-selected-file-info');
+    const nameTxt = document.getElementById('text-selected-filename');
+    if (input && input.files && input.files.length > 0) {
+        if (nameTxt) nameTxt.textContent = input.files[0].name;
+        if (infoBox) infoBox.classList.remove('hide');
+    } else {
+        if (infoBox) infoBox.classList.add('hide');
+    }
+}
+window.handlePizarraFileSelected = handlePizarraFileSelected;
+
 async function loadPizarraHistory() {
     const historyList = document.getElementById('pat-pizarra-history-list');
+    const badge = document.getElementById('pat-pizarra-unread-badge');
     if (!historyList) return;
     
     try {
@@ -2857,6 +3171,15 @@ async function loadPizarraHistory() {
         const data = await res.json();
         
         historyList.innerHTML = '';
+
+        if (data.unread_replies && data.unread_replies > 0) {
+            if (badge) {
+                badge.textContent = data.unread_replies;
+                badge.classList.remove('hide');
+            }
+        } else {
+            if (badge) badge.classList.add('hide');
+        }
         
         if (data.updates && data.updates.length > 0) {
             data.updates.forEach(upd => {
@@ -2884,18 +3207,36 @@ async function loadPizarraHistory() {
 
                 let fileHtml = '';
                 if (upd.archivo_adjunto) {
+                    const isAudio = /\.(webm|mp3|wav|m4a|ogg)$/i.test(upd.archivo_adjunto);
                     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(upd.archivo_adjunto);
-                    fileHtml = `
-                        <div style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.35rem 0.6rem; border-radius: 6px; background-color: rgba(255,255,255,0.85); display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--border-color);">
-                            ${isImage 
-                                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
-                                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
-                            }
-                            <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">
-                                ${isImage ? 'Ver Imagen Adjunta' : 'Ver Documento Adjunto'}
-                            </a>
-                        </div>
-                    `;
+                    const fileUrl = (upd.archivo_adjunto.startsWith('/') || upd.archivo_adjunto.startsWith('http')) ? upd.archivo_adjunto : `/uploads/${upd.archivo_adjunto}`;
+                    
+                    if (isAudio) {
+                        fileHtml = `
+                            <div style="margin-top: 0.6rem; width: 100%;">
+                                <div style="font-size: 0.78rem; font-weight: 700; color: #702e5e; margin-bottom: 0.25rem;">🎙️ Nota de Voz / Audio Adjunto:</div>
+                                <audio controls preload="metadata" src="${fileUrl}" style="width: 100%; max-width: 420px; height: 38px; border-radius: 8px; outline: none;"></audio>
+                            </div>
+                        `;
+                    } else if (isImage) {
+                        fileHtml = `
+                            <div style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.35rem 0.6rem; border-radius: 6px; background-color: rgba(255,255,255,0.85); display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--border-color);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">
+                                    Ver Imagen Adjunta
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        fileHtml = `
+                            <div style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.35rem 0.6rem; border-radius: 6px; background-color: rgba(255,255,255,0.85); display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--border-color);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">
+                                    Ver Documento Adjunto
+                                </a>
+                            </div>
+                        `;
+                    }
                 }
 
                 patientBubble.innerHTML = `
@@ -2913,6 +3254,9 @@ async function loadPizarraHistory() {
                 if (upd.respuesta_psicologo) {
                     const therapistBubble = document.createElement('div');
                     therapistBubble.className = 'chat-bubble-therapist';
+                    if (upd.leida_paciente === 0) {
+                        therapistBubble.style.borderLeft = '5px solid #dc2626';
+                    }
                     therapistBubble.innerHTML = `
                         <div class="chat-bubble-header">
                             <span class="chat-author-tag therapist">🩺 Respuesta de tu Psicólogo/a</span>
@@ -3004,7 +3348,7 @@ async function handleSaveMoodCheckin() {
             selectedMoodState = { mood: '', emoji: '' };
             document.getElementById('mood-comment-section')?.classList.add('hide');
 
-            loadPizarraHistory();
+            switchPizarraTab('history');
         } else {
             statusMsg.textContent = data.error || 'Error al guardar el estado de ánimo.';
             statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
@@ -3037,8 +3381,11 @@ async function handleSavePizarraUpdate() {
     statusMsg.classList.add('hide');
     const text = inputArea.value.trim();
     
-    if (!text && (!fileInput || fileInput.files.length === 0)) {
-        const errorText = 'Por favor, escribe algún contenido o adjunta un archivo antes de guardar.';
+    const hasAudioRecording = (pizarraRecordedAudioBlob !== null);
+    const hasClipFile = (fileInput && fileInput.files && fileInput.files.length > 0);
+
+    if (!text && !hasAudioRecording && !hasClipFile) {
+        const errorText = 'Por favor, escribe un texto, graba una nota de voz o adjunta un archivo antes de guardar.';
         statusMsg.innerHTML = `<div style="background: #fef2f2; border: 1.5px solid #ef4444; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">⚠️ ${errorText}</div>`;
         statusMsg.classList.remove('hide');
         alert(`⚠️ ${errorText}`);
@@ -3055,8 +3402,27 @@ async function handleSavePizarraUpdate() {
     let uploadedFilename = null;
     
     try {
-        // Si hay archivo seleccionado, subirlo primero
-        if (fileInput && fileInput.files.length > 0) {
+        // 1. Si hay nota de voz grabada en vivo
+        if (hasAudioRecording) {
+            statusMsg.innerHTML = `<div style="background: #eff6ff; border: 1.5px solid #3b82f6; color: #1e40af; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">⏳ Subiendo nota de voz grabada...</div>`;
+            statusMsg.classList.remove('hide');
+            
+            const voiceFile = new File([pizarraRecordedAudioBlob], `nota_voz_${Date.now()}.webm`, { type: pizarraRecordedAudioBlob.type || 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', voiceFile);
+            
+            const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const uploadData = await uploadRes.json();
+            if (!uploadRes.ok) {
+                throw new Error(uploadData.error || 'Error al subir nota de voz.');
+            }
+            uploadedFilename = uploadData.filename;
+
+        } else if (hasClipFile) {
+            // 2. Si hay archivo adjunto por clip
             statusMsg.innerHTML = `<div style="background: #eff6ff; border: 1.5px solid #3b82f6; color: #1e40af; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">⏳ Subiendo archivo adjunto...</div>`;
             statusMsg.classList.remove('hide');
             
@@ -3067,18 +3433,9 @@ async function handleSavePizarraUpdate() {
                 method: 'POST',
                 body: formData
             });
-            
             const uploadData = await uploadRes.json();
             if (!uploadRes.ok) {
-                const uploadErr = uploadData.error || 'Error al subir el archivo.';
-                statusMsg.innerHTML = `<div style="background: #fef2f2; border: 1.5px solid #ef4444; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">❌ ${uploadErr}</div>`;
-                statusMsg.classList.remove('hide');
-                alert(`❌ ${uploadErr}`);
-                if (saveBtn) {
-                    saveBtn.disabled = false;
-                    saveBtn.textContent = originalBtnText;
-                }
-                return;
+                throw new Error(uploadData.error || 'Error al subir el archivo.');
             }
             uploadedFilename = uploadData.filename;
         }
@@ -3093,14 +3450,16 @@ async function handleSavePizarraUpdate() {
         const data = await res.json();
         if (res.ok) {
             inputArea.value = '';
-            if (fileInput) fileInput.value = ''; // Limpiar selector
-            
-            const successMsgText = '¡Apunte guardado con éxito en tu Pizarra Terapéutica! Tu terapeuta ya puede visualizarlo en tiempo real.';
+            if (fileInput) fileInput.value = '';
+            discardVoiceRecording();
+            const infoBox = document.getElementById('container-selected-file-info');
+            if (infoBox) infoBox.classList.add('hide');
+
+            const successMsgText = '¡Entrada guardada con éxito en tu Pizarra Terapéutica! Tu terapeuta ya puede visualizarla en tiempo real.';
             statusMsg.innerHTML = `<div style="background: #ecfdf5; border: 1.5px solid #10b981; color: #047857; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">✅ ${successMsgText}</div>`;
             statusMsg.classList.remove('hide');
             
-            loadPizarraHistory();
-            alert(`✅ ${successMsgText}`);
+            switchPizarraTab('history');
             
             setTimeout(() => {
                 statusMsg.classList.add('hide');
@@ -3112,7 +3471,7 @@ async function handleSavePizarraUpdate() {
             alert(`❌ ${errTxt}`);
         }
     } catch (err) {
-        const connErr = 'Error de conexión con el servidor.';
+        const connErr = err.message || 'Error de conexión con el servidor.';
         statusMsg.innerHTML = `<div style="background: #fef2f2; border: 1.5px solid #ef4444; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">❌ ${connErr}</div>`;
         statusMsg.classList.remove('hide');
         alert(`❌ ${connErr}`);
@@ -3270,21 +3629,31 @@ function renderPizarraVisual() {
             fileDiv.style.padding = '0.35rem 0.5rem';
             fileDiv.style.borderRadius = '4px';
             fileDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.6)';
-            fileDiv.style.display = 'inline-flex';
-            fileDiv.style.alignItems = 'center';
-            fileDiv.style.gap = '0.35rem';
+            fileDiv.style.display = 'block';
             fileDiv.style.border = '1px solid var(--border-color)';
             
+            const isAudio = /\.(webm|mp3|wav|m4a|ogg)$/i.test(upd.archivo_adjunto);
             const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(upd.archivo_adjunto);
-            if (isImage) {
+            const fileUrl = (upd.archivo_adjunto.startsWith('/') || upd.archivo_adjunto.startsWith('http')) ? upd.archivo_adjunto : `/uploads/${upd.archivo_adjunto}`;
+            
+            if (isAudio) {
                 fileDiv.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">Ver Imagen Adjunta</a>
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #702e5e; margin-bottom: 0.2rem;">🎙️ Nota de Voz del Consultante:</div>
+                    <audio controls preload="metadata" src="${fileUrl}" style="width: 100%; max-width: 380px; height: 38px; border-radius: 8px; outline: none;"></audio>
+                `;
+            } else if (isImage) {
+                fileDiv.innerHTML = `
+                    <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">Ver Imagen Adjunta</a>
+                    </div>
                 `;
             } else {
                 fileDiv.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">Ver Documento Adjunto</a>
+                    <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <a href="#" onclick="openFilePreview('${upd.archivo_adjunto}'); return false;" style="color: var(--primary-color); text-decoration: none; font-weight: 700;">Ver Documento Adjunto</a>
+                    </div>
                 `;
             }
             card.appendChild(fileDiv);
@@ -3406,16 +3775,47 @@ async function handlePatientPaymentSubmit(e) {
 async function handlePatientChangePwSubmit(e) {
     e.preventDefault();
     const statusMsg = document.getElementById('pat-pw-status-msg');
-    statusMsg.classList.add('hide');
+    if (statusMsg) statusMsg.classList.add('hide');
     
-    const current_password = document.getElementById('pat-pw-current').value;
-    const new_password = document.getElementById('pat-pw-new').value;
+    const usernameInput = document.getElementById('pat-username-new');
+    const username = usernameInput ? usernameInput.value.trim() : '';
+    const current_password = document.getElementById('pat-pw-current') ? document.getElementById('pat-pw-current').value : '';
+    const new_password = document.getElementById('pat-pw-new') ? document.getElementById('pat-pw-new').value : '';
     const confirm_password = document.getElementById('pat-pw-confirm') ? document.getElementById('pat-pw-confirm').value : null;
     
-    if (confirm_password && new_password !== confirm_password) {
-        statusMsg.textContent = '❌ La nueva contraseña y la confirmación no coinciden.';
-        statusMsg.className = 'status-msg error-msg';
-        statusMsg.classList.remove('hide');
+    if (!username) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ El nombre de usuario no puede estar vacío.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        return;
+    }
+
+    if (!current_password) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Ingresa tu contraseña actual para confirmar los cambios.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        return;
+    }
+
+    if (new_password && new_password.length < 6) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ La nueva contraseña debe tener al menos 6 caracteres.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        return;
+    }
+
+    if (new_password && confirm_password && new_password !== confirm_password) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ La nueva contraseña y la confirmación no coinciden.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
         return;
     }
     
@@ -3423,24 +3823,40 @@ async function handlePatientChangePwSubmit(e) {
         const res = await fetch('/api/patient/change-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ current_password, new_password, confirm_password })
+            body: JSON.stringify({ username, current_password, new_password, confirm_password })
         });
         const data = await res.json();
         
         if (res.ok) {
-            statusMsg.textContent = '✅ Contraseña actualizada con éxito.';
-            statusMsg.className = 'status-msg success-msg';
-            statusMsg.classList.remove('hide');
-            document.getElementById('pat-change-pw-form').reset();
+            if (statusMsg) {
+                statusMsg.textContent = '✅ ' + (data.success || 'Datos de acceso actualizados con éxito.');
+                statusMsg.className = 'status-msg success-msg';
+                statusMsg.classList.remove('hide');
+            }
+            if (data.username) {
+                if (typeof setAuthItem === 'function') setAuthItem('patient_username', data.username);
+                sessionStorage.setItem('patient_username', data.username);
+            }
+            // Limpiar campos de contraseña
+            if (document.getElementById('pat-pw-current')) document.getElementById('pat-pw-current').value = '';
+            if (document.getElementById('pat-pw-new')) document.getElementById('pat-pw-new').value = '';
+            if (document.getElementById('pat-pw-confirm')) document.getElementById('pat-pw-confirm').value = '';
+            
+            const patientId = sessionStorage.getItem('patient_id');
+            if (patientId) loadPatientPortalData(patientId);
         } else {
-            statusMsg.textContent = '❌ ' + (data.error || 'Error al actualizar contraseña.');
+            if (statusMsg) {
+                statusMsg.textContent = '❌ ' + (data.error || 'Error al actualizar datos de acceso.');
+                statusMsg.className = 'status-msg error-msg';
+                statusMsg.classList.remove('hide');
+            }
+        }
+    } catch (err) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Error de red con el servidor.';
             statusMsg.className = 'status-msg error-msg';
             statusMsg.classList.remove('hide');
         }
-    } catch (err) {
-        statusMsg.textContent = '❌ Error de red con el servidor.';
-        statusMsg.className = 'status-msg error-msg';
-        statusMsg.classList.remove('hide');
     }
 }
 
@@ -5320,12 +5736,21 @@ async function deleteConsultationFromHistory(eventId) {
         const res = await fetch(`/api/admin/consultation-history/${eventId}`, {
             method: 'DELETE'
         });
-        const data = await res.json();
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (e) {
+            data = { error: `Respuesta del servidor no válida (${res.status})` };
+        }
         if (res.ok) {
             alert(data.success || "Consulta eliminada con éxito.");
-            loadAdminConsultationHistory();
-            if (typeof loadAgenda === 'function') loadAgenda();
-            if (typeof loadFinanceData === 'function') loadFinanceData();
+            try {
+                if (typeof loadTherapistConsultationHistory === 'function') loadTherapistConsultationHistory();
+                if (typeof loadAgenda === 'function') loadAgenda();
+                if (typeof loadFinanceData === 'function') loadFinanceData();
+            } catch (refreshErr) {
+                console.warn("Error actualizando interfaz tras eliminar:", refreshErr);
+            }
         } else {
             alert(data.error || "Error al eliminar la consulta.");
         }
@@ -8031,8 +8456,9 @@ async function loadPatientPortalTests() {
             if (wrapper) wrapper.style.display = 'none';
             return;
         }
-        const list = await res.json();
-        const pendingList = (list || []).filter(t => t.estado !== 'completado');
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (data.tests || []);
+        const pendingList = list.filter(t => t.estado !== 'completado');
         
         if (!pendingList || pendingList.length === 0) {
             if (wrapper) wrapper.style.display = 'none';
@@ -8044,7 +8470,7 @@ async function loadPatientPortalTests() {
         let html = '';
         pendingList.forEach(t => {
             const badge = '<span style="background:#fef3c7; color:#b45309; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px;">⏳ Pendiente</span>';
-            const actionBtn = `<a href="${t.url_evaluacion}" target="_blank" class="btn btn-sm btn-primary" style="padding:0.35rem 0.85rem; font-weight:700; font-size:0.8rem; border-radius:6px; text-decoration:none;">▶ Responder Test</a>`;
+            const actionBtn = `<a href="${t.url_evaluacion}" target="_blank" class="btn btn-sm btn-primary" style="padding:0.35rem 0.85rem; font-weight:700; font-size:0.8rem; border-radius:6px; text-decoration:none; background:#702e5e; color:white; border:none;">▶ Responder Test</a>`;
                 
             html += `
                 <div style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 0.65rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
@@ -8738,7 +9164,7 @@ function switchWaSubTab(tabName) {
 }
 
 let currentWaQueuePage = 1;
-const WA_QUEUE_PER_PAGE = 5;
+let waQueuePerPage = 10;
 let currentWaQueueData = [];
 
 async function loadWhatsAppMonitoringQueue() {
@@ -8746,10 +9172,10 @@ async function loadWhatsAppMonitoringQueue() {
     if (!tbody) return;
 
     try {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color: var(--text-secondary);">🔄 Consultando cola de mensajes...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3" style="color: var(--text-secondary);">🔄 Consultando cola de mensajes...</td></tr>';
         const res = await fetch('/api/whatsapp/queue-status');
         if (!res.ok) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Error al consultar la cola de mensajes.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-danger">Error al consultar la cola de mensajes.</td></tr>';
             return;
         }
         const data = await res.json();
@@ -8759,7 +9185,7 @@ async function loadWhatsAppMonitoringQueue() {
         renderWaQueueTablePage();
     } catch (err) {
         console.error("Error al cargar monitoreo de WhatsApp:", err);
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Error de conexión al cargar monitoreo.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-danger">Error de conexión al cargar monitoreo.</td></tr>';
     }
 }
 
@@ -8768,17 +9194,18 @@ function renderWaQueueTablePage() {
     if (!tbody) return;
 
     if (currentWaQueueData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color: var(--text-secondary);">No hay citas próximas registradas en la cola de mensajes.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3" style="color: var(--text-secondary);">No hay citas próximas registradas en la cola de mensajes.</td></tr>';
         removeWaQueuePaginationControls();
         return;
     }
 
-    const totalPages = Math.ceil(currentWaQueueData.length / WA_QUEUE_PER_PAGE);
+    const perPage = waQueuePerPage === 'all' ? currentWaQueueData.length : parseInt(waQueuePerPage, 10);
+    const totalPages = Math.ceil(currentWaQueueData.length / perPage) || 1;
     if (currentWaQueuePage < 1) currentWaQueuePage = 1;
     if (currentWaQueuePage > totalPages) currentWaQueuePage = totalPages;
 
-    const startIdx = (currentWaQueuePage - 1) * WA_QUEUE_PER_PAGE;
-    const pageItems = currentWaQueueData.slice(startIdx, startIdx + WA_QUEUE_PER_PAGE);
+    const startIdx = (currentWaQueuePage - 1) * perPage;
+    const pageItems = currentWaQueueData.slice(startIdx, startIdx + perPage);
 
     tbody.innerHTML = pageItems.map(item => {
         let badgeBg = '#64748b';
@@ -8786,7 +9213,7 @@ function renderWaQueueTablePage() {
 
         if (item.pipeline_status === 'confirmado') {
             badgeBg = '#10b981';
-        } else if (item.pipeline_status === 'cancelado') {
+        } else if (item.pipeline_status === 'cancelado' || item.pipeline_status === 'detenido_manual') {
             badgeBg = '#ef4444';
         } else if (item.pipeline_status.includes('en_cola')) {
             badgeBg = '#2563eb';
@@ -8799,6 +9226,12 @@ function renderWaQueueTablePage() {
         } else if (item.pipeline_status === 'completada') {
             badgeBg = '#475569';
         }
+
+        const actionBtnHtml = item.can_cancel ? `
+            <button type="button" class="btn btn-sm text-danger" onclick="handleCancelWaQueueItem(${item.cita_id}, '${escapeJsQuotes(item.paciente_nombre)}')" title="Detener el envío automático de este mensaje" style="background: white; border: 1.5px solid rgba(239, 68, 68, 0.3); padding: 0.25rem 0.5rem; font-size: 0.78rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                🛑 Detener Envío
+            </button>
+        ` : `<span style="font-size: 0.78rem; color: var(--text-muted);">-</span>`;
 
         return `
             <tr style="border-bottom: 1px solid var(--border-color);">
@@ -8818,6 +9251,9 @@ function renderWaQueueTablePage() {
                         ${item.pipeline_label}
                     </span>
                 </td>
+                <td style="padding: 0.65rem; text-align: right;">
+                    ${actionBtnHtml}
+                </td>
             </tr>
         `;
     }).join('');
@@ -8833,24 +9269,35 @@ function renderWaQueuePaginationControls(totalPages) {
     if (!container) {
         container = document.createElement('div');
         container.id = 'wa-queue-pagination';
-        container.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--border-color); font-size: 0.85rem;';
+        container.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--border-color); font-size: 0.85rem; flex-wrap: wrap; gap: 0.5rem;';
         tbody.closest('table').parentNode.appendChild(container);
     }
 
-    if (totalPages <= 1) {
-        container.innerHTML = `<span style="color: var(--text-secondary);">Mostrando ${currentWaQueueData.length} registros</span>`;
-        return;
-    }
+    const perPageSelectHtml = `
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <span style="color: var(--text-secondary); font-weight: 500;">Mostrar:</span>
+            <select onchange="changeWaQueuePerPage(this.value)" style="padding: 0.2rem 0.4rem; border-radius: 6px; border: 1.5px solid var(--border-color); font-size: 0.82rem; background: white;">
+                <option value="5" ${waQueuePerPage == 5 ? 'selected' : ''}>5</option>
+                <option value="10" ${waQueuePerPage == 10 ? 'selected' : ''}>10</option>
+                <option value="25" ${waQueuePerPage == 25 ? 'selected' : ''}>25</option>
+                <option value="50" ${waQueuePerPage == 50 ? 'selected' : ''}>50</option>
+                <option value="all" ${waQueuePerPage == 'all' ? 'selected' : ''}>Todos</option>
+            </select>
+        </div>
+    `;
 
     container.innerHTML = `
-        <span style="color: var(--text-secondary); font-weight: 500;">
-            Página ${currentWaQueuePage} de ${totalPages} (${currentWaQueueData.length} registros en total)
-        </span>
-        <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-sm btn-secondary" ${currentWaQueuePage === 1 ? 'disabled' : ''} onclick="changeWaQueuePage(-1)">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <span style="color: var(--text-secondary); font-weight: 600;">
+                Página ${currentWaQueuePage} de ${totalPages} (${currentWaQueueData.length} registros)
+            </span>
+            ${perPageSelectHtml}
+        </div>
+        <div style="display: flex; gap: 0.4rem;">
+            <button class="btn btn-sm btn-secondary" ${currentWaQueuePage === 1 ? 'disabled' : ''} onclick="changeWaQueuePage(-1)" style="font-weight: 600;">
                 ◀ Anterior
             </button>
-            <button class="btn btn-sm btn-secondary" ${currentWaQueuePage === totalPages ? 'disabled' : ''} onclick="changeWaQueuePage(1)">
+            <button class="btn btn-sm btn-secondary" ${currentWaQueuePage >= totalPages ? 'disabled' : ''} onclick="changeWaQueuePage(1)" style="font-weight: 600;">
                 Siguiente ▶
             </button>
         </div>
@@ -8865,6 +9312,36 @@ function removeWaQueuePaginationControls() {
 function changeWaQueuePage(delta) {
     currentWaQueuePage += delta;
     renderWaQueueTablePage();
+}
+
+function changeWaQueuePerPage(val) {
+    waQueuePerPage = val;
+    currentWaQueuePage = 1;
+    renderWaQueueTablePage();
+}
+
+async function handleCancelWaQueueItem(citaId, pacienteNombre) {
+    if (!confirm(`¿Estás seguro de que deseas detener manualmente el envío automático de este mensaje para ${pacienteNombre}?`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/whatsapp/cancel-queue-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cita_id: citaId })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || "Envío detenido con éxito.");
+            loadWhatsAppMonitoringQueue();
+        } else {
+            alert(data.error || "Error al detener el envío.");
+        }
+    } catch (err) {
+        console.error("Error al detener envío de WhatsApp:", err);
+        alert("Error de conexión al detener el envío.");
+    }
 }
 
 async function sendWhatsappTemplate(type) {
@@ -11863,7 +12340,8 @@ async function openPatientSessionHistoryModal() {
     modal.classList.remove('hide');
     
     try {
-        const res = await fetch('/api/patient/sessions');
+        const patientId = sessionStorage.getItem('patient_id') || '';
+        const res = await fetch('/api/patient/sessions' + (patientId ? `?patient_id=${patientId}` : ''));
         if (!res.ok) {
             body.innerHTML = '<div class="text-center py-4"><span class="text-danger">Error al cargar el historial. Asegúrese de haber iniciado sesión.</span></div>';
             return;
@@ -14437,14 +14915,14 @@ function changeTtPreviewPage(newPage) {
 window.changeTtPreviewPage = changeTtPreviewPage;
 
 const toolButtonLabels = {
-    'sueno': '📊 Ver Registro de Sueño',
-    'ansiedad': '📊 Ver Registro de Ansiedad',
-    'sobriedad': '📊 Ver Registro de Consumo',
-    'consumo': '📊 Ver Registro de Consumo',
-    'adherencia': '📊 Ver Registro de Tratamiento',
-    'medicacion': '📊 Ver Registro de Tratamiento',
-    'activacion': '📊 Ver Registro de Activación Conductual',
-    'pantalla': '📱 Ver Tracker de Pantalla'
+    'sueno': '📊 Ver Registros',
+    'ansiedad': '📊 Ver Registros',
+    'sobriedad': '📊 Ver Registros',
+    'consumo': '📊 Ver Registros',
+    'adherencia': '📊 Ver Registros',
+    'medicacion': '📊 Ver Registros',
+    'activacion': '📊 Ver Registros',
+    'pantalla': '📱 Ver Registros'
 };
 
 const claveToToolMap = {
@@ -15077,11 +15555,13 @@ async function selectPatientForTherapistTools(id, name, code) {
 
         if (list) {
             list.innerHTML = data.modules.map(m => {
-                const btnText = toolButtonLabels[m.clave] || `📊 Ver Registro de ${m.nombre}`;
                 const safeName = (name || '').replace(/'/g, "");
                 const safeModName = (m.nombre || '').replace(/'/g, "");
                 const inlineId = `inline-history-sel-${id}-${m.clave}`;
                 const actBtn = (m.clave === 'activacion') ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${safeName}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : '';
+                const waBtn = `<button type="button" class="btn btn-sm" onclick="enviarWhatsAppDirectoHerramienta(${id}, '${m.clave}')" style="padding: 0.35rem 0.65rem; font-weight: 600; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0;">💬 WhatsApp Directo</button>`;
+                const progBtn = `<button type="button" class="btn btn-sm" onclick="programarRecordatorioWhatsApp(${id}, '${m.clave}', '20:00')" style="padding: 0.35rem 0.65rem; font-weight: 600; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe;">⏰ Recordatorio 8 PM</button>`;
+                
                 return `
                 <div style="display: flex; flex-direction: column; width: 100%;">
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
@@ -15094,6 +15574,8 @@ async function selectPatientForTherapistTools(id, name, code) {
                         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                             <button type="button" class="btn btn-sm btn-info" onclick="toggleInlinePatientHistory(${id}, '${m.clave}', '${inlineId}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">${btnText}</button>
                             ${actBtn}
+                            ${waBtn}
+                            ${progBtn}
                             <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
                                 ${m.activo ? ' Desactivar' : ' Activar'}
                             </button>
@@ -15700,19 +16182,20 @@ window.loadPatientSobrietyHistory = loadPatientSobrietyHistory;
 // --- AUTO-SET TODAY'S DATE IN THERAPEUTIC TOOLS FORMS ---
 function setDefaultToolDates() {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const localToday = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     const nowLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-    ['sleep-fecha', 'anx-fecha', 'sob-fecha', 'adh-fecha', 'act-fecha'].forEach(id => {
+    const ids = ['sleep-fecha', 'anx-fecha', 'sob-fecha', 'adh-fecha', 'act-fecha', 'pat-pay-fecha', 'pantalla-fecha'];
+    ids.forEach(id => {
         const input = document.getElementById(id);
-        if (input && !input.value) {
-            input.value = today;
+        if (input) {
+            input.value = localToday;
         }
     });
 
-    ['ingesta-fecha', 'cog-fecha'].forEach(id => {
+    ['ingesta-fecha', 'cog-fecha', 'cognitivo-fecha'].forEach(id => {
         const input = document.getElementById(id);
-        if (input && !input.value) {
+        if (input) {
             input.value = nowLocal;
         }
     });
@@ -15733,15 +16216,20 @@ async function submitAddMedication(e) {
     const nombre = document.getElementById('med-nombre').value;
     const dosis = document.getElementById('med-dosis').value;
     const hora = document.getElementById('med-hora').value;
+    const patientId = sessionStorage.getItem('patient_id') || '';
 
     try {
-        const res = await fetch('/api/patient/adherence/medications', {
+        const query = patientId ? `?patient_id=${patientId}` : '';
+        const res = await fetch(`/api/patient/adherence/medications${query}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre_medicamento: nombre, dosis: dosis, hora_prescrita: hora })
+            body: JSON.stringify({ nombre_medicamento: nombre, dosis: dosis, hora_prescrita: hora, patient_id: patientId })
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al guardar medicamento');
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al guardar medicamento');
+        }
+        await res.json();
 
         closeModal('add-medication-modal');
         loadPatientMedications();
@@ -15754,8 +16242,10 @@ async function submitAddMedication(e) {
 
 async function deletePatientAdherenceMedication(medId) {
     if (!confirm('¿Deseas eliminar este medicamento de tus medicamentos registrados?')) return;
+    const patientId = sessionStorage.getItem('patient_id') || '';
     try {
-        const res = await fetch(`/api/patient/adherence/medications/${medId}`, { method: 'DELETE' });
+        const query = patientId ? `?patient_id=${patientId}` : '';
+        const res = await fetch(`/api/patient/adherence/medications/${medId}${query}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error al eliminar medicamento');
         loadPatientMedications();
         const today = document.getElementById('adh-fecha')?.value || new Date().toISOString().split('T')[0];
@@ -15768,10 +16258,16 @@ async function deletePatientAdherenceMedication(medId) {
 async function loadPatientMedications() {
     const list = document.getElementById('patient-medications-list');
     if (!list) return;
+    const patientId = sessionStorage.getItem('patient_id') || '';
     try {
-        const res = await fetch('/api/patient/adherence/medications');
+        const query = patientId ? `?patient_id=${patientId}` : '';
+        const res = await fetch(`/api/patient/adherence/medications${query}`);
+        if (!res.ok) {
+            list.innerHTML = '<p class="text-muted">No se pudieron cargar los medicamentos prescriptos.</p>';
+            return;
+        }
         const data = await res.json();
-        if (data.length === 0) {
+        if (!Array.isArray(data) || data.length === 0) {
             list.innerHTML = '<p class="text-muted">No tienes medicamentos registrados aún. Haz clic en <strong>"+ Agregar otro medicamento"</strong> para empezar.</p>';
             return;
         }
@@ -15792,7 +16288,7 @@ async function loadPatientMedications() {
             </div>
         `;
     } catch (err) {
-        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        list.innerHTML = `<p class="text-muted">Error al cargar medicamentos.</p>`;
     }
 }
 
@@ -15805,10 +16301,17 @@ async function loadPatientAdherenceChecklist(dateStr) {
         if (fechaInput) fechaInput.value = dateStr;
     }
 
+    const patientId = sessionStorage.getItem('patient_id') || '';
     try {
-        const res = await fetch(`/api/patient/adherence/checklist?fecha=${dateStr}`);
+        const query = `?fecha=${dateStr}` + (patientId ? `&patient_id=${patientId}` : '');
+        const res = await fetch(`/api/patient/adherence/checklist${query}`);
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            container.innerHTML = `<div class="alert alert-warning" style="background: #fffbe6; border-color: #ffe58f; color: #d48806; padding: 0.85rem; border-radius: 8px;">${errData.error || 'No tienes medicamentos agregados en tu lista o requiere iniciar sesión.'}</div>`;
+            return;
+        }
         const data = await res.json();
-        if (data.length === 0) {
+        if (!Array.isArray(data) || data.length === 0) {
             container.innerHTML = '<div class="alert alert-info" style="background: #f0f9ff; border-color: #bae6fd; color: #0369a1; padding: 0.85rem; border-radius: 8px;">No tienes medicamentos agregados en tu lista. Presiona "+ Agregar otro medicamento" arriba para añadirlos.</div>';
             return;
         }
@@ -15837,7 +16340,7 @@ async function loadPatientAdherenceChecklist(dateStr) {
             </div>
         `;
     } catch (err) {
-        container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        container.innerHTML = `<p class="text-muted">No hay lista disponible.</p>`;
     }
 }
 
@@ -15973,15 +16476,60 @@ function getSelectedSingleChip(containerId) {
     return activeBtn ? activeBtn.getAttribute('data-value') : '';
 }
 
+function toggleCpDropdown(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const menu = el.querySelector('.cp-dropdown-menu');
+    if (menu) {
+        menu.classList.toggle('hide');
+    }
+}
+
+function updateCpDropdownSummary(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const checked = el.querySelectorAll('.cp-dropdown-item input[type="checkbox"]:checked');
+    const badge = el.querySelector('.cp-dropdown-badge');
+    if (badge) {
+        badge.innerText = `${checked.length} seleccionado${checked.length === 1 ? '' : 's'}`;
+    }
+}
+
+function getCpDropdownValues(id) {
+    const el = document.getElementById(id);
+    if (!el) return [];
+    const checked = el.querySelectorAll('.cp-dropdown-item input[type="checkbox"]:checked');
+    return Array.from(checked).map(input => input.value);
+}
+
+window.toggleCpDropdown = toggleCpDropdown;
+window.updateCpDropdownSummary = updateCpDropdownSummary;
+window.getCpDropdownValues = getCpDropdownValues;
+
 async function submitPatientConsumoPantalla(e) {
     if (e) e.preventDefault();
     
-    const dispositivos = getSelectedChips('cp-chips-dispositivos');
-    const tiempo_uso = getSelectedSingleChip('cp-chips-tiempo');
-    const aplicaciones = getSelectedChips('cp-chips-aplicaciones');
-    const tipo_contenido = getSelectedChips('cp-chips-contenido');
-    const estado_emocional_posterior = getSelectedSingleChip('cp-chips-emocional');
-    const interferencia_actividad = getSelectedSingleChip('cp-chips-interferencia');
+    // Extraer valores desde los desplegables de opción múltiple y desplegables simples
+    let dispositivos = getCpDropdownValues('dropdown-cp-dispositivos');
+    if (dispositivos.length === 0) {
+        dispositivos = getSelectedChips('cp-chips-dispositivos');
+    }
+    
+    const tiempo_uso = document.getElementById('cp-select-tiempo')?.value || getSelectedSingleChip('cp-chips-tiempo');
+    
+    let aplicaciones = getCpDropdownValues('dropdown-cp-aplicaciones');
+    if (aplicaciones.length === 0) {
+        aplicaciones = getSelectedChips('cp-chips-aplicaciones');
+    }
+    
+    let tipo_contenido = getCpDropdownValues('dropdown-cp-contenido');
+    if (tipo_contenido.length === 0) {
+        tipo_contenido = getSelectedChips('cp-chips-contenido');
+    }
+    
+    const estado_emocional_posterior = document.getElementById('cp-select-emocional')?.value || getSelectedSingleChip('cp-chips-emocional');
+    const interferencia_actividad = document.getElementById('cp-select-interferencia')?.value || getSelectedSingleChip('cp-chips-interferencia');
+    const fecha = document.getElementById('pantalla-fecha')?.value || new Date().toISOString().split('T')[0];
 
     if (dispositivos.length === 0 || !tiempo_uso || aplicaciones.length === 0) {
         alert("Por favor selecciona al menos un dispositivo, el tiempo estimado y una aplicación.");
@@ -15993,6 +16541,7 @@ async function submitPatientConsumoPantalla(e) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                fecha,
                 dispositivos,
                 tiempo_uso,
                 aplicaciones,
@@ -16004,7 +16553,12 @@ async function submitPatientConsumoPantalla(e) {
         const data = await res.json();
         if (res.ok) {
             alert(data.success || "¡Registro de consumo de pantalla guardado con éxito!");
-            document.querySelectorAll('#view-patient-consumo-pantalla .chip-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('#form-consumo-pantalla input[type="checkbox"]').forEach(cb => cb.checked = false);
+            ['dropdown-cp-dispositivos', 'dropdown-cp-aplicaciones', 'dropdown-cp-contenido'].forEach(id => updateCpDropdownSummary(id));
+            if (document.getElementById('cp-select-tiempo')) document.getElementById('cp-select-tiempo').selectedIndex = 0;
+            if (document.getElementById('cp-select-emocional')) document.getElementById('cp-select-emocional').selectedIndex = 0;
+            if (document.getElementById('cp-select-interferencia')) document.getElementById('cp-select-interferencia').selectedIndex = 0;
+            
             loadPatientConsumoPantallaHistory();
         } else {
             alert(data.error || "Error al guardar el registro.");
@@ -16221,9 +16775,18 @@ async function loadPatientActivationChecklist(dateStr) {
         if (fechaInput) fechaInput.value = dateStr;
     }
 
+    const patientId = sessionStorage.getItem('patient_id') || '';
     try {
-        const res = await fetch(`/api/patient/activation/checklist?fecha=${dateStr}`);
+        const query = `?fecha=${dateStr}` + (patientId ? `&patient_id=${patientId}` : '');
+        const res = await fetch(`/api/patient/activation/checklist${query}`);
+        if (!res.ok) {
+            if (necList) necList.innerHTML = '<p class="text-muted" style="font-size: 0.85rem;">No se pudieron cargar actividades.</p>';
+            if (plaList) plaList.innerHTML = '<p class="text-muted" style="font-size: 0.85rem;">No se pudieron cargar actividades.</p>';
+            if (cotList) cotList.innerHTML = '<p class="text-muted" style="font-size: 0.85rem;">No se pudieron cargar actividades.</p>';
+            return;
+        }
         const data = await res.json();
+        if (!Array.isArray(data)) return;
 
         const nec = data.filter(a => a.categoria === 'necesaria');
         const pla = data.filter(a => a.categoria === 'placer');
@@ -16259,11 +16822,13 @@ async function submitPatientActivationLog(e) {
         completada: cb.checked
     }));
 
+    const patientId = sessionStorage.getItem('patient_id') || '';
     try {
-        const res = await fetch('/api/patient/activation/log', {
+        const query = patientId ? `?patient_id=${patientId}` : '';
+        const res = await fetch(`/api/patient/activation/log${query}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fecha, registros: items })
+            body: JSON.stringify({ fecha, registros: items, patient_id: patientId })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al guardar');
@@ -16284,10 +16849,16 @@ async function submitPatientActivationLog(e) {
 async function loadPatientActivationHistory() {
     const list = document.getElementById('patient-activation-history-list');
     if (!list) return;
+    const patientId = sessionStorage.getItem('patient_id') || '';
     try {
-        const res = await fetch('/api/patient/activation/history');
+        const query = patientId ? `?patient_id=${patientId}` : '';
+        const res = await fetch(`/api/patient/activation/history${query}`);
+        if (!res.ok) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No se pudieron cargar los registros de activación.</p>';
+            return;
+        }
         const data = await res.json();
-        if (data.length === 0) {
+        if (!Array.isArray(data) || data.length === 0) {
             list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros de actividades guardados aún.</p>';
             return;
         }
@@ -16318,7 +16889,133 @@ async function loadPatientActivationHistory() {
             </table>
         `;
     } catch (err) {
-        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        list.innerHTML = `<p class="text-muted text-center py-3">Error al cargar historial.</p>`;
+    }
+}
+
+let currentPatientActivities = [];
+
+async function openPatientActivationManageModal() {
+    const modal = document.getElementById('patient-activation-manage-modal');
+    if (!modal) return;
+    resetPatientManageActForm();
+    modal.classList.remove('hide');
+    await loadPatientActivationManageList();
+}
+
+function resetPatientManageActForm() {
+    if (document.getElementById('pat-act-id')) document.getElementById('pat-act-id').value = '';
+    if (document.getElementById('pat-act-nombre')) document.getElementById('pat-act-nombre').value = '';
+    if (document.getElementById('pat-act-categoria')) document.getElementById('pat-act-categoria').value = 'necesaria';
+    const btnSave = document.getElementById('btn-save-pat-act');
+    if (btnSave) btnSave.innerText = '➕ Agregar Actividad';
+    const cancelBtn = document.getElementById('btn-cancel-pat-act');
+    if (cancelBtn) cancelBtn.classList.add('hide');
+}
+
+async function loadPatientActivationManageList() {
+    const listContainer = document.getElementById('patient-activation-manage-list');
+    if (!listContainer) return;
+
+    const patientId = sessionStorage.getItem('patient_id') || '';
+    try {
+        const query = patientId ? `?patient_id=${patientId}` : '';
+        const res = await fetch(`/api/patient/activation/activities${query}`);
+        if (!res.ok) {
+            listContainer.innerHTML = '<p class="text-muted">No se pudieron cargar tus actividades.</p>';
+            return;
+        }
+        const data = await res.json();
+        currentPatientActivities = data;
+
+        if (!Array.isArray(data) || data.length === 0) {
+            listContainer.innerHTML = '<p class="text-muted" style="font-size: 0.88rem; text-align: center; padding: 1rem;">No tienes actividades personalizadas. ¡Agrega tu primera actividad arriba!</p>';
+            return;
+        }
+
+        const catNames = { necesaria: '🚿 Necesaria', placer: '🎨 Placer', cotidiana: '🧹 Cotidiana' };
+
+        listContainer.innerHTML = data.map(act => `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.6rem 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                <div style="flex: 1; overflow: hidden;">
+                    <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${act.nombre_actividad}</div>
+                    <div style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${catNames[act.categoria] || act.categoria} ${act.creado_por === 'paciente' ? '• (Creada por ti)' : '• (Asignada por psicólogo)'}</div>
+                </div>
+                <div style="display: flex; gap: 0.35rem; shrink: 0;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="editPatientActivationActivity(${act.id})" title="Editar" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">✏️</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="deletePatientActivationActivity(${act.id})" title="Eliminar" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; color: #dc2626;">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        listContainer.innerHTML = `<p class="text-muted">Error: ${err.message}</p>`;
+    }
+}
+
+function editPatientActivationActivity(actId) {
+    const act = currentPatientActivities.find(a => a.id === actId);
+    if (!act) return;
+    document.getElementById('pat-act-id').value = act.id;
+    document.getElementById('pat-act-nombre').value = act.nombre_actividad;
+    document.getElementById('pat-act-categoria').value = act.categoria === 'disfrute' ? 'placer' : act.categoria;
+    document.getElementById('btn-save-pat-act').innerText = '💾 Guardar Cambios';
+    const cancelBtn = document.getElementById('btn-cancel-pat-act');
+    if (cancelBtn) cancelBtn.classList.remove('hide');
+}
+
+async function submitPatientActivationManageActivity(e) {
+    e.preventDefault();
+    const actId = document.getElementById('pat-act-id').value;
+    const nombre = document.getElementById('pat-act-nombre').value.trim();
+    let categoria = document.getElementById('pat-act-categoria').value;
+    if (categoria === 'disfrute') categoria = 'placer';
+    const patientId = sessionStorage.getItem('patient_id') || '';
+
+    if (!nombre) return;
+
+    try {
+        const url = actId ? `/api/patient/activation/activities/${actId}` : '/api/patient/activation/activities';
+        const method = actId ? 'PUT' : 'POST';
+        const query = patientId ? `?patient_id=${patientId}` : '';
+
+        const res = await fetch(url + query, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre_actividad: nombre, categoria: categoria, patient_id: patientId })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al guardar actividad');
+        }
+
+        resetPatientManageActForm();
+        await loadPatientActivationManageList();
+        const today = document.getElementById('act-fecha')?.value || new Date().toISOString().split('T')[0];
+        loadPatientActivationChecklist(today);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function deletePatientActivationActivity(actId) {
+    if (!confirm('¿Seguro que deseas eliminar esta actividad?')) return;
+    const patientId = sessionStorage.getItem('patient_id') || '';
+
+    try {
+        const query = patientId ? `?patient_id=${patientId}` : '';
+        const res = await fetch(`/api/patient/activation/activities/${actId}${query}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al eliminar actividad');
+        }
+
+        resetPatientManageActForm();
+        await loadPatientActivationManageList();
+        const today = document.getElementById('act-fecha')?.value || new Date().toISOString().split('T')[0];
+        loadPatientActivationChecklist(today);
+    } catch (err) {
+        alert(err.message);
     }
 }
 
@@ -16336,6 +17033,12 @@ window.submitTherapistAddActivationActivity = submitTherapistAddActivationActivi
 window.addPresetActivity = addPresetActivity;
 window.toggleActivationActivity = toggleActivationActivity;
 window.loadPatientActivationChecklist = loadPatientActivationChecklist;
+window.openPatientActivationManageModal = openPatientActivationManageModal;
+window.resetPatientManageActForm = resetPatientManageActForm;
+window.loadPatientActivationManageList = loadPatientActivationManageList;
+window.editPatientActivationActivity = editPatientActivationActivity;
+window.submitPatientActivationManageActivity = submitPatientActivationManageActivity;
+window.deletePatientActivationActivity = deletePatientActivationActivity;
 window.submitPatientActivationLog = submitPatientActivationLog;
 window.loadPatientActivationHistory = loadPatientActivationHistory;
 window.openPatientActivationView = openPatientActivationView;
@@ -19461,6 +20164,10 @@ function selectTestForApplication(testCode) {
             panel.classList.add('hide');
             panel.style.display = 'none';
         }
+        
+        const testInfoContainer = document.getElementById('container-selected-test-info');
+        if (testInfoContainer) testInfoContainer.innerHTML = '';
+
         document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
             card.style.border = '2.5px solid #e2e8f0';
             card.style.background = '#ffffff';
@@ -19503,11 +20210,38 @@ function selectTestForApplication(testCode) {
         'BDI-II': 'BDI-II — Inventario de Depresión de Beck (21 ítems)',
         'BAI': 'BAI — Inventario de Ansiedad de Beck (21 ítems)',
         'TCS': 'TCS — Escala de Congruencia Transgénero (12 ítems)',
-        'UGDS-GS': 'UGDS-GS — Escala de Disforia de Utrecht (18 ítems)'
+        'UGDS-GS': 'UGDS-GS — Escala de Disforia de Utrecht (18 ítems)',
+        'SWLS': 'SwLS — Escala de Satisfacción con la Vida (Diener - 5 ítems)',
+        'SHIM': 'SHIM / IIEF-5 — Inventario de Salud Sexual para Hombres (Disfunción Eréctil)',
+        'NSSS-S': 'NSSS-S — Nueva Escala de Satisfacción Sexual (Forma Corta - 12 ítems)',
+        'FSFI': 'FSFI — Índice de Función Sexual Femenina (Disfunción Sexual - 19 ítems)',
+        'MMSE': 'MMSE — Mini-Mental State Examination (Folstein - 30 ítems)',
+        'AtAS': 'AtAS — Escala de Adaptación al Envejecimiento (10 ítems)',
+        'BSSC': 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales (4 ítems)'
     };
 
+    const testDataFound = testsCatalogDatabase.find(t => t.code === testCode);
     const labelTest = document.getElementById('label-selected-test-name');
-    if (labelTest) labelTest.textContent = testNamesMap[testCode] || testCode;
+    if (labelTest) labelTest.textContent = testDataFound ? testDataFound.name : (testNamesMap[testCode] || testCode);
+
+    const testInfoContainer = document.getElementById('container-selected-test-info');
+    if (testInfoContainer) {
+        const testData = testsCatalogDatabase.find(t => t.code === testCode);
+        if (testData) {
+            testInfoContainer.innerHTML = `
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; font-size: 0.9rem;">
+                    <div style="font-weight: 600; color: #334155; margin-bottom: 0.25rem;">${testData.name}</div>
+                    <div style="color: #64748b; margin-bottom: 0.5rem;">${testData.desc}</div>
+                    <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: #475569;">
+                        <span><i class="fas fa-users"></i> ${testData.poblacion}</span>
+                        <span><i class="fas fa-list-ol"></i> ${testData.itemsCount} ítems</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            testInfoContainer.innerHTML = '';
+        }
+    }
 
     updateSelectedPatientLabel();
 
@@ -19580,6 +20314,8 @@ function onSelectMainPatientChange() {
 }
 
 async function executeMainApplyTest(modoParam) {
+    if (window.isApplyingTestInFlight) return;
+
     const select = document.getElementById('select-test-main-patient');
     if (!select || !select.value) {
         alert("Por favor busque o seleccione un paciente primero en la barra superior.");
@@ -19595,6 +20331,15 @@ async function executeMainApplyTest(modoParam) {
     const patientId = select.value;
     const testCode = selectedTestCodeForApplication;
     const modo = modoParam || 'link';
+
+    // Deshabilitar botones para prevenir doble clic
+    window.isApplyingTestInFlight = true;
+    const applyButtons = document.querySelectorAll("#panel-apply-selected-test button");
+    applyButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+    });
 
     try {
         const res = await fetch('/api/tests/asignar', {
@@ -19624,6 +20369,7 @@ async function executeMainApplyTest(modoParam) {
         if (successPanel) {
             successPanel.classList.remove('hide');
             successPanel.style.display = 'block';
+            successPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         const testUrl = data.url_test || `${window.location.origin}/evaluacion/${data.token}`;
@@ -19644,9 +20390,9 @@ async function executeMainApplyTest(modoParam) {
                 <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.6rem 0.85rem; margin-bottom: 0.75rem; color: #166534; font-weight: 700; font-size: 0.86rem;">
                     ✓ ¡Solicitud registrada y guardada con éxito en el historial!
                 </div>
-                <div><strong>Token ID:</strong> <code>${data.token || ''}</code></div>
-                <div><strong>Modo de Aplicación:</strong> <span style="font-weight:800; color:#702e5e;">${modoLabelHtml}</span></div>
-                <div><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all; font-weight: 700;">${testUrl}</a></div>
+                <div style="margin-top: 0.35rem;"><strong>Token ID:</strong> <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${data.token || ''}</code></div>
+                <div style="margin-top: 0.35rem;"><strong>Modo de Aplicación:</strong> <span style="font-weight:800; color:#702e5e;">${modoLabelHtml}</span></div>
+                <div style="margin-top: 0.35rem;"><strong>Enlace generado:</strong> <a href="${testUrl}" target="_blank" style="color: #702e5e; word-break: break-all; font-weight: 700;">${testUrl}</a></div>
                 ${statusNoticeHtml}
             `;
         }
@@ -19668,25 +20414,30 @@ async function executeMainApplyTest(modoParam) {
                     </a>
                 `;
             }
-
-            actionsHtml += `
-                <button type="button" class="btn btn-sm" style="background: #0284c7; color: white; font-weight: 800; border-radius: 8px; padding: 0.55rem 1.1rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2,132,199,0.3);" onclick="resetTestApplicationModule()">
-                    ✨ Solicitud Guardada - Iniciar Nueva Solicitud
-                </button>
-            `;
-
             successActions.innerHTML = actionsHtml;
-        }
-
-        if (successPanel) {
-            successPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
     } catch (e) {
         console.error("Error al asignar test:", e);
         alert("Error al asignar la evaluación.");
+    } finally {
+        window.isApplyingTestInFlight = false;
+        applyButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+        });
     }
 }
+
+function closeTestSuccessPanel() {
+    const panel = document.getElementById('panel-apply-success-result');
+    if (panel) {
+        panel.classList.add('hide');
+        panel.style.display = 'none';
+    }
+}
+window.closeTestSuccessPanel = closeTestSuccessPanel;
 
 function copyTestLink(linkUrl) {
     if (!linkUrl) return;
@@ -19777,7 +20528,9 @@ function renderCatalogViewWithFiltersAndPagination() {
         filtered = testsCatalogDatabase.filter(t => {
             const tCat = (t.cat || '').toLowerCase();
             const tCode = (t.code || '').toLowerCase();
-            return tCat.includes(catNorm) || catNorm.includes(tCat) || tCode.includes(catNorm);
+            const tName = (t.name || '').toLowerCase();
+            const tDesc = (t.desc || '').toLowerCase();
+            return tCat.includes(catNorm) || catNorm.includes(tCat) || tCode.includes(catNorm) || tName.includes(catNorm) || tDesc.includes(catNorm);
         });
     }
 
@@ -22054,6 +22807,59 @@ window.updateDayStatusBadge = updateDayStatusBadge;
 window.updateDayScheduleSummary = updateDayScheduleSummary;
 
 window.renderClinicaFullCalendar = renderClinicaFullCalendar;
+
+
+// ==========================================
+// HERRAMIENTAS TERAPÉUTICAS: ACCESO DIRECTO WHATSAPP Y PROGRAMACIÓN
+// ==========================================
+
+async function enviarWhatsAppDirectoHerramienta(patientId, toolKey) {
+    try {
+        const res = await fetch('/api/herramientas/generar-link-directo', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ patient_id: patientId, herramienta_tipo: toolKey })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al generar enlace.');
+
+        if (data.wa_url) {
+            window.open(data.wa_url, '_blank');
+        } else if (data.link) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(data.link);
+                alert(`🔗 Enlace directo de 1 solo uso generado y copiado al portapapeles:\n${data.link}`);
+            } else {
+                prompt("Copia el siguiente enlace directo para el paciente:", data.link);
+            }
+        }
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+
+function previsualizarHerramientaDirecta(toolKey) {
+    window.open(`/herramienta/directa?token=preview_mode`, '_blank');
+}
+
+async function programarRecordatorioWhatsApp(patientId, toolKey, horaStr) {
+    try {
+        const res = await fetch('/api/herramientas/programar-recordatorio', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ patient_id: patientId, herramienta_tipo: toolKey, hora_programada: horaStr || '20:00' })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al programar recordatorio.');
+        alert('✅ ' + (data.message || 'Recordatorio diario a las 8:00 PM fijado con éxito.'));
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+
+window.enviarWhatsAppDirectoHerramienta = enviarWhatsAppDirectoHerramienta;
+window.previsualizarHerramientaDirecta = previsualizarHerramientaDirecta;
+window.programarRecordatorioWhatsApp = programarRecordatorioWhatsApp;
 
 
 

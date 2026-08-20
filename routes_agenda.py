@@ -16,6 +16,63 @@ from flask import Blueprint, request, jsonify, session, g
 
 agenda_bp = Blueprint('agenda', __name__)
 
+def normalize_date_str(d_str):
+    if not d_str:
+        return ""
+    d_str = str(d_str).strip()
+    try:
+        dt = datetime.strptime(d_str, "%Y-%m-%d")
+        return dt.strftime("%Y-%m-%d")
+    except:
+        pass
+    try:
+        dt = datetime.strptime(d_str, "%d/%m/%Y")
+        return dt.strftime("%Y-%m-%d")
+    except:
+        pass
+    try:
+        parts = d_str.split('-')
+        if len(parts) == 3 and len(parts[0]) == 4:
+            return f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+    except:
+        pass
+    return d_str
+
+def normalize_time_str(t_str):
+    if not t_str:
+        return "00:00"
+    t_str = str(t_str).strip().lower()
+    is_pm = 'pm' in t_str
+    is_am = 'am' in t_str
+    clean_t = re.sub(r'[^\d:]', '', t_str)
+    parts = clean_t.split(':')
+    if not parts or not parts[0]:
+        return "00:00"
+    try:
+        h = int(parts[0])
+        m = int(parts[1]) if len(parts) > 1 and parts[1] else 0
+        if is_pm and h < 12:
+            h += 12
+        elif is_am and h == 12:
+            h = 0
+        return f"{h:02d}:{m:02d}"
+    except:
+        return "00:00"
+
+def get_appointment_fee(cursor, patient_id, psicologo_id=None, modalidad=None):
+    """Calcula la tarifa (monto y moneda) para una consulta."""
+    monto = 0.0
+    moneda = '$'
+    if patient_id:
+        cursor.execute("SELECT costo_personalizado, moneda_personalizada FROM pacientes WHERE id = ?", (patient_id,))
+        row = cursor.fetchone()
+        if row:
+            if row['costo_personalizado'] is not None and row['costo_personalizado'] > 0:
+                monto = float(row['costo_personalizado'])
+            if row['moneda_personalizada']:
+                moneda = row['moneda_personalizada']
+    return monto, moneda
+
 def get_db():
     """Obtiene la conexión a la base de datos desde el contexto global g de Flask."""
     db = getattr(g, '_database', None)
@@ -845,6 +902,7 @@ def fast_booking_book():
         
     try:
         google_event_id = None
+        from routes_admin import get_calendar_service
         service = get_calendar_service(psicologo_id)
         if service:
             start_datetime = f"{fecha}T{hora}:00-04:00"
@@ -978,12 +1036,23 @@ def delete_admin_consultation_history_event(event_id):
         db = get_db()
         cursor = db.cursor()
 
-        cursor.execute("""
-            SELECT af.id, af.google_event_id, af.paciente_id 
-            FROM agenda_finanzas af
-            JOIN pacientes p ON af.paciente_id = p.id
-            WHERE af.id = ? AND p.psicologo_id = ?
-        """, (event_id, user_id))
+        role = session.get('role', '')
+        is_admin = role in ['admin', 'superadmin'] or user_id == 1
+
+        if is_admin:
+            cursor.execute("""
+                SELECT af.id, af.google_event_id, af.paciente_id 
+                FROM agenda_finanzas af
+                LEFT JOIN pacientes p ON af.paciente_id = p.id
+                WHERE af.id = ?
+            """, (event_id,))
+        else:
+            cursor.execute("""
+                SELECT af.id, af.google_event_id, af.paciente_id 
+                FROM agenda_finanzas af
+                LEFT JOIN pacientes p ON af.paciente_id = p.id
+                WHERE af.id = ? AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR af.paciente_id IS NULL)
+            """, (event_id, user_id))
         row = cursor.fetchone()
 
         if not row:
@@ -993,7 +1062,8 @@ def delete_admin_consultation_history_event(event_id):
         paciente_id = row['paciente_id']
 
         if google_event_id:
-            service = get_calendar_service()
+            from routes_admin import get_calendar_service
+            service = get_calendar_service(user_id)
             if service:
                 try:
                     service.events().delete(calendarId='primary', eventId=google_event_id).execute()

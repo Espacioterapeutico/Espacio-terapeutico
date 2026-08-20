@@ -323,6 +323,7 @@ def get_monthly_balance():
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?) 
               AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+              AND af.monto > 0
               AND p.psicologo_id = ?
             ORDER BY af.fecha DESC
         """, (date_prefix, date_prefix, psic_id))
@@ -336,6 +337,7 @@ def get_monthly_balance():
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
+              AND af.monto > 0
               AND (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?)
               AND p.psicologo_id = ?
         """, (date_prefix, date_prefix, psic_id))
@@ -364,6 +366,7 @@ def get_monthly_balance():
             FROM sesiones s
             JOIN pacientes p ON s.paciente_id = p.id
             WHERE s.fecha LIKE ? AND p.psicologo_id = ?
+              AND (s.estado IS NULL OR (s.estado != 'Cancelada' AND s.estado NOT LIKE 'Cancelada%'))
             GROUP BY s.modalidad
         """, (date_prefix, psic_id))
         ses_counts = {row[0]: row[1] for row in cursor.fetchall() if row[0]}
@@ -372,7 +375,8 @@ def get_monthly_balance():
             SELECT af.tipo_consulta, COUNT(af.id)
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
-            WHERE af.fecha LIKE ? AND p.psicologo_id = ? AND af.estado_pago != 'Cancelada'
+            WHERE af.fecha LIKE ? AND p.psicologo_id = ?
+              AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
             GROUP BY af.tipo_consulta
         """, (date_prefix, psic_id))
         af_counts = {row[0]: row[1] for row in cursor.fetchall() if row[0]}
@@ -410,7 +414,9 @@ def get_monthly_balance():
                    COALESCE(p.apellidos, '') as apellidos
             FROM agenda_finanzas af
             LEFT JOIN pacientes p ON af.paciente_id = p.id
-            WHERE (fecha LIKE ? OR fecha_liquidacion LIKE ?) AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+            WHERE (fecha LIKE ? OR fecha_liquidacion LIKE ?) 
+              AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+              AND af.monto > 0
             ORDER BY af.fecha DESC
         """, (date_prefix, date_prefix))
         income_list = [dict(row) for row in cursor.fetchall()]
@@ -422,6 +428,7 @@ def get_monthly_balance():
             SELECT SUM(cantidad_sesiones) 
             FROM agenda_finanzas 
             WHERE estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
+              AND monto > 0
               AND (fecha LIKE ? OR fecha_liquidacion LIKE ?)
         """, (date_prefix, date_prefix))
         total_pagas = cursor.fetchone()[0] or 0
@@ -440,7 +447,7 @@ def get_monthly_balance():
         cursor.execute("""
             SELECT modalidad, COUNT(id)
             FROM sesiones
-            WHERE fecha LIKE ?
+            WHERE fecha LIKE ? AND (estado IS NULL OR (estado != 'Cancelada' AND estado NOT LIKE 'Cancelada%'))
             GROUP BY modalidad
         """, (date_prefix,))
         modality_counts = {row[0]: row[1] for row in cursor.fetchall()}

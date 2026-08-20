@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ tool_title or 'Herramienta Terapéutica' }} - Espacio Terapéutico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #5d3a6f;
+            --primary-light: #f5eff8;
+            --primary-hover: #4a2d59;
+            --accent: #2e7d32;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #2b2b2b;
+            --text-muted: #6c757d;
+            --border: #e2e8f0;
+            --radius: 16px;
+            --shadow: 0 10px 25px -5px rgba(93, 58, 111, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 1.25rem 0.75rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #4a2d59 100%);
+            color: white;
+            padding: 1.75rem 1.25rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .header-logo {
+            width: 52px;
+            height: 52px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.75rem;
+            font-size: 1.6rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .header p {
+            font-size: 0.88rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .badge-therapist {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .content {
+            padding: 1.5rem 1.25rem;
+        }
+
+        .greeting {
+            background-color: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            padding: 0.88rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.92rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.4rem;
+        }
+
+        label small {
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="time"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem 0.88rem;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            background: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(93, 58, 111, 0.12);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.95rem 1.25rem;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(93, 58, 111, 0.25);
+            margin-top: 1rem;
+        }
+
+        .btn-submit:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .checkbox-card {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.88rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            background: #fff;
+            user-select: none;
+        }
+
+        .checkbox-card input {
+            accent-color: var(--primary);
+            width: 16px;
+            height: 16px;
+        }
+
+        .state-card {
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+        }
+
+        .state-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .state-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .state-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-msg {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .status-msg.error {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            display: block;
+        }
+
+        .status-msg.success {
+            background-color: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    {% if error_msg %}
+    <div class="state-card">
+        <div class="state-icon">⚠️</div>
+        <div class="state-title">Enlace no disponible</div>
+        <div class="state-desc">{{ error_msg }}</div>
+    </div>
+    {% elif already_used %}
+    <div class="state-card">
+        <div class="state-icon">✅</div>
+        <div class="state-title">¡Registro Completado!</div>
+        <div class="state-desc">
+            Hola <strong>{{ patient_name }}</strong> 👋<br>
+            Tu registro diario de <strong>{{ tool_title }}</strong> ya fue completado y guardado correctamente en tu historia clínica.
+        </div>
+        <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 1rem;">
+            Completado el {{ completed_at }}
+        </div>
+    </div>
+    {% elif valid_tool %}
+    <div class="header">
+        <div class="header-logo">🧠</div>
+        <h1>{{ tool_title }}</h1>
+        <p>Registro Diario de Seguimiento</p>
+        {% if therapist_name %}
+        <div class="badge-therapist">Atendido por {{ therapist_name }}</div>
+        {% endif %}
+    </div>
+
+    <div class="content">
+        <div class="greeting">
+            Hola, {{ patient_name }} 👋 Completa tu registro del día en pocos segundos.
+        </div>
+
+        <form id="public-tool-form" onsubmit="submitPublicTool(event)">
+            <input type="hidden" id="tool-token" value="{{ token }}">
+            <input type="hidden" id="tool-type" value="{{ tool_type }}">
+
+            {% if tool_type == 'pantalla' %}
+            <div class="form-group">
+                <label>Dispositivos Utilizados Hoy *</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-card"><input type="checkbox" name="dispositivos" value="Smartphone"> 📱 Teléfono</label>
+                    <label class="checkbox-card"><input type="checkbox" name="dispositivos" value="Computadora / Laptop"> 💻 Laptop</label>
+                    <label class="checkbox-card"><input type="checkbox" name="dispositivos" value="TV / Smart TV"> 📺 TV</label>
+                    <label class="checkbox-card"><input type="checkbox" name="dispositivos" value="Tablet"> 📲 Tablet</label>
+                    <label class="checkbox-card"><input type="checkbox" name="dispositivos" value="Consola Videojuegos"> 🎮 Consola</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="tiempo_uso">Tiempo Total de Uso Estimado (Horas) *</label>
+                <input type="number" id="tiempo_uso" required step="0.5" min="0" max="24" placeholder="Ej: 3.5">
+            </div>
+
+            <div class="form-group">
+                <label for="aplicaciones">Aplicaciones / Redes Principales</label>
+                <input type="text" id="aplicaciones" placeholder="Ej: Instagram, TikTok, WhatsApp, YouTube">
+            </div>
+
+            <div class="form-group">
+                <label for="tipo_contenido">Tipo de Contenido Consumido</label>
+                <select id="tipo_contenido">
+                    <option value="Entretenimiento / Redes">Entretenimiento / Redes Sociales</option>
+                    <option value="Trabajo / Estudio">Trabajo / Estudio</option>
+                    <option value="Noticias / Información">Noticias / Información</option>
+                    <option value="Videojuegos">Videojuegos</option>
+                    <option value="Mixto">Mixto</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="estado_emocional_posterior">¿Cómo te sentiste después del consumo?</label>
+                <select id="estado_emocional_posterior">
+                    <option value="Tranquilo / Satisfecho">Tranquilo / Satisfecho</option>
+                    <option value="Ansioso / Inquieto">Ansioso / Inquieto</option>
+                    <option value="Cansado / Frustrado">Cansado / Frustrado</option>
+                    <option value="Culpable / Distraído">Culpable / Distraído</option>
+                    <option value="Neutral">Neutral</option>
+                </select>
+            </div>
+
+            {% elif tool_type == 'cognitivo' %}
+            <div class="form-group">
+                <label for="situacion">Situación Gatillo (¿Qué sucedió?) *</label>
+                <textarea id="situacion" required rows="3" placeholder="Describe brevemente el evento o situación..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="pensamiento">Pensamiento Automático (¿Qué te dijiste a ti mismo/a?) *</label>
+                <textarea id="pensamiento" required rows="3" placeholder="Pensamientos que pasaron por tu mente..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="emocion_sensacion">Emoción / Sensación Física *</label>
+                <input type="text" id="emocion_sensacion" required placeholder="Ej: Rabia, Miedo, Ansiedad, Opresión en el pecho">
+            </div>
+
+            <div class="form-group">
+                <label for="intensidad_emocion">Intensidad de la Emoción (1 al 10) *</label>
+                <input type="number" id="intensidad_emocion" required min="1" max="10" value="5">
+            </div>
+
+            <div class="form-group">
+                <label for="conducta">Conducta / Respuesta (¿Qué hiciste?) *</label>
+                <textarea id="conducta" required rows="2" placeholder="Acción realizada..."></textarea>
+            </div>
+
+            {% elif tool_type == 'ingesta' %}
+            <div class="form-group">
+                <label for="tipo_comida">Tipo de Comida *</label>
+                <select id="tipo_comida">
+                    <option value="Desayuno">Desayuno</option>
+                    <option value="Almuerzo">Almuerzo</option>
+                    <option value="Merienda / Snack">Merienda / Snack</option>
+                    <option value="Cena">Cena</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="descripcion_plato">Descripción del Alimento / Bebida *</label>
+                <textarea id="descripcion_plato" required rows="3" placeholder="Describe los alimentos e ingredientes..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="apetito_previo">Apetito previo (1 = Nada, 5 = Mucho)</label>
+                <input type="number" id="apetito_previo" min="1" max="5" value="3">
+            </div>
+
+            <div class="form-group">
+                <label for="saciedad">Nivel de Saciedad posterior (1 = Con hambre, 5 = Muy lleno)</label>
+                <input type="number" id="saciedad" min="1" max="5" value="3">
+            </div>
+
+            <div class="form-group">
+                <label for="afectividad">Estado de Ánimo durante la ingesta</label>
+                <input type="text" id="afectividad" placeholder="Ej: Tranquilo, Ansioso, Culpable, Apurado">
+            </div>
+
+            {% elif tool_type == 'adherencia' %}
+            <div class="form-group">
+                <label>Lista de Medicamentos Prescritos</label>
+                {% if extra_data and extra_data.medicamentos %}
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+                    {% for m in extra_data.medicamentos %}
+                    <div style="padding: 0.75rem; border: 1.5px solid var(--border); border-radius: 10px; background: #fff;">
+                        <label class="checkbox-card" style="border: none; padding: 0; margin-bottom: 0.4rem; font-weight: 600;">
+                            <input type="checkbox" class="med-check" data-med-id="{{ m.id }}">
+                            💊 {{ m.nombre_medicamento }} ({{ m.dosis }})
+                        </label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="time" class="med-time" style="padding: 0.4rem; font-size: 0.85rem;" placeholder="Hora de toma">
+                            <input type="text" class="med-notes" style="padding: 0.4rem; font-size: 0.85rem;" placeholder="Notas adicionales">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="font-size: 0.88rem; color: var(--text-muted);">No tienes medicamentos específicos cargados. Indica si tomaste tu medicación:</p>
+                <div style="margin-top: 0.5rem;">
+                    <label class="checkbox-card"><input type="checkbox" id="med_generico_tomado"> 💊 Tomé mi medicación prescrita hoy</label>
+                </div>
+                {% endif %}
+            </div>
+
+            {% elif tool_type == 'activacion' %}
+            <div class="form-group">
+                <label>Checklist de Actividades del Día</label>
+                {% if extra_data and extra_data.actividades %}
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+                    {% for a in extra_data.actividades %}
+                    <div style="padding: 0.75rem; border: 1.5px solid var(--border); border-radius: 10px; background: #fff;">
+                        <label class="checkbox-card" style="border: none; padding: 0; font-weight: 600;">
+                            <input type="checkbox" class="act-check" data-act-id="{{ a.id }}">
+                            {% if a.categoria == 'necesaria' %}🚿{% elif a.categoria == 'placer' %}🎉{% else %}🧹{% endif %}
+                            {{ a.nombre_actividad }}
+                        </label>
+                        <input type="text" class="act-notes" style="margin-top: 0.4rem; padding: 0.4rem; font-size: 0.85rem;" placeholder="Comentarios / nivel de disfrute">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="margin-top: 0.5rem;">
+                    <label for="act_general_texto">Escribe las actividades completadas hoy:</label>
+                    <textarea id="act_general_texto" rows="3" placeholder="Ej: Me bañé, salí a caminar 15 mins, limpié el cuarto..."></textarea>
+                </div>
+                {% endif %}
+            </div>
+
+            {% else %}
+            <!-- Pizarra / Diario general -->
+            <div class="form-group">
+                <label for="estado_animo">¿Cómo te sientes hoy? *</label>
+                <select id="estado_animo" style="font-size: 1.1rem; padding: 0.6rem;">
+                    <option value="feliz">😊 Muy bien / Feliz</option>
+                    <option value="tranquilo">😌 Tranquilo / En paz</option>
+                    <option value="neutral">😐 Neutral / Normal</option>
+                    <option value="triste">😢 Triste / Desanimado</option>
+                    <option value="ansioso">😰 Ansioso / Estresado</option>
+                    <option value="enojado">😠 Molesto / Frustrado</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="nota_texto">Escribe tu reflexión o mensaje para tu terapeuta *</label>
+                <textarea id="nota_texto" required rows="4" placeholder="Escribe libremente aquí tu registro..."></textarea>
+            </div>
+            {% endif %}
+
+            <div id="status-msg" class="status-msg"></div>
+
+            <button type="submit" id="btn-submit-public" class="btn-submit">
+                💾 Guardar Registro Diario
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+async function submitPublicTool(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit-public');
+    const msgEl = document.getElementById('status-msg');
+    msgEl.className = 'status-msg';
+    msgEl.style.display = 'none';
+
+    const token = document.getElementById('tool-token').value;
+    const toolType = document.getElementById('tool-type').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Guardando...';
+
+    let payload = {};
+
+    if (toolType === 'pantalla') {
+        const dispNodes = document.querySelectorAll('input[name="dispositivos"]:checked');
+        const dispositivos = Array.from(dispNodes).map(n => n.value);
+        payload = {
+            dispositivos: dispositivos,
+            tiempo_uso: document.getElementById('tiempo_uso').value,
+            aplicaciones: document.getElementById('aplicaciones').value,
+            tipo_contenido: document.getElementById('tipo_contenido').value,
+            estado_emocional_posterior: document.getElementById('estado_emocional_posterior').value
+        };
+    } else if (toolType === 'cognitivo') {
+        payload = {
+            situacion: document.getElementById('situacion').value,
+            pensamiento: document.getElementById('pensamiento').value,
+            emocion_sensacion: document.getElementById('emocion_sensacion').value,
+            intensidad_emocion: document.getElementById('intensidad_emocion').value,
+            conducta: document.getElementById('conducta').value
+        };
+    } else if (toolType === 'ingesta') {
+        payload = {
+            tipo_comida: document.getElementById('tipo_comida').value,
+            descripcion_plato: document.getElementById('descripcion_plato').value,
+            apetito_previo: document.getElementById('apetito_previo').value,
+            saciedad: document.getElementById('saciedad').value,
+            afectividad: document.getElementById('afectividad').value
+        };
+    } else if (toolType === 'adherencia') {
+        const medLogs = [];
+        const medChecks = document.querySelectorAll('.med-check');
+        medChecks.forEach(ch => {
+            const card = ch.closest('div');
+            medLogs.push({
+                id: ch.getAttribute('data-med-id'),
+                tomado: ch.checked,
+                hora_tomado: card.querySelector('.med-time') ? card.querySelector('.med-time').value : '',
+                notas: card.querySelector('.med-notes') ? card.querySelector('.med-notes').value : ''
+            });
+        });
+        payload = { medicamentos_log: medLogs };
+    } else if (toolType === 'activacion') {
+        const actLogs = [];
+        const actChecks = document.querySelectorAll('.act-check');
+        actChecks.forEach(ch => {
+            const card = ch.closest('div');
+            actLogs.push({
+                id: ch.getAttribute('data-act-id'),
+                completada: ch.checked,
+                notas: card.querySelector('.act-notes') ? card.querySelector('.act-notes').value : ''
+            });
+        });
+        payload = { actividades_log: actLogs };
+    } else {
+        payload = {
+            estado_animo: document.getElementById('estado_animo') ? document.getElementById('estado_animo').value : 'neutral',
+            nota_texto: document.getElementById('nota_texto') ? document.getElementById('nota_texto').value : ''
+        };
+    }
+
+    try {
+        const res = await fetch('/api/public/herramienta/guardar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token, payload: payload })
+        });
+        const resData = await res.json();
+
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            msgEl.textContent = '❌ ' + (resData.error || 'Error al guardar registro.');
+            msgEl.classList.add('error');
+            btn.disabled = false;
+            btn.innerHTML = '💾 Guardar Registro Diario';
+        }
+    } catch (err) {
+        msgEl.textContent = '❌ Error de red con el servidor. Intenta de nuevo.';
+        msgEl.classList.add('error');
+        btn.disabled = false;
+        btn.innerHTML = '💾 Guardar Registro Diario';
+    }
+}
+</script>
+
+</body>
+</html>

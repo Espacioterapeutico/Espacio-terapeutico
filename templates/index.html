@@ -1157,7 +1157,7 @@
                 </a>
                 <a href="#" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-consumo-pantalla" data-mod-key="pantalla" onclick="selectPatientMenuItem('patient-consumo-pantalla')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <span style="font-size: 1.2rem;">📱</span>
-                    <span>Tracker de Pantalla</span>
+                    <span>Registro de Consumo de Pantallas</span>
                 </a>
                 <a href="#" class="pat-menu-item" data-pat-view="patient-support" onclick="selectPatientMenuItem('patient-support')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -2537,10 +2537,11 @@
                                                     <th>Fecha / Hora Cita</th>
                                                     <th>Modalidad</th>
                                                     <th>Estado de Mensaje / Pipeline</th>
+                                                    <td style="text-align: right; font-weight: 700; padding: 0.75rem 0.5rem;">Acción Manual</td>
                                                 </tr>
                                             </thead>
                                             <tbody id="wa-monitoring-queue-tbody">
-                                                <tr><td colspan="4" class="text-center py-4">Cargando cola de mensajes...</td></tr>
+                                                <tr><td colspan="5" class="text-center py-4">Cargando cola de mensajes...</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -3072,16 +3073,14 @@
                                 <label for="select-test-category-dropdown" style="font-size: 0.8rem; font-weight: 800; color: #475569; margin-bottom: 4px; display: block;">📂 Filtrar por Categoría de Evaluación:</label>
                                 <select id="select-test-category-dropdown" onchange="filterTestsByCategory(this.value)" style="width: 100%; padding: 0.7rem 1rem; border-radius: 12px; border: 2px solid #702e5e; background: #ffffff; color: #702e5e; font-weight: 800; font-size: 0.88rem; outline: none; cursor: pointer; box-shadow: 0 2px 8px rgba(112,46,94,0.06);">
                                     <option value="TODAS">📚 Todas las Categorías</option>
-                                    <option value="Depresión y Ansiedad">Depresión y Ansiedad</option>
-                                    <option value="Clínica e Infantil">Clínica e Infantil</option>
-                                    <option value="Cognición y Estrés">Cognición y Estrés</option>
-                                    <option value="Pareja y Violencia">Pareja y Violencia</option>
-                                    <option value="Salud y Sexología">Salud y Sexología</option>
-                                    <option value="Neurodivergencia y Autismo">Neurodivergencia y Autismo</option>
-                                    <option value="Personalidad y Psicopatología">Personalidad y Psicopatología</option>
-                                    <option value="Capacidad Intelectual">Capacidad Intelectual</option>
-                                    <option value="Orientación Vocacional">Orientación Vocacional</option>
-                                    <option value="Identidad de Género">Identidad de Género</option>
+                                    <option value="Test Infanto-Juvenil">👶 Test Infanto-Juvenil</option>
+                                    <option value="Adulto Mayor">👵 Adulto Mayor / Psicogerontología</option>
+                                    <option value="Sexología y Salud Sexual">👩‍❤️‍👨 Sexología y Salud Sexual</option>
+                                    <option value="Neurodesarrollo y Neuropsicología">🧠 Neurodesarrollo y Neuropsicología</option>
+                                    <option value="Personalidad y Psicopatología">🎭 Personalidad y Psicopatología</option>
+                                    <option value="Pruebas Proyectivas">🎨 Pruebas Proyectivas (Material Físico / Gráficos)</option>
+                                    <option value="Cognición y Capacidad Intelectual">💡 Cognición y Capacidad Intelectual</option>
+                                    <option value="Afectividad, Depresión y Ansiedad">💓 Afectividad, Depresión y Ansiedad</option>
                                 </select>
                             </div>
                         </div>
@@ -3135,6 +3134,9 @@
                                 </div>
                             </div>
 
+                            <!-- INFORMACIÓN DETALLADA E INSTRUCCIONES DEL TEST SELECCIONADO -->
+                            <div id="container-selected-test-info" style="margin-bottom: 1.25rem;"></div>
+
                             <p style="font-size: 0.88rem; color: #475569; margin-bottom: 1.25rem;">Seleccione la modalidad de aplicación deseada para enviar o iniciar la prueba:</p>
 
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
@@ -3176,8 +3178,11 @@
                             </div>
 
                             <!-- TARJETA DE ÉXITO RESULTADO GENERADO -->
-                            <div id="panel-apply-success-result" class="hide mt-3" style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 1.25rem;">
-                                <div style="color: #15803d; font-weight: 800; font-size: 1.05rem; margin-bottom: 0.5rem;">✅ ¡Evaluación creada exitosamente!</div>
+                            <div id="panel-apply-success-result" class="hide" style="background: #ffffff; border: 2px solid #86efac; border-radius: 14px; padding: 1.25rem 1.5rem; margin-top: 2rem !important; box-shadow: 0 4px 15px rgba(22, 101, 52, 0.08); position: relative;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.65rem;">
+                                    <div style="color: #15803d; font-weight: 800; font-size: 1.05rem;">✅ ¡Evaluación creada exitosamente!</div>
+                                    <button type="button" onclick="closeTestSuccessPanel()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 800; color: #475569; cursor: pointer; transition: all 0.2s;" title="Cerrar información de la solicitud">&times;</button>
+                                </div>
                                 <div id="text-apply-success-details" style="font-size: 0.9rem; color: #334155; margin-bottom: 1rem;"></div>
                                 <div id="container-apply-success-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;"></div>
                             </div>
@@ -3615,8 +3620,9 @@
 
                     <!-- TARJETA CHECKLIST DIARIO POR CATEGORÍAS -->
                     <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);">
-                        <div class="card-header" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                             <h3 style="color: #92400e; margin: 0;">📌 Check-in Diario de Actividades</h3>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="openPatientActivationManageModal()" style="background: #d97706; border: none; font-weight: 700; border-radius: 6px; padding: 0.4rem 0.85rem;">⚙️ Gestionar / Agregar Actividades</button>
                         </div>
                         <div class="card-body">
                             <form id="patient-activation-form" onsubmit="submitPatientActivationLog(event)">
@@ -3854,7 +3860,7 @@
                 <!-- VISTA PORTAL PACIENTE: TRACKER DE CONSUMO DE PANTALLA -->
                 <section id="view-patient-consumo-pantalla" class="app-view hide">
                     <div class="view-header-row">
-                        <h2>📱 Tracker de Consumo de Pantalla</h2>
+                        <h2>📱 Registro de Consumo de Pantallas</h2>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="showSection('patient-home')">← Volver a Mi Sesión</button>
                     </div>
 
@@ -3867,93 +3873,182 @@
                                 Selecciona las opciones aplicables con toques rápidos para registrar tu tiempo de pantalla y su impacto.
                             </p>
                             <form id="form-consumo-pantalla" onsubmit="submitPatientConsumoPantalla(event)">
-                                <!-- 1. DISPOSITIVOS (CHIPS MULTISELECT) -->
-                                <div class="form-group mb-4">
-                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
-                                        1. Dispositivos Utilizados *
+                                <!-- FECHA DEL REGISTRO -->
+                                <div class="cp-question-card mb-4" style="background: #faf5ff; border: 1.5px solid #e9d5ff; border-radius: 12px; padding: 1.25rem;">
+                                    <label for="pantalla-fecha" style="font-weight: 700; color: #581c87; display: block; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                                        📅 Fecha del Registro *
                                     </label>
-                                    <div id="cp-chips-dispositivos" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                        <button type="button" class="chip-btn" data-value="telefono">📱 Teléfono / Smartphone</button>
-                                        <button type="button" class="chip-btn" data-value="computadora">💻 Computadora / Laptop</button>
-                                        <button type="button" class="chip-btn" data-value="televisor">📺 Televisor / Smart TV</button>
-                                        <button type="button" class="chip-btn" data-value="consola">🎮 Consola de Juegos</button>
-                                        <button type="button" class="chip-btn" data-value="tablet">📟 Tablet</button>
+                                    <input type="date" id="pantalla-fecha" required style="width: 100%; max-width: 250px; padding: 0.6rem; border-radius: 8px; border: 1.5px solid #c084fc; font-weight: 600;">
+                                </div>
+
+                                <!-- PREGUNTA 1: DISPOSITIVOS (MULTISELECT DROPDOWN) -->
+                                <div class="cp-question-card mb-4" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 5px solid #7e22ce;">
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem;">
+                                        <span style="background: #7e22ce; color: white; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;">1</span>
+                                        <label style="font-weight: 700; color: #1e293b; margin: 0; font-size: 0.95rem;">📱 Dispositivos Utilizados *</label>
+                                    </div>
+                                    <div class="cp-dropdown-multiselect" id="dropdown-cp-dispositivos">
+                                        <button type="button" class="cp-dropdown-toggle" onclick="toggleCpDropdown('dropdown-cp-dispositivos')" style="width: 100%; text-align: left; padding: 0.75rem 1rem; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; font-weight: 600; color: #334155; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                            <span class="cp-dropdown-label">Seleccionar dispositivos (Opción múltiple)...</span>
+                                            <span class="cp-dropdown-badge" style="background: #e9d5ff; color: #6b21a8; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.78rem; font-weight: 700;">0 seleccionados</span>
+                                        </button>
+                                        <div class="cp-dropdown-menu hide" style="margin-top: 0.5rem; background: white; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="telefono" onchange="updateCpDropdownSummary('dropdown-cp-dispositivos')" style="width: 18px; height: 18px; accent-color: #7e22ce;">
+                                                <span>📱 Teléfono / Smartphone</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="computadora" onchange="updateCpDropdownSummary('dropdown-cp-dispositivos')" style="width: 18px; height: 18px; accent-color: #7e22ce;">
+                                                <span>💻 Computadora / Laptop</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="televisor" onchange="updateCpDropdownSummary('dropdown-cp-dispositivos')" style="width: 18px; height: 18px; accent-color: #7e22ce;">
+                                                <span>📺 Televisor / Smart TV</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="consola" onchange="updateCpDropdownSummary('dropdown-cp-dispositivos')" style="width: 18px; height: 18px; accent-color: #7e22ce;">
+                                                <span>🎮 Consola de Juegos</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="tablet" onchange="updateCpDropdownSummary('dropdown-cp-dispositivos')" style="width: 18px; height: 18px; accent-color: #7e22ce;">
+                                                <span>📟 Tablet</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- 2. TIEMPO DE USO (SINGLE SELECT CHIPS) -->
-                                <div class="form-group mb-4">
-                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
-                                        2. Tiempo Estimado de Uso *
-                                    </label>
-                                    <div id="cp-chips-tiempo" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                        <button type="button" class="chip-btn single-select" data-value="menos_1_hora">⏱️ Menos de 1 hora</button>
-                                        <button type="button" class="chip-btn single-select" data-value="1_2_horas">⏱️ 1 a 2 horas</button>
-                                        <button type="button" class="chip-btn single-select" data-value="3_4_horas">⏱️ 3 a 4 horas</button>
-                                        <button type="button" class="chip-btn single-select" data-value="mas_5_horas">⚠️ Más de 5 horas</button>
+                                <!-- PREGUNTA 2: TIEMPO ESTIMADO (DESPLEGABLE SIMPLE) -->
+                                <div class="cp-question-card mb-4" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 5px solid #0284c7;">
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem;">
+                                        <span style="background: #0284c7; color: white; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;">2</span>
+                                        <label for="cp-select-tiempo" style="font-weight: 700; color: #1e293b; margin: 0; font-size: 0.95rem;">⏱️ Tiempo Estimado de Uso *</label>
+                                    </div>
+                                    <select id="cp-select-tiempo" required style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; font-weight: 600; color: #334155; font-size: 0.92rem;">
+                                        <option value="" disabled selected>-- Selecciona el tiempo estimado de uso --</option>
+                                        <option value="menos_1_hora">⏱️ Menos de 1 hora</option>
+                                        <option value="1_2_horas">⏱️ 1 a 2 horas</option>
+                                        <option value="3_4_horas">⏱️ 3 a 4 horas</option>
+                                        <option value="mas_5_horas">⚠️ Más de 5 horas</option>
+                                    </select>
+                                </div>
+
+                                <!-- PREGUNTA 3: APLICACIONES PRINCIPALES (MULTISELECT DROPDOWN) -->
+                                <div class="cp-question-card mb-4" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 5px solid #d97706;">
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem;">
+                                        <span style="background: #d97706; color: white; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;">3</span>
+                                        <label style="font-weight: 700; color: #1e293b; margin: 0; font-size: 0.95rem;">📲 Aplicaciones Principales Usadas *</label>
+                                    </div>
+                                    <div class="cp-dropdown-multiselect" id="dropdown-cp-aplicaciones">
+                                        <button type="button" class="cp-dropdown-toggle" onclick="toggleCpDropdown('dropdown-cp-aplicaciones')" style="width: 100%; text-align: left; padding: 0.75rem 1rem; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; font-weight: 600; color: #334155; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                            <span class="cp-dropdown-label">Seleccionar aplicaciones usadas (Opción múltiple)...</span>
+                                            <span class="cp-dropdown-badge" style="background: #fef3c7; color: #92400e; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.78rem; font-weight: 700;">0 seleccionados</span>
+                                        </button>
+                                        <div class="cp-dropdown-menu hide" style="margin-top: 0.5rem; background: white; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="instagram" onchange="updateCpDropdownSummary('dropdown-cp-aplicaciones')" style="width: 18px; height: 18px; accent-color: #d97706;">
+                                                <span>📸 Instagram</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="tiktok" onchange="updateCpDropdownSummary('dropdown-cp-aplicaciones')" style="width: 18px; height: 18px; accent-color: #d97706;">
+                                                <span>🎵 TikTok</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="youtube" onchange="updateCpDropdownSummary('dropdown-cp-aplicaciones')" style="width: 18px; height: 18px; accent-color: #d97706;">
+                                                <span>▶️ YouTube</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="whatsapp" onchange="updateCpDropdownSummary('dropdown-cp-aplicaciones')" style="width: 18px; height: 18px; accent-color: #d97706;">
+                                                <span>💬 WhatsApp / Mensajería</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="videojuegos" onchange="updateCpDropdownSummary('dropdown-cp-aplicaciones')" style="width: 18px; height: 18px; accent-color: #d97706;">
+                                                <span>🎮 Videojuegos</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="noticias" onchange="updateCpDropdownSummary('dropdown-cp-aplicaciones')" style="width: 18px; height: 18px; accent-color: #d97706;">
+                                                <span>🌐 Navegador / Noticias</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="streaming" onchange="updateCpDropdownSummary('dropdown-cp-aplicaciones')" style="width: 18px; height: 18px; accent-color: #d97706;">
+                                                <span>🎬 Netflix / Streaming</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- 3. APLICACIONES PRINCIPALES (CHIPS MULTISELECT) -->
-                                <div class="form-group mb-4">
-                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
-                                        3. Aplicaciones Principales Usadas *
-                                    </label>
-                                    <div id="cp-chips-aplicaciones" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                        <button type="button" class="chip-btn" data-value="instagram">📸 Instagram</button>
-                                        <button type="button" class="chip-btn" data-value="tiktok">🎵 TikTok</button>
-                                        <button type="button" class="chip-btn" data-value="youtube">▶️ YouTube</button>
-                                        <button type="button" class="chip-btn" data-value="whatsapp">💬 WhatsApp / Mensajería</button>
-                                        <button type="button" class="chip-btn" data-value="videojuegos">🎮 Videojuegos</button>
-                                        <button type="button" class="chip-btn" data-value="noticias">🌐 Navegador / Noticias</button>
-                                        <button type="button" class="chip-btn" data-value="streaming">🎬 Netflix / Streaming</button>
+                                <!-- PREGUNTA 4: TIPO DE CONTENIDO (MULTISELECT DROPDOWN) -->
+                                <div class="cp-question-card mb-4" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 5px solid #16a34a;">
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem;">
+                                        <span style="background: #16a34a; color: white; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;">4</span>
+                                        <label style="font-weight: 700; color: #1e293b; margin: 0; font-size: 0.95rem;">🎬 Tipo de Contenido Consumido *</label>
+                                    </div>
+                                    <div class="cp-dropdown-multiselect" id="dropdown-cp-contenido">
+                                        <button type="button" class="cp-dropdown-toggle" onclick="toggleCpDropdown('dropdown-cp-contenido')" style="width: 100%; text-align: left; padding: 0.75rem 1rem; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; font-weight: 600; color: #334155; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                            <span class="cp-dropdown-label">Seleccionar tipos de contenido (Opción múltiple)...</span>
+                                            <span class="cp-dropdown-badge" style="background: #dcfce7; color: #15803d; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.78rem; font-weight: 700;">0 seleccionados</span>
+                                        </button>
+                                        <div class="cp-dropdown-menu hide" style="margin-top: 0.5rem; background: white; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="reels" onchange="updateCpDropdownSummary('dropdown-cp-contenido')" style="width: 18px; height: 18px; accent-color: #16a34a;">
+                                                <span>🎬 Reels / Shorts / Videos Cortos</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="noticias" onchange="updateCpDropdownSummary('dropdown-cp-contenido')" style="width: 18px; height: 18px; accent-color: #16a34a;">
+                                                <span>📰 Noticias / Actualidad</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="streams" onchange="updateCpDropdownSummary('dropdown-cp-contenido')" style="width: 18px; height: 18px; accent-color: #16a34a;">
+                                                <span>🎮 Gameplays / Streams</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="chat" onchange="updateCpDropdownSummary('dropdown-cp-contenido')" style="width: 18px; height: 18px; accent-color: #16a34a;">
+                                                <span>💬 Mensajes y Chat</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="series" onchange="updateCpDropdownSummary('dropdown-cp-contenido')" style="width: 18px; height: 18px; accent-color: #16a34a;">
+                                                <span>🍿 Películas / Series</span>
+                                            </label>
+                                            <label class="cp-dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.4rem 0.6rem; border-radius: 6px; background: #f8fafc;">
+                                                <input type="checkbox" value="educativo" onchange="updateCpDropdownSummary('dropdown-cp-contenido')" style="width: 18px; height: 18px; accent-color: #16a34a;">
+                                                <span>📚 Educación / Trabajo</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- 4. TIPO DE CONTENIDO VISTO (CHIPS MULTISELECT) -->
-                                <div class="form-group mb-4">
-                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
-                                        4. Tipo de Contenido Consumido *
-                                    </label>
-                                    <div id="cp-chips-contenido" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                        <button type="button" class="chip-btn" data-value="reels">🎬 Reels / Shorts / Videos Cortos</button>
-                                        <button type="button" class="chip-btn" data-value="noticias">📰 Noticias / Actualidad</button>
-                                        <button type="button" class="chip-btn" data-value="streams">🎮 Gameplays / Streams</button>
-                                        <button type="button" class="chip-btn" data-value="chat">💬 Mensajes y Chat</button>
-                                        <button type="button" class="chip-btn" data-value="series">🍿 Películas / Series</button>
-                                        <button type="button" class="chip-btn" data-value="educativo">📚 Educación / Trabajo</button>
+                                <!-- PREGUNTA 5: ESTADO EMOCIONAL POSTERIOR (DESPLEGABLE SIMPLE) -->
+                                <div class="cp-question-card mb-4" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 5px solid #dc2626;">
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem;">
+                                        <span style="background: #dc2626; color: white; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;">5</span>
+                                        <label for="cp-select-emocional" style="font-weight: 700; color: #1e293b; margin: 0; font-size: 0.95rem;">🧠 Estado Emocional Posterior *</label>
                                     </div>
+                                    <select id="cp-select-emocional" required style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; font-weight: 600; color: #334155; font-size: 0.92rem;">
+                                        <option value="" disabled selected>-- Selecciona cómo te sentiste después --</option>
+                                        <option value="ansioso">😰 Ansioso / Inquieto</option>
+                                        <option value="apatia">😔 Apatía / Desanimado</option>
+                                        <option value="culpable">😞 Culpable / Frustrado</option>
+                                        <option value="agotado">🤯 Agotado Mentalmente</option>
+                                        <option value="tranquilo">😌 Tranquilo / Satisfecho</option>
+                                    </select>
                                 </div>
 
-                                <!-- 5. ESTADO EMOCIONAL POSTERIOR (SINGLE SELECT CHIPS) -->
-                                <div class="form-group mb-4">
-                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
-                                        5. Estado Emocional Posterior *
-                                    </label>
-                                    <div id="cp-chips-emocional" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                        <button type="button" class="chip-btn single-select" data-value="ansioso">😰 Ansioso / Inquieto</button>
-                                        <button type="button" class="chip-btn single-select" data-value="apatia">😔 Apatía / Desanimado</button>
-                                        <button type="button" class="chip-btn single-select" data-value="culpable">😞 Culpable / Frustrado</button>
-                                        <button type="button" class="chip-btn single-select" data-value="agotado">🤯 Agotado Mentalmente</button>
-                                        <button type="button" class="chip-btn single-select" data-value="tranquilo">😌 Tranquilo / Satisfecho</button>
+                                <!-- PREGUNTA 6: INTERFERENCIA EN ACTIVIDADES (DESPLEGABLE SIMPLE) -->
+                                <div class="cp-question-card mb-4" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 5px solid #4f46e5;">
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem;">
+                                        <span style="background: #4f46e5; color: white; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;">6</span>
+                                        <label for="cp-select-interferencia" style="font-weight: 700; color: #1e293b; margin: 0; font-size: 0.95rem;">⚠️ Interferencia con tus Actividades *</label>
                                     </div>
+                                    <select id="cp-select-interferencia" required style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; font-weight: 600; color: #334155; font-size: 0.92rem;">
+                                        <option value="" disabled selected>-- Selecciona nivel de interferencia --</option>
+                                        <option value="sueno">😴 Sueño / Insomnio</option>
+                                        <option value="estudio_trabajo">📚 Estudio / Trabajo</option>
+                                        <option value="relaciones">🤝 Relaciones / Familia</option>
+                                        <option value="ejercicio">🧘 Cuidado Personal / Ejercicio</option>
+                                        <option value="ninguna">🟢 Ninguna Interferencia</option>
+                                    </select>
                                 </div>
 
-                                <!-- 6. INTERFERENCIA EN ACTIVIDADES (SINGLE SELECT CHIPS) -->
-                                <div class="form-group mb-4">
-                                    <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem; font-size: 0.92rem;">
-                                        6. Interferencia con tus Actividades *
-                                    </label>
-                                    <div id="cp-chips-interferencia" class="chip-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                        <button type="button" class="chip-btn single-select" data-value="sueno">😴 Sueño / Insomnio</button>
-                                        <button type="button" class="chip-btn single-select" data-value="estudio_trabajo">📚 Estudio / Trabajo</button>
-                                        <button type="button" class="chip-btn single-select" data-value="relaciones">🤝 Relaciones / Familia</button>
-                                        <button type="button" class="chip-btn single-select" data-value="ejercicio">🧘 Cuidado Personal / Ejercicio</button>
-                                        <button type="button" class="chip-btn single-select" data-value="ninguna">🟢 Ninguna Interferencia</button>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; padding: 0.85rem; font-weight: 700; font-size: 1rem; background: linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%); border: none;">
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; padding: 0.9rem; font-weight: 700; font-size: 1rem; background: linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%); border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(126, 34, 206, 0.25);">
                                     📱 Registrar Consumo de Pantalla
                                 </button>
                             </form>
@@ -4181,14 +4276,20 @@
                         <h2>Mis Consultas y Pagos</h2>
                     </div>
                     
-                    <div class="finance-balances-grid mb-6">
-                        <div class="balance-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                            <span class="fin-label">Consultas disponibles (Prepagadas)</span>
-                            <h3 id="pat-prepaid-count" class="fin-amount">0</h3>
+                    <div class="finance-balances-grid mb-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; max-width: 650px;">
+                        <div class="balance-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 0.85rem 1.1rem; color: white; box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.3); position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                                <span class="fin-label" style="font-size: 0.82rem; font-weight: 600; opacity: 0.95;">Consultas disponibles (Prepagadas)</span>
+                                <span style="font-size: 1.1rem; background: rgba(255,255,255,0.25); width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">🎟️</span>
+                            </div>
+                            <h3 id="pat-prepaid-count" class="fin-amount" style="font-size: 1.5rem; font-weight: 800; margin: 0; color: white; letter-spacing: -0.5px;">0</h3>
                         </div>
-                        <div class="balance-card" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
-                            <span class="fin-label">Saldo Pendiente (Deuda)</span>
-                            <h3 id="pat-debt-amount" class="fin-amount">0.00 USD</h3>
+                        <div class="balance-card" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border-radius: 12px; padding: 0.85rem 1.1rem; color: white; box-shadow: 0 4px 12px -2px rgba(99, 102, 241, 0.3); position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                                <span class="fin-label" style="font-size: 0.82rem; font-weight: 600; opacity: 0.95;">Saldo Pendiente (Deuda)</span>
+                                <span style="font-size: 1.1rem; background: rgba(255,255,255,0.25); width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">💳</span>
+                            </div>
+                            <h3 id="pat-debt-amount" class="fin-amount" style="font-size: 1.5rem; font-weight: 800; margin: 0; color: white; letter-spacing: -0.5px;">0.00 USD</h3>
                         </div>
                     </div>
 
@@ -4352,11 +4453,26 @@
                 
                 <!-- 9. VISTA: PIZARRA TERAPÉUTICA -->
                 <section id="view-patient-diary" class="app-view hide">
-                    <div class="view-header-row">
+                    <div class="view-header-row mb-3">
                         <h2>Mi Pizarra Terapéutica</h2>
                     </div>
-                    <!-- Bloque: ¿Cómo me siento hoy? -->
-                    <div class="card mb-4" style="background: linear-gradient(135deg, rgba(169, 89, 147, 0.06) 0%, rgba(93, 58, 111, 0.08) 100%); border-left: 5px solid var(--primary-color);">
+
+                    <!-- Barra de Pestañas Deslizantes (Segment Tabs) -->
+                    <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1.5px solid var(--border-color); -webkit-overflow-scrolling: touch;">
+                        <button type="button" class="pat-pizarra-tab-btn active" data-tab="mood" onclick="switchPizarraTab('mood')" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.1rem; border-radius: 20px; border: 1.5px solid #702e5e; background: #702e5e; color: white; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                            <span>💭</span> ¿Cómo me siento hoy?
+                        </button>
+                        <button type="button" class="pat-pizarra-tab-btn" data-tab="write" onclick="switchPizarraTab('write')" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.1rem; border-radius: 20px; border: 1.5px solid var(--border-color); background: white; color: var(--text-dark); font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                            <span>✏️</span> Escribir / Grabar en el Diario
+                        </button>
+                        <button type="button" class="pat-pizarra-tab-btn" data-tab="history" onclick="switchPizarraTab('history')" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.1rem; border-radius: 20px; border: 1.5px solid var(--border-color); background: white; color: var(--text-dark); font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; position: relative;">
+                            <span>📜</span> Historial de Pizarra
+                            <span id="pat-pizarra-unread-badge" class="badge hide" style="background: #dc2626; color: white; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 12px;">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Panel 1: ¿Cómo me siento hoy? -->
+                    <div id="pizarra-tab-mood" class="pizarra-tab-content card mb-4" style="background: linear-gradient(135deg, rgba(169, 89, 147, 0.06) 0%, rgba(93, 58, 111, 0.08) 100%); border-left: 5px solid var(--primary-color);">
                         <div class="card-header" style="border-bottom: none; padding-bottom: 0.25rem;">
                             <h3 style="display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.1rem; color: var(--text-dark);">
                                 <span style="font-size: 1.3rem;">💭</span> ¿Cómo me siento hoy?
@@ -4403,29 +4519,69 @@
                         </div>
                     </div>
 
-                    <div class="card mb-4">
+                    <!-- Panel 2: Escribir / Grabar en el Diario -->
+                    <div id="pizarra-tab-write" class="pizarra-tab-content card mb-4 hide">
                         <div class="card-header">
-                            <h3>Escribir Nueva Actualización</h3>
+                            <h3 style="display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.1rem; color: var(--text-dark);">
+                                <span>✏️</span> Redactar o Grabar Nota para tu Terapeuta
+                            </h3>
                         </div>
                         <div class="card-body">
-                            <p class="text-secondary mb-3 text-sm">Registra una idea, reflexión o reporte de tus ejercicios. Al guardarlo, se agregará a tu pizarra histórica y tu terapeuta lo podrá visualizar en tiempo real.</p>
-                            <textarea id="pat-pizarra-input" rows="4" placeholder="Escribe aquí tu actualización..." style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-family: inherit; font-size: 0.95rem; resize: vertical; outline: none; transition: border-color 0.2s;"></textarea>
+                            <p class="text-secondary mb-3 text-sm">Registra tus pensamientos, reflexiones o audios. Puedes escribir, grabar una nota de voz o adjuntar un archivo:</p>
                             
-                            <div class="form-group mt-3">
-                                <label for="pat-pizarra-file" style="font-weight: 600; display: block; margin-bottom: 0.25rem; font-size: 0.85rem;">Adjuntar Imagen o Documento de Tarea (Opcional)</label>
-                                <input type="file" id="pat-pizarra-file" accept="image/*,.pdf,.doc,.docx" style="font-size: 0.85rem; cursor: pointer; display: block; width: 100%;">
+                            <textarea id="pat-pizarra-input" rows="4" placeholder="Escribe aquí tu actualización o reflexión..." style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-family: inherit; font-size: 0.95rem; resize: vertical; outline: none; transition: border-color 0.2s;"></textarea>
+                            
+                            <!-- Barra de Acciones de Multimedia: Grabadora de Voz + Clip Adjuntos -->
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.85rem; padding: 0.75rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                    <!-- Botón Grabadora de Voz -->
+                                    <button type="button" id="btn-toggle-voice-record" onclick="toggleVoiceRecording()" class="btn btn-sm" style="background: #702e5e; color: white; font-weight: 700; border-radius: 8px; padding: 0.45rem 0.9rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                        <span>🎙️</span> <span id="label-voice-record">Grabar Nota de Voz</span>
+                                    </button>
+
+                                    <!-- Botón Clip Adjuntar Archivo/Imagen -->
+                                    <label for="pat-pizarra-file" style="margin: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 700; font-size: 0.85rem; color: #475569;">
+                                        <span>📎</span> <span id="label-clip-file">Adjuntar Archivo / Imagen</span>
+                                    </label>
+                                    <input type="file" id="pat-pizarra-file" accept="image/*,.pdf,.doc,.docx,audio/*" onchange="handlePizarraFileSelected(this)" style="display: none;">
+                                </div>
+
+                                <div id="container-selected-file-info" class="hide" style="font-size: 0.8rem; font-weight: 700; color: #166534; background: #f0fdf4; padding: 4px 10px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                                    📎 Archivo seleccionado: <span id="text-selected-filename"></span>
+                                </div>
                             </div>
 
-                            <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;">
-                                <button type="button" onclick="handleSavePizarraUpdate()" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">Guardar en Pizarra</button>
+                            <!-- Grabadora de Voz: Estado y Reproductor Previo -->
+                            <div id="container-voice-recorder-box" class="hide mt-3" style="background: #fff5f5; border: 1.5px dashed #fca5a5; border-radius: 10px; padding: 0.85rem 1rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                        <span id="indicator-recording-dot" style="display: inline-block; width: 12px; height: 12px; background: #dc2626; border-radius: 50%; animation: pulse 1s infinite ease-in-out;"></span>
+                                        <strong id="text-recording-timer" style="color: #991b1b; font-size: 0.9rem;">🔴 Grabando nota de voz... (00:00)</strong>
+                                    </div>
+                                    <button type="button" onclick="stopVoiceRecording()" class="btn btn-sm" style="background: #dc2626; color: white; font-weight: 800; border-radius: 6px; padding: 0.35rem 0.75rem; border: none; cursor: pointer;">
+                                        ⏹️ Detener Grabación
+                                    </button>
+                                </div>
+                                <div id="container-voice-audio-preview" class="hide mt-2" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                    <audio id="audio-voice-preview" controls style="height: 38px; flex-grow: 1; max-width: 100%;"></audio>
+                                    <button type="button" onclick="discardVoiceRecording()" class="btn btn-sm" style="background: #ef4444; color: white; font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem; border: none; cursor: pointer;">
+                                        🗑️ Descartar Audio
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: flex-end; margin-top: 1.1rem;">
+                                <button type="button" onclick="handleSavePizarraUpdate()" class="btn btn-primary" style="padding: 0.55rem 1.5rem; font-weight: 800; background: #702e5e; border: none;">Guardar en Pizarra</button>
                             </div>
                             <div id="pat-pizarra-status-msg" class="status-msg hide mt-2"></div>
                         </div>
                     </div>
                     
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Historial de Actualizaciones</h3>
+                    <!-- Panel 3: Historial de Actualizaciones -->
+                    <div id="pizarra-tab-history" class="pizarra-tab-content card hide">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0;">Historial de Actualizaciones</h3>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="loadPatientPizarraHistory()" style="padding: 0.3rem 0.75rem; font-size: 0.8rem;">🔄 Actualizar</button>
                         </div>
                         <div class="card-body">
                             <div id="pat-pizarra-history-list" style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -4444,23 +4600,35 @@
                     <div class="settings-grid">
                         <div class="card">
                             <div class="card-header">
-                                <h3>Cambiar Contraseña</h3>
+                                <h3>Datos de Acceso (Usuario / Contraseña)</h3>
                             </div>
                             <div class="card-body">
                                 <form id="pat-change-pw-form" onsubmit="handlePatientChangePwSubmit(event)">
                                     <div class="form-group mb-3">
-                                        <label for="pat-pw-current">Contraseña Actual *</label>
-                                        <input type="password" id="pat-pw-current" required placeholder="Contraseña actual">
+                                        <label for="pat-username-new" style="font-weight: 600;">Nombre de Usuario *</label>
+                                        <input type="text" id="pat-username-new" required placeholder="Tu nombre de usuario" style="font-weight: 600;">
+                                        <small class="text-secondary" style="font-size: 0.78rem; display: block; margin-top: 0.25rem;">
+                                            Nombre de usuario único para ingresar a tu consultorio. (No se permite repetir usuarios).
+                                        </small>
                                     </div>
                                     <div class="form-group mb-3">
-                                        <label for="pat-pw-new">Nueva Contraseña *</label>
-                                        <input type="password" id="pat-pw-new" required minlength="6" placeholder="Nueva contraseña">
+                                        <label for="pat-pw-current" style="font-weight: 600;">Contraseña Actual *</label>
+                                        <input type="password" id="pat-pw-current" required placeholder="Ingresa tu contraseña actual para confirmar cambios">
                                     </div>
-                                    <div class="form-group mb-4">
-                                        <label for="pat-pw-confirm">Confirmar Nueva Contraseña *</label>
-                                        <input type="password" id="pat-pw-confirm" required minlength="6" placeholder="Repite la nueva contraseña">
+                                    <div style="border-top: 1px dashed var(--border-color); margin: 1rem 0; padding-top: 0.75rem;">
+                                        <label style="font-weight: 700; font-size: 0.88rem; color: var(--primary-color); display: block; margin-bottom: 0.5rem;">
+                                            🔑 Cambiar Contraseña (Opcional)
+                                        </label>
+                                        <div class="form-group mb-3">
+                                            <label for="pat-pw-new">Nueva Contraseña</label>
+                                            <input type="password" id="pat-pw-new" minlength="6" placeholder="Dejar en blanco para mantener la contraseña actual">
+                                        </div>
+                                        <div class="form-group mb-4">
+                                            <label for="pat-pw-confirm">Confirmar Nueva Contraseña</label>
+                                            <input type="password" id="pat-pw-confirm" minlength="6" placeholder="Repite la nueva contraseña si vas a cambiarla">
+                                        </div>
                                     </div>
-                                    <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Actualizar Contraseña</button>
+                                    <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Actualizar Nombre de Usuario / Contraseña</button>
                                 </form>
                                 <div id="pat-pw-status-msg" class="status-msg hide mt-2"></div>
                             </div>
@@ -6650,6 +6818,43 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('therapist-activation-modal')">Cerrar</button>
+            </div>
+    <!-- MODAL: GESTIONAR ACTIVIDADES (PACIENTE) -->
+    <div id="patient-activation-manage-modal" class="modal hide">
+        <div class="modal-content" style="max-width: 560px; border-radius: 12px; border: 1.5px solid #fde68a;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; padding: 1rem 1.25rem;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #92400e; font-weight: 800;">⚙️ Gestionar Mis Actividades Conductuales</h3>
+                <button type="button" class="close-btn" onclick="closeModal('patient-activation-manage-modal')" style="background: none; border: none; font-size: 1.4rem; color: #92400e; cursor: pointer;">✕</button>
+            </div>
+            <div class="modal-body" style="padding: 1.25rem;">
+                <!-- FORMULARIO AGREGAR/EDITAR -->
+                <form id="form-patient-manage-act" onsubmit="submitPatientActivationManageActivity(event)" style="background: #fffbeb; border: 1.5px solid #fde68a; padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem;">
+                    <input type="hidden" id="pat-act-id" value="">
+                    <div class="form-group mb-2">
+                        <label for="pat-act-nombre" style="font-weight: 700; font-size: 0.88rem; color: #92400e;">Nombre de la Actividad *</label>
+                        <input type="text" id="pat-act-nombre" required placeholder="Ej: Salir a caminar 20 min / Hacer mi cama" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1.5px solid #cbd5e1; font-weight: 600;">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="pat-act-categoria" style="font-weight: 700; font-size: 0.88rem; color: #92400e;">Categoría *</label>
+                        <select id="pat-act-categoria" required style="width: 100%; padding: 0.55rem; border-radius: 6px; border: 1.5px solid #cbd5e1; font-weight: 600;">
+                            <option value="necesaria">🚿 Actividad Necesaria (Higiene, Alimentación, Obligaciones)</option>
+                            <option value="disfrute">🎨 Actividad de Disfrute / Placer (Pasatiempos, Social)</option>
+                            <option value="cotidiana">🧹 Actividad Cotidiana (Orden del Hogar, Organización)</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="submit" id="btn-save-pat-act" class="btn btn-primary btn-sm" style="flex: 1; background: #d97706; border: none; font-weight: 700; padding: 0.5rem;">➕ Agregar Actividad</button>
+                        <button type="button" id="btn-cancel-pat-act" class="btn btn-secondary btn-sm hide" onclick="resetPatientManageActForm()" style="font-weight: 600;">Cancelar</button>
+                    </div>
+                </form>
+
+                <h4 style="font-size: 0.95rem; font-weight: 800; color: #1e293b; margin-bottom: 0.75rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.4rem;">📋 Mis Actividades Configuradas</h4>
+                <div id="patient-activation-manage-list" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 250px; overflow-y: auto;">
+                    <p class="text-muted">Cargando lista de actividades...</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 0.75rem 1.25rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('patient-activation-manage-modal')">Cerrar</button>
             </div>
         </div>
     </div>

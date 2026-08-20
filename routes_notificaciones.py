@@ -372,226 +372,6 @@ def admin_message_templates_render():
         })
     except Exception as e:
         return jsonify({'error': f'Error al renderizar mensaje: {str(e)}'}), 500
-
-
-# --- RUTAS MIGRADAS AUTOMÁTICAMENTE DE AUDITORÍA ---
-
-@notificaciones_bp.route('/api/whatsapp/webhook', methods=['POST'])
-def whatsapp_webhook():
-    data = request.json or {}
-    raw_user_id = data.get('user_id')
-    raw_phone = str(data.get('phone', '')).strip()
-    text = str(data.get('text', '')).strip()
-    
-    if not raw_phone or not text:
-        return jsonify({'error': 'Payload incompleto'}), 400
-
-    db = get_db()
-    cursor = db.cursor()
-
-    clean_digits = ''.join(filter(str.isdigit, raw_phone))
-    if not clean_digits:
-        return jsonify({'status': 'ignored', 'message': 'Número no válido'}), 400
-
-    # 1. Búsqueda de paciente ultra flexible por coincidencia de dígitos telefónicos
-    if raw_user_id:
-        cursor.execute("SELECT id, nombres, apellidos, telefono, psicologo_id FROM pacientes WHERE psicologo_id = ? ORDER BY id DESC", (raw_user_id,))
-    else:
-        cursor.execute("SELECT id, nombres, apellidos, telefono, psicologo_id FROM pacientes ORDER BY id DESC")
-    candidates = cursor.fetchall()
-
-    patient = None
-    for cand in candidates:
-        cand_digits = ''.join(filter(str.isdigit, str(cand['telefono'] or '')))
-        if not cand_digits:
-            continue
-        if (clean_digits.endswith(cand_digits) or 
-            cand_digits.endswith(clean_digits) or 
-            (len(clean_digits) >= 7 and len(cand_digits) >= 7 and clean_digits[-7:] == cand_digits[-7:])):
-            patient = cand
-            break
-
-    if not patient and raw_user_id:
-        cursor.execute("SELECT id, nombres, apellidos, telefono, psicologo_id FROM pacientes ORDER BY id DESC")
-        all_cands = cursor.fetchall()
-        for cand in all_cands:
-            cand_digits = ''.join(filter(str.isdigit, str(cand['telefono'] or '')))
-            if not cand_digits:
-                continue
-            if (clean_digits.endswith(cand_digits) or 
-                cand_digits.endswith(clean_digits) or 
-                (len(clean_digits) >= 7 and len(cand_digits) >= 7 and clean_digits[-7:] == cand_digits[-7:])):
-                patient = cand
-                break
-
-    if not patient:
-        return jsonify({'status': 'ignored', 'message': f'Teléfono {raw_phone} no asociado a ningún paciente.'})
-
-    patient_id = patient['id']
-    patient_name = f"{patient['nombres']} {patient['apellidos']}".strip()
-    psic_id = patient['psicologo_id']
-    
-    import unicodedata, re
-    text_lower = text.lower().strip()
-    text_norm = unicodedata.normalize('NFD', text_lower)
-    text_clean = ''.join(c for c in text_norm if unicodedata.category(c) != 'Mn')
-    text_clean = re.sub(r'[^a-z0-9\s👍]', ' ', text_clean).strip()
-    words_set = set(text_clean.split())
-
-    confirm_keywords = {
-        'si', 'sip', 'sii', 'siii', 'confirmo', 'confirmar', 'confirmado', 'confirmada',
-        'asistire', 'ok', 'listo', '1', 's', 'voy', 'asisto', 'seguro', 'perfecto',
-        'excelente', 'correcto', 'claro', 'dale', 'ahi', 'estare', 'allí', 'estaré', '👍'
-    }
-
-    cancel_keywords = {
-        'no', 'nop', 'cancelo', 'cancelar', 'cancelado', 'cancelada', 'imposible',
-        'podre', 'asisto', '2'
-    }
-
-    is_confirm = any(w in words_set for w in confirm_keywords) or any(k in text_clean for k in ['si', 'confirmo', 'asistire', 'ahi estare', 'allí estaré', '👍'])
-    is_cancel = ('no' in words_set and 'si' not in words_set) or any(k in text_clean for k in ['cancelo', 'cancelar', 'no podre', 'no asisto'])
-
-    if not is_confirm and not is_cancel:
-        return jsonify({'status': 'text_received_no_action', 'message': f'Mensaje "{text}" recibido pero no requiere acción de confirmación.'})
-
-    # 2. Buscar cita pendiente sin confirmar para este paciente
-    cursor.execute("""
-        SELECT id, fecha, hora, confirmada, tipo_consulta 
-        FROM agenda_finanzas 
-        WHERE paciente_id = ? AND (confirmada IS NULL OR confirmada = 0) AND (estado_pago IS NULL OR estado_pago != 'Cancelada')
-        ORDER BY fecha ASC, hora ASC LIMIT 1
-    """, (patient_id,))
-    next_cita = cursor.fetchone()
-
-    if not next_cita:
-        cursor.execute("""
-            SELECT id, fecha, hora, confirmada, tipo_consulta 
-            FROM agenda_finanzas 
-            WHERE paciente_id = ? AND (estado_pago IS NULL OR estado_pago != 'Cancelada')
-            ORDER BY fecha DESC, hora DESC LIMIT 1
-        """, (patient_id,))
-        next_cita = cursor.fetchone()
-
-    if not next_cita:
-        return jsonify({'status': 'no_upcoming_appointment', 'message': f'No hay citas registradas para {patient_name}'})
-
-    cita_id = next_cita['id']
-    cita_fecha = next_cita['fecha']
-    cita_hora = next_cita['hora']
-
-    # Configuración de plantilla
-    antelacion_horas = 24
-    plantilla_encuadre = (
-        "¡Gracias por confirmar tu sesión, *{paciente}*! 🌿\n\n"
-        "📍 *Detalles de tu cita:*\n"
-        "📅 *Fecha:* {fecha}\n"
-        "⏰ *Hora:* {hora}\n\n"
-        "💡 *Encuadre Terapéutico:*\n"
-        "• Recuerda habilitar un espacio tranquilo, cómodo y privado para ti.\n"
-        "• Realizar el pago correspondiente de la sesión.\n"
-        "• Conectarte o asistir puntualmente a la hora acordada.\n\n"
-        "⚠️ *Política de cancelación:* Si necesitas cancelar o reprogramar tu sesión, por favor avísanos con al menos *{horas_antelacion} horas* de anticipación."
-    )
-
-    try:
-        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
-        u_row = cursor.fetchone()
-        if u_row and u_row['configuracion_horarios_visual']:
-            import json
-            cfg_json = json.loads(u_row['configuracion_horarios_visual'])
-            antelacion_horas = cfg_json.get('limite_cancelacion_valor') or cfg_json.get('limite_cancelacion') or 24
-            if cfg_json.get('plantilla_encuadre'):
-                plantilla_encuadre = cfg_json.get('plantilla_encuadre')
-    except Exception:
-        pass
-
-    from datetime import datetime
-    now_formatted = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    if is_confirm:
-        cursor.execute("UPDATE agenda_finanzas SET confirmada = 1, confirmacion_enviada_wa = 1 WHERE id = ?", (cita_id,))
-        try:
-            cursor.execute("UPDATE citas SET confirmada = 1 WHERE paciente_id = ? AND fecha = ?", (patient_id, cita_fecha))
-        except Exception:
-            pass
-
-        notif_msg = f"📱 WhatsApp: {patient_name} CONFIRMÓ su cita del {cita_fecha} a las {cita_hora}."
-        cursor.execute("""
-            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-            VALUES (?, 'whatsapp_confirmation', 'Cita Confirmada por WhatsApp', ?, ?, 0, '#agenda')
-        """, (psic_id, notif_msg, now_formatted))
-        db.commit()
-
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_confirmacion_ok'")
-        cfg_ok = cursor.fetchone()
-        tmpl_ok = cfg_ok['valor'] if cfg_ok and cfg_ok['valor'] else plantilla_encuadre
-
-        psicologo_data = {'nombres': '', 'apellidos': ''}
-        cursor.execute("SELECT nombres, apellidos FROM usuarios WHERE id = ?", (psic_id,))
-        u_p = cursor.fetchone()
-        if u_p: psicologo_data = dict(u_p)
-
-        cita_dict = {'nombre': patient_name, 'fecha': cita_fecha, 'hora': cita_hora, 'modalidad': next_cita['tipo_consulta'] or 'Presencial'}
-        patient_dict = {'nombres': patient['nombres'], 'apellidos': patient['apellidos']}
-        
-        try:
-            reply_text = format_whatsapp_message(tmpl_ok, patient_dict, cita_dict, psicologo_data)
-        except Exception:
-            reply_text = (
-                f"¡Gracias por confirmar tu sesión, *{patient['nombres']}*! 🌿\n\n"
-                f"📅 *Fecha:* {cita_fecha}\n"
-                f"⏰ *Hora:* {cita_hora}\n\n"
-                f"Recuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo."
-            )
-
-        try:
-            make_wa_http_request('POST', '/send', json_data={'phone': raw_phone, 'text': reply_text}, timeout=10)
-        except Exception as wa_err:
-            print(f"⚠️ No se pudo responder automáticamente por WhatsApp: {wa_err}")
-
-        return jsonify({'status': 'confirmed', 'message': f'Cita #{cita_id} confirmada para {patient_name}'})
-
-    elif is_cancel:
-        cursor.execute("UPDATE agenda_finanzas SET confirmada = 0, estado_pago = 'Cancelada' WHERE id = ?", (cita_id,))
-        try:
-            cursor.execute("UPDATE citas SET confirmada = 0 WHERE paciente_id = ? AND fecha = ?", (patient_id, cita_fecha))
-        except Exception:
-            pass
-
-        notif_msg = f"⚠️ WhatsApp: {patient_name} CANCELÓ su cita del {cita_fecha} a las {cita_hora}."
-        cursor.execute("""
-            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-            VALUES (?, 'whatsapp_cancellation', 'Cita Cancelada por WhatsApp', ?, ?, 0, '#agenda')
-        """, (psic_id, notif_msg, now_formatted))
-        db.commit()
-
-        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cancelacion_ok'")
-        cfg_cancel = cursor.fetchone()
-        tmpl_cancel = cfg_cancel['valor'] if cfg_cancel and cfg_cancel['valor'] else (
-            "Entendido, *{nombre}*. Hemos registrado la cancelación de tu sesión del *{fecha}* a las *{hora}*.\n\nSi deseas reprogramar en otro momento, no dudes en escribirnos o agendar desde tu portal."
-        )
-
-        psicologo_data = {'nombres': '', 'apellidos': ''}
-        cursor.execute("SELECT nombres, apellidos FROM usuarios WHERE id = ?", (psic_id,))
-        u_p = cursor.fetchone()
-        if u_p: psicologo_data = dict(u_p)
-
-        cita_dict = {'nombre': patient_name, 'fecha': cita_fecha, 'hora': cita_hora, 'modalidad': next_cita['tipo_consulta'] or 'Presencial'}
-        patient_dict = {'nombres': patient['nombres'], 'apellidos': patient['apellidos']}
-        cancel_reply = format_whatsapp_message(tmpl_cancel, patient_dict, cita_dict, psicologo_data)
-
-        try:
-            make_wa_http_request('POST', '/send', json_data={'phone': raw_phone, 'text': cancel_reply}, timeout=10)
-        except Exception as wa_err:
-            print(f"⚠️ No se pudo enviar mensaje de cancelación por WhatsApp: {wa_err}")
-
-        return jsonify({'status': 'cancelled', 'message': f'Cita #{cita_id} cancelada para {patient_name}'})
-
-
-
-@notificaciones_bp.route('/api/whatsapp/sync-session', methods=['GET', 'POST', 'DELETE'])
-def sync_whatsapp_session():
     import json
     db = get_db()
     cursor = db.cursor()
@@ -1004,7 +784,7 @@ def get_whatsapp_queue_status():
         user_id = session.get('user_id', 1)
         if user_id == 1:
             sql = f"""
-                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
+                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago,
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
                        COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
                        COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
@@ -1015,12 +795,12 @@ def get_whatsapp_queue_status():
                 {join_clause}
                 WHERE (p.psicologo_id = 1 OR p.psicologo_id IS NULL) AND af.fecha >= ?
                 ORDER BY af.fecha ASC, af.hora ASC
-                LIMIT 50
+                LIMIT 500
             """
             cursor.execute(sql, (yesterday_str,))
         else:
             sql = f"""
-                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
+                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago,
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
                        COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
                        COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
@@ -1031,7 +811,7 @@ def get_whatsapp_queue_status():
                 {join_clause}
                 WHERE p.psicologo_id = ? AND af.fecha >= ?
                 ORDER BY af.fecha ASC, af.hora ASC
-                LIMIT 50
+                LIMIT 500
             """
             cursor.execute(sql, (user_id, yesterday_str))
         
@@ -1043,21 +823,28 @@ def get_whatsapp_queue_status():
             pat_name = f"{r['pat_nombres']} {r['pat_apellidos']}"
             phone = r['pat_telefono'] or ''
             estado_c = r['estado_cita']
+            estado_p = str(r['estado_pago'] or '')
             is_confirmada = (r['confirmada'] == 1 or estado_c == 'Confirmada')
-            is_cancelada = (estado_c == 'Cancelada')
+            is_cancelada = (estado_c == 'Cancelada' or 'Cancelada' in estado_p or estado_p == 'Reprogramada')
+            is_stopped_manual = (r['confirmacion_enviada'] == -1 or r['recordatorio_enviado'] == -1 or r['reagendamiento_enviado'] == -1)
 
             tomorrow_str = (now_local + timedelta(days=1)).strftime('%Y-%m-%d')
+            can_cancel = False
 
-            if fecha_cita == tomorrow_str:
+            if is_stopped_manual:
+                pipeline_status = 'detenido_manual'
+                pipeline_label = '🛑 Envío Detenido Manualmente'
+                priority = 6
+            elif is_cancelada:
+                pipeline_status = 'cancelado'
+                pipeline_label = '❌ Cita Cancelada/Eliminada (Envío Inhabilitado)'
+                priority = 6
+            elif fecha_cita == tomorrow_str:
                 if r['confirmacion_enviada'] == 1:
                     if is_confirmada:
                         pipeline_status = 'confirmado'
                         pipeline_label = '✅ Confirmado por Paciente'
                         priority = 4
-                    elif is_cancelada:
-                        pipeline_status = 'cancelado'
-                        pipeline_label = '❌ Cancelado por Paciente'
-                        priority = 5
                     else:
                         pipeline_status = 'enviado_conf'
                         pipeline_label = '🚀 Confirmación Enviada (Esperando Respuesta)'
@@ -1066,6 +853,7 @@ def get_whatsapp_queue_status():
                     pipeline_status = 'en_cola_conf'
                     pipeline_label = '📥 En Cola (Confirmación 24h)'
                     priority = 1
+                    can_cancel = True
             elif fecha_cita > tomorrow_str:
                 if r['confirmacion_enviada'] == 1:
                     pipeline_status = 'enviado_conf'
@@ -1075,6 +863,7 @@ def get_whatsapp_queue_status():
                     pipeline_status = 'esperando_fecha'
                     pipeline_label = '⏳ Programado en Cola'
                     priority = 2
+                    can_cancel = True
             elif fecha_cita == today_str:
                 if is_confirmada:
                     if r['recordatorio_enviado'] == 1:
@@ -1085,10 +874,7 @@ def get_whatsapp_queue_status():
                         pipeline_status = 'en_cola'
                         pipeline_label = '📥 En Cola (Recordatorio Hoy)'
                         priority = 1
-                elif is_cancelada:
-                    pipeline_status = 'cancelado'
-                    pipeline_label = '❌ Cancelado por Paciente'
-                    priority = 5
+                        can_cancel = True
                 else:
                     if r['reagendamiento_enviado'] == 1:
                         pipeline_status = 'reagendar_enviado'
@@ -1098,6 +884,7 @@ def get_whatsapp_queue_status():
                         pipeline_status = 'en_cola_reagendar'
                         pipeline_label = '📥 En Cola (Reagendamiento Fin de Día)'
                         priority = 1
+                        can_cancel = True
             else:
                 if r['reagendamiento_enviado'] == 1:
                     pipeline_status = 'reagendar_enviado'
@@ -1121,7 +908,8 @@ def get_whatsapp_queue_status():
                 'tipo_consulta': r['tipo_consulta'] or 'Presencial',
                 'pipeline_status': pipeline_status,
                 'pipeline_label': pipeline_label,
-                'priority': priority
+                'priority': priority,
+                'can_cancel': can_cancel
             })
 
         # Ordenar cola: Primero los pendientes/en cola (prioridad 1 y 2), al final los enviados y realizados
@@ -1133,6 +921,42 @@ def get_whatsapp_queue_status():
         return jsonify({'queue': queue, 'debug_error': str(e_q)})
 
     return jsonify({'queue': queue})
+
+
+@notificaciones_bp.route('/api/whatsapp/cancel-queue-item', methods=['POST'])
+@login_required
+def cancel_whatsapp_queue_item():
+    data = request.json or {}
+    cita_id = data.get('cita_id')
+    if not cita_id:
+        return jsonify({'error': 'cita_id es obligatorio'}), 400
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+            UPDATE agenda_finanzas
+            SET confirmacion_enviada_wa = -1, recordatorio_enviado_wa = -1, reagendamiento_enviado_wa = -1
+            WHERE id = ?
+        """, (cita_id,))
+        
+        cursor.execute("SELECT paciente_id, fecha FROM agenda_finanzas WHERE id = ?", (cita_id,))
+        row = cursor.fetchone()
+        if row:
+            cursor.execute("""
+                UPDATE cola_recordatorios_herramientas
+                SET estado = 'cancelado'
+                WHERE paciente_id = ? AND fecha_programada = ?
+            """, (row['paciente_id'], row['fecha']))
+            cursor.execute("""
+                UPDATE tokens_herramientas
+                SET usado = 2
+                WHERE paciente_id = ? AND fecha_programada = ?
+            """, (row['paciente_id'], row['fecha']))
+            
+        db.commit()
+        return jsonify({'success': 'Envío detenido y cancelado manualmente con éxito.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al detener envío: {str(e)}'}), 500
 
 # --- SCHEDULER DE WHATSAPP EN SEGUNDO PLANO (AUTOMÁTICO) ---
 _wa_cron_thread_started = False
