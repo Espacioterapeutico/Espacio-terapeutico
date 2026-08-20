@@ -458,6 +458,51 @@ def update_patient(patient_id):
     except Exception as e:
         return jsonify({'error': f'Error al actualizar expediente: {str(e)}'}), 500
 
+@pacientes_bp.route('/api/patients/<int:patient_id>/reset-credentials', methods=['POST'])
+@login_required
+def reset_patient_credentials(patient_id):
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = get_psicologo_id_filter()
+    
+    cursor.execute("SELECT cedula, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+    pac_info = cursor.fetchone()
+    if not pac_info:
+        return jsonify({'error': 'Paciente no encontrado.'}), 404
+        
+    if psic_id is not None and pac_info['psicologo_id'] != psic_id:
+        return jsonify({'error': 'No tienes permisos para modificar a este paciente.'}), 403
+
+    cedula = pac_info['cedula']
+    if not cedula:
+        return jsonify({'error': 'El paciente no tiene cédula registrada.'}), 400
+
+    new_hash = generate_password_hash(cedula)
+    
+    try:
+        cursor.execute("""
+            UPDATE pacientes 
+            SET username = ?, 
+                password_hash = ?, 
+                pregunta_seguridad_1 = NULL, 
+                pregunta_seguridad_2 = NULL, 
+                respuesta_seguridad_1_hash = NULL, 
+                respuesta_seguridad_2_hash = NULL 
+            WHERE id = ?
+        """, (cedula, new_hash, patient_id))
+        db.commit()
+        
+        try:
+            import threading
+            from app import sync_patient_to_firebase
+            threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        except Exception:
+            pass
+            
+        return jsonify({'success': 'Credenciales restablecidas correctamente.'})
+    except Exception as e:
+        return jsonify({'error': f'Error al restablecer credenciales: {str(e)}'}), 500
+
 @pacientes_bp.route('/api/patients/<int:patient_id>', methods=['DELETE'])
 @login_required
 def delete_patient(patient_id):
