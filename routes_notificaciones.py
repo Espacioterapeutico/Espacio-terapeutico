@@ -913,6 +913,43 @@ def cancel_whatsapp_queue_item():
         return jsonify({'error': 'cita_id es obligatorio'}), 400
     db = get_db()
     cursor = db.cursor()
+    
+    # Crear tablas defensivamente por si la BD es antigua o restaurada
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                psicologo_id INTEGER NOT NULL,
+                paciente_id INTEGER NOT NULL,
+                herramienta_tipo TEXT NOT NULL,
+                fecha_programada DATE NOT NULL,
+                hora_programada TEXT DEFAULT '20:00',
+                estado TEXT DEFAULT 'programado',
+                enviado INTEGER DEFAULT 0,
+                fecha_envio DATETIME NULL,
+                token_id INTEGER NULL,
+                pausado INTEGER DEFAULT 0,
+                fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(paciente_id, herramienta_tipo, fecha_programada)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tokens_herramientas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token TEXT UNIQUE NOT NULL,
+                paciente_id INTEGER NOT NULL,
+                psicologo_id INTEGER NOT NULL,
+                herramienta_tipo TEXT NOT NULL,
+                fecha_programada DATE NOT NULL,
+                usado INTEGER DEFAULT 0,
+                fecha_completado DATETIME NULL,
+                fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        db.commit()
+    except Exception as _tbl_err:
+        print("Aviso creando tablas defensivas en cancel_whatsapp_queue_item:", _tbl_err)
+
     try:
         cursor.execute("""
             UPDATE agenda_finanzas
@@ -923,16 +960,23 @@ def cancel_whatsapp_queue_item():
         cursor.execute("SELECT paciente_id, fecha FROM agenda_finanzas WHERE id = ?", (cita_id,))
         row = cursor.fetchone()
         if row:
-            cursor.execute("""
-                UPDATE cola_recordatorios_herramientas
-                SET estado = 'cancelado'
-                WHERE paciente_id = ? AND fecha_programada = ?
-            """, (row['paciente_id'], row['fecha']))
-            cursor.execute("""
-                UPDATE tokens_herramientas
-                SET usado = 2
-                WHERE paciente_id = ? AND fecha_programada = ?
-            """, (row['paciente_id'], row['fecha']))
+            try:
+                cursor.execute("""
+                    UPDATE cola_recordatorios_herramientas
+                    SET estado = 'cancelado'
+                    WHERE paciente_id = ? AND fecha_programada = ?
+                """, (row['paciente_id'], row['fecha']))
+            except Exception as _ex1:
+                print("Aviso actualizando cola_recordatorios_herramientas:", _ex1)
+                
+            try:
+                cursor.execute("""
+                    UPDATE tokens_herramientas
+                    SET usado = 2
+                    WHERE paciente_id = ? AND fecha_programada = ?
+                """, (row['paciente_id'], row['fecha']))
+            except Exception as _ex2:
+                print("Aviso actualizando tokens_herramientas:", _ex2)
             
         db.commit()
         return jsonify({'success': 'Envío detenido y cancelado manualmente con éxito.'})
@@ -941,5 +985,3 @@ def cancel_whatsapp_queue_item():
 
 # --- SCHEDULER DE WHATSAPP EN SEGUNDO PLANO (AUTOMÁTICO) ---
 _wa_cron_thread_started = False
-
-

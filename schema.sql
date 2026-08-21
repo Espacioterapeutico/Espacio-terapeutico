@@ -124,6 +124,34 @@ CREATE TABLE IF NOT EXISTS modulos_terapeuticos_paciente (
     UNIQUE(paciente_id, modulo_clave)
 );
 
+CREATE TABLE IF NOT EXISTS tokens_herramientas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE NOT NULL,
+    paciente_id INTEGER NOT NULL,
+    psicologo_id INTEGER NOT NULL,
+    herramienta_tipo TEXT NOT NULL,
+    fecha_programada DATE NOT NULL,
+    usado INTEGER DEFAULT 0,
+    fecha_completado DATETIME NULL,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    psicologo_id INTEGER NOT NULL,
+    paciente_id INTEGER NOT NULL,
+    herramienta_tipo TEXT NOT NULL,
+    fecha_programada DATE NOT NULL,
+    hora_programada TEXT DEFAULT '20:00',
+    estado TEXT DEFAULT 'programado',
+    enviado INTEGER DEFAULT 0,
+    fecha_envio DATETIME NULL,
+    token_id INTEGER NULL,
+    pausado INTEGER DEFAULT 0,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(paciente_id, herramienta_tipo, fecha_programada)
+);
+
 CREATE TABLE IF NOT EXISTS registros_sueno (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     paciente_id INTEGER NOT NULL,
