@@ -2558,6 +2558,23 @@ function switchPatientView(viewName) {
 }
 
 function goToWizardStep(stepNum) {
+    if (stepNum > 1) {
+        const username = document.getElementById('wiz-username')?.value || '';
+        const new_password = document.getElementById('wiz-password')?.value || '';
+        const confirm_password = document.getElementById('wiz-password-confirm')?.value || '';
+        const respuesta_1 = document.getElementById('wiz-respuesta-1')?.value || '';
+        const respuesta_2 = document.getElementById('wiz-respuesta-2')?.value || '';
+
+        if (!username || !new_password || !respuesta_1 || !respuesta_2) {
+            alert('Por favor completa el nombre de usuario, contraseña y las respuestas de seguridad en el Paso 1.');
+            return;
+        }
+        if (confirm_password && new_password !== confirm_password) {
+            alert('La nueva contraseña y la confirmación no coinciden.');
+            return;
+        }
+    }
+
     document.querySelectorAll('.wizard-step').forEach(step => step.classList.add('hide'));
     document.getElementById(`wizard-step-${stepNum}`).classList.remove('hide');
     
@@ -2592,6 +2609,7 @@ async function handlePatientWizardSubmit(e) {
     const patientId = document.getElementById('wizard-patient-id')?.value || '';
     const username = document.getElementById('wiz-username')?.value || '';
     const new_password = document.getElementById('wiz-password')?.value || '';
+    const confirm_password = document.getElementById('wiz-password-confirm')?.value || '';
     const pregunta_1 = document.getElementById('wiz-pregunta-1')?.value || '';
     const respuesta_1 = document.getElementById('wiz-respuesta-1')?.value || '';
     const pregunta_2 = document.getElementById('wiz-pregunta-2')?.value || '';
@@ -2606,6 +2624,18 @@ async function handlePatientWizardSubmit(e) {
             statusMsg.classList.remove('hide');
         } else {
             alert('Por favor completa el nombre de usuario, contraseña y las respuestas de seguridad en el Paso 1.');
+        }
+        return;
+    }
+
+    if (confirm_password && new_password !== confirm_password) {
+        goToWizardStep(1);
+        if (statusMsg) {
+            statusMsg.textContent = 'La nueva contraseña y la confirmación no coinciden.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        } else {
+            alert('La nueva contraseña y la confirmación no coinciden.');
         }
         return;
     }

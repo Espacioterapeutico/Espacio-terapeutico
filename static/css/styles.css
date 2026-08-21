@@ -2331,4 +2331,66 @@ body.is-patient .main-content {
     }
 }
 
+/* Pizarra Terapéutica - Pestañas adaptadas a pantalla móvil sin scroll */
+.pat-pizarra-tabs-container {
+    display: flex;
+    gap: 0.4rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1.5px solid var(--border-color);
+    width: 100%;
+}
+
+.pat-pizarra-tab-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.6rem 0.35rem;
+    border-radius: 20px;
+    border: 1.5px solid var(--border-color);
+    background: white;
+    color: var(--text-dark);
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.pat-pizarra-tab-btn.active {
+    border-color: #702e5e;
+    background: #702e5e;
+    color: white;
+}
+
+@media (max-width: 600px) {
+    .pat-pizarra-tab-btn {
+        font-size: 0.74rem;
+        padding: 0.55rem 0.2rem;
+        gap: 0.25rem;
+    }
+    
+    /* Estatus Financiero Paciente - Ajuste para móvil (evita tarjetas comprimidas) */
+    .finance-balances-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+    
+    .sub-nav-tabs {
+        flex-wrap: wrap !important;
+        gap: 0.4rem !important;
+    }
+    
+    .sub-nav-tabs .btn {
+        flex: 1 1 auto !important;
+        text-align: center !important;
+        font-size: 0.82rem !important;
+        padding: 0.5rem 0.6rem !important;
+    }
+}
+
 

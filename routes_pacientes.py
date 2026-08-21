@@ -962,7 +962,7 @@ def patient_add_appointment():
                 'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
                 'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
             }
-            if paciente and paciente.get('email'):
+            if paciente and paciente['email']:
                 event_body['attendees'] = [{'email': paciente['email'], 'displayName': f"{paciente['nombres']} {paciente['apellidos']}"}]
 
             try:

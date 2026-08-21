@@ -4517,17 +4517,17 @@
                         <h2>Mi Pizarra Terapéutica</h2>
                     </div>
 
-                    <!-- Barra de Pestañas Deslizantes (Segment Tabs) -->
-                    <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1.5px solid var(--border-color); -webkit-overflow-scrolling: touch;">
-                        <button type="button" class="pat-pizarra-tab-btn active" data-tab="mood" onclick="switchPizarraTab('mood')" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.1rem; border-radius: 20px; border: 1.5px solid #702e5e; background: #702e5e; color: white; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
-                            <span>💭</span> ¿Cómo me siento hoy?
+                    <!-- Barra de Pestañas (Segment Tabs) -->
+                    <div class="pat-pizarra-tabs-container">
+                        <button type="button" class="pat-pizarra-tab-btn active" data-tab="mood" onclick="switchPizarraTab('mood')">
+                            <span>💭</span> ¿Cómo me siento?
                         </button>
-                        <button type="button" class="pat-pizarra-tab-btn" data-tab="write" onclick="switchPizarraTab('write')" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.1rem; border-radius: 20px; border: 1.5px solid var(--border-color); background: white; color: var(--text-dark); font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
-                            <span>✏️</span> Escribir / Grabar en el Diario
+                        <button type="button" class="pat-pizarra-tab-btn" data-tab="write" onclick="switchPizarraTab('write')">
+                            <span>✏️</span> Escribir Diario
                         </button>
-                        <button type="button" class="pat-pizarra-tab-btn" data-tab="history" onclick="switchPizarraTab('history')" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.1rem; border-radius: 20px; border: 1.5px solid var(--border-color); background: white; color: var(--text-dark); font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; position: relative;">
-                            <span>📜</span> Historial de Pizarra
-                            <span id="pat-pizarra-unread-badge" class="badge hide" style="background: #dc2626; color: white; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 12px;">0</span>
+                        <button type="button" class="pat-pizarra-tab-btn" data-tab="history" onclick="switchPizarraTab('history')">
+                            <span>📜</span> Historial
+                            <span id="pat-pizarra-unread-badge" class="badge hide" style="background: #dc2626; color: white; font-size: 0.68rem; font-weight: 800; padding: 1px 5px; border-radius: 10px; margin-left: 2px;">0</span>
                         </button>
                     </div>
 
@@ -4790,9 +4790,15 @@
                                         <label for="wiz-username">Nombre de Usuario Definitivo *</label>
                                         <input type="text" id="wiz-username" required placeholder="Ej. juan_perez">
                                     </div>
-                                    <div class="form-group">
-                                        <label for="wiz-password">Contraseña Nueva *</label>
-                                        <input type="password" id="wiz-password" required placeholder="Contraseña de acceso fuerte">
+                                    <div class="form-row">
+                                        <div class="form-group col-6">
+                                            <label for="wiz-password">Contraseña Nueva *</label>
+                                            <input type="password" id="wiz-password" required placeholder="Contraseña de acceso fuerte">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label for="wiz-password-confirm">Confirmar Contraseña *</label>
+                                            <input type="password" id="wiz-password-confirm" required placeholder="Repite la contraseña">
+                                        </div>
                                     </div>
                                     
                                     <div class="form-row">
