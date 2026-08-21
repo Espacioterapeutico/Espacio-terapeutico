@@ -39,6 +39,9 @@ def get_resource_path(relative_path):
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FIREBASE_SA_FILE = os.path.join(BASE_DIR, 'firebase-service-account.json')
+
 app = Flask(
     __name__,
     static_folder=get_resource_path('static'),
@@ -388,15 +391,79 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
     except Exception as e:
         print("Error global en send_fcm_notification:", e)
 
+def send_vapid_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
+    try:
+        from pywebpush import webpush, WebPushException
+    except ImportError:
+        return
+
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        vapid_keys = get_vapid_keys(cursor)
+        private_key = vapid_keys.get('vapid_private_key')
+        if not private_key:
+            return
+
+        if user_id:
+            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ?", (user_id,))
+        elif patient_id:
+            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE patient_id = ?", (patient_id,))
+        else:
+            return
+
+        subs = cursor.fetchall()
+        if not subs:
+            return
+
+        payload_data = json.dumps({
+            "title": title,
+            "body": body,
+            "url": url,
+            "icon": "/static/logo.png",
+            "badge": "/static/badge.png"
+        })
+
+        vapid_claims = {
+            "sub": "mailto:soporte@espacioterapeutico.com"
+        }
+
+        for sub in subs:
+            subscription_info = {
+                "endpoint": sub['endpoint'],
+                "keys": {
+                    "p256dh": sub['p256dh'],
+                    "auth": sub['auth']
+                }
+            }
+            try:
+                webpush(
+                    subscription_info=subscription_info,
+                    data=payload_data,
+                    vapid_private_key=private_key,
+                    vapid_claims=vapid_claims
+                )
+            except WebPushException as ex:
+                if ex.response is not None and getattr(ex.response, 'status_code', None) in (404, 410):
+                    cursor.execute("DELETE FROM web_push_subscriptions WHERE id = ?", (sub['id'],))
+                    db.commit()
+            except Exception as e:
+                print("Error enviando VAPID webpush:", e)
+    except Exception as err:
+        print("Error general en send_vapid_notification:", err)
+
 def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
-    # Usa exclusivamente FCM (Firebase Cloud Messaging) para evitar duplicados.
-    # El envío VAPID (pywebpush) fue desactivado porque generaba notificaciones duplicadas:
-    # FCM usa firebase-messaging-sw.js y VAPID usa sw.js — son Service Workers distintos
-    # que no pueden deduplicarse entre sí mediante 'tag'.
+    # 1. FCM (Firebase Cloud Messaging)
     try:
         send_fcm_notification(user_id=user_id, patient_id=patient_id, title=title, body=body, url=url)
     except Exception as fcm_err:
         print("Error al disparar FCM en send_webpush_notification:", fcm_err)
+
+    # 2. VAPID Web Push
+    try:
+        send_vapid_notification(user_id=user_id, patient_id=patient_id, title=title, body=body, url=url)
+    except Exception as vapid_err:
+        print("Error al disparar VAPID en send_webpush_notification:", vapid_err)
 
 def clean_digits_only(s):
     if not s:

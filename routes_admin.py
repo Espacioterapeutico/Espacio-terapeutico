@@ -15,6 +15,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 admin_bp = Blueprint('admin', __name__)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FIREBASE_SA_FILE = os.path.join(BASE_DIR, 'firebase-service-account.json')
+
 def get_db():
     """Obtiene la conexión a la base de datos desde el contexto global g de Flask."""
     db = getattr(g, '_database', None)
