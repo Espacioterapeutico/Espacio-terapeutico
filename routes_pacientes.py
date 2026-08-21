@@ -615,6 +615,11 @@ def patient_login():
         
     needs_setup = (patient['pregunta_seguridad_1'] is None or patient['respuesta_seguridad_1_hash'] is None)
     
+    session.permanent = True
+    session['patient_id'] = patient['id']
+    session['patient_username'] = patient['username'] or patient['cedula']
+    session['role'] = 'paciente'
+    
     if needs_setup:
         return jsonify({
             'success': 'Primer acceso detectado. Requiere configuración.',
@@ -622,11 +627,6 @@ def patient_login():
             'patient_id': patient['id'],
             'username': patient['username'] or patient['cedula']
         })
-        
-    session.permanent = True
-    session['patient_id'] = patient['id']
-    session['patient_username'] = patient['username']
-    session['role'] = 'paciente'
     
     return jsonify({
         'success': 'Inicio de sesión correcto.',
@@ -663,6 +663,16 @@ def patient_setup_first_login():
     resp_1_hash = generate_password_hash(respuesta_1.strip().lower())
     resp_2_hash = generate_password_hash(respuesta_2.strip().lower())
     
+    cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
+    curr_pac = cursor.fetchone()
+    curr = dict(curr_pac) if curr_pac else {}
+
+    def get_val(key):
+        val = data.get(key)
+        if val is not None and str(val).strip() != '':
+            return val
+        return curr.get(key)
+
     try:
         cursor.execute("""
             UPDATE pacientes 
@@ -679,13 +689,13 @@ def patient_setup_first_login():
             WHERE id = ?
         """, (
             username, password_hash, pregunta_1, resp_1_hash, pregunta_2, resp_2_hash,
-            data.get('pronombre'), data.get('genero'), data.get('edad'), data.get('lugar_nacimiento'), data.get('fecha_nacimiento'),
-            data.get('residencia_actual'), data.get('pais'), data.get('ciudad'), data.get('con_quien_reside'), data.get('nivel_academico'), data.get('ocupacion'), data.get('estado_civil'),
-            data.get('telefono'), data.get('email'),
-            data.get('antecedentes_medicos_familiares'), data.get('antecedentes_medicos_personales'),
-            data.get('antecedentes_psicologicos_familiares'), data.get('antecedentes_psicologicos_personales'),
-            data.get('asistencia_previa_psicologo'), data.get('motivo_consulta'), data.get('expectativas'), data.get('farmacologia'),
-            data.get('contacto_emergencia_nombre'), data.get('contacto_emergencia_parentesco'),
+            get_val('pronombre'), get_val('genero'), get_val('edad'), get_val('lugar_nacimiento'), get_val('fecha_nacimiento'),
+            get_val('residencia_actual'), get_val('pais'), get_val('ciudad'), get_val('con_quien_reside'), get_val('nivel_academico'), get_val('ocupacion'), get_val('estado_civil'),
+            get_val('telefono'), get_val('email'),
+            get_val('antecedentes_medicos_familiares'), get_val('antecedentes_medicos_personales'),
+            get_val('antecedentes_psicologicos_familiares'), get_val('antecedentes_psicologicos_personales'),
+            get_val('asistencia_previa_psicologo'), get_val('motivo_consulta'), get_val('expectativas'), get_val('farmacologia'),
+            get_val('contacto_emergencia_nombre'), get_val('contacto_emergencia_parentesco'),
             patient_id
         ))
         db.commit()
