@@ -508,7 +508,7 @@ def send_manual_whatsapp_reminder(cita_id):
 
 @notificaciones_bp.route('/api/whatsapp/cron-send-reminders', methods=['GET', 'POST'])
 def cron_send_whatsapp_reminders():
-    import os
+    import os, sys, traceback
     from flask import has_request_context, jsonify
     CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
     if has_request_context():
@@ -526,8 +526,11 @@ def cron_send_whatsapp_reminders():
         now_local = datetime.utcnow() - timedelta(hours=4)
 
     current_hour = now_local.hour
+    print(f"[CRON] === Inicio cron_send_whatsapp_reminders === Hora local: {now_local.strftime('%Y-%m-%d %H:%M:%S')} (hour={current_hour})", flush=True)
+    
     # Delimitar horario de envíos automáticos: NO enviar entre las 10:00 PM (22:00) y las 7:59 AM (07:59)
     if current_hour < 8 or current_hour >= 22:
+        print(f"[CRON] Skipped: fuera de horario laboral (hour={current_hour})", flush=True)
         return jsonify({
             'status': 'skipped',
             'message': f'Filtro de horario laboral activo (10:00 PM - 7:59 AM). Hora actual: {current_hour:02d}:00. Los envíos automáticos están pausados hasta las 8:00 AM.',
@@ -562,7 +565,7 @@ def cron_send_whatsapp_reminders():
 
     future_3days_str = (now_local + timedelta(days=3)).strftime('%Y-%m-%d')
 
-    # 1. ENVIAR CONFIRMACIONES PARA CITAS PRÓXIMAS (Citas no confirmadas en la ventana 24-48h)
+    # 1. ENVIAR CONFIRMACIONES PARA CITAS PRÓXIMAS (Citas no confirmadas en la ventana día previo)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
@@ -572,17 +575,21 @@ def cron_send_whatsapp_reminders():
         WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
     """, (today_str, future_3days_str))
     citas_confirmar = cursor.fetchall()
+    print(f"[CRON] Citas pendientes de confirmación encontradas: {len(citas_confirmar)} (rango {today_str} a {future_3days_str})", flush=True)
 
     for cita in citas_confirmar:
         phone = cita['pat_telefono']
+        pat_name = f"{cita['pat_nombres']} {cita['pat_apellidos']}"
         if not phone or not phone.strip():
+            print(f"[CRON]   Saltando {pat_name}: sin teléfono", flush=True)
             continue
         
         try:
             cita_dt = datetime.strptime(f"{cita['fecha']} {cita['hora']}", "%Y-%m-%d %H:%M")
-            diff_hours = (cita_dt - now_local).total_seconds() / 3600.0
+            diff_hours = (cita_dt - now_local.replace(tzinfo=None)).total_seconds() / 3600.0
             dia_previo_str = (cita_dt.date() - timedelta(days=1)).strftime('%Y-%m-%d')
-        except Exception:
+        except Exception as e_parse:
+            print(f"[CRON]   Error parseando fecha/hora para {pat_name}: {e_parse}", flush=True)
             diff_hours = 12.0
             dia_previo_str = today_str
 
@@ -593,13 +600,15 @@ def cron_send_whatsapp_reminders():
         # 2. Cita de última hora: Faltan menos de 24 horas para la consulta.
         es_ultima_hora = (0 < diff_hours < 24)
 
-        # 3. Disparo manual ("Ejecutar Recordatorios Ahora" o envío individual)
-        es_manual = has_request_context()
+        print(f"[CRON]   Evaluando {pat_name} | cita={cita['fecha']} {cita['hora']} | diff_hours={diff_hours:.1f} | dia_previo={dia_previo_str} | today={today_str} | paso_8am={paso_8am_dia_previo} | ultima_hora={es_ultima_hora}", flush=True)
 
-        should_send_confirmation = paso_8am_dia_previo or es_ultima_hora or es_manual
+        should_send_confirmation = paso_8am_dia_previo or es_ultima_hora
 
         if not should_send_confirmation:
+            print(f"[CRON]   Saltando {pat_name}: no cumple condiciones de envío", flush=True)
             continue
+        
+        print(f"[CRON]   >>> ENVIANDO confirmación a {pat_name} ({phone})...", flush=True)
         psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
         cita_dict = {
             'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
@@ -618,19 +627,24 @@ def cron_send_whatsapp_reminders():
         try:
             from routes_herramientas import clean_phone_number
             c_phone = clean_phone_number(phone)
+            print(f"[CRON]   Llamando make_wa_http_request POST /send phone={c_phone} user_id={psych_id} url={WHATSAPP_SERVICE_URL}", flush=True)
             r = make_wa_http_request('POST', '/send', json_data={'phone': c_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+            print(f"[CRON]   Respuesta de Render: status_code={r.status_code if r else 'None'}, body={r.text[:300] if r else 'None'}", flush=True)
             if r and r.status_code == 200:
                 cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
                 db.commit()
-                enviados_confirmaciones.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'confirmacion'})
+                enviados_confirmaciones.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'tipo': 'confirmacion'})
+                print(f"[CRON]   ✅ Confirmación ENVIADA con éxito a {pat_name}", flush=True)
             else:
-                err_msg = 'Timeout de microservicio'
+                err_msg = f'HTTP {r.status_code if r else "None"}'
                 if r:
-                    try: err_msg = r.json().get('error', r.text)
-                    except: err_msg = r.text
-                errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': err_msg})
+                    try: err_msg = r.json().get('error', r.text[:200])
+                    except: err_msg = r.text[:200]
+                errores.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'error': err_msg})
+                print(f"[CRON]   ❌ Error enviando a {pat_name}: {err_msg}", flush=True)
         except Exception as e:
-            errores.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'error': str(e)})
+            errores.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'error': str(e)})
+            print(f"[CRON]   ❌ Excepción enviando a {pat_name}: {traceback.format_exc()}", flush=True)
 
     # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy CONFIRMADAS en Citas O Finanzas)
     cursor.execute("""
@@ -987,7 +1001,99 @@ def send_queue_item_now(item_id):
     except Exception as e:
         return jsonify({'error': f'Error procesando envío individual: {str(e)}'}), 500
 
+@notificaciones_bp.route('/api/whatsapp/diagnostico', methods=['GET'])
+@login_required
+def whatsapp_diagnostico():
+    """Endpoint de diagnóstico para verificar la cadena completa de envío de WhatsApp."""
+    import traceback
+    from datetime import datetime, timedelta
+    results = {}
 
+    # 1. Verificar conectividad con Render
+    try:
+        import requests
+        render_url = WHATSAPP_SERVICE_URL.rstrip('/')
+        results['render_url'] = render_url
+        r = requests.get(f"{render_url}/status", params={'user_id': '1'}, timeout=10)
+        results['render_status_code'] = r.status_code
+        try:
+            results['render_response'] = r.json()
+        except:
+            results['render_response'] = r.text[:500]
+    except Exception as e:
+        results['render_error'] = str(e)
+        results['render_traceback'] = traceback.format_exc()
+
+    # 2. Verificar hora del servidor
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_local = datetime.now(tz)
+    except:
+        now_local = datetime.utcnow() - timedelta(hours=4)
+
+    results['server_time_utc'] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    results['server_time_local'] = now_local.strftime('%Y-%m-%d %H:%M:%S')
+    results['current_hour'] = now_local.hour
+    results['cron_activo'] = 8 <= now_local.hour < 22
+
+    today_str = now_local.strftime('%Y-%m-%d')
+    future_3days_str = (now_local + timedelta(days=3)).strftime('%Y-%m-%d')
+
+    # 3. Verificar citas pendientes
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada,
+               COALESCE(af.confirmacion_enviada_wa, 0) as conf_wa,
+               p.nombres, p.apellidos, p.telefono, p.psicologo_id
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        WHERE af.fecha >= ? AND af.fecha <= ?
+          AND COALESCE(af.estado_pago, '') != 'Cancelada'
+        ORDER BY af.fecha, af.hora
+    """, (today_str, future_3days_str))
+    rows = cursor.fetchall()
+
+    citas_eval = []
+    for r in rows:
+        try:
+            cita_dt = datetime.strptime(f"{r['fecha']} {r['hora']}", "%Y-%m-%d %H:%M")
+            diff_hours = (cita_dt - now_local.replace(tzinfo=None)).total_seconds() / 3600.0
+            dia_previo = (cita_dt.date() - timedelta(days=1)).strftime('%Y-%m-%d')
+        except:
+            diff_hours = -1
+            dia_previo = '?'
+
+        paso_8am = (today_str >= dia_previo) and (now_local.hour >= 8)
+        ultima_hora = (0 < diff_hours < 24)
+
+        citas_eval.append({
+            'id': r['id'],
+            'paciente': f"{r['nombres']} {r['apellidos']}",
+            'telefono': r['telefono'],
+            'fecha': r['fecha'],
+            'hora': r['hora'],
+            'confirmada': r['confirmada'],
+            'conf_wa_enviada': r['conf_wa'],
+            'diff_hours': round(diff_hours, 1),
+            'dia_previo': dia_previo,
+            'paso_8am_dia_previo': paso_8am,
+            'es_ultima_hora': ultima_hora,
+            'deberia_enviarse': (paso_8am or ultima_hora) and r['conf_wa'] == 0 and r['confirmada'] == 0,
+            'razon_no_envio': (
+                'Ya enviada (conf_wa=1)' if r['conf_wa'] == 1 else
+                'Ya confirmada' if r['confirmada'] == 1 else
+                'No cumple condiciones de tiempo' if not (paso_8am or ultima_hora) else
+                'LISTA PARA ENVIAR'
+            )
+        })
+
+    results['citas_evaluadas'] = citas_eval
+    results['total_citas'] = len(citas_eval)
+    results['pendientes_envio'] = sum(1 for c in citas_eval if c['deberia_enviarse'])
+
+    return jsonify(results)
 
 
 
