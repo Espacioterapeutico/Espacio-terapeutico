@@ -1489,5 +1489,98 @@ def cancel_whatsapp_queue_item():
     except Exception as e:
         return jsonify({'error': f'Error al detener envío: {str(e)}'}), 500
 
+
+# --- WEBHOOK PARA RECIBIR RESPUESTAS DE PACIENTES ---
+@notificaciones_bp.route('/api/whatsapp/webhook', methods=['POST'])
+def whatsapp_webhook():
+    """Recibe mensajes entrantes del microservicio de WhatsApp y procesa confirmaciones"""
+    data = request.json or {}
+    phone = data.get('phone', '')
+    text = data.get('text', '').strip().lower()
+    user_id = data.get('user_id', 1)
+    
+    if not phone or not text:
+        return jsonify({'status': 'ignored', 'reason': 'missing data'}), 200
+
+    import re
+    # Limpiar signos de puntuación del texto para evaluar mejor
+    clean_text = re.sub(r'[^\w\s]', '', text).strip()
+    
+    # Palabras clave de afirmación o negación
+    afirmaciones = ['si', 'sí', 'confirmo', 'claro', 'por supuesto', 'ok', 'vale', 's', 'yes', 'confirmado']
+    negaciones = ['no', 'cancelo', 'cancelar', 'n', 'no podre', 'no podré']
+    
+    es_afirmacion = any(word == clean_text for word in afirmaciones)
+    es_negacion = any(word == clean_text for word in negaciones)
+
+    if not (es_afirmacion or es_negacion):
+        # El mensaje no es un "sí" ni un "no" claro, no hacemos nada automático
+        return jsonify({'status': 'ignored', 'reason': 'not a confirmation keyword'}), 200
+        
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Buscar paciente por teléfono (coincidencia de los últimos 8-10 dígitos)
+    short_phone = phone[-8:]
+    cursor.execute("SELECT id, nombres FROM pacientes WHERE telefono LIKE ?", ('%' + short_phone + '%',))
+    patients = cursor.fetchall()
+    
+    if not patients:
+        return jsonify({'status': 'ignored', 'reason': 'patient not found'}), 200
+        
+    # Encontrar la cita futura más próxima sin confirmar
+    from datetime import datetime, timedelta
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_local = datetime.now(tz)
+    except:
+        now_local = datetime.utcnow() - timedelta(hours=4)
+        
+    today_str = now_local.strftime('%Y-%m-%d')
+    patient_ids = [str(p['id']) for p in patients]
+    placeholders = ','.join(['?'] * len(patient_ids))
+    
+    # Buscar la cita más cercana (desde hoy en adelante) que no esté confirmada ni cancelada
+    cursor.execute(f"""
+        SELECT id, fecha, hora, confirmada 
+        FROM agenda_finanzas 
+        WHERE paciente_id IN ({placeholders}) 
+          AND fecha >= ? 
+          AND COALESCE(confirmada, 0) = 0
+          AND COALESCE(estado_pago, '') != 'Cancelada'
+        ORDER BY fecha ASC, hora ASC LIMIT 1
+    """, patient_ids + [today_str])
+    
+    cita = cursor.fetchone()
+    
+    if not cita:
+        return jsonify({'status': 'ignored', 'reason': 'no pending unconfirmed appointment'}), 200
+        
+    if es_afirmacion:
+        cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (cita['id'],))
+        db.commit()
+        # Enviar respuesta automática de éxito
+        respuesta = "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+        try:
+            make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': respuesta}, timeout=10, user_id=user_id)
+        except:
+            pass
+        return jsonify({'status': 'confirmed', 'cita_id': cita['id']}), 200
+        
+    if es_negacion:
+        # En caso de negación, marcamos como Cancelada
+        cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada' WHERE id = ?", (cita['id'],))
+        db.commit()
+        respuesta = "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
+        try:
+            make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': respuesta}, timeout=10, user_id=user_id)
+        except:
+            pass
+        return jsonify({'status': 'cancelled', 'cita_id': cita['id']}), 200
+
+    return jsonify({'status': 'processed'}), 200
+
+
 # --- SCHEDULER DE WHATSAPP EN SEGUNDO PLANO (AUTOMÁTICO) ---
 _wa_cron_thread_started = False
