@@ -208,6 +208,88 @@ def make_wa_http_request(method, endpoint, json_data=None, timeout=5, user_id=No
         else:
             return requests.post(url, json=json_data, params=params, headers=headers, timeout=timeout)
 
+@notificaciones_bp.route('/api/whatsapp/sync-session', methods=['GET', 'POST', 'DELETE'])
+def handle_whatsapp_session_sync():
+    """
+    Sincroniza y recupera las credenciales de autenticación de Baileys (JSON) 
+    en la base de datos SQLite para mantener la sesión de WhatsApp viva de forma permanente.
+    """
+    db = get_db()
+    cursor = db.cursor()
+    
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                content TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, filename)
+            )
+        """)
+        db.commit()
+    except Exception as e_tbl:
+        print("Aviso creando tabla whatsapp_sessions:", e_tbl)
+
+    if request.method == 'GET':
+        user_id = request.args.get('user_id')
+        if not user_id:
+            try:
+                user_id = session.get('user_id')
+            except RuntimeError:
+                user_id = 1
+        user_id = user_id or 1
+        try:
+            cursor.execute("SELECT filename, content FROM whatsapp_sessions WHERE user_id = ?", (user_id,))
+            rows = cursor.fetchall()
+            files_map = {row['filename']: row['content'] for row in rows}
+            return jsonify({'success': True, 'user_id': user_id, 'files': files_map})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    elif request.method == 'POST':
+        data = request.json or {}
+        user_id = data.get('user_id')
+        if not user_id:
+            try:
+                user_id = session.get('user_id')
+            except RuntimeError:
+                user_id = 1
+        user_id = user_id or 1
+        files = data.get('files') or {}
+        if not files or not isinstance(files, dict):
+            return jsonify({'error': 'No files provided'}), 400
+        
+        try:
+            for filename, content in files.items():
+                cursor.execute("""
+                    INSERT INTO whatsapp_sessions (user_id, filename, content, updated_at)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, filename) DO UPDATE SET
+                        content = excluded.content,
+                        updated_at = CURRENT_TIMESTAMP
+                """, (user_id, filename, content))
+            db.commit()
+            return jsonify({'success': True, 'user_id': user_id, 'saved_files': len(files)})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    elif request.method == 'DELETE':
+        user_id = request.args.get('user_id')
+        if not user_id:
+            try:
+                user_id = session.get('user_id')
+            except RuntimeError:
+                user_id = 1
+        user_id = user_id or 1
+        try:
+            cursor.execute("DELETE FROM whatsapp_sessions WHERE user_id = ?", (user_id,))
+            db.commit()
+            return jsonify({'success': True, 'user_id': user_id, 'message': 'Sesión eliminada de la BD'})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
 @notificaciones_bp.route('/api/whatsapp/status', methods=['GET'])
 @login_required
 def get_whatsapp_status():
