@@ -9428,17 +9428,6 @@ function renderWaQueueTablePage() {
                 🛑 Detener Envío
             </button>
         ` : `<span style="font-size: 0.78rem; color: var(--text-muted);">-</span>`;
-
-        return `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="font-weight: 700; padding: 0.65rem;">
-                    ${item.paciente_nombre}
-                    <div style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 400;">📱 ${item.telefono || 'Sin teléfono'}</div>
-                </td>
-                <td style="padding: 0.65rem;">
-                    <div style="font-weight: 600;">📅 ${item.fecha}</div>
-                    <div style="font-size: 0.78rem; color: var(--text-secondary);">🕒 ${item.hora}</div>
-                </td>
         const toolLinkHtml = item.link ? `
             <div style="margin-top: 4px; font-size: 0.75rem;">
                 <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${item.link}')" style="padding: 2px 6px; font-size: 0.73rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
