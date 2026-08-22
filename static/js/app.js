@@ -1530,6 +1530,7 @@ async function handleAuthSubmit(e) {
         }
     }
 }
+window.handleAuthSubmit = handleAuthSubmit;
 
 async function handleLogout() {
     try {
@@ -1700,7 +1701,11 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         authScr.style.display = 'none';
         authScr.classList.add('hide');
     }
-    if (pubLanding) pubLanding.classList.add('hide');
+    if (pubLanding) {
+        pubLanding.classList.add('hide');
+        pubLanding.style.removeProperty('display');
+        pubLanding.style.display = 'none';
+    }
     if (fastBookingScr) {
         fastBookingScr.style.display = 'none';
         fastBookingScr.classList.add('hide');
@@ -1964,7 +1969,11 @@ function showPatientLayout(username, patientId) {
         authScr.style.display = 'none';
         authScr.classList.add('hide');
     }
-    if (pubLanding) pubLanding.classList.add('hide');
+    if (pubLanding) {
+        pubLanding.classList.add('hide');
+        pubLanding.style.removeProperty('display');
+        pubLanding.style.display = 'none';
+    }
     document.getElementById('sidebar').classList.add('hide');
     document.getElementById('app-layout').classList.remove('hide');
     document.getElementById('patient-header').classList.remove('hide');
