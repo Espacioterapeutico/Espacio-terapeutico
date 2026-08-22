@@ -50,9 +50,20 @@
         <div style="width: 40px; height: 40px; border: 4px solid rgba(255, 255, 255, 0.1); border-top: 4px solid #a95993; border-radius: 50%; animation: spin 1s linear infinite;"></div>
     </div>
     <script>
-        if (window.location.pathname.startsWith('/evaluacion/')) {
-            document.documentElement.classList.add('is-public-eval-page');
-        }
+        (function() {
+            if (window.location.pathname.startsWith('/evaluacion/')) {
+                document.documentElement.classList.add('is-public-eval-page');
+            }
+            // Garantizar que la pantalla de carga SE OCULTE MÁXIMO a los 2.5 segundos sin importar errores de red o JS
+            setTimeout(function() {
+                var loader = document.getElementById('loading-screen');
+                if (loader && loader.style.display !== 'none') {
+                    loader.style.opacity = '0';
+                    loader.style.visibility = 'hidden';
+                    setTimeout(function() { loader.style.display = 'none'; }, 350);
+                }
+            }, 2500);
+        })();
     </script>
     <style>
     html.is-public-eval-page #public-landing-screen,

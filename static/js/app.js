@@ -1390,12 +1390,16 @@ function hideLoadingScreen() {
 async function checkSession() {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
         const res = await fetch('/api/check-session', { signal: controller.signal });
         clearTimeout(timeoutId);
+        if (!res.ok) {
+            showAuthScreen();
+            return;
+        }
         const data = await res.json();
         
-        if (res.ok && (data.logged_in || data.authenticated)) {
+        if (data.logged_in || data.authenticated) {
             if (data.role === 'paciente' || data.user_type === 'patient') {
                 showPatientLayout(data.username, data.patient_id);
             } else {
@@ -2085,14 +2089,14 @@ function showAuthScreen() {
         hideLoadingScreen();
         return;
     }
-    clearAllNotificationIntervals();
-    sessionStorage.clear();
-    document.body.classList.remove('is-patient');
-    document.getElementById('app-layout').classList.add('hide');
-    document.getElementById('patient-header').classList.add('hide');
-    document.getElementById('patient-menu').classList.add('hide');
-    document.getElementById('patient-menu-overlay').classList.add('hide');
-    document.getElementById('sidebar').classList.remove('hide'); // Restaurar estado inicial
+    try { clearAllNotificationIntervals(); } catch(e) {}
+    try { sessionStorage.clear(); } catch(e) {}
+    try { document.body.classList.remove('is-patient'); } catch(e) {}
+    try { document.getElementById('app-layout')?.classList.add('hide'); } catch(e) {}
+    try { document.getElementById('patient-header')?.classList.add('hide'); } catch(e) {}
+    try { document.getElementById('patient-menu')?.classList.add('hide'); } catch(e) {}
+    try { document.getElementById('patient-menu-overlay')?.classList.add('hide'); } catch(e) {}
+    try { document.getElementById('sidebar')?.classList.remove('hide'); } catch(e) {}
     
     const path = window.location.pathname.toLowerCase();
     const pubLanding = document.getElementById('public-landing-screen');
@@ -2110,12 +2114,14 @@ function showAuthScreen() {
             authScreen.style.display = 'none';
             authScreen.classList.add('hide');
         }
-        loadLandingPageContent();
+        try { loadLandingPageContent(); } catch(e) {}
     }
     
-    document.getElementById('auth-username').value = '';
-    document.getElementById('auth-password').value = '';
-    checkAdminExists();
+    const uInput = document.getElementById('auth-username');
+    const pInput = document.getElementById('auth-password');
+    if (uInput) uInput.value = '';
+    if (pInput) pInput.value = '';
+    try { checkAdminExists(); } catch(e) {}
     hideLoadingScreen();
 }
 
