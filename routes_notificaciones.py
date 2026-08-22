@@ -1507,7 +1507,7 @@ def whatsapp_webhook():
     clean_text = re.sub(r'[^\w\s]', '', text).strip()
     
     # Palabras clave de afirmación o negación
-    afirmaciones = ['si', 'sí', 'confirmo', 'claro', 'por supuesto', 'ok', 'vale', 's', 'yes', 'confirmado']
+    afirmaciones = ['si', 'sí', 'sii', 'siii', 'siiii', 'confirmo', 'claro', 'por supuesto', 'ok', 'vale', 's', 'yes', 'confirmado']
     negaciones = ['no', 'cancelo', 'cancelar', 'n', 'no podre', 'no podré']
     
     es_afirmacion = any(word == clean_text for word in afirmaciones)
