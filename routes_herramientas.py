@@ -913,15 +913,57 @@ def render_public_tool_page():
         
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("""
-        SELECT t.*, p.nombres, p.apellidos, u.nombres as psic_nombres, u.apellidos as psic_apellidos
-        FROM tokens_herramientas t
-        JOIN pacientes p ON t.paciente_id = p.id
-        LEFT JOIN usuarios u ON t.psicologo_id = u.id
-        WHERE t.token = ?
-    """, (token_str,))
-    token_row = cursor.fetchone()
-    
+
+    # Garantizar creación defensiva de tablas por si la BD en servidor no ha migrado
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tokens_herramientas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token TEXT UNIQUE NOT NULL,
+                paciente_id INTEGER NOT NULL,
+                psicologo_id INTEGER NOT NULL,
+                herramienta_tipo TEXT NOT NULL,
+                fecha_programada DATE NOT NULL,
+                fecha_expiracion DATETIME NULL,
+                usado INTEGER DEFAULT 0,
+                fecha_completado DATETIME NULL,
+                fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                psicologo_id INTEGER NOT NULL,
+                paciente_id INTEGER NOT NULL,
+                herramienta_tipo TEXT NOT NULL,
+                fecha_programada DATE NOT NULL,
+                hora_programada TEXT DEFAULT '20:00',
+                estado TEXT DEFAULT 'programado',
+                enviado INTEGER DEFAULT 0,
+                fecha_envio DATETIME NULL,
+                token_id INTEGER NULL,
+                pausado INTEGER DEFAULT 0,
+                fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(paciente_id, herramienta_tipo, fecha_programada)
+            )
+        """)
+        db.commit()
+    except Exception as _tbl_err:
+        print("Aviso creando tablas defensivas en render_public_tool_page:", _tbl_err)
+
+    try:
+        cursor.execute("""
+            SELECT t.*, p.nombres, p.apellidos, u.nombres as psic_nombres, u.apellidos as psic_apellidos
+            FROM tokens_herramientas t
+            JOIN pacientes p ON t.paciente_id = p.id
+            LEFT JOIN usuarios u ON t.psicologo_id = u.id
+            WHERE t.token = ?
+        """, (token_str,))
+        token_row = cursor.fetchone()
+    except Exception as e_tok:
+        print("Error en consulta de token público:", e_tok)
+        return render_template('public_tool.html', error_msg="El enlace no es válido o ha sido eliminado.")
+
     if not token_row:
         return render_template('public_tool.html', error_msg="El enlace no es válido o ha sido eliminado.")
         
@@ -939,12 +981,15 @@ def render_public_tool_page():
                                
     # Cargar medicamentos o actividades si la herramienta lo requiere
     extra_data = {}
-    if t_dict['herramienta_tipo'] == 'adherencia':
-        cursor.execute("SELECT id, nombre_medicamento, dosis, hora_prescrita FROM adherencia_medicamentos WHERE paciente_id = ?", (t_dict['paciente_id'],))
-        extra_data['medicamentos'] = [dict(r) for r in cursor.fetchall()]
-    elif t_dict['herramienta_tipo'] == 'activacion':
-        cursor.execute("SELECT id, categoria, nombre_actividad FROM activacion_actividades WHERE paciente_id = ? AND activa = 1", (t_dict['paciente_id'],))
-        extra_data['actividades'] = [dict(r) for r in cursor.fetchall()]
+    try:
+        if t_dict['herramienta_tipo'] == 'adherencia':
+            cursor.execute("SELECT id, nombre_medicamento, dosis, hora_prescrita FROM adherencia_medicamentos WHERE paciente_id = ?", (t_dict['paciente_id'],))
+            extra_data['medicamentos'] = [dict(r) for r in cursor.fetchall()]
+        elif t_dict['herramienta_tipo'] == 'activacion':
+            cursor.execute("SELECT id, categoria, nombre_actividad FROM activacion_actividades WHERE paciente_id = ? AND activa = 1", (t_dict['paciente_id'],))
+            extra_data['actividades'] = [dict(r) for r in cursor.fetchall()]
+    except Exception as _ex_extra:
+        print("Aviso al cargar extra_data para herramienta pública:", _ex_extra)
 
     return render_template('public_tool.html',
                            valid_tool=True,

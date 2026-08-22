@@ -2540,13 +2540,16 @@ def before_request_cleanup():
         return
     _last_cleanup_timestamp = now_ts
 
-    db = get_db()
-    auto_cancel_unconfirmed_sessions(db)
-    auto_send_appointment_reminders(db)
-    auto_send_confirmation_requests(db)
-    auto_check_patient_birthdays(db)
-    send_hourly_patient_tool_reminders(db)
-    auto_check_subscription_expiration_reminders(db)
+    try:
+        db = get_db()
+        auto_cancel_unconfirmed_sessions(db)
+        auto_send_appointment_reminders(db)
+        auto_send_confirmation_requests(db)
+        auto_check_patient_birthdays(db)
+        send_hourly_patient_tool_reminders(db)
+        auto_check_subscription_expiration_reminders(db)
+    except Exception as e_bg:
+        print("Aviso en ejecutor en segundo plano before_request_cleanup:", e_bg)
 
 def auto_settle_patient_debts(db, patient_id):
     if not patient_id:
