@@ -2491,13 +2491,21 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
                     first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
                     tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')
                     
-                    msg_wa = (
-                        f"Hola *{first_name}* 👋 Espero te encuentres muy bien.\n\n"
-                        f"Te recuerdo completar tu *{tool_title}* del día de hoy. "
-                        f"Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
-                        f"👉 {direct_link}\n\n"
-                        f"¡Gracias por tu constancia!"
+                    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_herramientas_{psic_id}",))
+                    tmpl_row = cursor.fetchone()
+                    if not tmpl_row or not tmpl_row['valor']:
+                        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_herramientas'")
+                        tmpl_row = cursor.fetchone()
+
+                    default_tmpl = (
+                        "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
+                        "Te recuerdo completar tu *{herramienta}* del día de hoy. "
+                        "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
+                        "👉 {link}\n\n"
+                        "¡Gracias por tu constancia!"
                     )
+                    raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
+                    msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link)
                     
                     try:
                         from routes_notificaciones import make_wa_http_request

@@ -2578,6 +2578,11 @@
                                             </div>
                                             <textarea id="template-cumpleanos" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="¡Feliz cumpleaños, *{nombre}*! 🎉🎂"></textarea>
                                         </div>
+                                        <div class="form-group mb-4" style="background: rgba(59, 130, 246, 0.05); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(59, 130, 246, 0.2);">
+                                            <label for="template-herramientas" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #2563eb;">🛠️ Recordatorio Diario de Herramientas Terapéuticas (Link Directo)</label>
+                                            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.35rem;">Variables disponibles: <code>{nombre}</code> (primer nombre), <code>{herramienta}</code> (ej. Diario de Ansiedad), <code>{link}</code> (enlace directo de registro rápido).</p>
+                                            <textarea id="template-herramientas" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\nTe recuerdo completar tu *{herramienta}* del día de hoy. Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n👉 {link}\n\n¡Gracias por tu constancia!"></textarea>
+                                        </div>
                                         <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Guardar Plantillas de Mensaje</button>
                                     </form>
                                 </div>

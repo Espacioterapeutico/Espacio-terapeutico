@@ -9118,6 +9118,7 @@ async function loadMessageTemplates() {
         const rg = document.getElementById('template-reagendamiento');
         const ci = document.getElementById('template-cierre');
         const cum = document.getElementById('template-cumpleanos');
+        const her = document.getElementById('template-herramientas');
         const swReag = document.getElementById('auto-reagendamiento-switch');
         const swCum = document.getElementById('auto-cumpleanos-switch');
         
@@ -9128,6 +9129,7 @@ async function loadMessageTemplates() {
         if (rg) rg.value = data.msg_reagendamiento || "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!";
         if (ci) ci.value = data.msg_cierre || "";
         if (cum) cum.value = data.msg_cumpleanos || "¡Feliz cumpleaños, *{nombre}*! 🎉🎂\n\nDesde Espacio Terapéutico te deseamos un excelente día lleno de bienestar, paz y alegría. ¡Gracias por confiar en nosotros en tu proceso!";
+        if (her) her.value = data.msg_herramientas || "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\nTe recuerdo completar tu *{herramienta}* del día de hoy. Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n👉 {link}\n\n¡Gracias por tu constancia!";
         if (swReag) swReag.checked = (data.auto_reagendamiento_activo === '1');
         if (swCum) swCum.checked = (data.auto_cumpleanos_activo === '1');
     } catch (err) {
@@ -9170,6 +9172,7 @@ async function handleSaveMessageTemplates(e) {
     const msgReagendamiento = document.getElementById('template-reagendamiento')?.value || '';
     const msgCierre = document.getElementById('template-cierre').value;
     const msgCumpleanos = document.getElementById('template-cumpleanos')?.value || '';
+    const msgHerramientas = document.getElementById('template-herramientas')?.value || '';
     const autoReagActivo = document.getElementById('auto-reagendamiento-switch')?.checked ? '1' : '0';
     const autoCumActivo = document.getElementById('auto-cumpleanos-switch')?.checked ? '1' : '0';
     
@@ -9185,6 +9188,7 @@ async function handleSaveMessageTemplates(e) {
                 msg_reagendamiento: msgReagendamiento,
                 msg_cierre: msgCierre,
                 msg_cumpleanos: msgCumpleanos,
+                msg_herramientas: msgHerramientas,
                 auto_reagendamiento_activo: autoReagActivo,
                 auto_cumpleanos_activo: autoCumActivo
             })
