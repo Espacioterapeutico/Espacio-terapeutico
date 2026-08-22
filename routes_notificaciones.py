@@ -560,7 +560,9 @@ def cron_send_whatsapp_reminders():
     enviados_recordatorios = []
     errores = []
 
-    # 1. ENVIAR CONFIRMACIONES PARA HOY Y MAÑANA (Citas no confirmadas en la ventana 24-48h)
+    future_3days_str = (now_local + timedelta(days=3)).strftime('%Y-%m-%d')
+
+    # 1. ENVIAR CONFIRMACIONES PARA CITAS PRÓXIMAS (Citas no confirmadas en la ventana 24-48h)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
@@ -568,12 +570,22 @@ def cron_send_whatsapp_reminders():
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
         WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
-    """, (today_str, tomorrow_str))
+    """, (today_str, future_3days_str))
     citas_confirmar = cursor.fetchall()
 
     for cita in citas_confirmar:
         phone = cita['pat_telefono']
         if not phone or not phone.strip():
+            continue
+        
+        try:
+            session_dt = datetime.strptime(f"{cita['fecha']} {cita['hora']}", "%Y-%m-%d %H:%M")
+            diff_hours = (session_dt - now_local).total_seconds() / 3600.0
+        except Exception:
+            diff_hours = 12.0
+
+        # Si la cita está dentro de las 48h o si el usuario hizo clic manual en "Ejecutar Recordatorios Ahora"
+        if not (0 < diff_hours <= 48 or has_request_context()):
             continue
         psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
         cita_dict = {
