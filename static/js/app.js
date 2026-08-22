@@ -1416,21 +1416,31 @@ async function checkSession() {
 }
 
 async function handleAuthSubmit(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const username = (document.getElementById('auth-username')?.value || '').trim();
     const password = (document.getElementById('auth-password')?.value || '').trim();
     const errorMsg = document.getElementById('auth-error-msg');
-    const submitBtn = e.target ? e.target.querySelector('button[type="submit"]') : document.querySelector('#auth-form button[type="submit"]');
-    const origText = submitBtn ? submitBtn.textContent : '';
+    const submitBtn = (e && e.target) ? e.target.querySelector('button[type="submit"]') : document.querySelector('#auth-form button[type="submit"]');
+    const origText = (submitBtn ? submitBtn.textContent : '') || 'Iniciar Sesión';
+
+    function showError(msg) {
+        if (errorMsg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.remove('hide');
+        }
+    }
 
     if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Iniciando sesión...';
     }
-    errorMsg.classList.add('hide');
+    if (errorMsg) {
+        errorMsg.classList.add('hide');
+        errorMsg.textContent = '';
+    }
     
     try {
-        if (authFormMode === 'register') {
+        if (typeof authFormMode !== 'undefined' && authFormMode === 'register') {
             try {
                 const res = await fetch('/api/register-admin', {
                     method: 'POST',
@@ -1440,17 +1450,17 @@ async function handleAuthSubmit(e) {
                 const data = await res.json();
                 if (res.ok) {
                     alert("Usuario administrador creado con éxito. Inicia sesión a continuación.");
-                    document.getElementById('auth-username').value = '';
-                    document.getElementById('auth-password').value = '';
+                    const uIn = document.getElementById('auth-username');
+                    const pIn = document.getElementById('auth-password');
+                    if (uIn) uIn.value = '';
+                    if (pIn) pIn.value = '';
                     authFormMode = 'login';
-                    checkAdminExists();
+                    try { checkAdminExists(); } catch(ex) {}
                 } else {
-                    errorMsg.textContent = data.error || 'Error al registrar administrador.';
-                    errorMsg.classList.remove('hide');
+                    showError(data.error || 'Error al registrar administrador.');
                 }
             } catch (err) {
-                errorMsg.textContent = 'Error de conexión con el servidor.';
-                errorMsg.classList.remove('hide');
+                showError('Error de conexión con el servidor.');
             }
         } else {
             // Modo Login: Identificación Automática de Rol
@@ -1464,8 +1474,8 @@ async function handleAuthSubmit(e) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                dataAdmin = await resAdmin.json();
-                if (resAdmin.ok) {
+                try { dataAdmin = await resAdmin.json(); } catch(exJ) {}
+                if (resAdmin.ok && dataAdmin) {
                     showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago, dataAdmin.primer_inicio, dataAdmin.suscripcion_paga, dataAdmin.fecha_expiracion_prueba, dataAdmin.nombres, dataAdmin.apellidos);
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
@@ -1482,9 +1492,9 @@ async function handleAuthSubmit(e) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                dataPatient = await resPatient.json();
+                try { dataPatient = await resPatient.json(); } catch(exP) {}
                 
-                if (resPatient.ok) {
+                if (resPatient.ok && dataPatient) {
                     if (dataPatient.first_login) {
                         showPatientWizard(dataPatient.patient_id, dataPatient.username);
                     } else {
@@ -1498,8 +1508,7 @@ async function handleAuthSubmit(e) {
             }
 
             if (!dataAdmin && !dataPatient && networkError) {
-                errorMsg.textContent = 'Error de conexión: El servidor no está iniciado o no responde.';
-                errorMsg.classList.remove('hide');
+                showError('Error de conexión: El servidor no está iniciado o no responde.');
                 return;
             }
             
@@ -1510,12 +1519,10 @@ async function handleAuthSubmit(e) {
             } else if (dataPatient && dataPatient.error && dataPatient.error !== 'Credenciales inválidas.' && dataPatient.error !== 'Usuario no registrado.') {
                 finalError = dataPatient.error;
             }
-            errorMsg.textContent = finalError;
-            errorMsg.classList.remove('hide');
+            showError(finalError);
         }
     } catch (err) {
-        errorMsg.textContent = 'Error de conexión con el servidor.';
-        errorMsg.classList.remove('hide');
+        showError('Error de conexión con el servidor.');
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -2121,6 +2128,15 @@ function showAuthScreen() {
     const pInput = document.getElementById('auth-password');
     if (uInput) uInput.value = '';
     if (pInput) pInput.value = '';
+    
+    const authForm = document.getElementById('auth-form');
+    const recoveryView = document.getElementById('auth-recovery-view');
+    if (authForm) authForm.style.display = 'block';
+    if (recoveryView) {
+        recoveryView.style.display = 'none';
+        recoveryView.classList.add('hide');
+    }
+
     try { checkAdminExists(); } catch(e) {}
     hideLoadingScreen();
 }
@@ -17771,6 +17787,13 @@ function openAuthModal() {
         authScreen.style.display = 'flex';
         authScreen.classList.remove('hide');
         authScreen.scrollIntoView({ behavior: 'smooth' });
+    }
+    const authForm = document.getElementById('auth-form');
+    const recoveryView = document.getElementById('auth-recovery-view');
+    if (authForm) authForm.style.display = 'block';
+    if (recoveryView) {
+        recoveryView.style.display = 'none';
+        recoveryView.classList.add('hide');
     }
     if (!window.location.pathname.includes('/login')) {
         window.history.pushState({ auth: true }, '', '/login');
