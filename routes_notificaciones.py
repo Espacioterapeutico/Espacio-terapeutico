@@ -579,13 +579,26 @@ def cron_send_whatsapp_reminders():
             continue
         
         try:
-            session_dt = datetime.strptime(f"{cita['fecha']} {cita['hora']}", "%Y-%m-%d %H:%M")
-            diff_hours = (session_dt - now_local).total_seconds() / 3600.0
+            cita_dt = datetime.strptime(f"{cita['fecha']} {cita['hora']}", "%Y-%m-%d %H:%M")
+            diff_hours = (cita_dt - now_local).total_seconds() / 3600.0
+            dia_previo_str = (cita_dt.date() - timedelta(days=1)).strftime('%Y-%m-%d')
         except Exception:
             diff_hours = 12.0
+            dia_previo_str = today_str
 
-        # Si la cita está dentro de las 48h o si el usuario hizo clic manual en "Ejecutar Recordatorios Ahora"
-        if not (0 < diff_hours <= 48 or has_request_context()):
+        # Regla de Confirmación:
+        # 1. Cita programada normal: Sale a las 8:00 AM del día previo a la cita.
+        paso_8am_dia_previo = (today_str >= dia_previo_str) and (current_hour >= 8)
+
+        # 2. Cita de última hora: Faltan menos de 24 horas para la consulta.
+        es_ultima_hora = (0 < diff_hours < 24)
+
+        # 3. Disparo manual ("Ejecutar Recordatorios Ahora" o envío individual)
+        es_manual = has_request_context()
+
+        should_send_confirmation = paso_8am_dia_previo or es_ultima_hora or es_manual
+
+        if not should_send_confirmation:
             continue
         psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
         cita_dict = {
@@ -1108,7 +1121,7 @@ def get_whatsapp_queue_status():
                         priority = 3
                 else:
                     pipeline_status = 'en_cola_conf'
-                    pipeline_label = '📥 En Cola (Confirmación 24h)'
+                    pipeline_label = '📥 En Cola (Confirmación 08:00 AM Día Previo)'
                     priority = 1
                     can_cancel = True
             elif fecha_cita > tomorrow_str:
