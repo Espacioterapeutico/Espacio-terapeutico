@@ -1502,16 +1502,33 @@ def whatsapp_webhook():
     if not phone or not text:
         return jsonify({'status': 'ignored', 'reason': 'missing data'}), 200
 
-    import re
-    # Limpiar signos de puntuación del texto para evaluar mejor
-    clean_text = re.sub(r'[^\w\s]', '', text).strip()
+    import unicodedata, re
+    text_lower = text.lower().strip()
+    text_norm = unicodedata.normalize('NFD', text_lower)
+    text_clean = ''.join(c for c in text_norm if unicodedata.category(c) != 'Mn')
+    text_clean = re.sub(r'[^a-z0-9\s👍]', ' ', text_clean).strip()
     
-    # Palabras clave de afirmación o negación
-    afirmaciones = ['si', 'sí', 'sii', 'siii', 'siiii', 'confirmo', 'claro', 'por supuesto', 'ok', 'vale', 's', 'yes', 'confirmado']
-    negaciones = ['no', 'cancelo', 'cancelar', 'n', 'no podre', 'no podré']
-    
-    es_afirmacion = any(word == clean_text for word in afirmaciones)
-    es_negacion = any(word == clean_text for word in negaciones)
+    # Normalizar letras repetidas (ej. 'siiiiii' -> 'si', 'siii' -> 'si')
+    text_dedup = re.sub(r'i+', 'i', text_clean)
+    words_set = set(text_clean.split()) | set(text_dedup.split())
+
+    confirm_keywords = {
+        'si', 'sip', 'sii', 'siii', 'siiii', 'siiiii', 'confirmo', 'confirmar', 'confirmado', 'confirmada',
+        'asistire', 'ok', 'listo', '1', 's', 'voy', 'asisto', 'seguro', 'perfecto',
+        'excelente', 'correcto', 'claro', 'dale', 'ahi', 'estare', 'allí', 'estaré', '👍'
+    }
+
+    cancel_keywords = {
+        'no', 'nop', 'cancelo', 'cancelar', 'cancelado', 'cancelada', 'imposible',
+        'podre', 'asisto', '2'
+    }
+
+    is_confirm = any(w in words_set for w in confirm_keywords) or ('si' in text_dedup.split()) or any(k in text_clean for k in ['si', 'confirmo', 'asistire', 'ahi estare', 'allí estaré', '👍'])
+    is_cancel = ('no' in words_set and 'si' not in words_set and 'sii' not in words_set and 'siii' not in words_set) or any(k in text_clean for k in ['cancelo', 'cancelar', 'no podre', 'no asisto'])
+
+    es_afirmacion = is_confirm
+    es_negacion = is_cancel
+
 
     if not (es_afirmacion or es_negacion):
         # El mensaje no es un "sí" ni un "no" claro, no hacemos nada automático
