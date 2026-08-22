@@ -188,7 +188,8 @@ h1, h2, h3, h4, h5, h6 {
     width: 100vw;
     height: 100vh;
     z-index: 99999;
-    background-color: var(--bg-body, #e5e7eb);
+    background-color: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -197,14 +198,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .auth-card {
-    background-color: var(--card-bg);
+    background-color: var(--card-bg, #ffffff);
     width: 100%;
     max-width: 420px;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border-color);
-    padding: 2.5rem;
-    animation: slideUp var(--transition-normal);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color, #e2e8f0);
+    padding: 2.5rem 2rem;
+    position: relative;
+    animation: slideUp var(--transition-normal, 0.3s ease);
 }
 
 .auth-header {

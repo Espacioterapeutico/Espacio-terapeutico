@@ -2112,14 +2112,15 @@ function showAuthScreen() {
     if (path.includes('/login')) {
         if (pubLanding) pubLanding.classList.add('hide');
         if (authScreen) {
-            authScreen.style.display = 'flex';
             authScreen.classList.remove('hide');
+            authScreen.style.setProperty('display', 'flex', 'important');
         }
     } else {
         if (pubLanding) pubLanding.classList.remove('hide');
         if (authScreen) {
-            authScreen.style.display = 'none';
             authScreen.classList.add('hide');
+            authScreen.style.removeProperty('display');
+            authScreen.style.display = 'none';
         }
         try { loadLandingPageContent(); } catch(e) {}
     }
@@ -17778,14 +17779,13 @@ function openAuthModal() {
     const subModal = document.getElementById('subscription-info-modal');
     if (subModal) {
         subModal.classList.add('hide');
+        subModal.style.removeProperty('display');
         subModal.style.display = 'none';
     }
-    const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
-    if (pubLanding) pubLanding.classList.add('hide');
     if (authScreen) {
-        authScreen.style.display = 'flex';
         authScreen.classList.remove('hide');
+        authScreen.style.setProperty('display', 'flex', 'important');
         authScreen.scrollIntoView({ behavior: 'smooth' });
     }
     const authForm = document.getElementById('auth-form');
@@ -17796,7 +17796,7 @@ function openAuthModal() {
         recoveryView.classList.add('hide');
     }
     if (!window.location.pathname.includes('/login')) {
-        window.history.pushState({ auth: true }, '', '/login');
+        try { window.history.pushState({ auth: true }, '', '/login'); } catch(e) {}
     }
 }
 
@@ -17805,15 +17805,16 @@ function closeAuthModal(e) {
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
     if (authScreen) {
-        authScreen.style.display = 'none';
         authScreen.classList.add('hide');
+        authScreen.style.removeProperty('display');
+        authScreen.style.display = 'none';
     }
     if (pubLanding) {
         pubLanding.classList.remove('hide');
-        pubLanding.scrollIntoView({ behavior: 'smooth' });
+        pubLanding.style.display = 'block';
     }
     if (window.location.pathname.includes('/login')) {
-        window.history.pushState({}, '', '/');
+        try { window.history.pushState({}, '', '/'); } catch(e) {}
     }
 }
 
