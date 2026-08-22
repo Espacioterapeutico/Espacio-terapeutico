@@ -615,13 +615,13 @@ def cron_send_whatsapp_reminders():
         mensaje_texto = format_whatsapp_message(msg_conf_db, patient_dict, cita_dict, psicologo_data)
         psych_id = cita['psicologo_id'] or 1
 
-        # Marcar inmediatamente para prevenir re-envíos duplicados por timeout o reintentos
-        cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
-        db.commit()
-
         try:
-            r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+            from routes_herramientas import clean_phone_number
+            c_phone = clean_phone_number(phone)
+            r = make_wa_http_request('POST', '/send', json_data={'phone': c_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
             if r and r.status_code == 200:
+                cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
+                db.commit()
                 enviados_confirmaciones.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'confirmacion'})
             else:
                 err_msg = 'Timeout de microservicio'
@@ -662,13 +662,13 @@ def cron_send_whatsapp_reminders():
         mensaje_texto = format_whatsapp_message(tmpl_rec_default, patient_dict, cita_dict, psicologo_data)
         psych_id = cita['psicologo_id'] or 1
 
-        # Marcar inmediatamente para prevenir re-envíos duplicados
-        cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
-        db.commit()
-
         try:
-            r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+            from routes_herramientas import clean_phone_number
+            c_phone = clean_phone_number(phone)
+            r = make_wa_http_request('POST', '/send', json_data={'phone': c_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
             if r and r.status_code == 200:
+                cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
+                db.commit()
                 enviados_recordatorios.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'recordatorio'})
             else:
                 err_msg = 'Timeout de microservicio'
