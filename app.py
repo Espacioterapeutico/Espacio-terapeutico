@@ -2362,10 +2362,11 @@ def auto_check_subscription_expiration_reminders(db):
         print("Error en auto_check_subscription_expiration_reminders:", e)
 
 
-def send_hourly_patient_tool_reminders(db=None):
+def send_hourly_patient_tool_reminders(db=None, force=False):
     """
     Revisa la hora local (8:00 PM / 20:00) de cada paciente que tenga herramientas
     terapéuticas activas en modulos_terapeuticos_paciente y les envía el recordatorio diario por WhatsApp con Link Directo de 1 solo uso.
+    Si force=True, procesa el envío sin importar si la hora actual es 20:00.
     """
     if db is None:
         db = get_db()
@@ -2419,8 +2420,8 @@ def send_hourly_patient_tool_reminders(db=None):
         patient_local = now_utc - datetime.timedelta(minutes=offset_min)
         current_hour = patient_local.hour
 
-        # Ejecutar únicamente cuando en el reloj local del paciente son las 8:00 PM (hora 20)
-        if current_hour == 20:
+        # Ejecutar cuando en el reloj local del paciente son las 8:00 PM (hora 20) o cuando se fuerza manualmente
+        if force or current_hour == 20:
             cursor.execute("SELECT modulo_clave FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND activo = 1", (p_id,))
             active_modules = [r['modulo_clave'] for r in cursor.fetchall()]
             
@@ -2457,18 +2458,35 @@ def send_hourly_patient_tool_reminders(db=None):
 
                 # Si WhatsApp está conectado y no se ha enviado hoy, procesar envío
                 if p['telefono']:
-                    import secrets
-                    token = secrets.token_urlsafe(32)
-                    expiracion = now_utc + datetime.timedelta(days=3)
-                    
                     cursor.execute("""
-                        INSERT INTO tokens_herramientas (
-                            token, paciente_id, psicologo_id, herramienta_tipo, fecha_programada, fecha_expiracion, usado
-                        ) VALUES (?, ?, ?, ?, ?, ?, 0)
-                    """, (token, p_id, psic_id, mod_clave, today_str, expiracion.strftime("%Y-%m-%d %H:%M:%S")))
-                    token_id = cursor.lastrowid
+                        SELECT id, token FROM tokens_herramientas
+                        WHERE paciente_id = ? AND herramienta_tipo = ? AND usado = 0
+                        ORDER BY id DESC LIMIT 1
+                    """, (p_id, mod_clave))
+                    t_row = cursor.fetchone()
+
+                    if t_row:
+                        token = t_row['token']
+                        token_id = t_row['id']
+                    else:
+                        import secrets
+                        token = secrets.token_urlsafe(32)
+                        expiracion = now_utc + datetime.timedelta(days=7)
+                        cursor.execute("""
+                            INSERT INTO tokens_herramientas (
+                                token, paciente_id, psicologo_id, herramienta_tipo, fecha_programada, fecha_expiracion, usado
+                            ) VALUES (?, ?, ?, ?, ?, ?, 0)
+                        """, (token, p_id, psic_id, mod_clave, today_str, expiracion.strftime("%Y-%m-%d %H:%M:%S")))
+                        token_id = cursor.lastrowid
                     
-                    domain_host = os.environ.get('APP_URL', 'https://mi-consultorio.onrender.com').rstrip('/')
+                    domain_host = os.environ.get('APP_URL', 'https://www.espacioterapeutico.net').rstrip('/')
+                    try:
+                        from flask import request
+                        if request and hasattr(request, 'host_url') and request.host_url:
+                            domain_host = request.host_url.rstrip('/')
+                    except Exception:
+                        pass
+
                     direct_link = f"{domain_host}/herramienta/directa?token={token}"
                     first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
                     tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')
