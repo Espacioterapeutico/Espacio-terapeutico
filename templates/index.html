@@ -892,6 +892,53 @@
         </div>
     </div>
 
+    <script>
+        function openAuthModal(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            var subModal = document.getElementById('subscription-info-modal');
+            if (subModal) {
+                subModal.classList.add('hide');
+                subModal.style.removeProperty('display');
+                subModal.style.display = 'none';
+            }
+            var authScreen = document.getElementById('auth-screen');
+            if (authScreen) {
+                authScreen.classList.remove('hide');
+                authScreen.style.setProperty('display', 'flex', 'important');
+                try { authScreen.scrollIntoView({ behavior: 'smooth' }); } catch(err) {}
+            }
+            var authForm = document.getElementById('auth-form');
+            var recoveryView = document.getElementById('auth-recovery-view');
+            if (authForm) authForm.style.display = 'block';
+            if (recoveryView) {
+                recoveryView.style.display = 'none';
+                recoveryView.classList.add('hide');
+            }
+            if (!window.location.pathname.includes('/login')) {
+                try { window.history.pushState({ auth: true }, '', '/login'); } catch(err) {}
+            }
+        }
+        function closeAuthModal(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            var pubLanding = document.getElementById('public-landing-screen');
+            var authScreen = document.getElementById('auth-screen');
+            if (authScreen) {
+                authScreen.classList.add('hide');
+                authScreen.style.removeProperty('display');
+                authScreen.style.display = 'none';
+            }
+            if (pubLanding) {
+                pubLanding.classList.remove('hide');
+                pubLanding.style.display = 'block';
+            }
+            if (window.location.pathname.includes('/login')) {
+                try { window.history.pushState({}, '', '/'); } catch(err) {}
+            }
+        }
+        window.openAuthModal = openAuthModal;
+        window.closeAuthModal = closeAuthModal;
+    </script>
+
     <!-- PANTALLA DE LOGUEO / REGISTRO INICIAL (Bloqueo de seguridad) -->
     <div id="auth-screen" class="auth-container hide" style="display: none;">
         <div class="auth-card">

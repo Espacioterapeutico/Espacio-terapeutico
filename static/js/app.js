@@ -17817,6 +17817,8 @@ function closeAuthModal(e) {
         try { window.history.pushState({}, '', '/'); } catch(e) {}
     }
 }
+window.openAuthModal = openAuthModal;
+window.closeAuthModal = closeAuthModal;
 
 async function loadLandingPageContent() {
     try {
