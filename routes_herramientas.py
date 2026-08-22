@@ -57,11 +57,13 @@ def patient_login_required(f):
 @herramientas_bp.route('/api/patients/<int:patient_id>/modules', methods=['GET'])
 @login_required
 def get_patient_modules(patient_id):
+    import secrets
+    from datetime import datetime, timedelta
     user_id = session.get('user_id')
     db = get_db()
     cursor = db.cursor()
     
-    cursor.execute("SELECT id, nombres, apellidos FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
     patient = cursor.fetchone()
     if not patient:
         return jsonify({'error': 'Paciente no encontrado o sin permisos.'}), 404
@@ -70,17 +72,55 @@ def get_patient_modules(patient_id):
     rows = cursor.fetchall()
     active_map = {r['modulo_clave']: r['activo'] for r in rows}
     
-    catalog = [
-        {'clave': 'sueno', 'nombre': 'Higiene del Sueño', 'activo': active_map.get('sueno', 0)},
-        {'clave': 'ansiedad', 'nombre': 'Diario de Ansiedad (Checklist)', 'activo': active_map.get('ansiedad', 0)},
-        {'clave': 'sobriedad', 'nombre': 'Registro de Consumo (Días Consecutivos)', 'activo': active_map.get('sobriedad', 0)},
-        {'clave': 'pantalla', 'nombre': 'Registro de Consumo de Pantallas (Uso Digital)', 'activo': active_map.get('pantalla', 0)},
-        {'clave': 'adherencia', 'nombre': 'Adherencia al Tratamiento (Medicación)', 'activo': active_map.get('adherencia', 0)},
-        {'clave': 'activacion', 'nombre': 'Activación Conductual (Tareas Diarias)', 'activo': active_map.get('activacion', 0)},
-        {'clave': 'ingesta', 'nombre': 'Ingesta de Alimentos y Apetito', 'activo': active_map.get('ingesta', 0)},
-        {'clave': 'cognitivo', 'nombre': 'Registro Cognitivo (TCC)', 'activo': active_map.get('cognitivo', 0)}
+    host_url = request.host_url.rstrip('/')
+    now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+
+    catalog_raw = [
+        {'clave': 'sueno', 'nombre': 'Higiene del Sueño'},
+        {'clave': 'ansiedad', 'nombre': 'Diario de Ansiedad (Checklist)'},
+        {'clave': 'sobriedad', 'nombre': 'Registro de Consumo (Días Consecutivos)'},
+        {'clave': 'pantalla', 'nombre': 'Registro de Consumo de Pantallas (Uso Digital)'},
+        {'clave': 'adherencia', 'nombre': 'Adherencia al Tratamiento (Medicación)'},
+        {'clave': 'activacion', 'nombre': 'Activación Conductual (Tareas Diarias)'},
+        {'clave': 'ingesta', 'nombre': 'Ingesta de Alimentos y Apetito'},
+        {'clave': 'cognitivo', 'nombre': 'Registro Cognitivo (TCC)'}
     ]
-    return jsonify({'patient': dict(patient), 'modules': catalog})
+
+    modules = []
+    for m in catalog_raw:
+        clave = m['clave']
+        activo = active_map.get(clave, 0)
+        token_str = None
+        link_str = None
+
+        if activo:
+            cursor.execute("""
+                SELECT token FROM tokens_herramientas 
+                WHERE paciente_id = ? AND herramienta_tipo = ? AND usado = 0 
+                ORDER BY id DESC LIMIT 1
+            """, (patient_id, clave))
+            t_row = cursor.fetchone()
+            if t_row:
+                token_str = t_row['token']
+            else:
+                token_str = secrets.token_urlsafe(32)
+                expiracion = now + timedelta(days=7)
+                cursor.execute("""
+                    INSERT INTO tokens_herramientas (
+                        token, paciente_id, psicologo_id, herramienta_tipo, fecha_programada, fecha_expiracion, usado
+                    ) VALUES (?, ?, ?, ?, ?, ?, 0)
+                """, (token_str, patient_id, user_id, clave, today_str, expiracion.strftime("%Y-%m-%d %H:%M:%S")))
+                db.commit()
+            link_str = f"{host_url}/herramienta/directa?token={token_str}"
+
+        m_dict = dict(m)
+        m_dict['activo'] = activo
+        m_dict['token'] = token_str
+        m_dict['link'] = link_str
+        modules.append(m_dict)
+
+    return jsonify({'patient': dict(patient), 'modules': modules})
 
 @herramientas_bp.route('/api/patients/<int:patient_id>/modules/toggle', methods=['POST'])
 @login_required

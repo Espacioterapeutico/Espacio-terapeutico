@@ -789,6 +789,201 @@ def get_whatsapp_queue_status():
                        p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
+                      WHERE af_future.paciente_id = af.paciente_id AND af_future.fecha > af.fecha
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM sesiones s 
+                      WHERE s.paciente_id = af.paciente_id AND s.fecha >= af.fecha
+                  )
+            """, (today_str, (now_local - timedelta(days=1)).strftime('%Y-%m-%d')))
+            citas_reagendar = cursor.fetchall()
+
+            for cita in citas_reagendar:
+                phone = cita['pat_telefono']
+                if not phone or not phone.strip():
+                    continue
+                psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+                cita_dict = {
+                    'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
+                    'fecha': cita['fecha'],
+                    'hora': cita['hora'],
+                    'modalidad': cita['tipo_consulta'] or 'Presencial'
+                }
+                patient_dict = {
+                    'nombres': cita['pat_nombres'],
+                    'apellidos': cita['pat_apellidos'],
+                    'pais': cita['pat_pais'] or ''
+                }
+                mensaje_texto = format_whatsapp_message(tmpl_reag_default, patient_dict, cita_dict, psicologo_data)
+                psych_id = cita['psicologo_id'] or 1
+
+                # Marcar inmediatamente para prevenir re-envíos duplicados
+                cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado_wa = 1 WHERE id = ?", (cita['id'],))
+                db.commit()
+
+                try:
+                    r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+                    if r and r.status_code == 200:
+                        enviados_reagendamientos.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'reagendamiento'})
+                except Exception as e:
+                    pass
+
+        # B) Cierre de Sesión (Citas de Hoy finalizadas para invitar a volver a agendar)
+        tmpl_cierre_default = cfg_rows.get('msg_cierre') or "Hola {nombre}, gracias por compartir el espacio terapéutico hoy. Recuerda realizar las tareas asignadas. Si deseas agendar o reprogramar tu próxima sesión, puedes hacerlo desde tu portal."
+
+        cursor.execute("""
+            SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+                   COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
+            FROM agenda_finanzas af
+            JOIN pacientes p ON af.paciente_id = p.id
+            LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
+            WHERE af.fecha = ? 
+              AND COALESCE(af.confirmada, 0) = 1
+              AND COALESCE(af.estado_pago, '') != 'Cancelada'
+              AND COALESCE(af.cierre_enviado_wa, 0) = 0
+        """, (today_str,))
+        citas_cierre = cursor.fetchall()
+
+        for cita in citas_cierre:
+            phone = cita['pat_telefono']
+            if not phone or not phone.strip():
+                continue
+            psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+            cita_dict = {
+                'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
+                'fecha': cita['fecha'],
+                'hora': cita['hora'],
+                'modalidad': cita['tipo_consulta'] or 'Presencial'
+            }
+            patient_dict = {
+                'nombres': cita['pat_nombres'],
+                'apellidos': cita['pat_apellidos'],
+                'pais': cita['pat_pais'] or ''
+            }
+            mensaje_texto = format_whatsapp_message(tmpl_cierre_default, patient_dict, cita_dict, psicologo_data)
+            psych_id = cita['psicologo_id'] or 1
+
+            # Marcar inmediatamente para prevenir re-envíos duplicados
+            cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (cita['id'],))
+            db.commit()
+
+            try:
+                r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+                if r and r.status_code == 200:
+                    enviados_cierres.append({'cita_id': cita['id'], 'paciente': f"{cita['pat_nombres']} {cita['pat_apellidos']}", 'phone': phone, 'tipo': 'cierre'})
+            except Exception as e:
+                pass
+
+    db.commit()
+
+    return jsonify({
+        'success': True,
+        'confirmaciones_enviadas': len(enviados_confirmaciones),
+        'recordatorios_enviados': len(enviados_recordatorios),
+        'reagendamientos_enviados': len(enviados_reagendamientos),
+        'cierres_enviados': len(enviados_cierres),
+        'detalles': {
+            'confirmaciones': enviados_confirmaciones,
+            'recordatorios': enviados_recordatorios,
+            'reagendamientos': enviados_reagendamientos,
+            'cierres': enviados_cierres,
+            'errores': errores
+        },
+        'summary': {
+            'confirmaciones': enviados_confirmaciones,
+            'recordatorios': enviados_recordatorios,
+            'reagendamientos': enviados_reagendamientos,
+            'cierres': enviados_cierres,
+            'errores': errores
+        }
+    })
+
+
+
+@notificaciones_bp.route('/api/whatsapp/queue-status', methods=['GET'])
+@login_required
+def get_whatsapp_queue_status():
+    psic_id = get_psicologo_id_filter()
+    db = get_db()
+    cursor = db.cursor()
+
+    # Garantizar creación automática de columnas en SQLite
+    try:
+        cursor.execute("PRAGMA table_info(agenda_finanzas)")
+        cols_fin = [r[1] for r in cursor.fetchall()]
+        if 'reagendamiento_enviado_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
+        if 'confirmacion_enviada_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
+        if 'recordatorio_enviado_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+        db.commit()
+    except Exception as ex_col:
+        print("Aviso al migrar columnas de cola de WhatsApp en agenda_finanzas:", ex_col)
+
+    try:
+        cursor.execute("PRAGMA table_info(citas)")
+        cols_citas = [r[1] for r in cursor.fetchall()]
+        if cols_citas:
+            if 'reagendamiento_enviado_wa' not in cols_citas:
+                cursor.execute("ALTER TABLE citas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
+            if 'confirmacion_enviada_wa' not in cols_citas:
+                cursor.execute("ALTER TABLE citas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
+            if 'recordatorio_enviado_wa' not in cols_citas:
+                cursor.execute("ALTER TABLE citas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+            db.commit()
+    except Exception as ex_col:
+        print("Aviso al migrar columnas de cola de WhatsApp:", ex_col)
+
+    from datetime import datetime, timedelta
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_local = datetime.now(tz)
+    except Exception:
+        now_local = datetime.utcnow() - timedelta(hours=4)
+
+    today_str = now_local.strftime('%Y-%m-%d')
+    yesterday_str = (now_local - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    queue = []
+    try:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='citas'")
+        has_citas_table = cursor.fetchone() is not None
+        if has_citas_table:
+            join_clause = "LEFT JOIN citas c ON c.paciente_id = p.id AND c.fecha = af.fecha"
+            estado_col = "COALESCE(c.estado, 'Agendada') as estado_cita"
+        else:
+            join_clause = ""
+            estado_col = "'Agendada' as estado_cita"
+
+        user_id = session.get('user_id', 1)
+        if user_id == 1:
+            sql = f"""
+                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago,
+                       COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
+                       COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
+                       COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                       {estado_col},
+                       p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+                FROM agenda_finanzas af
+                JOIN pacientes p ON af.paciente_id = p.id
+                {join_clause}
+                WHERE (p.psicologo_id = 1 OR p.psicologo_id IS NULL) AND af.fecha >= ?
+                ORDER BY af.fecha ASC, af.hora ASC
+                LIMIT 500
+            """
+            cursor.execute(sql, (yesterday_str,))
+        else:
+            sql = f"""
+                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago,
+                       COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
+                       COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
+                       COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                       {estado_col},
+                       p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+                FROM agenda_finanzas af
+                JOIN pacientes p ON af.paciente_id = p.id
                 {join_clause}
                 WHERE p.psicologo_id = ? AND af.fecha >= ?
                 ORDER BY af.fecha ASC, af.hora ASC
@@ -893,8 +1088,105 @@ def get_whatsapp_queue_status():
                 'can_cancel': can_cancel
             })
 
-        # Ordenar cola: Primero los pendientes/en cola (prioridad 1 y 2), al final los enviados y realizados
-        queue.sort(key=lambda x: (x['priority'], x['fecha'], x['hora']))
+        # Incluir también recordatorios de herramientas terapéuticas programados
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    psicologo_id INTEGER NOT NULL,
+                    paciente_id INTEGER NOT NULL,
+                    herramienta_tipo TEXT NOT NULL,
+                    fecha_programada DATE NOT NULL,
+                    hora_programada TEXT DEFAULT '20:00',
+                    estado TEXT DEFAULT 'programado',
+                    enviado INTEGER DEFAULT 0,
+                    fecha_envio DATETIME NULL,
+                    token_id INTEGER NULL,
+                    pausado INTEGER DEFAULT 0,
+                    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(paciente_id, herramienta_tipo, fecha_programada)
+                )
+            """)
+            
+            tool_sql = """
+                SELECT c.id, c.paciente_id, c.herramienta_tipo, c.fecha_programada, c.hora_programada,
+                       c.estado, c.enviado, c.pausado, c.token_id,
+                       p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono,
+                       t.token
+                FROM cola_recordatorios_herramientas c
+                JOIN pacientes p ON c.paciente_id = p.id
+                LEFT JOIN tokens_herramientas t ON c.token_id = t.id
+                WHERE (p.psicologo_id = ? OR ? = 1) AND c.fecha_programada >= ?
+                ORDER BY c.fecha_programada ASC, c.hora_programada ASC
+                LIMIT 200
+            """
+            cursor.execute(tool_sql, (user_id, user_id, yesterday_str))
+            tool_rows = cursor.fetchall()
+
+            host_url = request.host_url.rstrip('/') if request else ""
+            tool_names_map = {
+                'sueno': 'Higiene del Sueño',
+                'ansiedad': 'Diario de Ansiedad',
+                'sobriedad': 'Registro de Consumo',
+                'pantalla': 'Consumo de Pantallas',
+                'adherencia': 'Adherencia Medicación',
+                'activacion': 'Activación Conductual',
+                'ingesta': 'Alimentos y Apetito',
+                'cognitivo': 'Registro Cognitivo'
+            }
+
+            for tr in tool_rows:
+                pat_name = f"{tr['pat_nombres']} {tr['pat_apellidos']}"
+                phone = tr['pat_telefono'] or ''
+                h_tipo = tr['herramienta_tipo']
+                h_nombre = tool_names_map.get(h_tipo, 'Herramienta Terapéutica')
+                tok = tr['token']
+
+                if not tok:
+                    cursor.execute("SELECT token FROM tokens_herramientas WHERE paciente_id = ? AND herramienta_tipo = ? ORDER BY id DESC LIMIT 1", (tr['paciente_id'], h_tipo))
+                    t_row = cursor.fetchone()
+                    if t_row:
+                        tok = t_row['token']
+
+                link_tool = f"{host_url}/herramienta/directa?token={tok}" if tok else ""
+                
+                st = tr['estado']
+                pausado = tr['pausado']
+                
+                if st == 'cancelado' or pausado == 1:
+                    pipeline_status = 'detenido_manual'
+                    pipeline_label = '🛑 Recordatorio Pausado'
+                    priority = 6
+                    can_cancel = False
+                elif st == 'completado' or tr['enviado'] == 1:
+                    pipeline_status = 'completado'
+                    pipeline_label = '🚀 Recordatorio Enviado'
+                    priority = 4
+                    can_cancel = False
+                else:
+                    pipeline_status = 'en_cola'
+                    pipeline_label = '⏳ Recordatorio Herramienta (8:00 PM)'
+                    priority = 1
+                    can_cancel = True
+
+                queue.append({
+                    'cita_id': f"tool_{tr['id']}",
+                    'paciente_nombre': pat_name,
+                    'telefono': phone,
+                    'fecha': tr['fecha_programada'],
+                    'hora': tr['hora_programada'] or '20:00',
+                    'tipo_consulta': f"🛠️ Herramienta: {h_nombre}",
+                    'pipeline_status': pipeline_status,
+                    'pipeline_label': pipeline_label,
+                    'priority': priority,
+                    'can_cancel': can_cancel,
+                    'token': tok,
+                    'link': link_tool
+                })
+        except Exception as _tool_err:
+            print("Aviso al consultar cola de herramientas en queue-status:", _tool_err)
+
+        queue.sort(key=lambda x: (x['priority'], str(x['fecha']), str(x['hora'])))
     except Exception as e_q:
         import traceback
         print("Error en consulta de cola de WhatsApp:", e_q)
@@ -908,76 +1200,45 @@ def get_whatsapp_queue_status():
 @login_required
 def cancel_whatsapp_queue_item():
     data = request.json or {}
-    cita_id = data.get('cita_id')
+    cita_id = str(data.get('cita_id') or '')
     if not cita_id:
         return jsonify({'error': 'cita_id es obligatorio'}), 400
     db = get_db()
     cursor = db.cursor()
     
-    # Crear tablas defensivamente por si la BD es antigua o restaurada
     try:
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                psicologo_id INTEGER NOT NULL,
-                paciente_id INTEGER NOT NULL,
-                herramienta_tipo TEXT NOT NULL,
-                fecha_programada DATE NOT NULL,
-                hora_programada TEXT DEFAULT '20:00',
-                estado TEXT DEFAULT 'programado',
-                enviado INTEGER DEFAULT 0,
-                fecha_envio DATETIME NULL,
-                token_id INTEGER NULL,
-                pausado INTEGER DEFAULT 0,
-                fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(paciente_id, herramienta_tipo, fecha_programada)
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tokens_herramientas (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                token TEXT UNIQUE NOT NULL,
-                paciente_id INTEGER NOT NULL,
-                psicologo_id INTEGER NOT NULL,
-                herramienta_tipo TEXT NOT NULL,
-                fecha_programada DATE NOT NULL,
-                usado INTEGER DEFAULT 0,
-                fecha_completado DATETIME NULL,
-                fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        db.commit()
-    except Exception as _tbl_err:
-        print("Aviso creando tablas defensivas en cancel_whatsapp_queue_item:", _tbl_err)
-
-    try:
-        cursor.execute("""
-            UPDATE agenda_finanzas
-            SET confirmacion_enviada_wa = -1, recordatorio_enviado_wa = -1, reagendamiento_enviado_wa = -1
-            WHERE id = ?
-        """, (cita_id,))
-        
-        cursor.execute("SELECT paciente_id, fecha FROM agenda_finanzas WHERE id = ?", (cita_id,))
-        row = cursor.fetchone()
-        if row:
-            try:
-                cursor.execute("""
-                    UPDATE cola_recordatorios_herramientas
-                    SET estado = 'cancelado'
-                    WHERE paciente_id = ? AND fecha_programada = ?
-                """, (row['paciente_id'], row['fecha']))
-            except Exception as _ex1:
-                print("Aviso actualizando cola_recordatorios_herramientas:", _ex1)
-                
-            try:
-                cursor.execute("""
-                    UPDATE tokens_herramientas
-                    SET usado = 2
-                    WHERE paciente_id = ? AND fecha_programada = ?
-                """, (row['paciente_id'], row['fecha']))
-            except Exception as _ex2:
-                print("Aviso actualizando tokens_herramientas:", _ex2)
+        if cita_id.startswith('tool_'):
+            tool_queue_id = int(cita_id.replace('tool_', ''))
+            cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'cancelado', pausado = 1 WHERE id = ?", (tool_queue_id,))
+        else:
+            cid = int(cita_id)
+            cursor.execute("""
+                UPDATE agenda_finanzas
+                SET confirmacion_enviada_wa = -1, recordatorio_enviado_wa = -1, reagendamiento_enviado_wa = -1
+                WHERE id = ?
+            """, (cid,))
             
+            cursor.execute("SELECT paciente_id, fecha FROM agenda_finanzas WHERE id = ?", (cid,))
+            row = cursor.fetchone()
+            if row:
+                try:
+                    cursor.execute("""
+                        UPDATE cola_recordatorios_herramientas
+                        SET estado = 'cancelado'
+                        WHERE paciente_id = ? AND fecha_programada = ?
+                    """, (row['paciente_id'], row['fecha']))
+                except Exception as _ex1:
+                    print("Aviso actualizando cola_recordatorios_herramientas:", _ex1)
+                    
+                try:
+                    cursor.execute("""
+                        UPDATE tokens_herramientas
+                        SET usado = 2
+                        WHERE paciente_id = ? AND fecha_programada = ?
+                    """, (row['paciente_id'], row['fecha']))
+                except Exception as _ex2:
+                    print("Aviso actualizando tokens_herramientas:", _ex2)
+                
         db.commit()
         return jsonify({'success': 'Envío detenido y cancelado manualmente con éxito.'})
     except Exception as e:

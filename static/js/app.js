@@ -9403,8 +9403,27 @@ function renderWaQueueTablePage() {
                     <div style="font-weight: 600;">📅 ${item.fecha}</div>
                     <div style="font-size: 0.78rem; color: var(--text-secondary);">🕒 ${item.hora}</div>
                 </td>
+        const toolLinkHtml = item.link ? `
+            <div style="margin-top: 4px; font-size: 0.75rem;">
+                <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${item.link}')" style="padding: 2px 6px; font-size: 0.73rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                    🔑 Copiar Token / Link Rápido
+                </button>
+            </div>
+        ` : '';
+
+        return `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="font-weight: 700; padding: 0.65rem;">
+                    ${item.paciente_nombre}
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 400;">📱 ${item.telefono || 'Sin teléfono'}</div>
+                </td>
+                <td style="padding: 0.65rem;">
+                    <div style="font-weight: 600;">📅 ${item.fecha}</div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary);">🕒 ${item.hora}</div>
+                </td>
                 <td style="padding: 0.65rem;">
                     <span class="badge" style="background: var(--bg-hover); color: var(--text-dark); border: 1px solid var(--border-color);">${item.tipo_consulta}</span>
+                    ${toolLinkHtml}
                 </td>
                 <td style="padding: 0.65rem;">
                     <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 600; padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.8rem; display: inline-block;">
@@ -15729,6 +15748,17 @@ async function selectPatientForTherapistTools(id, name, code) {
                 const waBtn = `<button type="button" class="btn btn-sm" onclick="enviarWhatsAppDirectoHerramienta(${id}, '${m.clave}')" style="padding: 0.35rem 0.65rem; font-weight: 600; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0;">💬 WhatsApp Directo</button>`;
                 const progBtn = `<button type="button" class="btn btn-sm" onclick="programarRecordatorioWhatsApp(${id}, '${m.clave}', '20:00')" style="padding: 0.35rem 0.65rem; font-weight: 600; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe;">⏰ Recordatorio 8 PM</button>`;
                 
+                const toolTokenBanner = (m.activo && m.link) ? `
+                    <div style="margin-top: 0.45rem; padding: 0.35rem 0.65rem; background: rgba(59, 130, 246, 0.08); border: 1.5px solid rgba(59, 130, 246, 0.25); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.78rem; font-family: monospace; color: #1e40af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px;">
+                            🔑 Link Rápido (Sin Inicio de Sesión): ${m.link}
+                        </span>
+                        <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${m.link}')" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #1e40af; color: white; border: none; font-weight: 700; border-radius: 4px; cursor: pointer;">
+                            📋 Copiar Link Directo
+                        </button>
+                    </div>
+                ` : '';
+
                 return `
                 <div style="display: flex; flex-direction: column; width: 100%;">
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
@@ -15748,6 +15778,7 @@ async function selectPatientForTherapistTools(id, name, code) {
                             </button>
                         </div>
                     </div>
+                    ${toolTokenBanner}
                     <div id="${inlineId}" class="inline-patient-history hide" style="display: none; margin-top: 0.5rem; width: 100%;"></div>
                 </div>
                 `;
@@ -23024,9 +23055,24 @@ async function programarRecordatorioWhatsApp(patientId, toolKey, horaStr) {
     }
 }
 
+async function copyToolDirectLink(link) {
+    if (!link) return;
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(link);
+            alert("🔑 ¡Link Rápido (Token sin inicio de sesión) copiado al portapapeles con éxito!\n\n" + link);
+        } else {
+            prompt("Copia el siguiente enlace directo de 1 solo uso para el paciente:", link);
+        }
+    } catch (err) {
+        prompt("Copia el siguiente enlace directo de 1 solo uso para el paciente:", link);
+    }
+}
+
 window.enviarWhatsAppDirectoHerramienta = enviarWhatsAppDirectoHerramienta;
 window.previsualizarHerramientaDirecta = previsualizarHerramientaDirecta;
 window.programarRecordatorioWhatsApp = programarRecordatorioWhatsApp;
+window.copyToolDirectLink = copyToolDirectLink;
 
 
 
