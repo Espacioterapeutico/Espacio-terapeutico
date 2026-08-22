@@ -2362,11 +2362,42 @@ def auto_check_subscription_expiration_reminders(db):
         print("Error en auto_check_subscription_expiration_reminders:", e)
 
 
+def patient_has_filled_tool_today(cursor, paciente_id, mod_clave, today_str):
+    """Verifica si el paciente ya completó el registro de la herramienta el día de hoy."""
+    try:
+        if mod_clave == 'sueno':
+            cursor.execute("SELECT id FROM registros_sueno WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+        elif mod_clave == 'ansiedad':
+            cursor.execute("SELECT id FROM registros_ansiedad WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+        elif mod_clave == 'sobriedad':
+            cursor.execute("SELECT id FROM registros_sobriedad WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+        elif mod_clave == 'pantalla':
+            cursor.execute("SELECT id FROM registro_consumo_pantalla WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+        elif mod_clave == 'cognitivo':
+            cursor.execute("SELECT id FROM registros_cognitivos WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+        elif mod_clave == 'ingesta':
+            cursor.execute("SELECT id FROM registros_ingesta WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+        elif mod_clave == 'activacion':
+            cursor.execute("SELECT id FROM activacion_registros WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+        elif mod_clave == 'adherencia':
+            cursor.execute("SELECT id FROM adherencia_registros WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+        elif mod_clave == 'pizarra':
+            cursor.execute("SELECT id FROM pizarra_terapeutica WHERE paciente_id = ? AND (fecha_registro LIKE ? OR DATE(fecha_registro) = ?)", (paciente_id, f"{today_str}%", today_str))
+        else:
+            return False
+        return cursor.fetchone() is not None
+    except Exception as e:
+        print(f"Aviso comprobando registro diario de {mod_clave} para paciente {paciente_id}:", e)
+        return False
+
+
 def send_hourly_patient_tool_reminders(db=None, force=False):
     """
-    Revisa la hora local (8:00 PM / 20:00) de cada paciente que tenga herramientas
-    terapéuticas activas en modulos_terapeuticos_paciente y les envía el recordatorio diario por WhatsApp con Link Directo de 1 solo uso.
-    Si force=True, procesa el envío sin importar si la hora actual es 20:00.
+    Evaluación de herramientas terapéuticas:
+    1. Registro de Sueño ('sueno'): Se evalúa a las 7:30 AM (reloj del paciente) para enviarse a las 08:00 AM.
+    2. Resto de herramientas diarias: Se evalúan a las 7:30 PM (reloj del paciente) para enviarse a las 20:00 PM.
+    En la evaluación (7:30 AM/PM), se genera el token y el ítem en cola_recordatorios_herramientas (visible en WhatsApp).
+    A las 8:00 AM/PM se envía la notificación por WhatsApp con el enlace directo.
     """
     if db is None:
         db = get_db()
@@ -2419,110 +2450,153 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
         # Calcular hora local del paciente a partir de UTC
         patient_local = now_utc - datetime.timedelta(minutes=offset_min)
         current_hour = patient_local.hour
+        current_minute = patient_local.minute
 
-        # Ejecutar cuando en el reloj local del paciente son las 8:00 PM (hora 20) o cuando se fuerza manualmente
-        if force or current_hour == 20:
-            cursor.execute("SELECT modulo_clave FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND activo = 1", (p_id,))
-            active_modules = [r['modulo_clave'] for r in cursor.fetchall()]
+        cursor.execute("SELECT modulo_clave FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND activo = 1", (p_id,))
+        active_modules = [r['modulo_clave'] for r in cursor.fetchall()]
+        
+        for mod_clave in active_modules:
+            is_sleep = (mod_clave == 'sueno')
+            target_hora_str = '08:00' if is_sleep else '20:00'
             
-            for mod_clave in active_modules:
-                # Comprobar si ya existe registro en la cola para hoy
-                cursor.execute("""
-                    SELECT id, estado, enviado, pausado FROM cola_recordatorios_herramientas
-                    WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
-                """, (p_id, mod_clave, today_str))
-                queue_row = cursor.fetchone()
-                
-                if queue_row:
-                    q_dict = dict(queue_row)
-                    if q_dict.get('enviado') == 1 or q_dict.get('pausado') == 1:
-                        continue # Ya enviado o pausado por el terapeuta
-                else:
-                    # Crear registro inicial en cola
-                    cursor.execute("""
-                        INSERT INTO cola_recordatorios_herramientas (
-                            psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, pausado
-                        ) VALUES (?, ?, ?, ?, '20:00', 'programado', 0, 0)
-                    """, (psic_id, p_id, mod_clave, today_str))
-                    db.commit()
+            # Evaluar si estamos dentro de la ventana de evaluación (7:30 AM para sueño, 7:30 PM para resto)
+            eval_window = False
+            if force:
+                eval_window = True
+            elif is_sleep:
+                eval_window = (current_hour > 7) or (current_hour == 7 and current_minute >= 30)
+            else:
+                eval_window = (current_hour > 19) or (current_hour == 19 and current_minute >= 30)
 
-                # Si WhatsApp no está conectado, actualizar estado a 'esperando_wa' y omitir envío por ahora
-                if not wa_connected:
+            if not eval_window:
+                continue
+
+            # 1. Chequeo de llenado previo: si ya llenó el registro hoy, no generar/enviar recordatorio
+            if patient_has_filled_tool_today(cursor, p_id, mod_clave, today_str):
+                cursor.execute("""
+                    UPDATE cola_recordatorios_herramientas
+                    SET estado = 'completado'
+                    WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ? AND enviado = 0
+                """, (p_id, mod_clave, today_str))
+                db.commit()
+                continue
+
+            # 2. Generar o recuperar Token de 1 solo uso para hoy
+            cursor.execute("""
+                SELECT id, token FROM tokens_herramientas
+                WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ? AND usado = 0
+                ORDER BY id DESC LIMIT 1
+            """, (p_id, mod_clave, today_str))
+            t_row = cursor.fetchone()
+
+            if t_row:
+                token = t_row['token']
+                token_id = t_row['id']
+            else:
+                import secrets
+                token = secrets.token_urlsafe(32)
+                expiracion = now_utc + datetime.timedelta(days=7)
+                cursor.execute("""
+                    INSERT INTO tokens_herramientas (
+                        token, paciente_id, psicologo_id, herramienta_tipo, fecha_programada, fecha_expiracion, usado
+                    ) VALUES (?, ?, ?, ?, ?, ?, 0)
+                """, (token, p_id, psic_id, mod_clave, today_str, expiracion.strftime("%Y-%m-%d %H:%M:%S")))
+                token_id = cursor.lastrowid
+                db.commit()
+
+            # 3. Insertar o verificar registro en cola_recordatorios_herramientas
+            cursor.execute("""
+                SELECT id, estado, enviado, pausado FROM cola_recordatorios_herramientas
+                WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
+            """, (p_id, mod_clave, today_str))
+            queue_row = cursor.fetchone()
+            
+            if queue_row:
+                q_dict = dict(queue_row)
+                if q_dict.get('enviado') == 1 or q_dict.get('pausado') == 1 or q_dict.get('estado') == 'completado':
+                    continue
+                else:
                     cursor.execute("""
                         UPDATE cola_recordatorios_herramientas
-                        SET estado = 'esperando_wa'
-                        WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
-                    """, (p_id, mod_clave, today_str))
+                        SET token_id = ?, hora_programada = ?
+                        WHERE id = ?
+                    """, (token_id, target_hora_str, q_dict['id']))
                     db.commit()
-                    continue
+            else:
+                cursor.execute("""
+                    INSERT INTO cola_recordatorios_herramientas (
+                        psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, pausado, token_id
+                    ) VALUES (?, ?, ?, ?, ?, 'programado', 0, 0, ?)
+                """, (psic_id, p_id, mod_clave, today_str, target_hora_str, token_id))
+                db.commit()
 
-                # Si WhatsApp está conectado y no se ha enviado hoy, procesar envío
-                if p['telefono']:
-                    cursor.execute("""
-                        SELECT id, token FROM tokens_herramientas
-                        WHERE paciente_id = ? AND herramienta_tipo = ? AND usado = 0
-                        ORDER BY id DESC LIMIT 1
-                    """, (p_id, mod_clave))
-                    t_row = cursor.fetchone()
+            # 4. Determinar si es momento de enviar por WhatsApp (8:00 AM para sueño, 8:00 PM para resto)
+            should_dispatch_wa = False
+            if force:
+                should_dispatch_wa = True
+            elif is_sleep:
+                should_dispatch_wa = (current_hour >= 8)
+            else:
+                should_dispatch_wa = (current_hour >= 20)
 
-                    if t_row:
-                        token = t_row['token']
-                        token_id = t_row['id']
-                    else:
-                        import secrets
-                        token = secrets.token_urlsafe(32)
-                        expiracion = now_utc + datetime.timedelta(days=7)
-                        cursor.execute("""
-                            INSERT INTO tokens_herramientas (
-                                token, paciente_id, psicologo_id, herramienta_tipo, fecha_programada, fecha_expiracion, usado
-                            ) VALUES (?, ?, ?, ?, ?, ?, 0)
-                        """, (token, p_id, psic_id, mod_clave, today_str, expiracion.strftime("%Y-%m-%d %H:%M:%S")))
-                        token_id = cursor.lastrowid
-                    
-                    domain_host = os.environ.get('APP_URL', 'https://www.espacioterapeutico.net').rstrip('/')
-                    try:
-                        from flask import request
-                        if request and hasattr(request, 'host_url') and request.host_url:
-                            domain_host = request.host_url.rstrip('/')
-                    except Exception:
-                        pass
+            if not should_dispatch_wa:
+                continue
 
-                    direct_link = f"{domain_host}/herramienta/directa?token={token}"
-                    first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
-                    tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')
-                    
-                    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_herramientas_{psic_id}",))
+            if not wa_connected:
+                cursor.execute("""
+                    UPDATE cola_recordatorios_herramientas
+                    SET estado = 'esperando_wa'
+                    WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
+                """, (p_id, mod_clave, today_str))
+                db.commit()
+                continue
+
+            # Procesar envío WhatsApp
+            if p['telefono']:
+                domain_host = os.environ.get('APP_URL', 'https://www.espacioterapeutico.net').rstrip('/')
+                try:
+                    from flask import request
+                    if request and hasattr(request, 'host_url') and request.host_url:
+                        domain_host = request.host_url.rstrip('/')
+                except Exception:
+                    pass
+
+                direct_link = f"{domain_host}/herramienta/directa?token={token}"
+                first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
+                tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')
+                
+                cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_herramientas_{psic_id}",))
+                tmpl_row = cursor.fetchone()
+                if not tmpl_row or not tmpl_row['valor']:
+                    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_herramientas'")
                     tmpl_row = cursor.fetchone()
-                    if not tmpl_row or not tmpl_row['valor']:
-                        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_herramientas'")
-                        tmpl_row = cursor.fetchone()
 
-                    default_tmpl = (
-                        "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
-                        "Te recuerdo completar tu *{herramienta}* del día de hoy. "
-                        "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
-                        "👉 {link}\n\n"
-                        "¡Gracias por tu constancia!"
-                    )
-                    raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
-                    msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link)
+                default_tmpl = (
+                    "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
+                    "Te recuerdo completar tu *{herramienta}* del día de hoy. "
+                    "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
+                    "👉 {link}\n\n"
+                    "¡Gracias por tu constancia!"
+                )
+                raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
+                msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link)
+                
+                try:
+                    from routes_notificaciones import make_wa_http_request
+                    from routes_herramientas import clean_phone_number
+                    clean_phone = clean_phone_number(p['telefono'])
+                    res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
                     
-                    try:
-                        from routes_notificaciones import make_wa_http_request
-                        from routes_herramientas import clean_phone_number
-                        clean_phone = clean_phone_number(p['telefono'])
-                        res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
-                        
-                        if res_wa and res_wa.status_code == 200:
-                            cursor.execute("""
-                                UPDATE cola_recordatorios_herramientas
-                                SET estado = 'enviado', enviado = 1, fecha_envio = ?, token_id = ?
-                                WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
-                            """, (now_str, token_id, p_id, mod_clave, today_str))
-                            db.commit()
-                            reminders_sent += 1
-                    except Exception as _ex_wa:
-                        print(f"Error enviando WhatsApp directo a paciente {p_id}:", _ex_wa)
+                    if res_wa and res_wa.status_code == 200:
+                        cursor.execute("""
+                            UPDATE cola_recordatorios_herramientas
+                            SET estado = 'enviado', enviado = 1, fecha_envio = ?, token_id = ?
+                            WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
+                        """, (now_str, token_id, p_id, mod_clave, today_str))
+                        db.commit()
+                        reminders_sent += 1
+                except Exception as _ex_wa:
+                    print(f"Error enviando WhatsApp directo a paciente {p_id}:", _ex_wa)
 
     return reminders_sent
 

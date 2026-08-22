@@ -975,7 +975,11 @@ def get_whatsapp_queue_status():
                     can_cancel = False
                 else:
                     pipeline_status = 'en_cola'
-                    pipeline_label = '⏳ Recordatorio Herramienta (8:00 PM)'
+                    hora_disp = tr['hora_programada'] or '20:00'
+                    if hora_disp == '08:00':
+                        pipeline_label = '⏳ Recordatorio Sueño (08:00 AM)'
+                    else:
+                        pipeline_label = '⏳ Recordatorio Herramienta (08:00 PM)'
                     priority = 1
                     can_cancel = True
 
