@@ -151,6 +151,47 @@ def admin_notifications_mark_read():
     except Exception as e:
         return jsonify({'error': f'Error al marcar notificaciones: {str(e)}'}), 500
 
+def format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data):
+    """
+    Formatea un template de mensaje de WhatsApp reemplazando placeholders con datos reales.
+    Placeholders soportados: {nombre}, {fecha}, {hora}, {modalidad}, {psicologo}
+    """
+    if not template:
+        template = "Hola {nombre}, te recordamos que tu cita está agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
+
+    first_name = ''
+    full_name = ''
+    if patient_dict:
+        nombres = patient_dict.get('nombres', '') or ''
+        apellidos = patient_dict.get('apellidos', '') or ''
+        first_name = nombres.strip().split()[0] if nombres.strip() else ''
+        full_name = f"{nombres} {apellidos}".strip()
+    if not full_name:
+        full_name = cita_dict.get('nombre', 'Consultante') if cita_dict else 'Consultante'
+    if not first_name:
+        first_name = full_name.split()[0] if full_name else 'Consultante'
+
+    fecha = cita_dict.get('fecha', '') if cita_dict else ''
+    hora = cita_dict.get('hora', '') if cita_dict else ''
+    modalidad = cita_dict.get('modalidad', 'Presencial') if cita_dict else 'Presencial'
+
+    psic_name = ''
+    if psicologo_data:
+        p_nombres = psicologo_data.get('nombres', '') or ''
+        p_apellidos = psicologo_data.get('apellidos', '') or ''
+        psic_name = f"{p_nombres} {p_apellidos}".strip()
+
+    msg = template
+    msg = msg.replace('{nombre}', first_name)
+    msg = msg.replace('{nombre_completo}', full_name)
+    msg = msg.replace('{fecha}', fecha)
+    msg = msg.replace('{hora}', hora)
+    msg = msg.replace('{modalidad}', modalidad)
+    msg = msg.replace('{psicologo}', psic_name)
+    msg = msg.replace('{terapeuta}', psic_name)
+
+    return msg
+
 WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'https://espacio-terapeutico-whatsapp.onrender.com')
 
 _wa_keepalive_started = False
