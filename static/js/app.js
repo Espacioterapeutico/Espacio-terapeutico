@@ -9423,10 +9423,16 @@ function renderWaQueueTablePage() {
             badgeBg = '#475569';
         }
 
-        const actionBtnHtml = item.can_cancel ? `
-            <button type="button" class="btn btn-sm text-danger" onclick="handleCancelWaQueueItem(${item.cita_id}, '${escapeJsQuotes(item.paciente_nombre)}')" title="Detener el envío automático de este mensaje" style="background: white; border: 1.5px solid rgba(239, 68, 68, 0.3); padding: 0.25rem 0.5rem; font-size: 0.78rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                🛑 Detener Envío
-            </button>
+        const actionBtnHtml = (item.pipeline_status !== 'completado' && item.pipeline_status !== 'detenido_manual') ? `
+            <div style="display: inline-flex; gap: 4px; align-items: center;">
+                <button type="button" class="btn btn-sm btn-primary" onclick="sendSingleQueueItemNow('${item.cita_id}', '${escapeJsQuotes(item.paciente_nombre)}')" title="Enviar mensaje de WhatsApp inmediatamente a este paciente" style="background: #10b981; border: 1.5px solid #059669; color: white; padding: 0.25rem 0.5rem; font-size: 0.78rem; border-radius: 6px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                    📲 Enviar Ahora
+                </button>
+                ${item.can_cancel ? `
+                <button type="button" class="btn btn-sm text-danger" onclick="handleCancelWaQueueItem('${item.cita_id}', '${escapeJsQuotes(item.paciente_nombre)}')" title="Detener el envío automático de este mensaje" style="background: white; border: 1.5px solid rgba(239, 68, 68, 0.3); padding: 0.25rem 0.5rem; font-size: 0.78rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                    🛑 Detener
+                </button>` : ''}
+            </div>
         ` : `<span style="font-size: 0.78rem; color: var(--text-muted);">-</span>`;
         const toolLinkHtml = item.link ? `
             <div style="margin-top: 4px; font-size: 0.75rem;">
@@ -9523,6 +9529,23 @@ function changeWaQueuePerPage(val) {
     currentWaQueuePage = 1;
     renderWaQueueTablePage();
 }
+
+async function sendSingleQueueItemNow(itemId, pacienteNombre) {
+    if (!confirm(`¿Deseas enviar el mensaje de WhatsApp a ${pacienteNombre} inmediatamente?`)) return;
+    try {
+        const res = await fetch(`/api/whatsapp/send-queue-item-now/${itemId}`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message || `Mensaje enviado con éxito a ${pacienteNombre}.`);
+            loadWhatsAppMonitoringQueue();
+        } else {
+            alert("Error al enviar mensaje: " + (data.error || "No se pudo conectar"));
+        }
+    } catch (err) {
+        alert("Error de conexión al enviar mensaje por WhatsApp.");
+    }
+}
+window.sendSingleQueueItemNow = sendSingleQueueItemNow;
 
 async function handleCancelWaQueueItem(citaId, pacienteNombre) {
     if (!confirm(`¿Estás seguro de que deseas detener manualmente el envío automático de este mensaje para ${pacienteNombre}?`)) {

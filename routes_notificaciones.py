@@ -560,15 +560,15 @@ def cron_send_whatsapp_reminders():
     enviados_recordatorios = []
     errores = []
 
-    # 1. ENVIAR CONFIRMACIONES PARA MAÑANA (Citas no confirmadas de mañana)
+    # 1. ENVIAR CONFIRMACIONES PARA HOY Y MAÑANA (Citas no confirmadas en la ventana 24-48h)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
-        WHERE af.fecha = ? AND COALESCE(af.confirmada, 0) = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
-    """, (tomorrow_str,))
+        WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
+    """, (today_str, tomorrow_str))
     citas_confirmar = cursor.fetchall()
 
     for cita in citas_confirmar:
@@ -761,6 +761,14 @@ def cron_send_whatsapp_reminders():
             except Exception as e:
                 pass
 
+    # 4. ENVIAR RECORDATORIOS DE HERRAMIENTAS TERAPÉUTICAS DIARIAS
+    herramientas_enviadas = 0
+    try:
+        from app import send_hourly_patient_tool_reminders
+        herramientas_enviadas = send_hourly_patient_tool_reminders(db, force=True)
+    except Exception as e_tools:
+        print("Aviso al ejecutar send_hourly_patient_tool_reminders en cron:", e_tools)
+
     db.commit()
 
     return jsonify({
@@ -769,6 +777,7 @@ def cron_send_whatsapp_reminders():
         'recordatorios_enviados': len(enviados_recordatorios),
         'reagendamientos_enviados': len(enviados_reagendamientos),
         'cierres_enviados': len(enviados_cierres),
+        'herramientas_enviadas': herramientas_enviadas,
         'detalles': {
             'confirmaciones': enviados_confirmaciones,
             'recordatorios': enviados_recordatorios,
@@ -784,6 +793,174 @@ def cron_send_whatsapp_reminders():
             'errores': errores
         }
     })
+
+@notificaciones_bp.route('/api/whatsapp/send-queue-item-now/<item_id>', methods=['POST'])
+@login_required
+def send_queue_item_now(item_id):
+    """
+    Envía inmediatamente un mensaje de la cola de WhatsApp (ya sea confirmación de cita, 
+    recordatorio de consulta o token de herramienta terapéutica).
+    """
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        if str(item_id).startswith('tool_'):
+            tool_queue_id = int(str(item_id).replace('tool_', ''))
+            cursor.execute("""
+                SELECT c.*, p.nombres, p.apellidos, p.telefono, p.psicologo_id, t.token
+                FROM cola_recordatorios_herramientas c
+                JOIN pacientes p ON c.paciente_id = p.id
+                LEFT JOIN tokens_herramientas t ON c.token_id = t.id
+                WHERE c.id = ?
+            """, (tool_queue_id,))
+            q_row = cursor.fetchone()
+
+            if not q_row:
+                return jsonify({'error': 'Registro de herramienta no encontrado'}), 404
+            
+            p_id = q_row['paciente_id']
+            mod_clave = q_row['herramienta_tipo']
+            psych_id = q_row['psicologo_id'] or user_id or 1
+            phone = q_row['telefono']
+            today_str = q_row['fecha_programada']
+            token = q_row['token']
+
+            if not phone:
+                return jsonify({'error': 'El paciente no tiene teléfono registrado'}), 400
+
+            if not token:
+                import secrets
+                token = secrets.token_urlsafe(32)
+                expiracion = datetime.now() + timedelta(days=7)
+                cursor.execute("""
+                    INSERT INTO tokens_herramientas (
+                        token, paciente_id, psicologo_id, herramienta_tipo, fecha_programada, fecha_expiracion, usado
+                    ) VALUES (?, ?, ?, ?, ?, ?, 0)
+                """, (token, p_id, psych_id, mod_clave, today_str, expiracion.strftime("%Y-%m-%d %H:%M:%S")))
+                token_id = cursor.lastrowid
+                db.commit()
+            else:
+                token_id = q_row['token_id']
+
+            domain_host = request.host_url.rstrip('/') if request else 'https://www.espacioterapeutico.net'
+            direct_link = f"{domain_host}/herramienta/directa?token={token}"
+            first_name = (q_row['nombres'] or '').strip().split()[0] if q_row['nombres'] else 'Consultante'
+
+            TOOL_NAME_MAP = {
+                'pantalla': 'Registro de Consumo de Pantallas',
+                'cognitivo': 'Registro Cognitivo (TCC)',
+                'ingesta': 'Registro de Ingesta Alimentaria',
+                'activacion': 'Checklist de Activación Conductual',
+                'adherencia': 'Control de Adherencia a Medicamentos',
+                'pizarra': 'Diario / Pizarra Terapéutica',
+                'sueno': 'Higiene del Sueño',
+                'ansiedad': 'Diario de Ansiedad',
+                'sobriedad': 'Registro de Consumo y Sobriedad'
+            }
+            tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')
+
+            cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_herramientas_{psych_id}",))
+            tmpl_row = cursor.fetchone()
+            if not tmpl_row or not tmpl_row['valor']:
+                cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_herramientas'")
+                tmpl_row = cursor.fetchone()
+
+            default_tmpl = (
+                "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
+                "Te recuerdo completar tu *{herramienta}* del día de hoy. "
+                "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
+                "👉 {link}\n\n"
+                "¡Gracias por tu constancia!"
+            )
+            raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
+            msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link)
+
+            from routes_herramientas import clean_phone_number
+            clean_phone = clean_phone_number(phone)
+            res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psych_id}, timeout=15, user_id=psych_id)
+
+            if res_wa and res_wa.status_code == 200:
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cursor.execute("""
+                    UPDATE cola_recordatorios_herramientas
+                    SET estado = 'enviado', enviado = 1, fecha_envio = ?, token_id = ?
+                    WHERE id = ?
+                """, (now_str, token_id, tool_queue_id))
+                db.commit()
+                return jsonify({'success': True, 'message': f'Recordatorio de herramienta enviado a {q_row["nombres"]}'})
+            else:
+                err_text = 'Error enviando por WhatsApp microservicio'
+                try: err_text = res_wa.json().get('error', res_wa.text)
+                except: pass
+                return jsonify({'error': err_text}), 500
+
+        else:
+            # Es una cita regular de agenda_finanzas
+            appt_id = int(item_id)
+            cursor.execute("""
+                SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+                       COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
+                FROM agenda_finanzas af
+                JOIN pacientes p ON af.paciente_id = p.id
+                LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
+                WHERE af.id = ?
+            """, (appt_id,))
+            cita = cursor.fetchone()
+
+            if not cita:
+                return jsonify({'error': 'Cita no encontrada'}), 404
+
+            phone = cita['pat_telefono']
+            if not phone:
+                return jsonify({'error': 'El paciente no tiene teléfono registrado'}), 400
+
+            psych_id = cita['psicologo_id'] or user_id or 1
+            psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+            cita_dict = {
+                'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
+                'fecha': cita['fecha'],
+                'hora': cita['hora'],
+                'modalidad': cita['tipo_consulta'] or 'Presencial'
+            }
+            patient_dict = {
+                'nombres': cita['pat_nombres'],
+                'apellidos': cita['pat_apellidos'],
+                'pais': cita['pat_pais'] or ''
+            }
+
+            cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio')")
+            cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
+            
+            if cita['confirmada'] == 1:
+                tmpl_msg = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que tu cita está agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
+                is_conf_type = False
+            else:
+                tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+                is_conf_type = True
+
+            mensaje_texto = format_whatsapp_message(tmpl_msg, patient_dict, cita_dict, psicologo_data)
+            
+            from routes_herramientas import clean_phone_number
+            clean_phone = clean_phone_number(phone)
+            res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+
+            if res_wa and res_wa.status_code == 200:
+                if is_conf_type:
+                    cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (appt_id,))
+                else:
+                    cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                db.commit()
+                return jsonify({'success': True, 'message': f'Mensaje enviado con éxito a {cita["pat_nombres"]}'})
+            else:
+                err_text = 'Error enviando por WhatsApp microservicio'
+                try: err_text = res_wa.json().get('error', res_wa.text)
+                except: pass
+                return jsonify({'error': err_text}), 500
+
+    except Exception as e:
+        return jsonify({'error': f'Error procesando envío individual: {str(e)}'}), 500
 
 
 
