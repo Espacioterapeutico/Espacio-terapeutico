@@ -78,7 +78,7 @@ Puedes entrar en cualquier momento desde tu celular o computadora aquí: https:/
             pass_hash = generate_password_hash(temp_pass)
             
             # Actualizar en BD
-            cursor.execute("UPDATE pacientes SET username = ?, password_hash = ?, primer_inicio = 1 WHERE id = ?", (username, pass_hash, paciente_id))
+            cursor.execute("UPDATE pacientes SET username = ?, password_hash = ? WHERE id = ?", (username, pass_hash, paciente_id))
             db.commit()
             
             msg = f"""¡Hola {nombre}! 🌟 Quería invitarte oficialmente a usar el nuevo *Portal del Consultante* de Espacio Terapéutico.
