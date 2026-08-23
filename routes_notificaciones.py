@@ -804,6 +804,7 @@ def cron_send_whatsapp_reminders():
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
+            JOIN sesiones s ON s.agenda_id = af.id
             WHERE af.fecha = ? 
               AND COALESCE(af.confirmada, 0) = 1
               AND COALESCE(af.estado_pago, '') != 'Cancelada'
