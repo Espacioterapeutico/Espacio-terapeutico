@@ -35,8 +35,8 @@ def main():
     db = get_db()
     cursor = db.cursor()
     
-    # Obtener pacientes activos con teléfono
-    cursor.execute("SELECT id, nombres, apellidos, telefono, cedula, email, username, password_hash, psicologo_id FROM pacientes WHERE activo = 1 AND telefono IS NOT NULL AND telefono != ''")
+    # Obtener pacientes con teléfono
+    cursor.execute("SELECT id, nombres, apellidos, telefono, cedula, email, username, password_hash, psicologo_id FROM pacientes WHERE telefono IS NOT NULL AND telefono != ''")
     pacientes = cursor.fetchall()
     
     print(f"Encontrados {len(pacientes)} pacientes con teléfono.")
