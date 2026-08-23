@@ -334,11 +334,27 @@ def manage_sessions():
                     WHERE id = ?
                 """, (monto, moneda, metodo_pago, referencia, fecha_pago, agenda_id))
             elif tipo_liq in ['Prepagada', 'Descontar de saldo prepagado', 'Ya prepagada en paquete']:
+                cursor.execute("SELECT estado_pago, control_uso FROM agenda_finanzas WHERE id = ?", (agenda_id,))
+                orig_state = cursor.fetchone()
+                
                 cursor.execute("""
                     UPDATE agenda_finanzas 
                     SET estado_pago = 'Prepagada', control_uso = 'Consumida'
                     WHERE id = ?
                 """, (agenda_id,))
+                
+                if orig_state and not (orig_state['estado_pago'] == 'Prepagada' and orig_state['control_uso'] == 'No consumida'):
+                    cursor.execute("""
+                        SELECT id, cantidad_sesiones FROM agenda_finanzas 
+                        WHERE paciente_id = ? AND estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida'
+                        ORDER BY fecha ASC, id ASC LIMIT 1
+                    """, (paciente_id,))
+                    pkg = cursor.fetchone()
+                    if pkg:
+                        if pkg['cantidad_sesiones'] > 1:
+                            cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg['cantidad_sesiones'] - 1, pkg['id']))
+                        else:
+                            cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg['id'],))
             elif tipo_liq in ['Cancelada sin aviso - Paga']:
                 cursor.execute("""
                     UPDATE agenda_finanzas 
@@ -372,9 +388,22 @@ def manage_sessions():
             cursor.execute("""
                 INSERT INTO agenda_finanzas (
                     paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
-                    metodo_pago, referencia, fecha_pago, confirmada
-                ) VALUES (?, ?, '00:00', ?, ?, ?, ?, ?, ?, ?, 1)
+                    metodo_pago, referencia, fecha_pago, confirmada, control_uso
+                ) VALUES (?, ?, '00:00', ?, ?, ?, ?, ?, ?, ?, 1, 'Consumida')
             """, (paciente_id, fecha, modalidad, monto, moneda, estado_pago, metodo_pago, referencia, fecha_pago))
+            
+            if estado_pago == 'Prepagada':
+                cursor.execute("""
+                    SELECT id, cantidad_sesiones FROM agenda_finanzas 
+                    WHERE paciente_id = ? AND estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida'
+                    ORDER BY fecha ASC, id ASC LIMIT 1
+                """, (paciente_id,))
+                pkg = cursor.fetchone()
+                if pkg:
+                    if pkg['cantidad_sesiones'] > 1:
+                        cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg['cantidad_sesiones'] - 1, pkg['id']))
+                    else:
+                        cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg['id'],))
 
         db.commit()
 
