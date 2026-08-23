@@ -541,8 +541,37 @@ def init_db():
     try:
         from routes_clinica import ensure_clinica_tables
         ensure_clinica_tables(db)
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tokens_herramientas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token TEXT UNIQUE NOT NULL,
+                paciente_id INTEGER NOT NULL,
+                psicologo_id INTEGER NOT NULL,
+                herramienta_tipo TEXT NOT NULL,
+                fecha_programada TEXT NOT NULL,
+                fecha_expiracion TEXT NOT NULL,
+                usado INTEGER DEFAULT 0,
+                herramienta_id INTEGER
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                psicologo_id INTEGER NOT NULL,
+                paciente_id INTEGER NOT NULL,
+                herramienta_tipo TEXT NOT NULL,
+                fecha_programada TEXT NOT NULL,
+                hora_programada TEXT NOT NULL,
+                estado TEXT DEFAULT 'programado',
+                enviado INTEGER DEFAULT 0,
+                pausado INTEGER DEFAULT 0,
+                token_id INTEGER
+            )
+        """)
+        db.commit()
     except Exception as _e:
-        print("Aviso al asegurar tablas de clínica:", _e)
+        print("Aviso al asegurar tablas de clínica/herramientas:", _e)
 
     # Verificar si la tabla principal 'usuarios' existe
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
