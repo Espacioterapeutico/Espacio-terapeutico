@@ -214,7 +214,7 @@ def adjust_patient_prepay_balance(patient_id):
         else:
             now_date = datetime.datetime.now().strftime('%Y-%m-%d')
             cursor.execute("""
-                INSERT INTO agenda_finanzas (paciente_id, fecha, hora, tipo_consulta, monto, estado_pago, control_uso, cantidad_sesiones, uso_sesiones_detalle)
+                INSERT INTO agenda_finanzas (paciente_id, fecha, hora, tipo_consulta, monto, estado_pago, control_uso, cantidad_sesiones, referencia)
                 VALUES (?, ?, '00:00', 'Prepago', 0.0, 'Prepagada', 'No consumida', ?, 'Ajuste manual de saldo')
             """, (patient_id, now_date, diff))
 
