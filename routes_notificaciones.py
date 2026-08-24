@@ -1350,19 +1350,35 @@ def get_whatsapp_queue_status():
                 )
             """)
             
-            tool_sql = """
-                SELECT c.id, c.paciente_id, c.herramienta_tipo, c.fecha_programada, c.hora_programada,
-                       c.estado, c.enviado, c.pausado, c.token_id,
-                       p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono,
-                       t.token
-                FROM cola_recordatorios_herramientas c
-                JOIN pacientes p ON c.paciente_id = p.id
-                LEFT JOIN tokens_herramientas t ON c.token_id = t.id
-                WHERE (p.psicologo_id = ? OR ? = 1) AND c.fecha_programada >= ?
-                ORDER BY c.fecha_programada ASC, c.hora_programada ASC
-                LIMIT 200
-            """
-            cursor.execute(tool_sql, (user_id, user_id, yesterday_str))
+            if user_id == 1:
+                tool_sql = """
+                    SELECT c.id, c.paciente_id, c.herramienta_tipo, c.fecha_programada, c.hora_programada,
+                           c.estado, c.enviado, c.pausado, c.token_id,
+                           p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono,
+                           t.token
+                    FROM cola_recordatorios_herramientas c
+                    JOIN pacientes p ON c.paciente_id = p.id
+                    LEFT JOIN tokens_herramientas t ON c.token_id = t.id
+                    WHERE (p.psicologo_id = 1 OR p.psicologo_id IS NULL) AND c.fecha_programada >= ?
+                    ORDER BY c.fecha_programada ASC, c.hora_programada ASC
+                    LIMIT 200
+                """
+                cursor.execute(tool_sql, (yesterday_str,))
+            else:
+                tool_sql = """
+                    SELECT c.id, c.paciente_id, c.herramienta_tipo, c.fecha_programada, c.hora_programada,
+                           c.estado, c.enviado, c.pausado, c.token_id,
+                           p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono,
+                           t.token
+                    FROM cola_recordatorios_herramientas c
+                    JOIN pacientes p ON c.paciente_id = p.id
+                    LEFT JOIN tokens_herramientas t ON c.token_id = t.id
+                    WHERE p.psicologo_id = ? AND c.fecha_programada >= ?
+                    ORDER BY c.fecha_programada ASC, c.hora_programada ASC
+                    LIMIT 200
+                """
+                cursor.execute(tool_sql, (user_id, yesterday_str))
+                
             tool_rows = cursor.fetchall()
 
             host_url = request.host_url.rstrip('/') if request else ""
