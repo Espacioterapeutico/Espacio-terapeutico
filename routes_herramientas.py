@@ -605,6 +605,11 @@ def get_therapist_module_summary(modulo_clave):
     db = get_db()
     cursor = db.cursor()
     
+    if modulo_clave in ('consumo', 'sobriedad'):
+        modulo_clave = 'sobriedad'
+    elif modulo_clave in ('medicacion', 'adherencia'):
+        modulo_clave = 'adherencia'
+    
     # 1. Verificar asignación y obtener fecha_asignacion
     cursor.execute("""
         SELECT fecha_asignacion FROM modulos_terapeuticos_paciente 
