@@ -7434,11 +7434,11 @@
     <script src="/static/js/app.js?v={{ asset_v or '111' }}"></script>
     <script src="/static/js/tests_module.js?v={{ asset_v or '111' }}"></script>
     <!-- Modal Registro Rápido -->
-    <div id="quick-add-patient-modal" class="modal">
+    <div id="quick-add-patient-modal" class="modal hide">
         <div class="modal-content" style="max-width: 500px; border-radius: 12px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
             <div class="modal-header" style="background: linear-gradient(135deg, #702e5e, #984b80); color: white; border-radius: 12px 12px 0 0; padding: 1.25rem;">
                 <h3 style="margin: 0; font-family: var(--font-title); font-size: 1.25rem;">Agregar Registro Rápido</h3>
-                <span class="close-modal" onclick="closeModal('quick-add-patient-modal')" style="color: white; opacity: 0.8; font-size: 1.5rem;">&times;</span>
+                <button class="btn-close-modal" onclick="closeModal('quick-add-patient-modal')" style="color: white; opacity: 0.8;">✕</button>
             </div>
             <div class="modal-body" style="padding: 1.5rem;">
                 <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 1.25rem;">
@@ -7474,11 +7474,11 @@
     </div>
 
     <!-- Modal WhatsApp Broadcast -->
-    <div id="whatsapp-broadcast-modal" class="modal">
+    <div id="whatsapp-broadcast-modal" class="modal hide">
         <div class="modal-content" style="max-width: 600px; border-radius: 12px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
             <div class="modal-header" style="background: linear-gradient(135deg, #128C7E, #25D366); color: white; border-radius: 12px 12px 0 0; padding: 1.25rem;">
                 <h3 style="margin: 0; font-family: var(--font-title); font-size: 1.25rem;">📢 Mensaje de Difusión (WhatsApp)</h3>
-                <span class="close-modal" onclick="closeModal('whatsapp-broadcast-modal')" style="color: white; opacity: 0.8; font-size: 1.5rem;">&times;</span>
+                <button class="btn-close-modal" onclick="closeModal('whatsapp-broadcast-modal')" style="color: white; opacity: 0.8;">✕</button>
             </div>
             <div class="modal-body" style="padding: 1.5rem;">
                 <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 1.25rem;">
