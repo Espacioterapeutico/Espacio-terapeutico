@@ -5891,6 +5891,39 @@
         </div>
     </div>
 
+    <!-- MODAL FICHA RESUMEN DE HERRAMIENTA TERAPÉUTICA -->
+    <div id="tool-summary-modal" class="modal hide">
+        <div class="modal-content modal-md">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); color: white;">
+                <h3 id="tool-summary-title" style="margin: 0; font-size: 1.1rem;">Ficha Resumen</h3>
+                <button class="btn-close-modal white-close" onclick="closeModal('tool-summary-modal')" style="color: white; opacity: 0.8;">✕</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem; background: #f8fafc;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <h4 id="tool-summary-patient-name" style="margin: 0; font-size: 1.2rem; color: var(--text-dark); font-weight: 700;">Nombre del Paciente</h4>
+                </div>
+                
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; text-align: center; box-shadow: var(--shadow-sm); margin-bottom: 1rem;">
+                    <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Registros Recibidos</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary-color);">
+                        <span id="tool-summary-days-registered">0</span> / <span id="tool-summary-days-assigned">0</span> días
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">desde su asignación</div>
+                </div>
+
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; text-align: center; box-shadow: var(--shadow-sm);">
+                    <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Métrica Principal</div>
+                    <div id="tool-summary-metric" style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); line-height: 1.4;">
+                        Cargando métrica...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; padding: 1rem 1.5rem;">
+                <button class="btn btn-primary" onclick="closeModal('tool-summary-modal')">Entendido</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL VERIFICACIÓN DE PAGO NOTIFICADO -->
     <div id="verify-payment-modal" class="modal hide">
         <div class="modal-content modal-md">

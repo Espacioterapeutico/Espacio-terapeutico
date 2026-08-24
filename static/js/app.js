@@ -15245,7 +15245,10 @@ function renderTherapistToolsCatalog() {
                                 <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
                                 <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
                             </div>
-                            <div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="showPatientToolSummary(${p.patient_id}, '${toolType}', '${p.nombre_paciente.replace(/'/g, "\\'")}')" style="font-weight: 600; padding: 0.35rem 0.75rem; border: 1.5px solid var(--border-color); background: white; color: var(--text-dark);">
+                                    📄 Ver Ficha
+                                </button>
                                 <button type="button" class="btn btn-primary btn-sm btn-view-history" onclick="toggleInlinePatientHistory(${p.patient_id}, '${toolType}', '${inlineContainerId}')" style="font-weight: 600; padding: 0.35rem 0.75rem;">
                                     📋 Ver Historial
                                 </button>
@@ -23146,4 +23149,40 @@ window.copyToolDirectLink = copyToolDirectLink;
 
 
 
+async function showPatientToolSummary(patientId, toolKey, patientName) {
+    try {
+        const titleEl = document.getElementById('tool-summary-title');
+        const nameEl = document.getElementById('tool-summary-patient-name');
+        const daysRegEl = document.getElementById('tool-summary-days-registered');
+        const daysAssignedEl = document.getElementById('tool-summary-days-assigned');
+        const metricEl = document.getElementById('tool-summary-metric');
+        
+        if (titleEl) titleEl.innerText = `Ficha Resumen - Herramienta`;
+        if (nameEl) nameEl.innerText = patientName || 'Consultante';
+        if (daysRegEl) daysRegEl.innerText = '...';
+        if (daysAssignedEl) daysAssignedEl.innerText = '...';
+        if (metricEl) metricEl.innerText = 'Cargando métrica...';
 
+        showModal('tool-summary-modal');
+
+        const res = await fetch(`/api/therapist/modules/summary/${toolKey}?patient_id=${patientId}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+            if (metricEl) metricEl.innerHTML = `<span style="color:var(--danger-color)">Error: ${data.error || 'No se pudo cargar'}</span>`;
+            return;
+        }
+
+        if (daysRegEl) daysRegEl.innerText = data.dias_registrados || 0;
+        if (daysAssignedEl) daysAssignedEl.innerText = data.dias_asignado || 0;
+        if (metricEl) {
+            metricEl.innerHTML = `<span style="color:var(--primary-color)">${data.resumen || 'Sin resumen disponible'}</span>`;
+        }
+
+    } catch (err) {
+        console.error("Error cargando ficha resumen:", err);
+        const metricEl = document.getElementById('tool-summary-metric');
+        if (metricEl) metricEl.innerHTML = `<span style="color:var(--danger-color)">Error de conexión al cargar resumen.</span>`;
+    }
+}
+window.showPatientToolSummary = showPatientToolSummary;

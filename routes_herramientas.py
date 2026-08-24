@@ -595,6 +595,152 @@ def get_therapist_modules_catalog():
     return jsonify(catalog)
 
 
+@herramientas_bp.route('/api/therapist/modules/summary/<string:modulo_clave>', methods=['GET'])
+@login_required
+def get_therapist_module_summary(modulo_clave):
+    patient_id = request.args.get('patient_id')
+    if not patient_id:
+        return jsonify({'error': 'Falta patient_id'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    
+    # 1. Verificar asignación y obtener fecha_asignacion
+    cursor.execute("""
+        SELECT fecha_asignacion FROM modulos_terapeuticos_paciente 
+        WHERE paciente_id = ? AND modulo_clave = ? AND activo = 1
+    """, (patient_id, modulo_clave))
+    asignacion = cursor.fetchone()
+    if not asignacion:
+        return jsonify({'error': 'El paciente no tiene esta herramienta activa'}), 404
+        
+    fecha_asignacion = asignacion['fecha_asignacion'] or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    dt_asignacion = datetime.strptime(fecha_asignacion[:10], "%Y-%m-%d")
+    dt_today = datetime.now()
+    dias_asignado = (dt_today - dt_asignacion).days + 1
+    if dias_asignado < 1: dias_asignado = 1
+    
+    resumen_especifico = ""
+    dias_registrados = 0
+    
+    try:
+        if modulo_clave == 'sueno':
+            cursor.execute("SELECT fecha, hora_dormi, hora_desperto FROM registros_sueno WHERE paciente_id = ?", (patient_id,))
+            rows = cursor.fetchall()
+            fechas = set([r['fecha'] for r in rows])
+            dias_registrados = len(fechas)
+            
+            total_hours = 0
+            count_valid = 0
+            for r in rows:
+                if r['hora_dormi'] and r['hora_desperto']:
+                    try:
+                        h_d = datetime.strptime(r['hora_dormi'], "%H:%M")
+                        h_w = datetime.strptime(r['hora_desperto'], "%H:%M")
+                        diff = (h_w - h_d).total_seconds() / 3600.0
+                        if diff < 0: diff += 24
+                        total_hours += diff
+                        count_valid += 1
+                    except: pass
+            
+            avg = round(total_hours / count_valid, 1) if count_valid > 0 else 0
+            resumen_especifico = f"Promedio de horas dormidas: {avg} horas/noche."
+            
+        elif modulo_clave == 'ansiedad':
+            cursor.execute("SELECT fecha, nivel_ansiedad FROM registros_ansiedad WHERE paciente_id = ?", (patient_id,))
+            rows = cursor.fetchall()
+            fechas = set([r['fecha'] for r in rows])
+            dias_registrados = len(fechas)
+            
+            niveles = [float(r['nivel_ansiedad']) for r in rows if r['nivel_ansiedad'] is not None]
+            avg = round(sum(niveles) / len(niveles), 1) if niveles else 0
+            resumen_especifico = f"Nivel promedio de ansiedad: {avg}/10."
+            
+        elif modulo_clave == 'sobriedad':
+            cursor.execute("SELECT fecha, sobrio FROM registros_sobriedad WHERE paciente_id = ? ORDER BY fecha DESC", (patient_id,))
+            rows = cursor.fetchall()
+            fechas = set([r['fecha'] for r in rows])
+            dias_registrados = len(fechas)
+            
+            streak = 0
+            for r in rows:
+                if r['sobrio'] == 1: streak += 1
+                else: break
+            resumen_especifico = f"Racha actual: {streak} días consecutivos de sobriedad."
+            
+        elif modulo_clave == 'activacion':
+            cursor.execute("SELECT fecha, completada FROM activacion_registros WHERE paciente_id = ?", (patient_id,))
+            rows = cursor.fetchall()
+            fechas = set([r['fecha'] for r in rows])
+            dias_registrados = len(fechas)
+            
+            total = len(rows)
+            completadas = sum([1 for r in rows if r['completada'] == 1])
+            pct = round((completadas / total * 100), 1) if total > 0 else 0
+            resumen_especifico = f"Tasa de cumplimiento: {pct}% ({completadas} de {total} asignadas)."
+            
+        elif modulo_clave == 'adherencia':
+            cursor.execute("SELECT fecha, tomado FROM adherencia_registros WHERE paciente_id = ?", (patient_id,))
+            rows = cursor.fetchall()
+            fechas = set([r['fecha'] for r in rows])
+            dias_registrados = len(fechas)
+            
+            total = len(rows)
+            tomadas = sum([1 for r in rows if r['tomado'] == 1])
+            pct = round((tomadas / total * 100), 1) if total > 0 else 0
+            resumen_especifico = f"Tasa de adherencia: {pct}% ({tomadas} de {total} dosis)."
+            
+        elif modulo_clave == 'ingesta':
+            cursor.execute("SELECT fecha, conductas_json FROM registros_ingesta WHERE paciente_id = ?", (patient_id,))
+            rows = cursor.fetchall()
+            fechas = set([r['fecha'] for r in rows])
+            dias_registrados = len(fechas)
+            
+            conductas_problema = 0
+            for r in rows:
+                try:
+                    c_list = json.loads(r['conductas_json'] or '[]')
+                    conductas_problema += len(c_list)
+                except: pass
+            resumen_especifico = f"Conductas problema reportadas: {conductas_problema} episodios."
+            
+        elif modulo_clave == 'pantalla':
+            cursor.execute("SELECT DATE(fecha_registro) as fecha, tiempo_uso FROM registro_consumo_pantalla WHERE paciente_id = ?", (patient_id,))
+            rows = cursor.fetchall()
+            fechas = set([r['fecha'] for r in rows])
+            dias_registrados = len(fechas)
+            
+            usos = [r['tiempo_uso'] for r in rows if r['tiempo_uso']]
+            from collections import Counter
+            comun = Counter(usos).most_common(1)[0][0] if usos else "N/A"
+            resumen_especifico = f"Tiempo de uso frecuente reportado: {comun}."
+            
+        elif modulo_clave == 'cognitivo':
+            cursor.execute("SELECT fecha, emocion_sensacion FROM registros_cognitivos WHERE paciente_id = ?", (patient_id,))
+            rows = cursor.fetchall()
+            fechas = set([r['fecha'] for r in rows])
+            dias_registrados = len(fechas)
+            
+            emociones = [r['emocion_sensacion'] for r in rows if r['emocion_sensacion']]
+            from collections import Counter
+            comun = Counter(emociones).most_common(1)[0][0] if emociones else "N/A"
+            resumen_especifico = f"Total registros: {len(rows)}. Emoción frecuente: {comun}."
+            
+        else:
+            resumen_especifico = "Resumen no disponible para esta herramienta."
+            
+    except Exception as e:
+        print(f"Error generando resumen para {modulo_clave}: {e}")
+        resumen_especifico = "Error al procesar el resumen."
+
+    return jsonify({
+        'success': True,
+        'dias_asignado': dias_asignado,
+        'dias_registrados': dias_registrados,
+        'resumen': resumen_especifico
+    })
+
+
 # --- RUTAS MIGRADAS AUTOMÁTICAMENTE DE AUDITORÍA ---
 
 @herramientas_bp.route('/api/therapist/modules/report/<string:modulo_clave>', methods=['GET'])
