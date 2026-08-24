@@ -4036,10 +4036,15 @@ function renderPatientsTable(list) {
         const badgeOrigen = p.organizacion_id 
             ? `<span style="display: inline-block; background: #faf4f8; color: #984b80; border: 1px solid #f3e0ed; font-size: 0.72rem; font-weight: 800; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">🏥 ${p.organizacion_nombre || 'Clínica'}</span>`
             : `<span style="display: inline-block; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">👤 Privado</span>`;
+            
+        const estado = p.estado || 'Activo';
+        const badgeEstado = estado === 'De Alta' 
+            ? `<span style="display: inline-block; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">⚪ De Alta</span>`
+            : `<span style="display: inline-block; background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">🟢 Activo</span>`;
 
         tr.innerHTML = `
             <td><strong>${p.cedula || 'N/A'}</strong></td>
-            <td><strong>${p.nombres || ''} ${p.apellidos || ''}</strong> ${badgeOrigen}</td>
+            <td><strong>${p.nombres || ''} ${p.apellidos || ''}</strong> ${badgeOrigen} ${badgeEstado}</td>
             <td>${p.edad || 'N/A'}</td>
             <td>${p.genero || 'N/A'}</td>
             <td>${loc}</td>
@@ -4168,6 +4173,9 @@ function openNewPatientModal() {
     const pkgSess = document.getElementById('p-sesiones-paquete-personalizado');
     if (pkgSess) pkgSess.value = '';
     
+    const pEstado = document.getElementById('p-estado');
+    if (pEstado) pEstado.value = 'Activo';
+    
     if (typeof togglePatientPkgInputs === 'function') togglePatientPkgInputs();
     
     const title = document.getElementById('patient-modal-title');
@@ -4188,9 +4196,11 @@ async function openEditPatientModal(patientId) {
         document.getElementById('patient-form-id').value = p.id;
         document.getElementById('p-nombres').value = p.nombres;
         document.getElementById('p-apellidos').value = p.apellidos;
-        document.getElementById('p-cedula').value = p.cedula;
+        document.getElementById('p-cedula').value = p.cedula || '';
         document.getElementById('p-edad').value = p.edad || '';
         document.getElementById('p-genero').value = p.genero || '';
+        const pEstado = document.getElementById('p-estado');
+        if (pEstado) pEstado.value = p.estado || 'Activo';
         document.getElementById('p-pronombre').value = p.pronombre || '';
         document.getElementById('p-fecha-nac').value = p.fecha_nacimiento || '';
         document.getElementById('p-lugar-nac').value = p.lugar_nacimiento || '';
@@ -4318,6 +4328,7 @@ async function handlePatientSubmit(e) {
         apellidos: document.getElementById('p-apellidos').value,
         cedula: document.getElementById('p-cedula').value,
         edad: document.getElementById('p-edad').value,
+        estado: document.getElementById('p-estado') ? document.getElementById('p-estado').value : 'Activo',
         genero: document.getElementById('p-genero').value,
         pronombre: document.getElementById('p-pronombre').value,
         fecha_nacimiento: document.getElementById('p-fecha-nac').value,
@@ -4374,6 +4385,141 @@ async function handlePatientSubmit(e) {
         }
     } catch (err) {
         alert("Error de conexión al guardar el expediente.");
+    }
+}
+
+function openQuickAddPatientModal() {
+    if (typeof isFeatureBlocked === 'function' && isFeatureBlocked('registro')) {
+        alert("La función de Registro de Pacientes está suspendida por administración.");
+        return;
+    }
+    const form = document.getElementById('quick-add-patient-form');
+    if (form) form.reset();
+    openModal('quick-add-patient-modal');
+}
+
+async function handleQuickAddPatientSubmit(e) {
+    e.preventDefault();
+    const payload = {
+        nombres: document.getElementById('qa-nombres').value,
+        apellidos: document.getElementById('qa-apellidos').value,
+        telefono: document.getElementById('qa-telefono').value,
+        estado: document.getElementById('qa-estado').value,
+        cedula: '', // Registro rápido no requiere cédula
+        edad: '',
+        genero: '',
+        pronombre: '',
+        fecha_nacimiento: '',
+        lugar_nacimiento: '',
+        pais: '',
+        ciudad: '',
+        con_quien_reside: '',
+        email: '',
+        nivel_academico: '',
+        ocupacion: '',
+        estado_civil: '',
+        antecedentes_medicos_personales: '',
+        antecedentes_medicos_familiares: '',
+        antecedentes_psicologicos_personales: '',
+        antecedentes_psicologicos_familiares: '',
+        asistencia_previa_psicologo: '',
+        expectativas: '',
+        motivo_consulta: '',
+        farmacologia: '',
+        contacto_emergencia_nombre: '',
+        contacto_emergencia_parentesco: '',
+        diagnostico: '',
+        costo_personalizado: '',
+        moneda_personalizada: 'USD',
+        costo_paquete_personalizado: '',
+        sesiones_paquete_personalizado: '',
+        organizacion_id: 'null'
+    };
+    
+    try {
+        const res = await fetch('/api/patients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            alert("Consultante agregado al registro rápido con éxito.");
+            closeModal('quick-add-patient-modal');
+            loadPatients();
+            if (activeView === 'dashboard') {
+                loadDashboardStats();
+            }
+        } else {
+            alert(data.error);
+        }
+    } catch (err) {
+        alert("Error de conexión al guardar el registro rápido.");
+    }
+}
+
+function insertBroadcastTag(tag) {
+    const textarea = document.getElementById('broadcast-message');
+    if (!textarea) return;
+    
+    const startPos = textarea.selectionStart;
+    const endPos = textarea.selectionEnd;
+    
+    textarea.value = textarea.value.substring(0, startPos)
+        + tag
+        + textarea.value.substring(endPos, textarea.value.length);
+        
+    textarea.focus();
+    textarea.selectionStart = startPos + tag.length;
+    textarea.selectionEnd = startPos + tag.length;
+}
+
+async function handleWhatsAppBroadcastSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('broadcast-submit-btn');
+    const statusMsg = document.getElementById('broadcast-status-msg');
+    
+    const target = document.getElementById('broadcast-destinatarios').value;
+    const message = document.getElementById('broadcast-message').value;
+    
+    if (!confirm("¿Está seguro de enviar este mensaje masivo? El envío se hará en segundo plano para evitar bloqueos por SPAM.")) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Enviando...';
+    statusMsg.textContent = "Preparando envío...";
+    statusMsg.style.color = "#0284c7";
+    
+    try {
+        const res = await fetch('/api/whatsapp/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: target, message: message })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            statusMsg.textContent = data.success;
+            statusMsg.style.color = "#10b981";
+            setTimeout(() => {
+                closeModal('whatsapp-broadcast-modal');
+                const form = document.getElementById('whatsapp-broadcast-form');
+                if (form) form.reset();
+                statusMsg.textContent = "";
+            }, 3000);
+        } else {
+            statusMsg.textContent = data.error;
+            statusMsg.style.color = "#ef4444";
+            alert(data.error);
+        }
+    } catch (err) {
+        statusMsg.textContent = "Error de conexión";
+        statusMsg.style.color = "#ef4444";
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🚀 Iniciar Difusión';
     }
 }
 
@@ -4489,7 +4635,11 @@ async function openSummaryModal(patientId) {
                     <ul class="summary-details-list">
                         <li><strong>Código Consultante:</strong> #P-${p.id}</li>
                         <li><strong>Cédula:</strong> ${p.cedula}</li>
-                        <li><strong>Nombre Completo:</strong> ${p.nombres} ${p.apellidos}</li>
+                        <li><strong>Nombre Completo:</strong> ${p.nombres} ${p.apellidos} ${
+                            (p.estado || 'Activo') === 'De Alta' 
+                                ? `<span style="display: inline-block; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px; vertical-align: middle;">⚪ De Alta</span>`
+                                : `<span style="display: inline-block; background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px; vertical-align: middle;">🟢 Activo</span>`
+                        }</li>
                         <li><strong>Teléfono:</strong> ${p.telefono || 'N/A'} ${p.telefono ? `<a href="${getWhatsAppLink(p.telefono, `Hola ${p.nombres}, te escribimos de Mi Consultorio.`)}" target="_blank" style="margin-left:0.5rem; text-decoration:none; font-size:0.75rem; background:#25D366; color:white; padding:0.15rem 0.45rem; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:0.2rem;">💬 WhatsApp</a>` : ''}</li>
                         <li><strong>Correo:</strong> ${p.email || 'N/A'}</li>
                         <li><strong>Género / Pronombre:</strong> ${p.genero || 'N/A'} / ${p.pronombre || 'N/A'}</li>

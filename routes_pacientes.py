@@ -216,7 +216,7 @@ def get_patients():
         query = "%" + search + "%"
         if psic_id is not None:
             cursor.execute("""
-                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, o.nombre as organizacion_nombre 
+                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
                 FROM pacientes p
                 LEFT JOIN organizaciones o ON p.organizacion_id = o.id
                 WHERE (p.psicologo_id = ? OR p.psicologo_id IS NULL) AND (p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)
@@ -224,7 +224,7 @@ def get_patients():
             """, (psic_id, query, query, query))
         else:
             cursor.execute("""
-                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, o.nombre as organizacion_nombre 
+                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
                 FROM pacientes p
                 LEFT JOIN organizaciones o ON p.organizacion_id = o.id
                 WHERE p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?
@@ -233,7 +233,7 @@ def get_patients():
     else:
         if psic_id is not None:
             cursor.execute("""
-                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, o.nombre as organizacion_nombre 
+                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
                 FROM pacientes p
                 LEFT JOIN organizaciones o ON p.organizacion_id = o.id
                 WHERE (p.psicologo_id = ? OR p.psicologo_id IS NULL) 
@@ -241,7 +241,7 @@ def get_patients():
             """, (psic_id,))
         else:
             cursor.execute("""
-                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, o.nombre as organizacion_nombre 
+                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
                 FROM pacientes p
                 LEFT JOIN organizaciones o ON p.organizacion_id = o.id
                 ORDER BY p.nombres ASC, p.apellidos ASC
@@ -289,14 +289,16 @@ def create_patient():
     
     nombres = data.get('nombres')
     apellidos = data.get('apellidos')
-    cedula = data.get('cedula')
-    if not nombres or not apellidos or not cedula:
-        return jsonify({'error': 'Nombres, Apellidos y Cédula son campos obligatorios.'}), 400
+    cedula = data.get('cedula', '').strip()
+    estado = data.get('estado', 'Activo')
+    if not nombres or not apellidos:
+        return jsonify({'error': 'Nombres y Apellidos son campos obligatorios.'}), 400
         
     psic_id = session.get('user_id', 1)
-    cursor.execute("SELECT id FROM pacientes WHERE cedula = ? AND psicologo_id = ?", (cedula, psic_id))
-    if cursor.fetchone() is not None:
-        return jsonify({'error': f'Ya tienes un paciente registrado con la cédula {cedula}.'}), 400
+    if cedula:
+        cursor.execute("SELECT id FROM pacientes WHERE cedula = ? AND psicologo_id = ?", (cedula, psic_id))
+        if cursor.fetchone() is not None:
+            return jsonify({'error': f'Ya tienes un paciente registrado con la cédula {cedula}.'}), 400
 
     costo_personalizado = data.get('costo_personalizado')
     if costo_personalizado == '' or costo_personalizado is None:
@@ -327,12 +329,17 @@ def create_patient():
         except: org_id_val = None
 
     try:
-        base_username = cedula
-        cursor.execute("SELECT id FROM pacientes WHERE username = ?", (base_username,))
-        if cursor.fetchone() is not None:
-            base_username = f"{cedula}_{psic_id}"
-        username = base_username
-        password_hash = generate_password_hash(cedula)
+        import time
+        if cedula:
+            base_username = cedula
+            cursor.execute("SELECT id FROM pacientes WHERE username = ?", (base_username,))
+            if cursor.fetchone() is not None:
+                base_username = f"{cedula}_{psic_id}"
+            username = base_username
+            password_hash = generate_password_hash(cedula)
+        else:
+            username = f"user_{int(time.time())}_{psic_id}"
+            password_hash = ""
         
         cursor.execute("""
             INSERT INTO pacientes (
@@ -344,8 +351,8 @@ def create_patient():
                 asistencia_previa_psicologo, motivo_consulta, expectativas, farmacologia,
                 contacto_emergencia_nombre, contacto_emergencia_parentesco, diagnostico,
                 username, password_hash, psicologo_id, costo_personalizado, moneda_personalizada,
-                costo_paquete_personalizado, sesiones_paquete_personalizado, organizacion_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                costo_paquete_personalizado, sesiones_paquete_personalizado, organizacion_id, estado
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             nombres, apellidos, cedula, data.get('pronombre'), data.get('genero'), data.get('edad'),
             data.get('lugar_nacimiento'), data.get('fecha_nacimiento'), data.get('residencia_actual'),
@@ -357,7 +364,7 @@ def create_patient():
             data.get('asistencia_previa_psicologo'), data.get('motivo_consulta'), data.get('expectativas'),
             data.get('farmacologia'), data.get('contacto_emergencia_nombre'), data.get('contacto_emergencia_parentesco'),
             data.get('diagnostico'), username, password_hash, session.get('user_id'), costo_personalizado, moneda_personalizada,
-            costo_paquete_personalizado, sesiones_paquete_personalizado, org_id_val
+            costo_paquete_personalizado, sesiones_paquete_personalizado, org_id_val, estado
         ))
         db.commit()
         patient_id = cursor.lastrowid
@@ -381,14 +388,16 @@ def update_patient(patient_id):
     
     nombres = data.get('nombres')
     apellidos = data.get('apellidos')
-    cedula = data.get('cedula')
-    if not nombres or not apellidos or not cedula:
-        return jsonify({'error': 'Nombres, Apellidos y Cédula son obligatorios.'}), 400
+    cedula = data.get('cedula', '').strip()
+    estado = data.get('estado', 'Activo')
+    if not nombres or not apellidos:
+        return jsonify({'error': 'Nombres y Apellidos son obligatorios.'}), 400
         
     psic_id = session.get('user_id', 1)
-    cursor.execute("SELECT id FROM pacientes WHERE cedula = ? AND psicologo_id = ? AND id != ?", (cedula, psic_id, patient_id))
-    if cursor.fetchone() is not None:
-        return jsonify({'error': f'Ya tienes otro paciente registrado con la cédula {cedula}.'}), 400
+    if cedula:
+        cursor.execute("SELECT id FROM pacientes WHERE cedula = ? AND psicologo_id = ? AND id != ?", (cedula, psic_id, patient_id))
+        if cursor.fetchone() is not None:
+            return jsonify({'error': f'Ya tienes otro paciente registrado con la cédula {cedula}.'}), 400
         
     costo_personalizado = data.get('costo_personalizado')
     if costo_personalizado == '' or costo_personalizado is None:
@@ -431,7 +440,7 @@ def update_patient(patient_id):
                 contacto_emergencia_nombre = ?, contacto_emergencia_parentesco = ?, diagnostico = ?,
                 costo_personalizado = ?, moneda_personalizada = ?,
                 costo_paquete_personalizado = ?, sesiones_paquete_personalizado = ?,
-                organizacion_id = ?
+                organizacion_id = ?, estado = ?
             WHERE id = ?
         """, (
             nombres, apellidos, cedula, data.get('pronombre'), data.get('genero'), data.get('edad'),
@@ -444,7 +453,7 @@ def update_patient(patient_id):
             data.get('asistencia_previa_psicologo'), data.get('motivo_consulta'), data.get('expectativas'),
             data.get('farmacologia'), data.get('contacto_emergencia_nombre'), data.get('contacto_emergencia_parentesco'),
             data.get('diagnostico'), costo_personalizado, moneda_personalizada,
-            costo_paquete_personalizado, sesiones_paquete_personalizado, org_id_val, patient_id
+            costo_paquete_personalizado, sesiones_paquete_personalizado, org_id_val, estado, patient_id
         ))
         db.commit()
         

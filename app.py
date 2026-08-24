@@ -768,6 +768,8 @@ def init_db():
     cursor.execute("PRAGMA table_info(pacientes)")
     cols_pac = [row[1] for row in cursor.fetchall()]
     if cols_pac:
+        if 'estado' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN estado TEXT DEFAULT 'Activo'")
         if 'telefono' not in cols_pac:
             cursor.execute("ALTER TABLE pacientes ADD COLUMN telefono TEXT")
         if 'email' not in cols_pac:

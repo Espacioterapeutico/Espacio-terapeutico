@@ -1764,7 +1764,10 @@
                         </div>
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                             <button class="btn btn-secondary" onclick="openNewSessionModal()" style="font-weight: 700; padding: 0.55rem 1.1rem; border-radius: var(--radius-sm);">
-                                ✍️ + Evolución Libre
+                                + Evolución Libre
+                            </button>
+                            <button class="btn btn-secondary" onclick="openQuickAddPatientModal()" style="font-weight: 700; padding: 0.55rem 1.1rem; border-radius: var(--radius-sm); background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc;">
+                                + Registro Rápido
                             </button>
                             <button class="btn btn-primary" onclick="openNewPatientModal()" style="font-weight: 700; padding: 0.55rem 1.1rem; border-radius: var(--radius-sm);">
                                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1775,8 +1778,8 @@
 
                     <!-- Menú de Sub-pestañas Horizontales (Pills estilo Agenda) -->
                     <div class="sub-nav-tabs mt-4 mb-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                        <button type="button" id="exp-tab-evoluciones" class="btn btn-sm btn-primary" onclick="switchExpedientesTab('evoluciones')" style="font-weight: 600; padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">✍️ Evoluciones & Notas Clínicas</button>
-                        <button type="button" id="exp-tab-historias" class="btn btn-sm btn-secondary" onclick="switchExpedientesTab('historias')" style="font-weight: 600; padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">📋 Historias Clínicas</button>
+                        <button type="button" id="exp-tab-evoluciones" class="btn btn-sm btn-primary" onclick="switchExpedientesTab('evoluciones')" style="font-weight: 600; padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Evoluciones & Notas Clínicas</button>
+                        <button type="button" id="exp-tab-historias" class="btn btn-sm btn-secondary" onclick="switchExpedientesTab('historias')" style="font-weight: 600; padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Historias Clínicas</button>
                     </div>
 
                     <!-- Pestaña 1: Evoluciones & Notas Clínicas -->
@@ -2583,7 +2586,8 @@
                                     </div>
                                 </div>
                                 <div style="display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="triggerManualCronReminders()" style="border: 1.5px solid var(--primary-color); font-weight: 600;">🚀 Ejecutar Recordatorios Ahora</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="triggerManualCronReminders()" style="border: 1.5px solid var(--primary-color); font-weight: 600;">🚀 Ejecutar Recordatorios</button>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('whatsapp-broadcast-modal')" style="background: #128C7E; border: none; font-weight: 600;">📢 Mensaje de Difusión</button>
                                     <button type="button" class="btn btn-secondary btn-sm" onclick="checkWhatsAppQRStatus(false)">🔄 Verificar Estado</button>
                                 </div>
                             </div>
@@ -5188,6 +5192,16 @@
                             </div>
                         </div>
 
+                        <div class="form-row" style="background: #f8fafc; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; margin-bottom: 1.25rem;">
+                            <div class="form-group col-12" style="margin-bottom: 0;">
+                                <label for="p-estado" style="font-weight: 800; color: #0f172a;">🏷️ Estado del Paciente</label>
+                                <select id="p-estado" class="form-control" style="font-weight: 700;">
+                                    <option value="Activo">🟢 Activo</option>
+                                    <option value="De Alta">⚪ De Alta (Alta Voluntaria / Finalizado)</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div class="form-row">
                             <div class="form-group col-6">
                                 <label for="p-nombres">Nombres *</label>
@@ -5200,8 +5214,8 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group col-4">
-                                <label for="p-cedula">Cédula / Identificación *</label>
-                                <input type="text" id="p-cedula" required>
+                                <label for="p-cedula">Cédula / Identificación</label>
+                                <input type="text" id="p-cedula">
                             </div>
                             <div class="form-group col-4">
                                 <label for="p-edad">Edad</label>
@@ -7419,5 +7433,93 @@
 
     <script src="/static/js/app.js?v={{ asset_v or '111' }}"></script>
     <script src="/static/js/tests_module.js?v={{ asset_v or '111' }}"></script>
+    <!-- Modal Registro Rápido -->
+    <div id="quick-add-patient-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px; border-radius: 12px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #702e5e, #984b80); color: white; border-radius: 12px 12px 0 0; padding: 1.25rem;">
+                <h3 style="margin: 0; font-family: var(--font-title); font-size: 1.25rem;">Agregar Registro Rápido</h3>
+                <span class="close-modal" onclick="closeModal('quick-add-patient-modal')" style="color: white; opacity: 0.8; font-size: 1.5rem;">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 1.25rem;">
+                    Agregue un paciente solo con sus datos de contacto para tenerlo registrado y enviarle mensajes. Luego puede completar su historia clínica.
+                </p>
+                <form id="quick-add-patient-form" onsubmit="handleQuickAddPatientSubmit(event)">
+                    <div class="form-group mb-3">
+                        <label for="qa-nombres" style="font-weight: 700;">Nombres *</label>
+                        <input type="text" id="qa-nombres" class="form-control" required placeholder="Ej. Juan Pérez">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="qa-apellidos" style="font-weight: 700;">Apellidos *</label>
+                        <input type="text" id="qa-apellidos" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="qa-telefono" style="font-weight: 700;">Número de Teléfono</label>
+                        <input type="text" id="qa-telefono" class="form-control" placeholder="Ej. +593987654321">
+                    </div>
+                    <div class="form-group mb-4" style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <label for="qa-estado" style="font-weight: 700; color: #0f172a;">Estado</label>
+                        <select id="qa-estado" class="form-control">
+                            <option value="Activo">🟢 Activo</option>
+                            <option value="De Alta">⚪ De Alta</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('quick-add-patient-modal')" style="border-radius: 8px;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" style="background: #702e5e; border: none; border-radius: 8px; font-weight: 700;">Guardar Registro</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal WhatsApp Broadcast -->
+    <div id="whatsapp-broadcast-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px; border-radius: 12px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #128C7E, #25D366); color: white; border-radius: 12px 12px 0 0; padding: 1.25rem;">
+                <h3 style="margin: 0; font-family: var(--font-title); font-size: 1.25rem;">📢 Mensaje de Difusión (WhatsApp)</h3>
+                <span class="close-modal" onclick="closeModal('whatsapp-broadcast-modal')" style="color: white; opacity: 0.8; font-size: 1.5rem;">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 1.25rem;">
+                    Envía un mensaje masivo a tus pacientes. El envío se realizará en segundo plano respetando las pausas para evitar bloqueos.
+                </p>
+                <form id="whatsapp-broadcast-form" onsubmit="handleWhatsAppBroadcastSubmit(event)">
+                    <div class="form-group mb-4">
+                        <label for="broadcast-destinatarios" style="font-weight: 700;">Destinatarios</label>
+                        <select id="broadcast-destinatarios" class="form-control" style="font-weight: 600;">
+                            <option value="all">👥 Todos los Pacientes Registrados</option>
+                            <option value="activos">🟢 Solo Pacientes Activos</option>
+                            <option value="alta">⚪ Solo Pacientes De Alta</option>
+                            <option value="sin_historia">Solo Registro Rápido (Sin Historia Clínica)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label style="font-weight: 700; display: flex; justify-content: space-between; align-items: flex-end;">
+                            Mensaje
+                            <div class="format-buttons" style="display: flex; gap: 0.25rem;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertBroadcastTag('{nombre}')" style="font-size: 0.75rem; padding: 2px 6px;">{Nombre}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertBroadcastTag('{apellido}')" style="font-size: 0.75rem; padding: 2px 6px;">{Apellido}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertBroadcastTag('*')" style="font-size: 0.75rem; padding: 2px 6px; font-weight: bold;">N</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertBroadcastTag('_')" style="font-size: 0.75rem; padding: 2px 6px; font-style: italic;">K</button>
+                            </div>
+                        </label>
+                        <textarea id="broadcast-message" class="form-control" rows="6" required placeholder="Hola {nombre}, te recordamos que..."></textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem;">
+                        <span id="broadcast-status-msg" style="font-size: 0.85rem; color: #64748b; font-weight: 600;"></span>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('whatsapp-broadcast-modal')" style="border-radius: 8px;">Cancelar</button>
+                            <button type="submit" id="broadcast-submit-btn" class="btn btn-primary" style="background: #128C7E; border: none; border-radius: 8px; font-weight: 700;">
+                                🚀 Iniciar Difusión
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

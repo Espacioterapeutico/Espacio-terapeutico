@@ -1617,6 +1617,70 @@ def whatsapp_webhook():
 
     return jsonify({'status': 'processed'}), 200
 
+@notificaciones_bp.route('/api/whatsapp/broadcast', methods=['POST'])
+@login_required
+def whatsapp_broadcast():
+    data = request.json or {}
+    target = data.get('target', 'all')
+    message = data.get('message', '').strip()
+    
+    if not message:
+        return jsonify({'error': 'El mensaje no puede estar vacío.'}), 400
+        
+    user_id = session.get('user_id') or 1
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Dependiendo del target, extraemos los pacientes que tengan teléfono
+    if target == 'activos':
+        cursor.execute("SELECT nombres, apellidos, telefono FROM pacientes WHERE telefono IS NOT NULL AND telefono != '' AND (estado = 'Activo' OR estado IS NULL)")
+    elif target == 'alta':
+        cursor.execute("SELECT nombres, apellidos, telefono FROM pacientes WHERE telefono IS NOT NULL AND telefono != '' AND estado = 'De Alta'")
+    elif target == 'sin_historia':
+        cursor.execute("SELECT nombres, apellidos, telefono FROM pacientes WHERE telefono IS NOT NULL AND telefono != '' AND (cedula = '' OR cedula IS NULL)")
+    else: # 'all'
+        cursor.execute("SELECT nombres, apellidos, telefono FROM pacientes WHERE telefono IS NOT NULL AND telefono != ''")
+        
+    patients = [dict(r) for r in cursor.fetchall()]
+    
+    if not patients:
+        return jsonify({'error': 'No se encontraron pacientes para este filtro que tengan un número de teléfono.'}), 404
+        
+    # Función en segundo plano
+    def broadcast_task(patients_list, msg_template, psic_id):
+        import time
+        from routes_herramientas import clean_phone_number
+        from flask import current_app
+        print(f"[BROADCAST] Iniciando envío masivo a {len(patients_list)} pacientes...", flush=True)
+        for p in patients_list:
+            try:
+                phone = clean_phone_number(p['telefono'])
+                if not phone:
+                    continue
+                    
+                nombre = p['nombres'] or ''
+                apellido = p['apellidos'] or ''
+                
+                # Reemplazar tags
+                personal_msg = msg_template.replace('{nombre}', nombre).replace('{apellido}', apellido).replace('{Nombre}', nombre).replace('{Apellido}', apellido)
+                
+                # Asumiendo make_wa_http_request ya existe en este archivo o es global.
+                r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': personal_msg}, timeout=15, user_id=psic_id)
+                print(f"[BROADCAST] Enviado a {nombre} ({phone}): {r.status_code if r else 'Fallido'}")
+            except Exception as e:
+                print(f"[BROADCAST] Error enviando a {p.get('nombres')}: {e}")
+                
+            # Pausa para evitar SPAM y baneos
+            time.sleep(4)
+            
+        print("[BROADCAST] Envío masivo completado.", flush=True)
+        
+    import threading
+    t = threading.Thread(target=broadcast_task, args=(patients, message, user_id), daemon=True)
+    t.start()
+    
+    return jsonify({'success': f'Difusión iniciada. El mensaje se enviará progresivamente a {len(patients)} pacientes en segundo plano.'})
 
 # --- SCHEDULER DE WHATSAPP EN SEGUNDO PLANO (AUTOMÁTICO) ---
 _wa_cron_thread_started = False
