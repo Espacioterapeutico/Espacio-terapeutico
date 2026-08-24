@@ -136,10 +136,20 @@ def get_db():
     """Obtiene la conexión a la base de datos desde el contexto global g de Flask."""
     db = getattr(g, '_database', None)
     if db is None:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+        import sys
+        if getattr(sys, 'frozen', False):
+            base_dir = os.path.dirname(sys.executable)
+        else:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
         db_path = os.path.join(base_dir, 'clinica.db')
         db = g._database = sqlite3.connect(db_path, timeout=30.0)
         db.row_factory = sqlite3.Row
+        
+        try:
+            db.execute("ALTER TABLE pacientes ADD COLUMN estado TEXT DEFAULT 'Activo'")
+            db.commit()
+        except:
+            pass
     return db
 
 def login_required(f):
