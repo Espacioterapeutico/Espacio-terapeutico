@@ -327,7 +327,7 @@ def manage_sessions():
         fecha_pago = data.get('fecha_pago') or fecha
 
         if agenda_id:
-            if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada', 'Exonerada', 'Exonerar pago (Gratuita)']:
+            if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada', 'Exonerada', 'Exonerar', 'Exonerar pago (Gratuita)']:
                 cursor.execute("""
                     UPDATE agenda_finanzas 
                     SET estado_pago = 'Paga', monto = ?, moneda = ?, metodo_pago = ?, referencia = ?, fecha_pago = ?
@@ -376,7 +376,7 @@ def manage_sessions():
         else:
             # Crear entrada en agenda_finanzas si no venía de una cita pre-existente
             estado_pago = 'Pendiente'
-            if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada', 'Exonerada', 'Exonerar pago (Gratuita)']:
+            if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada', 'Exonerada', 'Exonerar', 'Exonerar pago (Gratuita)']:
                 estado_pago = 'Paga'
             elif tipo_liq in ['Prepagada', 'Descontar de saldo prepagado', 'Ya prepagada en paquete']:
                 estado_pago = 'Prepagada'
