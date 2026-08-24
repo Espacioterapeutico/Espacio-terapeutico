@@ -48,7 +48,9 @@ function getUserAuthDir(userId) {
 }
 
 // Persistencia remota en BD Flask para sobrevivir a reinicios/despliegues de servidores efímeros
-async function syncSessionToFlask(userId, userAuthDir) {
+const _syncDebounceMap = {};
+
+async function _syncSessionToFlaskActual(userId, userAuthDir) {
     try {
         if (!fs.existsSync(userAuthDir)) return;
         const fileNames = fs.readdirSync(userAuthDir);
@@ -66,6 +68,16 @@ async function syncSessionToFlask(userId, userAuthDir) {
     } catch(e) {
         // Silencioso
     }
+}
+
+function syncSessionToFlask(userId, userAuthDir) {
+    if (_syncDebounceMap[userId]) {
+        clearTimeout(_syncDebounceMap[userId]);
+    }
+    _syncDebounceMap[userId] = setTimeout(() => {
+        _syncSessionToFlaskActual(userId, userAuthDir);
+        delete _syncDebounceMap[userId];
+    }, 15000); // 15 segundos de debounce
 }
 
 async function restoreSessionFromFlask(userId, userAuthDir) {
@@ -332,6 +344,10 @@ app.post('/send', async (req, res) => {
             }
         } catch (eWa) {
             console.warn(`[User ${userId}] ADVERTENCIA en onWhatsApp check:`, eWa.message);
+        }
+
+        if (!session.sock.ws || !session.sock.ws.isOpen) {
+            return res.status(400).json({ error: `Socket cerrado o zombi. Intente de nuevo en unos segundos.` });
         }
 
         await session.sock.sendMessage(targetJid, { text: text });

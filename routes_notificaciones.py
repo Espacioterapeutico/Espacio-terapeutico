@@ -215,7 +215,7 @@ def _start_wa_keepalive_thread():
     t = threading.Thread(target=_keepalive_loop, daemon=True)
     t.start()
 
-def make_wa_http_request(method, endpoint, json_data=None, timeout=5, user_id=None):
+def make_wa_http_request(method, endpoint, json_data=None, timeout=35, user_id=None):
     import requests
     _start_wa_keepalive_thread()
     url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/{endpoint.lstrip('/')}"
@@ -236,18 +236,12 @@ def make_wa_http_request(method, endpoint, json_data=None, timeout=5, user_id=No
         if 'user_id' not in json_data:
             json_data['user_id'] = user_id
 
-    try:
-        s = requests.Session()
-        s.trust_env = False
-        if method.upper() == 'GET':
-            return s.get(url, params=params, headers=headers, timeout=timeout)
-        else:
-            return s.post(url, json=json_data, params=params, headers=headers, timeout=timeout)
-    except Exception:
-        if method.upper() == 'GET':
-            return requests.get(url, params=params, headers=headers, timeout=timeout)
-        else:
-            return requests.post(url, json=json_data, params=params, headers=headers, timeout=timeout)
+    s = requests.Session()
+    s.trust_env = False
+    if method.upper() == 'GET':
+        return s.get(url, params=params, headers=headers, timeout=timeout)
+    else:
+        return s.post(url, json=json_data, params=params, headers=headers, timeout=timeout)
 
 @notificaciones_bp.route('/api/whatsapp/sync-session', methods=['GET', 'POST', 'DELETE'])
 def handle_whatsapp_session_sync():
@@ -1317,6 +1311,10 @@ def get_whatsapp_queue_status():
                     pipeline_label = '📥 Pendiente Reagendar'
                     priority = 4
 
+            # Ocultar del historial si es una cita pasada (menor a hoy) y ya está en estado final
+            if fecha_cita < today_str and (pipeline_status in ['detenido_manual', 'cancelado', 'completada', 'reagendar_enviado', 'enviado_rec']):
+                continue
+
             queue.append({
                 'cita_id': r['id'],
                 'paciente_nombre': pat_name,
@@ -1430,6 +1428,10 @@ def get_whatsapp_queue_status():
                         pipeline_label = '⏳ Recordatorio Herramienta (08:00 PM)'
                     priority = 1
                     can_cancel = True
+
+                # Ocultar del historial si es de un día anterior a hoy y ya está en estado final
+                if tr['fecha_programada'] < today_str and (pipeline_status in ['detenido_manual', 'completado']):
+                    continue
 
                 queue.append({
                     'cita_id': f"tool_{tr['id']}",
