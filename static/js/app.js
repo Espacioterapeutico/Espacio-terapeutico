@@ -7926,7 +7926,7 @@ function togglePrepaymentCheckbox(checked) {
 }
 
 function toggleSessionFinanceFields(status) {
-    const finSection = document.getElementById('s-finance-fields') || document.getElementById('session-finance-section');
+    const finSection = document.getElementById('s-finance-section') || document.getElementById('session-finance-section') || document.getElementById('s-finance-fields');
     const selectLiq = document.getElementById('s-tipo-liq');
     if (status === 'Cancelada con aviso' || status === 'Reprogramada') {
         if (finSection) finSection.style.display = 'none';
