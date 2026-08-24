@@ -11265,6 +11265,20 @@ function renderSuperadminTherapistsTable() {
     renderSuperadminPaginationControls(totalFiltered, startIndex, endIndex, totalPages);
 }
 
+async function toggleTherapistDirectorio(userId) {
+    if (!confirm('¿Estás seguro de que deseas cambiar la visibilidad de este psicólogo en el directorio?')) return;
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/toggle-directorio`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al cambiar visibilidad.');
+        alert('✅ ' + data.success);
+        loadSuperadminData();
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+window.toggleTherapistDirectorio = toggleTherapistDirectorio;
+
 function toggleTherapistAccordion(userId, sectionTarget) {
     const targetRow = document.getElementById(`perm-row-${userId}`);
     if (!targetRow) return;
