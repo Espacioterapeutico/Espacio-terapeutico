@@ -23163,7 +23163,7 @@ async function showPatientToolSummary(patientId, toolKey, patientName) {
         if (daysAssignedEl) daysAssignedEl.innerText = '...';
         if (metricEl) metricEl.innerText = 'Cargando métrica...';
 
-        showModal('tool-summary-modal');
+        openModal('tool-summary-modal');
 
         const res = await fetch(`/api/therapist/modules/summary/${toolKey}?patient_id=${patientId}`);
         const data = await res.json();
