@@ -8764,11 +8764,12 @@ async function markNotificationAsRead(id, link) {
         loadNotifications();
         
         if (link) {
-            if (link === '#equipo' || link === 'equipo' || link === '#ajustes' || link === 'ajustes') {
+            let cleanLink = link.replace(/^\/?#/, '');
+            if (cleanLink === 'equipo' || cleanLink === 'ajustes') {
                 if (typeof switchView === 'function') switchView('settings');
                 if (typeof switchSettingsTab === 'function') switchSettingsTab('equipo');
             } else {
-                if (typeof switchView === 'function') switchView(link);
+                if (typeof switchView === 'function') switchView(cleanLink);
             }
         }
     } catch (err) {
