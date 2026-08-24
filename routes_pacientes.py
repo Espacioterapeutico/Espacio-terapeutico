@@ -625,7 +625,17 @@ def patient_login():
             'success': 'Primer acceso detectado. Requiere configuración.',
             'first_login': True,
             'patient_id': patient['id'],
-            'username': patient['username'] or patient['cedula']
+            'username': patient['username'] or patient['cedula'],
+            'patient_data': {
+                'nombres': patient['nombres'] or '',
+                'apellidos': patient['apellidos'] or '',
+                'cedula': patient['cedula'] or '',
+                'fecha_nacimiento': patient['fecha_nacimiento'] or '',
+                'pais': patient['pais'] or '',
+                'ciudad': patient['ciudad'] or '',
+                'telefono': patient['telefono'] or '',
+                'email': patient['email'] or ''
+            }
         })
     
     return jsonify({

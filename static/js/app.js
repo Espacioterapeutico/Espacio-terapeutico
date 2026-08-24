@@ -1496,7 +1496,7 @@ async function handleAuthSubmit(e) {
                 
                 if (resPatient.ok && dataPatient) {
                     if (dataPatient.first_login) {
-                        showPatientWizard(dataPatient.patient_id, dataPatient.username);
+                        showPatientWizard(dataPatient.patient_id, dataPatient.username, dataPatient.patient_data);
                     } else {
                         showPatientLayout(dataPatient.username, dataPatient.patient_id);
                     }
@@ -2030,7 +2030,7 @@ function showPatientLayout(username, patientId) {
     hideLoadingScreen();
 }
 
-async function showPatientWizard(patientId, username) {
+async function showPatientWizard(patientId, username, patientData = null) {
     sessionStorage.setItem('patient_id', patientId);
     sessionStorage.setItem('patient_username', username);
     sessionStorage.setItem('role', 'paciente');
@@ -2045,17 +2045,29 @@ async function showPatientWizard(patientId, username) {
     document.getElementById('wizard-patient-id').value = patientId;
     document.getElementById('wiz-username').value = username;
 
+    // Helper para asignar valor si existe el elemento
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined && val !== null && val !== '') el.value = val;
+    };
+
+    if (patientData) {
+        setVal('wiz-nombres', patientData.nombres);
+        setVal('wiz-apellidos', patientData.apellidos);
+        setVal('wiz-cedula', patientData.cedula || username); // Usar username si cedula no viene, ya que suele ser la cedula
+        setVal('wiz-fecha-nac', patientData.fecha_nacimiento);
+        setVal('wiz-pais', patientData.pais);
+        setVal('wiz-ciudad', patientData.ciudad);
+        setVal('wiz-telefono', patientData.telefono);
+        setVal('wiz-email', patientData.email);
+        if (typeof wizCalculateAge === 'function') wizCalculateAge();
+    }
+
     try {
         const res = await fetch('/api/patient/portal-data');
         if (res.ok) {
             const data = await res.json();
             
-            // Helper para asignar valor si existe el elemento
-            const setVal = (id, val) => {
-                const el = document.getElementById(id);
-                if (el && val !== undefined && val !== null) el.value = val;
-            };
-
             // Personales
             setVal('wiz-pronombre', data.pronombre);
             setVal('wiz-genero', data.genero);
