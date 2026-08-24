@@ -2631,11 +2631,10 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
     return reminders_sent
 
 _last_cleanup_timestamp = 0
-
-@app.before_request
 import threading
 _cleanup_lock = threading.Lock()
 
+@app.before_request
 def before_request_cleanup():
     global _last_cleanup_timestamp
     # Evitar ejecutar en llamadas de archivos estáticos
