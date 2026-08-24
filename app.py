@@ -1748,6 +1748,7 @@ def auto_send_appointment_reminders(db):
               AND af.confirmada = 1
               AND af.estado_pago NOT LIKE 'Cancelada%'
               AND af.estado_pago != 'Reprogramada'
+              AND (af.control_uso IS NULL OR af.control_uso != 'Consumida')
         """, (today_str,))
         
         today_appts = cursor.fetchall()
@@ -2632,18 +2633,25 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
 _last_cleanup_timestamp = 0
 
 @app.before_request
+import threading
+_cleanup_lock = threading.Lock()
+
 def before_request_cleanup():
     global _last_cleanup_timestamp
     # Evitar ejecutar en llamadas de archivos estáticos
     if request.path.startswith('/static/'):
         return
-    import time
-    now_ts = time.time()
-    if now_ts - _last_cleanup_timestamp < 60:
-        return
-    _last_cleanup_timestamp = now_ts
-
+        
+    if not _cleanup_lock.acquire(blocking=False):
+        return  # Alguien más ya está ejecutando esto
+        
     try:
+        import time
+        now_ts = time.time()
+        if now_ts - _last_cleanup_timestamp < 60:
+            return
+        _last_cleanup_timestamp = now_ts
+
         db = get_db()
         auto_cancel_unconfirmed_sessions(db)
         auto_send_appointment_reminders(db)
@@ -2653,6 +2661,8 @@ def before_request_cleanup():
         auto_check_subscription_expiration_reminders(db)
     except Exception as e_bg:
         print("Aviso en ejecutor en segundo plano before_request_cleanup:", e_bg)
+    finally:
+        _cleanup_lock.release()
 
 def auto_settle_patient_debts(db, patient_id):
     if not patient_id:
