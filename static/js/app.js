@@ -4039,8 +4039,8 @@ function renderPatientsTable(list) {
             
         const estado = p.estado || 'Activo';
         const badgeEstado = estado === 'De Alta' 
-            ? `<span style="display: inline-block; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">⚪ De Alta</span>`
-            : `<span style="display: inline-block; background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">🟢 Activo</span>`;
+            ? `<span style="display: inline-block; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px; cursor: pointer; transition: opacity 0.2s;" onclick="togglePatientEstado(${p.id})" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="Haz clic para cambiar a Activo">⚪ De Alta</span>`
+            : `<span style="display: inline-block; background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px; cursor: pointer; transition: opacity 0.2s;" onclick="togglePatientEstado(${p.id})" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="Haz clic para dar De Alta">🟢 Activo</span>`;
 
         tr.innerHTML = `
             <td><strong>${p.cedula || 'N/A'}</strong></td>
@@ -4397,6 +4397,26 @@ function openQuickAddPatientModal() {
     if (form) form.reset();
     openModal('quick-add-patient-modal');
 }
+
+async function togglePatientEstado(patientId) {
+    try {
+        const res = await fetch(`/api/patients/${patientId}/toggle-estado`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            // Actualizar la lista en memoria si existe
+            if (typeof patients !== 'undefined') {
+                const p = patients.find(x => x.id === patientId);
+                if (p) p.estado = data.new_estado;
+            }
+            loadPatients(); // Recargar la tabla
+        } else {
+            alert(data.error || "Error al cambiar el estado");
+        }
+    } catch (err) {
+        alert("Error de conexión al cambiar el estado.");
+    }
+}
+window.togglePatientEstado = togglePatientEstado;
 
 async function handleQuickAddPatientSubmit(e) {
     e.preventDefault();

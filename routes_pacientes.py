@@ -477,6 +477,28 @@ def update_patient(patient_id):
     except Exception as e:
         return jsonify({'error': f'Error al actualizar expediente: {str(e)}'}), 500
 
+@pacientes_bp.route('/api/patients/<int:patient_id>/toggle-estado', methods=['POST'])
+@login_required
+def toggle_estado(patient_id):
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = session.get('user_id', 1)
+    
+    cursor.execute("SELECT estado FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (patient_id, psic_id))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Paciente no encontrado'}), 404
+        
+    current_estado = dict(row).get('estado') or 'Activo'
+    new_estado = 'De Alta' if current_estado == 'Activo' else 'Activo'
+    
+    try:
+        cursor.execute("UPDATE pacientes SET estado = ? WHERE id = ?", (new_estado, patient_id))
+        db.commit()
+        return jsonify({'success': True, 'new_estado': new_estado})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @pacientes_bp.route('/api/patients/<int:patient_id>/reset-credentials', methods=['POST'])
 @login_required
 def reset_patient_credentials(patient_id):
