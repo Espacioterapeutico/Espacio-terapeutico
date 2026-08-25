@@ -887,6 +887,7 @@ def send_queue_item_now(item_id):
     recordatorio de consulta o token de herramienta terapéutica).
     """
     user_id = session.get('user_id')
+    from datetime import datetime, timedelta
     db = get_db()
     cursor = db.cursor()
 

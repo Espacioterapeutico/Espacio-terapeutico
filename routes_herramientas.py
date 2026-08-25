@@ -929,10 +929,17 @@ TOOL_NAMES = {
 def clean_phone_number(phone_str):
     if not phone_str:
         return ""
+    phone_str = phone_str.strip()
+    has_plus = phone_str.startswith("+")
     digits = "".join([c for c in phone_str if c.isdigit()])
+    
+    if has_plus:
+        return digits
+        
     if digits.startswith("0"):
         digits = "58" + digits[1:]
-    elif not (digits.startswith("58") or digits.startswith("54") or digits.startswith("57") or digits.startswith("34") or digits.startswith("1")):
+    elif not (digits.startswith("58") or digits.startswith("54") or digits.startswith("57") or digits.startswith("34") or digits.startswith("1") or len(digits) >= 11):
+        # Si no tiene + y no coincide con códigos comunes, pero es muy corto, asume VE
         digits = "58" + digits
     return digits
 
