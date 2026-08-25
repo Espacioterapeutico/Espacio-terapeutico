@@ -14491,7 +14491,7 @@ async function checkWhatsAppQRStatus(wantQR = false) {
 
         // 1. Consultar estado a través del proxy del backend (Flask inyecta la sesión del psicólogo actual)
         try {
-            const resStatus = await fetchWithTimeout('/api/whatsapp/status', { timeout: 18000 });
+            const resStatus = await fetchWithTimeout('/api/whatsapp/status', { timeout: 65000 });
             if (resStatus.ok) {
                 const st = await resStatus.json();
                 if (st && (st.status === 'connected' || st.status === 'connecting' || st.status === 'qr_ready')) {
@@ -14503,7 +14503,7 @@ async function checkWhatsAppQRStatus(wantQR = false) {
         // 2. Consultar código QR específico del psicólogo logueado
         if (!qrData || wantQR || (qrData && qrData.status === 'qr_ready')) {
             try {
-                const resBackendQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 28000 });
+                const resBackendQr = await fetchWithTimeout('/api/whatsapp/qr', { timeout: 65000 });
                 if (resBackendQr.ok) {
                     const d = await resBackendQr.json();
                     if (d && (d.qr || d.status === 'qr_ready' || d.status === 'connected')) qrData = d;

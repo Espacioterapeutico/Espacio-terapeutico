@@ -436,6 +436,36 @@
                 {% endif %}
             </div>
 
+            {% elif tool_type == 'sobriedad' %}
+            <div class="form-group" style="background: #ecfdf5; border: 1.5px solid #a7f3d0; padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                <label style="font-size: 1.05rem; font-weight: 800; color: #047857; margin-bottom: 1rem; display: block;">
+                    1. ¿Te mantuviste libre de consumo hoy? *
+                </label>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <label style="flex: 1; text-align: center; background: white; padding: 1rem; border-radius: 8px; border: 2px solid #34d399; cursor: pointer; font-weight: 700; color: #065f46;">
+                        <input type="radio" name="sob_sobrio" value="1" style="display: block; margin: 0 auto 0.5rem;" required> Sí, me mantuve sobrio/a
+                    </label>
+                    <label style="flex: 1; text-align: center; background: white; padding: 1rem; border-radius: 8px; border: 2px solid #fbbf24; cursor: pointer; font-weight: 700; color: #92400e;">
+                        <input type="radio" name="sob_sobrio" value="0" style="display: block; margin: 0 auto 0.5rem;" required> No, tuve una recaída
+                    </label>
+                </div>
+
+                <label style="font-weight: 700; color: var(--text-dark); margin-bottom: 0.5rem; display: block;">2. Nivel de Deseo o Impulso (Craving) hoy: (1 a 5) *</label>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem;">
+                    <label><input type="radio" name="sob_craving" value="1" required> 1 (Nulo)</label>
+                    <label><input type="radio" name="sob_craving" value="2"> 2</label>
+                    <label><input type="radio" name="sob_craving" value="3"> 3</label>
+                    <label><input type="radio" name="sob_craving" value="4"> 4</label>
+                    <label><input type="radio" name="sob_craving" value="5"> 5 (Muy alto)</label>
+                </div>
+
+                <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem;">3. ¿Hubo algún disparador emocional importante?</label>
+                <textarea id="sob_disparador" rows="2" placeholder="Ej: Discusión familiar, estrés laboral, aburrimiento..." style="margin-bottom: 1.5rem;"></textarea>
+
+                <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem;">4. Comentarios Adicionales (Opcional)</label>
+                <textarea id="sob_notas" rows="3" placeholder="¿Qué hiciste para manejar el deseo? ¿Cómo te sientes al terminar el día?"></textarea>
+            </div>
+
             {% else %}
             <!-- Pizarra / Diario general -->
             <div class="form-group">
@@ -533,6 +563,21 @@ async function submitPublicTool(e) {
             });
         });
         payload = { actividades_log: actLogs };
+    } else if (toolType === 'sobriedad') {
+        let sobrioVal = 1;
+        const sRadios = document.querySelectorAll('input[name="sob_sobrio"]:checked');
+        if (sRadios.length > 0) sobrioVal = parseInt(sRadios[0].value);
+        
+        let cravVal = 1;
+        const cRadios = document.querySelectorAll('input[name="sob_craving"]:checked');
+        if (cRadios.length > 0) cravVal = parseInt(cRadios[0].value);
+
+        payload = {
+            sobrio: sobrioVal,
+            nivel_ansiedad: cravVal,
+            disparador_emocional: document.getElementById('sob_disparador').value,
+            notas: document.getElementById('sob_notas').value
+        };
     } else {
         payload = {
             estado_animo: document.getElementById('estado_animo') ? document.getElementById('estado_animo').value : 'neutral',

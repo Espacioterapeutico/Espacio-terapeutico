@@ -1222,6 +1222,12 @@ def save_public_tool_submission():
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (patient_id, med.get('id'), today_str, 1 if med.get('tomado') else 0, med.get('hora_tomado', ''), med.get('notas', ''), now_str))
 
+    elif tool_type == 'sobriedad':
+        cursor.execute("""
+            INSERT INTO registros_sobriedad (paciente_id, fecha, sobrio, nivel_ansiedad, disparador_emocional, notas)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (patient_id, today_str, payload.get('sobrio', 1), payload.get('nivel_ansiedad', 1), payload.get('disparador_emocional', ''), payload.get('notas', '')))
+
     elif tool_type == 'pizarra':
         cursor.execute("""
             INSERT INTO pizarra_terapeutica (paciente_id, tipo_autor, nota_texto, estado_animo, fecha_registro, leida_psicologo)

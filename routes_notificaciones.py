@@ -225,7 +225,7 @@ def _start_wa_keepalive_thread():
     t = threading.Thread(target=_keepalive_loop, daemon=True)
     t.start()
 
-def make_wa_http_request(method, endpoint, json_data=None, timeout=35, user_id=None):
+def make_wa_http_request(method, endpoint, json_data=None, timeout=60, user_id=None):
     import requests
     _start_wa_keepalive_thread()
     url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/{endpoint.lstrip('/')}"
@@ -340,7 +340,7 @@ def handle_whatsapp_session_sync():
 def get_whatsapp_status():
     try:
         user_id = session.get('user_id')
-        r = make_wa_http_request('GET', '/status', timeout=15, user_id=user_id)
+        r = make_wa_http_request('GET', '/status', timeout=60, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'error': 'Microservicio de WhatsApp no disponible', 'details': str(e)})
@@ -350,7 +350,7 @@ def get_whatsapp_status():
 def get_whatsapp_qr():
     try:
         user_id = session.get('user_id')
-        r = make_wa_http_request('GET', '/qr', timeout=25, user_id=user_id)
+        r = make_wa_http_request('GET', '/qr', timeout=60, user_id=user_id)
         return jsonify(r.json())
     except Exception as e:
         return jsonify({'status': 'disconnected', 'qr': None, 'error': str(e)})

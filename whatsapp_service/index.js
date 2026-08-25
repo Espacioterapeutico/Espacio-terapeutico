@@ -77,7 +77,7 @@ function syncSessionToFlask(userId, userAuthDir) {
     _syncDebounceMap[userId] = setTimeout(() => {
         _syncSessionToFlaskActual(userId, userAuthDir);
         delete _syncDebounceMap[userId];
-    }, 15000); // 15 segundos de debounce
+    }, 2000); // 2 segundos de debounce para no perder credenciales
 }
 
 async function restoreSessionFromFlask(userId, userAuthDir) {
@@ -270,6 +270,12 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
 app.get('/status', (req, res) => {
     const userId = req.query.user_id || req.headers['x-user-id'] || '1';
     const session = getSessionObj(userId);
+    
+    // Auto-arrancar la sesión si está desconectada y no hay socket
+    if (session.connectionStatus === 'disconnected' && !session.sock) {
+        connectToWhatsAppUser(userId, false);
+    }
+    
     res.json({
         user_id: userId,
         status: session.connectionStatus,
