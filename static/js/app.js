@@ -1477,6 +1477,7 @@ async function handleAuthSubmit(e) {
                 try { dataAdmin = await resAdmin.json(); } catch(exJ) {}
                 if (resAdmin.ok && dataAdmin) {
                     showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago, dataAdmin.primer_inicio, dataAdmin.suscripcion_paga, dataAdmin.fecha_expiracion_prueba, dataAdmin.nombres, dataAdmin.apellidos);
+                    if (typeof closeAuthModal === 'function') closeAuthModal();
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
                 }
@@ -1500,6 +1501,7 @@ async function handleAuthSubmit(e) {
                     } else {
                         showPatientLayout(dataPatient.username, dataPatient.patient_id);
                     }
+                    if (typeof closeAuthModal === 'function') closeAuthModal();
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
                 }
