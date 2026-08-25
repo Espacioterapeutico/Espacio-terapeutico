@@ -23370,3 +23370,7 @@ async function showPatientToolSummary(patientId, toolKey, patientName) {
     }
 }
 window.showPatientToolSummary = showPatientToolSummary;
+
+function openWhatsAppBroadcastModal() {
+    openModal('whatsapp-broadcast-modal');
+}

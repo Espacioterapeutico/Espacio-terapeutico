@@ -1607,8 +1607,12 @@ def whatsapp_webhook():
     if es_afirmacion:
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (cita['id'],))
         db.commit()
-        # Enviar respuesta automática de éxito
-        respuesta = "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+        
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_confirmacion_ok'")
+        row = cursor.fetchone()
+        respuesta = row['valor'] if row and row['valor'] else "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+        respuesta = respuesta.replace('{nombre}', patients[0]['nombres'].split()[0] if patients[0]['nombres'] else 'Consultante')
+
         try:
             make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': respuesta}, timeout=10, user_id=user_id)
         except:
@@ -1619,7 +1623,12 @@ def whatsapp_webhook():
         # En caso de negación, marcamos como Cancelada
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada' WHERE id = ?", (cita['id'],))
         db.commit()
-        respuesta = "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
+
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cancelacion_ok'")
+        row = cursor.fetchone()
+        respuesta = row['valor'] if row and row['valor'] else "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
+        respuesta = respuesta.replace('{nombre}', patients[0]['nombres'].split()[0] if patients[0]['nombres'] else 'Consultante')
+
         try:
             make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': respuesta}, timeout=10, user_id=user_id)
         except:

@@ -1229,6 +1229,50 @@ def save_public_tool_submission():
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (patient_id, med.get('id'), today_str, 1 if med.get('tomado') else 0, med.get('hora_tomado', ''), med.get('notas', ''), now_str))
 
+    elif tool_type == 'sueno':
+        cursor.execute("""
+            INSERT INTO registros_sueno (
+                paciente_id, fecha, situaciones_dia, emociones_dia, proceso_dormir,
+                hora_dormi, desperto_noche, cant_despertares, hora_desperto,
+                senti_descanso, somnolencia_dia, pesadez_dia, agotamiento_dia
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(paciente_id, fecha) DO UPDATE SET
+                situaciones_dia=excluded.situaciones_dia, emociones_dia=excluded.emociones_dia,
+                proceso_dormir=excluded.proceso_dormir, hora_dormi=excluded.hora_dormi,
+                desperto_noche=excluded.desperto_noche, cant_despertares=excluded.cant_despertares,
+                hora_desperto=excluded.hora_desperto, senti_descanso=excluded.senti_descanso,
+                somnolencia_dia=excluded.somnolencia_dia, pesadez_dia=excluded.pesadez_dia,
+                agotamiento_dia=excluded.agotamiento_dia
+        """, (
+            patient_id, today_str,
+            payload.get('situaciones_dia', ''),
+            payload.get('emociones_dia', ''),
+            payload.get('proceso_dormir', ''),
+            payload.get('hora_dormi', ''),
+            payload.get('desperto_noche', 0),
+            payload.get('cant_despertares', 0),
+            payload.get('hora_desperto', ''),
+            payload.get('senti_descanso', 1),
+            1 if 'Somnolencia' in payload.get('sintomas_dia', '') else 0,
+            1 if 'Pesadez' in payload.get('sintomas_dia', '') else 0,
+            1 if 'Agotamiento' in payload.get('sintomas_dia', '') else 0
+        ))
+
+    elif tool_type == 'ansiedad':
+        cursor.execute("""
+            INSERT INTO registros_ansiedad (paciente_id, fecha, nivel_ansiedad, sintomas_json, situacion_desencadenante)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(paciente_id, fecha) DO UPDATE SET
+                nivel_ansiedad=excluded.nivel_ansiedad,
+                sintomas_json=excluded.sintomas_json,
+                situacion_desencadenante=excluded.situacion_desencadenante
+        """, (
+            patient_id, today_str,
+            payload.get('nivel_ansiedad', 5),
+            payload.get('sintomas_json', '[]'),
+            payload.get('situacion', '')
+        ))
+
     elif tool_type == 'sobriedad':
         cursor.execute("""
             INSERT INTO registros_sobriedad (paciente_id, fecha, sobrio, nivel_ansiedad, disparador_emocional, notas)

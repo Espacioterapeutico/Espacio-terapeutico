@@ -436,6 +436,78 @@
                 {% endif %}
             </div>
 
+            {% elif tool_type == 'sueno' %}
+            <div class="form-group">
+                <label style="font-weight: 700;">Me dormí a las *</label>
+                <input type="time" id="sleep-hora-dormi" required>
+            </div>
+            <div class="form-group">
+                <label style="font-weight: 700;">Me desperté a las *</label>
+                <input type="time" id="sleep-hora-desperto" required>
+            </div>
+            <div class="form-group">
+                <label style="font-weight: 700;">Situaciones relevantes durante el día:</label>
+                <textarea id="sleep-situaciones" rows="2" placeholder="Eventos importantes del día..."></textarea>
+            </div>
+            <div class="form-group">
+                <label style="font-weight: 700;">Emociones relevantes durante el día:</label>
+                <textarea id="sleep-emociones" rows="2" placeholder="¿Cómo te sentiste emocionalmente?"></textarea>
+            </div>
+            <div class="form-group">
+                <label style="font-weight: 700;">¿Cómo fue el proceso para conciliar el sueño?</label>
+                <input type="text" id="sleep-proceso" placeholder="Ej: Rápido, costoso, rumiación mental...">
+            </div>
+            <div class="form-group">
+                <label style="font-weight: 700; display: block; margin-bottom: 0.35rem;">¿Te despertaste durante la noche?</label>
+                <select id="sleep-desperto-noche" onchange="document.getElementById('sleep-cant-despertares-group').style.display = this.value === '1' ? 'block' : 'none'">
+                    <option value="0">No, dormí de corrido</option>
+                    <option value="1">Sí, me desperté</option>
+                </select>
+            </div>
+            <div class="form-group" id="sleep-cant-despertares-group" style="display: none;">
+                <label style="font-weight: 700;">¿Cuántas veces aproximadamente?</label>
+                <input type="number" id="sleep-cant-despertares" value="1" min="1" max="20">
+            </div>
+            <div class="form-group">
+                <label style="font-weight: 700; display: block; margin-bottom: 0.35rem;">¿Sentiste que descansaste al despertar?</label>
+                <select id="sleep-senti-descanso">
+                    <option value="1">Sí, me sentí descansado/a</option>
+                    <option value="0">No, desperté fatigado/a</option>
+                </select>
+            </div>
+            <div class="form-group" style="background: #f8fafc; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                <label style="font-weight: 700; display: block; margin-bottom: 0.4rem; color: #1e293b;">Síntomas durante el día:</label>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <label style="cursor: pointer; font-weight: 600;"><input type="checkbox" id="sleep-somnolencia"> 🥱 Somnolencia</label>
+                    <label style="cursor: pointer; font-weight: 600;"><input type="checkbox" id="sleep-pesadez"> 🪨 Pesadez</label>
+                    <label style="cursor: pointer; font-weight: 600;"><input type="checkbox" id="sleep-agotamiento"> 🔋 Agotamiento</label>
+                </div>
+            </div>
+
+            {% elif tool_type == 'ansiedad' %}
+            <div class="form-group">
+                <label style="font-weight: 700;">Nivel de Ansiedad percibido (1 a 10) *</label>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <input type="range" id="anx-nivel" min="1" max="10" value="5" oninput="document.getElementById('anx-nivel-val').innerText = this.value" style="flex: 1;">
+                    <span id="anx-nivel-val" style="font-size: 1.2rem; font-weight: 800; color: #c2410c; min-width: 28px; text-align: center;">5</span>
+                </div>
+            </div>
+            <div class="form-group" style="background: #fffdfb; border: 1.5px solid #fed7aa; padding: 1rem; border-radius: 8px;">
+                <label style="font-weight: 700; color: #9a3412; margin-bottom: 0.5rem; display: block;">Síntomas Experimentados:</label>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label><input type="checkbox" class="anx-sintoma-cb" value="Taquicardia / Palpitaciones"> 💓 Taquicardia / Palpitaciones</label>
+                    <label><input type="checkbox" class="anx-sintoma-cb" value="Opresión en el pecho"> 🫁 Opresión en el pecho</label>
+                    <label><input type="checkbox" class="anx-sintoma-cb" value="Sudoración excesiva"> 💦 Sudoración excesiva</label>
+                    <label><input type="checkbox" class="anx-sintoma-cb" value="Dificultad para respirar"> 😮‍💨 Dificultad para respirar</label>
+                    <label><input type="checkbox" class="anx-sintoma-cb" value="Pensamientos intrusivos"> ⚡ Pensamientos intrusivos</label>
+                    <label><input type="checkbox" class="anx-sintoma-cb" value="Inquietud"> ⚠️ Inquietud</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label style="font-weight: 700;">Situación Desencadenante o Notas Reflexivas:</label>
+                <textarea id="anx-situacion" rows="3" placeholder="¿Qué estabas haciendo o pensando cuando se elevó la ansiedad?"></textarea>
+            </div>
+
             {% elif tool_type == 'sobriedad' %}
             <div class="form-group" style="background: #ecfdf5; border: 1.5px solid #a7f3d0; padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem;">
                 <label style="font-size: 1.05rem; font-weight: 800; color: #047857; margin-bottom: 1rem; display: block;">
@@ -563,6 +635,30 @@ async function submitPublicTool(e) {
             });
         });
         payload = { actividades_log: actLogs };
+    } else if (toolType === 'sueno') {
+        const sintomas = [];
+        if (document.getElementById('sleep-somnolencia') && document.getElementById('sleep-somnolencia').checked) sintomas.push("Somnolencia");
+        if (document.getElementById('sleep-pesadez') && document.getElementById('sleep-pesadez').checked) sintomas.push("Pesadez");
+        if (document.getElementById('sleep-agotamiento') && document.getElementById('sleep-agotamiento').checked) sintomas.push("Agotamiento");
+        payload = {
+            hora_dormi: document.getElementById('sleep-hora-dormi').value,
+            hora_desperto: document.getElementById('sleep-hora-desperto').value,
+            situaciones_dia: document.getElementById('sleep-situaciones').value,
+            emociones_dia: document.getElementById('sleep-emociones').value,
+            proceso_dormir: document.getElementById('sleep-proceso').value,
+            desperto_noche: parseInt(document.getElementById('sleep-desperto-noche').value || 0),
+            cant_despertares: parseInt(document.getElementById('sleep-cant-despertares').value || 0),
+            senti_descanso: parseInt(document.getElementById('sleep-senti-descanso').value || 1),
+            sintomas_dia: sintomas.join(", ")
+        };
+    } else if (toolType === 'ansiedad') {
+        const sintomasAnx = [];
+        document.querySelectorAll('.anx-sintoma-cb:checked').forEach(cb => sintomasAnx.push(cb.value));
+        payload = {
+            nivel_ansiedad: document.getElementById('anx-nivel').value,
+            situacion: document.getElementById('anx-situacion').value,
+            sintomas_json: JSON.stringify(sintomasAnx)
+        };
     } else if (toolType === 'sobriedad') {
         let sobrioVal = 1;
         const sRadios = document.querySelectorAll('input[name="sob_sobrio"]:checked');

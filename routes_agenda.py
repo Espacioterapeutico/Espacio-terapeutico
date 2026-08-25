@@ -623,6 +623,39 @@ def update_agenda_event_status(event_id):
     cursor.execute(sql, params)
     db.commit()
     
+    # Enviar mensaje de WhatsApp si se confirmó o canceló manualmente
+    try:
+        from routes_notificaciones import make_wa_http_request
+        from routes_herramientas import clean_phone_number
+        if confirmada == 1 or estado == 'Confirmada' or estado == 'Cancelada':
+            cursor.execute("""
+                SELECT p.telefono, p.nombres, af.fecha, af.hora, p.psicologo_id 
+                FROM agenda_finanzas af 
+                JOIN pacientes p ON af.paciente_id = p.id 
+                WHERE af.id = ?
+            """, (event_id,))
+            cita = cursor.fetchone()
+            if cita and cita['telefono']:
+                phone_clean = clean_phone_number(cita['telefono'])
+                psych_id = cita['psicologo_id'] or session.get('user_id') or 1
+                
+                # Fetch templates
+                cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok')")
+                templates = {r['clave']: r['valor'] for r in cursor.fetchall()}
+                
+                nombre = (cita['nombres'] or '').split()[0]
+                
+                if confirmada == 1 or estado == 'Confirmada':
+                    msg = templates.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+                else:
+                    msg = templates.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
+                
+                msg = msg.replace('{nombre}', nombre)
+                
+                make_wa_http_request('POST', '/send', json_data={'phone': phone_clean, 'text': msg, 'user_id': psych_id}, timeout=10, user_id=psych_id)
+    except Exception as e:
+        print("Error sending manual confirmation WA:", e)
+    
     return jsonify({'success': True, 'message': 'Cita actualizada exitosamente.'})
 
 @agenda_bp.route('/api/agenda/<int:event_id>', methods=['DELETE'])
