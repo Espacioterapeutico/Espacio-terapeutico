@@ -143,14 +143,13 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             version,
             auth: state,
             printQRInTerminal: false,
-            browser: [`Espacio Terapeutico (User ${key})`, 'Chrome', '1.0.0'],
-            keepAliveIntervalMs: 25000,     // Enviar pings WebSocket cada 25 segundos para mantener canal abierto
-            connectTimeoutMs: 60000,        // Timeout de conexión 60s
-            defaultQueryTimeoutMs: 60000,   // Timeout de peticiones 60s
-            retryRequestDelayMs: 2000,      // Reintento rápido tras fallo
+            browser: ['Ubuntu', 'Chrome', '22.04'],     // Nombre estándar reconocido por WhatsApp
+            connectTimeoutMs: 60000,
+            defaultQueryTimeoutMs: 60000,
+            retryRequestDelayMs: 250,       // Reintento rápido (default de Baileys, estable en v2.2.2)
             maxMsgRetryCount: 5,
             markOnlineOnConnect: true,
-            syncFullHistory: false          // Evitar descarga pesada de historial que sature memoria o desconecte el socket
+            syncFullHistory: false
         });
 
         session.sock.ev.on('creds.update', async () => {
@@ -184,10 +183,11 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 // DisconnectReason.loggedOut = 401
-                const isExplicitLogout = statusCode === DisconnectReason.loggedOut;
+                const isExplicitLogout = statusCode === DisconnectReason.loggedOut || statusCode === 401;
                 console.log(`[User ${key}] ⚠️ Conexión cerrada. Código: ${statusCode}. Reconectando: ${!isExplicitLogout}`);
                 
-                if (isExplicitLogout && forceNew) {
+                if (isExplicitLogout) {
+                    // Sesión cerrada desde el teléfono o revocada por WhatsApp → limpiar todo
                     session.connectionStatus = 'disconnected';
                     session.connectedPhone = null;
                     session.currentQR = null;
@@ -196,10 +196,10 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
                     }
                     await clearSessionFromFlask(key);
                 } else {
+                    // Desconexión temporal (515 restartRequired, 408 timedOut, etc.) → reconectar rápido
                     session.connectionStatus = 'connecting';
                     session.currentQR = null;
-                    // Reconectar automáticamente tras 2.5 segundos restaurando estado guardado
-                    setTimeout(() => connectToWhatsAppUser(key, false), 2500);
+                    setTimeout(() => connectToWhatsAppUser(key, false), 1500);
                 }
             }
         });
