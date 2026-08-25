@@ -2039,6 +2039,11 @@ async function showPatientWizard(patientId, username, patientData = null) {
     
     document.body.classList.add('is-patient');
     document.getElementById('auth-screen').classList.add('hide');
+    const pubLnd = document.getElementById('public-landing-screen');
+    if (pubLnd) {
+        pubLnd.classList.add('hide');
+        pubLnd.style.display = 'none';
+    }
     document.getElementById('sidebar').classList.add('hide');
     document.getElementById('patient-header').classList.add('hide'); // Ocultar cabecera durante registro
     document.getElementById('patient-menu').classList.add('hide');   // Ocultar menú durante registro
