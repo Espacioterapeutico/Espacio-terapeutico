@@ -1016,15 +1016,27 @@ def send_queue_item_now(item_id):
                 'pais': cita['pat_pais'] or ''
             }
 
-            cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio')")
+            cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_confirmacion_ok', 'msg_recordatorio', 'msg_reagendamiento')")
             cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
             
-            if cita['confirmada'] == 1:
-                tmpl_msg = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que tu cita está agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
-                is_conf_type = False
+            # Determinar plantilla y tipo de mensaje según la fecha de la cita y su estado
+            if cita['fecha'] == today_str:
+                if cita['confirmada'] == 1:
+                    tmpl_msg = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
+                    msg_stage = 'recordatorio'
+                else:
+                    tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para HOY a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+                    msg_stage = 'confirmacion'
+            elif cita['fecha'] > today_str:
+                if cita['confirmada'] == 1:
+                    tmpl_msg = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+                    msg_stage = 'confirmacion_ok'
+                else:
+                    tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+                    msg_stage = 'confirmacion'
             else:
-                tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
-                is_conf_type = True
+                tmpl_msg = cfg_rows.get('msg_reagendamiento') or "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje."
+                msg_stage = 'reagendamiento'
 
             mensaje_texto = format_whatsapp_message(tmpl_msg, patient_dict, cita_dict, psicologo_data)
             
@@ -1033,10 +1045,12 @@ def send_queue_item_now(item_id):
             res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
 
             if res_wa and res_wa.status_code == 200:
-                if is_conf_type:
+                if msg_stage in ('confirmacion', 'confirmacion_ok'):
                     cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (appt_id,))
-                else:
+                elif msg_stage == 'recordatorio':
                     cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                elif msg_stage == 'reagendamiento':
+                    cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado_wa = 1 WHERE id = ?", (appt_id,))
                 db.commit()
                 return jsonify({'success': True, 'message': f'Mensaje enviado con éxito a {cita["pat_nombres"]}'})
             else:
@@ -1590,19 +1604,40 @@ def whatsapp_webhook():
     
     # Buscar la cita más cercana (desde hoy en adelante) que no esté confirmada ni cancelada
     cursor.execute(f"""
-        SELECT id, fecha, hora, confirmada 
-        FROM agenda_finanzas 
-        WHERE paciente_id IN ({placeholders}) 
-          AND fecha >= ? 
-          AND COALESCE(confirmada, 0) = 0
-          AND COALESCE(estado_pago, '') != 'Cancelada'
-        ORDER BY fecha ASC, hora ASC LIMIT 1
+        SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.paciente_id,
+               p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+               COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
+        FROM agenda_finanzas af 
+        JOIN pacientes p ON af.paciente_id = p.id
+        LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
+        WHERE af.paciente_id IN ({placeholders}) 
+          AND af.fecha >= ? 
+          AND COALESCE(af.confirmada, 0) = 0
+          AND COALESCE(af.estado_pago, '') != 'Cancelada'
+        ORDER BY af.fecha ASC, af.hora ASC LIMIT 1
     """, patient_ids + [today_str])
     
     cita = cursor.fetchone()
     
     if not cita:
         return jsonify({'status': 'ignored', 'reason': 'no pending unconfirmed appointment'}), 200
+
+    patient_dict = {
+        'nombres': cita['pat_nombres'],
+        'apellidos': cita['pat_apellidos'],
+        'pais': cita['pat_pais'] or ''
+    }
+    cita_dict = {
+        'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}".strip(),
+        'fecha': cita['fecha'],
+        'hora': cita['hora'],
+        'modalidad': cita['tipo_consulta'] or 'Presencial'
+    }
+    psicologo_data = {
+        'nombres': cita['psic_nombres'],
+        'apellidos': cita['psic_apellidos']
+    }
+    psych_id = cita['psicologo_id'] or user_id or 1
         
     if es_afirmacion:
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (cita['id'],))
@@ -1610,27 +1645,27 @@ def whatsapp_webhook():
         
         cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_confirmacion_ok'")
         row = cursor.fetchone()
-        respuesta = row['valor'] if row and row['valor'] else "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
-        respuesta = respuesta.replace('{nombre}', patients[0]['nombres'].split()[0] if patients[0]['nombres'] else 'Consultante')
+        template = row['valor'] if row and row['valor'] else "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+        respuesta = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
 
         try:
-            make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': respuesta}, timeout=10, user_id=user_id)
+            make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': respuesta}, timeout=10, user_id=psych_id)
         except:
             pass
         return jsonify({'status': 'confirmed', 'cita_id': cita['id']}), 200
         
     if es_negacion:
         # En caso de negación, marcamos como Cancelada
-        cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada' WHERE id = ?", (cita['id'],))
+        cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (cita['id'],))
         db.commit()
 
         cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cancelacion_ok'")
         row = cursor.fetchone()
-        respuesta = row['valor'] if row and row['valor'] else "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
-        respuesta = respuesta.replace('{nombre}', patients[0]['nombres'].split()[0] if patients[0]['nombres'] else 'Consultante')
+        template = row['valor'] if row and row['valor'] else "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
+        respuesta = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
 
         try:
-            make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': respuesta}, timeout=10, user_id=user_id)
+            make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': respuesta}, timeout=10, user_id=psych_id)
         except:
             pass
         return jsonify({'status': 'cancelled', 'cita_id': cita['id']}), 200

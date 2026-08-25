@@ -625,13 +625,15 @@ def update_agenda_event_status(event_id):
     
     # Enviar mensaje de WhatsApp si se confirmó o canceló manualmente
     try:
-        from routes_notificaciones import make_wa_http_request
+        from routes_notificaciones import make_wa_http_request, format_whatsapp_message
         from routes_herramientas import clean_phone_number
         if confirmada == 1 or estado == 'Confirmada' or estado == 'Cancelada':
             cursor.execute("""
-                SELECT p.telefono, p.nombres, af.fecha, af.hora, p.psicologo_id 
+                SELECT p.telefono, p.nombres, p.apellidos, p.pais, af.fecha, af.hora, af.tipo_consulta, p.psicologo_id,
+                       u.nombres as psic_nombres, u.apellidos as psic_apellidos
                 FROM agenda_finanzas af 
                 JOIN pacientes p ON af.paciente_id = p.id 
+                LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
                 WHERE af.id = ?
             """, (event_id,))
             cita = cursor.fetchone()
@@ -643,14 +645,28 @@ def update_agenda_event_status(event_id):
                 cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok')")
                 templates = {r['clave']: r['valor'] for r in cursor.fetchall()}
                 
-                nombre = (cita['nombres'] or '').split()[0]
+                patient_dict = {
+                    'nombres': cita['nombres'],
+                    'apellidos': cita['apellidos'],
+                    'pais': cita['pais'] or ''
+                }
+                cita_dict = {
+                    'nombre': f"{cita['nombres']} {cita['apellidos']}".strip(),
+                    'fecha': cita['fecha'],
+                    'hora': cita['hora'],
+                    'modalidad': cita['tipo_consulta'] or 'Presencial'
+                }
+                psicologo_data = {
+                    'nombres': cita['psic_nombres'],
+                    'apellidos': cita['psic_apellidos']
+                }
                 
                 if confirmada == 1 or estado == 'Confirmada':
-                    msg = templates.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+                    template = templates.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
                 else:
-                    msg = templates.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
+                    template = templates.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
                 
-                msg = msg.replace('{nombre}', nombre)
+                msg = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
                 
                 make_wa_http_request('POST', '/send', json_data={'phone': phone_clean, 'text': msg, 'user_id': psych_id}, timeout=10, user_id=psych_id)
     except Exception as e:
