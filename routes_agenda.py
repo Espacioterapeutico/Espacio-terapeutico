@@ -1132,3 +1132,119 @@ def delete_admin_consultation_history_event(event_id):
         return jsonify({'error': f'Error al eliminar consulta: {str(e)}'}), 500
 
 
+# --- RUTAS PÚBLICAS PARA CONFIRMACIÓN POR ENLACE ---
+
+@agenda_bp.route('/cita/confirmar/<token>', methods=['GET'])
+def vista_confirmar_cita(token):
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Buscar la cita por token
+    cursor.execute("""
+        SELECT af.*, p.nombres, p.apellidos, u.nombres as psic_nombres, u.apellidos as psic_apellidos
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        LEFT JOIN usuarios u ON p.psicologo_id = u.id
+        WHERE af.token_confirmacion = ?
+    """, (token,))
+    cita = cursor.fetchone()
+    
+    if not cita:
+        return render_template('cita_invalida.html', mensaje="El enlace proporcionado no es válido o la cita ya no existe.")
+        
+    from datetime import datetime
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    
+    if cita['fecha'] < today_str:
+        return render_template('cita_invalida.html', mensaje="Esta cita ya ocurrió y no puede ser modificada.")
+        
+    return render_template('confirmar_cita_public.html', cita=cita)
+
+@agenda_bp.route('/api/cita/accion', methods=['POST'])
+def accion_cita_publica():
+    data = request.json or {}
+    token = data.get('token')
+    accion = data.get('accion') # 'confirmar', 'cancelar', 'reprogramar'
+    
+    if not token or accion not in ['confirmar', 'cancelar', 'reprogramar']:
+        return jsonify({'error': 'Datos inválidos.'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        LEFT JOIN usuarios u ON p.psicologo_id = u.id
+        WHERE af.token_confirmacion = ?
+    """, (token,))
+    cita = cursor.fetchone()
+    
+    if not cita:
+        return jsonify({'error': 'Cita no encontrada.'}), 404
+        
+    appt_id = cita['id']
+    psych_id = cita['psicologo_id'] or 1
+    phone = cita['pat_telefono']
+    
+    # Preparamos datos para Whatsapp
+    patient_dict = {
+        'nombres': cita['pat_nombres'],
+        'apellidos': cita['pat_apellidos'],
+        'pais': cita['pat_pais'] or ''
+    }
+    cita_dict = {
+        'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}".strip(),
+        'fecha': cita['fecha'],
+        'hora': cita['hora'],
+        'modalidad': cita['tipo_consulta'] or 'Presencial'
+    }
+    psicologo_data = {
+        'nombres': cita['psic_nombres'],
+        'apellidos': cita['psic_apellidos']
+    }
+    
+    cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_reagendamiento')")
+    cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
+    
+    msg_stage = None
+    template = ""
+    
+    if accion == 'confirmar':
+        cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt_id,))
+        template = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto."
+        msg_stage = 'confirmacion_ok'
+        
+    elif accion == 'cancelar':
+        cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
+        template = cfg_rows.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar, por favor contáctanos."
+        msg_stage = 'cancelacion_ok'
+        
+    elif accion == 'reprogramar':
+        cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
+        template = cfg_rows.get('msg_reagendamiento') or "Hemos recibido tu solicitud para reprogramar. Pronto nos pondremos en contacto contigo para agendar un nuevo espacio."
+        msg_stage = 'reprogramar'
+        
+    db.commit()
+    
+    # Enviar mensaje de WhatsApp confirmando la accion
+    if phone:
+        try:
+            from routes_notificaciones import make_wa_http_request, format_whatsapp_message
+            from routes_herramientas import clean_phone_number
+            msg = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
+            clean_phone = clean_phone_number(phone)
+            make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg, 'user_id': psych_id}, timeout=10, user_id=psych_id)
+        except Exception as e:
+            print("Error enviando confirmacion WA desde public link:", e)
+            
+    # También forzamos la sincronización de la DB si es que usa PythonAnywhere y Desktop
+    try:
+        from app import push_all_data_to_firebase
+        push_all_data_to_firebase()
+    except Exception as e:
+        print("Error en push_all_data_to_firebase:", e)
+        
+    return jsonify({'success': True})

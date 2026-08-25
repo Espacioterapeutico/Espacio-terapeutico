@@ -200,6 +200,9 @@ def format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data):
     msg = msg.replace('{psicologo}', psic_name)
     msg = msg.replace('{terapeuta}', psic_name)
 
+    if cita_dict and 'link_confirmacion' in cita_dict:
+        msg = msg.replace('{link_confirmacion}', cita_dict['link_confirmacion'])
+
     return msg
 
 WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'https://espacio-terapeutico-whatsapp.onrender.com')
@@ -1019,38 +1022,92 @@ def send_queue_item_now(item_id):
             cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_confirmacion_ok', 'msg_recordatorio', 'msg_reagendamiento')")
             cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
             
-            # Determinar plantilla y tipo de mensaje según la fecha de la cita y su estado
-            if cita['fecha'] == today_str:
-                if cita['confirmada'] == 1:
-                    tmpl_msg = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
-                    msg_stage = 'recordatorio'
-                else:
-                    tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para HOY a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
-                    msg_stage = 'confirmacion'
-            elif cita['fecha'] > today_str:
-                if cita['confirmada'] == 1:
-                    tmpl_msg = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
-                    msg_stage = 'confirmacion_ok'
-                else:
-                    tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
-                    msg_stage = 'confirmacion'
-            else:
-                tmpl_msg = cfg_rows.get('msg_reagendamiento') or "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje."
-                msg_stage = 'reagendamiento'
+            
+            req_type = request.args.get('type')
+            import secrets
+            
+            # Generar token de confirmación si no existe
+            token_conf = cita.get('token_confirmacion')
+            if not token_conf:
+                token_conf = secrets.token_urlsafe(16)
+                try:
+                    cursor.execute("UPDATE agenda_finanzas SET token_confirmacion = ? WHERE id = ?", (token_conf, appt_id))
+                    db.commit()
+                except:
+                    pass
+            
+            domain_host = request.host_url.rstrip('/') if request else 'https://www.espacioterapeutico.net'
+            link_confirmacion = f"{domain_host}/cita/confirmar/{token_conf}"
+            patient_dict['link_confirmacion'] = link_confirmacion
+            cita_dict['link_confirmacion'] = link_confirmacion
+            
 
+            
+            # Determinar plantilla y tipo de mensaje según la fecha de la cita y su estado
+            if req_type == 'confirmacion':
+                tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+                msg_stage = 'confirmacion'
+            elif req_type == 'confirmacion_ok':
+                tmpl_msg = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+                msg_stage = 'confirmacion_ok'
+            elif req_type == 'recordatorio':
+                tmpl_msg = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
+                msg_stage = 'recordatorio'
+            elif req_type == 'cierre':
+                if cita['confirmada'] == 1:
+                    tmpl_msg = cfg_rows.get('msg_cierre') or "Hola {nombre}, esperamos que tu sesión de hoy haya sido provechosa. ¡Que tengas un excelente día!"
+                    msg_stage = 'cierre'
+                else:
+                    tmpl_msg = cfg_rows.get('msg_reagendamiento') or "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio."
+                    msg_stage = 'reagendamiento'
+            else:
+                # Auto-detect fallback
+                if cita['fecha'] == today_str:
+                    if cita['confirmada'] == 1:
+                        tmpl_msg = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
+                        msg_stage = 'recordatorio'
+                    else:
+                        tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para HOY a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+                        msg_stage = 'confirmacion'
+                elif cita['fecha'] > today_str:
+                    if cita['confirmada'] == 1:
+                        tmpl_msg = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+                        msg_stage = 'confirmacion_ok'
+                    else:
+                        tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+                        msg_stage = 'confirmacion'
+                else:
+                    tmpl_msg = cfg_rows.get('msg_reagendamiento') or "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje."
+                    msg_stage = 'reagendamiento'
+
+            
             mensaje_texto = format_whatsapp_message(tmpl_msg, patient_dict, cita_dict, psicologo_data)
+            
+            # Si es confirmación y la plantilla no incluye el link explícitamente, lo añadimos
+            if msg_stage == 'confirmacion' and '{link_confirmacion}' not in tmpl_msg:
+                mensaje_texto += f"\n\n📍 *Gestiona tu cita aquí:*\n{link_confirmacion}"
+
             
             from routes_herramientas import clean_phone_number
             clean_phone = clean_phone_number(phone)
             res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
 
             if res_wa and res_wa.status_code == 200:
-                if msg_stage in ('confirmacion', 'confirmacion_ok'):
-                    cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (appt_id,))
+                if msg_stage == 'confirmacion':
+                    cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada = 1, confirmacion_enviada_wa = 1 WHERE id = ?", (appt_id,))
+                elif msg_stage == 'confirmacion_ok':
+                    # Only mark as acknowledged, not strictly necessary but helpful if they want an 'enviado' status
+                    pass
                 elif msg_stage == 'recordatorio':
-                    cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                    cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado = 1, recordatorio_enviado_wa = 1 WHERE id = ?", (appt_id,))
                 elif msg_stage == 'reagendamiento':
-                    cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                    cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado = 1, reagendamiento_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                elif msg_stage == 'cierre':
+                    # Try setting cierre_enviado if column exists
+                    try:
+                        cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                    except:
+                        pass
                 db.commit()
                 return jsonify({'success': True, 'message': f'Mensaje enviado con éxito a {cita["pat_nombres"]}'})
             else:
@@ -1265,93 +1322,103 @@ def get_whatsapp_queue_status():
             is_cancelada = (estado_c == 'Cancelada' or 'Cancelada' in estado_p or estado_p == 'Reprogramada')
             is_stopped_manual = (r['confirmacion_enviada'] == -1 or r['recordatorio_enviado'] == -1 or r['reagendamiento_enviado'] == -1)
 
-            tomorrow_str = (now_local + timedelta(days=1)).strftime('%Y-%m-%d')
-            can_cancel = False
+            is_past = fecha_cita < today_str
+            is_today = fecha_cita == today_str
+            is_tomorrow = fecha_cita == tomorrow_str
+            is_future = fecha_cita > today_str
 
-            if is_stopped_manual:
-                pipeline_status = 'detenido_manual'
-                pipeline_label = '🛑 Envío Detenido Manualmente'
-                priority = 6
-            elif is_cancelada:
-                pipeline_status = 'cancelado'
-                pipeline_label = '❌ Cita Cancelada/Eliminada (Envío Inhabilitado)'
-                priority = 6
-            elif fecha_cita == tomorrow_str:
-                if r['confirmacion_enviada'] == 1:
-                    if is_confirmada:
-                        pipeline_status = 'confirmado'
-                        pipeline_label = '✅ Confirmado por Paciente'
-                        priority = 4
-                    else:
-                        pipeline_status = 'enviado_conf'
-                        pipeline_label = '🚀 Confirmación Enviada (Esperando Respuesta)'
-                        priority = 3
-                else:
-                    pipeline_status = 'en_cola_conf'
-                    pipeline_label = '📥 En Cola (Confirmación 08:00 AM Día Previo)'
-                    priority = 1
-                    can_cancel = True
-            elif fecha_cita > tomorrow_str:
-                if r['confirmacion_enviada'] == 1:
-                    pipeline_status = 'enviado_conf'
-                    pipeline_label = '🚀 Confirmación Enviada'
-                    priority = 3
-                else:
-                    pipeline_status = 'esperando_fecha'
-                    pipeline_label = '⏳ Programado en Cola'
-                    priority = 2
-                    can_cancel = True
-            elif fecha_cita == today_str:
-                if is_confirmada:
-                    if r['recordatorio_enviado'] == 1:
-                        pipeline_status = 'enviado_rec'
-                        pipeline_label = '🚀 Recordatorio Enviado Hoy'
-                        priority = 4
-                    else:
-                        pipeline_status = 'en_cola'
-                        pipeline_label = '📥 En Cola (Recordatorio Hoy)'
-                        priority = 1
-                        can_cancel = True
-                else:
-                    if r['reagendamiento_enviado'] == 1:
-                        pipeline_status = 'reagendar_enviado'
-                        pipeline_label = '🔄 Reagendamiento Enviado'
-                        priority = 4
-                    else:
-                        pipeline_status = 'en_cola_reagendar'
-                        pipeline_label = '📥 En Cola (Reagendamiento Fin de Día)'
-                        priority = 1
-                        can_cancel = True
-            else:
-                if r['reagendamiento_enviado'] == 1:
-                    pipeline_status = 'reagendar_enviado'
-                    pipeline_label = '🔄 Reagendamiento Enviado'
-                    priority = 4
-                elif is_confirmada:
-                    pipeline_status = 'completada'
-                    pipeline_label = '✅ Cita Realizada'
-                    priority = 5
-                else:
-                    pipeline_status = 'pendiente_reagendar'
-                    pipeline_label = '📥 Pendiente Reagendar'
-                    priority = 4
-
-            # Ocultar del historial si es una cita pasada (menor a hoy) y ya está en estado final
-            if fecha_cita < today_str and (pipeline_status in ['detenido_manual', 'cancelado', 'completada', 'reagendar_enviado', 'enviado_rec']):
-                continue
-
-            queue.append({
+            base_item = {
                 'cita_id': r['id'],
                 'paciente_nombre': pat_name,
                 'telefono': phone,
                 'fecha': fecha_cita,
                 'hora': hora_cita,
                 'tipo_consulta': r['tipo_consulta'] or 'Presencial',
-                'pipeline_status': pipeline_status,
-                'pipeline_label': pipeline_label,
-                'priority': priority,
-                'can_cancel': can_cancel
-            })
+            }
+
+            # TOKEN 1: Confirmacion
+            if not is_past:
+                if r['confirmacion_enviada'] == 1:
+                    lbl = 'Enviado ✅ (Respondido Sí)' if is_confirmada else ('Enviado ⚠️ (Respondido No)' if is_cancelada else 'Enviado 🚀 (Esperando Respuesta)')
+                    status = 'confirmado' if is_confirmada else 'enviado_conf'
+                elif r['confirmacion_enviada'] == -1:
+                    lbl = '🛑 Detenido Manualmente'
+                    status = 'detenido_manual'
+                elif is_cancelada:
+                    lbl = '❌ Cancelado'
+                    status = 'cancelado'
+                elif is_tomorrow:
+                    lbl = '📥 En Cola (08:00 AM Día Previo)'
+                    status = 'en_cola_conf'
+                else:
+                    lbl = '⏳ Programado (Día previo)'
+                    status = 'esperando_fecha'
+                queue.append({**base_item, 'token_name': 'Fase 1: Confirmación', 'pipeline_status': status, 'pipeline_label': lbl, 'can_cancel': status in ('en_cola_conf', 'esperando_fecha'), 'token_type': 'confirmacion', 'priority': 1})
+            
+            # TOKEN 2: Respuesta Automatica
+            if r['confirmacion_enviada'] == 1 or is_confirmada or is_cancelada:
+                if is_confirmada:
+                    lbl = 'Enviado ✅ (Agradecimiento)'
+                    status = 'enviado'
+                elif is_cancelada:
+                    lbl = 'Enviado ❌ (Aviso Cancelación)'
+                    status = 'cancelado'
+                else:
+                    lbl = '⏳ Pendiente (Esperando respuesta)'
+                    status = 'esperando'
+                if not is_past or status != 'esperando':
+                    queue.append({**base_item, 'token_name': 'Respuesta Automática', 'pipeline_status': status, 'pipeline_label': lbl, 'can_cancel': False, 'token_type': 'confirmacion_ok', 'priority': 2})
+
+            # TOKEN 3: Recordatorio del Día
+            if not is_cancelada:
+                if r['recordatorio_enviado'] == 1:
+                    lbl = 'Enviado ✅'
+                    status = 'enviado_rec'
+                elif r['recordatorio_enviado'] == -1:
+                    lbl = '🛑 Detenido Manualmente'
+                    status = 'detenido_manual'
+                elif is_past:
+                    lbl = '⚠️ No Enviado (Cita Pasada)'
+                    status = 'cancelado'
+                elif is_today:
+                    if is_confirmada:
+                        lbl = '📥 En Cola (Mismo Día)'
+                        status = 'en_cola'
+                    else:
+                        lbl = '⏳ Esperando Confirmación'
+                        status = 'esperando'
+                else:
+                    lbl = '⏳ Programado (Mismo día)'
+                    status = 'esperando_fecha'
+                if not is_past or r['recordatorio_enviado'] == 1:
+                    queue.append({**base_item, 'token_name': 'Fase 2: Recordatorio', 'pipeline_status': status, 'pipeline_label': lbl, 'can_cancel': status == 'en_cola', 'token_type': 'recordatorio', 'priority': 3})
+
+            # TOKEN 4: Cierre / Reagendamiento
+            if r.get('cierre_enviado_wa') == 1:
+                lbl = 'Enviado ✅ (Mensaje de Cierre)'
+                status = 'completada'
+            elif r['reagendamiento_enviado'] == 1:
+                lbl = 'Enviado 🔄 (Reagendamiento)'
+                status = 'reagendar_enviado'
+            elif is_cancelada:
+                lbl = '❌ Cancelada (No aplica)'
+                status = 'cancelado'
+            elif is_past or is_today:
+                if is_confirmada:
+                    lbl = '📥 En Cola (Cierre Post-sesión)'
+                    status = 'en_cola_reagendar'
+                else:
+                    lbl = '📥 En Cola (Reagendamiento)'
+                    status = 'en_cola_reagendar'
+            else:
+                lbl = '⏳ Programado (Fin de día)'
+                status = 'esperando_fecha'
+            
+            if not is_past or r.get('cierre_enviado_wa') == 1 or r['reagendamiento_enviado'] == 1:
+                if is_past and fecha_cita < (now_local - timedelta(days=2)).strftime('%Y-%m-%d') and r.get('cierre_enviado_wa') == 0 and r['reagendamiento_enviado'] == 0:
+                    pass
+                else:
+                    queue.append({**base_item, 'token_name': 'Fase 3: Cierre/Reagend.', 'pipeline_status': status, 'pipeline_label': lbl, 'can_cancel': status == 'en_cola_reagendar', 'token_type': 'cierre', 'priority': 4})
 
         # Incluir también recordatorios de herramientas terapéuticas programados
         try:
@@ -1501,11 +1568,22 @@ def cancel_whatsapp_queue_item():
             cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'cancelado', pausado = 1 WHERE id = ?", (tool_queue_id,))
         else:
             cid = int(cita_id)
-            cursor.execute("""
-                UPDATE agenda_finanzas
-                SET confirmacion_enviada_wa = -1, recordatorio_enviado_wa = -1, reagendamiento_enviado_wa = -1
-                WHERE id = ?
-            """, (cid,))
+            token_type = data.get('token_type')
+            
+            if token_type == 'confirmacion':
+                cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada = -1, confirmacion_enviada_wa = -1 WHERE id = ?", (cid,))
+            elif token_type == 'recordatorio':
+                cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado = -1, recordatorio_enviado_wa = -1 WHERE id = ?", (cid,))
+            elif token_type == 'cierre':
+                cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado = -1, reagendamiento_enviado_wa = -1 WHERE id = ?", (cid,))
+                try: cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = -1 WHERE id = ?", (cid,))
+                except: pass
+            else:
+                cursor.execute("""
+                    UPDATE agenda_finanzas
+                    SET confirmacion_enviada_wa = -1, recordatorio_enviado_wa = -1, reagendamiento_enviado_wa = -1
+                    WHERE id = ?
+                """, (cid,))
             
             cursor.execute("SELECT paciente_id, fecha FROM agenda_finanzas WHERE id = ?", (cid,))
             row = cursor.fetchone()

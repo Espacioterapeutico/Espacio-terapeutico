@@ -9573,7 +9573,7 @@ function renderWaQueueTablePage() {
     if (!tbody) return;
 
     if (currentWaQueueData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3" style="color: var(--text-secondary);">No hay citas próximas registradas en la cola de mensajes.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3" style="color: var(--text-secondary);">No hay citas próximas registradas en la cola de mensajes.</td></tr>';
         removeWaQueuePaginationControls();
         return;
     }
@@ -9606,13 +9606,13 @@ function renderWaQueueTablePage() {
             badgeBg = '#475569';
         }
 
-        const actionBtnHtml = (item.pipeline_status !== 'completado' && item.pipeline_status !== 'detenido_manual') ? `
+        const actionBtnHtml = (item.pipeline_status !== 'completado' && item.pipeline_status !== 'detenido_manual' && item.pipeline_status !== 'cancelado' && item.pipeline_status !== 'esperando_fecha' && !item.pipeline_status.includes('enviado')) ? `
             <div style="display: inline-flex; gap: 4px; align-items: center;">
-                <button type="button" class="btn btn-sm btn-primary" onclick="sendSingleQueueItemNow('${item.cita_id}', '${escapeJsQuotes(item.paciente_nombre)}')" title="Enviar mensaje de WhatsApp inmediatamente a este paciente" style="background: #10b981; border: 1.5px solid #059669; color: white; padding: 0.25rem 0.5rem; font-size: 0.78rem; border-radius: 6px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                    📲 Enviar Ahora
+                <button type="button" class="btn btn-sm btn-primary" onclick="sendSingleQueueItemNow('${item.cita_id}', '${escapeJsQuotes(item.paciente_nombre)}', '${item.token_type}')" title="Enviar este mensaje inmediatamente" style="background: #10b981; border: 1.5px solid #059669; color: white; padding: 0.25rem 0.5rem; font-size: 0.78rem; border-radius: 6px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                    📲 Enviar
                 </button>
                 ${item.can_cancel ? `
-                <button type="button" class="btn btn-sm text-danger" onclick="handleCancelWaQueueItem('${item.cita_id}', '${escapeJsQuotes(item.paciente_nombre)}')" title="Detener el envío automático de este mensaje" style="background: white; border: 1.5px solid rgba(239, 68, 68, 0.3); padding: 0.25rem 0.5rem; font-size: 0.78rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                <button type="button" class="btn btn-sm text-danger" onclick="handleCancelWaQueueItem('${item.cita_id}', '${escapeJsQuotes(item.paciente_nombre)}', '${item.token_type}')" title="Detener el envío automático de este mensaje" style="background: white; border: 1.5px solid rgba(239, 68, 68, 0.3); padding: 0.25rem 0.5rem; font-size: 0.78rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                     🛑 Detener
                 </button>` : ''}
             </div>
@@ -9620,7 +9620,7 @@ function renderWaQueueTablePage() {
         const toolLinkHtml = item.link ? `
             <div style="margin-top: 4px; font-size: 0.75rem;">
                 <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${item.link}')" style="padding: 2px 6px; font-size: 0.73rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
-                    🔑 Copiar Token / Link Rápido
+                    🔑 Link Rápido
                 </button>
             </div>
         ` : '';
@@ -9638,6 +9638,9 @@ function renderWaQueueTablePage() {
                 <td style="padding: 0.65rem;">
                     <span class="badge" style="background: var(--bg-hover); color: var(--text-dark); border: 1px solid var(--border-color);">${item.tipo_consulta}</span>
                     ${toolLinkHtml}
+                </td>
+                <td style="padding: 0.65rem; font-weight: 600; color: #334155; font-size: 0.82rem;">
+                    ${item.token_name || 'Desconocido'}
                 </td>
                 <td style="padding: 0.65rem;">
                     <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 600; padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.8rem; display: inline-block;">
@@ -9713,10 +9716,14 @@ function changeWaQueuePerPage(val) {
     renderWaQueueTablePage();
 }
 
-async function sendSingleQueueItemNow(itemId, pacienteNombre) {
-    if (!confirm(`¿Deseas enviar el mensaje de WhatsApp a ${pacienteNombre} inmediatamente?`)) return;
+async function sendSingleQueueItemNow(itemId, pacienteNombre, tokenType) {
+    if (!confirm(`¿Deseas enviar este mensaje de WhatsApp a ${pacienteNombre} inmediatamente?`)) return;
     try {
-        const res = await fetch(`/api/whatsapp/send-queue-item-now/${itemId}`, { method: 'POST' });
+        let url = `/api/whatsapp/send-queue-item-now/${itemId}`;
+        if (tokenType) {
+            url += `?type=${encodeURIComponent(tokenType)}`;
+        }
+        const res = await fetch(url, { method: 'POST' });
         const data = await res.json();
         if (res.ok) {
             alert(data.message || `Mensaje enviado con éxito a ${pacienteNombre}.`);
@@ -9730,7 +9737,7 @@ async function sendSingleQueueItemNow(itemId, pacienteNombre) {
 }
 window.sendSingleQueueItemNow = sendSingleQueueItemNow;
 
-async function handleCancelWaQueueItem(citaId, pacienteNombre) {
+async function handleCancelWaQueueItem(citaId, pacienteNombre, tokenType) {
     if (!confirm(`¿Estás seguro de que deseas detener manualmente el envío automático de este mensaje para ${pacienteNombre}?`)) {
         return;
     }
@@ -9739,7 +9746,7 @@ async function handleCancelWaQueueItem(citaId, pacienteNombre) {
         const res = await fetch('/api/whatsapp/cancel-queue-item', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cita_id: citaId })
+            body: JSON.stringify({ cita_id: citaId, token_type: tokenType })
         });
         const data = await res.json();
         if (res.ok) {

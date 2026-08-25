@@ -1053,9 +1053,14 @@ def init_db():
     """)
     # Inicializar plantillas de mensaje si no existen
     cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_confirmacion'")
-    if not cursor.fetchone():
+    row = cursor.fetchone()
+    if not row:
         cursor.execute("INSERT INTO configuracion (clave, valor) VALUES ('msg_confirmacion', ?)",
-                       ("Hola {nombre}, espero te encuentres muy bien. Te escribo para confirmar nuestra próxima sesión el día {fecha} a las {hora} ({modalidad}).",))
+                       ("Hola {nombre}, espero te encuentres muy bien. Te escribo para recordar nuestra próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor haz clic en el siguiente enlace para confirmar, reprogramar o cancelar tu asistencia:\n{link_confirmacion}\n\n¡Gracias!",))
+    elif '{link_confirmacion}' not in row['valor']:
+        cursor.execute("UPDATE configuracion SET valor = ? WHERE clave = 'msg_confirmacion'",
+                       ("Hola {nombre}, espero te encuentres muy bien. Te escribo para recordar nuestra próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor haz clic en el siguiente enlace para confirmar, reprogramar o cancelar tu asistencia:\n{link_confirmacion}\n\n¡Gracias!",))
+                       
                        
     cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_recordatorio'")
     if not cursor.fetchone():
@@ -1125,7 +1130,6 @@ def init_db():
     cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_config', ?)", (_def_cfg,))
     cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('firebase_vapid_key', ?)", (_def_vapid,))
 
-    # Tablas para Módulos Terapéuticos Personalizados (Sueño, Ansiedad, Sobriedad)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS modulos_terapeuticos_paciente (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1138,6 +1142,13 @@ def init_db():
             UNIQUE(paciente_id, modulo_clave)
         )
     """)
+    try:
+        cursor.execute("SELECT token_confirmacion FROM agenda_finanzas LIMIT 1")
+    except sqlite3.OperationalError:
+        try:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN token_confirmacion TEXT UNIQUE")
+        except:
+            pass
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS registros_sueno (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

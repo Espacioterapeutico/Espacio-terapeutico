@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS agenda_finanzas (
     control_uso TEXT NOT NULL DEFAULT 'Consumida', -- 'Consumida', 'No consumida'
     fecha_liquidacion TEXT,
     confirmada INTEGER DEFAULT 0,
+    token_confirmacion TEXT UNIQUE,
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
 );
 
