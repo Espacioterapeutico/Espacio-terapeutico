@@ -1477,7 +1477,7 @@ async function handleAuthSubmit(e) {
                 try { dataAdmin = await resAdmin.json(); } catch(exJ) {}
                 if (resAdmin.ok && dataAdmin) {
                     showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago, dataAdmin.primer_inicio, dataAdmin.suscripcion_paga, dataAdmin.fecha_expiracion_prueba, dataAdmin.nombres, dataAdmin.apellidos);
-                    if (typeof closeAuthModal === 'function') closeAuthModal();
+                    
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
                 }
@@ -1501,7 +1501,7 @@ async function handleAuthSubmit(e) {
                     } else {
                         showPatientLayout(dataPatient.username, dataPatient.patient_id);
                     }
-                    if (typeof closeAuthModal === 'function') closeAuthModal();
+                    
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
                 }
@@ -1682,7 +1682,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         const fastBooking = document.getElementById('fast-booking-screen');
         if (appLayout) { appLayout.style.display = 'none'; appLayout.classList.add('hide'); }
         if (sidebar) sidebar.classList.add('hide');
-        if (authScr) { authScr.style.display = 'none'; authScr.classList.add('hide'); }
+        if (authScr) { authScr.style.removeProperty('display'); authScr.style.removeProperty('display'); authScr.style.display = 'none'; authScr.classList.add('hide'); }
         if (pubLanding) { pubLanding.style.display = 'none'; pubLanding.classList.add('hide'); }
         if (pubProfile) { pubProfile.style.display = 'none'; pubProfile.classList.add('hide'); }
         if (fastBooking) { fastBooking.style.display = 'none'; fastBooking.classList.add('hide'); }
@@ -2038,7 +2038,12 @@ async function showPatientWizard(patientId, username, patientData = null) {
     sessionStorage.setItem('role', 'paciente');
     
     document.body.classList.add('is-patient');
-    document.getElementById('auth-screen').classList.add('hide');
+    const authScrWiz = document.getElementById('auth-screen');
+    if (authScrWiz) {
+        authScrWiz.classList.add('hide');
+        authScrWiz.style.removeProperty('display');
+        authScrWiz.style.display = 'none';
+    }
     const pubLnd = document.getElementById('public-landing-screen');
     if (pubLnd) {
         pubLnd.classList.add('hide');
