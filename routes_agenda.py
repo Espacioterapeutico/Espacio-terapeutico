@@ -12,7 +12,7 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Blueprint, request, jsonify, session, g
+from flask import Blueprint, request, jsonify, session, g, render_template
 
 agenda_bp = Blueprint('agenda', __name__)
 
