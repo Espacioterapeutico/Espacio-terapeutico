@@ -227,6 +227,10 @@
                     ❌ No podré asistir
                 </button>
             </div>
+            
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 1.5rem; padding: 0 5px;">
+                <strong>Norma de cancelación:</strong> Si ha confirmado su cita, puede cancelar la consulta de forma gratuita antes del tiempo límite. Pasado el tiempo de la regla de cancelación, se realizará el cargo de la sesión.
+            </p>
         </div>
         
         <div class="loading" id="loading-view">
@@ -250,43 +254,66 @@
             if (accion === 'cancelar' && !confirm('¿Estás seguro que deseas cancelar tu sesión?')) {
                 return;
             }
+            if (accion === 'reprogramar' && !confirm('¿Deseas cancelar esta cita para elegir un nuevo horario?')) {
+                return;
+            }
             
             document.getElementById('action-view').style.display = 'none';
-            document.getElementById('loading-view').style.display = 'block';
+            document.getElementById('loading-view').style.display = 'flex';
             
             try {
-                const res = await fetch('/api/cita/accion', {
+                const response = await fetch('/api/cita/accion', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: token, accion: accion })
+                    body: JSON.stringify({ token, accion })
                 });
                 
-                if (res.ok) {
-                    document.getElementById('loading-view').style.display = 'none';
-                    document.getElementById('success-view').style.display = 'block';
-                    
+                const data = await response.json();
+                
+                document.getElementById('loading-view').style.display = 'none';
+                document.getElementById('success-view').style.display = 'flex';
+                
+                const icon = document.getElementById('success-icon');
+                const title = document.getElementById('success-title');
+                const desc = document.getElementById('success-desc');
+                
+                if (data.success) {
                     if (accion === 'confirmar') {
-                        document.getElementById('success-icon').innerText = '✅';
-                        document.getElementById('success-title').innerText = '¡Confirmado!';
-                        document.getElementById('success-desc').innerText = 'Tu asistencia ha sido confirmada exitosamente. Te hemos enviado un mensaje de confirmación por WhatsApp.';
-                    } else if (accion === 'reprogramar') {
-                        document.getElementById('success-icon').innerText = '🔄';
-                        document.getElementById('success-title').innerText = 'Solicitud Enviada';
-                        document.getElementById('success-desc').innerText = 'Nos pondremos en contacto contigo por WhatsApp para agendar una nueva fecha.';
+                        icon.innerText = '✅';
+                        icon.style.background = 'rgba(16, 185, 129, 0.1)';
+                        title.innerText = '¡Confirmado!';
+                        desc.innerText = 'Tu asistencia ha sido confirmada. Nos vemos pronto.';
                     } else if (accion === 'cancelar') {
-                        document.getElementById('success-icon').innerText = '❌';
-                        document.getElementById('success-title').innerText = 'Cita Cancelada';
-                        document.getElementById('success-desc').innerText = 'Tu sesión ha sido cancelada exitosamente.';
+                        icon.innerText = '❌';
+                        icon.style.background = 'rgba(220, 53, 69, 0.1)';
+                        title.innerText = 'Cita Cancelada';
+                        desc.innerText = 'Hemos notificado al terapeuta sobre tu cancelación.';
+                    } else if (accion === 'reprogramar') {
+                        icon.innerText = '🔄';
+                        icon.style.background = 'rgba(23, 162, 184, 0.1)';
+                        title.innerText = 'Redirigiendo...';
+                        desc.innerText = 'Serás redirigido a la agenda para elegir tu nueva fecha.';
+                        if (data.fast_booking_url) {
+                            setTimeout(() => {
+                                window.location.href = data.fast_booking_url;
+                            }, 1500);
+                        }
                     }
                 } else {
-                    alert('Ocurrió un error. Por favor intenta de nuevo.');
-                    document.getElementById('loading-view').style.display = 'none';
-                    document.getElementById('action-view').style.display = 'block';
+                    icon.innerText = '⚠️';
+                    icon.style.background = 'rgba(255, 193, 7, 0.1)';
+                    title.innerText = 'Error';
+                    desc.innerText = data.error || 'Ocurrió un problema, intenta de nuevo.';
                 }
             } catch (err) {
-                alert('Error de conexión. Por favor verifica tu internet.');
                 document.getElementById('loading-view').style.display = 'none';
-                document.getElementById('action-view').style.display = 'block';
+                document.getElementById('success-view').style.display = 'flex';
+                
+                const icon = document.getElementById('success-icon');
+                icon.innerText = '⚠️';
+                icon.style.background = 'rgba(255, 193, 7, 0.1)';
+                document.getElementById('success-title').innerText = 'Error de conexión';
+                document.getElementById('success-desc').innerText = 'No se pudo procesar tu solicitud.';
             }
         }
     </script>

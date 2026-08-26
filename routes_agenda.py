@@ -1173,8 +1173,8 @@ def accion_cita_publica():
     cursor = db.cursor()
     
     cursor.execute("""
-        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.username as psic_username
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON p.psicologo_id = u.id
@@ -1188,6 +1188,14 @@ def accion_cita_publica():
     appt_id = cita['id']
     psych_id = cita['psicologo_id'] or 1
     phone = cita['pat_telefono']
+    
+    fast_booking_url = f"https://www.espacioterapeutico.net/agendar/{cita['psic_username'] or 'psic.paulomora'}"
+    
+    # Prevenir doble-click
+    if accion == 'confirmar' and cita['confirmada'] == 1:
+        return jsonify({'success': True})
+    if accion in ('cancelar', 'reprogramar') and cita['estado_pago'] == 'Cancelada':
+        return jsonify({'success': True, 'fast_booking_url': fast_booking_url})
     
     # Preparamos datos para Whatsapp
     patient_dict = {
@@ -1209,42 +1217,49 @@ def accion_cita_publica():
     cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_reagendamiento')")
     cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
     
-    msg_stage = None
     template = ""
     
     if accion == 'confirmar':
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto."
-        msg_stage = 'confirmacion_ok'
         
     elif accion == 'cancelar':
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar, por favor contáctanos."
-        msg_stage = 'cancelacion_ok'
         
     elif accion == 'reprogramar':
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_reagendamiento') or "Hemos recibido tu solicitud para reprogramar. Pronto nos pondremos en contacto contigo para agendar un nuevo espacio."
-        msg_stage = 'reprogramar'
         
     db.commit()
     
-    # Enviar mensaje de WhatsApp confirmando la accion
-    if phone:
+    import threading
+    def _background_tasks():
+        if phone:
+            try:
+                from routes_notificaciones import make_wa_http_request, format_whatsapp_message
+                from routes_herramientas import clean_phone_number
+                msg = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
+                clean_phone = clean_phone_number(phone)
+                # Marcar en DB como enviado para evitar duplicado con el cron
+                db_bg = sqlite3.connect('clinica.db')
+                db_bg.row_factory = sqlite3.Row
+                if accion == 'cancelar' or accion == 'reprogramar':
+                    db_bg.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                elif accion == 'confirmar':
+                    db_bg.execute("UPDATE agenda_finanzas SET respuesta_enviada_wa = 1 WHERE id = ?", (appt_id,))
+                db_bg.commit()
+                db_bg.close()
+                make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg, 'user_id': psych_id}, timeout=15, user_id=psych_id)
+            except Exception as e:
+                print("Error enviando confirmacion WA desde public link:", e)
+                
         try:
-            from routes_notificaciones import make_wa_http_request, format_whatsapp_message
-            from routes_herramientas import clean_phone_number
-            msg = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
-            clean_phone = clean_phone_number(phone)
-            make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg, 'user_id': psych_id}, timeout=10, user_id=psych_id)
+            from app import push_all_data_to_firebase
+            push_all_data_to_firebase()
         except Exception as e:
-            print("Error enviando confirmacion WA desde public link:", e)
+            print("Error en push_all_data_to_firebase:", e)
             
-    # También forzamos la sincronización de la DB si es que usa PythonAnywhere y Desktop
-    try:
-        from app import push_all_data_to_firebase
-        push_all_data_to_firebase()
-    except Exception as e:
-        print("Error en push_all_data_to_firebase:", e)
+    threading.Thread(target=_background_tasks, daemon=True).start()
         
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'fast_booking_url': fast_booking_url})
