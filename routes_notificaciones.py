@@ -1566,7 +1566,17 @@ def get_whatsapp_queue_status():
         except Exception as _tool_err:
             print("Aviso al consultar cola de herramientas en queue-status:", _tool_err)
 
-        queue.sort(key=lambda x: (x['priority'], str(x['fecha']), str(x['hora'])))
+        def get_state_weight(st):
+            if st.startswith('en_cola'): return 1
+            if st.startswith('esperando'): return 2
+            return 3
+
+        queue.sort(key=lambda x: (
+            get_state_weight(x['pipeline_status']),
+            str(x['fecha']),
+            str(x['hora']),
+            x.get('priority', 99)
+        ))
     except Exception as e_q:
         import traceback
         print("Error en consulta de cola de WhatsApp:", e_q)
