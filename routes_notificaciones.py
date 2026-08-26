@@ -596,11 +596,10 @@ def cron_send_whatsapp_reminders():
     cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo')")
     cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
     
-    tmpl_conf_default = "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+    tmpl_conf_default = "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\n📍 *Confirma o gestiona tu cita aquí:*\n{link_confirmacion}\n\n¡Gracias!"
     
-    # Si la plantilla guardada en BD no tiene 'SI' o 'NO', la actualizamos para garantizar la instrucción
     msg_conf_db = cfg_rows.get('msg_confirmacion', '')
-    if not msg_conf_db or ('SI' not in msg_conf_db and 'Sí' not in msg_conf_db and 'si' not in msg_conf_db):
+    if not msg_conf_db:
         cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('msg_confirmacion', ?)", (tmpl_conf_default,))
         db.commit()
         msg_conf_db = tmpl_conf_default
@@ -689,6 +688,8 @@ def cron_send_whatsapp_reminders():
         patient_dict['link_confirmacion'] = link_confirmacion
 
         mensaje_texto = format_whatsapp_message(msg_conf_db, patient_dict, cita_dict, psicologo_data)
+        if '{link_confirmacion}' not in msg_conf_db and link_confirmacion not in mensaje_texto:
+            mensaje_texto += f"\n\n📍 *Confirma o gestiona tu cita aquí:*\n{link_confirmacion}"
         psych_id = cita['psicologo_id'] or 1
 
         try:
@@ -872,7 +873,7 @@ def cron_send_whatsapp_reminders():
     herramientas_enviadas = 0
     try:
         from app import send_hourly_patient_tool_reminders
-        herramientas_enviadas = send_hourly_patient_tool_reminders(db, force=True)
+        herramientas_enviadas = send_hourly_patient_tool_reminders(db)
     except Exception as e_tools:
         print("Aviso al ejecutar send_hourly_patient_tool_reminders en cron:", e_tools)
 
@@ -1282,6 +1283,7 @@ def get_whatsapp_queue_status():
 
     today_str = now_local.strftime('%Y-%m-%d')
     yesterday_str = (now_local - timedelta(days=1)).strftime('%Y-%m-%d')
+    tomorrow_str = (now_local + timedelta(days=1)).strftime('%Y-%m-%d')
 
     queue = []
     try:
