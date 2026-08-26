@@ -1303,6 +1303,7 @@ def get_whatsapp_queue_status():
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
                        COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
                        COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                       COALESCE(af.cierre_enviado_wa, 0) as cierre_enviado_wa,
                        {estado_col},
                        p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
                 FROM agenda_finanzas af
@@ -1319,6 +1320,7 @@ def get_whatsapp_queue_status():
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
                        COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
                        COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
+                       COALESCE(af.cierre_enviado_wa, 0) as cierre_enviado_wa,
                        {estado_col},
                        p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
                 FROM agenda_finanzas af
@@ -1332,7 +1334,8 @@ def get_whatsapp_queue_status():
         
         rows = cursor.fetchall()
 
-        for r in rows:
+        for raw_r in rows:
+            r = dict(raw_r)
             fecha_cita = r['fecha']
             hora_cita = r['hora']
             pat_name = f"{r['pat_nombres']} {r['pat_apellidos']}"
