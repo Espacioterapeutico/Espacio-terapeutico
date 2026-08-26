@@ -2597,13 +2597,6 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
             # Procesar envío WhatsApp
             if p['telefono']:
                 domain_host = os.environ.get('APP_URL', 'https://www.espacioterapeutico.net').rstrip('/')
-                try:
-                    from flask import request
-                    if request and hasattr(request, 'host_url') and request.host_url:
-                        domain_host = request.host_url.rstrip('/')
-                except Exception:
-                    pass
-
                 direct_link = f"{domain_host}/herramienta/directa?token={token}"
                 first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
                 tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')

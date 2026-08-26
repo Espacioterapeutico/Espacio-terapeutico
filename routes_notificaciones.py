@@ -1371,6 +1371,9 @@ def get_whatsapp_queue_status():
                 elif is_cancelada:
                     lbl = '❌ Cancelado'
                     status = 'cancelado'
+                elif is_today or (is_tomorrow and now_local.hour >= 8):
+                    lbl = '📥 En Cola (Envío Inmediato)'
+                    status = 'en_cola_conf'
                 elif is_tomorrow:
                     lbl = '📥 En Cola (08:00 AM Día Previo)'
                     status = 'en_cola_conf'
