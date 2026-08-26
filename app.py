@@ -1146,7 +1146,7 @@ def init_db():
         cursor.execute("SELECT token_confirmacion FROM agenda_finanzas LIMIT 1")
     except sqlite3.OperationalError:
         try:
-            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN token_confirmacion TEXT UNIQUE")
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN token_confirmacion TEXT")
         except:
             pass
     cursor.execute("""
