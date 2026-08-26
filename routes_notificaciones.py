@@ -669,6 +669,25 @@ def cron_send_whatsapp_reminders():
             'apellidos': cita['pat_apellidos'],
             'pais': cita['pat_pais'] or ''
         }
+        
+        import secrets
+        try:
+            token_conf = cita['token_confirmacion']
+        except IndexError:
+            token_conf = None
+        if not token_conf:
+            token_conf = secrets.token_urlsafe(16)
+            try:
+                cursor.execute("UPDATE agenda_finanzas SET token_confirmacion = ? WHERE id = ?", (token_conf, cita['id']))
+                db.commit()
+            except:
+                pass
+        
+        domain_host = request.host_url.rstrip('/') if request else 'https://www.espacioterapeutico.net'
+        link_confirmacion = f"{domain_host}/cita/confirmar/{token_conf}"
+        cita_dict['link_confirmacion'] = link_confirmacion
+        patient_dict['link_confirmacion'] = link_confirmacion
+
         mensaje_texto = format_whatsapp_message(msg_conf_db, patient_dict, cita_dict, psicologo_data)
         psych_id = cita['psicologo_id'] or 1
 
@@ -682,17 +701,17 @@ def cron_send_whatsapp_reminders():
                 cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
                 db.commit()
                 enviados_confirmaciones.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'tipo': 'confirmacion'})
-                print(f"[CRON]   ✅ Confirmación ENVIADA con éxito a {pat_name}", flush=True)
+                print(f"[CRON]   OK: Confirmación ENVIADA con éxito a {pat_name}", flush=True)
             else:
                 err_msg = f'HTTP {r.status_code if r else "None"}'
                 if r:
                     try: err_msg = r.json().get('error', r.text[:200])
                     except: err_msg = r.text[:200]
                 errores.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'error': err_msg})
-                print(f"[CRON]   ❌ Error enviando a {pat_name}: {err_msg}", flush=True)
+                print(f"[CRON]   ERROR enviando a {pat_name}: {err_msg}", flush=True)
         except Exception as e:
             errores.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'error': str(e)})
-            print(f"[CRON]   ❌ Excepción enviando a {pat_name}: {traceback.format_exc()}", flush=True)
+            print(f"[CRON]   EXCEPCION enviando a {pat_name}: {e}", flush=True)
 
     # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy CONFIRMADAS en Citas O Finanzas)
     cursor.execute("""
