@@ -619,7 +619,7 @@ def cron_send_whatsapp_reminders():
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
-        WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0
+        WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0 AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
     """, (today_str, future_3days_str))
     citas_confirmar = cursor.fetchall()
     print(f"[CRON] Citas pendientes de confirmación encontradas: {len(citas_confirmar)} (rango {today_str} a {future_3days_str})", flush=True)
@@ -721,7 +721,7 @@ def cron_send_whatsapp_reminders():
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
-        WHERE af.fecha = ? AND COALESCE(af.confirmada, 0) = 1 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0
+        WHERE af.fecha = ? AND COALESCE(af.confirmada, 0) = 1 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0 AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
     """, (today_str,))
     citas_recordar = cursor.fetchall()
 
@@ -781,6 +781,7 @@ def cron_send_whatsapp_reminders():
                   AND COALESCE(af.confirmada, 0) = 0 
                   AND COALESCE(af.reagendamiento_enviado_wa, 0) = 0
                   AND COALESCE(af.estado_pago, '') NOT IN ('Cancelada', 'Pagado', 'Paga', 'Completada')
+                  AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
                   AND NOT EXISTS (
                       SELECT 1 FROM agenda_finanzas af_future 
                       WHERE af_future.paciente_id = af.paciente_id AND af_future.fecha > af.fecha
@@ -835,6 +836,7 @@ def cron_send_whatsapp_reminders():
             WHERE af.fecha = ? 
               AND COALESCE(af.confirmada, 0) = 1
               AND COALESCE(af.estado_pago, '') != 'Cancelada'
+              AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
               AND COALESCE(af.cierre_enviado_wa, 0) = 0
         """, (today_str,))
         citas_cierre = cursor.fetchall()
@@ -1309,7 +1311,7 @@ def get_whatsapp_queue_status():
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
                 {join_clause}
-                WHERE (p.psicologo_id = 1 OR p.psicologo_id IS NULL) AND af.fecha >= ?
+                WHERE (p.psicologo_id = 1 OR p.psicologo_id IS NULL) AND af.fecha >= ? AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
                 ORDER BY af.fecha ASC, af.hora ASC
                 LIMIT 500
             """
@@ -1326,7 +1328,7 @@ def get_whatsapp_queue_status():
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
                 {join_clause}
-                WHERE p.psicologo_id = ? AND af.fecha >= ?
+                WHERE p.psicologo_id = ? AND af.fecha >= ? AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
                 ORDER BY af.fecha ASC, af.hora ASC
                 LIMIT 500
             """
