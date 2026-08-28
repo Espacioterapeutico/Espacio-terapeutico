@@ -10202,6 +10202,9 @@ async function initFirebaseMessagingFlow(registration) {
         }
         
         let fcmReg = registration;
+        if (!fcmReg && 'serviceWorker' in navigator) {
+            fcmReg = await navigator.serviceWorker.ready;
+        }
         
         // Obtener el token de registro de FCM
         const token = await messaging.getToken({

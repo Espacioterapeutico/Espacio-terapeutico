@@ -3023,7 +3023,7 @@ def index(slug=None):
 def serve_manifest():
     return send_file(get_resource_path('static/manifest.json'), mimetype='application/manifest+json')
 
-@app.route('/firebase-messaging-sw.js')
+@app.route('/disabled-firebase-messaging-sw.js')
 def serve_firebase_sw():
     db = get_db()
     cursor = db.cursor()
