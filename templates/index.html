@@ -7522,5 +7522,101 @@
             </div>
         </div>
     </div>
+
+
+
+
+<script>
+function openQuickAddPatientModal() {
+    if (typeof isFeatureBlocked === 'function' && isFeatureBlocked('registro')) {
+        alert("La función de Registro de Pacientes está suspendida por administración.");
+        return;
+    }
+    const form = document.getElementById('quick-add-patient-form');
+    if (form) form.reset();
+    openModal('quick-add-patient-modal');
+}
+
+async function togglePatientEstado(patientId) {
+    try {
+        const res = await fetch(`/api/patients/${patientId}/toggle-estado`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            // Actualizar la lista en memoria si existe
+            if (typeof patients !== 'undefined') {
+                const p = patients.find(x => x.id === patientId);
+                if (p) p.estado = data.new_estado;
+            }
+            loadPatients(); // Recargar la tabla
+        } else {
+            alert(data.error || "Error al cambiar el estado");
+        }
+    } catch (err) {
+        alert("Error de conexión al cambiar el estado.");
+    }
+}
+window.togglePatientEstado = togglePatientEstado;
+
+async function handleQuickAddPatientSubmit(e) {
+    e.preventDefault();
+    const payload = {
+        nombres: document.getElementById('qa-nombres').value,
+        apellidos: document.getElementById('qa-apellidos').value,
+        telefono: document.getElementById('qa-telefono').value,
+        estado: document.getElementById('qa-estado').value,
+        cedula: '', // Registro rápido no requiere cédula
+        edad: '',
+        genero: '',
+        pronombre: '',
+        fecha_nacimiento: '',
+        lugar_nacimiento: '',
+        pais: '',
+        ciudad: '',
+        con_quien_reside: '',
+        email: '',
+        nivel_academico: '',
+        ocupacion: '',
+        estado_civil: '',
+        antecedentes_medicos_personales: '',
+        antecedentes_medicos_familiares: '',
+        antecedentes_psicologicos_personales: '',
+        antecedentes_psicologicos_familiares: '',
+        asistencia_previa_psicologo: '',
+        expectativas: '',
+        motivo_consulta: '',
+        farmacologia: '',
+        contacto_emergencia_nombre: '',
+        contacto_emergencia_parentesco: '',
+        diagnostico: '',
+        costo_personalizado: '',
+        moneda_personalizada: 'USD',
+        costo_paquete_personalizado: '',
+        sesiones_paquete_personalizado: '',
+        organizacion_id: 'null'
+    };
+    
+    try {
+        const res = await fetch('/api/patients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            alert("Consultante agregado al registro rápido con éxito.");
+            closeModal('quick-add-patient-modal');
+            loadPatients();
+            if (activeView === 'dashboard') {
+                loadDashboardStats();
+            }
+        } else {
+            alert(data.error);
+        }
+    } catch (err) {
+        alert("Error de conexión al guardar el registro rápido.");
+    }
+}
+</script>
 </body>
 </html>
