@@ -2313,7 +2313,13 @@ def get_firebase_config():
         cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_vapid_key'")
         row_vapid = cursor.fetchone()
         if row_cfg and row_cfg[0]:
-            cfg_val = row_cfg[0]
+            import json
+            try:
+                saved = json.loads(row_cfg[0])
+                saved["apiKey"] = "AIzaSyDRQlUEv1SToy5ZdQQyUuYZDIhejeJ81zM"
+                cfg_val = json.dumps(saved)
+            except:
+                cfg_val = row_cfg[0]
         if row_vapid and row_vapid[0]:
             vapid_val = row_vapid[0]
     except Exception as e:

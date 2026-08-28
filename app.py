@@ -3075,19 +3075,41 @@ def serve_sw():
     except Exception as e:
         sw_content = ""
         
+    valid_cfg = {
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQQyUuYZDIhejeJ81zM",
+        "authDomain": "espacio-terapeutico.firebaseapp.com",
+        "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
+        "projectId": "espacio-terapeutico",
+        "storageBucket": "espacio-terapeutico.firebasestorage.app",
+        "messagingSenderId": "437385369836",
+        "appId": "1:437385369836:web:f3745dc8d65d7ca418edc9",
+        "measurementId": "G-M04FWL2963"
+    }
+
     db = get_db()
     cursor = db.cursor()
     cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
     row = cursor.fetchone()
     
+    import json
     if row and row[0]:
+        try:
+            saved = json.loads(row[0])
+            saved["apiKey"] = valid_cfg["apiKey"]
+            config_dict_str = json.dumps(saved)
+        except Exception:
+            config_dict_str = json.dumps(valid_cfg)
+    else:
+        config_dict_str = json.dumps(valid_cfg)
+        
+    if config_dict_str:
         firebase_sw_code = f"""
 // === FIREBASE CLOUD MESSAGING INYECTADO ===
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 try {{
-  firebase.initializeApp({row[0]});
+  firebase.initializeApp({config_dict_str});
   const messaging = firebase.messaging();
   messaging.onBackgroundMessage((payload) => {{
     console.log('[FCM] Mensaje en segundo plano (FCM SDK):', payload);
