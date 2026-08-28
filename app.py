@@ -1520,7 +1520,7 @@ def ensure_db_initialized():
                 sync_all_psychologist_patients_to_firebase(1)
             except Exception as _db_err:
                 print(f"Advertencia al inicializar BD: {_db_err}")
-        threading.Thread(target=_async_init, daemon=True).start()
+        _async_init()
 
 FIREBASE_DB_URL = "https://espacio-terapeutico-default-rtdb.firebaseio.com"
 
