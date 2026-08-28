@@ -556,7 +556,17 @@ def init_db():
             )
         """)
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
+            
+    # Migraciones para tokens_herramientas (por si ya existia antes de agregar las nuevas columnas)
+    cursor.execute("PRAGMA table_info(tokens_herramientas)")
+    th_cols = [r_col[1] for r_col in cursor.fetchall()]
+    if 'fecha_completado' not in th_cols:
+        cursor.execute("ALTER TABLE tokens_herramientas ADD COLUMN fecha_completado DATETIME NULL")
+    if 'fecha_registro' not in th_cols:
+        cursor.execute("ALTER TABLE tokens_herramientas ADD COLUMN fecha_registro DATETIME NULL")
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 psicologo_id INTEGER NOT NULL,
                 paciente_id INTEGER NOT NULL,
@@ -1317,6 +1327,16 @@ def init_db():
         )
     """)
     cursor.execute("""
+        
+    # Migraciones para tokens_herramientas (por si ya existia antes de agregar las nuevas columnas)
+    cursor.execute("PRAGMA table_info(tokens_herramientas)")
+    th_cols = [r_col[1] for r_col in cursor.fetchall()]
+    if 'fecha_completado' not in th_cols:
+        cursor.execute("ALTER TABLE tokens_herramientas ADD COLUMN fecha_completado DATETIME NULL")
+    if 'fecha_registro' not in th_cols:
+        cursor.execute("ALTER TABLE tokens_herramientas ADD COLUMN fecha_registro DATETIME NULL")
+
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             psicologo_id INTEGER NOT NULL,
