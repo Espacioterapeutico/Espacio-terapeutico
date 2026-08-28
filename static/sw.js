@@ -73,25 +73,38 @@ self.addEventListener('fetch', (event) => {
 
 // Push notifications en segundo plano
 self.addEventListener('push', (event) => {
-  let data = { title: 'Espacio Terapéutico', body: 'Tienes una nueva notificación.', icon: '/static/logo.png' };
+  let data = { title: 'Espacio Terapéutico', body: 'Tienes una nueva notificación.', icon: '/static/logo.png', url: '/' };
   if (event.data) {
     try {
-      data = event.data.json();
+      const parsed = event.data.json();
+      if (parsed.notification || parsed.data) {
+        // FCM payload format
+        data.title = (parsed.notification && parsed.notification.title) || (parsed.data && parsed.data.title) || data.title;
+        data.body = (parsed.notification && parsed.notification.body) || (parsed.data && parsed.data.body) || parsed.data?.mensaje || data.body;
+        data.icon = (parsed.notification && parsed.notification.icon) || (parsed.data && parsed.data.icon) || data.icon;
+        data.url = (parsed.data && parsed.data.url) || (parsed.data && parsed.data.link) || data.url;
+      } else {
+        // Standard VAPID format
+        data.title = parsed.title || data.title;
+        data.body = parsed.body || parsed.mensaje || data.body;
+        data.icon = parsed.icon || data.icon;
+        data.url = parsed.url || parsed.link || data.url;
+      }
     } catch (e) {
       data.body = event.data.text();
     }
   }
 
   const options = {
-    body: data.body || data.mensaje || 'Nueva notificación',
-    icon: data.icon || '/static/logo.png',
-    badge: '/static/logo.png',
+    body: data.body,
+    icon: data.icon,
+    badge: '/static/badge.png',
     vibrate: [100, 50, 100],
-    data: { url: data.url || data.link || '/' }
+    data: { url: data.url }
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Espacio Terapéutico', options)
+    self.registration.showNotification(data.title, options)
   );
 });
 
