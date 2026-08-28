@@ -77,19 +77,18 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       const parsed = event.data.json();
-      if (parsed.notification || parsed.data) {
-        // FCM payload format
-        data.title = (parsed.notification && parsed.notification.title) || (parsed.data && parsed.data.title) || data.title;
-        data.body = (parsed.notification && parsed.notification.body) || (parsed.data && parsed.data.body) || parsed.data?.mensaje || data.body;
-        data.icon = (parsed.notification && parsed.notification.icon) || (parsed.data && parsed.data.icon) || data.icon;
-        data.url = (parsed.data && parsed.data.url) || (parsed.data && parsed.data.link) || data.url;
-      } else {
-        // Standard VAPID format
-        data.title = parsed.title || data.title;
-        data.body = parsed.body || parsed.mensaje || data.body;
-        data.icon = parsed.icon || data.icon;
-        data.url = parsed.url || parsed.link || data.url;
+      
+      // Si es de Firebase (FCM), ignorar este manejador manual 
+      // porque el SDK inyectado en app.py se encargará.
+      if (parsed.notification || parsed.data?.["gcm.message_id"] || parsed.fcmMessageId) {
+        return; 
       }
+      
+      // Manejar formato VAPID estándar
+      data.title = parsed.title || data.title;
+      data.body = parsed.body || parsed.mensaje || data.body;
+      data.icon = parsed.icon || data.icon;
+      data.url = parsed.url || parsed.link || data.url;
     } catch (e) {
       data.body = event.data.text();
     }

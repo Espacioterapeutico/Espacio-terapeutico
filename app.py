@@ -3080,6 +3080,37 @@ def serve_sw():
     cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
     row = cursor.fetchone()
     
+    if row and row[0]:
+        firebase_sw_code = f"""
+// === FIREBASE CLOUD MESSAGING INYECTADO ===
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+try {{
+  firebase.initializeApp({row[0]});
+  const messaging = firebase.messaging();
+  messaging.onBackgroundMessage((payload) => {{
+    console.log('[FCM] Mensaje en segundo plano (FCM SDK):', payload);
+    const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'Espacio Terapéutico';
+    const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || 'Tienes una nueva notificación.';
+    const url = (payload.data && payload.data.url) || (payload.data && payload.data.link) || '/';
+    
+    self.registration.showNotification(title, {{
+      body: body,
+      icon: '/static/logo.png',
+      badge: '/static/badge.png',
+      sound: '/static/notification.wav',
+      vibrate: [200, 100, 200, 100, 200],
+      data: {{ url: url }}
+    }});
+  }});
+}} catch(err) {{
+  console.error("Fallo al inicializar Firebase SDK en el SW:", err);
+}}
+// ===========================================
+"""
+        sw_content = firebase_sw_code + "\n" + sw_content
+        
     response = Response(sw_content, mimetype='application/javascript')
     response.headers['Service-Worker-Allowed'] = '/'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
