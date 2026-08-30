@@ -1324,25 +1324,25 @@ def init_db():
             FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE
         )
     """)
-        # Migraciones para tokens_herramientas (por si ya existia antes de agregar las nuevas columnas)
-        cursor.execute("PRAGMA table_info(tokens_herramientas)")
-        th_cols = [r_col[1] for r_col in cursor.fetchall()]
-        if 'fecha_completado' not in th_cols:
+    # Migraciones para tokens_herramientas (por si ya existia antes de agregar las nuevas columnas)
+    cursor.execute("PRAGMA table_info(tokens_herramientas)")
+    th_cols = [r_col[1] for r_col in cursor.fetchall()]
+    if 'fecha_completado' not in th_cols:
         cursor.execute("ALTER TABLE tokens_herramientas ADD COLUMN fecha_completado DATETIME NULL")
-        if 'fecha_registro' not in th_cols:
+    if 'fecha_registro' not in th_cols:
         cursor.execute("ALTER TABLE tokens_herramientas ADD COLUMN fecha_registro DATETIME NULL")
 
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            psicologo_id INTEGER NOT NULL,
-            paciente_id INTEGER NOT NULL,
-            herramienta_tipo TEXT NOT NULL,
-            fecha_programada DATE NOT NULL,
-            hora_programada TEXT DEFAULT '20:00',
-            estado TEXT DEFAULT 'programado',
-            enviado INTEGER DEFAULT 0,
-            fecha_envio DATETIME NULL,
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS cola_recordatorios_herramientas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        psicologo_id INTEGER NOT NULL,
+        paciente_id INTEGER NOT NULL,
+        herramienta_tipo TEXT NOT NULL,
+        fecha_programada DATE NOT NULL,
+        hora_programada TEXT DEFAULT '20:00',
+        estado TEXT DEFAULT 'programado',
+        enviado INTEGER DEFAULT 0,
+        fecha_envio DATETIME NULL,
             token_id INTEGER NULL,
             pausado INTEGER DEFAULT 0,
             fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
