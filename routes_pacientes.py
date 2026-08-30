@@ -300,6 +300,8 @@ def create_patient():
     nombres = data.get('nombres')
     apellidos = data.get('apellidos')
     cedula = data.get('cedula', '').strip()
+    if not cedula:
+        cedula = None
     estado = data.get('estado', 'Activo')
     if not nombres or not apellidos:
         return jsonify({'error': 'Nombres y Apellidos son campos obligatorios.'}), 400
@@ -399,6 +401,8 @@ def update_patient(patient_id):
     nombres = data.get('nombres')
     apellidos = data.get('apellidos')
     cedula = data.get('cedula', '').strip()
+    if not cedula:
+        cedula = None
     estado = data.get('estado', 'Activo')
     if not nombres or not apellidos:
         return jsonify({'error': 'Nombres y Apellidos son obligatorios.'}), 400
