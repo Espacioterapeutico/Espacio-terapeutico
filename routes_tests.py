@@ -1728,12 +1728,17 @@ def api_post_public_evaluacion(token):
             total_score, subscales_dict, classification, interpretation = process_atas_scoring(answers)
         elif assignment['test_code'] == 'BSSC':
             total_score, subscales_dict, classification, interpretation = process_bssc_scoring(answers)
+        elif assignment['test_code'] == 'RAADS-R':
+            total_score = sum(int(float(v)) for v in answers.values() if str(v).replace('.', '', 1).isdigit())
+            classification = "Compatible con TEA (RAADS-R >= 65)" if total_score >= 65 else "Por Debajo del Umbral Clínico (< 65)"
+            interpretation = f"Puntuación Total: {total_score} / 240 pts."
+            subscales_dict = {"Puntuación Total": {"puntuacion": total_score, "max": 240}}
         else:
             try:
-                from app import process_test_scoring
-                total_score, subscales_dict, classification, interpretation = process_test_scoring(
-                    assignment['test_code'], answers, assignment=assignment, request_data=data, db=db
-                )
+                total_score = sum(int(float(v)) for v in answers.values() if str(v).replace('.', '', 1).isdigit())
+                classification = "Completado"
+                interpretation = f"Puntuación Total: {total_score} pts."
+                subscales_dict = {"Puntuación Total": total_score}
             except Exception as _pe:
                 total_score, subscales_dict, classification, interpretation = 0.0, {}, "Completado", "Respuestas registradas exitosamente."
 
@@ -1864,6 +1869,13 @@ def api_get_tests_historial():
         item = dict(r)
         if item.get('uuid_token'):
             item['url_test'] = f"/evaluacion/{item['uuid_token']}"
+        import json
+        if item.get('respuestas_json'):
+            try: item['respuestas'] = json.loads(item['respuestas_json'])
+            except: item['respuestas'] = {}
+        if item.get('subescalas_json'):
+            try: item['subescalas'] = json.loads(item['subescalas_json'])
+            except: item['subescalas'] = {}
         data_list.append(item)
     return jsonify({'asignaciones': data_list, 'tests': data_list, 'success': True})
 
@@ -1907,6 +1919,13 @@ def api_get_tests_paciente(patient_id):
         item = dict(r)
         if item.get('uuid_token'):
             item['url_test'] = f"/evaluacion/{item['uuid_token']}"
+        import json
+        if item.get('respuestas_json'):
+            try: item['respuestas'] = json.loads(item['respuestas_json'])
+            except: item['respuestas'] = {}
+        if item.get('subescalas_json'):
+            try: item['subescalas'] = json.loads(item['subescalas_json'])
+            except: item['subescalas'] = {}
         data_list.append(item)
     return jsonify({'asignaciones': data_list, 'tests': data_list, 'success': True})
 
@@ -1950,6 +1969,13 @@ def api_patient_portal_tests():
         d = dict(r)
         d['psicologo_nombre'] = f"Psic. {d.get('psic_username') or 'Clínico'}".strip()
         d['url_evaluacion'] = f"/evaluacion/{d['uuid_token']}"
+        import json
+        if d.get('respuestas_json'):
+            try: d['respuestas'] = json.loads(d.get('respuestas_json'))
+            except: d['respuestas'] = {}
+        if d.get('subescalas_json'):
+            try: d['subescalas'] = json.loads(d.get('subescalas_json'))
+            except: d['subescalas'] = {}
         tests_list.append(d)
 
     return jsonify({'tests': tests_list, 'success': True})
