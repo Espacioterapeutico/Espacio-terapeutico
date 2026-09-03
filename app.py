@@ -1820,6 +1820,7 @@ def auto_send_appointment_reminders(db):
               AND af.estado_pago NOT LIKE 'Cancelada%'
               AND af.estado_pago != 'Reprogramada'
               AND (af.control_uso IS NULL OR af.control_uso != 'Consumida')
+              AND af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL
         """, (today_str,))
         
         today_appts = cursor.fetchall()
@@ -2059,6 +2060,7 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
                     if not cursor.fetchone():
                         msg_wa = tmpl_cumple_default.replace('{nombre}', first_name).replace('{nombre_completo}', pac_nombre)
                         try:
+                            from routes_notificaciones import make_wa_http_request
                             res = make_wa_http_request('POST', '/send', json_data={'phone': p['telefono'], 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
                             if res and res.status_code == 200:
                                 wa_log_msg = f"Mensaje de cumpleaños enviado por WhatsApp a {pac_nombre} (ID: {pac_id})"

@@ -73,7 +73,7 @@ def get_patient_summary(patient_id):
     except Exception: pass
         
     cursor.execute("""
-        SELECT fecha, modalidad, resumen, observaciones_clinicas, tareas_asignadas, anotaciones_proxima 
+        SELECT fecha, modalidad, resumen, resumen_paciente, tareas_asignadas, anotaciones_proxima 
         FROM sesiones 
         WHERE paciente_id = ? 
         ORDER BY fecha DESC, id DESC LIMIT 1
@@ -135,7 +135,7 @@ def get_patient_summary(patient_id):
             
     last_session_dict = dict(last_session) if last_session else None
     if last_session_dict:
-        for k in ['resumen', 'observaciones_clinicas', 'tareas_asignadas', 'anotaciones_proxima']:
+        for k in ['resumen', 'resumen_paciente', 'tareas_asignadas', 'anotaciones_proxima']:
             if k in last_session_dict and last_session_dict[k]:
                 last_session_dict[k] = decrypt_clinical_text(last_session_dict[k])
 

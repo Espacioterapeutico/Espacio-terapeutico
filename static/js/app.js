@@ -8387,8 +8387,8 @@ async function updateSessionPatientQuickInfo(patientId) {
         if (lastSes) {
             lastSessionSummaryHtml = `
                 <div style="margin-bottom: 0.5rem; font-weight: 700; color: var(--primary-color);">Sesión Anterior (${lastSes.fecha} - ${lastSes.modalidad || ''}):</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Resumen:</strong> ${lastSes.resumen || '<em>Sin resumen</em>'}</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Obs. Clínicas (Privado):</strong> ${lastSes.observaciones_clinicas || '<em>Ninguna</em>'}</div>
+                <div style="margin-bottom: 0.5rem;"><strong>Resumen (Público):</strong> ${lastSes.resumen_paciente || '<em>Sin resumen público</em>'}</div>
+                <div style="margin-bottom: 0.5rem;"><strong>Obs. Clínicas (Privado):</strong> ${lastSes.resumen || '<em>Ninguna</em>'}</div>
                 <div style="margin-bottom: 0.5rem;"><strong>Tareas Asignadas:</strong> ${lastSes.tareas_asignadas || '<em>Ninguna</em>'}</div>
                 <div style="margin-bottom: 0.25rem;"><strong>Anotaciones / Objetivos próxima:</strong> ${lastSes.anotaciones_proxima || '<em>Ninguna</em>'}</div>
             `;
@@ -23441,3 +23441,30 @@ window.resetFastBookingForm = function() {
     fastSelectedTime = null;
     renderFastCalendar();
 };
+
+function filterQuickPayPatientSelect(query) {
+    const select = document.getElementById('qp-paciente');
+    if (!select) return;
+    const options = select.options;
+    const lowerQuery = query.toLowerCase();
+    
+    let firstVisibleMatch = null;
+    
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        if (option.value === "") continue;
+        
+        const text = option.textContent.toLowerCase();
+        if (text.includes(lowerQuery)) {
+            option.style.display = "";
+            if (!firstVisibleMatch) firstVisibleMatch = option.value;
+        } else {
+            option.style.display = "none";
+        }
+    }
+    
+    if (firstVisibleMatch && query.trim() !== "") {
+        select.value = firstVisibleMatch;
+        handleQuickPayPatientChange(firstVisibleMatch);
+    }
+}
