@@ -676,6 +676,7 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
             .then(reg => {
+                reg.update(); // FORCE SW UPDATE EVERY LOAD
                 console.log('PWA Service Worker registrado:', reg.scope);
                 setTimeout(() => {
                     initFirebaseMessagingFlow(reg);
@@ -12413,14 +12414,15 @@ async function submitFastBooking(e) {
                     <a href="${gcalUrl}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 6px; background: #4285f4; color: white; padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(66,133,244,0.3);">
                         📅 Agregar a mi Google Calendar
                     </a>
+                    <br><br>
+                    <button type="button" onclick="resetFastBookingForm()" class="btn btn-secondary" style="width: 100%; border-radius: 8px; font-weight: 700; padding: 0.6rem;">Agendar nueva consulta</button>
                 </div>
             `;
             statusMsg.className = "status-msg success-msg";
             statusMsg.classList.remove('hide');
-            document.getElementById('fast-booking-form').reset();
+            document.getElementById('fast-booking-form').classList.add('hide'); // Ocultar el formulario y calendario
             document.getElementById('fast-hours-container').classList.add('hide');
             document.getElementById('fast-patient-details').classList.add('hide');
-            initFastTimeZoneSelector(); renderFastCalendar();
         } else {
             statusMsg.textContent = data.error || "Error al agendar la consulta.";
             statusMsg.className = "status-msg error-msg";
@@ -23414,3 +23416,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+window.resetFastBookingForm = function() {
+    const form = document.getElementById('fast-booking-form');
+    if (form) {
+        form.reset();
+        form.classList.remove('hide');
+    }
+    const statusMsg = document.getElementById('fast-booking-status-msg');
+    if (statusMsg) statusMsg.classList.add('hide');
+    
+    document.getElementById('fast-hours-container').classList.add('hide');
+    document.getElementById('fast-patient-details').classList.add('hide');
+    
+    // Clear selections by simulating what changeFastBookingMonth(0) does but keeping current month
+    fastSelectedDate = null;
+    fastSelectedTime = null;
+    renderFastCalendar();
+};
