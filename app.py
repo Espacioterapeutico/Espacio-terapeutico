@@ -388,6 +388,13 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                     response.read()
             except Exception as fcm_ex:
                 print("Error de envío a token FCM individual:", fcm_ex)
+                if hasattr(fcm_ex, 'code') and fcm_ex.code in [400, 404]:
+                    try:
+                        cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
+                        db.commit()
+                        print("Token FCM inválido eliminado de la base de datos.")
+                    except Exception as db_ex:
+                        print("Error eliminando token FCM inválido:", db_ex)
     except Exception as e:
         print("Error global en send_fcm_notification:", e)
 
