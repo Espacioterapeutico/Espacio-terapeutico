@@ -214,9 +214,11 @@ def _start_wa_keepalive_thread():
     if _wa_keepalive_started:
         return
     _wa_keepalive_started = True
+    
+    import threading
 
     def _keepalive_loop():
-        import time, requests, threading
+        import time, requests
         while True:
             try:
                 url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/status"
