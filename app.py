@@ -1666,9 +1666,22 @@ def auto_cancel_unconfirmed_sessions(db):
         from datetime import datetime
         import threading
         import requests
-        today_str = datetime.now().strftime("%Y-%m-%d")
+        import json
+        from routes_pacientes import get_deadline_datetime
         
-        # Obtener citas no confirmadas del día de hoy o anteriores en estado 'Agendada'
+        try:
+            import zoneinfo
+            tz = zoneinfo.ZoneInfo("America/Caracas")
+            now_dt = datetime.now(tz).replace(tzinfo=None)
+        except Exception:
+            from datetime import timezone, timedelta
+            now_dt = datetime.now(timezone(timedelta(hours=-4))).replace(tzinfo=None)
+            
+        # Check from yesterday to 7 days in future
+        from datetime import timedelta
+        start_date_str = (now_dt - timedelta(days=2)).strftime("%Y-%m-%d")
+        
+        # Obtener citas no confirmadas en estado 'Agendada'
         cursor.execute("""
             SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.google_event_id, p.nombres, p.apellidos, p.psicologo_id
             FROM agenda_finanzas af
@@ -1676,16 +1689,38 @@ def auto_cancel_unconfirmed_sessions(db):
             WHERE af.confirmada = 0 
               AND af.estado_pago = 'Agendada' 
               AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
-              AND af.fecha <= ?
-        """, (today_str,))
+              AND af.fecha >= ?
+        """, (start_date_str,))
         
         unconfirmed = cursor.fetchall()
         if not unconfirmed:
             return
             
+        psic_configs = {}
         for appt in unconfirmed:
             appt_id = appt['id']
             patient_id = appt['paciente_id']
+            psic_id = appt['psicologo_id'] or 1
+            
+            if psic_id not in psic_configs:
+                cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
+                u_row = cursor.fetchone()
+                cfg = {}
+                if u_row and u_row[0]:
+                    try:
+                        cfg = json.loads(u_row[0])
+                    except: pass
+                psic_configs[psic_id] = cfg
+                
+            cfg = psic_configs[psic_id]
+            rule_type = cfg.get('limite_cancelacion_tipo', 'horas')
+            rule_value = cfg.get('limite_cancelacion_valor', 24)
+            
+            deadline_dt = get_deadline_datetime(appt['fecha'], appt['hora'], rule_type, rule_value)
+            
+            if now_dt < deadline_dt:
+                continue # Aún no vence el plazo
+
             fecha_cita = appt['fecha']
             hora_cita = appt['hora']
             pac_nombre = f"{appt['nombres']} {appt['apellidos']}"

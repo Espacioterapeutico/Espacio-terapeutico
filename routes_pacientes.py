@@ -86,10 +86,24 @@ def get_deadline_datetime(fecha_str, hora_str, rule_type, rule_value):
     except Exception:
         return datetime.now() + timedelta(days=365)
 
-    rule_val = float(rule_value or 24)
     if rule_type == 'dias':
+        rule_val = float(rule_value or 1)
         return cita_dt - timedelta(days=rule_val)
-    else:
+    elif rule_type == 'previo':
+        try:
+            prev_day = cita_dt - timedelta(days=1)
+            deadline_time = datetime.strptime(str(rule_value), "%H:%M").time()
+            return datetime.combine(prev_day.date(), deadline_time)
+        except:
+            return cita_dt - timedelta(hours=24)
+    elif rule_type == 'mismo_dia':
+        try:
+            deadline_time = datetime.strptime(str(rule_value), "%H:%M").time()
+            return datetime.combine(cita_dt.date(), deadline_time)
+        except:
+            return cita_dt - timedelta(hours=24)
+    else: # horas
+        rule_val = float(rule_value or 24)
         return cita_dt - timedelta(hours=rule_val)
 
 def get_rule_description(rule_type, rule_value):
