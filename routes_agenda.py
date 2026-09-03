@@ -919,8 +919,8 @@ def fast_booking_book():
     
     # 1. Verificar si el paciente existe por cédula limpia (dígitos), usuario o teléfono
     clean_cedula = cedula.strip()
-    digits_cedula = clean_digits_only(clean_cedula)
-    digits_telefono = clean_digits_only(telefono)
+    digits_cedula = re.sub(r'\D', '', clean_cedula) if clean_cedula else ''
+    digits_telefono = re.sub(r'\D', '', telefono) if telefono else ''
 
     cursor.execute("""
         SELECT id, nombres, apellidos, telefono, email 
@@ -1019,6 +1019,7 @@ def fast_booking_book():
 
         # Enviar notificación WebPush al psicólogo
         try:
+            from app import send_webpush_notification
             send_webpush_notification(
                 user_id=psicologo_id,
                 title="Nueva Cita Auto-Agendada",
