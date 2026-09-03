@@ -1263,3 +1263,34 @@ def accion_cita_publica():
     threading.Thread(target=_background_tasks, daemon=True).start()
         
     return jsonify({'success': True, 'fast_booking_url': fast_booking_url})
+
+@agenda_bp.route('/api/fast-booking/check-cedula', methods=['POST'])
+def fast_booking_check_cedula():
+    data = request.json or {}
+    cedula = data.get('cedula', '').strip()
+    if not cedula:
+        return jsonify({'found': False})
+    
+    db = get_db()
+    cursor = db.cursor()
+    import re
+    digits_cedula = re.sub(r'\D', '', cedula)
+    
+    cursor.execute('''
+        SELECT nombres, apellidos, telefono, email 
+        FROM pacientes 
+        WHERE (LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '') 
+           OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = ?)
+        LIMIT 1
+    ''', (digits_cedula, digits_cedula, cedula.lower()))
+    
+    row = cursor.fetchone()
+    if row:
+        return jsonify({
+            'found': True,
+            'nombres': row['nombres'],
+            'apellidos': row['apellidos'],
+            'telefono': row['telefono'],
+            'email': row['email']
+        })
+    return jsonify({'found': False})

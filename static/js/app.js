@@ -12427,7 +12427,7 @@ async function submitFastBooking(e) {
             statusMsg.classList.remove('hide');
         }
     } catch (err) {
-        statusMsg.textContent = "Error de conexión al agendar la cita.";
+        statusMsg.textContent = "Error al agendar la cita: " + err.message;
         statusMsg.className = "status-msg error-msg";
         statusMsg.classList.remove('hide');
     } finally {
@@ -23389,3 +23389,28 @@ window.showPatientToolSummary = showPatientToolSummary;
 function openWhatsAppBroadcastModal() {
     openModal('whatsapp-broadcast-modal');
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const cedulaInput = document.getElementById('fast-cedula');
+    if (cedulaInput) {
+        cedulaInput.addEventListener('blur', async (e) => {
+            const cedula = e.target.value.trim();
+            if (cedula.length > 4) {
+                try {
+                    const res = await fetch('/api/fast-booking/check-cedula', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ cedula }) 
+                    });
+                    const data = await res.json();
+                    if (data.found) {
+                        document.getElementById('fast-nombres').value = data.nombres || '';
+                        document.getElementById('fast-apellidos').value = data.apellidos || '';
+                        document.getElementById('fast-telefono').value = data.telefono || '';
+                        if (document.getElementById('fast-email')) document.getElementById('fast-email').value = data.email || '';
+                    }
+                } catch(err) { console.error('Error autofilling patient:', err); }
+            }
+        });
+    }
+});
