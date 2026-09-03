@@ -8385,7 +8385,13 @@ async function updateSessionPatientQuickInfo(patientId) {
         
         let lastSessionSummaryHtml = '<strong>Sesión Anterior:</strong> <em>No hay evoluciones previas registradas.</em>';
         if (lastSes) {
-            lastSessionSummaryHtml = `<strong>Sesión Anterior (${lastSes.fecha}):</strong> ${lastSes.resumen || 'Sin resumen'}`;
+            lastSessionSummaryHtml = `
+                <div style="margin-bottom: 0.5rem; font-weight: 700; color: var(--primary-color);">Sesión Anterior (${lastSes.fecha} - ${lastSes.modalidad || ''}):</div>
+                <div style="margin-bottom: 0.5rem;"><strong>Resumen:</strong> ${lastSes.resumen || '<em>Sin resumen</em>'}</div>
+                <div style="margin-bottom: 0.5rem;"><strong>Obs. Clínicas (Privado):</strong> ${lastSes.observaciones_clinicas || '<em>Ninguna</em>'}</div>
+                <div style="margin-bottom: 0.5rem;"><strong>Tareas Asignadas:</strong> ${lastSes.tareas_asignadas || '<em>Ninguna</em>'}</div>
+                <div style="margin-bottom: 0.25rem;"><strong>Anotaciones / Objetivos próxima:</strong> ${lastSes.anotaciones_proxima || '<em>Ninguna</em>'}</div>
+            `;
         }
         
         quickInfoDiv.innerHTML = `
