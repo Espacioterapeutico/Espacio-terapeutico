@@ -10,6 +10,86 @@ var CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
 
 // BASE DE DATOS DE EVALUACIONES PSICOMÉTRICAS CON METADATOS COMPLETOS
 var testsCatalogDatabase = [
+    // --- NUEVAS EVALUACIONES DE VIOLENCIA Y PSICOSIS ---
+    { 
+        code: 'CUVINO', 
+        name: 'CUVINO  Cuestionario de Violencia entre Novios', 
+        siglas: 'CUVINO', 
+        cat: 'Violencia y Abuso', 
+        desc: 'Evala de forma multidimensional la violencia recibida en la relacin (castigo emocional, desapego, humillacin, coercin).', 
+        autor: 'Plantilla Estndar', 
+        poblacion: 'Adolescentes y Adultos', 
+        validez: 'Uso Clnico', 
+        itemsCount: 15,
+        isPhysical: false,
+        instrucciones: 'Lea cada afirmacin y seleccione con qu frecuencia ha experimentado esto en su relacin.'
+    },
+    { 
+        code: 'ABUSO-COERCITIVO', 
+        name: 'EAPC  Escala de Abuso Psicolgico y Control Coercitivo', 
+        siglas: 'EAPC', 
+        cat: 'Violencia y Abuso', 
+        desc: 'Instrumento basado en la Rueda de Poder y Control. Identifica tcticas de aislamiento, control de rutinas y limitacin de la movilidad.', 
+        autor: 'Plantilla Estndar', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clnico', 
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'Indique con qu frecuencia su pareja ha realizado las siguientes acciones.'
+    },
+    { 
+        code: 'VIOLENCIA-ECON', 
+        name: 'IVEP  Inventario de Violencia Econmica y Patrimonial', 
+        siglas: 'IVEP', 
+        cat: 'Violencia y Abuso', 
+        desc: 'Mide la restriccin de acceso al dinero, prohibicin de trabajar/estudiar y dependencia financiera forzada.', 
+        autor: 'Plantilla Estndar', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clnico', 
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'Responda con qu frecuencia ocurren las siguientes situaciones en su entorno financiero/patrimonial.'
+    },
+    { 
+        code: 'BPRS', 
+        name: 'BPRS  Escala Breve de Psiquiatra', 
+        siglas: 'BPRS', 
+        cat: 'Psicopatologa y Clnica', 
+        desc: 'Evala la gravedad de sntomas psicopatolgicos generales (aislamiento, suspicacia, alteracin del pensamiento). APLICACIN POR EL CLNICO.', 
+        autor: 'Overall & Gorham', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clnico Evaluador', 
+        itemsCount: 18,
+        isPhysical: false,
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Evale del 1 al 7 la gravedad del sntoma observado durante la consulta.'
+    },
+    { 
+        code: 'PANSS-POS', 
+        name: 'PANSS  Subescala Positiva', 
+        siglas: 'PANSS-P', 
+        cat: 'Psicopatologa y Clnica', 
+        desc: 'Valora la presencia focalizada de ideas delirantes, suspicacia o distorsiones severas de la realidad. APLICACIN POR EL CLNICO.', 
+        autor: 'Kay et al.', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clnico Evaluador', 
+        itemsCount: 7,
+        isPhysical: false,
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Evale del 1 al 7 la gravedad de los sntomas positivos.'
+    },
+    { 
+        code: 'JUICIO-REALIDAD', 
+        name: 'IPRJC  Inventario de Percepcin de Realidad y Juicio Clnico', 
+        siglas: 'IPRJC', 
+        cat: 'Psicopatologa y Clnica', 
+        desc: 'Explora la congruencia entre los hechos percibidos y el entorno observable a travs de comprobacin de realidad. APLICACIN POR EL CLNICO.', 
+        autor: 'Plantilla Clnica', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clnico Evaluador', 
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Valore la percepcin de la realidad del consultante.'
+    },
+
     // 1. NEURODIVERGENCIA Y AUTISMO
     { 
         code: 'AQ', 
