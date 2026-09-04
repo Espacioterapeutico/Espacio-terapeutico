@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mi Meditación | Espacio Terapéutico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #702e5e;
+            --primary-light: #9e4b85;
+            --bg-color: #f7f9fa;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-gray: #64748b;
+        }
+        * { box-sizing: border-box; font-family: 'Nunito', sans-serif; }
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-dark);
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+        .header {
+            width: 100%; background: var(--primary); color: white; padding: 1.5rem 1rem;
+            text-align: center; box-shadow: 0 4px 12px rgba(112,46,94,0.15);
+            border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
+        }
+        .header h1 { margin: 0; font-size: 1.4rem; font-weight: 800; }
+        .header p { margin: 5px 0 0; font-size: 0.95rem; opacity: 0.9; }
+        
+        .container {
+            width: 100%; max-width: 500px; padding: 1.5rem; flex-grow: 1;
+            display: flex; flex-direction: column; gap: 1.5rem;
+        }
+        
+        .streak-card {
+            background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 16px; padding: 1rem;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            color: #92400e; font-weight: 700; font-size: 1.1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .player-card {
+            background: var(--card-bg); border-radius: 20px; padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04); text-align: center;
+        }
+        .player-card h2 { margin: 0 0 1rem; font-size: 1.2rem; color: var(--primary); }
+        
+        .video-wrapper {
+            position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .video-wrapper iframe {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;
+        }
+        
+        audio { width: 100%; margin-top: 1rem; outline: none; }
+        
+        .log-card {
+            background: var(--card-bg); border-radius: 20px; padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04); text-align: center;
+            display: {{ 'none' if completada_hoy else 'block' }};
+        }
+        .log-card h3 { margin: 0 0 1rem; font-size: 1.1rem; }
+        
+        .mood-selector {
+            display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .mood-btn {
+            background: #f1f5f9; border: 2px solid transparent; border-radius: 50%;
+            width: 50px; height: 50px; font-size: 1.8rem; display: flex; align-items: center;
+            justify-content: center; cursor: pointer; transition: 0.2s;
+        }
+        .mood-btn.selected { border-color: var(--primary); background: #fdf4f9; transform: scale(1.1); }
+        
+        .btn-submit {
+            background: var(--primary); color: white; border: none; width: 100%;
+            padding: 1rem; border-radius: 12px; font-size: 1rem; font-weight: 700;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(112,46,94,0.3); transition: 0.2s;
+        }
+        .btn-submit:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+        
+        .success-msg {
+            text-align: center; color: #059669; font-weight: 700; font-size: 1.2rem;
+            display: {{ 'block' if completada_hoy else 'none' }};
+            background: #d1fae5; padding: 1rem; border-radius: 12px; margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Hola, {{ asig.nombres.split()[0] }} 👋</h1>
+        <p>Tu momento de paz diaria</p>
+    </div>
+
+    <div class="container">
+        
+        {% if racha > 0 %}
+        <div class="streak-card">
+            🔥 ¡Llevas {{ racha }} día(s) seguido(s) meditando!
+        </div>
+        {% endif %}
+
+        <div class="player-card">
+            <h2>{{ asig.titulo }}</h2>
+            {% if asig.tipo_contenido == 'youtube' %}
+                <div class="video-wrapper">
+                    <iframe src="{{ url_embed }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            {% else %}
+                <div style="background:#f1f5f9; padding: 2rem; border-radius:16px; margin-bottom: 1rem;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon>
+                    </svg>
+                </div>
+                <audio controls>
+                    <source src="{{ url_embed }}" type="audio/mpeg">
+                    Tu navegador no soporta el reproductor de audio.
+                </audio>
+            {% endif %}
+        </div>
+        
+        <div class="success-msg" id="success-message">
+            ✨ ¡Excelente! Has completado tu meditación de hoy.
+        </div>
+
+        <div class="log-card" id="log-section">
+            <h3>¿Cómo te sientes AHORA?</h3>
+            <div class="mood-selector" id="mood-after">
+                <button class="mood-btn" data-val="Cansado/a">😩</button>
+                <button class="mood-btn" data-val="Ansioso/a">😰</button>
+                <button class="mood-btn" data-val="Neutral">😐</button>
+                <button class="mood-btn" data-val="Relajado/a">😌</button>
+                <button class="mood-btn" data-val="Feliz">✨</button>
+            </div>
+            
+            <button class="btn-submit" id="btn-save" disabled>✅ Registrar mi Meditación de Hoy</button>
+        </div>
+
+    </div>
+
+    <script>
+        const token = "{{ token }}";
+        let selectedMood = null;
+        
+        document.querySelectorAll('.mood-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedMood = this.getAttribute('data-val');
+                document.getElementById('btn-save').disabled = false;
+            });
+        });
+        
+        document.getElementById('btn-save').addEventListener('click', function() {
+            if(!selectedMood) return;
+            
+            this.innerHTML = "Guardando...";
+            this.disabled = true;
+            
+            fetch(`/portal/meditacion/${token}/log`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    animo_antes: null, // Si quieres registrar antes, agregar otra botonera
+                    animo_despues: selectedMood
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('log-section').style.display = 'none';
+                document.getElementById('success-message').style.display = 'block';
+                // Opcional: Si racha era 0, mostrar una alerta de que empezaron su racha
+            })
+            .catch(err => {
+                alert("Ocurrió un error. Intenta de nuevo.");
+                this.innerHTML = "✅ Registrar mi Meditación de Hoy";
+                this.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>

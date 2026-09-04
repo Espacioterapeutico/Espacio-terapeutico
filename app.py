@@ -1968,6 +1968,74 @@ def auto_send_confirmation_requests(db):
     except Exception as e:
         print("Error en auto_send_confirmation_requests:", e)
 
+
+def auto_send_meditation_reminders(db):
+    """
+    Envía recordatorios de meditación por WhatsApp a los pacientes a la hora configurada.
+    """
+    from datetime import datetime, timezone, timedelta
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_dt = datetime.now(tz)
+    except Exception:
+        tz = timezone(timedelta(hours=-4))
+        now_dt = datetime.now(tz)
+
+    now_time_str = now_dt.strftime("%H:%M")
+    today_str = now_dt.strftime("%Y-%m-%d")
+    now_full_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+            SELECT pm.id as asignacion_id, pm.paciente_id, pm.psicologo_id, pm.hora_recordatorio, pm.token_acceso,
+                   p.nombres, p.telefono, cm.titulo
+            FROM paciente_meditaciones pm
+            JOIN pacientes p ON pm.paciente_id = p.id
+            JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
+            WHERE pm.activa = 1 AND pm.hora_recordatorio = ?
+        """, (now_time_str,))
+        
+        assignments = cursor.fetchall()
+        
+        for asig in assignments:
+            # Check if notification was already sent today for this assignment
+            cursor.execute("""
+                SELECT id FROM notificaciones 
+                WHERE tipo = 'meditacion_wa' AND user_id = ? AND mensaje LIKE ? AND fecha LIKE ?
+            """, (asig['psicologo_id'], f"%ID_ASIG:{asig['asignacion_id']}%", f"{today_str}%"))
+            
+            if not cursor.fetchone() and asig['telefono']:
+                from routes_notificaciones import make_wa_http_request
+                
+                # Check if patient already completed it today before sending reminder
+                cursor.execute("SELECT completada FROM registro_meditaciones WHERE asignacion_id = ? AND fecha = ?", (asig['asignacion_id'], today_str))
+                reg = cursor.fetchone()
+                if reg and reg['completada']:
+                    continue
+                
+                first_name = asig['nombres'].split()[0] if asig['nombres'] else 'Consultante'
+                app_url = "https://www.espacioterapeutico.net" # O tu dominio real
+                link = f"{app_url}/portal/meditacion/{asig['token_acceso']}"
+                
+                msg_wa = f"Hola *{first_name}* 👋\n\nTe recuerdo hacer tu sesión de meditación el día de hoy: *{asig['titulo']}*\n\nHaz clic en el siguiente enlace para escucharla y registrar tu progreso:\n{link}"
+                
+                try:
+                    res = make_wa_http_request('POST', '/send', json_data={'phone': asig['telefono'], 'text': msg_wa, 'user_id': asig['psicologo_id']}, timeout=15, user_id=asig['psicologo_id'])
+                    if res and res.status_code == 200:
+                        log_msg = f"Recordatorio de meditación enviado a {first_name} para {asig['titulo']} (ID_ASIG:{asig['asignacion_id']})"
+                        cursor.execute("""
+                            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                            VALUES (?, 'meditacion_wa', '🧘 Recordatorio de Meditación Enviado', ?, ?, 1, '')
+                        """, (asig['psicologo_id'], log_msg, now_full_str))
+                        db.commit()
+                except Exception as ex_wa:
+                    print("Error al enviar recordatorio de meditación:", ex_wa)
+                    
+    except Exception as e:
+        print("Error en auto_send_meditation_reminders:", e)
+
 def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
     """
     Verifica si algún consultante cumple años el día de hoy y genera
@@ -2722,6 +2790,7 @@ def before_request_cleanup():
         auto_send_appointment_reminders(db)
         auto_send_confirmation_requests(db)
         auto_check_patient_birthdays(db)
+            auto_send_meditation_reminders(db)
         send_hourly_patient_tool_reminders(db)
         auto_check_subscription_expiration_reminders(db)
     except Exception as e_bg:

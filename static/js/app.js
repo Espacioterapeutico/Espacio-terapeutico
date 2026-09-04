@@ -23468,3 +23468,222 @@ function filterQuickPayPatientSelect(query) {
         handleQuickPayPatientChange(firstVisibleMatch);
     }
 }
+
+// ==========================================
+// MÓDULO: MEDITACIONES DIARIAS
+// ==========================================
+
+let meditationsLibrary = [];
+
+function loadMeditacionesLibrary() {
+    fetch('/api/meditaciones')
+        .then(res => res.json())
+        .then(data => {
+            meditationsLibrary = data.meditaciones;
+            const tbody = document.getElementById('meditaciones-library-tbody');
+            tbody.innerHTML = '';
+            
+            if (meditationsLibrary.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No hay meditaciones en tu biblioteca.</td></tr>';
+                return;
+            }
+            
+            meditationsLibrary.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${m.titulo}</strong></td>
+                    <td>${m.tipo_contenido === 'youtube' ? '🎥 YouTube' : '🎵 Audio'}</td>
+                    <td>${m.fecha_creacion.split(' ')[0]}</td>
+                    <td>
+                        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="deleteMeditacion(${m.id})">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+}
+
+function openMeditacionModal() {
+    document.getElementById('form-meditacion-create').reset();
+    document.getElementById('med-youtube-group').classList.remove('hide');
+    document.getElementById('med-audio-group').classList.add('hide');
+    document.getElementById('meditacion-create-modal').classList.remove('hide');
+}
+function closeMeditacionModal() {
+    document.getElementById('meditacion-create-modal').classList.add('hide');
+}
+
+function toggleMedType(type) {
+    if (type === 'youtube') {
+        document.getElementById('med-youtube-group').classList.remove('hide');
+        document.getElementById('med-audio-group').classList.add('hide');
+        document.getElementById('med-url').required = true;
+        document.getElementById('med-audio').required = false;
+    } else {
+        document.getElementById('med-youtube-group').classList.add('hide');
+        document.getElementById('med-audio-group').classList.remove('hide');
+        document.getElementById('med-url').required = false;
+        document.getElementById('med-audio').required = true;
+    }
+}
+
+function submitMeditacionCreate(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = 'Guardando...';
+    
+    const formData = new FormData();
+    formData.append('titulo', document.getElementById('med-titulo').value);
+    const tipo = document.getElementById('med-tipo').value;
+    formData.append('tipo', tipo);
+    
+    if (tipo === 'youtube') {
+        formData.append('url_youtube', document.getElementById('med-url').value);
+    } else {
+        formData.append('audio_file', document.getElementById('med-audio').files[0]);
+    }
+    
+    fetch('/api/meditaciones', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.error) throw new Error(data.error);
+        closeMeditacionModal();
+        loadMeditacionesLibrary();
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar en Biblioteca';
+        showToast("Meditación guardada en biblioteca");
+    })
+    .catch(err => {
+        alert(err.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar en Biblioteca';
+    });
+}
+
+function deleteMeditacion(id) {
+    if(!confirm("¿Seguro que deseas eliminar esta meditación? Se borrará también a los pacientes asignados.")) return;
+    
+    fetch(`/api/meditaciones/${id}`, {method: 'DELETE'})
+        .then(res => res.json())
+        .then(() => {
+            loadMeditacionesLibrary();
+            const patId = document.getElementById('med-patient-filter').value;
+            if(patId) loadPacienteMeditaciones(patId);
+        });
+}
+
+function populateMedPatientFilter() {
+    const select = document.getElementById('med-patient-filter');
+    select.innerHTML = '<option value="">Selecciona un paciente...</option>';
+    if (window.allPatientsData) {
+        window.allPatientsData.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.nombres} ${p.apellidos} - ${p.cedula}`;
+            select.appendChild(opt);
+        });
+    }
+}
+
+let currentMedPatientId = null;
+
+function loadPacienteMeditaciones(patientId) {
+    currentMedPatientId = patientId;
+    const container = document.getElementById('med-assignments-container');
+    if (!patientId) {
+        container.classList.add('hide');
+        return;
+    }
+    
+    container.classList.remove('hide');
+    fetch(`/api/pacientes/${patientId}/meditaciones`)
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('meditaciones-asignadas-tbody');
+            tbody.innerHTML = '';
+            
+            if (data.asignaciones.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No tiene meditaciones asignadas.</td></tr>';
+                return;
+            }
+            
+            data.asignaciones.forEach(a => {
+                const tr = document.createElement('tr');
+                const estado = a.completada_hoy 
+                    ? `<span style="color:#059669;font-weight:700;">✅ Completada ${a.animo_despues ? '('+a.animo_despues+')' : ''}</span>`
+                    : `<span style="color:#64748b;">Pendiente</span>`;
+                    
+                tr.innerHTML = `
+                    <td><strong>${a.titulo}</strong></td>
+                    <td>⏰ ${a.hora_recordatorio}</td>
+                    <td>${estado}</td>
+                    <td>🔥 ${a.racha} días</td>
+                    <td>
+                        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="unassignMeditacion(${a.asignacion_id})">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+}
+
+function openAssignMeditacionModal() {
+    if (!currentMedPatientId) {
+        alert("Selecciona un paciente primero.");
+        return;
+    }
+    const select = document.getElementById('med-assign-id');
+    select.innerHTML = '<option value="">Selecciona una meditación...</option>';
+    meditationsLibrary.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.titulo;
+        select.appendChild(opt);
+    });
+    
+    document.getElementById('form-meditacion-assign').reset();
+    document.getElementById('meditacion-assign-modal').classList.remove('hide');
+}
+function closeAssignMeditacionModal() {
+    document.getElementById('meditacion-assign-modal').classList.add('hide');
+}
+
+function submitMeditacionAssign(e) {
+    e.preventDefault();
+    if (!currentMedPatientId) return;
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    
+    const medId = document.getElementById('med-assign-id').value;
+    const hora = document.getElementById('med-assign-hora').value;
+    
+    fetch(`/api/pacientes/${currentMedPatientId}/meditaciones`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ meditacion_id: medId, hora_recordatorio: hora })
+    })
+    .then(res => res.json())
+    .then(data => {
+        closeAssignMeditacionModal();
+        loadPacienteMeditaciones(currentMedPatientId);
+        btn.disabled = false;
+        showToast("Meditación asignada exitosamente");
+    })
+    .catch(err => {
+        alert("Error al asignar meditación");
+        btn.disabled = false;
+    });
+}
+
+function unassignMeditacion(asignacionId) {
+    if(!confirm("¿Seguro que deseas eliminar esta asignación?")) return;
+    fetch(`/api/pacientes/meditaciones/${asignacionId}`, {method: 'DELETE'})
+        .then(() => {
+            loadPacienteMeditaciones(currentMedPatientId);
+        });
+}
