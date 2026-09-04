@@ -2790,7 +2790,7 @@ def before_request_cleanup():
         auto_send_appointment_reminders(db)
         auto_send_confirmation_requests(db)
         auto_check_patient_birthdays(db)
-            auto_send_meditation_reminders(db)
+        auto_send_meditation_reminders(db)
         send_hourly_patient_tool_reminders(db)
         auto_check_subscription_expiration_reminders(db)
     except Exception as e_bg:
