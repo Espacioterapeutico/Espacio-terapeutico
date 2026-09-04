@@ -1360,6 +1360,18 @@ def patient_confirm_appointment():
 
         db.commit()
         
+        # Notificar al psicólogo por Push
+        try:
+            from app import send_webpush_notification
+            send_webpush_notification(
+                user_id=psic_id,
+                title="✅ Cita Confirmada",
+                body=f"{pac_nombre} ha confirmado su asistencia a la consulta del {appt['fecha']} a las {appt['hora']}.",
+                url="/?view=agenda"
+            )
+        except Exception as wp_ex:
+            print("Error al enviar WebPush de confirmación por paciente:", wp_ex)
+        
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
         
