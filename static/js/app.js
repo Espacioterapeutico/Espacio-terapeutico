@@ -1770,7 +1770,8 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
     }
     
-    window.currentUser = { username, role, id: userId };
+    window.currentUser = { username, role, id: userId, bloqueos: bloqueos || {} };
+    applyUserBlocks(window.currentUser.bloqueos);
     if (role) {
         setAuthItem('user_role', role);
         setAuthItem('role', role);
@@ -11428,7 +11429,8 @@ function renderSuperadminTherapistsTable() {
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; font-size: 0.84rem; margin-bottom: 1rem;">
-                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro Pacientes</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro" ${p.bloqueo_registro === 1 ? 'checked' : ''}> Bloquear Registro Detallado (Historia)</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-registro-rapido" ${p.bloqueo_registro_rapido === 1 ? 'checked' : ''}> Bloquear Registro Rápido (Modal Simple)</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-evoluciones" ${p.bloqueo_evoluciones === 1 ? 'checked' : ''}> Bloquear Evoluciones Clínicas</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-finanzas" ${p.bloqueo_finanzas === 1 ? 'checked' : ''}> Bloquear Control Finanzas</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-agenda" ${p.bloqueo_agenda === 1 ? 'checked' : ''}> Bloquear Agenda</label>
@@ -11814,6 +11816,7 @@ async function saveTherapistRowSettings(userId) {
         mostrar_en_directorio: (container.querySelector('.chk-mostrar-directorio') || row?.querySelector('.chk-mostrar-directorio'))?.checked ? 1 : 0,
         aviso_pago: container.querySelector('.chk-aviso-pago')?.checked ? 1 : 0,
         bloqueo_registro: container.querySelector('.chk-bloqueo-registro')?.checked ? 1 : 0,
+        bloqueo_registro_rapido: container.querySelector('.chk-bloqueo-registro-rapido')?.checked ? 1 : 0,
         bloqueo_evoluciones: container.querySelector('.chk-bloqueo-evoluciones')?.checked ? 1 : 0,
         bloqueo_finanzas: container.querySelector('.chk-bloqueo-finanzas')?.checked ? 1 : 0,
         bloqueo_agenda: container.querySelector('.chk-bloqueo-agenda')?.checked ? 1 : 0,
@@ -23744,3 +23747,77 @@ function unassignMeditacion(asignacionId) {
             loadPacienteMeditaciones(currentMedPatientId);
         });
 }
+
+window.applyUserBlocks = function(bloqueos) {
+    if (!bloqueos) return;
+
+    // Registro Detallado (Historia Clínica)
+    const btnHistoria = document.querySelector('button[onclick*="openNewPatientModal()"]');
+    const tabHistorias = document.getElementById('exp-tab-historias');
+    const tabContentHistorias = document.getElementById('exp-content-historias');
+    const pModalTabClinical = document.querySelector('.tab-btn[onclick*="tab-clinical"]');
+    
+    // El modal de historial/evoluciones de un paciente en particular (patient-details-modal)
+    const detTabHistorial = document.querySelector('button[onclick*="switchPatientDetailsTab(\'historial\')"]');
+
+    if (bloqueos.registro === 1) {
+        if (btnHistoria) btnHistoria.classList.add('hide');
+        if (tabHistorias) tabHistorias.classList.add('hide');
+        if (tabContentHistorias) tabContentHistorias.classList.add('hide');
+        if (pModalTabClinical) pModalTabClinical.classList.add('hide');
+    } else {
+        if (btnHistoria) btnHistoria.classList.remove('hide');
+        if (tabHistorias) tabHistorias.classList.remove('hide');
+        if (pModalTabClinical) pModalTabClinical.classList.remove('hide');
+    }
+
+    // Registro Rápido
+    const btnRegistroRapido = document.querySelector('button[onclick*="openQuickAddPatientModal()"]');
+    if (bloqueos.registro_rapido === 1) {
+        if (btnRegistroRapido) btnRegistroRapido.classList.add('hide');
+    } else {
+        if (btnRegistroRapido) btnRegistroRapido.classList.remove('hide');
+    }
+
+    // Evoluciones
+    const tabEvoluciones = document.getElementById('exp-tab-evoluciones');
+    const tabContentEvoluciones = document.getElementById('exp-content-evoluciones');
+    const btnNuevaEvolucion = document.querySelector('button[onclick*="openNewSessionModal()"]');
+    
+    // Si Registro (historial entero) y Evoluciones están bloqueados, ocultar pestaña historial en detalles
+    if (bloqueos.registro === 1 && bloqueos.evoluciones === 1) {
+        if (detTabHistorial) detTabHistorial.classList.add('hide');
+    } else {
+        if (detTabHistorial) detTabHistorial.classList.remove('hide');
+    }
+
+    if (bloqueos.evoluciones === 1) {
+        if (tabEvoluciones) tabEvoluciones.classList.add('hide');
+        if (tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
+        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.add('hide');
+    } else {
+        if (tabEvoluciones) tabEvoluciones.classList.remove('hide');
+        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.remove('hide');
+    }
+
+    // Herramientas
+    const ttTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'herramientas\')"]');
+    const toolNav = document.querySelector('a[data-view="therapist-tools"]');
+    if (bloqueos.herramientas === 1) {
+        if (ttTab) ttTab.classList.add('hide');
+        if (toolNav) toolNav.classList.add('hide');
+    } else {
+        if (ttTab) ttTab.classList.remove('hide');
+        if (toolNav) toolNav.classList.remove('hide');
+    }
+
+    // Tests
+    const testsTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'tests\')"]');
+    if (bloqueos.tests === 1 && testsTab) testsTab.classList.add('hide');
+    else if (testsTab) testsTab.classList.remove('hide');
+
+    // Pizarra
+    const pizarraTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'pizarra\')"]');
+    if (bloqueos.pizarra === 1 && pizarraTab) pizarraTab.classList.add('hide');
+    else if (pizarraTab) pizarraTab.classList.remove('hide');
+};

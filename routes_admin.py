@@ -139,16 +139,17 @@ def login():
                 'suscripcion_paga': u_dict.get('suscripcion_paga', 0),
                 'fecha_expiracion_prueba': u_dict.get('fecha_expiracion_prueba', ''),
                 'bloqueos': {
-                    'registro': u_dict.get('bloqueo_registro', 0),
-                    'evoluciones': u_dict.get('bloqueo_evoluciones', 0),
-                    'finanzas': u_dict.get('bloqueo_finanzas', 0),
-                    'agenda': u_dict.get('bloqueo_agenda', 0),
-                    'mensajes': u_dict.get('bloqueo_mensajes', 0),
-                    'pizarra': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_pizarra') or 0),
-                    'herramientas': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_herramientas') or 0),
-                    'confirmaciones': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_confirmaciones') or 0),
-                    'examen_mental': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_examen_mental') or 0),
-                    'tests': 0 if user['role'] in ['psicologo', 'admin'] else (u_dict.get('bloqueo_tests') or 0)
+                    'registro': 0 if user['role'] == 'admin' else u_dict.get('bloqueo_registro', 0),
+                    'registro_rapido': 0 if user['role'] == 'admin' else u_dict.get('bloqueo_registro_rapido', 0),
+                    'evoluciones': 0 if user['role'] == 'admin' else u_dict.get('bloqueo_evoluciones', 0),
+                    'finanzas': 0 if user['role'] == 'admin' else u_dict.get('bloqueo_finanzas', 0),
+                    'agenda': 0 if user['role'] == 'admin' else u_dict.get('bloqueo_agenda', 0),
+                    'mensajes': 0 if user['role'] == 'admin' else u_dict.get('bloqueo_mensajes', 0),
+                    'pizarra': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_pizarra') or 0),
+                    'herramientas': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_herramientas') or 0),
+                    'confirmaciones': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_confirmaciones') or 0),
+                    'examen_mental': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_examen_mental') or 0),
+                    'tests': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0)
                 }
             })
         
@@ -208,16 +209,17 @@ def check_session():
             'suscripcion_paga': r_dict.get('suscripcion_paga', 0),
             'fecha_expiracion_prueba': r_dict.get('fecha_expiracion_prueba', ''),
             'bloqueos': {
-                'registro': r_dict.get('bloqueo_registro', 0),
-                'evoluciones': r_dict.get('bloqueo_evoluciones', 0),
-                'finanzas': r_dict.get('bloqueo_finanzas', 0),
-                'agenda': r_dict.get('bloqueo_agenda', 0),
-                'mensajes': r_dict.get('bloqueo_mensajes', 0),
-                'pizarra': 0 if r_dict.get('role') in ['psicologo', 'admin'] else (r_dict.get('bloqueo_pizarra') or 0),
-                'herramientas': 0 if r_dict.get('role') in ['psicologo', 'admin'] else (r_dict.get('bloqueo_herramientas') or 0),
-                'confirmaciones': 0 if r_dict.get('role') in ['psicologo', 'admin'] else (r_dict.get('bloqueo_confirmaciones') or 0),
-                'examen_mental': 0 if r_dict.get('role') in ['psicologo', 'admin'] else (r_dict.get('bloqueo_examen_mental') or 0),
-                'tests': 0 if r_dict.get('role') in ['psicologo', 'admin'] else (r_dict.get('bloqueo_tests') or 0)
+                'registro': 0 if r_dict.get('role') == 'admin' else r_dict.get('bloqueo_registro', 0),
+                'registro_rapido': 0 if r_dict.get('role') == 'admin' else r_dict.get('bloqueo_registro_rapido', 0),
+                'evoluciones': 0 if r_dict.get('role') == 'admin' else r_dict.get('bloqueo_evoluciones', 0),
+                'finanzas': 0 if r_dict.get('role') == 'admin' else r_dict.get('bloqueo_finanzas', 0),
+                'agenda': 0 if r_dict.get('role') == 'admin' else r_dict.get('bloqueo_agenda', 0),
+                'mensajes': 0 if r_dict.get('role') == 'admin' else r_dict.get('bloqueo_mensajes', 0),
+                'pizarra': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_pizarra') or 0),
+                'herramientas': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_herramientas') or 0),
+                'confirmaciones': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_confirmaciones') or 0),
+                'examen_mental': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_examen_mental') or 0),
+                'tests': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_tests') or 0)
             }
         })
     elif 'patient_id' in session:
@@ -797,6 +799,7 @@ def superadmin_save_therapist_settings(user_id):
     mostrar_en_directorio = 1 if data.get('mostrar_en_directorio') else 0
     aviso_pago = 1 if data.get('aviso_pago') else 0
     bloqueo_registro = 1 if data.get('bloqueo_registro') else 0
+    bloqueo_registro_rapido = 1 if data.get('bloqueo_registro_rapido') else 0
     bloqueo_evoluciones = 1 if data.get('bloqueo_evoluciones') else 0
     bloqueo_finanzas = 1 if data.get('bloqueo_finanzas') else 0
     bloqueo_agenda = 1 if data.get('bloqueo_agenda') else 0
@@ -804,15 +807,19 @@ def superadmin_save_therapist_settings(user_id):
     bloqueo_pizarra = 1 if data.get('bloqueo_pizarra') else 0
     bloqueo_herramientas = 1 if data.get('bloqueo_herramientas') else 0
     bloqueo_confirmaciones = 1 if data.get('bloqueo_confirmaciones') else 0
+    bloqueo_examen_mental = 1 if data.get('bloqueo_examen_mental') else 0
+    bloqueo_tests = 1 if data.get('bloqueo_tests') else 0
     
     cursor.execute("""
         UPDATE usuarios 
         SET mostrar_en_directorio = ?, aviso_pago = ?,
-            bloqueo_registro = ?, bloqueo_evoluciones = ?, bloqueo_finanzas = ?,
-            bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?, bloqueo_confirmaciones = ?
+            bloqueo_registro = ?, bloqueo_registro_rapido = ?, bloqueo_evoluciones = ?, bloqueo_finanzas = ?,
+            bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?, bloqueo_confirmaciones = ?,
+            bloqueo_examen_mental = ?, bloqueo_tests = ?
         WHERE id = ?
-    """, (mostrar_en_directorio, aviso_pago, bloqueo_registro, bloqueo_evoluciones, bloqueo_finanzas,
-          bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, bloqueo_confirmaciones, user_id))
+    """, (mostrar_en_directorio, aviso_pago, bloqueo_registro, bloqueo_registro_rapido, bloqueo_evoluciones, bloqueo_finanzas,
+          bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, bloqueo_confirmaciones,
+          bloqueo_examen_mental, bloqueo_tests, user_id))
     db.commit()
     return jsonify({'success': '¡Cambios guardados con éxito en la base de datos!'})
 
