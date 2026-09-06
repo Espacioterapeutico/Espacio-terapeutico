@@ -2463,21 +2463,19 @@ def subscribe_firebase():
     cursor = db.cursor()
 
     if user_id:
-        # Actualizar cualquier token anónimo existente (NULL) o insertar con user_id
-        cursor.execute("UPDATE fcm_subscriptions SET user_id = ? WHERE token = ?", (user_id, token))
-        if cursor.rowcount == 0:
-            cursor.execute("""
-                INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
-                VALUES (?, NULL, ?)
-            """, (user_id, token))
+        # Eliminar tokens anteriores de este usuario y quedarse solo con el nuevo
+        cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+        cursor.execute("""
+            INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+            VALUES (?, NULL, ?)
+        """, (user_id, token))
     elif patient_id:
-        # Actualizar o insertar con patient_id
-        cursor.execute("UPDATE fcm_subscriptions SET patient_id = ? WHERE token = ?", (patient_id, token))
-        if cursor.rowcount == 0:
-            cursor.execute("""
-                INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
-                VALUES (NULL, ?, ?)
-            """, (patient_id, token))
+        # Eliminar tokens anteriores de este paciente y quedarse solo con el nuevo
+        cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+        cursor.execute("""
+            INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+            VALUES (NULL, ?, ?)
+        """, (patient_id, token))
     else:
         # Sin sesión activa: guardar como anónimo (se actualizará al hacer login)
         cursor.execute("""
