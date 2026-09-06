@@ -1794,15 +1794,15 @@ def api_post_public_evaluacion(token):
         db.commit()
 
         try:
-            from app import send_fcm_notification
-            send_fcm_notification(
+            from app import send_webpush_notification
+            send_webpush_notification(
                 user_id=assignment['user_id'],
                 title="🧪 Test Psicológico Completado",
                 body=f"El consultante {pac_nombre} completó la evaluación {assignment['test_code']}. Puntuación: {total_score} ({classification}).",
                 url="/#tests-psicologicos"
             )
         except Exception as _fcm_psic_err:
-            print("Aviso al enviar FCM de test completado a psicólogo:", _fcm_psic_err)
+            print("Aviso al enviar push de test completado a psicólogo:", _fcm_psic_err)
 
         return jsonify({
             'success': '¡Evaluación completada con éxito! Tus respuestas han sido registradas para tu especialista.'

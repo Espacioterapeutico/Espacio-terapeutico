@@ -1851,9 +1851,20 @@ def auto_send_appointment_reminders(db):
                 now_str,
                 notif_link
             ))
+            # 2. Push notification al psicólogo
+            try:
+                send_webpush_notification(
+                    user_id=target_psic,
+                    title="⏰ Recordatorio de Consulta Hoy",
+                    body=f"Tienes consulta programada hoy con {pac_nombre} a las {hora_cita} ({appt['tipo_consulta']}).",
+                    url="/?view=agenda"
+                )
+            except Exception as wp_ex:
+                print("Error al enviar WebPush de recordatorio de cita:", wp_ex)
+            
             db.commit()
             
-            # 2. Notificación al paciente en Firebase
+            # 3. Notificación al paciente en Firebase
             try:
                 fb_payload = {
                     "id": int(now_dt.timestamp() * 1000),
@@ -1866,6 +1877,17 @@ def auto_send_appointment_reminders(db):
                 requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
             except Exception as fe:
                 pass
+            
+            # 4. Push al paciente también
+            try:
+                send_webpush_notification(
+                    patient_id=patient_id,
+                    title="⏰ Recordatorio de Consulta Hoy",
+                    body=f"Hola {appt['nombres']}, tienes consulta hoy a las {hora_cita}.",
+                    url="/"
+                )
+            except Exception as wp_pac_ex:
+                print("Error al enviar WebPush de recordatorio al paciente:", wp_pac_ex)
                 
         db.commit()
     except Exception as e:
