@@ -1885,7 +1885,7 @@ def accept_patient_terms():
                 INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
                 VALUES (?, 'terminos_aceptados', '📜 Términos Aceptados', ?, ?, 0, '/#pacientes')
             """, (psic_id, notif_msg, now_str))
-            send_fcm_notification(user_id=psic_id, title="📜 Términos Aceptados", body=notif_msg, url="/#pacientes")
+            send_webpush_notification(user_id=psic_id, title="📜 Términos Aceptados", body=notif_msg, url="/#pacientes")
         db.commit()
         return jsonify({'success': 'Términos y condiciones aceptados.', 'fecha': now_str})
     except Exception as e:

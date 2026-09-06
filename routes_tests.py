@@ -1544,7 +1544,7 @@ def api_asignar_test():
         clean_phone = (pac['telefono'] or '').replace(' ', '').replace('-', '').replace('+', '')
 
         try:
-            from app import notify_patient_firebase, send_fcm_notification
+            from app import notify_patient_firebase, send_fcm_notification, send_webpush_notification
             notify_patient_firebase(
                 patient_id,
                 "🧪 Nuevo Test Psicológico Asignado",
@@ -1552,7 +1552,7 @@ def api_asignar_test():
                 link=url_test,
                 icon="🧪"
             )
-            send_fcm_notification(
+            send_webpush_notification(
                 patient_id=patient_id,
                 title="🧪 Nuevo Test Psicológico Asignado",
                 body=f"Tu psicólogo te ha asignado una evaluación psicológica para responder.",

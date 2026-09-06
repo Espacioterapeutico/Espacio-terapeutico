@@ -1082,7 +1082,7 @@ def register():
                 VALUES (?, 'nuevo_paciente', '👤 Nuevo Registro de Consultante', ?, ?, 0, '/#pacientes')
             """, (target_psic, notif_msg, now_str))
             
-            send_fcm_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
+            send_webpush_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
             send_webpush_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
 
             db.commit()
