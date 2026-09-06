@@ -248,9 +248,15 @@ def log_patient_sleep():
             """, (psic_id, notif_title, notif_msg, now_str))
             db.commit()
             try:
+                import threading
                 from app import send_webpush_notification
-                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
-            except Exception: pass
+                threading.Thread(
+                    target=send_webpush_notification,
+                    kwargs=dict(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools"),
+                    daemon=True
+                ).start()
+            except Exception as _wp_ex:
+                print("Error al enviar push de registro de sueño:", _wp_ex)
     except Exception as _ne:
         print("Error al notificar registro de sueño:", _ne)
 
@@ -305,9 +311,15 @@ def log_patient_anxiety():
             """, (psic_id, notif_title, notif_msg, now_str))
             db.commit()
             try:
+                import threading
                 from app import send_webpush_notification
-                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
-            except Exception: pass
+                threading.Thread(
+                    target=send_webpush_notification,
+                    kwargs=dict(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools"),
+                    daemon=True
+                ).start()
+            except Exception as _wp_ex:
+                print("Error al enviar push de registro de ansiedad:", _wp_ex)
     except Exception as _ne:
         print("Error al notificar registro de ansiedad:", _ne)
 
@@ -372,9 +384,15 @@ def log_patient_sobriety():
             """, (psic_id, notif_title, notif_msg, now_str))
             db.commit()
             try:
+                import threading
                 from app import send_webpush_notification
-                send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
-            except Exception: pass
+                threading.Thread(
+                    target=send_webpush_notification,
+                    kwargs=dict(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools"),
+                    daemon=True
+                ).start()
+            except Exception as _wp_ex:
+                print("Error al enviar push de registro de sobriedad:", _wp_ex)
     except Exception as _ne:
         print("Error al notificar registro de sobriedad:", _ne)
 
