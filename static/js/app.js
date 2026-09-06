@@ -8888,9 +8888,9 @@ async function loadNotifications() {
         list.innerHTML = '';
         if (data.notifications && data.notifications.length > 0) {
             data.notifications.forEach(n => {
-                if (!n.leida) {
-                    triggerNativeNotification(n.titulo || 'Mi Consultorio', n.mensaje || '', `n_${n.id}`, n.link);
-                }
+                // NO volver a disparar notificación del sistema aquí.
+                // El push de FCM/VAPID ya la mostró en segundo plano.
+                // Mostrar el badge visual es suficiente aviso en-app.
 
                 const item = document.createElement('div');
                 item.style.padding = '0.75rem 1rem';
