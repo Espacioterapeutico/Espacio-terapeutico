@@ -1600,11 +1600,9 @@ window.execLogout = execLogout;
 function isFeatureBlocked(feature) {
     const role = (window.currentUser && window.currentUser.role) || sessionStorage.getItem('user_role') || sessionStorage.getItem('role') || '';
     const cleanRole = (role || '').toString().toLowerCase();
-    if (cleanRole === 'psicologo' || cleanRole === 'admin') {
-        const clinicalFeatures = ['examen_mental', 'tests', 'herramientas', 'pizarra', 'confirmaciones'];
-        if (clinicalFeatures.includes(feature)) {
-            return false;
-        }
+    // Admin always gets access, psicologo depends on blocks
+    if (cleanRole === 'admin') {
+        return false;
     }
     const blocksStr = sessionStorage.getItem('bloqueos');
     if (!blocksStr) return false;
@@ -23762,12 +23760,10 @@ window.applyUserBlocks = function(bloqueos) {
 
     if (bloqueos.registro === 1) {
         if (btnHistoria) btnHistoria.classList.add('hide');
-        if (tabHistorias) tabHistorias.classList.add('hide');
-        if (tabContentHistorias) tabContentHistorias.classList.add('hide');
+        // NOTA: NO ocultamos tabHistorias ni tabContentHistorias porque allí está la lista de pacientes
         if (pModalTabClinical) pModalTabClinical.classList.add('hide');
     } else {
         if (btnHistoria) btnHistoria.classList.remove('hide');
-        if (tabHistorias) tabHistorias.classList.remove('hide');
         if (pModalTabClinical) pModalTabClinical.classList.remove('hide');
     }
 
@@ -23795,6 +23791,16 @@ window.applyUserBlocks = function(bloqueos) {
         if (tabEvoluciones) tabEvoluciones.classList.add('hide');
         if (tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
         if (btnNuevaEvolucion) btnNuevaEvolucion.classList.add('hide');
+        // Auto-switch to Historias (Patient list) since Evoluciones is blocked
+        if (typeof switchExpedientesTab === 'function' && document.getElementById('view-expedientes-clinicos') && !document.getElementById('view-expedientes-clinicos').classList.contains('hide')) {
+             // Will switch when they visit, but let's just make the active classes right here
+             if (tabHistorias) {
+                 if(tabEvoluciones) tabEvoluciones.classList.remove('active');
+                 if(tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
+                 tabHistorias.classList.add('active');
+                 if(tabContentHistorias) tabContentHistorias.classList.remove('hide');
+             }
+        }
     } else {
         if (tabEvoluciones) tabEvoluciones.classList.remove('hide');
         if (btnNuevaEvolucion) btnNuevaEvolucion.classList.remove('hide');
@@ -23813,11 +23819,47 @@ window.applyUserBlocks = function(bloqueos) {
 
     // Tests
     const testsTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'tests\')"]');
-    if (bloqueos.tests === 1 && testsTab) testsTab.classList.add('hide');
-    else if (testsTab) testsTab.classList.remove('hide');
+    const navTests = document.querySelector('a[data-view="tests-psicologicos"]');
+    if (bloqueos.tests === 1) {
+        if (testsTab) testsTab.classList.add('hide');
+        if (navTests) navTests.classList.add('hide');
+    } else {
+        if (testsTab) testsTab.classList.remove('hide');
+        if (navTests) navTests.classList.remove('hide');
+    }
 
     // Pizarra
     const pizarraTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'pizarra\')"]');
-    if (bloqueos.pizarra === 1 && pizarraTab) pizarraTab.classList.add('hide');
-    else if (pizarraTab) pizarraTab.classList.remove('hide');
+    const navPizarra = document.querySelector('a[data-view="pizarra-visual"]');
+    if (bloqueos.pizarra === 1) {
+        if (pizarraTab) pizarraTab.classList.add('hide');
+        if (navPizarra) navPizarra.classList.add('hide');
+    } else {
+        if (pizarraTab) pizarraTab.classList.remove('hide');
+        if (navPizarra) navPizarra.classList.remove('hide');
+    }
+    
+    // Examen Mental
+    const navExamen = document.querySelector('a[data-view="examen-mental"]');
+    if (bloqueos.examen_mental === 1 && navExamen) {
+        navExamen.classList.add('hide');
+    } else if (navExamen) {
+        navExamen.classList.remove('hide');
+    }
+    
+    // Finanzas
+    const navFinance = document.querySelector('a[data-view="finance"]');
+    if (bloqueos.finanzas === 1 && navFinance) {
+        navFinance.classList.add('hide');
+    } else if (navFinance) {
+        navFinance.classList.remove('hide');
+    }
+    
+    // Centro de Confirmaciones
+    const navConfirms = document.querySelector('a[data-view="manual-confirmations"]');
+    if (bloqueos.confirmaciones === 1 && navConfirms) {
+        navConfirms.classList.add('hide');
+    } else if (navConfirms) {
+        navConfirms.classList.remove('hide');
+    }
 };
