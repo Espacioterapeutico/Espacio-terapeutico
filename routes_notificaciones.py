@@ -547,6 +547,12 @@ def send_manual_whatsapp_reminder(cita_id):
         if r and r.status_code == 200:
             cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita_id,))
             db.commit()
+            
+            try:
+                from routes_agenda import _update_google_calendar_status_bg
+                _update_google_calendar_status_bg(cita_id, 'esperando')
+            except Exception as e:
+                print("Error setting orange dot GC:", e)
             return jsonify({'success': f'Recordatorio de WhatsApp enviado con éxito a {phone}.', 'phone': phone})
         else:
             res_data = r.json() if r else {}

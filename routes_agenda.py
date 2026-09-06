@@ -12,6 +12,71 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
+def _update_google_calendar_status_bg(event_id, status):
+    """
+    Actualiza el estado de la cita en Google Calendar en background.
+    status: 'esperando', 'confirmada', 'cancelada'
+    """
+    import sqlite3
+    import threading
+    from routes_admin import get_calendar_service
+
+    def run():
+        try:
+            db = sqlite3.connect('clinica.db')
+            db.row_factory = sqlite3.Row
+            cursor = db.cursor()
+            
+            cursor.execute("""
+                SELECT af.google_event_id, p.psicologo_id 
+                FROM agenda_finanzas af
+                JOIN pacientes p ON af.paciente_id = p.id
+                WHERE af.id = ?
+            """, (event_id,))
+            cita = cursor.fetchone()
+            if not cita or not cita['google_event_id']:
+                db.close()
+                return
+
+            google_event_id = cita['google_event_id']
+            psych_id = cita['psicologo_id'] or 1
+            
+            service = get_calendar_service(psych_id)
+            if not service:
+                db.close()
+                return
+
+            if status == 'cancelada':
+                try:
+                    service.events().delete(calendarId='primary', eventId=google_event_id).execute()
+                    cursor.execute("UPDATE agenda_finanzas SET google_event_id = NULL WHERE id = ?", (event_id,))
+                    db.commit()
+                except Exception as e:
+                    print("Error eliminando cita en GC por cancelacion:", e)
+            else:
+                try:
+                    g_event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
+                    summary = g_event.get('summary', '')
+                    
+                    # Limpiar emojis previos
+                    clean_summary = summary.replace('🟠', '').replace('✅', '').strip()
+                    
+                    if status == 'esperando':
+                        g_event['summary'] = f"🟠 {clean_summary}"
+                    elif status == 'confirmada':
+                        g_event['summary'] = f"✅ {clean_summary}"
+                        
+                    service.events().update(calendarId='primary', eventId=google_event_id, body=g_event).execute()
+                except Exception as e:
+                    print("Error actualizando emoji en GC:", e)
+                    
+            db.close()
+        except Exception as e:
+            print("Error fatal GC sync status:", e)
+
+    threading.Thread(target=run, daemon=True).start()
+
+
 from flask import Blueprint, request, jsonify, session, g, render_template
 
 agenda_bp = Blueprint('agenda', __name__)
@@ -663,8 +728,10 @@ def update_agenda_event_status(event_id):
                 
                 if confirmada == 1 or estado == 'Confirmada':
                     template = templates.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+                    _update_google_calendar_status_bg(event_id, 'confirmada')
                 else:
                     template = templates.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
+                    _update_google_calendar_status_bg(event_id, 'cancelada')
                 
                 msg = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
                 
@@ -1223,14 +1290,17 @@ def accion_cita_publica():
     if accion == 'confirmar':
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto."
+        _update_google_calendar_status_bg(appt_id, 'confirmada')
         
     elif accion == 'cancelar':
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar, por favor contáctanos."
+        _update_google_calendar_status_bg(appt_id, 'cancelada')
         
     elif accion == 'reprogramar':
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_reagendamiento') or "Hemos recibido tu solicitud para reprogramar. Pronto nos pondremos en contacto contigo para agendar un nuevo espacio."
+        _update_google_calendar_status_bg(appt_id, 'cancelada')
         
     db.commit()
     
