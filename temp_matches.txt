@@ -1,0 +1,26 @@
+background: #fdf4ff; color: #702e5e; border: 1px solid #f0abfc;">
+                                + Registro Rápido
+                            </button>
+                            <button class="btn btn-primary" o
+
+--- MATCH ---
+
+ipt>
+    <script src="/static/js/tests_module.js?v={{ asset_v or '111' }}"></script>
+    <!-- Modal Registro Rápido -->
+    <div id="quick-add-patient-modal" class="modal hide">
+        <div class="modal-content" st
+
+--- MATCH ---
+
+
+                <h3 style="margin: 0; font-family: var(--font-title); font-size: 1.25rem;">Agregar Registro Rápido</h3>
+                <button class="btn-close-modal" onclick="closeModal('quick-add-patient-modal')
+
+--- MATCH ---
+
+ta">⚪ Solo Pacientes De Alta</option>
+                            <option value="sin_historia">Solo Registro Rápido (Sin Historia Clínica)</option>
+                        </select>
+                    </div>
+      

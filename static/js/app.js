@@ -23747,6 +23747,7 @@ function unassignMeditacion(asignacionId) {
 }
 
 window.applyUserBlocks = function(bloqueos) {
+    console.log("BLOCKS_PAYLOAD:", bloqueos);
     if (!bloqueos) return;
 
     // Registro Detallado (Historia Clínica)
