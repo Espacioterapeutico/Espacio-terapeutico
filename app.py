@@ -2016,8 +2016,8 @@ def auto_send_meditation_reminders(db):
             FROM paciente_meditaciones pm
             JOIN pacientes p ON pm.paciente_id = p.id
             JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
-            WHERE pm.activa = 1 AND pm.hora_recordatorio = ?
-        """, (now_time_str,))
+            WHERE pm.activa = 1 AND pm.hora_recordatorio LIKE ?
+        """, (f"%{now_time_str}%",))
         
         assignments = cursor.fetchall()
         

@@ -181,6 +181,9 @@ def assign_meditacion(paciente_id):
     if not meditacion_id or not hora:
         return jsonify({'error': 'Debe seleccionar una meditación y una hora'}), 400
         
+    if isinstance(hora, list):
+        hora = ','.join(hora)
+        
     token = str(uuid.uuid4())
     
     cursor.execute("""
@@ -190,6 +193,35 @@ def assign_meditacion(paciente_id):
     db.commit()
     
     return jsonify({'message': 'Meditación asignada al paciente'})
+
+@meditaciones_bp.route('/api/pacientes/meditaciones/<int:asignacion_id>', methods=['PUT'])
+@login_required
+def edit_meditacion_assignment(asignacion_id):
+    db = get_db()
+    cursor = db.cursor()
+    psic_id = get_psicologo_id_filter() or 1
+    
+    data = request.json
+    meditacion_id = data.get('meditacion_id')
+    hora = data.get('hora_recordatorio')
+    
+    if not meditacion_id or not hora:
+        return jsonify({'error': 'Debe seleccionar una meditación y una hora'}), 400
+        
+    if isinstance(hora, list):
+        hora = ','.join(hora)
+        
+    cursor.execute("""
+        UPDATE paciente_meditaciones 
+        SET meditacion_id = ?, hora_recordatorio = ?
+        WHERE id = ? AND psicologo_id = ?
+    """, (meditacion_id, hora, asignacion_id, psic_id))
+    db.commit()
+    
+    if cursor.rowcount == 0:
+        return jsonify({'error': 'Asignación no encontrada o sin permisos'}), 404
+        
+    return jsonify({'message': 'Asignación actualizada'})
 
 @meditaciones_bp.route('/api/pacientes/meditaciones/<int:asignacion_id>', methods=['DELETE'])
 @login_required

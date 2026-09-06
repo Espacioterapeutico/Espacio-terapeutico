@@ -23617,12 +23617,16 @@ function loadPacienteMeditaciones(patientId) {
                     ? `<span style="color:#059669;font-weight:700;">✅ Completada ${a.animo_despues ? '('+a.animo_despues+')' : ''}</span>`
                     : `<span style="color:#64748b;">Pendiente</span>`;
                     
+                // a.hora_recordatorio could be comma-separated like "08:00,15:00"
+                const horas = (a.hora_recordatorio || "").split(',').map(h => h.trim()).join(' / ');
+                    
                 tr.innerHTML = `
                     <td><strong>${a.titulo}</strong></td>
-                    <td>⏰ ${a.hora_recordatorio}</td>
+                    <td>⏰ ${horas}</td>
                     <td>${estado}</td>
                     <td>🔥 ${a.racha} días</td>
                     <td>
+                        <button class="btn btn-sm" style="background:var(--bg-soft);color:var(--text-dark);border:1px solid var(--border-color);padding:4px 8px;border-radius:4px;cursor:pointer;margin-right:4px;" onclick="editMeditacionAssignment(${a.asignacion_id}, ${a.meditacion_id}, '${a.hora_recordatorio}')">Editar</button>
                         <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="unassignMeditacion(${a.asignacion_id})">Eliminar</button>
                     </td>
                 `;
@@ -23645,8 +23649,51 @@ function openAssignMeditacionModal() {
         select.appendChild(opt);
     });
     
+    document.getElementById('med-assign-modal-title').textContent = 'Asignar Meditación';
+    document.getElementById('med-assign-submit-btn').textContent = 'Asignar';
+    document.getElementById('med-edit-asig-id').value = '';
+    
     document.getElementById('form-meditacion-assign').reset();
+    document.getElementById('med-times-container').innerHTML = `
+        <div class="time-input-row" style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="time" class="med-assign-hora" required style="flex: 1;">
+        </div>
+    `;
+    
     document.getElementById('meditacion-assign-modal').classList.remove('hide');
+}
+
+function addMedTimeInput(val = '') {
+    const container = document.getElementById('med-times-container');
+    const div = document.createElement('div');
+    div.className = 'time-input-row';
+    div.style = 'display: flex; gap: 0.5rem; align-items: center;';
+    div.innerHTML = `
+        <input type="time" class="med-assign-hora" required style="flex: 1;" value="${val}">
+        <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-weight:bold;">&times;</button>
+    `;
+    container.appendChild(div);
+}
+
+function editMeditacionAssignment(asigId, medId, horasStr) {
+    openAssignMeditacionModal();
+    document.getElementById('med-assign-modal-title').textContent = 'Editar Asignación';
+    document.getElementById('med-assign-submit-btn').textContent = 'Guardar Cambios';
+    document.getElementById('med-edit-asig-id').value = asigId;
+    document.getElementById('med-assign-id').value = medId;
+    
+    const container = document.getElementById('med-times-container');
+    container.innerHTML = '';
+    const horas = (horasStr || "").split(',');
+    horas.forEach(h => {
+        if(h.trim()) addMedTimeInput(h.trim());
+    });
+    if(container.children.length === 0) {
+        addMedTimeInput(); // fallback
+    }
+    // Remove delete button from first input
+    const firstBtn = container.querySelector('.time-input-row button');
+    if(firstBtn) firstBtn.style.display = 'none';
 }
 function closeAssignMeditacionModal() {
     document.getElementById('meditacion-assign-modal').classList.add('hide');
@@ -23659,23 +23706,29 @@ function submitMeditacionAssign(e) {
     const btn = e.target.querySelector('button[type="submit"]');
     btn.disabled = true;
     
-    const medId = document.getElementById('med-assign-id').value;
-    const hora = document.getElementById('med-assign-hora').value;
+    const timeInputs = document.querySelectorAll('.med-assign-hora');
+    const horas = Array.from(timeInputs).map(inp => inp.value).filter(v => v);
     
-    fetch(`/api/pacientes/${currentMedPatientId}/meditaciones`, {
-        method: 'POST',
+    const medId = document.getElementById('med-assign-id').value;
+    
+    const asigId = document.getElementById('med-edit-asig-id').value;
+    const url = asigId ? `/api/pacientes/meditaciones/${asigId}` : `/api/pacientes/${currentMedPatientId}/meditaciones`;
+    const method = asigId ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ meditacion_id: medId, hora_recordatorio: hora })
+        body: JSON.stringify({ meditacion_id: medId, hora_recordatorio: horas })
     })
     .then(res => res.json())
     .then(data => {
         closeAssignMeditacionModal();
         loadPacienteMeditaciones(currentMedPatientId);
         btn.disabled = false;
-        showToast("Meditación asignada exitosamente");
+        showToast(asigId ? "Asignación actualizada" : "Meditación asignada exitosamente");
     })
     .catch(err => {
-        alert("Error al asignar meditación");
+        alert("Error al guardar meditación");
         btn.disabled = false;
     });
 }
