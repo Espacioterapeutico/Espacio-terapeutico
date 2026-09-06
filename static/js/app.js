@@ -14815,35 +14815,32 @@ window.triggerManualCronReminders = triggerManualCronReminders;
 // ==========================================
 
 function switchTherapistToolsTab(tab) {
-    const viewAsignar = document.getElementById('tt-sub-view-asignar');
-    const viewPlantillas = document.getElementById('tt-sub-view-plantillas');
-    const tabAsignar = document.getElementById('tt-tab-asignar');
-    const tabPlantillas = document.getElementById('tt-tab-plantillas');
-
-    if (!viewAsignar || !viewPlantillas) return;
-
-    if (tab === 'asignar') {
-        viewAsignar.classList.remove('hide');
-        viewPlantillas.classList.add('hide');
+    const views = ['asignar', 'plantillas', 'meditaciones'];
+    views.forEach(v => {
+        const viewEl = document.getElementById(`tt-sub-view-${v}`);
+        const tabEl = document.getElementById(`tt-tab-${v}`);
         
-        if (tabAsignar) {
-            tabAsignar.className = 'btn btn-sm btn-primary';
+        if (viewEl) {
+            if (v === tab) {
+                viewEl.classList.remove('hide');
+            } else {
+                viewEl.classList.add('hide');
+            }
         }
-        if (tabPlantillas) {
-            tabPlantillas.className = 'btn btn-sm btn-secondary';
+        
+        if (tabEl) {
+            if (v === tab) {
+                tabEl.className = 'btn btn-sm btn-primary';
+            } else {
+                tabEl.className = 'btn btn-sm btn-secondary';
+            }
         }
-    } else {
-        viewAsignar.classList.add('hide');
-        viewPlantillas.classList.remove('hide');
+    });
 
-        if (tabAsignar) {
-            tabAsignar.className = 'btn btn-sm btn-secondary';
-        }
-        if (tabPlantillas) {
-            tabPlantillas.className = 'btn btn-sm btn-primary';
-        }
-
+    if (tab === 'plantillas') {
         renderTherapistPreviewTemplates();
+    } else if (tab === 'meditaciones') {
+        if(typeof loadMeditacionesLibrary === 'function') loadMeditacionesLibrary();
     }
 }
 window.switchTherapistToolsTab = switchTherapistToolsTab;
@@ -20168,8 +20165,15 @@ async function executeAssignTestToPatient() {
 }
 
 function copyTestLink(url) {
+    if (url.startsWith('/')) {
+        url = window.location.origin + url;
+    }
     navigator.clipboard.writeText(url).then(() => {
-        alert("📋 Enlace de evaluación copiado al portapapeles:\n" + url);
+        if (typeof showCustomToast === 'function') {
+            showCustomToast('📋 Enlace copiado', 'El enlace ha sido copiado al portapapeles');
+        } else {
+            alert("📋 Enlace de evaluación copiado al portapapeles:\n" + url);
+        }
     }).catch(() => {
         prompt("Copia el siguiente enlace:", url);
     });
