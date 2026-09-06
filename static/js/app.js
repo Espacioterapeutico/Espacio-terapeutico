@@ -1671,6 +1671,124 @@ function purgeClientCacheOnLogin() {
     } catch(e) {}
 }
 
+function applyUserBlocks(bloqueos) {
+    if (!bloqueos) return;
+
+    // Registro Detallado (Historia Clínica)
+    const btnHistoria = document.querySelector('button[onclick*="openNewPatientModal()"]');
+    const tabHistorias = document.getElementById('exp-tab-historias');
+    const tabContentHistorias = document.getElementById('exp-content-historias');
+    const pModalTabClinical = document.querySelector('.tab-btn[onclick*="tab-clinical"]');
+    
+    // El modal de historial/evoluciones de un paciente en particular (patient-details-modal)
+    const detTabHistorial = document.querySelector('button[onclick*="switchPatientDetailsTab(\'historial\')"]');
+
+    if (bloqueos.registro === 1) {
+        if (btnHistoria) btnHistoria.classList.add('hide');
+        if (pModalTabClinical) pModalTabClinical.classList.add('hide');
+    } else {
+        if (btnHistoria) btnHistoria.classList.remove('hide');
+        if (pModalTabClinical) pModalTabClinical.classList.remove('hide');
+    }
+
+    // Registro Rápido
+    const btnRegistroRapido = document.querySelector('button[onclick*="openQuickAddPatientModal()"]');
+    if (bloqueos.registro_rapido === 1) {
+        if (btnRegistroRapido) btnRegistroRapido.classList.add('hide');
+    } else {
+        if (btnRegistroRapido) btnRegistroRapido.classList.remove('hide');
+    }
+
+    // Evoluciones
+    const tabEvoluciones = document.getElementById('exp-tab-evoluciones');
+    const tabContentEvoluciones = document.getElementById('exp-content-evoluciones');
+    const btnNuevaEvolucion = document.querySelector('button[onclick*="openNewSessionModal()"]');
+    
+    // Si Registro (historial entero) y Evoluciones están bloqueados, ocultar pestaña historial en detalles
+    if (bloqueos.registro === 1 && bloqueos.evoluciones === 1) {
+        if (detTabHistorial) detTabHistorial.classList.add('hide');
+    } else {
+        if (detTabHistorial) detTabHistorial.classList.remove('hide');
+    }
+
+    if (bloqueos.evoluciones === 1) {
+        if (tabEvoluciones) tabEvoluciones.classList.add('hide');
+        if (tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
+        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.add('hide');
+        if (typeof switchExpedientesTab === 'function' && document.getElementById('view-expedientes-clinicos') && !document.getElementById('view-expedientes-clinicos').classList.contains('hide')) {
+             if (tabHistorias) {
+                 if(tabEvoluciones) tabEvoluciones.classList.remove('active');
+                 if(tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
+                 tabHistorias.classList.add('active');
+                 if(tabContentHistorias) tabContentHistorias.classList.remove('hide');
+             }
+        }
+    } else {
+        if (tabEvoluciones) tabEvoluciones.classList.remove('hide');
+        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.remove('hide');
+    }
+
+    // Herramientas
+    const ttTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'herramientas\')"]');
+    const toolNav = document.querySelector('a[data-view="therapist-tools"]');
+    if (bloqueos.herramientas === 1) {
+        if (ttTab) ttTab.classList.add('hide');
+        if (toolNav) toolNav.classList.add('hide');
+    } else {
+        if (ttTab) ttTab.classList.remove('hide');
+        if (toolNav) toolNav.classList.remove('hide');
+    }
+
+    // Tests
+    const testsTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'tests\')"]');
+    const navTests = document.querySelector('a[data-view="tests-psicologicos"]');
+    if (bloqueos.tests === 1) {
+        if (testsTab) testsTab.classList.add('hide');
+        if (navTests) navTests.classList.add('hide');
+    } else {
+        if (testsTab) testsTab.classList.remove('hide');
+        if (navTests) navTests.classList.remove('hide');
+    }
+
+    // Pizarra
+    const pizarraTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'pizarra\')"]');
+    const navPizarra = document.querySelector('a[data-view="pizarra-visual"]');
+    if (bloqueos.pizarra === 1) {
+        if (bloqueos.pizarra === 1) {
+            if (pizarraTab) pizarraTab.classList.add('hide');
+            if (navPizarra) navPizarra.classList.add('hide');
+        }
+    } else {
+        if (pizarraTab) pizarraTab.classList.remove('hide');
+        if (navPizarra) navPizarra.classList.remove('hide');
+    }
+    
+    // Examen Mental
+    const navExamen = document.querySelector('a[data-view="examen-mental"]');
+    if (bloqueos.examen_mental === 1 && navExamen) {
+        navExamen.classList.add('hide');
+    } else if (navExamen) {
+        navExamen.classList.remove('hide');
+    }
+    
+    // Finanzas
+    const navFinance = document.querySelector('a[data-view="finance"]');
+    if (bloqueos.finanzas === 1 && navFinance) {
+        navFinance.classList.add('hide');
+    } else if (navFinance) {
+        navFinance.classList.remove('hide');
+    }
+    
+    // Centro de Confirmaciones
+    const navConfirms = document.querySelector('a[data-view="manual-confirmations"]');
+    if (bloqueos.confirmaciones === 1 && navConfirms) {
+        navConfirms.classList.add('hide');
+    } else if (navConfirms) {
+        navConfirms.classList.remove('hide');
+    }
+}
+window.applyUserBlocks = applyUserBlocks;
+
 function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba, nombres, apellidos) {
     if (window.location.pathname.startsWith('/evaluacion/')) {
         const appLayout = document.getElementById('app-layout');
@@ -1831,8 +1949,6 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
             } else {
                 link.classList.remove('hide');
             }
-        } else {
-            link.classList.remove('hide');
         }
     });
     
@@ -1917,29 +2033,24 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
 
     // 2. Reglas por bloqueos de casillas de SuperAdmin
     if (bloqueos) {
-        if (cleanRole === 'psicologo' || cleanRole === 'admin') {
+        if (cleanRole === 'admin') {
             bloqueos.examen_mental = 0;
             bloqueos.tests = 0;
             bloqueos.herramientas = 0;
             bloqueos.pizarra = 0;
             bloqueos.confirmaciones = 0;
+            bloqueos.registro = 0;
+            bloqueos.registro_rapido = 0;
+            bloqueos.evoluciones = 0;
+            bloqueos.finanzas = 0;
+            bloqueos.agenda = 0;
         }
         sessionStorage.setItem('bloqueos', JSON.stringify(bloqueos));
-
-        const linkConf = document.querySelector('[data-view="manual-confirmations"]');
-        if (linkConf) { if (bloqueos.confirmaciones === 1) linkConf.classList.add('hide'); else linkConf.classList.remove('hide'); }
-
-        const linkPizarra = document.querySelector('[data-view="pizarra-visual"]');
-        if (linkPizarra) { if (bloqueos.pizarra === 1) linkPizarra.classList.add('hide'); else linkPizarra.classList.remove('hide'); }
-
-        const linkExamen = document.querySelector('[data-view="examen-mental"]');
-        if (linkExamen) { if (bloqueos.examen_mental === 1) linkExamen.classList.add('hide'); else linkExamen.classList.remove('hide'); }
-
-        const linkTests = document.querySelector('[data-view="tests-psicologicos"]');
-        if (linkTests) { if (bloqueos.tests === 1) linkTests.classList.add('hide'); else linkTests.classList.remove('hide'); }
-
-        const linkHerram = document.querySelector('[data-view="therapist-tools"]');
-        if (linkHerram) { if (bloqueos.herramientas === 1) linkHerram.classList.add('hide'); else linkHerram.classList.remove('hide'); }
+    }
+    
+    // Aplicar bloqueos en la interfaz y menú lateral
+    if (typeof applyUserBlocks === 'function') {
+        applyUserBlocks(window.currentUser ? window.currentUser.bloqueos : bloqueos);
     }
     
     if (isPureSuperadmin) {
@@ -23745,122 +23856,3 @@ function unassignMeditacion(asignacionId) {
             loadPacienteMeditaciones(currentMedPatientId);
         });
 }
-
-window.applyUserBlocks = function(bloqueos) {
-    console.log("BLOCKS_PAYLOAD:", bloqueos);
-    if (!bloqueos) return;
-
-    // Registro Detallado (Historia Clínica)
-    const btnHistoria = document.querySelector('button[onclick*="openNewPatientModal()"]');
-    const tabHistorias = document.getElementById('exp-tab-historias');
-    const tabContentHistorias = document.getElementById('exp-content-historias');
-    const pModalTabClinical = document.querySelector('.tab-btn[onclick*="tab-clinical"]');
-    
-    // El modal de historial/evoluciones de un paciente en particular (patient-details-modal)
-    const detTabHistorial = document.querySelector('button[onclick*="switchPatientDetailsTab(\'historial\')"]');
-
-    if (bloqueos.registro === 1) {
-        if (btnHistoria) btnHistoria.classList.add('hide');
-        // NOTA: NO ocultamos tabHistorias ni tabContentHistorias porque allí está la lista de pacientes
-        if (pModalTabClinical) pModalTabClinical.classList.add('hide');
-    } else {
-        if (btnHistoria) btnHistoria.classList.remove('hide');
-        if (pModalTabClinical) pModalTabClinical.classList.remove('hide');
-    }
-
-    // Registro Rápido
-    const btnRegistroRapido = document.querySelector('button[onclick*="openQuickAddPatientModal()"]');
-    if (bloqueos.registro_rapido === 1) {
-        if (btnRegistroRapido) btnRegistroRapido.classList.add('hide');
-    } else {
-        if (btnRegistroRapido) btnRegistroRapido.classList.remove('hide');
-    }
-
-    // Evoluciones
-    const tabEvoluciones = document.getElementById('exp-tab-evoluciones');
-    const tabContentEvoluciones = document.getElementById('exp-content-evoluciones');
-    const btnNuevaEvolucion = document.querySelector('button[onclick*="openNewSessionModal()"]');
-    
-    // Si Registro (historial entero) y Evoluciones están bloqueados, ocultar pestaña historial en detalles
-    if (bloqueos.registro === 1 && bloqueos.evoluciones === 1) {
-        if (detTabHistorial) detTabHistorial.classList.add('hide');
-    } else {
-        if (detTabHistorial) detTabHistorial.classList.remove('hide');
-    }
-
-    if (bloqueos.evoluciones === 1) {
-        if (tabEvoluciones) tabEvoluciones.classList.add('hide');
-        if (tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
-        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.add('hide');
-        // Auto-switch to Historias (Patient list) since Evoluciones is blocked
-        if (typeof switchExpedientesTab === 'function' && document.getElementById('view-expedientes-clinicos') && !document.getElementById('view-expedientes-clinicos').classList.contains('hide')) {
-             // Will switch when they visit, but let's just make the active classes right here
-             if (tabHistorias) {
-                 if(tabEvoluciones) tabEvoluciones.classList.remove('active');
-                 if(tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
-                 tabHistorias.classList.add('active');
-                 if(tabContentHistorias) tabContentHistorias.classList.remove('hide');
-             }
-        }
-    } else {
-        if (tabEvoluciones) tabEvoluciones.classList.remove('hide');
-        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.remove('hide');
-    }
-
-    // Herramientas
-    const ttTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'herramientas\')"]');
-    const toolNav = document.querySelector('a[data-view="therapist-tools"]');
-    if (bloqueos.herramientas === 1) {
-        if (ttTab) ttTab.classList.add('hide');
-        if (toolNav) toolNav.classList.add('hide');
-    } else {
-        if (ttTab) ttTab.classList.remove('hide');
-        if (toolNav) toolNav.classList.remove('hide');
-    }
-
-    // Tests
-    const testsTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'tests\')"]');
-    const navTests = document.querySelector('a[data-view="tests-psicologicos"]');
-    if (bloqueos.tests === 1) {
-        if (testsTab) testsTab.classList.add('hide');
-        if (navTests) navTests.classList.add('hide');
-    } else {
-        if (testsTab) testsTab.classList.remove('hide');
-        if (navTests) navTests.classList.remove('hide');
-    }
-
-    // Pizarra
-    const pizarraTab = document.querySelector('button[onclick*="switchPatientDetailsTab(\'pizarra\')"]');
-    const navPizarra = document.querySelector('a[data-view="pizarra-visual"]');
-    if (bloqueos.pizarra === 1) {
-        if (pizarraTab) pizarraTab.classList.add('hide');
-        if (navPizarra) navPizarra.classList.add('hide');
-    } else {
-        if (pizarraTab) pizarraTab.classList.remove('hide');
-        if (navPizarra) navPizarra.classList.remove('hide');
-    }
-    
-    // Examen Mental
-    const navExamen = document.querySelector('a[data-view="examen-mental"]');
-    if (bloqueos.examen_mental === 1 && navExamen) {
-        navExamen.classList.add('hide');
-    } else if (navExamen) {
-        navExamen.classList.remove('hide');
-    }
-    
-    // Finanzas
-    const navFinance = document.querySelector('a[data-view="finance"]');
-    if (bloqueos.finanzas === 1 && navFinance) {
-        navFinance.classList.add('hide');
-    } else if (navFinance) {
-        navFinance.classList.remove('hide');
-    }
-    
-    // Centro de Confirmaciones
-    const navConfirms = document.querySelector('a[data-view="manual-confirmations"]');
-    if (bloqueos.confirmaciones === 1 && navConfirms) {
-        navConfirms.classList.add('hide');
-    } else if (navConfirms) {
-        navConfirms.classList.remove('hide');
-    }
-};
