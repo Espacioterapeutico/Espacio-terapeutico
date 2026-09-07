@@ -15628,7 +15628,7 @@ function renderTherapistToolsCatalog() {
             <!-- BARRA INDEPENDIENTE: Botones de Acción (FUERA del accordion-header) -->
             <div style="padding: 0.35rem 0.85rem; border-top: 1px solid #f3e8ff; background: #faf5ff; display: flex; justify-content: flex-end; gap: 0.5rem; align-items: center;">
                 ${m.clave === 'meditacion' ? `
-                    <button type="button" class="btn btn-sm" onclick="openMeditacionesLibraryModal()" style="padding: 0.25rem 0.75rem; font-size: 0.78rem; border-radius: 5px; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); color: white; border: none; box-shadow: 0 2px 5px rgba(112,46,94,0.25); cursor: pointer;">
+                    <button type="button" class="btn btn-sm" onclick="openModal('modal-meditaciones-library'); loadMeditacionesLibrary();" style="padding: 0.25rem 0.75rem; font-size: 0.78rem; border-radius: 5px; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); color: white; border: none; box-shadow: 0 2px 5px rgba(112,46,94,0.25); cursor: pointer;">
                         📚 Biblioteca de Meditaciones
                     </button>
                 ` : ''}
@@ -23720,63 +23720,91 @@ function filterQuickPayPatientSelect(query) {
 
 let meditationsLibrary = [];
 
-function loadMeditacionesLibrary() {
-    fetch('/api/meditaciones')
-        .then(res => res.json())
-        .then(data => {
-            meditationsLibrary = data.meditaciones;
-            const tbody = document.getElementById('meditaciones-library-tbody');
-            tbody.innerHTML = '';
-            
-            if (meditationsLibrary.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No hay meditaciones en tu biblioteca.</td></tr>';
-                return;
-            }
-            
-            meditationsLibrary.forEach(m => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${m.titulo}</strong></td>
-                    <td>${m.tipo_contenido === 'youtube' ? '🎥 YouTube' : '🎵 Audio'}</td>
-                    <td>${m.fecha_creacion.split(' ')[0]}</td>
-                    <td>
-                        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="deleteMeditacion(${m.id})">Eliminar</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+async function loadMeditacionesLibrary() {
+    const tbody = document.getElementById('meditaciones-library-tbody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">Cargando biblioteca...</td></tr>';
+    }
+    try {
+        const res = await fetch('/api/meditaciones');
+        const data = await res.json();
+        meditationsLibrary = (data && data.meditaciones) ? data.meditaciones : [];
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        
+        if (meditationsLibrary.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No hay meditaciones en tu biblioteca todavía. Haz clic en <strong>"+ Nueva Meditación"</strong> para registrar una.</td></tr>';
+            return;
+        }
+        
+        meditationsLibrary.forEach(m => {
+            const tr = document.createElement('tr');
+            const fecha = m.fecha_creacion ? m.fecha_creacion.split(' ')[0] : 'N/A';
+            const tipoLabel = m.tipo_contenido === 'youtube' ? '🎥 YouTube' : '🎵 Audio MP3';
+            tr.innerHTML = `
+                <td><strong style="color: var(--text-dark); font-size: 0.92rem;">${m.titulo || 'Sin título'}</strong></td>
+                <td><span class="badge" style="background:#f3e8ff;color:#702e5e;font-weight:600;padding:0.25rem 0.5rem;border-radius:4px;">${tipoLabel}</span></td>
+                <td style="color: var(--text-muted); font-size: 0.82rem;">${fecha}</td>
+                <td style="text-align: right;">
+                    <button type="button" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:600;" onclick="deleteMeditacion(${m.id})">Eliminar</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
+    } catch (err) {
+        console.error("Error cargando biblioteca de meditaciones:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-danger">Error al cargar biblioteca: ${err.message}</td></tr>`;
+        }
+    }
+}
+
+function openMeditacionesLibraryModal() {
+    openModal('modal-meditaciones-library');
+    loadMeditacionesLibrary();
+}
+
+function closeMeditacionesLibraryModal() {
+    closeModal('modal-meditaciones-library');
 }
 
 function openMeditacionModal() {
-    document.getElementById('form-meditacion-create').reset();
-    document.getElementById('med-youtube-group').classList.remove('hide');
-    document.getElementById('med-audio-group').classList.add('hide');
-    document.getElementById('meditacion-create-modal').classList.remove('hide');
+    const form = document.getElementById('form-meditacion-create');
+    if (form) form.reset();
+    document.getElementById('med-youtube-group')?.classList.remove('hide');
+    document.getElementById('med-audio-group')?.classList.add('hide');
+    openModal('meditacion-create-modal');
 }
+
 function closeMeditacionModal() {
-    document.getElementById('meditacion-create-modal').classList.add('hide');
+    closeModal('meditacion-create-modal');
 }
 
 function toggleMedType(type) {
     if (type === 'youtube') {
-        document.getElementById('med-youtube-group').classList.remove('hide');
-        document.getElementById('med-audio-group').classList.add('hide');
-        document.getElementById('med-url').required = true;
-        document.getElementById('med-audio').required = false;
+        document.getElementById('med-youtube-group')?.classList.remove('hide');
+        document.getElementById('med-audio-group')?.classList.add('hide');
+        const u = document.getElementById('med-url');
+        if (u) u.required = true;
+        const a = document.getElementById('med-audio');
+        if (a) a.required = false;
     } else {
-        document.getElementById('med-youtube-group').classList.add('hide');
-        document.getElementById('med-audio-group').classList.remove('hide');
-        document.getElementById('med-url').required = false;
-        document.getElementById('med-audio').required = true;
+        document.getElementById('med-youtube-group')?.classList.add('hide');
+        document.getElementById('med-audio-group')?.classList.remove('hide');
+        const u = document.getElementById('med-url');
+        if (u) u.required = false;
+        const a = document.getElementById('med-audio');
+        if (a) a.required = true;
     }
 }
 
 function submitMeditacionCreate(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.innerHTML = 'Guardando...';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Guardando...';
+    }
     
     const formData = new FormData();
     formData.append('titulo', document.getElementById('med-titulo').value);
@@ -23796,28 +23824,21 @@ function submitMeditacionCreate(e) {
     .then(res => res.json())
     .then(data => {
         if(data.error) throw new Error(data.error);
-        closeMeditacionModal();
+        closeModal('meditacion-create-modal');
         loadMeditacionesLibrary();
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar en Biblioteca';
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar en Biblioteca';
+        }
         showToast("Meditación guardada en biblioteca");
     })
     .catch(err => {
         alert(err.message);
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar en Biblioteca';
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar en Biblioteca';
+        }
     });
-}
-
-function openMeditacionesLibraryModal() {
-    loadMeditacionesLibrary();
-    const modal = document.getElementById('modal-meditaciones-library');
-    if (modal) modal.classList.remove('hide');
-}
-
-function closeMeditacionesLibraryModal() {
-    const modal = document.getElementById('modal-meditaciones-library');
-    if (modal) modal.classList.add('hide');
 }
 
 function deleteMeditacion(id) {
@@ -23862,7 +23883,7 @@ async function openAssignMeditacionModalForPatient(patientId, patientName) {
             meditationsLibrary.forEach(m => {
                 const opt = document.createElement('option');
                 opt.value = m.id;
-                opt.textContent = `${m.titulo} (${m.tipo_contenido === 'youtube' ? '🎥 YouTube' : '🎵 Audio'})`;
+                opt.textContent = `${m.titulo} (${m.tipo_contenido === 'youtube' ? '🎥 YouTube' : '🎵 Audio MP3'})`;
                 select.appendChild(opt);
             });
         }
@@ -23886,8 +23907,7 @@ async function openAssignMeditacionModalForPatient(patientId, patientName) {
         addMedTimeInput('20:00', false);
     }
     
-    const modal = document.getElementById('meditacion-assign-modal');
-    if (modal) modal.classList.remove('hide');
+    openModal('meditacion-assign-modal');
 }
 
 function addMedTimeInput(val = '', showDelete = true) {
@@ -23934,8 +23954,7 @@ async function editMeditacionAssignment(asigId, medId, horasStr, patientName) {
 }
 
 function closeAssignMeditacionModal() {
-    const modal = document.getElementById('meditacion-assign-modal');
-    if (modal) modal.classList.add('hide');
+    closeModal('meditacion-assign-modal');
 }
 
 async function submitMeditacionAssign(e) {
@@ -23979,7 +23998,7 @@ async function submitMeditacionAssign(e) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al guardar asignación');
         
-        closeAssignMeditacionModal();
+        closeModal('meditacion-assign-modal');
         showToast(asigId ? "Horarios actualizados exitosamente" : "Meditación asignada exitosamente con sus horarios");
         
         const name = document.getElementById('tt-selected-patient-name')?.innerText;
@@ -24019,6 +24038,13 @@ async function unassignMeditacion(asignacionId) {
     }
 }
 
+window.showModal = function(modalId) {
+    openModal(modalId);
+};
+window.hideModal = function(modalId) {
+    closeModal(modalId);
+};
+
 window.openMeditacionesLibraryModal = openMeditacionesLibraryModal;
 window.closeMeditacionesLibraryModal = closeMeditacionesLibraryModal;
 window.openMeditacionModal = openMeditacionModal;
@@ -24032,3 +24058,4 @@ window.editMeditacionAssignment = editMeditacionAssignment;
 window.closeAssignMeditacionModal = closeAssignMeditacionModal;
 window.submitMeditacionAssign = submitMeditacionAssign;
 window.unassignMeditacion = unassignMeditacion;
+window.loadMeditacionesLibrary = loadMeditacionesLibrary;

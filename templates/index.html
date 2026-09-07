@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Local CSS Link -->
-    <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_v or '1788790000' }}">
+    <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_v or '1788791000' }}">
     <!-- FullCalendar v6 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/es.global.min.js"></script>
@@ -7450,8 +7450,8 @@
 
     <!-- Local JavaScript Link -->
 
-    <script src="/static/js/app.js?v={{ asset_v or '1788790000' }}"></script>
-    <script src="/static/js/tests_module.js?v={{ asset_v or '1788790000' }}"></script>
+    <script src="/static/js/app.js?v={{ asset_v or '1788791000' }}"></script>
+    <script src="/static/js/tests_module.js?v={{ asset_v or '1788791000' }}"></script>
     <!-- Modal Registro Rápido -->
     <div id="quick-add-patient-modal" class="modal hide">
         <div class="modal-content" style="max-width: 500px; border-radius: 12px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
@@ -7638,7 +7638,7 @@ async function handleQuickAddPatientSubmit(e) {
 </script>
 
     <!-- MODAL BIBLIOTECA DE MEDITACIONES -->
-    <div id="modal-meditaciones-library" class="modal hide" role="dialog" onclick="if(event.target === this) closeMeditacionesLibraryModal()" style="z-index: 3750;">
+    <div id="modal-meditaciones-library" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('modal-meditaciones-library')" style="z-index: 3750;">
         <div class="modal-content" style="max-width: 780px; border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
             <div class="modal-header" style="background: linear-gradient(135deg, #702e5e, #984b80); color: white; padding: 1.15rem 1.4rem; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-family: var(--font-title); color: white; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem;">
@@ -7648,7 +7648,7 @@ async function handleQuickAddPatientSubmit(e) {
                     <button type="button" class="btn btn-sm" onclick="openMeditacionModal()" style="background: white; color: #702e5e; font-weight: 700; border: none; border-radius: 6px; padding: 0.4rem 0.85rem; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         + Nueva Meditación
                     </button>
-                    <button class="btn-close-modal" onclick="closeMeditacionesLibraryModal()" style="color: white; opacity: 0.85; background: none; border: none; font-size: 1.25rem; cursor: pointer; line-height: 1;">✕</button>
+                    <button class="btn-close-modal" onclick="closeModal('modal-meditaciones-library')" style="color: white; opacity: 0.85; background: none; border: none; font-size: 1.25rem; cursor: pointer; line-height: 1;">✕</button>
                 </div>
             </div>
             <div class="modal-body" style="padding: 1.4rem; max-height: 72vh; overflow-y: auto;">
@@ -7675,11 +7675,11 @@ async function handleQuickAddPatientSubmit(e) {
     </div>
 
     <!-- MODAL NUEVA MEDITACIÓN -->
-    <div id="meditacion-create-modal" class="modal hide" role="dialog" onclick="if(event.target === this) closeMeditacionModal()">
+    <div id="meditacion-create-modal" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('meditacion-create-modal')">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h3>Crear Nueva Meditación</h3>
-                <button class="btn-close-modal" onclick="closeMeditacionModal()">&times;</button>
+                <button class="btn-close-modal" onclick="closeModal('meditacion-create-modal')">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="form-meditacion-create" onsubmit="submitMeditacionCreate(event)">
@@ -7709,11 +7709,11 @@ async function handleQuickAddPatientSubmit(e) {
     </div>
 
     <!-- MODAL ASIGNAR MEDITACIÓN -->
-    <div id="meditacion-assign-modal" class="modal hide" role="dialog" onclick="if(event.target === this) closeAssignMeditacionModal()">
+    <div id="meditacion-assign-modal" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('meditacion-assign-modal')">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h3 id="med-assign-modal-title">Asignar Meditación</h3>
-                <button class="btn-close-modal" onclick="closeAssignMeditacionModal()">&times;</button>
+                <button class="btn-close-modal" onclick="closeModal('meditacion-assign-modal')">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="form-meditacion-assign" onsubmit="submitMeditacionAssign(event)">
