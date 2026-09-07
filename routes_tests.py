@@ -2192,176 +2192,227 @@ def ensure_violence_and_psychotic_tests_definitions(db):
     import json
     cursor = db.cursor()
     
-    # 1. CUVINO
-    opciones_frecuencia = [
-        {"val": 0, "text": "Nunca"},
-        {"val": 1, "text": "A veces"},
-        {"val": 2, "text": "Frecuentemente"},
-        {"val": 3, "text": "Casi siempre"},
-        {"val": 4, "text": "Siempre"}
+    # 1. CUVINO (Frecuencia 0 a 4)
+    opciones_frecuencia_cuvino = [
+        {"val": 0, "text": "0 - Nunca", "txt": "0 - Nunca"},
+        {"val": 1, "text": "1 - A veces", "txt": "1 - A veces"},
+        {"val": 2, "text": "2 - Frecuentemente", "txt": "2 - Frecuentemente"},
+        {"val": 3, "text": "3 - Casi siempre", "txt": "3 - Casi siempre"},
+        {"val": 4, "text": "4 - Siempre", "txt": "4 - Siempre"}
     ]
     items_cuvino = [
-        {"id": 1, "texto": "(Castigo) Me ha ignorado o me ha dejado de hablar.", "reverse": False},
-        {"id": 2, "texto": "(Castigo) Se ha negado a darme afecto o apoyo.", "reverse": False},
-        {"id": 3, "texto": "(Castigo) Me ha hecho sentir culpable de sus problemas.", "reverse": False},
-        {"id": 4, "texto": "(Desapego) Muestra frialdad hacia m.", "reverse": False},
-        {"id": 5, "texto": "(Desapego) No presta atencin a lo que digo o siento.", "reverse": False},
-        {"id": 6, "texto": "(Desapego) Siento que no se compromete con la relacin.", "reverse": False},
-        {"id": 7, "texto": "(Humillacin) Me ha ridiculizado en pblico o privado.", "reverse": False},
-        {"id": 8, "texto": "(Humillacin) Critica constantemente mi forma de ser o actuar.", "reverse": False},
-        {"id": 9, "texto": "(Humillacin) Me ha insultado o usado palabras despectivas.", "reverse": False},
-        {"id": 10, "texto": "(Coercin) Me obliga a hacer cosas que no quiero.", "reverse": False},
-        {"id": 11, "texto": "(Coercin) Me amenaza si no cumplo lo que dice.", "reverse": False},
-        {"id": 12, "texto": "(Coercin) Controla cmo me visto o me arreglo.", "reverse": False},
-        {"id": 13, "texto": "(Control) Revisa mi telfono, mensajes o redes sociales.", "reverse": False},
-        {"id": 14, "texto": "(Control) Me prohbe o dificulta ver a ciertas amistades o familiares.", "reverse": False},
-        {"id": 15, "texto": "(Control) Me interroga sobre dnde he estado y con quin.", "reverse": False}
+        {"id": 1, "num": 1, "texto": "(Castigo) Me ha ignorado o me ha dejado de hablar.", "txt": "(Castigo) Me ha ignorado o me ha dejado de hablar.", "reverse": False},
+        {"id": 2, "num": 2, "texto": "(Castigo) Se ha negado a darme afecto o apoyo.", "txt": "(Castigo) Se ha negado a darme afecto o apoyo.", "reverse": False},
+        {"id": 3, "num": 3, "texto": "(Castigo) Me ha hecho sentir culpable de sus problemas.", "txt": "(Castigo) Me ha hecho sentir culpable de sus problemas.", "reverse": False},
+        {"id": 4, "num": 4, "texto": "(Desapego) Muestra frialdad hacia mí.", "txt": "(Desapego) Muestra frialdad hacia mí.", "reverse": False},
+        {"id": 5, "num": 5, "texto": "(Desapego) No presta atención a lo que digo o siento.", "txt": "(Desapego) No presta atención a lo que digo o siento.", "reverse": False},
+        {"id": 6, "num": 6, "texto": "(Desapego) Siento que no se compromete con la relación.", "txt": "(Desapego) Siento que no se compromete con la relación.", "reverse": False},
+        {"id": 7, "num": 7, "texto": "(Humillación) Me ha ridiculizado en público o privado.", "txt": "(Humillación) Me ha ridiculizado en público o privado.", "reverse": False},
+        {"id": 8, "num": 8, "texto": "(Humillación) Critica constantemente mi forma de ser o actuar.", "txt": "(Humillación) Critica constantemente mi forma de ser o actuar.", "reverse": False},
+        {"id": 9, "num": 9, "texto": "(Humillación) Me ha insultado o usado palabras despectivas.", "txt": "(Humillación) Me ha insultado o usado palabras despectivas.", "reverse": False},
+        {"id": 10, "num": 10, "texto": "(Coerción) Me obliga a hacer cosas que no quiero.", "txt": "(Coerción) Me obliga a hacer cosas que no quiero.", "reverse": False},
+        {"id": 11, "num": 11, "texto": "(Coerción) Me amenaza si no cumplo lo que dice.", "txt": "(Coerción) Me amenaza si no cumplo lo que dice.", "reverse": False},
+        {"id": 12, "num": 12, "texto": "(Coerción) Controla cómo me visto o me arreglo.", "txt": "(Coerción) Controla cómo me visto o me arreglo.", "reverse": False},
+        {"id": 13, "num": 13, "texto": "(Control) Revisa mi teléfono, mensajes o redes sociales.", "txt": "(Control) Revisa mi teléfono, mensajes o redes sociales.", "reverse": False},
+        {"id": 14, "num": 14, "texto": "(Control) Me prohíbe o dificulta ver a ciertas amistades o familiares.", "txt": "(Control) Me prohíbe o dificulta ver a ciertas amistades o familiares.", "reverse": False},
+        {"id": 15, "num": 15, "texto": "(Control) Me interroga sobre dónde he estado y con quién.", "txt": "(Control) Me interroga sobre dónde he estado y con quién.", "reverse": False}
     ]
     cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'CUVINO'")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ('CUVINO', 'CUVINO - Cuestionario de Violencia entre Novios', 'CUVINO', 'Violencia y Abuso', 'Evala multidimensionalmente la violencia (castigo, desapego, humillacin, coercin, control).', 'Por favor, indique con qu frecuencia ocurren estas situaciones.', json.dumps(opciones_frecuencia, ensure_ascii=False), json.dumps(items_cuvino, ensure_ascii=False)))
+            ('CUVINO', 'CUVINO - Cuestionario de Violencia entre Novios', 'CUVINO', 'Violencia y Abuso', 'Evalúa multidimensionalmente la violencia (castigo, desapego, humillación, coerción, control).', 'Por favor, indique con qué frecuencia ocurren estas situaciones en su relación.', json.dumps(opciones_frecuencia_cuvino, ensure_ascii=False), json.dumps(items_cuvino, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'CUVINO'
+        """, ('CUVINO - Cuestionario de Violencia entre Novios', 'CUVINO', 'Violencia y Abuso', 'Evalúa multidimensionalmente la violencia (castigo, desapego, humillación, coerción, control).', 'Por favor, indique con qué frecuencia ocurren estas situaciones en su relación.', json.dumps(opciones_frecuencia_cuvino, ensure_ascii=False), json.dumps(items_cuvino, ensure_ascii=False)))
 
-    # 2. ABUSO COERCITIVO
+    # 2. ABUSO COERCITIVO (EAPC)
     items_coercitivo = [
-        {"id": 1, "texto": "Me asla de mis redes de apoyo (amigos, familia).", "reverse": False},
-        {"id": 2, "texto": "Supervisa o controla mis rutinas diarias.", "reverse": False},
-        {"id": 3, "texto": "Me impide salir de casa sin su permiso.", "reverse": False},
-        {"id": 4, "texto": "Limita mis medios de transporte o movilidad.", "reverse": False},
-        {"id": 5, "texto": "Usa la intimidacin o miradas amenazantes para controlarme.", "reverse": False},
-        {"id": 6, "texto": "Destruye mis pertenencias personales para castigarme.", "reverse": False},
-        {"id": 7, "texto": "Utiliza a los nios, mascotas o seres queridos para chantajearme.", "reverse": False},
-        {"id": 8, "texto": "Minimiza o niega el abuso diciendo que yo exagero.", "reverse": False},
-        {"id": 9, "texto": "Me culpa de su comportamiento violento o controlador.", "reverse": False},
-        {"id": 10, "texto": "Muestra celos excesivos o posesividad.", "reverse": False}
+        {"id": 1, "num": 1, "texto": "Me aísla de mis redes de apoyo (amigos, familia).", "txt": "Me aísla de mis redes de apoyo (amigos, familia).", "reverse": False},
+        {"id": 2, "num": 2, "texto": "Supervisa o controla mis rutinas diarias.", "txt": "Supervisa o controla mis rutinas diarias.", "reverse": False},
+        {"id": 3, "num": 3, "texto": "Me impide salir de casa sin su permiso.", "txt": "Me impide salir de casa sin su permiso.", "reverse": False},
+        {"id": 4, "num": 4, "texto": "Limita mis medios de transporte o movilidad.", "txt": "Limita mis medios de transporte o movilidad.", "reverse": False},
+        {"id": 5, "num": 5, "texto": "Usa la intimidación o miradas amenazantes para controlarme.", "txt": "Usa la intimidación o miradas amenazantes para controlarme.", "reverse": False},
+        {"id": 6, "num": 6, "texto": "Destruye mis pertenencias personales para castigarme.", "txt": "Destruye mis pertenencias personales para castigarme.", "reverse": False},
+        {"id": 7, "num": 7, "texto": "Utiliza a los niños, mascotas o seres queridos para chantajearme.", "txt": "Utiliza a los niños, mascotas o seres queridos para chantajearme.", "reverse": False},
+        {"id": 8, "num": 8, "texto": "Minimiza o niega el abuso diciendo que yo exagero.", "txt": "Minimiza o niega el abuso diciendo que yo exagero.", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Me culpa de su comportamiento violento o controlador.", "txt": "Me culpa de su comportamiento violento o controlador.", "reverse": False},
+        {"id": 10, "num": 10, "texto": "Muestra celos excesivos o posesividad.", "txt": "Muestra celos excesivos o posesividad.", "reverse": False}
     ]
     cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'ABUSO-COERCITIVO'")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ('ABUSO-COERCITIVO', 'Escala de Abuso Psicolgico y Control Coercitivo', 'EAPC', 'Violencia y Abuso', 'Basado en la Rueda de Poder y Control de Duluth.', 'Indique con qu frecuencia experimenta lo siguiente.', json.dumps(opciones_frecuencia, ensure_ascii=False), json.dumps(items_coercitivo, ensure_ascii=False)))
+            ('ABUSO-COERCITIVO', 'Escala de Abuso Psicológico y Control Coercitivo', 'EAPC', 'Violencia y Abuso', 'Basado en la Rueda de Poder y Control de Duluth. Identifica tácticas de aislamiento y restricción.', 'Indique con qué frecuencia experimenta lo siguiente.', json.dumps(opciones_frecuencia_cuvino, ensure_ascii=False), json.dumps(items_coercitivo, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'ABUSO-COERCITIVO'
+        """, ('Escala de Abuso Psicológico y Control Coercitivo', 'EAPC', 'Violencia y Abuso', 'Basado en la Rueda de Poder y Control de Duluth. Identifica tácticas de aislamiento y restricción.', 'Indique con qué frecuencia experimenta lo siguiente.', json.dumps(opciones_frecuencia_cuvino, ensure_ascii=False), json.dumps(items_coercitivo, ensure_ascii=False)))
 
-    # 3. VIOLENCIA ECONOMICA
+    # 3. VIOLENCIA ECONOMICA (IVEP)
     items_econ = [
-        {"id": 1, "texto": "Me prohbe o me desanima trabajar o estudiar.", "reverse": False},
-        {"id": 2, "texto": "Me restringe el acceso a mis propias cuentas bancarias o tarjetas.", "reverse": False},
-        {"id": 3, "texto": "Me obliga a pedirle dinero para gastos bsicos.", "reverse": False},
-        {"id": 4, "texto": "Esconde los ingresos reales de la familia o miente sobre el dinero.", "reverse": False},
-        {"id": 5, "texto": "Me exige justificar cada centavo que gasto.", "reverse": False},
-        {"id": 6, "texto": "Gasta dinero necesario para el hogar en l/ella mismo(a) sin consultarme.", "reverse": False},
-        {"id": 7, "texto": "Toma dinero de mis ingresos sin mi permiso.", "reverse": False},
-        {"id": 8, "texto": "Genera deudas a mi nombre sin mi consentimiento.", "reverse": False},
-        {"id": 9, "texto": "Se niega a aportar dinero para la manutencin de los hijos o del hogar.", "reverse": False},
-        {"id": 10, "texto": "Me obliga a darle acceso total a mis contraseas bancarias.", "reverse": False}
+        {"id": 1, "num": 1, "texto": "Me prohíbe o me desanima trabajar o estudiar.", "txt": "Me prohíbe o me desanima trabajar o estudiar.", "reverse": False},
+        {"id": 2, "num": 2, "texto": "Me restringe el acceso a mis propias cuentas bancarias o tarjetas.", "txt": "Me restringe el acceso a mis propias cuentas bancarias o tarjetas.", "reverse": False},
+        {"id": 3, "num": 3, "texto": "Me obliga a pedirle dinero para gastos básicos.", "txt": "Me obliga a pedirle dinero para gastos básicos.", "reverse": False},
+        {"id": 4, "num": 4, "texto": "Esconde los ingresos reales de la familia o miente sobre el dinero.", "txt": "Esconde los ingresos reales de la familia o miente sobre el dinero.", "reverse": False},
+        {"id": 5, "num": 5, "texto": "Me exige justificar cada centavo que gasto.", "txt": "Me exige justificar cada centavo que gasto.", "reverse": False},
+        {"id": 6, "num": 6, "texto": "Gasta dinero necesario para el hogar en él/ella mismo(a) sin consultarme.", "txt": "Gasta dinero necesario para el hogar en él/ella mismo(a) sin consultarme.", "reverse": False},
+        {"id": 7, "num": 7, "texto": "Toma dinero de mis ingresos sin mi permiso.", "txt": "Toma dinero de mis ingresos sin mi permiso.", "reverse": False},
+        {"id": 8, "num": 8, "texto": "Genera deudas a mi nombre sin mi consentimiento.", "txt": "Genera deudas a mi nombre sin mi consentimiento.", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Se niega a aportar dinero para la manutención de los hijos o del hogar.", "txt": "Se niega a aportar dinero para la manutención de los hijos o del hogar.", "reverse": False},
+        {"id": 10, "num": 10, "texto": "Me obliga a darle acceso total a mis contraseñas bancarias.", "txt": "Me obliga a darle acceso total a mis contraseñas bancarias.", "reverse": False}
     ]
     cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'VIOLENCIA-ECON'")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ('VIOLENCIA-ECON', 'Inventario de Violencia Econmica y Patrimonial', 'IVEP', 'Violencia y Abuso', 'Mide la restriccin y abuso econmico en la pareja.', 'Indique la frecuencia de estas situaciones.', json.dumps(opciones_frecuencia, ensure_ascii=False), json.dumps(items_econ, ensure_ascii=False)))
+            ('VIOLENCIA-ECON', 'Inventario de Violencia Económica y Patrimonial', 'IVEP', 'Violencia y Abuso', 'Mide la restricción y abuso económico en la pareja.', 'Indique la frecuencia de estas situaciones.', json.dumps(opciones_frecuencia_cuvino, ensure_ascii=False), json.dumps(items_econ, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'VIOLENCIA-ECON'
+        """, ('Inventario de Violencia Económica y Patrimonial', 'IVEP', 'Violencia y Abuso', 'Mide la restricción y abuso económico en la pareja.', 'Indique la frecuencia de estas situaciones.', json.dumps(opciones_frecuencia_cuvino, ensure_ascii=False), json.dumps(items_econ, ensure_ascii=False)))
 
-    # 4. BPRS
-    opciones_bprs = [{"val": i, "text": str(i)} for i in range(1, 8)]
-    opciones_bprs[0]["text"] = "1 (Ausente)"
-    opciones_bprs[-1]["text"] = "7 (Extremadamente grave)"
+    # 4. BPRS (Escala 1 a 7 completa con descriptores clínicos)
+    opciones_bprs = [
+        {"val": 1, "text": "1 - Ausente (No presente)", "txt": "1 - Ausente (No presente)"},
+        {"val": 2, "text": "2 - Muy leve", "txt": "2 - Muy leve"},
+        {"val": 3, "text": "3 - Leve", "txt": "3 - Leve"},
+        {"val": 4, "text": "4 - Moderado", "txt": "4 - Moderado"},
+        {"val": 5, "text": "5 - Moderadamente grave", "txt": "5 - Moderadamente grave"},
+        {"val": 6, "text": "6 - Grave", "txt": "6 - Grave"},
+        {"val": 7, "text": "7 - Muy grave / Extremadamente grave", "txt": "7 - Muy grave / Extremadamente grave"}
+    ]
     items_bprs = [
-        {"id": 1, "texto": "Preocupacin somtica", "reverse": False},
-        {"id": 2, "texto": "Ansiedad", "reverse": False},
-        {"id": 3, "texto": "Aislamiento emocional", "reverse": False},
-        {"id": 4, "texto": "Desorganizacin conceptual", "reverse": False},
-        {"id": 5, "texto": "Sentimientos de culpa", "reverse": False},
-        {"id": 6, "texto": "Tensin", "reverse": False},
-        {"id": 7, "texto": "Manierismos y posturas inusuales", "reverse": False},
-        {"id": 8, "texto": "Grandiosidad", "reverse": False},
-        {"id": 9, "texto": "Humor depresivo", "reverse": False},
-        {"id": 10, "texto": "Hostilidad", "reverse": False},
-        {"id": 11, "texto": "Suspicacia", "reverse": False},
-        {"id": 12, "texto": "Comportamiento alucinatorio", "reverse": False},
-        {"id": 13, "texto": "Retardo motor", "reverse": False},
-        {"id": 14, "texto": "Falta de cooperacin", "reverse": False},
-        {"id": 15, "texto": "Contenido del pensamiento inusual", "reverse": False},
-        {"id": 16, "texto": "Afecto embotado", "reverse": False},
-        {"id": 17, "texto": "Excitacin", "reverse": False},
-        {"id": 18, "texto": "Desorientacin", "reverse": False}
+        {"id": 1, "num": 1, "texto": "Preocupación somática", "txt": "Preocupación somática", "reverse": False},
+        {"id": 2, "num": 2, "texto": "Ansiedad", "txt": "Ansiedad", "reverse": False},
+        {"id": 3, "num": 3, "texto": "Aislamiento emocional", "txt": "Aislamiento emocional", "reverse": False},
+        {"id": 4, "num": 4, "texto": "Desorganización conceptual", "txt": "Desorganización conceptual", "reverse": False},
+        {"id": 5, "num": 5, "texto": "Sentimientos de culpa", "txt": "Sentimientos de culpa", "reverse": False},
+        {"id": 6, "num": 6, "texto": "Tensión", "txt": "Tensión", "reverse": False},
+        {"id": 7, "num": 7, "texto": "Manierismos y posturas inusuales", "txt": "Manierismos y posturas inusuales", "reverse": False},
+        {"id": 8, "num": 8, "texto": "Grandiosidad", "txt": "Grandiosidad", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Humor depresivo", "txt": "Humor depresivo", "reverse": False},
+        {"id": 10, "num": 10, "texto": "Hostilidad", "txt": "Hostilidad", "reverse": False},
+        {"id": 11, "num": 11, "texto": "Suspicacia", "txt": "Suspicacia", "reverse": False},
+        {"id": 12, "num": 12, "texto": "Comportamiento alucinatorio", "txt": "Comportamiento alucinatorio", "reverse": False},
+        {"id": 13, "num": 13, "texto": "Retardo motor", "txt": "Retardo motor", "reverse": False},
+        {"id": 14, "num": 14, "texto": "Falta de cooperación", "txt": "Falta de cooperación", "reverse": False},
+        {"id": 15, "num": 15, "texto": "Contenido del pensamiento inusual", "txt": "Contenido del pensamiento inusual", "reverse": False},
+        {"id": 16, "num": 16, "texto": "Afecto embotado", "txt": "Afecto embotado", "reverse": False},
+        {"id": 17, "num": 17, "texto": "Excitación", "txt": "Excitación", "reverse": False},
+        {"id": 18, "num": 18, "texto": "Desorientación", "txt": "Desorientación", "reverse": False}
     ]
     cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'BPRS'")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ('BPRS', 'BPRS - Escala Breve de Psiquiatra', 'BPRS', 'Psicopatologa y Clnica', 'Evala la gravedad de sntomas psicopatolgicos generales (aislamiento, suspicacia, alteracin del pensamiento).', 'PARA EL CLNICO: Evale del 1 al 7 la gravedad.', json.dumps(opciones_bprs, ensure_ascii=False), json.dumps(items_bprs, ensure_ascii=False)))
+            ('BPRS', 'BPRS - Escala Breve de Psiquiatría', 'BPRS', 'Psicopatología y Clínica', 'Evalúa la gravedad de síntomas psicopatológicos generales (aislamiento, suspicacia, alteración del pensamiento).', 'PARA EL CLÍNICO: Evalúe del 1 al 7 la gravedad del síntoma observado.', json.dumps(opciones_bprs, ensure_ascii=False), json.dumps(items_bprs, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'BPRS'
+        """, ('BPRS - Escala Breve de Psiquiatría', 'BPRS', 'Psicopatología y Clínica', 'Evalúa la gravedad de síntomas psicopatológicos generales (aislamiento, suspicacia, alteración del pensamiento).', 'PARA EL CLÍNICO: Evalúe del 1 al 7 la gravedad del síntoma observado.', json.dumps(opciones_bprs, ensure_ascii=False), json.dumps(items_bprs, ensure_ascii=False)))
 
-    # 5. PANSS POSITIVA
+    # 5. PANSS POSITIVA (Escala 1 a 7 estandarizada PANSS)
+    opciones_panss = [
+        {"val": 1, "text": "1 - Ausente", "txt": "1 - Ausente"},
+        {"val": 2, "text": "2 - Mínimo", "txt": "2 - Mínimo"},
+        {"val": 3, "text": "3 - Leve", "txt": "3 - Leve"},
+        {"val": 4, "text": "4 - Moderado", "txt": "4 - Moderado"},
+        {"val": 5, "text": "5 - Moderadamente grave", "txt": "5 - Moderadamente grave"},
+        {"val": 6, "text": "6 - Grave", "txt": "6 - Grave"},
+        {"val": 7, "text": "7 - Extremo", "txt": "7 - Extremo"}
+    ]
     items_panss = [
-        {"id": 1, "texto": "P1. Delirios", "reverse": False},
-        {"id": 2, "texto": "P2. Desorganizacin conceptual", "reverse": False},
-        {"id": 3, "texto": "P3. Alucinaciones", "reverse": False},
-        {"id": 4, "texto": "P4. Excitacin", "reverse": False},
-        {"id": 5, "texto": "P5. Grandiosidad", "reverse": False},
-        {"id": 6, "texto": "P6. Suspicacia / Persecucin", "reverse": False},
-        {"id": 7, "texto": "P7. Hostilidad", "reverse": False}
+        {"id": 1, "num": 1, "texto": "P1. Delirios", "txt": "P1. Delirios", "reverse": False},
+        {"id": 2, "num": 2, "texto": "P2. Desorganización conceptual", "txt": "P2. Desorganización conceptual", "reverse": False},
+        {"id": 3, "num": 3, "texto": "P3. Alucinaciones", "txt": "P3. Alucinaciones", "reverse": False},
+        {"id": 4, "num": 4, "texto": "P4. Excitación", "txt": "P4. Excitación", "reverse": False},
+        {"id": 5, "num": 5, "texto": "P5. Grandiosidad", "txt": "P5. Grandiosidad", "reverse": False},
+        {"id": 6, "num": 6, "texto": "P6. Suspicacia / Persecución", "txt": "P6. Suspicacia / Persecución", "reverse": False},
+        {"id": 7, "num": 7, "texto": "P7. Hostilidad", "txt": "P7. Hostilidad", "reverse": False}
     ]
     cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'PANSS-POS'")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ('PANSS-POS', 'PANSS - Subescala Positiva', 'PANSS-P', 'Psicopatologa y Clnica', 'Valora la presencia focalizada de ideas delirantes, suspicacia o distorsiones severas de la realidad.', 'PARA EL CLNICO: Evale del 1 al 7 la gravedad.', json.dumps(opciones_bprs, ensure_ascii=False), json.dumps(items_panss, ensure_ascii=False)))
+            ('PANSS-POS', 'PANSS - Subescala Positiva', 'PANSS-P', 'Psicopatología y Clínica', 'Valora la presencia focalizada de ideas delirantes, suspicacia o distorsiones severas de la realidad.', 'PARA EL CLÍNICO: Evalúe del 1 al 7 la gravedad del síntoma positivo.', json.dumps(opciones_panss, ensure_ascii=False), json.dumps(items_panss, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'PANSS-POS'
+        """, ('PANSS - Subescala Positiva', 'PANSS-P', 'Psicopatología y Clínica', 'Valora la presencia focalizada de ideas delirantes, suspicacia o distorsiones severas de la realidad.', 'PARA EL CLÍNICO: Evalúe del 1 al 7 la gravedad del síntoma positivo.', json.dumps(opciones_panss, ensure_ascii=False), json.dumps(items_panss, ensure_ascii=False)))
 
-    # 6. JUICIO-REALIDAD
+    # 6. JUICIO-REALIDAD (IPRJC)
     opciones_juicio = [
-        {"val": 1, "text": "1 - Intacto / Normal"},
-        {"val": 2, "text": "2 - Levemente alterado"},
-        {"val": 3, "text": "3 - Moderadamente alterado"},
-        {"val": 4, "text": "4 - Gravemente alterado"},
-        {"val": 5, "text": "5 - Prdida total de juicio"}
+        {"val": 1, "text": "1 - Intacto / Normal", "txt": "1 - Intacto / Normal"},
+        {"val": 2, "text": "2 - Levemente alterado", "txt": "2 - Levemente alterado"},
+        {"val": 3, "text": "3 - Moderadamente alterado", "txt": "3 - Moderadamente alterado"},
+        {"val": 4, "text": "4 - Gravemente alterado", "txt": "4 - Gravemente alterado"},
+        {"val": 5, "text": "5 - Pérdida total de juicio", "txt": "5 - Pérdida total de juicio"}
     ]
     items_juicio = [
-        {"id": 1, "texto": "Orientacin en tiempo, espacio y persona.", "reverse": False},
-        {"id": 2, "texto": "Prueba de Realidad (distincin entre lo interno/subjetivo y externo/objetivo).", "reverse": False},
-        {"id": 3, "texto": "Congruencia entre el relato de persecucin/confinamiento y los hechos observables.", "reverse": False},
-        {"id": 4, "texto": "Presencia de distorsiones paranoicas no explicadas por abuso real.", "reverse": False},
-        {"id": 5, "texto": "Capacidad para anticipar consecuencias de sus actos.", "reverse": False},
-        {"id": 6, "texto": "Juicio social y adherencia a normas aceptables.", "reverse": False},
-        {"id": 7, "texto": "Capacidad de introspeccin clnica (insight).", "reverse": False},
-        {"id": 8, "texto": "Lgica del discurso y formacin de conceptos.", "reverse": False},
-        {"id": 9, "texto": "Riesgo inminente para s mismo/a debido a alteraciones del pensamiento.", "reverse": False},
-        {"id": 10, "texto": "Riesgo inminente para terceros debido a alteraciones del pensamiento.", "reverse": False}
+        {"id": 1, "num": 1, "texto": "Orientación en tiempo, espacio y persona.", "txt": "Orientación en tiempo, espacio y persona.", "reverse": False},
+        {"id": 2, "num": 2, "texto": "Prueba de Realidad (distinción entre lo interno/subjetivo y externo/objetivo).", "txt": "Prueba de Realidad (distinción entre lo interno/subjetivo y externo/objetivo).", "reverse": False},
+        {"id": 3, "num": 3, "texto": "Congruencia entre el relato de persecución/confinamiento y los hechos observables.", "txt": "Congruencia entre el relato de persecución/confinamiento y los hechos observables.", "reverse": False},
+        {"id": 4, "num": 4, "texto": "Presencia de distorsiones paranoicas no explicadas por abuso real.", "txt": "Presencia de distorsiones paranoicas no explicadas por abuso real.", "reverse": False},
+        {"id": 5, "num": 5, "texto": "Capacidad para anticipar consecuencias de sus actos.", "txt": "Capacidad para anticipar consecuencias de sus actos.", "reverse": False},
+        {"id": 6, "num": 6, "texto": "Juicio social y adherencia a normas aceptables.", "txt": "Juicio social y adherencia a normas aceptables.", "reverse": False},
+        {"id": 7, "num": 7, "texto": "Capacidad de introspección clínica (insight).", "txt": "Capacidad de introspección clínica (insight).", "reverse": False},
+        {"id": 8, "num": 8, "texto": "Lógica del discurso y formación de conceptos.", "txt": "Lógica del discurso y formación de conceptos.", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Riesgo inminente para sí mismo/a debido a alteraciones del pensamiento.", "txt": "Riesgo inminente para sí mismo/a debido a alteraciones del pensamiento.", "reverse": False},
+        {"id": 10, "num": 10, "texto": "Riesgo inminente para terceros debido a alteraciones del pensamiento.", "txt": "Riesgo inminente para terceros debido a alteraciones del pensamiento.", "reverse": False}
     ]
     cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'JUICIO-REALIDAD'")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ('JUICIO-REALIDAD', 'Inventario de Percepcin de Realidad y Juicio Clnico', 'IPRJC', 'Psicopatologa y Clnica', 'Explora la congruencia entre los hechos percibidos y el entorno observable (entrevista clnica).', 'PARA EL CLNICO: Califique del 1 al 5.', json.dumps(opciones_juicio, ensure_ascii=False), json.dumps(items_juicio, ensure_ascii=False)))
+            ('JUICIO-REALIDAD', 'Inventario de Percepción de Realidad y Juicio Clínico', 'IPRJC', 'Psicopatología y Clínica', 'Explora la congruencia entre los hechos percibidos y el entorno observable (entrevista clínica).', 'PARA EL CLÍNICO: Califique del 1 al 5 el juicio y percepción de realidad.', json.dumps(opciones_juicio, ensure_ascii=False), json.dumps(items_juicio, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'JUICIO-REALIDAD'
+        """, ('Inventario de Percepción de Realidad y Juicio Clínico', 'IPRJC', 'Psicopatología y Clínica', 'Explora la congruencia entre los hechos percibidos y el entorno observable (entrevista clínica).', 'PARA EL CLÍNICO: Califique del 1 al 5 el juicio y percepción de realidad.', json.dumps(opciones_juicio, ensure_ascii=False), json.dumps(items_juicio, ensure_ascii=False)))
     db.commit()
 
 
 def process_cuvino_scoring(answers):
     total = sum(int(v) for v in answers.values() if str(v).isdigit())
     classification = "Presencia de Violencia (CUVINO)" if total > 15 else "Riesgo Bajo o Ausente"
-    interpretation = f"Puntuacin Total CUVINO: {total} puntos. (Cualquier puntuacin mayor a 0 en tem especfico requiere atencin al tipo de violencia correspondiente: Castigo, Desapego, Humillacin, Coercin, Control)."
+    interpretation = f"Puntuación Total CUVINO: {total} puntos. (Cualquier puntuación mayor a 0 en ítem específico requiere atención al tipo de violencia correspondiente: Castigo, Desapego, Humillación, Coerción, Control)."
     return total, {"Total": total}, classification, interpretation
 
 def process_coercitivo_scoring(answers):
     total = sum(int(v) for v in answers.values() if str(v).isdigit())
     classification = "Abuso/Control Significativo" if total > 10 else "Bajo o Nulo"
-    interpretation = f"Puntuacin Total EAPC: {total} puntos. Puntuaciones altas sugieren aislamiento y control coercitivo en la relacin."
+    interpretation = f"Puntuación Total EAPC: {total} puntos. Puntuaciones altas sugieren aislamiento y control coercitivo en la relación."
     return total, {"Total": total}, classification, interpretation
 
 def process_econ_scoring(answers):
     total = sum(int(v) for v in answers.values() if str(v).isdigit())
-    classification = "Violencia Econmica Significativa" if total > 10 else "Bajo o Nulo"
-    interpretation = f"Puntuacin Total IVEP: {total} puntos. Muestra el grado de restriccin o abuso financiero ejercido sobre el paciente."
+    classification = "Violencia Económica Significativa" if total > 10 else "Bajo o Nulo"
+    interpretation = f"Puntuación Total IVEP: {total} puntos. Muestra el grado de restricción o abuso financiero ejercido sobre el paciente."
     return total, {"Total": total}, classification, interpretation
 
 def process_bprs_scoring(answers):
     total = sum(int(v) for v in answers.values() if str(v).isdigit())
-    classification = "Sintomatologa Grave" if total > 35 else "Sintomatologa Leve/Moderada"
-    interpretation = f"Puntuacin Total BPRS: {total} puntos (Rango 18-126). Sugiere la severidad global de los sntomas psiquitricos."
+    classification = "Sintomatología Grave" if total > 35 else "Sintomatología Leve/Moderada"
+    interpretation = f"Puntuación Total BPRS: {total} puntos (Rango 18-126). Sugiere la severidad global de los síntomas psiquiátricos."
     return total, {"Total": total}, classification, interpretation
 
 def process_panss_scoring(answers):
     total = sum(int(v) for v in answers.values() if str(v).isdigit())
-    classification = "Sntomas Positivos Graves" if total > 14 else "Leves/Ausentes"
-    interpretation = f"Puntuacin Total PANSS-P: {total} puntos (Rango 7-49). Puntuaciones ms altas indican mayor presencia de delirios, alucinaciones o suspicacia clnica."
+    classification = "Síntomas Positivos Graves" if total > 14 else "Leves/Ausentes"
+    interpretation = f"Puntuación Total PANSS-P: {total} puntos (Rango 7-49). Puntuaciones más altas indican mayor presencia de delirios, alucinaciones o suspicacia clínica."
     return total, {"Total": total}, classification, interpretation
 
 def process_juicio_scoring(answers):
     total = sum(int(v) for v in answers.values() if str(v).isdigit())
     classification = "Juicio Alterado" if total > 15 else "Juicio Conservado"
-    interpretation = f"Puntuacin Total IPRJC: {total} puntos. Evala si el paciente conserva la capacidad de comprobar la realidad de forma adecuada."
+    interpretation = f"Puntuación Total IPRJC: {total} puntos. Evalúa si el paciente conserva la capacidad de comprobar la realidad de forma adecuada."
     return total, {"Total": total}, classification, interpretation
 

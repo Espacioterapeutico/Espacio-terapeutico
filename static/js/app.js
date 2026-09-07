@@ -20053,7 +20053,6 @@ function renderPublicTestItems(testDef) {
 
     const items = testDef.items || [];
     const totalItems = items.length;
-    const isBdi2 = testDef.code === 'BDI-II';
 
     // Si el test tiene más de 15 ítems, activamos el modo paginado inteligente por bloques (20 ítems por página)
     const isPaginated = totalItems > 15;
@@ -20089,54 +20088,143 @@ function renderPublicTestItems(testDef) {
         `;
     }
 
+    // Diccionario de etiquetas clínicas de respaldo en caso de que alguna escala antigua solo contenga dígitos planos
+    const getFallbackOptionLabel = (code, siglas, val, rawTxt) => {
+        const strVal = String(val).trim();
+        const trimmedTxt = String(rawTxt || '').trim();
+        const isBareNumber = trimmedTxt === '' || trimmedTxt === strVal;
+        
+        const c = String(code || '').toUpperCase();
+        const s = String(siglas || '').toUpperCase();
+
+        if (c === 'BPRS' || s === 'BPRS') {
+            const bprsLabels = {
+                '1': '1 - Ausente (No presente)',
+                '2': '2 - Muy leve',
+                '3': '3 - Leve',
+                '4': '4 - Moderado',
+                '5': '5 - Moderadamente grave',
+                '6': '6 - Grave',
+                '7': '7 - Muy grave / Extremadamente grave'
+            };
+            if (bprsLabels[strVal] && isBareNumber) return bprsLabels[strVal];
+        }
+
+        if (c.includes('PANSS') || s.includes('PANSS')) {
+            const panssLabels = {
+                '1': '1 - Ausente',
+                '2': '2 - Mínimo',
+                '3': '3 - Leve',
+                '4': '4 - Moderado',
+                '5': '5 - Moderadamente grave',
+                '6': '6 - Grave',
+                '7': '7 - Extremo'
+            };
+            if (panssLabels[strVal] && isBareNumber) return panssLabels[strVal];
+        }
+
+        if (['CUVINO', 'ABUSO-COERCITIVO', 'VIOLENCIA-ECON', 'EAPC', 'IVEP'].includes(c) || ['CUVINO', 'EAPC', 'IVEP'].includes(s)) {
+            const freqLabels = {
+                '0': '0 - Nunca',
+                '1': '1 - A veces',
+                '2': '2 - Frecuentemente',
+                '3': '3 - Casi siempre',
+                '4': '4 - Siempre'
+            };
+            if (freqLabels[strVal] && isBareNumber) return freqLabels[strVal];
+        }
+
+        if (c === 'JUICIO-REALIDAD' || s === 'IPRJC') {
+            const juicioLabels = {
+                '1': '1 - Intacto / Normal',
+                '2': '2 - Levemente alterado',
+                '3': '3 - Moderadamente alterado',
+                '4': '4 - Gravemente alterado',
+                '5': '5 - Pérdida total de juicio'
+            };
+            if (juicioLabels[strVal] && isBareNumber) return juicioLabels[strVal];
+        }
+
+        return trimmedTxt || strVal;
+    };
+
     pageItems.forEach((item, index) => {
-        const itemNum = item.num || (startIdx + index + 1);
-        const itemTitle = item.titulo || item.txt || `Pregunta ${itemNum}`;
+        const itemNum = item.num || item.id || (startIdx + index + 1);
+        
+        // Extraer texto del reactivo soportando todas las nomenclaturas del catálogo
+        const rawTitle = (item.texto || item.txt || item.titulo || item.text || item.enunciado || item.pregunta || item.pregunta_texto || '').trim();
+        let itemTitle = rawTitle;
+        if (rawTitle) {
+            // Si no empieza con número ("1.", "P1.", etc.), anteponer el número de reactivo
+            if (!/^(?:P\d+|\d+)[\.\-\)]\s*/i.test(rawTitle)) {
+                itemTitle = `<strong>${itemNum}.</strong> ${rawTitle}`;
+            }
+        } else {
+            itemTitle = `Pregunta ${itemNum}`;
+        }
+
         const selectedVal = currentPublicTestAnswers[itemNum];
         const isAnswered = selectedVal !== undefined;
 
         const cardBorder = isAnswered ? '#a855f7' : '#e2e8f0';
         const cardBg = isAnswered ? '#fdf4ff' : '#ffffff';
 
+        const sectionBadge = item.sec || item.seccion || item.categoria;
+
         html += `
             <div id="test-item-card-${itemNum}" style="background: ${cardBg}; border: 1.5px solid ${cardBorder}; border-radius: 12px; padding: 1.25rem; transition: all 0.2s ease;">
+                ${sectionBadge ? `<div style="font-size: 0.76rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-bottom: 0.5rem;">${sectionBadge}</div>` : ''}
                 <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                    <span>${itemTitle}</span>
-                    ${isAnswered ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px;">✓ Respondida</span>' : ''}
+                    <span style="line-height: 1.45;">${itemTitle}</span>
+                    ${isAnswered ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap;">✓ Respondida</span>' : ''}
                 </div>`;
 
-        if (isBdi2 && item.opciones) {
+        // Si el ítem tiene sus propias opciones personalizadas (ej. BDI-II, HAMILTON-D, etc.)
+        const hasCustomOptions = Boolean(item.opciones && Array.isArray(item.opciones) && item.opciones.length > 0);
+
+        if (hasCustomOptions) {
             html += `<div style="display: flex; flex-direction: column; gap: 0.6rem;">`;
             item.opciones.forEach((op, opIdx) => {
                 let opVal = opIdx;
                 let opTxt = String(op);
                 if (typeof op === 'object' && op !== null) {
-                    opVal = (op.val !== undefined) ? op.val : opIdx;
-                    opTxt = op.txt || op.texto || op.label || String(opVal);
+                    opVal = (op.val !== undefined) ? op.val : (op.valor !== undefined ? op.valor : opIdx);
+                    opTxt = op.text || op.txt || op.texto || op.label || op.titulo || op.nombre || String(opVal);
                 }
-                const checked = (selectedVal !== undefined && String(selectedVal) === String(opVal)) ? 'checked' : '';
+                const isChecked = (selectedVal !== undefined && String(selectedVal) === String(opVal));
+                const checked = isChecked ? 'checked' : '';
+                const optBg = isChecked ? '#fdf4ff' : '#f8fafc';
+                const optBorder = isChecked ? '#702e5e' : '#cbd5e1';
                 html += `
-                    <label style="display: flex; align-items: flex-start; gap: 10px; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
-                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="margin-top: 3px; accent-color: #702e5e;">
-                        <span style="font-size: 0.92rem; color: #334155; line-height: 1.45;">${opTxt}</span>
+                    <label style="display: flex; align-items: flex-start; gap: 10px; background: ${optBg}; border: 1.5px solid ${optBorder}; padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
+                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="margin-top: 3px; accent-color: #702e5e; transform: scale(1.15);">
+                        <span style="font-size: 0.92rem; color: #334155; line-height: 1.45; font-weight: ${isChecked ? '700' : '500'};">${opTxt}</span>
                     </label>`;
             });
             html += `</div>`;
         } else {
             const escala = testDef.escala_opciones || [];
-            html += `<div style="display: flex; flex-wrap: wrap; gap: 0.6rem;">`;
+            
+            // Disposición en columna limpia para legibilidad óptima en móviles y escritorio
+            html += `<div style="display: flex; flex-direction: column; gap: 0.5rem;">`;
             escala.forEach((op, opIdx) => {
                 let opVal = opIdx;
                 let opTxt = String(op);
                 if (typeof op === 'object' && op !== null) {
-                    opVal = (op.val !== undefined) ? op.val : opIdx;
-                    opTxt = op.txt || op.texto || op.label || String(opVal);
+                    opVal = (op.val !== undefined) ? op.val : (op.valor !== undefined ? op.valor : opIdx);
+                    const extractedTxt = op.text || op.txt || op.texto || op.label || op.titulo || op.nombre || '';
+                    opTxt = getFallbackOptionLabel(testDef.code, testDef.siglas, opVal, extractedTxt);
+                } else {
+                    opTxt = getFallbackOptionLabel(testDef.code, testDef.siglas, opVal, opTxt);
                 }
-                const checked = (selectedVal !== undefined && String(selectedVal) === String(opVal)) ? 'checked' : '';
+                const isChecked = (selectedVal !== undefined && String(selectedVal) === String(opVal));
+                const checked = isChecked ? 'checked' : '';
+                const optBg = isChecked ? '#fdf4ff' : '#f8fafc';
+                const optBorder = isChecked ? '#702e5e' : '#cbd5e1';
                 html += `
-                    <label style="flex: 1; min-width: 140px; text-align: center; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 0.65rem 0.85rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
-                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="margin-right: 6px; accent-color: #702e5e;">
-                        <span style="font-size: 0.88rem; font-weight: 700; color: #334155;">${opTxt}</span>
+                    <label style="display: flex; align-items: center; gap: 12px; background: ${optBg}; border: 1.5px solid ${optBorder}; padding: 0.7rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
+                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="accent-color: #702e5e; transform: scale(1.15);">
+                        <span style="font-size: 0.92rem; font-weight: ${isChecked ? '700' : '600'}; color: ${isChecked ? '#702e5e' : '#334155'};">${opTxt}</span>
                     </label>`;
             });
             html += `</div>`;

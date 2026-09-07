@@ -13,81 +13,81 @@ var testsCatalogDatabase = [
     // --- NUEVAS EVALUACIONES DE VIOLENCIA Y PSICOSIS ---
     { 
         code: 'CUVINO', 
-        name: 'CUVINO  Cuestionario de Violencia entre Novios', 
+        name: 'CUVINO — Cuestionario de Violencia entre Novios', 
         siglas: 'CUVINO', 
         cat: 'Violencia y Abuso', 
-        desc: 'Evala de forma multidimensional la violencia recibida en la relacin (castigo emocional, desapego, humillacin, coercin).', 
-        autor: 'Plantilla Estndar', 
+        desc: 'Evalúa de forma multidimensional la violencia recibida en la relación (castigo emocional, desapego, humillación, coerción).', 
+        autor: 'Plantilla Estándar', 
         poblacion: 'Adolescentes y Adultos', 
-        validez: 'Uso Clnico', 
+        validez: 'Uso Clínico', 
         itemsCount: 15,
         isPhysical: false,
-        instrucciones: 'Lea cada afirmacin y seleccione con qu frecuencia ha experimentado esto en su relacin.'
+        instrucciones: 'Lea cada afirmación y seleccione con qué frecuencia ha experimentado esto en su relación.'
     },
     { 
         code: 'ABUSO-COERCITIVO', 
-        name: 'EAPC  Escala de Abuso Psicolgico y Control Coercitivo', 
+        name: 'EAPC — Escala de Abuso Psicológico y Control Coercitivo', 
         siglas: 'EAPC', 
         cat: 'Violencia y Abuso', 
-        desc: 'Instrumento basado en la Rueda de Poder y Control. Identifica tcticas de aislamiento, control de rutinas y limitacin de la movilidad.', 
-        autor: 'Plantilla Estndar', 
+        desc: 'Instrumento basado en la Rueda de Poder y Control. Identifica tácticas de aislamiento, control de rutinas y limitación de la movilidad.', 
+        autor: 'Plantilla Estándar', 
         poblacion: 'Adultos', 
-        validez: 'Uso Clnico', 
+        validez: 'Uso Clínico', 
         itemsCount: 10,
         isPhysical: false,
-        instrucciones: 'Indique con qu frecuencia su pareja ha realizado las siguientes acciones.'
+        instrucciones: 'Indique con qué frecuencia su pareja ha realizado las siguientes acciones.'
     },
     { 
         code: 'VIOLENCIA-ECON', 
-        name: 'IVEP  Inventario de Violencia Econmica y Patrimonial', 
+        name: 'IVEP — Inventario de Violencia Económica y Patrimonial', 
         siglas: 'IVEP', 
         cat: 'Violencia y Abuso', 
-        desc: 'Mide la restriccin de acceso al dinero, prohibicin de trabajar/estudiar y dependencia financiera forzada.', 
-        autor: 'Plantilla Estndar', 
+        desc: 'Mide la restricción de acceso al dinero, prohibición de trabajar/estudiar y dependencia financiera forzada.', 
+        autor: 'Plantilla Estándar', 
         poblacion: 'Adultos', 
-        validez: 'Uso Clnico', 
+        validez: 'Uso Clínico', 
         itemsCount: 10,
         isPhysical: false,
-        instrucciones: 'Responda con qu frecuencia ocurren las siguientes situaciones en su entorno financiero/patrimonial.'
+        instrucciones: 'Responda con qué frecuencia ocurren las siguientes situaciones en su entorno financiero/patrimonial.'
     },
     { 
         code: 'BPRS', 
-        name: 'BPRS  Escala Breve de Psiquiatra', 
+        name: 'BPRS — Escala Breve de Psiquiatría', 
         siglas: 'BPRS', 
-        cat: 'Psicopatologa y Clnica', 
-        desc: 'Evala la gravedad de sntomas psicopatolgicos generales (aislamiento, suspicacia, alteracin del pensamiento). APLICACIN POR EL CLNICO.', 
+        cat: 'Psicopatología y Clínica', 
+        desc: 'Evalúa la gravedad de síntomas psicopatológicos generales (aislamiento, suspicacia, alteración del pensamiento). APLICACIÓN POR EL CLÍNICO.', 
         autor: 'Overall & Gorham', 
         poblacion: 'Adultos', 
-        validez: 'Uso Clnico Evaluador', 
+        validez: 'Uso Clínico Evaluador', 
         itemsCount: 18,
         isPhysical: false,
-        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Evale del 1 al 7 la gravedad del sntoma observado durante la consulta.'
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Evalúe del 1 al 7 la gravedad del síntoma observado durante la consulta.'
     },
     { 
         code: 'PANSS-POS', 
-        name: 'PANSS  Subescala Positiva', 
+        name: 'PANSS — Subescala Positiva', 
         siglas: 'PANSS-P', 
-        cat: 'Psicopatologa y Clnica', 
-        desc: 'Valora la presencia focalizada de ideas delirantes, suspicacia o distorsiones severas de la realidad. APLICACIN POR EL CLNICO.', 
+        cat: 'Psicopatología y Clínica', 
+        desc: 'Valora la presencia focalizada de ideas delirantes, suspicacia o distorsiones severas de la realidad. APLICACIÓN POR EL CLÍNICO.', 
         autor: 'Kay et al.', 
         poblacion: 'Adultos', 
-        validez: 'Uso Clnico Evaluador', 
+        validez: 'Uso Clínico Evaluador', 
         itemsCount: 7,
         isPhysical: false,
-        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Evale del 1 al 7 la gravedad de los sntomas positivos.'
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Evalúe del 1 al 7 la gravedad de los síntomas positivos.'
     },
     { 
         code: 'JUICIO-REALIDAD', 
-        name: 'IPRJC  Inventario de Percepcin de Realidad y Juicio Clnico', 
+        name: 'IPRJC — Inventario de Percepción de Realidad y Juicio Clínico', 
         siglas: 'IPRJC', 
-        cat: 'Psicopatologa y Clnica', 
-        desc: 'Explora la congruencia entre los hechos percibidos y el entorno observable a travs de comprobacin de realidad. APLICACIN POR EL CLNICO.', 
-        autor: 'Plantilla Clnica', 
+        cat: 'Psicopatología y Clínica', 
+        desc: 'Explora la congruencia entre los hechos percibidos y el entorno observable a través de comprobación de realidad. APLICACIÓN POR EL CLÍNICO.', 
+        autor: 'Plantilla Clínica', 
         poblacion: 'Adultos', 
-        validez: 'Uso Clnico Evaluador', 
+        validez: 'Uso Clínico Evaluador', 
         itemsCount: 10,
         isPhysical: false,
-        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Valore la percepcin de la realidad del consultante.'
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Valore la percepción de la realidad del consultante.'
     },
 
     // 1. NEURODIVERGENCIA Y AUTISMO
