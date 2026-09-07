@@ -84,7 +84,8 @@ def get_patient_modules(patient_id):
         {'clave': 'adherencia', 'nombre': 'Adherencia al Tratamiento (Medicación)'},
         {'clave': 'activacion', 'nombre': 'Activación Conductual (Tareas Diarias)'},
         {'clave': 'ingesta', 'nombre': 'Ingesta de Alimentos y Apetito'},
-        {'clave': 'cognitivo', 'nombre': 'Registro Cognitivo (TCC)'}
+        {'clave': 'cognitivo', 'nombre': 'Registro Cognitivo (TCC)'},
+        {'clave': 'meditacion', 'nombre': 'Meditaciones Guiadas & Diarias'}
     ]
 
     modules = []
@@ -93,6 +94,27 @@ def get_patient_modules(patient_id):
         activo = active_map.get(clave, 0)
         token_str = None
         link_str = None
+
+        if clave == 'meditacion':
+            cursor.execute("""
+                SELECT pm.id as asignacion_id, pm.meditacion_id, pm.hora_recordatorio, pm.token_acceso, cm.titulo, cm.tipo_contenido
+                FROM paciente_meditaciones pm
+                JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
+                WHERE pm.paciente_id = ?
+                ORDER BY pm.id DESC
+            """, (patient_id,))
+            med_asigs = [dict(r) for r in cursor.fetchall()]
+            if len(med_asigs) > 0:
+                activo = 1
+                token_str = med_asigs[0].get('token_acceso')
+                link_str = f"{host_url}/portal/meditacion/{token_str}" if token_str else None
+            m_dict = dict(m)
+            m_dict['activo'] = activo
+            m_dict['token'] = token_str
+            m_dict['link'] = link_str
+            m_dict['meditaciones_asignadas'] = med_asigs
+            modules.append(m_dict)
+            continue
 
         if activo:
             cursor.execute("""
@@ -159,7 +181,8 @@ def toggle_patient_module(patient_id):
                 'activacion': 'Activación Conductual',
                 'ingesta': 'Ingesta y Apetito',
                 'cognitivo': 'Registro Cognitivo',
-                'pantalla': 'Tracker de Pantalla'
+                'pantalla': 'Tracker de Pantalla',
+                'meditacion': 'Meditaciones Guiadas & Diarias'
             }
             mod_nombre = mod_nombres.get(modulo_clave, modulo_clave.capitalize())
             notify_patient_firebase(
@@ -469,6 +492,12 @@ def get_therapist_modules_catalog():
             'nombre': 'Tracker de Consumo de Pantalla',
             'descripcion': 'Cuestionario interactivo por chips para monitoreo de tiempo de uso, dispositivos, aplicaciones, contenido, impacto emocional e interferencia.',
             'icono': '📱'
+        },
+        {
+            'clave': 'meditacion',
+            'nombre': 'Meditaciones Guiadas & Diarias',
+            'descripcion': 'Asignación de audios y videos de meditación y mindfulness con recordatorios y métricas de racha y bienestar.',
+            'icono': '🧘‍♀️'
         }
     ]
     
@@ -477,14 +506,24 @@ def get_therapist_modules_catalog():
     for mod in modules_info:
         clave = mod['clave']
         try:
-            cursor.execute("""
-                SELECT mt.paciente_id, p.nombres, p.apellidos, p.cedula
-                FROM modulos_terapeuticos_paciente mt
-                JOIN pacientes p ON mt.paciente_id = p.id
-                WHERE p.psicologo_id = ? AND mt.modulo_clave = ? AND mt.activo = 1
-                ORDER BY p.apellidos ASC, p.nombres ASC
-            """, (user_id, clave))
-            patients_rows = cursor.fetchall()
+            if clave == 'meditacion':
+                cursor.execute("""
+                    SELECT DISTINCT pm.paciente_id, p.nombres, p.apellidos, p.cedula
+                    FROM paciente_meditaciones pm
+                    JOIN pacientes p ON pm.paciente_id = p.id
+                    WHERE p.psicologo_id = ?
+                    ORDER BY p.apellidos ASC, p.nombres ASC
+                """, (user_id,))
+                patients_rows = cursor.fetchall()
+            else:
+                cursor.execute("""
+                    SELECT mt.paciente_id, p.nombres, p.apellidos, p.cedula
+                    FROM modulos_terapeuticos_paciente mt
+                    JOIN pacientes p ON mt.paciente_id = p.id
+                    WHERE p.psicologo_id = ? AND mt.modulo_clave = ? AND mt.activo = 1
+                    ORDER BY p.apellidos ASC, p.nombres ASC
+                """, (user_id, clave))
+                patients_rows = cursor.fetchall()
             
             patients_list = []
             for p_row in patients_rows:
@@ -582,6 +621,37 @@ def get_therapist_modules_catalog():
                     if r:
                         pens = (r['pensamiento'] or '')[:30]
                         metric_text = f"🧠 Último Registro: \"{pens}...\" | Emoción: {r['emocion_sensacion'] or 'N/A'} ({r['intensidad_emocion'] or 0}/10)"
+
+                elif clave == 'meditacion':
+                    cursor.execute("""
+                        SELECT cm.titulo, pm.hora_recordatorio, pm.id as asignacion_id
+                        FROM paciente_meditaciones pm
+                        JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
+                        WHERE pm.paciente_id = ?
+                        ORDER BY pm.id DESC
+                    """, (pid,))
+                    asigs = cursor.fetchall()
+                    count_asigs = len(asigs)
+                    titles = ", ".join([a['titulo'] for a in asigs[:2]])
+                    if count_asigs > 2:
+                        titles += f" (+{count_asigs - 2} más)"
+                    
+                    cursor.execute("""
+                        SELECT fecha, completada FROM registro_meditaciones 
+                        WHERE paciente_id = ? AND completada = 1
+                        ORDER BY fecha DESC
+                    """, (pid,))
+                    completed_dates = set(r['fecha'] for r in cursor.fetchall())
+                    streak = 0
+                    check_date = datetime.now().date()
+                    while check_date.strftime("%Y-%m-%d") in completed_dates:
+                        streak += 1
+                        check_date -= timedelta(days=1)
+                    
+                    horas_str = ""
+                    if asigs and asigs[0]['hora_recordatorio']:
+                        horas_str = f" | ⏰ {asigs[0]['hora_recordatorio']}"
+                    metric_text = f"🧘 {count_asigs} asignada(s): {titles or 'Sin título'}{horas_str} | 🔥 Racha: {streak} días"
 
                 patients_list.append({
                     'patient_id': pid,

@@ -14937,7 +14937,7 @@ window.triggerManualCronReminders = triggerManualCronReminders;
 // ==========================================
 
 function switchTherapistToolsTab(tab) {
-    const views = ['asignar', 'plantillas', 'meditaciones'];
+    const views = ['asignar', 'plantillas'];
     views.forEach(v => {
         const viewEl = document.getElementById(`tt-sub-view-${v}`);
         const tabEl = document.getElementById(`tt-tab-${v}`);
@@ -14961,8 +14961,6 @@ function switchTherapistToolsTab(tab) {
 
     if (tab === 'plantillas') {
         renderTherapistPreviewTemplates();
-    } else if (tab === 'meditaciones') {
-        if(typeof loadMeditacionesLibrary === 'function') loadMeditacionesLibrary();
     }
 }
 window.switchTherapistToolsTab = switchTherapistToolsTab;
@@ -15506,7 +15504,8 @@ const claveToToolMap = {
     'adherencia': 'medicacion',
     'medicacion': 'medicacion',
     'activacion': 'activacion',
-    'pantalla': 'pantalla'
+    'pantalla': 'pantalla',
+    'meditacion': 'meditacion'
 };
 
 let therapistToolsPatientsCatalog = [];
@@ -15564,6 +15563,27 @@ function renderTherapistToolsCatalog() {
         } else {
             patientsHtml = patients.map(p => {
                 const inlineContainerId = `inline-history-acc-${p.patient_id}-${toolType}`;
+                const safePName = (p.nombre_paciente || '').replace(/'/g, "\\'");
+                const safePCedula = (p.cedula || '').replace(/'/g, "\\'");
+
+                if (m.clave === 'meditacion') {
+                    return `
+                        <div style="display: flex; flex-direction: column; width: 100%;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
+                                <div style="flex: 1; min-width: 220px;">
+                                    <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="selectPatientForTherapistTools(${p.patient_id}, '${safePName}', '${safePCedula}'); window.scrollTo({top: 0, behavior: 'smooth'});" style="font-weight: 600; padding: 0.35rem 0.75rem; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.2);">
+                                        ⚙️ Horarios &amp; Asignación
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 return `
                     <div style="display: flex; flex-direction: column; width: 100%;">
                         <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
@@ -15605,8 +15625,13 @@ function renderTherapistToolsCatalog() {
                     </span>
                 </div>
             </div>
-            <!-- BARRA INDEPENDIENTE: Botón Previsualizar (FUERA del accordion-header) -->
-            <div style="padding: 0.35rem 0.85rem; border-top: 1px solid #f3e8ff; background: #faf5ff; display: flex; justify-content: flex-end;">
+            <!-- BARRA INDEPENDIENTE: Botones de Acción (FUERA del accordion-header) -->
+            <div style="padding: 0.35rem 0.85rem; border-top: 1px solid #f3e8ff; background: #faf5ff; display: flex; justify-content: flex-end; gap: 0.5rem; align-items: center;">
+                ${m.clave === 'meditacion' ? `
+                    <button type="button" class="btn btn-sm" onclick="openMeditacionesLibraryModal()" style="padding: 0.25rem 0.75rem; font-size: 0.78rem; border-radius: 5px; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); color: white; border: none; box-shadow: 0 2px 5px rgba(112,46,94,0.25); cursor: pointer;">
+                        📚 Biblioteca de Meditaciones
+                    </button>
+                ` : ''}
                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="openToolPreviewModal('${m.clave}')" style="padding: 0.2rem 0.65rem; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; position: relative; z-index: 10;">👁️ Previsualizar Formulario</button>
             </div>
             <!-- CONTENEDOR DE PREVISUALIZACIÓN INLINE (legacy, oculto) -->
@@ -16060,33 +16085,37 @@ document.addEventListener('click', function(e) {
     }
 });
 
+let cachedTherapistPatients = null;
+
 async function onTherapistToolPatientSearch(query) {
     const dropdown = document.getElementById('tt-patient-dropdown');
     if (!dropdown) return;
-    if (!query || query.trim().length < 1) {
-        dropdown.classList.add('hide');
-        dropdown.style.display = 'none';
-        return;
-    }
-    const q = query.trim().toLowerCase();
+
     try {
-        const res = await fetch('/api/patients');
-        const patients = await res.json();
-        const filtered = patients.filter(p => {
-            const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
-            const cedula = (p.cedula || '').toLowerCase();
-            return fullName.includes(q) || cedula.includes(q);
-        });
+        if (!cachedTherapistPatients) {
+            const res = await fetch('/api/patients');
+            cachedTherapistPatients = await res.json();
+        }
+        const patients = cachedTherapistPatients || [];
+        const q = (query || '').trim().toLowerCase();
+        
+        const filtered = q.length === 0 
+            ? patients.slice(0, 15) 
+            : patients.filter(p => {
+                const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
+                const cedula = (p.cedula || '').toLowerCase();
+                return fullName.includes(q) || cedula.includes(q);
+            });
 
         if (filtered.length === 0) {
             dropdown.innerHTML = '<div style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text-muted); background: white;">No se encontraron consultantes.</div>';
         } else {
             dropdown.innerHTML = filtered.map(p => {
                 const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.trim();
-                const safeFullName = fullName.replace(/'/g, "");
+                const safeFullName = fullName.replace(/'/g, "\\'");
                 const cedula = p.cedula || '';
                 return `
-                <div class="search-result-item" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${cedula}')" style="padding:0.75rem 1rem; font-size:0.88rem; cursor:pointer; border-bottom:1px solid var(--border-color); background: white; color: var(--text-dark);">
+                <div class="search-result-item" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${cedula}')" style="padding:0.65rem 0.85rem; font-size:0.88rem; cursor:pointer; border-bottom:1px solid var(--border-color); background: white; color: var(--text-dark); transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
                     <strong style="display:block; color: var(--text-dark);">👤 ${fullName}</strong>
                     <span style="color:var(--text-muted); font-size:0.78rem;">${p.cedula ? 'Cédula: ' + p.cedula : 'Sin Cédula'}</span>
                 </div>`;
@@ -16100,6 +16129,7 @@ async function onTherapistToolPatientSearch(query) {
 }
 
 async function selectPatientForTherapistTools(id, name, code) {
+    currentMedPatientId = id;
     const searchInput = document.getElementById('tt-patient-search');
     if (searchInput) searchInput.value = name;
     
@@ -16131,9 +16161,98 @@ async function selectPatientForTherapistTools(id, name, code) {
 
         if (list) {
             list.innerHTML = data.modules.map(m => {
-                const safeName = (name || '').replace(/'/g, "");
-                const safeModName = (m.nombre || '').replace(/'/g, "");
+                const safeName = (name || '').replace(/'/g, "\\'");
+                const safeModName = (m.nombre || '').replace(/'/g, "\\'");
                 const inlineId = `inline-history-sel-${id}-${m.clave}`;
+                
+                if (m.clave === 'meditacion') {
+                    const medAsigs = m.meditaciones_asignadas || [];
+                    let asigsHtml = '';
+                    if (medAsigs.length === 0) {
+                        asigsHtml = `
+                            <div style="padding: 0.65rem 0.85rem; background: #fdf2f8; border-radius: 6px; border: 1px dashed #f472b6; font-size: 0.84rem; color: #9d174d; margin-top: 0.5rem;">
+                                ℹ️ No tiene meditaciones asignadas actualmente. Haz clic en <strong>"+ Asignar Meditación &amp; Horarios"</strong> para programar audios/videos con recordatorios.
+                            </div>
+                        `;
+                    } else {
+                        asigsHtml = `
+                            <div style="margin-top: 0.65rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="font-size: 0.82rem; font-weight: 700; color: #702e5e; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Meditaciones y Horarios Asignados (${medAsigs.length}):
+                                </div>
+                                ${medAsigs.map(a => {
+                                    const horasList = (a.hora_recordatorio || '').split(',').map(h => h.trim()).filter(Boolean);
+                                    const horasBadges = horasList.length > 0 
+                                        ? horasList.map(h => `<span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.78rem; font-weight: 700; padding: 0.2rem 0.45rem; border-radius: 4px;">⏰ ${h}</span>`).join(' ')
+                                        : '<span style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">Sin horarios</span>';
+                                    const tipoIcon = a.tipo_contenido === 'youtube' ? '🎥' : '🎵';
+                                    
+                                    return `
+                                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.75rem; background: white; border-radius: 6px; border: 1.5px solid #f3e8ff; flex-wrap: wrap; gap: 0.5rem;">
+                                            <div style="flex: 1; min-width: 200px;">
+                                                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                                    <span>${tipoIcon}</span>
+                                                    <strong style="font-size: 0.88rem; color: var(--text-dark);">${a.titulo || 'Meditación'}</strong>
+                                                </div>
+                                                <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                                                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Recordatorios:</span>
+                                                    ${horasBadges}
+                                                </div>
+                                            </div>
+                                            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editMeditacionAssignment(${a.asignacion_id}, ${a.meditacion_id}, '${(a.hora_recordatorio || '').replace(/'/g, "\\'")}', '${safeName}')" style="padding: 0.25rem 0.55rem; font-size: 0.75rem; font-weight: 600; border-radius: 4px;">
+                                                    ✏️ Editar Horarios
+                                                </button>
+                                                <button type="button" class="btn btn-sm" onclick="unassignMeditacion(${a.asignacion_id})" style="padding: 0.25rem 0.55rem; font-size: 0.75rem; font-weight: 600; background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer;">
+                                                    🗑️ Eliminar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    }
+
+                    const medTokenBanner = (m.activo && m.link) ? `
+                        <div style="margin-top: 0.45rem; padding: 0.35rem 0.65rem; background: rgba(112, 46, 94, 0.08); border: 1.5px solid rgba(112, 46, 94, 0.25); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.78rem; font-family: monospace; color: #702e5e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px;">
+                                🔑 Link Directo Meditaciones: ${m.link}
+                            </span>
+                            <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${m.link}')" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #702e5e; color: white; border: none; font-weight: 700; border-radius: 4px; cursor: pointer;">
+                                📋 Copiar Link Directo
+                            </button>
+                        </div>
+                    ` : '';
+
+                    return `
+                    <div style="display: flex; flex-direction: column; width: 100%; border: 1.5px solid #d8b4fe; border-radius: 8px; padding: 0.85rem; background: #fdf4f9; margin-bottom: 0.25rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                            <div>
+                                <strong style="font-size: 0.95rem; color: #702e5e; display: flex; align-items: center; gap: 0.35rem;">
+                                    🧘‍♀️ ${m.nombre}
+                                </strong>
+                                <span style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                                    ${m.activo ? '🟢 Activo (' + medAsigs.length + ' meditación/es asignada/s)' : '⚪ Sin meditaciones activas'}
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-sm btn-primary" onclick="openAssignMeditacionModalForPatient(${id}, '${safeName}')" style="padding: 0.35rem 0.75rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.25);">
+                                    + Asignar Meditación &amp; Horarios
+                                </button>
+                                ${m.activo ? `
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="togglePatientModuleBackend(${id}, 'meditacion', 0)" style="padding: 0.35rem 0.75rem; font-weight: 600;">
+                                        Desactivar Todo
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${asigsHtml}
+                        ${medTokenBanner}
+                    </div>
+                    `;
+                }
+
                 const actBtn = (m.clave === 'activacion') ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${safeName}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : '';
                 const waBtn = `<button type="button" class="btn btn-sm" onclick="enviarWhatsAppDirectoHerramienta(${id}, '${m.clave}')" style="padding: 0.35rem 0.65rem; font-weight: 600; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0;">💬 WhatsApp Directo</button>`;
                 const progBtn = `<button type="button" class="btn btn-sm" onclick="programarRecordatorioWhatsApp(${id}, '${m.clave}', '20:00')" style="padding: 0.35rem 0.65rem; font-weight: 600; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe;">⏰ Recordatorio 8 PM</button>`;
@@ -23690,179 +23809,226 @@ function submitMeditacionCreate(e) {
     });
 }
 
+function openMeditacionesLibraryModal() {
+    loadMeditacionesLibrary();
+    const modal = document.getElementById('modal-meditaciones-library');
+    if (modal) modal.classList.remove('hide');
+}
+
+function closeMeditacionesLibraryModal() {
+    const modal = document.getElementById('modal-meditaciones-library');
+    if (modal) modal.classList.add('hide');
+}
+
 function deleteMeditacion(id) {
-    if(!confirm("¿Seguro que deseas eliminar esta meditación? Se borrará también a los pacientes asignados.")) return;
+    if(!confirm("¿Seguro que deseas eliminar esta meditación? Se borrará también de los consultantes asignados.")) return;
     
     fetch(`/api/meditaciones/${id}`, {method: 'DELETE'})
         .then(res => res.json())
         .then(() => {
             loadMeditacionesLibrary();
-            const patId = document.getElementById('med-patient-filter').value;
-            if(patId) loadPacienteMeditaciones(patId);
-        });
-}
-
-function populateMedPatientFilter() {
-    const select = document.getElementById('med-patient-filter');
-    select.innerHTML = '<option value="">Selecciona un paciente...</option>';
-    if (window.allPatientsData) {
-        window.allPatientsData.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = `${p.nombres} ${p.apellidos} - ${p.cedula}`;
-            select.appendChild(opt);
-        });
-    }
+            const name = document.getElementById('tt-selected-patient-name')?.innerText;
+            const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
+            if (currentMedPatientId && name) {
+                selectPatientForTherapistTools(currentMedPatientId, name, code);
+            }
+            loadTherapistToolsCatalog();
+            showToast("Meditación eliminada");
+        })
+        .catch(err => alert("Error al eliminar: " + err.message));
 }
 
 let currentMedPatientId = null;
 
-function loadPacienteMeditaciones(patientId) {
+async function openAssignMeditacionModalForPatient(patientId, patientName) {
     currentMedPatientId = patientId;
-    const container = document.getElementById('med-assignments-container');
-    if (!patientId) {
-        container.classList.add('hide');
-        return;
+    
+    if (!meditationsLibrary || meditationsLibrary.length === 0) {
+        try {
+            const res = await fetch('/api/meditaciones');
+            const data = await res.json();
+            meditationsLibrary = data.meditaciones || [];
+        } catch (e) {
+            console.error("Error cargando biblioteca de meditaciones:", e);
+        }
     }
     
-    container.classList.remove('hide');
-    fetch(`/api/pacientes/${patientId}/meditaciones`)
-        .then(res => res.json())
-        .then(data => {
-            const tbody = document.getElementById('meditaciones-asignadas-tbody');
-            tbody.innerHTML = '';
-            
-            if (data.asignaciones.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No tiene meditaciones asignadas.</td></tr>';
-                return;
-            }
-            
-            data.asignaciones.forEach(a => {
-                const tr = document.createElement('tr');
-                const estado = a.completada_hoy 
-                    ? `<span style="color:#059669;font-weight:700;">✅ Completada ${a.animo_despues ? '('+a.animo_despues+')' : ''}</span>`
-                    : `<span style="color:#64748b;">Pendiente</span>`;
-                    
-                // a.hora_recordatorio could be comma-separated like "08:00,15:00"
-                const horas = (a.hora_recordatorio || "").split(',').map(h => h.trim()).join(' / ');
-                    
-                tr.innerHTML = `
-                    <td><strong>${a.titulo}</strong></td>
-                    <td>⏰ ${horas}</td>
-                    <td>${estado}</td>
-                    <td>🔥 ${a.racha} días</td>
-                    <td>
-                        <button class="btn btn-sm" style="background:var(--bg-soft);color:var(--text-dark);border:1px solid var(--border-color);padding:4px 8px;border-radius:4px;cursor:pointer;margin-right:4px;" onclick="editMeditacionAssignment(${a.asignacion_id}, ${a.meditacion_id}, '${a.hora_recordatorio}')">Editar</button>
-                        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="unassignMeditacion(${a.asignacion_id})">Eliminar</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        });
-}
-
-function openAssignMeditacionModal() {
-    if (!currentMedPatientId) {
-        alert("Selecciona un paciente primero.");
-        return;
-    }
     const select = document.getElementById('med-assign-id');
-    select.innerHTML = '<option value="">Selecciona una meditación...</option>';
-    meditationsLibrary.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = m.titulo;
-        select.appendChild(opt);
-    });
+    if (select) {
+        select.innerHTML = '<option value="">Selecciona una meditación...</option>';
+        if (meditationsLibrary.length === 0) {
+            select.innerHTML += '<option value="" disabled>(No tienes meditaciones en tu biblioteca. Abre la biblioteca para agregar una)</option>';
+        } else {
+            meditationsLibrary.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.titulo} (${m.tipo_contenido === 'youtube' ? '🎥 YouTube' : '🎵 Audio'})`;
+                select.appendChild(opt);
+            });
+        }
+    }
     
-    document.getElementById('med-assign-modal-title').textContent = 'Asignar Meditación';
-    document.getElementById('med-assign-submit-btn').textContent = 'Asignar';
-    document.getElementById('med-edit-asig-id').value = '';
+    const titleEl = document.getElementById('med-assign-modal-title');
+    if (titleEl) titleEl.textContent = `Asignar Meditación a ${patientName || 'Consultante'}`;
     
-    document.getElementById('form-meditacion-assign').reset();
-    document.getElementById('med-times-container').innerHTML = `
-        <div class="time-input-row" style="display: flex; gap: 0.5rem; align-items: center;">
-            <input type="time" class="med-assign-hora" required style="flex: 1;">
-        </div>
-    `;
+    const submitBtn = document.getElementById('med-assign-submit-btn');
+    if (submitBtn) submitBtn.textContent = 'Guardar Asignación & Horarios';
     
-    document.getElementById('meditacion-assign-modal').classList.remove('hide');
+    const editIdEl = document.getElementById('med-edit-asig-id');
+    if (editIdEl) editIdEl.value = '';
+    
+    const form = document.getElementById('form-meditacion-assign');
+    if (form) form.reset();
+    
+    const container = document.getElementById('med-times-container');
+    if (container) {
+        container.innerHTML = '';
+        addMedTimeInput('20:00', false);
+    }
+    
+    const modal = document.getElementById('meditacion-assign-modal');
+    if (modal) modal.classList.remove('hide');
 }
 
-function addMedTimeInput(val = '') {
+function addMedTimeInput(val = '', showDelete = true) {
     const container = document.getElementById('med-times-container');
+    if (!container) return;
     const div = document.createElement('div');
     div.className = 'time-input-row';
     div.style = 'display: flex; gap: 0.5rem; align-items: center;';
+    const isFirst = container.children.length === 0 && !showDelete;
     div.innerHTML = `
-        <input type="time" class="med-assign-hora" required style="flex: 1;" value="${val}">
-        <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-weight:bold;">&times;</button>
+        <input type="time" class="med-assign-hora" required style="flex: 1; padding: 0.45rem 0.65rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;" value="${val}">
+        ${!isFirst ? `<button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2; border:none; color:#dc2626; border-radius: 4px; padding: 0.4rem 0.65rem; cursor:pointer; font-weight:bold; font-size: 0.9rem;" title="Eliminar horario">&times;</button>` : '<div style="width: 28px;"></div>'}
     `;
     container.appendChild(div);
 }
 
-function editMeditacionAssignment(asigId, medId, horasStr) {
-    openAssignMeditacionModal();
-    document.getElementById('med-assign-modal-title').textContent = 'Editar Asignación';
-    document.getElementById('med-assign-submit-btn').textContent = 'Guardar Cambios';
-    document.getElementById('med-edit-asig-id').value = asigId;
-    document.getElementById('med-assign-id').value = medId;
+async function editMeditacionAssignment(asigId, medId, horasStr, patientName) {
+    await openAssignMeditacionModalForPatient(currentMedPatientId, patientName);
+    
+    const titleEl = document.getElementById('med-assign-modal-title');
+    if (titleEl) titleEl.textContent = 'Modificar Horarios & Meditación';
+    
+    const submitBtn = document.getElementById('med-assign-submit-btn');
+    if (submitBtn) submitBtn.textContent = 'Guardar Cambios';
+    
+    const editIdEl = document.getElementById('med-edit-asig-id');
+    if (editIdEl) editIdEl.value = asigId;
+    
+    const select = document.getElementById('med-assign-id');
+    if (select) select.value = medId;
     
     const container = document.getElementById('med-times-container');
-    container.innerHTML = '';
-    const horas = (horasStr || "").split(',');
-    horas.forEach(h => {
-        if(h.trim()) addMedTimeInput(h.trim());
-    });
-    if(container.children.length === 0) {
-        addMedTimeInput(); // fallback
+    if (container) {
+        container.innerHTML = '';
+        const horas = (horasStr || "").split(',');
+        horas.forEach((h, idx) => {
+            const val = h.trim();
+            if (val) addMedTimeInput(val, idx > 0);
+        });
+        if (container.children.length === 0) {
+            addMedTimeInput('20:00', false);
+        }
     }
-    // Remove delete button from first input
-    const firstBtn = container.querySelector('.time-input-row button');
-    if(firstBtn) firstBtn.style.display = 'none';
-}
-function closeAssignMeditacionModal() {
-    document.getElementById('meditacion-assign-modal').classList.add('hide');
 }
 
-function submitMeditacionAssign(e) {
+function closeAssignMeditacionModal() {
+    const modal = document.getElementById('meditacion-assign-modal');
+    if (modal) modal.classList.add('hide');
+}
+
+async function submitMeditacionAssign(e) {
     e.preventDefault();
-    if (!currentMedPatientId) return;
+    if (!currentMedPatientId) {
+        alert("Por favor selecciona un paciente primero.");
+        return;
+    }
     
     const btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = true;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Guardando...';
+    }
     
     const timeInputs = document.querySelectorAll('.med-assign-hora');
-    const horas = Array.from(timeInputs).map(inp => inp.value).filter(v => v);
+    const horas = Array.from(timeInputs).map(inp => inp.value).filter(Boolean);
+    if (horas.length === 0) {
+        alert("Debes indicar al menos un horario de recordatorio.");
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Guardar Asignación & Horarios'; }
+        return;
+    }
     
     const medId = document.getElementById('med-assign-id').value;
+    if (!medId) {
+        alert("Por favor selecciona una meditación.");
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Guardar Asignación & Horarios'; }
+        return;
+    }
     
     const asigId = document.getElementById('med-edit-asig-id').value;
     const url = asigId ? `/api/pacientes/meditaciones/${asigId}` : `/api/pacientes/${currentMedPatientId}/meditaciones`;
     const method = asigId ? 'PUT' : 'POST';
     
-    fetch(url, {
-        method: method,
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ meditacion_id: medId, hora_recordatorio: horas })
-    })
-    .then(res => res.json())
-    .then(data => {
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ meditacion_id: medId, hora_recordatorio: horas })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar asignación');
+        
         closeAssignMeditacionModal();
-        loadPacienteMeditaciones(currentMedPatientId);
-        btn.disabled = false;
-        showToast(asigId ? "Asignación actualizada" : "Meditación asignada exitosamente");
-    })
-    .catch(err => {
-        alert("Error al guardar meditación");
-        btn.disabled = false;
-    });
+        showToast(asigId ? "Horarios actualizados exitosamente" : "Meditación asignada exitosamente con sus horarios");
+        
+        const name = document.getElementById('tt-selected-patient-name')?.innerText;
+        const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
+        if (name) {
+            await selectPatientForTherapistTools(currentMedPatientId, name, code);
+        }
+        await loadTherapistToolsCatalog();
+    } catch (err) {
+        alert(err.message || 'Error al procesar la solicitud');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = asigId ? 'Guardar Cambios' : 'Guardar Asignación & Horarios';
+        }
+    }
 }
 
-function unassignMeditacion(asignacionId) {
-    if(!confirm("¿Seguro que deseas eliminar esta asignación?")) return;
-    fetch(`/api/pacientes/meditaciones/${asignacionId}`, {method: 'DELETE'})
-        .then(() => {
-            loadPacienteMeditaciones(currentMedPatientId);
-        });
+async function unassignMeditacion(asignacionId) {
+    if(!confirm("¿Seguro que deseas eliminar esta asignación de meditación?")) return;
+    try {
+        const res = await fetch(`/api/pacientes/meditaciones/${asignacionId}`, {method: 'DELETE'});
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Error al eliminar');
+        }
+        showToast("Meditación desasignada exitosamente");
+        
+        const name = document.getElementById('tt-selected-patient-name')?.innerText;
+        const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
+        if (currentMedPatientId && name) {
+            await selectPatientForTherapistTools(currentMedPatientId, name, code);
+        }
+        await loadTherapistToolsCatalog();
+    } catch (err) {
+        alert(err.message);
+    }
 }
+
+window.openMeditacionesLibraryModal = openMeditacionesLibraryModal;
+window.closeMeditacionesLibraryModal = closeMeditacionesLibraryModal;
+window.openMeditacionModal = openMeditacionModal;
+window.closeMeditacionModal = closeMeditacionModal;
+window.toggleMedType = toggleMedType;
+window.submitMeditacionCreate = submitMeditacionCreate;
+window.deleteMeditacion = deleteMeditacion;
+window.openAssignMeditacionModalForPatient = openAssignMeditacionModalForPatient;
+window.addMedTimeInput = addMedTimeInput;
+window.editMeditacionAssignment = editMeditacionAssignment;
+window.closeAssignMeditacionModal = closeAssignMeditacionModal;
+window.submitMeditacionAssign = submitMeditacionAssign;
+window.unassignMeditacion = unassignMeditacion;

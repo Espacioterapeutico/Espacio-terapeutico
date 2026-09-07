@@ -190,6 +190,11 @@ def assign_meditacion(paciente_id):
         INSERT INTO paciente_meditaciones (paciente_id, psicologo_id, meditacion_id, hora_recordatorio, token_acceso)
         VALUES (?, ?, ?, ?, ?)
     """, (paciente_id, psic_id, meditacion_id, hora, token))
+    cursor.execute("""
+        INSERT INTO modulos_terapeuticos_paciente (paciente_id, modulo_clave, activo)
+        VALUES (?, 'meditacion', 1)
+        ON CONFLICT(paciente_id, modulo_clave) DO UPDATE SET activo = 1
+    """, (paciente_id,))
     db.commit()
     
     return jsonify({'message': 'Meditación asignada al paciente'})
@@ -229,10 +234,20 @@ def unassign_meditacion(asignacion_id):
     db = get_db()
     cursor = db.cursor()
     
+    cursor.execute("SELECT paciente_id FROM paciente_meditaciones WHERE id = ?", (asignacion_id,))
+    row = cursor.fetchone()
+    pac_id = row['paciente_id'] if row else None
+    
     cursor.execute("DELETE FROM registro_meditaciones WHERE asignacion_id = ?", (asignacion_id,))
     cursor.execute("DELETE FROM paciente_meditaciones WHERE id = ?", (asignacion_id,))
-    db.commit()
     
+    if pac_id:
+        cursor.execute("SELECT COUNT(*) as c FROM paciente_meditaciones WHERE paciente_id = ?", (pac_id,))
+        c_row = cursor.fetchone()
+        if c_row and c_row['c'] == 0:
+            cursor.execute("UPDATE modulos_terapeuticos_paciente SET activo = 0 WHERE paciente_id = ? AND modulo_clave = 'meditacion'", (pac_id,))
+            
+    db.commit()
     return jsonify({'message': 'Asignación eliminada'})
 
 # ==========================================
