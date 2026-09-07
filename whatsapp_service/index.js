@@ -24,6 +24,34 @@ const AUTH_BASE_DIR = path.join(__dirname, 'auth_info_baileys');
 // Mapa de sesiones activas por user_id: key = string(user_id) -> { userId, sock, connectionStatus, currentQR, connectedPhone }
 const sessions = new Map();
 
+// Almacén en memoria de mensajes para responder a solicitudes de reintento de descifrado (Signal Protocol Retries)
+const messageStore = new Map();
+const MAX_STORED_MESSAGES = 1000;
+
+function storeMessage(id, message) {
+    if (!id || !message) return;
+    if (messageStore.size >= MAX_STORED_MESSAGES) {
+        const firstKey = messageStore.keys().next().value;
+        messageStore.delete(firstKey);
+    }
+    messageStore.set(String(id), message);
+}
+
+// Cache para conteo y control de reintentos de mensajes
+const retryCache = new Map();
+const msgRetryCounterCache = {
+    get: (key) => retryCache.get(key),
+    set: (key, value) => {
+        if (retryCache.size >= 1000) {
+            const first = retryCache.keys().next().value;
+            retryCache.delete(first);
+        }
+        retryCache.set(key, value);
+    },
+    del: (key) => retryCache.delete(key),
+    flushAll: () => retryCache.clear()
+};
+
 function getSessionObj(userId) {
     const key = String(userId || 1);
     if (!sessions.has(key)) {
@@ -146,10 +174,18 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             browser: ['Ubuntu', 'Chrome', '22.04'],     // Nombre estándar reconocido por WhatsApp
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
+            keepAliveIntervalMs: 25000,     // Mantener WebSocket vivo y prevenir socket zombie
             retryRequestDelayMs: 250,       // Reintento rápido (default de Baileys, estable en v2.2.2)
             maxMsgRetryCount: 5,
             markOnlineOnConnect: true,
-            syncFullHistory: false
+            syncFullHistory: false,
+            msgRetryCounterCache,
+            getMessage: async (key) => {
+                if (key && key.id && messageStore.has(String(key.id))) {
+                    return messageStore.get(String(key.id));
+                }
+                return undefined;
+            }
         });
 
         session.sock.ev.on('creds.update', async () => {
@@ -206,6 +242,11 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
 
         // Escuchar mensajes entrantes de pacientes para este psicólogo específico
         session.sock.ev.on('messages.upsert', async (m) => {
+            for (const msg of (m.messages || [])) {
+                if (msg.key && msg.key.id && msg.message) {
+                    storeMessage(msg.key.id, msg.message);
+                }
+            }
             if (m.type !== 'notify') return;
 
             for (const msg of m.messages) {
@@ -356,7 +397,18 @@ app.post('/send', async (req, res) => {
             return res.status(400).json({ error: `Socket cerrado o zombi. Intente de nuevo en unos segundos.` });
         }
 
-        await session.sock.sendMessage(targetJid, { text: text });
+        // Negociar presencia y sesión de claves criptográficas antes del envío para evitar 'Esperando mensaje'
+        try {
+            await session.sock.presenceSubscribe(targetJid).catch(() => {});
+            await session.sock.sendPresenceUpdate('composing', targetJid).catch(() => {});
+            await new Promise(resolve => setTimeout(resolve, 800));
+            await session.sock.sendPresenceUpdate('paused', targetJid).catch(() => {});
+        } catch (_presErr) {}
+
+        const sentMsg = await session.sock.sendMessage(targetJid, { text: text });
+        if (sentMsg && sentMsg.key && sentMsg.key.id && sentMsg.message) {
+            storeMessage(sentMsg.key.id, sentMsg.message);
+        }
         res.json({ success: true, message: `Mensaje enviado a ${phone} (${targetJid}) desde cuenta de usuario ${userId}` });
     } catch (err) {
         console.error(`[User ${userId}] Error enviando mensaje por WhatsApp:`, err);
