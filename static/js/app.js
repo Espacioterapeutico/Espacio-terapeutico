@@ -23727,6 +23727,14 @@ async function loadMeditacionesLibrary() {
     }
     try {
         const res = await fetch('/api/meditaciones');
+        if (!res.ok) {
+            let errMsg = `Error del servidor (${res.status})`;
+            try {
+                const errJson = await res.json();
+                if (errJson && errJson.error) errMsg = errJson.error;
+            } catch (_) {}
+            throw new Error(errMsg);
+        }
         const data = await res.json();
         meditationsLibrary = (data && data.meditaciones) ? data.meditaciones : [];
         if (!tbody) return;

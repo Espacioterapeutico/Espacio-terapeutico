@@ -1,11 +1,81 @@
 import os
 import uuid
-from flask import Blueprint, request, jsonify, render_template, current_app, redirect
-from werkzeug.utils import secure_filename
-from app import get_db, login_required, get_psicologo_id_filter
+import sqlite3
 from datetime import datetime
+from functools import wraps
+from flask import Blueprint, request, jsonify, render_template, current_app, redirect, session, g
+from werkzeug.utils import secure_filename
 
 meditaciones_bp = Blueprint('meditaciones', __name__)
+
+def get_db():
+    """Obtiene la conexión a la base de datos desde el contexto global g de Flask."""
+    db = getattr(g, '_database', None)
+    if db is None:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(base_dir, 'clinica.db')
+        db = g._database = sqlite3.connect(db_path, timeout=30.0)
+        db.row_factory = sqlite3.Row
+    return db
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'No autorizado. Por favor inicia sesión.'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_psicologo_id_filter():
+    role = session.get('role')
+    user_id = session.get('user_id')
+    username = session.get('username', '')
+    
+    if (role in ['admin', 'superadmin']) and (username.lower() != 'pamoraro' and user_id != 1):
+        return -1
+        
+    return user_id if user_id else 1
+
+def ensure_meditaciones_tables(db=None):
+    if db is None:
+        db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cat_meditaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            psicologo_id INTEGER,
+            titulo TEXT NOT NULL,
+            tipo_contenido TEXT NOT NULL,
+            url_contenido TEXT,
+            fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS paciente_meditaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            psicologo_id INTEGER,
+            meditacion_id INTEGER NOT NULL,
+            hora_recordatorio TEXT,
+            activa INTEGER DEFAULT 1,
+            token_acceso TEXT UNIQUE,
+            fecha_asignacion DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registro_meditaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            asignacion_id INTEGER NOT NULL,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            completada INTEGER DEFAULT 0,
+            animo_antes TEXT,
+            animo_despues TEXT,
+            comentarios TEXT,
+            fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
 
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'ogg', 'm4a'}
 
@@ -19,6 +89,7 @@ def allowed_file(filename):
 @login_required
 def get_catalogo():
     db = get_db()
+    ensure_meditaciones_tables(db)
     cursor = db.cursor()
     psic_id = get_psicologo_id_filter()
     

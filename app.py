@@ -131,6 +131,18 @@ try:
 except Exception as _e:
     print("Aviso al registrar Blueprint de Administración:", _e)
 
+# Registrar Blueprint de Meditaciones Guiadas y Mindfulness
+try:
+    from routes_meditacion import meditaciones_bp, ensure_meditaciones_tables
+    app.register_blueprint(meditaciones_bp)
+    with app.app_context():
+        try:
+            ensure_meditaciones_tables()
+        except Exception as _et:
+            print("Aviso al asegurar tablas de meditaciones:", _et)
+except Exception as _e:
+    print("Aviso al registrar Blueprint de Meditaciones:", _e)
+
 import gzip
 
 @app.after_request
