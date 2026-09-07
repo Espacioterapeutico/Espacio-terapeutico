@@ -78,8 +78,9 @@ def subscribe_push():
 
     db = get_db()
     cursor = db.cursor()
+    cursor.execute("DELETE FROM web_push_subscriptions WHERE endpoint = ?", (endpoint,))
     cursor.execute("""
-        INSERT OR REPLACE INTO web_push_subscriptions (user_id, patient_id, endpoint, p256dh, auth)
+        INSERT INTO web_push_subscriptions (user_id, patient_id, endpoint, p256dh, auth)
         VALUES (?, ?, ?, ?, ?)
     """, (user_id, patient_id, endpoint, p256dh, auth))
     db.commit()

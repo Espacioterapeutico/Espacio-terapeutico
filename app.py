@@ -435,10 +435,22 @@ def send_vapid_notification(user_id=None, patient_id=None, title="Mi Consultorio
         if not subs:
             return
 
+        # Deduplicar por endpoint
+        seen_endpoints = set()
+        unique_subs = []
+        for s in subs:
+            if s['endpoint'] not in seen_endpoints:
+                seen_endpoints.add(s['endpoint'])
+                unique_subs.append(s)
+
+        import hashlib
+        tag_id = f"notif-{hashlib.md5((title + body).encode('utf-8')).hexdigest()[:10]}"
+
         payload_data = json.dumps({
             "title": title,
             "body": body,
             "url": url,
+            "tag": tag_id,
             "icon": "/static/logo.png",
             "badge": "/static/badge.png"
         })
@@ -447,7 +459,7 @@ def send_vapid_notification(user_id=None, patient_id=None, title="Mi Consultorio
             "sub": "mailto:soporte@espacioterapeutico.com"
         }
 
-        for sub in subs:
+        for sub in unique_subs:
             subscription_info = {
                 "endpoint": sub['endpoint'],
                 "keys": {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-consultorio-v108';
+const CACHE_NAME = 'mi-consultorio-v109';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/logo.png',
@@ -84,22 +84,29 @@ self.addEventListener('push', (event) => {
         data.body = (parsed.notification && parsed.notification.body) || (parsed.data && parsed.data.body) || parsed.data?.mensaje || data.body;
         data.icon = (parsed.notification && parsed.notification.icon) || (parsed.data && parsed.data.icon) || data.icon;
         data.url = (parsed.data && parsed.data.url) || (parsed.data && parsed.data.link) || data.url;
+        data.tag = (parsed.notification && parsed.notification.tag) || (parsed.data && parsed.data.tag) || data.tag;
       } else {
         // Standard VAPID format
         data.title = parsed.title || data.title;
         data.body = parsed.body || parsed.mensaje || data.body;
         data.icon = parsed.icon || data.icon;
         data.url = parsed.url || parsed.link || data.url;
+        data.tag = parsed.tag || data.tag;
       }
     } catch (e) {
       data.body = event.data.text();
     }
   }
 
+  // Generar tag determinista para colapsar duplicados
+  const notifTag = data.tag || ('notif-' + (data.title || '') + '-' + (data.body || '')).replace(/\s+/g, '_').substring(0, 40);
+
   const options = {
     body: data.body,
     icon: data.icon,
     badge: '/static/badge.png',
+    tag: notifTag,
+    renotify: false,
     vibrate: [100, 50, 100],
     data: { url: data.url }
   };

@@ -1090,7 +1090,6 @@ def register():
             """, (target_psic, notif_msg, now_str))
             
             send_webpush_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
-            send_webpush_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
 
             db.commit()
             
