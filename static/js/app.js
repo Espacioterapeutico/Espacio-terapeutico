@@ -1109,7 +1109,12 @@ function switchView(viewId) {
         if (subTabToActivate) {
             switchExpedientesTab(subTabToActivate);
         } else {
-            switchExpedientesTab('evoluciones');
+            const isEvoBlocked = isFeatureBlocked('evoluciones');
+            if (isEvoBlocked) {
+                switchExpedientesTab('historias');
+            } else {
+                switchExpedientesTab('evoluciones');
+            }
         }
     } else if (viewId === 'patient-list') {
         loadPatients();
@@ -1198,6 +1203,9 @@ function switchDashboardTab(tabKey) {
 }
 
 function switchExpedientesTab(tabKey) {
+    if (tabKey === 'evoluciones' && typeof isFeatureBlocked === 'function' && isFeatureBlocked('evoluciones')) {
+        tabKey = 'historias';
+    }
     const tabs = ['evoluciones', 'historias'];
     tabs.forEach(t => {
         const btn = document.getElementById(`exp-tab-${t}`);
@@ -1715,13 +1723,15 @@ function applyUserBlocks(bloqueos) {
         if (tabEvoluciones) tabEvoluciones.classList.add('hide');
         if (tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
         if (btnNuevaEvolucion) btnNuevaEvolucion.classList.add('hide');
-        if (typeof switchExpedientesTab === 'function' && document.getElementById('view-expedientes-clinicos') && !document.getElementById('view-expedientes-clinicos').classList.contains('hide')) {
-             if (tabHistorias) {
-                 if(tabEvoluciones) tabEvoluciones.classList.remove('active');
-                 if(tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
-                 tabHistorias.classList.add('active');
-                 if(tabContentHistorias) tabContentHistorias.classList.remove('hide');
-             }
+        if (tabHistorias) {
+            tabHistorias.classList.remove('btn-secondary');
+            tabHistorias.classList.add('btn-primary');
+        }
+        if (tabContentHistorias) {
+            tabContentHistorias.classList.remove('hide');
+        }
+        if (typeof loadPatients === 'function') {
+            loadPatients();
         }
     } else {
         if (tabEvoluciones) tabEvoluciones.classList.remove('hide');
