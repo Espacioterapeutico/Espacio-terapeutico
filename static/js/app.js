@@ -11390,6 +11390,9 @@ function renderSuperadminTherapistsTable() {
                         <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid #0284c7; background: #f0f9ff; color: #0369a1; border-radius: 6px;" onclick="toggleTherapistAccordion(${p.id}, 'ficha')">
                             📋 Ficha
                         </button>
+                        <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid #d97706; background: #fffbeb; color: #b45309; border-radius: 6px;" onclick="promptResetTherapistPassword(${p.id}, \`${escName}\`, \`${p.cedula || ''}\`)" title="Resetear contraseña a su cédula">
+                            🔑 Clave
+                        </button>
                         <button type="button" class="btn btn-sm" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px;" onclick="deactivateTherapistSubscription(${p.id})">
                             ⛔ Desactivar
                         </button>
@@ -11449,7 +11452,12 @@ function renderSuperadminTherapistsTable() {
                         </div>
                         <div>
                             <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Cédula / Documento</label>
-                            <input type="text" id="inline-cedula-${p.id}" class="form-control form-control-sm" value="${p.cedula || ''}" placeholder="Ej: V-12345678" style="border-radius: 6px;">
+                            <div style="display: flex; gap: 0.35rem;">
+                                <input type="text" id="inline-cedula-${p.id}" class="form-control form-control-sm" value="${p.cedula || ''}" placeholder="Ej: V-12345678" style="border-radius: 6px; flex: 1;">
+                                <button type="button" class="btn btn-sm" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 0.72rem; border-radius: 6px; padding: 0 8px; white-space: nowrap;" onclick="promptResetTherapistPassword(${p.id}, \`${escName}\`, document.getElementById('inline-cedula-${p.id}') ? document.getElementById('inline-cedula-${p.id}').value : \`${p.cedula || ''}\`)" title="Resetear contraseña con su cédula">
+                                    🔑 Reset Clave
+                                </button>
+                            </div>
                         </div>
                         <div style="grid-column: 1 / -1;">
                             <label style="font-size: 0.78rem; font-weight: 800; color: #0d9488; display: block; margin-bottom: 0.25rem;">
@@ -11674,6 +11682,121 @@ async function saveInlineTherapistProfile(userId) {
     }
 }
 window.saveInlineTherapistProfile = saveInlineTherapistProfile;
+
+async function promptResetTherapistPassword(userId, userName, currentCedula) {
+    let targetCedula = (currentCedula || '').trim();
+    if (!targetCedula) {
+        const cedInput = document.getElementById(`inline-cedula-${userId}`);
+        if (cedInput && cedInput.value.trim()) {
+            targetCedula = cedInput.value.trim();
+        }
+    }
+
+    if (window.Swal) {
+        const { value: formValues } = await Swal.fire({
+            title: '🔑 Resetear Contraseña',
+            html: `
+                <p style="font-size: 0.9rem; color: #475569; margin-bottom: 0.85rem; text-align: left;">
+                    Estás a punto de resetear la contraseña del psicólogo <strong>${userName}</strong>.
+                </p>
+                <div style="text-align: left; margin-bottom: 0.75rem;">
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">
+                        Nueva Contraseña Temporal (por defecto su Cédula):
+                    </label>
+                    <input id="swal-reset-pass" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; font-weight: 700;" value="${targetCedula}" placeholder="Escribe la contraseña o cédula">
+                </div>
+                <p style="font-size: 0.78rem; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 0.5rem; border-radius: 6px; text-align: left; margin: 0;">
+                    ℹ️ <strong>Nota de Seguridad:</strong> Al iniciar sesión con esta contraseña, el sistema le exigirá al psicólogo cambiarla obligatoriamente por una contraseña personal.
+                </p>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: '🔑 Confirmar Reseteo',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#d97706',
+            cancelButtonColor: '#64748b',
+            preConfirm: () => {
+                const pass = document.getElementById('swal-reset-pass').value.trim();
+                if (!pass) {
+                    Swal.showValidationMessage('Debes ingresar una contraseña o número de cédula válido');
+                    return false;
+                }
+                if (pass.length < 4) {
+                    Swal.showValidationMessage('La contraseña debe tener al menos 4 caracteres');
+                    return false;
+                }
+                return pass;
+            }
+        });
+
+        if (!formValues) return;
+
+        try {
+            const res = await fetch(`/api/superadmin/therapists/${userId}/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: formValues })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                const credsText = `Usuario: ${data.username}\nContraseña temporal: ${data.new_password}`;
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Contraseña Reseteada!',
+                    html: `
+                        <p style="font-size: 0.9rem; color: #166534; margin-bottom: 0.75rem;">
+                            La contraseña de <strong>${userName}</strong> ha sido actualizada con éxito.
+                        </p>
+                        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.85rem; text-align: left; font-family: monospace; font-size: 0.88rem; margin-bottom: 0.75rem;">
+                            <div><strong>Usuario:</strong> ${data.username}</div>
+                            <div><strong>Nueva Contraseña:</strong> <span style="background: #fef08a; padding: 1px 6px; border-radius: 4px; font-weight: bold; color: #854d0e;">${data.new_password}</span></div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" id="swal-copy-creds-btn" style="width: 100%; border-radius: 6px; font-weight: 700; padding: 0.45rem;">
+                            📋 Copiar Credenciales
+                        </button>
+                    `,
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#10b981',
+                    didOpen: () => {
+                        const copyBtn = document.getElementById('swal-copy-creds-btn');
+                        if (copyBtn) {
+                            copyBtn.onclick = () => {
+                                navigator.clipboard.writeText(credsText).then(() => {
+                                    copyBtn.textContent = '✅ ¡Copiado al portapapeles!';
+                                    copyBtn.style.backgroundColor = '#15803d';
+                                });
+                            };
+                        }
+                    }
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo resetear la contraseña.' });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error de Red', text: 'No se pudo conectar con el servidor.' });
+        }
+    } else {
+        // Fallback si SweetAlert no está cargado
+        const pass = prompt(`Resetear contraseña de ${userName}.\nIngresa la nueva contraseña temporal (o cédula):`, targetCedula);
+        if (!pass) return;
+        try {
+            const res = await fetch(`/api/superadmin/therapists/${userId}/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass.trim() })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(`¡Contraseña reseteada con éxito!\nUsuario: ${data.username}\nNueva Contraseña: ${data.new_password}`);
+            } else {
+                alert(data.error || 'Error al resetear contraseña.');
+            }
+        } catch (e) {
+            alert('Error de conexión al resetear contraseña.');
+        }
+    }
+}
+window.promptResetTherapistPassword = promptResetTherapistPassword;
 
 function setInlineSubPreset(userId, days) {
     const endInput = document.getElementById(`inline-sub-end-${userId}`);

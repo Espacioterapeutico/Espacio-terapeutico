@@ -1366,6 +1366,64 @@ def superadmin_update_therapist_documents(user_id):
 
 
 
+@admin_bp.route('/api/superadmin/therapists/<int:user_id>/reset-password', methods=['POST'])
+@login_required
+def superadmin_reset_therapist_password(user_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+
+    data = request.json or {}
+    custom_password = (data.get('password') or '').strip()
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT id, username, nombres, apellidos, cedula, email, role
+        FROM usuarios 
+        WHERE id = ?
+    """, (user_id,))
+    target_user = cursor.fetchone()
+
+    if not target_user:
+        return jsonify({'error': 'El psicólogo seleccionado no existe.'}), 404
+
+    # Determinar la nueva contraseña: clave personalizada o su cédula
+    if custom_password:
+        new_password = custom_password
+    else:
+        cedula_val = (target_user['cedula'] or '').strip()
+        if not cedula_val:
+            return jsonify({
+                'error': f"El psicólogo {target_user['nombres']} {target_user['apellidos']} no tiene número de cédula registrado en su ficha. Debes ingresar una contraseña temporal."
+            }), 400
+        new_password = cedula_val
+
+    if len(new_password) < 4:
+        return jsonify({'error': 'La contraseña debe tener al menos 4 caracteres.'}), 400
+
+    new_hash = generate_password_hash(new_password)
+
+    # Actualizar contraseña y marcar primer_inicio = 1 para forzar cambio de clave al iniciar sesión
+    cursor.execute("""
+        UPDATE usuarios 
+        SET password_hash = ?, primer_inicio = 1 
+        WHERE id = ?
+    """, (new_hash, user_id))
+    db.commit()
+
+    full_name = f"{target_user['nombres']} {target_user['apellidos']}".strip()
+    return jsonify({
+        'success': f'Contraseña de {full_name} reseteada exitosamente.',
+        'new_password': new_password,
+        'username': target_user['username'],
+        'nombres': target_user['nombres'],
+        'apellidos': target_user['apellidos'],
+        'email': target_user['email']
+    })
+
+
+
 @admin_bp.route('/api/superadmin/support', methods=['GET'])
 @login_required
 def superadmin_get_support_tickets():
