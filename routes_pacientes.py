@@ -1332,6 +1332,11 @@ def patient_confirm_appointment():
             return jsonify({'error': f'Aún no puedes confirmar esta cita. Estará disponible {alerta_confirmacion} horas antes de la sesión.'}), 400
             
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt['id'],))
+        try:
+            from routes_agenda import _update_google_calendar_status_bg
+            _update_google_calendar_status_bg(appt['id'], 'confirmada')
+        except Exception as _gce:
+            print("Aviso actualizando Google Calendar desde portal paciente:", _gce)
         
         # Notificar al psicólogo y al paciente
         cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))

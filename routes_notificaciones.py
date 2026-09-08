@@ -226,10 +226,15 @@ def _start_wa_keepalive_thread():
                 requests.get(url, params={'user_id': '1'}, timeout=15)
             except Exception:
                 pass
-            time.sleep(480) # Ping cada 8 minutos para evitar que Render hiberne
+            time.sleep(240) # Ping cada 4 minutos para evitar que Render hiberne
 
     t = threading.Thread(target=_keepalive_loop, daemon=True)
     t.start()
+
+try:
+    _start_wa_keepalive_thread()
+except Exception:
+    pass
 
 def make_wa_http_request(method, endpoint, json_data=None, timeout=60, user_id=None):
     import requests

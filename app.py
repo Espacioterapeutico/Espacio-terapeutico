@@ -894,6 +894,10 @@ def init_db():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
         if 'cierre_enviado_wa' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN cierre_enviado_wa INTEGER DEFAULT 0")
+        if 'respuesta_enviada_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN respuesta_enviada_wa INTEGER DEFAULT 0")
+        if 'token_confirmacion' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN token_confirmacion TEXT")
         if 'consultorio_nombre' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN consultorio_nombre TEXT")
         db.commit()

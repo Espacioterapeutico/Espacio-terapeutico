@@ -17,20 +17,23 @@ def _update_google_calendar_status_bg(event_id, status):
     Actualiza el estado de la cita en Google Calendar en background.
     status: 'esperando', 'confirmada', 'cancelada'
     """
+    import os
     import sqlite3
     import threading
     from routes_admin import get_calendar_service
 
     def run():
         try:
-            db = sqlite3.connect('clinica.db')
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(base_dir, 'clinica.db')
+            db = sqlite3.connect(db_path, timeout=30.0)
             db.row_factory = sqlite3.Row
             cursor = db.cursor()
             
             cursor.execute("""
-                SELECT af.google_event_id, p.psicologo_id 
+                SELECT af.google_event_id, p.psicologo_id, af.creado_por_user_id 
                 FROM agenda_finanzas af
-                JOIN pacientes p ON af.paciente_id = p.id
+                LEFT JOIN pacientes p ON af.paciente_id = p.id
                 WHERE af.id = ?
             """, (event_id,))
             cita = cursor.fetchone()
@@ -39,7 +42,7 @@ def _update_google_calendar_status_bg(event_id, status):
                 return
 
             google_event_id = cita['google_event_id']
-            psych_id = cita['psicologo_id'] or 1
+            psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or 1
             
             service = get_calendar_service(psych_id)
             if not service:
@@ -747,9 +750,39 @@ def update_agenda_event_status(event_id):
 def delete_agenda_event(event_id):
     db = get_db()
     cursor = db.cursor()
+    user_id = session.get('user_id')
+
+    # 1. Consultar cita antes de borrar para limpiar Google Calendar
+    cursor.execute("""
+        SELECT af.id, af.google_event_id, af.paciente_id, af.creado_por_user_id, p.psicologo_id
+        FROM agenda_finanzas af
+        LEFT JOIN pacientes p ON af.paciente_id = p.id
+        WHERE af.id = ?
+    """, (event_id,))
+    cita = cursor.fetchone()
+
+    if cita and cita['google_event_id']:
+        psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or user_id or 1
+        try:
+            from routes_admin import get_calendar_service
+            service = get_calendar_service(psych_id)
+            if service:
+                service.events().delete(calendarId='primary', eventId=cita['google_event_id']).execute()
+        except Exception as ge:
+            print("Error al eliminar evento en Google Calendar al borrar cita:", ge)
+
+    cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
     cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
     db.commit()
-    return jsonify({'message': 'Cita eliminada correctamente.'})
+
+    if cita and cita['paciente_id']:
+        try:
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(cita['paciente_id'],), daemon=True).start()
+        except Exception as fe:
+            print("Error al sincronizar paciente tras borrar cita:", fe)
+
+    return jsonify({'success': 'Cita eliminada correctamente de la agenda y Google Calendar.'})
 
 @agenda_bp.route('/api/admin/availability', methods=['GET', 'POST'])
 @login_required
@@ -1287,20 +1320,93 @@ def accion_cita_publica():
     
     template = ""
     
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pat_full_name = f"{cita['pat_nombres']} {cita['pat_apellidos']}".strip()
+
     if accion == 'confirmar':
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto."
         _update_google_calendar_status_bg(appt_id, 'confirmada')
+        
+        # 1. Notificación en campana para el psicólogo
+        try:
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'cita', '✅ Cita Confirmada', ?, ?, 0, 'agenda')
+            """, (psych_id, f"{pat_full_name} ha confirmado su asistencia a la consulta del {cita['fecha']} a las {cita['hora']}.", now_str))
+        except Exception as _ne:
+            print("Error guardando notificacion de confirmacion:", _ne)
+
+        # 2. Notificación Push en segundo plano para el psicólogo
+        try:
+            from app import send_webpush_notification
+            send_webpush_notification(
+                user_id=psych_id,
+                title="✅ Cita Confirmada",
+                body=f"{pat_full_name} ha confirmado su asistencia a la consulta del {cita['fecha']} a las {cita['hora']}.",
+                url="/?view=agenda"
+            )
+        except Exception as _wp_ex:
+            print("Error enviando WebPush de confirmacion publica:", _wp_ex)
+
+        # 3. Notificación para el paciente en Firebase
+        if cita['paciente_id']:
+            try:
+                from app import FIREBASE_DB_URL
+                import requests
+                fb_payload = {
+                    "id": int(datetime.now().timestamp() * 1000),
+                    "tipo": "cita",
+                    "titulo": "✅ Cita Confirmada",
+                    "mensaje": f"Has confirmado exitosamente tu consulta para el {cita['fecha']} a las {cita['hora']}.",
+                    "fecha": now_str,
+                    "leida": False
+                }
+                requests.post(f"{FIREBASE_DB_URL}/pacientes/{cita['paciente_id']}/notificaciones.json", json=fb_payload, timeout=2.0)
+            except Exception:
+                pass
         
     elif accion == 'cancelar':
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar, por favor contáctanos."
         _update_google_calendar_status_bg(appt_id, 'cancelada')
         
+        # Notificar cancelación al psicólogo
+        try:
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'cita', '❌ Cita Cancelada por Consultante', ?, ?, 0, 'agenda')
+            """, (psych_id, f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']}.", now_str))
+            from app import send_webpush_notification
+            send_webpush_notification(
+                user_id=psych_id,
+                title="❌ Cita Cancelada",
+                body=f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']}.",
+                url="/?view=agenda"
+            )
+        except Exception as _ne:
+            print("Error notificando cancelacion publica:", _ne)
+        
     elif accion == 'reprogramar':
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
         template = cfg_rows.get('msg_reagendamiento') or "Hemos recibido tu solicitud para reprogramar. Pronto nos pondremos en contacto contigo para agendar un nuevo espacio."
         _update_google_calendar_status_bg(appt_id, 'cancelada')
+        
+        # Notificar reprogramación al psicólogo
+        try:
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'cita', '🔄 Solicitud de Reprogramación', ?, ?, 0, 'agenda')
+            """, (psych_id, f"{pat_full_name} solicitó reprogramar su cita del {cita['fecha']} a las {cita['hora']}.", now_str))
+            from app import send_webpush_notification
+            send_webpush_notification(
+                user_id=psych_id,
+                title="🔄 Solicitud de Reprogramación",
+                body=f"{pat_full_name} solicitó reprogramar su cita del {cita['fecha']} a las {cita['hora']}.",
+                url="/?view=agenda"
+            )
+        except Exception as _ne:
+            print("Error notificando reprogramacion publica:", _ne)
         
     db.commit()
     
@@ -1312,15 +1418,26 @@ def accion_cita_publica():
                 from routes_herramientas import clean_phone_number
                 msg = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
                 clean_phone = clean_phone_number(phone)
-                # Marcar en DB como enviado para evitar duplicado con el cron
-                db_bg = sqlite3.connect('clinica.db')
-                db_bg.row_factory = sqlite3.Row
-                if accion == 'cancelar' or accion == 'reprogramar':
-                    db_bg.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (appt_id,))
-                elif accion == 'confirmar':
-                    db_bg.execute("UPDATE agenda_finanzas SET respuesta_enviada_wa = 1 WHERE id = ?", (appt_id,))
-                db_bg.commit()
-                db_bg.close()
+                
+                # Marcar en DB como enviado usando ruta absoluta segura
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                db_path = os.path.join(base_dir, 'clinica.db')
+                db_bg = sqlite3.connect(db_path, timeout=30.0)
+                try:
+                    if accion == 'cancelar' or accion == 'reprogramar':
+                        db_bg.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                    elif accion == 'confirmar':
+                        try:
+                            db_bg.execute("ALTER TABLE agenda_finanzas ADD COLUMN respuesta_enviada_wa INTEGER DEFAULT 0")
+                        except Exception:
+                            pass
+                        db_bg.execute("UPDATE agenda_finanzas SET respuesta_enviada_wa = 1 WHERE id = ?", (appt_id,))
+                    db_bg.commit()
+                except Exception as _dbe:
+                    print("Aviso actualizando flag en DB bg:", _dbe)
+                finally:
+                    db_bg.close()
+                
                 make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg, 'user_id': psych_id}, timeout=15, user_id=psych_id)
             except Exception as e:
                 print("Error enviando confirmacion WA desde public link:", e)

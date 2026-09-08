@@ -463,4 +463,12 @@ app.listen(PORT, () => {
     } catch(e) {}
     // Garantizar que la sesión 1 siempre inicie
     connectToWhatsAppUser('1', false);
+
+    // Keep-alive interno para evitar hibernación en Render Free Tier
+    const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://espacio-terapeutico-whatsapp.onrender.com';
+    setInterval(async () => {
+        try {
+            await axios.get(`${SELF_URL.replace(/\/+$/, '')}/status?user_id=1`, { timeout: 10000 });
+        } catch(e) {}
+    }, 4 * 60 * 1000); // Ping cada 4 minutos
 });
