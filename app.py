@@ -1818,8 +1818,7 @@ def auto_cancel_unconfirmed_sessions(db):
 def auto_send_appointment_reminders(db):
     """
     Envia notificaciones automaticas de recordatorio de citas del dia
-    tanto al psicologo como al paciente (Firebase + SQLite).
-    No se ejecutan fuera del horario laboral (10:00 PM a 7:59 AM).
+    al psicologo (24 horas continuas) y al paciente (Firebase + SQLite).
     """
     from datetime import datetime, timezone, timedelta
     try:
@@ -1829,9 +1828,6 @@ def auto_send_appointment_reminders(db):
     except Exception:
         tz = timezone(timedelta(hours=-4))
         now_dt = datetime.now(tz)
-
-    if now_dt.hour < 8 or now_dt.hour >= 22:
-        return
 
     cursor = db.cursor()
     try:
@@ -1869,7 +1865,7 @@ def auto_send_appointment_reminders(db):
             if cursor.fetchone():
                 continue
                 
-            # 1. Notificación al psicólogo
+            # 1. Notificación al psicólogo (24 horas)
             cursor.execute("""
                 INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
                 VALUES (?, 'cita', '⏰ Recordatorio de Consulta Hoy', ?, ?, 0, ?)
@@ -1879,7 +1875,7 @@ def auto_send_appointment_reminders(db):
                 now_str,
                 notif_link
             ))
-            # 2. Push notification al psicólogo
+            # 2. Push notification al psicólogo (24 horas)
             try:
                 send_webpush_notification(
                     user_id=target_psic,
@@ -1892,30 +1888,31 @@ def auto_send_appointment_reminders(db):
             
             db.commit()
             
-            # 3. Notificación al paciente en Firebase
-            try:
-                fb_payload = {
-                    "id": int(now_dt.timestamp() * 1000),
-                    "tipo": "cita",
-                    "titulo": "⏰ Recordatorio de Consulta Hoy",
-                    "mensaje": f"Hola {appt['nombres']}, te recordamos tu consulta programada para hoy a las {hora_cita}.",
-                    "fecha": now_str,
-                    "leida": False
-                }
-                requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
-            except Exception as fe:
-                pass
-            
-            # 4. Push al paciente también
-            try:
-                send_webpush_notification(
-                    patient_id=patient_id,
-                    title="⏰ Recordatorio de Consulta Hoy",
-                    body=f"Hola {appt['nombres']}, tienes consulta hoy a las {hora_cita}.",
-                    url="/"
-                )
-            except Exception as wp_pac_ex:
-                print("Error al enviar WebPush de recordatorio al paciente:", wp_pac_ex)
+            # 3. Notificación al paciente en Firebase y Push (respetando descanso nocturno del consultante: 8 AM a 10 PM)
+            if 8 <= now_dt.hour < 22:
+                try:
+                    fb_payload = {
+                        "id": int(now_dt.timestamp() * 1000),
+                        "tipo": "cita",
+                        "titulo": "⏰ Recordatorio de Consulta Hoy",
+                        "mensaje": f"Hola {appt['nombres']}, te recordamos tu consulta programada para hoy a las {hora_cita}.",
+                        "fecha": now_str,
+                        "leida": False
+                    }
+                    requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+                except Exception as fe:
+                    pass
+                
+                # 4. Push al paciente también
+                try:
+                    send_webpush_notification(
+                        patient_id=patient_id,
+                        title="⏰ Recordatorio de Consulta Hoy",
+                        body=f"Hola {appt['nombres']}, tienes consulta hoy a las {hora_cita}.",
+                        url="/"
+                    )
+                except Exception as wp_pac_ex:
+                    print("Error al enviar WebPush de recordatorio al paciente:", wp_pac_ex)
                 
         db.commit()
     except Exception as e:
@@ -2564,6 +2561,7 @@ def auto_check_subscription_expiration_reminders(db):
                 continue
 
             try:
+                import math
                 if 'T' in exp_str:
                     exp_date = datetime.datetime.fromisoformat(exp_str)
                 else:
@@ -2596,7 +2594,7 @@ def patient_has_filled_tool_today(cursor, paciente_id, mod_clave, today_str):
         elif mod_clave == 'sobriedad':
             cursor.execute("SELECT id FROM registros_sobriedad WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
         elif mod_clave == 'pantalla':
-            cursor.execute("SELECT id FROM registro_consumo_pantalla WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
+            cursor.execute("SELECT id FROM registro_consumo_pantalla WHERE paciente_id = ? AND (DATE(fecha_registro) = ? OR fecha_registro LIKE ?)", (paciente_id, today_str, f"{today_str}%"))
         elif mod_clave == 'cognitivo':
             cursor.execute("SELECT id FROM registros_cognitivos WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
         elif mod_clave == 'ingesta':
@@ -2850,6 +2848,56 @@ def before_request_cleanup():
         print("Aviso en ejecutor en segundo plano before_request_cleanup:", e_bg)
     finally:
         _cleanup_lock.release()
+
+@app.route('/api/cron/process-notifications', methods=['GET', 'POST'])
+def cron_process_notifications():
+    """
+    Endpoint dedicado para disparadores de cron externos (cron-job.org, uptime bots, etc.)
+    Procesa todas las alertas y notificaciones periódicas (citas 24h para psicólogo,
+    cumpleaños, meditaciones, tareas terapéuticas) y mantiene despierto el servidor de forma confiable.
+    """
+    CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
+    provided_key = request.args.get('key') or request.headers.get('X-Cron-Key', '')
+    user_agent = (request.headers.get('User-Agent') or '').lower()
+    is_known_cron = 'cron-job.org' in user_agent or 'pythonanywhere' in user_agent
+    
+    # Autorizar si coincide la clave secreta, viene de cron-job.org o el usuario tiene sesión activa
+    if provided_key != CRON_SECRET and not is_known_cron and 'user_id' not in session:
+        return jsonify({'error': 'No autorizado. Se requiere clave de cron válida (?key=...) o sesión activa.'}), 401
+
+    results = {}
+    from datetime import datetime
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("America/Caracas")
+        now_dt = datetime.now(tz)
+    except Exception:
+        now_dt = datetime.now()
+
+    db = get_db()
+    
+    tasks = [
+        ('auto_cancel_unconfirmed_sessions', auto_cancel_unconfirmed_sessions),
+        ('auto_send_appointment_reminders', auto_send_appointment_reminders),
+        ('auto_send_confirmation_requests', auto_send_confirmation_requests),
+        ('auto_check_patient_birthdays', auto_check_patient_birthdays),
+        ('auto_send_meditation_reminders', auto_send_meditation_reminders),
+        ('send_hourly_patient_tool_reminders', send_hourly_patient_tool_reminders),
+        ('auto_check_subscription_expiration_reminders', auto_check_subscription_expiration_reminders)
+    ]
+    
+    for task_name, task_func in tasks:
+        try:
+            task_func(db)
+            results[task_name] = 'ok'
+        except Exception as err:
+            results[task_name] = f"error: {str(err)}"
+
+    return jsonify({
+        'status': 'ok',
+        'timestamp': now_dt.strftime('%Y-%m-%d %H:%M:%S'),
+        'results': results
+    })
 
 def auto_settle_patient_debts(db, patient_id):
     if not patient_id:

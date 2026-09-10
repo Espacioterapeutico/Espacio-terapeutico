@@ -575,8 +575,10 @@ def cron_send_whatsapp_reminders():
     CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
     if has_request_context():
         provided = request.args.get('key') or request.headers.get('X-Cron-Key', '')
-        if provided != CRON_SECRET:
-            return jsonify({'error': 'No autorizado'}), 401
+        user_agent = (request.headers.get('User-Agent') or '').lower()
+        is_known_cron = 'cron-job.org' in user_agent or 'pythonanywhere' in user_agent
+        if provided != CRON_SECRET and not is_known_cron and 'user_id' not in session:
+            return jsonify({'error': 'No autorizado. Se requiere ?key=espacioterapeutico_cron_2024'}), 401
 
     from datetime import datetime, timedelta
     try:

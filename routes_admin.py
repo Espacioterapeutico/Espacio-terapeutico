@@ -2526,24 +2526,24 @@ def subscribe_firebase():
     db = get_db()
     cursor = db.cursor()
 
+    # 1. Eliminar únicamente cualquier mapeo previo de este MISMO token (ej: si cambió de cuenta en el mismo dispositivo)
+    cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
+
     if user_id:
-        # Eliminar tokens anteriores de este usuario y quedarse solo con el nuevo
-        cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+        # Permitir múltiples dispositivos para el mismo usuario (PC, laptop, celular)
         cursor.execute("""
-            INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+            INSERT INTO fcm_subscriptions (user_id, patient_id, token)
             VALUES (?, NULL, ?)
         """, (user_id, token))
     elif patient_id:
-        # Eliminar tokens anteriores de este paciente y quedarse solo con el nuevo
-        cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
         cursor.execute("""
-            INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+            INSERT INTO fcm_subscriptions (user_id, patient_id, token)
             VALUES (NULL, ?, ?)
         """, (patient_id, token))
     else:
         # Sin sesión activa: guardar como anónimo (se actualizará al hacer login)
         cursor.execute("""
-            INSERT OR REPLACE INTO fcm_subscriptions (user_id, patient_id, token)
+            INSERT INTO fcm_subscriptions (user_id, patient_id, token)
             VALUES (NULL, NULL, ?)
         """, (token,))
 
