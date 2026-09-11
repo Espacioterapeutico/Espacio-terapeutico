@@ -40,7 +40,25 @@ def get_resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FIREBASE_SA_FILE = os.path.join(BASE_DIR, 'firebase-service-account.json')
+
+def get_firebase_sa_file():
+    candidates = [
+        os.path.join(BASE_DIR, 'firebase_service_account.json'),
+        os.path.join(BASE_DIR, 'firebase-service-account.json'),
+        os.path.join(BASE_DIR, 'espacio-terapeutico-firebase-adminsdk-fbsvc-a25e869231.json')
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    try:
+        for f in os.listdir(BASE_DIR):
+            if f.endswith('.json') and ('firebase' in f.lower() or 'adminsdk' in f.lower()):
+                return os.path.join(BASE_DIR, f)
+    except Exception:
+        pass
+    return None
+
+FIREBASE_SA_FILE = get_firebase_sa_file() or os.path.join(BASE_DIR, 'firebase-service-account.json')
 
 app = Flask(
     __name__,
@@ -285,7 +303,8 @@ def get_vapid_keys(cursor):
     return cfg
 
 def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
-    if not os.path.exists(FIREBASE_SA_FILE):
+    sa_file = get_firebase_sa_file()
+    if not sa_file or not os.path.exists(sa_file):
         return
         
     try:
@@ -313,7 +332,7 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
             return
             
         # 2. Obtener project_id y access_token del service account JSON
-        with open(FIREBASE_SA_FILE, 'r', encoding='utf-8') as f:
+        with open(sa_file, 'r', encoding='utf-8') as f:
             sa_info = json.load(f)
             project_id = sa_info.get('project_id')
             
@@ -322,7 +341,7 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
             
         scopes = ["https://www.googleapis.com/auth/firebase.messaging"]
         creds = service_account.Credentials.from_service_account_file(
-            FIREBASE_SA_FILE, scopes=scopes
+            sa_file, scopes=scopes
         )
         auth_req = google.auth.transport.requests.Request()
         creds.refresh(auth_req)
@@ -400,11 +419,11 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                     response.read()
             except Exception as fcm_ex:
                 print("Error de envío a token FCM individual:", fcm_ex)
-                if hasattr(fcm_ex, 'code') and fcm_ex.code in [400, 404]:
+                if hasattr(fcm_ex, 'code') and fcm_ex.code in [400, 401, 403, 404, 410]:
                     try:
                         cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
                         db.commit()
-                        print("Token FCM inválido eliminado de la base de datos.")
+                        print(f"Token FCM obsoleto ({fcm_ex.code}) eliminado de la base de datos.")
                     except Exception as db_ex:
                         print("Error eliminando token FCM inválido:", db_ex)
     except Exception as e:

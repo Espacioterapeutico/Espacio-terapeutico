@@ -11586,10 +11586,26 @@ async function initFirebaseMessagingFlow(registration) {
         }
         
         // Obtener el token de registro de FCM
-        const token = await messaging.getToken({
-            vapidKey: data.vapid_key,
-            serviceWorkerRegistration: fcmReg
-        });
+        let token = null;
+        try {
+            token = await messaging.getToken({
+                vapidKey: data.vapid_key,
+                serviceWorkerRegistration: fcmReg
+            });
+        } catch (tokErr) {
+            console.warn("FCM getToken falló, reintentando tras deleteToken:", tokErr);
+            try {
+                if (typeof messaging.deleteToken === 'function') {
+                    await messaging.deleteToken();
+                }
+                token = await messaging.getToken({
+                    vapidKey: data.vapid_key,
+                    serviceWorkerRegistration: fcmReg
+                });
+            } catch (retryErr) {
+                console.error("Error definitivo obteniendo token FCM:", retryErr);
+            }
+        }
         
         if (token) {
             console.log("FCM Token generado con éxito:", token);
