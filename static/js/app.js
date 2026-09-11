@@ -9548,6 +9548,10 @@ function toggleSessionFinanceInputs(tipo) {
         montoInput.disabled = false;
         if (pagoDetallesRow) pagoDetallesRow.style.display = 'flex';
         if (pagoFechaRow) pagoFechaRow.style.display = 'flex';
+        const fechaPagoInput = document.getElementById('s-fecha-pago');
+        if (fechaPagoInput && !fechaPagoInput.value) {
+            fechaPagoInput.value = new Date().toISOString().split('T')[0];
+        }
     }
 }
 

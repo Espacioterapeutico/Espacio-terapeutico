@@ -228,6 +228,116 @@ def adjust_patient_prepay_balance(patient_id):
 
 # --- ENDPOINTS DE GESTIÓN DE SESIONES / EVOLUCIONES ---
 
+def _apply_session_finance_liquidation(cursor, agenda_id, paciente_id, fecha, modalidad, tipo_liq, raw_monto, moneda, metodo_pago, referencia, fecha_pago, user_id=None):
+    try:
+        monto = float(str(raw_monto).replace(',', '.')) if raw_monto is not None else 0.0
+    except Exception:
+        monto = 0.0
+
+    moneda = moneda or 'USD'
+    metodo_pago = metodo_pago or ''
+    referencia = referencia or ''
+    fecha_pago = fecha_pago or fecha
+    fecha_liq = fecha_pago or fecha or datetime.datetime.now().strftime('%Y-%m-%d')
+
+    # Normalizar valores de tipo_liq
+    is_paga = tipo_liq in ['Cobrar ahora', 'Paga', 'Marcar como pagada en esta fecha', 'Pagada']
+    is_exonerar = tipo_liq in ['Exonerar', 'Exonerada', 'Exonerar pago', 'Exonerar pago (Gratuita / Histórica)', 'Exonerar pago (Gratuita)']
+    is_prepago = tipo_liq in ['Descontar prepago', 'Prepagada', 'Descontar de saldo prepagado', 'Ya prepagada en paquete', 'Vincular paquete fraccionado']
+    is_cancelada_paga = tipo_liq in ['Cancelada sin aviso - Paga']
+    is_cancelada_sin_aviso = tipo_liq in ['Cancelada sin aviso']
+
+    if is_exonerar:
+        monto = 0.0
+        metodo_pago = metodo_pago or 'Exonerada'
+        referencia = referencia or 'Exonerada / Gratuita'
+
+    if is_prepago:
+        metodo_pago = metodo_pago or 'Descontado de Prepago'
+        referencia = referencia or 'Prepago consumido'
+
+    if agenda_id:
+        if is_paga or is_exonerar:
+            cursor.execute("""
+                UPDATE agenda_finanzas 
+                SET estado_pago = 'Paga', control_uso = 'Consumida', monto = ?, moneda = ?, metodo_pago = ?, referencia = ?, fecha_pago = ?, fecha_liquidacion = ?
+                WHERE id = ?
+            """, (monto, moneda, metodo_pago, referencia, fecha_pago, fecha_liq, agenda_id))
+        elif is_prepago:
+            cursor.execute("SELECT estado_pago, control_uso FROM agenda_finanzas WHERE id = ?", (agenda_id,))
+            orig_state = cursor.fetchone()
+            
+            cursor.execute("""
+                UPDATE agenda_finanzas 
+                SET estado_pago = 'Prepagada', control_uso = 'Consumida', metodo_pago = ?, referencia = ?, fecha_liquidacion = ?
+                WHERE id = ?
+            """, (metodo_pago, referencia, fecha_liq, agenda_id))
+            
+            if orig_state and not (orig_state['estado_pago'] == 'Prepagada' and orig_state['control_uso'] == 'No consumida'):
+                cursor.execute("""
+                    SELECT id, cantidad_sesiones FROM agenda_finanzas 
+                    WHERE paciente_id = ? AND estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida'
+                    ORDER BY fecha ASC, id ASC LIMIT 1
+                """, (paciente_id,))
+                pkg = cursor.fetchone()
+                if pkg:
+                    if pkg['cantidad_sesiones'] > 1:
+                        cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg['cantidad_sesiones'] - 1, pkg['id']))
+                    else:
+                        cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg['id'],))
+        elif is_cancelada_paga:
+            cursor.execute("""
+                UPDATE agenda_finanzas 
+                SET estado_pago = 'Cancelada sin aviso - Paga', control_uso = 'Consumida', monto = ?, moneda = ?, metodo_pago = ?, referencia = ?, fecha_pago = ?, fecha_liquidacion = ?
+                WHERE id = ?
+            """, (monto, moneda, metodo_pago, referencia, fecha_pago, fecha_liq, agenda_id))
+        elif is_cancelada_sin_aviso:
+            cursor.execute("""
+                UPDATE agenda_finanzas 
+                SET estado_pago = 'Cancelada sin aviso', control_uso = 'Consumida', monto = ?, moneda = ?
+                WHERE id = ?
+            """, (monto, moneda, agenda_id))
+        else:
+            # Dejar pendiente
+            cursor.execute("""
+                UPDATE agenda_finanzas 
+                SET estado_pago = 'Pendiente', control_uso = 'Consumida', monto = ?, moneda = ?
+                WHERE id = ?
+            """, (monto, moneda, agenda_id))
+        return agenda_id
+    else:
+        estado_pago = 'Pendiente'
+        if is_paga or is_exonerar:
+            estado_pago = 'Paga'
+        elif is_prepago:
+            estado_pago = 'Prepagada'
+        elif is_cancelada_paga:
+            estado_pago = 'Cancelada sin aviso - Paga'
+        elif is_cancelada_sin_aviso:
+            estado_pago = 'Cancelada sin aviso'
+
+        cursor.execute("""
+            INSERT INTO agenda_finanzas (
+                paciente_id, creado_por_user_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
+                metodo_pago, referencia, fecha_pago, fecha_liquidacion, confirmada, control_uso
+            ) VALUES (?, ?, ?, '00:00', ?, ?, ?, ?, ?, ?, ?, ?, 1, 'Consumida')
+        """, (paciente_id, user_id or 1, fecha, modalidad, monto, moneda, estado_pago, metodo_pago, referencia, fecha_pago, fecha_liq))
+        new_agenda_id = cursor.lastrowid
+        
+        if estado_pago == 'Prepagada':
+            cursor.execute("""
+                SELECT id, cantidad_sesiones FROM agenda_finanzas 
+                WHERE paciente_id = ? AND estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida'
+                ORDER BY fecha ASC, id ASC LIMIT 1
+            """, (paciente_id,))
+            pkg = cursor.fetchone()
+            if pkg:
+                if pkg['cantidad_sesiones'] > 1:
+                    cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg['cantidad_sesiones'] - 1, pkg['id']))
+                else:
+                    cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg['id'],))
+        return new_agenda_id
+
 @evoluciones_bp.route('/api/sessions', methods=['GET', 'POST'])
 @login_required
 def manage_sessions():
@@ -315,95 +425,25 @@ def manage_sessions():
 
         # Liquidación de finanzas
         tipo_liq = data.get('tipo_liquidacion')
-        raw_monto = data.get('monto', 0.0)
-        try:
-            monto = float(str(raw_monto).replace(',', '.')) if raw_monto is not None else 0.0
-        except Exception:
-            monto = 0.0
-
-        moneda = data.get('moneda', 'USD')
-        metodo_pago = data.get('metodo_pago', '')
-        referencia = data.get('referencia', '')
-        fecha_pago = data.get('fecha_pago') or fecha
-
-        if agenda_id:
-            if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada', 'Exonerada', 'Exonerar', 'Exonerar pago (Gratuita)']:
-                cursor.execute("""
-                    UPDATE agenda_finanzas 
-                    SET estado_pago = 'Paga', monto = ?, moneda = ?, metodo_pago = ?, referencia = ?, fecha_pago = ?
-                    WHERE id = ?
-                """, (monto, moneda, metodo_pago, referencia, fecha_pago, agenda_id))
-            elif tipo_liq in ['Prepagada', 'Descontar de saldo prepagado', 'Ya prepagada en paquete']:
-                cursor.execute("SELECT estado_pago, control_uso FROM agenda_finanzas WHERE id = ?", (agenda_id,))
-                orig_state = cursor.fetchone()
-                
-                cursor.execute("""
-                    UPDATE agenda_finanzas 
-                    SET estado_pago = 'Prepagada', control_uso = 'Consumida'
-                    WHERE id = ?
-                """, (agenda_id,))
-                
-                if orig_state and not (orig_state['estado_pago'] == 'Prepagada' and orig_state['control_uso'] == 'No consumida'):
-                    cursor.execute("""
-                        SELECT id, cantidad_sesiones FROM agenda_finanzas 
-                        WHERE paciente_id = ? AND estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida'
-                        ORDER BY fecha ASC, id ASC LIMIT 1
-                    """, (paciente_id,))
-                    pkg = cursor.fetchone()
-                    if pkg:
-                        if pkg['cantidad_sesiones'] > 1:
-                            cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg['cantidad_sesiones'] - 1, pkg['id']))
-                        else:
-                            cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg['id'],))
-            elif tipo_liq in ['Cancelada sin aviso - Paga']:
-                cursor.execute("""
-                    UPDATE agenda_finanzas 
-                    SET estado_pago = 'Cancelada sin aviso - Paga', monto = ?, moneda = ?
-                    WHERE id = ?
-                """, (monto, moneda, agenda_id))
-            elif tipo_liq in ['Cancelada sin aviso']:
-                cursor.execute("""
-                    UPDATE agenda_finanzas 
-                    SET estado_pago = 'Cancelada sin aviso', monto = ?, moneda = ?
-                    WHERE id = ?
-                """, (monto, moneda, agenda_id))
-            else:
-                cursor.execute("""
-                    UPDATE agenda_finanzas 
-                    SET estado_pago = 'Pendiente', monto = ?, moneda = ?
-                    WHERE id = ?
-                """, (monto, moneda, agenda_id))
-        else:
-            # Crear entrada en agenda_finanzas si no venía de una cita pre-existente
-            estado_pago = 'Pendiente'
-            if tipo_liq in ['Paga', 'Marcar como pagada en esta fecha', 'Pagada', 'Exonerada', 'Exonerar', 'Exonerar pago (Gratuita)']:
-                estado_pago = 'Paga'
-            elif tipo_liq in ['Prepagada', 'Descontar de saldo prepagado', 'Ya prepagada en paquete']:
-                estado_pago = 'Prepagada'
-            elif tipo_liq in ['Cancelada sin aviso - Paga']:
-                estado_pago = 'Cancelada sin aviso - Paga'
-            elif tipo_liq in ['Cancelada sin aviso']:
-                estado_pago = 'Cancelada sin aviso'
-
-            cursor.execute("""
-                INSERT INTO agenda_finanzas (
-                    paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
-                    metodo_pago, referencia, fecha_pago, confirmada, control_uso
-                ) VALUES (?, ?, '00:00', ?, ?, ?, ?, ?, ?, ?, 1, 'Consumida')
-            """, (paciente_id, fecha, modalidad, monto, moneda, estado_pago, metodo_pago, referencia, fecha_pago))
-            
-            if estado_pago == 'Prepagada':
-                cursor.execute("""
-                    SELECT id, cantidad_sesiones FROM agenda_finanzas 
-                    WHERE paciente_id = ? AND estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida'
-                    ORDER BY fecha ASC, id ASC LIMIT 1
-                """, (paciente_id,))
-                pkg = cursor.fetchone()
-                if pkg:
-                    if pkg['cantidad_sesiones'] > 1:
-                        cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg['cantidad_sesiones'] - 1, pkg['id']))
-                    else:
-                        cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg['id'],))
+        if tipo_liq:
+            linked_agenda_id = _apply_session_finance_liquidation(
+                cursor=cursor,
+                agenda_id=agenda_id,
+                paciente_id=paciente_id,
+                fecha=fecha,
+                modalidad=modalidad,
+                tipo_liq=tipo_liq,
+                raw_monto=data.get('monto', 0.0),
+                moneda=data.get('moneda', 'USD'),
+                metodo_pago=data.get('metodo_pago', ''),
+                referencia=data.get('referencia', ''),
+                fecha_pago=data.get('fecha_pago'),
+                user_id=session.get('user_id')
+            )
+            if not agenda_id and linked_agenda_id:
+                cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (linked_agenda_id, session_id))
+        elif agenda_id and estado in ['Cancelada con aviso', 'Reprogramada']:
+            cursor.execute("UPDATE agenda_finanzas SET estado_pago = ? WHERE id = ?", (estado, agenda_id))
 
         db.commit()
 
@@ -475,8 +515,39 @@ def update_session_detail(session_id):
                 diagnostico = ?, test_aplicados = ?, archivo_adjunto = ?, modalidad = ?, fecha = ?, paciente_id = ?
             WHERE id = ?
         """, (estado, resumen, resumen_paciente, tareas_asignadas, recursos_entregados, anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto, modalidad, fecha, patient_id, session_id))
+
+        # Actualizar finanzas vinculadas si se enviaron datos de liquidación
+        tipo_liq = data.get('tipo_liquidacion')
+        if tipo_liq:
+            target_agenda_id = ses['agenda_id'] or data.get('agenda_id')
+            linked_agenda_id = _apply_session_finance_liquidation(
+                cursor=cursor,
+                agenda_id=target_agenda_id,
+                paciente_id=patient_id,
+                fecha=fecha,
+                modalidad=modalidad,
+                tipo_liq=tipo_liq,
+                raw_monto=data.get('monto', 0.0),
+                moneda=data.get('moneda', 'USD'),
+                metodo_pago=data.get('metodo_pago', ''),
+                referencia=data.get('referencia', ''),
+                fecha_pago=data.get('fecha_pago'),
+                user_id=session.get('user_id')
+            )
+            if not target_agenda_id and linked_agenda_id:
+                cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (linked_agenda_id, session_id))
+        elif ses['agenda_id'] and estado in ['Cancelada con aviso', 'Reprogramada']:
+            cursor.execute("UPDATE agenda_finanzas SET estado_pago = ? WHERE id = ?", (estado, ses['agenda_id']))
         
         db.commit()
+
+        try:
+            from routes_finanzas import auto_settle_patient_debts
+            auto_settle_patient_debts(db, patient_id)
+            db.commit()
+        except Exception:
+            pass
+
         return jsonify({'success': 'Evolución actualizada con éxito.'})
     except Exception as e:
         db.rollback()
