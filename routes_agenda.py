@@ -1358,11 +1358,11 @@ def accion_cita_publica():
     cursor = db.cursor()
     
     cursor.execute("""
-        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago, af.creado_por_user_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.username as psic_username
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
-        LEFT JOIN usuarios u ON p.psicologo_id = u.id
+        LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR af.creado_por_user_id = u.id)
         WHERE af.token_confirmacion = ?
     """, (token,))
     cita = cursor.fetchone()
@@ -1371,7 +1371,7 @@ def accion_cita_publica():
         return jsonify({'error': 'Cita no encontrada.'}), 404
         
     appt_id = cita['id']
-    psych_id = cita['psicologo_id'] or 1
+    psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or 1
     phone = cita['pat_telefono']
     
     fast_booking_url = f"https://www.espacioterapeutico.net/agendar/{cita['psic_username'] or 'psic.paulomora'}"

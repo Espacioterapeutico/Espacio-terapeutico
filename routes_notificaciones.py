@@ -1773,11 +1773,43 @@ def whatsapp_webhook():
         'apellidos': cita['psic_apellidos']
     }
     psych_id = cita['psicologo_id'] or user_id or 1
+    pat_full_name = f"{cita['pat_nombres']} {cita['pat_apellidos']}".strip()
+    now_str = now_local.strftime("%Y-%m-%d %H:%M:%S")
         
     if es_afirmacion:
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (cita['id'],))
         db.commit()
+
+        # 1. Actualizar estado en Google Calendar (✅)
+        try:
+            from routes_agenda import _update_google_calendar_status_bg
+            _update_google_calendar_status_bg(cita['id'], 'confirmada')
+        except Exception as _gce:
+            print("Aviso actualizando Google Calendar desde webhook WhatsApp:", _gce)
+
+        # 2. Notificación en campana para el psicólogo
+        try:
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'cita', '✅ Cita Confirmada', ?, ?, 0, '/#agenda')
+            """, (psych_id, f"{pat_full_name} ha confirmado su asistencia por WhatsApp para la consulta del {cita['fecha']} a las {cita['hora']}.", now_str))
+            db.commit()
+        except Exception as _ne:
+            print("Error guardando notificacion de confirmacion en BD:", _ne)
+
+        # 3. Notificación Push (FCM / WebPush) para el psicólogo
+        try:
+            from app import send_webpush_notification
+            send_webpush_notification(
+                user_id=psych_id,
+                title="✅ Cita Confirmada",
+                body=f"{pat_full_name} ha confirmado su asistencia por WhatsApp para el {cita['fecha']} a las {cita['hora']}.",
+                url="/?view=agenda"
+            )
+        except Exception as _wp_ex:
+            print("Error enviando WebPush de confirmacion al psicologo:", _wp_ex)
         
+        # 4. Respuesta por WhatsApp al paciente
         cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_confirmacion_ok'")
         row = cursor.fetchone()
         template = row['valor'] if row and row['valor'] else "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
@@ -1794,6 +1826,36 @@ def whatsapp_webhook():
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (cita['id'],))
         db.commit()
 
+        # 1. Actualizar estado en Google Calendar (Cancelada)
+        try:
+            from routes_agenda import _update_google_calendar_status_bg
+            _update_google_calendar_status_bg(cita['id'], 'cancelada')
+        except Exception as _gce:
+            print("Aviso actualizando Google Calendar tras cancelacion WhatsApp:", _gce)
+
+        # 2. Notificación en campana para el psicólogo
+        try:
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'cita', '❌ Cita Cancelada por Consultante', ?, ?, 0, '/#agenda')
+            """, (psych_id, f"{pat_full_name} ha cancelado su cita por WhatsApp para el {cita['fecha']} a las {cita['hora']}.", now_str))
+            db.commit()
+        except Exception as _ne:
+            print("Error guardando notificacion de cancelacion en BD:", _ne)
+
+        # 3. Notificación Push (FCM / WebPush) para el psicólogo
+        try:
+            from app import send_webpush_notification
+            send_webpush_notification(
+                user_id=psych_id,
+                title="❌ Cita Cancelada",
+                body=f"{pat_full_name} ha cancelado su cita por WhatsApp para el {cita['fecha']} a las {cita['hora']}.",
+                url="/?view=agenda"
+            )
+        except Exception as _wp_ex:
+            print("Error enviando WebPush de cancelacion al psicologo:", _wp_ex)
+
+        # 4. Respuesta por WhatsApp al paciente
         cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cancelacion_ok'")
         row = cursor.fetchone()
         template = row['valor'] if row and row['valor'] else "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
