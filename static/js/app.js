@@ -7323,6 +7323,61 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     summaryBadge.style.gap = '0.35rem';
     summaryBadge.style.transition = 'all 0.2s';
     
+    // Parámetros propios de la modalidad (o herencia global)
+    if (profileData.duracion !== undefined && profileData.duracion !== null && profileData.duracion !== '') {
+        card.setAttribute('data-duracion', profileData.duracion);
+    }
+    if (profileData.receso !== undefined && profileData.receso !== null && profileData.receso !== '') {
+        card.setAttribute('data-receso', profileData.receso);
+    }
+    if (profileData.antelacion !== undefined && profileData.antelacion !== null && profileData.antelacion !== '') {
+        card.setAttribute('data-antelacion', profileData.antelacion);
+    }
+
+    // Badge de Tiempos / Parámetros de la Modalidad
+    const timeBadge = document.createElement('span');
+    timeBadge.className = 'profile-header-times';
+    timeBadge.style.fontSize = '0.78rem';
+    timeBadge.style.fontWeight = '700';
+    timeBadge.style.padding = '0.25rem 0.65rem';
+    timeBadge.style.borderRadius = '8px';
+    timeBadge.style.display = 'inline-flex';
+    timeBadge.style.alignItems = 'center';
+    timeBadge.style.gap = '0.35rem';
+    timeBadge.style.cursor = 'pointer';
+    timeBadge.style.transition = 'all 0.2s';
+    timeBadge.title = 'Clic para personalizar duración, receso y anticipación de esta modalidad';
+    timeBadge.onclick = (e) => {
+        e.stopPropagation();
+        openModalityParamsModal();
+    };
+
+    function updateProfileTimeBadge() {
+        const dVal = card.getAttribute('data-duracion');
+        const rVal = card.getAttribute('data-receso');
+        const aVal = card.getAttribute('data-antelacion');
+        const gDur = document.getElementById('avail-duracion')?.value || 60;
+        const gRec = document.getElementById('avail-receso')?.value || 15;
+
+        const dur = (dVal !== null && dVal !== '') ? dVal : gDur;
+        const rec = (rVal !== null && rVal !== '') ? rVal : gRec;
+        const isCustom = (dVal !== null && dVal !== '') || (rVal !== null && rVal !== '') || (aVal !== null && aVal !== '');
+
+        if (isCustom) {
+            timeBadge.style.backgroundColor = 'rgba(152,75,128,0.1)';
+            timeBadge.style.border = '1px solid rgba(152,75,128,0.3)';
+            timeBadge.style.color = 'var(--primary-color, #984b80)';
+            timeBadge.innerHTML = `⏱️ ${dur}m · ☕ ${rec}m <span style="font-size:0.68rem; font-weight:800; background:var(--primary-color); color:#fff; padding:1px 5px; border-radius:10px; margin-left:2px;">propio</span>`;
+        } else {
+            timeBadge.style.backgroundColor = '#f1f5f9';
+            timeBadge.style.border = '1px solid transparent';
+            timeBadge.style.color = '#64748b';
+            timeBadge.innerHTML = `⏱️ ${dur}m · ☕ ${rec}m`;
+        }
+    }
+    card.updateProfileTimeBadge = updateProfileTimeBadge;
+    updateProfileTimeBadge();
+
     // Badge opcional si tiene consultorio asignado
     const consultorioBadge = document.createElement('span');
     consultorioBadge.className = 'profile-header-consultorio';
@@ -7338,6 +7393,7 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     leftPart.appendChild(toggleArrow);
     leftPart.appendChild(headerTitle);
     leftPart.appendChild(summaryBadge);
+    leftPart.appendChild(timeBadge);
     leftPart.appendChild(consultorioBadge);
     
     // Botón de eliminar perfil
@@ -7560,6 +7616,62 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     descGroup.appendChild(descInput);
     descGroup.appendChild(descHelp);
     bodyContainer.appendChild(descGroup);
+    
+    // Fila 2.5: Resumen de parámetros de tiempo y acceso rápido a personalización
+    const paramsNotice = document.createElement('div');
+    paramsNotice.style.display = 'flex';
+    paramsNotice.style.justifyContent = 'space-between';
+    paramsNotice.style.alignItems = 'center';
+    paramsNotice.style.backgroundColor = '#ffffff';
+    paramsNotice.style.border = '1.5px solid var(--border-color)';
+    paramsNotice.style.borderRadius = '10px';
+    paramsNotice.style.padding = '0.65rem 1rem';
+    paramsNotice.style.marginBottom = '1.25rem';
+    paramsNotice.style.flexWrap = 'wrap';
+    paramsNotice.style.gap = '0.5rem';
+
+    const pNoticeText = document.createElement('div');
+    pNoticeText.style.fontSize = '0.84rem';
+    pNoticeText.style.color = '#475569';
+    pNoticeText.innerHTML = `<strong>Tiempos de consulta:</strong> <span class="profile-timing-text" style="color:var(--primary-color); font-weight:700;"></span>`;
+    
+    function updateNoticeTimingText() {
+        const dVal = card.getAttribute('data-duracion');
+        const rVal = card.getAttribute('data-receso');
+        const aVal = card.getAttribute('data-antelacion');
+        const gDur = document.getElementById('avail-duracion')?.value || 60;
+        const gRec = document.getElementById('avail-receso')?.value || 15;
+        const gAnt = document.getElementById('avail-antelacion')?.value || 24;
+
+        const dur = (dVal !== null && dVal !== '') ? `${dVal} min` : `${gDur} min (global)`;
+        const rec = (rVal !== null && rVal !== '') ? `${rVal} min` : `${gRec} min (global)`;
+        const ant = (aVal !== null && aVal !== '') ? `${aVal}h` : `${gAnt}h (global)`;
+
+        const span = pNoticeText.querySelector('.profile-timing-text');
+        if (span) span.textContent = `${dur} sesión · ${rec} receso · ${ant} antelación`;
+    }
+    card.updateNoticeTimingText = updateNoticeTimingText;
+    updateNoticeTimingText();
+
+    const pNoticeBtn = document.createElement('button');
+    pNoticeBtn.type = 'button';
+    pNoticeBtn.className = 'btn text-xs';
+    pNoticeBtn.innerHTML = '⚙️ Personalizar Tiempos';
+    pNoticeBtn.style.backgroundColor = 'rgba(152,75,128,0.08)';
+    pNoticeBtn.style.color = 'var(--primary-color, #984b80)';
+    pNoticeBtn.style.border = '1px solid rgba(152,75,128,0.25)';
+    pNoticeBtn.style.borderRadius = '8px';
+    pNoticeBtn.style.fontWeight = '700';
+    pNoticeBtn.style.padding = '0.35rem 0.75rem';
+    pNoticeBtn.style.cursor = 'pointer';
+    pNoticeBtn.onclick = (e) => {
+        e.stopPropagation();
+        openModalityParamsModal();
+    };
+
+    paramsNotice.appendChild(pNoticeText);
+    paramsNotice.appendChild(pNoticeBtn);
+    bodyContainer.appendChild(paramsNotice);
     
     // Fila 3: Encabezado de Horario Regular
     const scheduleHeader = document.createElement('div');
@@ -7871,6 +7983,19 @@ async function loadAdminAvailability() {
         toggleCancelRuleInputs();
         switchHorariosMode(currentHorariosPersonalMode);
         
+        ['avail-duracion', 'avail-receso', 'avail-antelacion'].forEach(inputId => {
+            const el = document.getElementById(inputId);
+            if (el && !el.dataset.boundSync) {
+                el.dataset.boundSync = '1';
+                el.addEventListener('input', () => {
+                    document.querySelectorAll('.avail-profile-card').forEach(card => {
+                        if (typeof card.updateProfileTimeBadge === 'function') card.updateProfileTimeBadge();
+                        if (typeof card.updateNoticeTimingText === 'function') card.updateNoticeTimingText();
+                    });
+                });
+            }
+        });
+        
         listContainer.innerHTML = '';
 
         const esMiembroClinica = (data.tipo_clinica === 2);
@@ -7967,10 +8092,162 @@ async function loadAdminAvailability() {
     }
 }
 
+// -------------------------------------------------------------
+// MODAL DE PARÁMETROS AVANZADOS POR MODALIDAD (DURACIÓN, RECESO, ANTELACIÓN)
+// -------------------------------------------------------------
+function openModalityParamsModal() {
+    const list = document.getElementById('modal-reglas-modalidades-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const cards = document.querySelectorAll('.avail-profile-card');
+    const gDur = document.getElementById('avail-duracion')?.value || 60;
+    const gRec = document.getElementById('avail-receso')?.value || 15;
+    const gAnt = document.getElementById('avail-antelacion')?.value || 24;
+
+    if (cards.length === 0) {
+        list.innerHTML = `
+            <div style="text-align: center; padding: 2rem 1rem; color: #64748b;">
+                <span style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">📅</span>
+                <strong>No hay modalidades creadas todavía.</strong>
+                <p style="margin: 0.35rem 0 0 0; font-size: 0.88rem;">Crea o activa una modalidad en la pestaña "Asignar Horarios" para personalizar sus tiempos.</p>
+            </div>
+        `;
+        openModal('modal-reglas-modalidades');
+        return;
+    }
+
+    cards.forEach(card => {
+        const id = card.getAttribute('data-id');
+        const name = card.querySelector('.profile-name')?.value || card.querySelector('.profile-header-title')?.textContent || 'Modalidad';
+        const dVal = card.getAttribute('data-duracion') || '';
+        const rVal = card.getAttribute('data-receso') || '';
+        const aVal = card.getAttribute('data-antelacion') || '';
+        const isCustom = Boolean(dVal || rVal || aVal);
+
+        const item = document.createElement('div');
+        item.className = 'modality-rule-item';
+        item.setAttribute('data-id', id);
+        item.style.background = '#ffffff';
+        item.style.border = isCustom ? '1.5px solid rgba(152,75,128,0.35)' : '1.5px solid var(--border-color)';
+        item.style.borderRadius = '12px';
+        item.style.padding = '1.15rem 1.25rem';
+        item.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
+        item.style.transition = 'all 0.2s ease';
+
+        const safeName = typeof escapeHtml === 'function' ? escapeHtml(name) : name;
+
+        item.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.1rem;">🏷️</span>
+                    <strong style="font-size: 1.02rem; color: #1e293b;">${safeName}</strong>
+                </div>
+                <label style="display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.83rem; font-weight: 600; color: #475569; cursor: pointer; user-select: none; background: #f8fafc; padding: 0.3rem 0.65rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <input type="checkbox" class="mod-use-global" ${isCustom ? '' : 'checked'} onchange="toggleModalityRuleInputs(this)">
+                    Heredar valores globales
+                </label>
+            </div>
+            <div class="mod-inputs-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; opacity: ${isCustom ? '1' : '0.5'}; pointer-events: ${isCustom ? 'auto' : 'none'}; transition: all 0.2s;">
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.3rem;">⏱️ Duración Sesión (min)</label>
+                    <input type="number" class="mod-duracion" min="15" max="240" step="5" value="${dVal}" placeholder="Por defecto (${gDur} min)" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.9rem; background: #ffffff;">
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.3rem;">☕ Receso / Descanso (min)</label>
+                    <input type="number" class="mod-receso" min="0" max="120" step="5" value="${rVal}" placeholder="Por defecto (${gRec} min)" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.9rem; background: #ffffff;">
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.3rem;">⏳ Anticipación Mínima (horas)</label>
+                    <input type="number" class="mod-antelacion" min="0" max="168" step="1" value="${aVal}" placeholder="Por defecto (${gAnt} h)" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.9rem; background: #ffffff;">
+                </div>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+
+    openModal('modal-reglas-modalidades');
+}
+window.openModalityParamsModal = openModalityParamsModal;
+
+function toggleModalityRuleInputs(chk) {
+    const item = chk.closest('.modality-rule-item');
+    if (!item) return;
+    const inputsRow = item.querySelector('.mod-inputs-row');
+    const isGlobal = chk.checked;
+    
+    if (isGlobal) {
+        inputsRow.style.opacity = '0.5';
+        inputsRow.style.pointerEvents = 'none';
+        item.style.borderColor = 'var(--border-color)';
+    } else {
+        inputsRow.style.opacity = '1';
+        inputsRow.style.pointerEvents = 'auto';
+        item.style.borderColor = 'rgba(152,75,128,0.35)';
+        
+        const gDur = document.getElementById('avail-duracion')?.value || 60;
+        const gRec = document.getElementById('avail-receso')?.value || 15;
+        const gAnt = document.getElementById('avail-antelacion')?.value || 24;
+        
+        const inDur = item.querySelector('.mod-duracion');
+        const inRec = item.querySelector('.mod-receso');
+        const inAnt = item.querySelector('.mod-antelacion');
+        
+        if (inDur && !inDur.value) inDur.value = gDur;
+        if (inRec && !inRec.value) inRec.value = gRec;
+        if (inAnt && !inAnt.value) inAnt.value = gAnt;
+    }
+}
+window.toggleModalityRuleInputs = toggleModalityRuleInputs;
+
+function saveModalityParamsModal() {
+    const items = document.querySelectorAll('#modal-reglas-modalidades-list .modality-rule-item');
+    items.forEach(item => {
+        const id = item.getAttribute('data-id');
+        const card = document.querySelector(`.avail-profile-card[data-id="${id}"]`);
+        if (!card) return;
+        
+        const isGlobal = item.querySelector('.mod-use-global')?.checked;
+        if (isGlobal) {
+            card.removeAttribute('data-duracion');
+            card.removeAttribute('data-receso');
+            card.removeAttribute('data-antelacion');
+        } else {
+            const d = item.querySelector('.mod-duracion')?.value;
+            const r = item.querySelector('.mod-receso')?.value;
+            const a = item.querySelector('.mod-antelacion')?.value;
+            
+            if (d !== undefined && d !== '') card.setAttribute('data-duracion', d);
+            else card.removeAttribute('data-duracion');
+            
+            if (r !== undefined && r !== '') card.setAttribute('data-receso', r);
+            else card.removeAttribute('data-receso');
+            
+            if (a !== undefined && a !== '') card.setAttribute('data-antelacion', a);
+            else card.removeAttribute('data-antelacion');
+        }
+        
+        if (typeof card.updateProfileTimeBadge === 'function') {
+            card.updateProfileTimeBadge();
+        }
+        if (typeof card.updateNoticeTimingText === 'function') {
+            card.updateNoticeTimingText();
+        }
+    });
+    
+    closeModal('modal-reglas-modalidades');
+    
+    // Guardar los cambios directamente en la base de datos
+    if (typeof handleSaveAvailability === 'function') {
+        handleSaveAvailability();
+    }
+}
+window.saveModalityParamsModal = saveModalityParamsModal;
+
 async function handleSaveAvailability(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const statusMsg = document.getElementById('availability-status-msg');
-    statusMsg.classList.add('hide');
+    if (statusMsg) statusMsg.classList.add('hide');
     
     const duracion = parseInt(document.getElementById('avail-duracion').value);
     const receso = parseInt(document.getElementById('avail-receso').value);
@@ -8021,6 +8298,13 @@ async function handleSaveAvailability(e) {
         
         const consultorio = card.querySelector('.profile-consultorio')?.value || '';
         const descripcion = card.querySelector('.profile-descripcion')?.value || '';
+        const duracionAttr = card.getAttribute('data-duracion');
+        const recesoAttr = card.getAttribute('data-receso');
+        const antelacionAttr = card.getAttribute('data-antelacion');
+
+        const duracionMod = (duracionAttr !== null && duracionAttr !== '') ? parseInt(duracionAttr) : null;
+        const recesoMod = (recesoAttr !== null && recesoAttr !== '') ? parseInt(recesoAttr) : null;
+        const antelacionMod = (antelacionAttr !== null && antelacionAttr !== '') ? parseInt(antelacionAttr) : null;
         
         perfiles.push({
             id,
@@ -8028,6 +8312,9 @@ async function handleSaveAvailability(e) {
             descripcion,
             modalidad,
             consultorio,
+            duracion: duracionMod,
+            receso: recesoMod,
+            antelacion: antelacionMod,
             dias
         });
     });
@@ -8207,6 +8494,13 @@ async function handleSaveTeamAvailability(e) {
         const nombre = card.querySelector('.profile-name').value;
         const descripcion = card.querySelector('.profile-descripcion')?.value || '';
         const consultorio = card.querySelector('.profile-consultorio')?.value || '';
+        const duracionAttr = card.getAttribute('data-duracion');
+        const recesoAttr = card.getAttribute('data-receso');
+        const antelacionAttr = card.getAttribute('data-antelacion');
+
+        const duracionMod = (duracionAttr !== null && duracionAttr !== '') ? parseInt(duracionAttr) : null;
+        const recesoMod = (recesoAttr !== null && recesoAttr !== '') ? parseInt(recesoAttr) : null;
+        const antelacionMod = (antelacionAttr !== null && antelacionAttr !== '') ? parseInt(antelacionAttr) : null;
 
         const dias = [];
         const dayRows = card.querySelectorAll('.profile-day-row');
@@ -8226,7 +8520,17 @@ async function handleSaveTeamAvailability(e) {
             dias.push({ dia, nombre: name, activo, rangos });
         });
 
-        perfiles.push({ id, nombre, descripcion, modalidad: nombre, consultorio, dias });
+        perfiles.push({
+            id,
+            nombre,
+            descripcion,
+            modalidad: nombre,
+            consultorio,
+            duracion: duracionMod,
+            receso: recesoMod,
+            antelacion: antelacionMod,
+            dias
+        });
     });
 
     const payload = { duracion, receso, perfiles };

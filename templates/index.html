@@ -2744,16 +2744,21 @@
                                                 
                                                 <!-- Tarjeta 1: Tiempos de Sesión -->
                                                 <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-                                                    <h5 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
-                                                        ⏱️ Duración de Consulta y Recesos
-                                                    </h5>
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                                                        <h5 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
+                                                            ⏱️ Duración de Consulta y Recesos (Valores Globales)
+                                                        </h5>
+                                                        <button type="button" class="btn text-xs" onclick="openModalityParamsModal()" style="background: rgba(152,75,128,0.1); color: var(--primary-color); border: 1px solid rgba(152,75,128,0.25); border-radius: 8px; font-weight: 700; padding: 0.4rem 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;">
+                                                            ⚙️ Personalizar por Modalidad (Avanzado)
+                                                        </button>
+                                                    </div>
                                                     <div class="form-row">
                                                         <div class="form-group col-6">
-                                                            <label for="avail-duracion" style="font-weight: 600; font-size: 0.88rem;">Duración de la Sesión (minutos)</label>
+                                                            <label for="avail-duracion" style="font-weight: 600; font-size: 0.88rem;">Duración de la Sesión por Defecto (minutos)</label>
                                                             <input type="number" id="avail-duracion" value="60" min="15" max="180" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
                                                         </div>
                                                         <div class="form-group col-6">
-                                                            <label for="avail-receso" style="font-weight: 600; font-size: 0.88rem;">Receso entre Sesiones (minutos)</label>
+                                                            <label for="avail-receso" style="font-weight: 600; font-size: 0.88rem;">Receso entre Sesiones por Defecto (minutos)</label>
                                                             <input type="number" id="avail-receso" value="15" min="0" max="120" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
                                                         </div>
                                                     </div>
@@ -6010,6 +6015,38 @@
             </div>
             <div class="modal-footer" style="display: flex; justify-content: flex-end; padding: 1rem 1.5rem;">
                 <button class="btn btn-primary" onclick="closeModal('tool-summary-modal')">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE PARÁMETROS AVANZADOS POR MODALIDAD (DURACIÓN, RECESO, ANTICIPACIÓN) -->
+    <div id="modal-reglas-modalidades" class="modal hide">
+        <div class="modal-content modal-lg" style="max-width: 780px; width: 95%;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.25rem;">⏱️</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.15rem; color: white; font-weight: 800;">Parámetros Avanzados por Modalidad</h3>
+                        <p style="margin: 0; font-size: 0.8rem; opacity: 0.9; color: white;">Configura duración de consulta, receso y antelación según la modalidad.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-modal white-close" onclick="closeModal('modal-reglas-modalidades')" style="color: white; opacity: 0.85; font-size: 1.1rem;">✕</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem; background: #f8fafc; max-height: 70vh; overflow-y: auto;">
+                <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; color: #3730a3; display: flex; align-items: flex-start; gap: 0.6rem;">
+                    <i class="fas fa-info-circle" style="margin-top: 0.2rem; font-size: 1rem;"></i>
+                    <div>
+                        <strong>Herencia inteligente:</strong> Si dejas los campos vacíos o marcas <em>"Usar global"</em>, la modalidad tomará automáticamente la duración, receso y antelación configurados en las tarjetas globales por defecto.
+                    </div>
+                </div>
+
+                <div id="modal-reglas-modalidades-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Se genera dinámicamente según los perfiles de modalidad existentes -->
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; background: #ffffff; border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-reglas-modalidades')">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveModalityParamsModal()" style="font-weight: 700;">💾 Guardar Parámetros</button>
             </div>
         </div>
     </div>

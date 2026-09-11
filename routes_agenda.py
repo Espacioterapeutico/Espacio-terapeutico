@@ -242,6 +242,29 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
             if not is_match:
                 continue
 
+        # Parámetros específicos de la modalidad o herencia de valores globales
+        p_dur = perf.get('duracion')
+        p_rec = perf.get('receso')
+        p_ant = perf.get('antelacion')
+        
+        try:
+            perf_duracion = int(p_dur) if p_dur is not None and str(p_dur).strip() != '' else duracion
+        except:
+            perf_duracion = duracion
+            
+        try:
+            perf_receso = int(p_rec) if p_rec is not None and str(p_rec).strip() != '' else receso
+        except:
+            perf_receso = receso
+            
+        try:
+            perf_antelacion = int(p_ant) if p_ant is not None and str(p_ant).strip() != '' else antelacion
+        except:
+            perf_antelacion = antelacion
+
+        duration_td = timedelta(minutes=perf_duracion)
+        recess_td = timedelta(minutes=perf_receso)
+
         dias_list = perf.get('dias', [])
         for d in dias_list:
             d_num = int(d.get('dia', -1))
@@ -262,8 +285,6 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                                 end_time = end_time.replace(hour=end_time.hour + 12)
 
                         curr = start_time
-                        duration_td = timedelta(minutes=duracion)
-                        recess_td = timedelta(minutes=receso)
 
                         while curr + duration_td <= end_time:
                             h_str = curr.strftime("%H:%M")
@@ -275,7 +296,9 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                                     'hora_inicio': h_str,
                                     'hora_fin': (curr + duration_td).strftime("%H:%M"),
                                     'modalidad': mod_label,
-                                    'perfil': perf_nombre
+                                    'perfil': perf_nombre,
+                                    'antelacion': perf_antelacion,
+                                    'duracion': perf_duracion
                                 })
                             curr = curr + duration_td + recess_td
                     except Exception as _re:
@@ -322,7 +345,6 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                     busy_hours.add(s['hora_literal'])
 
     now_dt = datetime.now()
-    min_allowed_dt = now_dt + timedelta(hours=antelacion)
 
     valid_slots = []
     for slot in candidate_slots:
@@ -331,6 +353,8 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
             continue
             
         slot_dt = datetime.strptime(f"{target_date_str} {h_lit}", "%Y-%m-%d %H:%M")
+        slot_antelacion = slot.get('antelacion', antelacion)
+        min_allowed_dt = now_dt + timedelta(hours=slot_antelacion)
         if slot_dt < min_allowed_dt:
             continue
 
