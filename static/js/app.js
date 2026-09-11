@@ -7413,6 +7413,9 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
         e.stopPropagation();
         if (confirm(`¿Eliminar el perfil "${headerTitle.textContent}"?`)) {
             card.remove();
+            if (typeof updateCustomModalitiesSummary === 'function') {
+                updateCustomModalitiesSummary();
+            }
         }
     };
     delProfileBtn.onmouseover = () => { delProfileBtn.style.backgroundColor = 'rgba(239, 68, 68, 0.16)'; };
@@ -7504,6 +7507,9 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     nameInput.style.outline = 'none';
     nameInput.oninput = () => {
         headerTitle.textContent = nameInput.value.trim() || 'Horario';
+        if (typeof updateCustomModalitiesSummary === 'function') {
+            updateCustomModalitiesSummary();
+        }
     };
     
     colName.appendChild(labelName);
@@ -8030,6 +8036,10 @@ async function loadAdminAvailability() {
             renderProfileBlock(listContainer, perf, data.espacios_fisicos);
         });
         
+        if (typeof updateCustomModalitiesSummary === 'function') {
+            updateCustomModalitiesSummary();
+        }
+        
         if (esMiembroClinica && !tieneSubPersonal) {
             const lockMsg = document.createElement('div');
             lockMsg.style.textAlign = 'center';
@@ -8083,6 +8093,9 @@ async function loadAdminAvailability() {
                 };
                 renderProfileBlock(listContainer, newPerf, data.espacios_fisicos);
                 listContainer.appendChild(addProfileBtn);
+                if (typeof updateCustomModalitiesSummary === 'function') {
+                    updateCustomModalitiesSummary();
+                }
             };
             
             listContainer.appendChild(addProfileBtn);
@@ -8237,12 +8250,93 @@ function saveModalityParamsModal() {
     
     closeModal('modal-reglas-modalidades');
     
+    // Actualizar el resumen dinámico de la planilla principal
+    if (typeof updateCustomModalitiesSummary === 'function') {
+        updateCustomModalitiesSummary();
+    }
+
     // Guardar los cambios directamente en la base de datos
     if (typeof handleSaveAvailability === 'function') {
         handleSaveAvailability();
     }
 }
 window.saveModalityParamsModal = saveModalityParamsModal;
+
+function updateCustomModalitiesSummary() {
+    const summaryBox = document.getElementById('avail-custom-modalities-summary');
+    if (!summaryBox) return;
+
+    const cards = document.querySelectorAll('.avail-profile-card');
+    const gDur = document.getElementById('avail-duracion')?.value || 60;
+    const gRec = document.getElementById('avail-receso')?.value || 15;
+    const gAnt = document.getElementById('avail-antelacion')?.value || 24;
+
+    if (cards.length === 0) {
+        summaryBox.innerHTML = `
+            <div style="font-size: 0.84rem; color: #64748b; text-align: center; padding: 0.5rem 0;">
+                <span>No hay modalidades creadas todavía en la pestaña "Asignar Horarios".</span>
+            </div>
+        `;
+        return;
+    }
+
+    const items = [];
+    cards.forEach(card => {
+        const name = card.querySelector('.profile-name')?.value || card.querySelector('.profile-header-title')?.textContent || 'Modalidad';
+        const dVal = card.getAttribute('data-duracion');
+        const rVal = card.getAttribute('data-receso');
+        const aVal = card.getAttribute('data-antelacion');
+
+        const isCustom = (dVal !== null && dVal !== '') || (rVal !== null && rVal !== '') || (aVal !== null && aVal !== '');
+        const dur = (dVal !== null && dVal !== '') ? dVal : gDur;
+        const rec = (rVal !== null && rVal !== '') ? rVal : gRec;
+        const ant = (aVal !== null && aVal !== '') ? aVal : gAnt;
+
+        items.push({
+            name,
+            dur,
+            rec,
+            ant,
+            isCustom
+        });
+    });
+
+    const customCount = items.filter(i => i.isCustom).length;
+
+    let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="font-size: 0.86rem; font-weight: 700; color: #334155; display: inline-flex; align-items: center; gap: 0.45rem;">
+                🎯 Desglose de Modalidades en esta Planilla:
+                ${customCount > 0 ? `<span style="font-size: 0.72rem; font-weight: 800; background: rgba(152,75,128,0.12); color: var(--primary-color); padding: 2px 8px; border-radius: 12px;">${customCount} con tiempos propios</span>` : `<span style="font-size: 0.72rem; font-weight: 600; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px;">Todas usan valores globales</span>`}
+            </span>
+            <button type="button" class="btn text-xs" onclick="openModalityParamsModal()" style="color: var(--primary-color); font-weight: 700; background: transparent; border: none; cursor: pointer; text-decoration: underline; font-size: 0.8rem; padding: 0;">
+                ⚙️ Configurar en el modal
+            </button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.65rem;">
+    `;
+
+    items.forEach(item => {
+        const safeName = typeof escapeHtml === 'function' ? escapeHtml(item.name) : item.name;
+        html += `
+            <div style="background: #ffffff; border: 1.5px solid ${item.isCustom ? 'rgba(152,75,128,0.35)' : 'var(--border-color)'}; border-radius: 10px; padding: 0.75rem 0.9rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s;">
+                <div>
+                    <strong style="font-size: 0.92rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">🏷️ ${safeName}</strong>
+                    <span style="font-size: 0.81rem; color: ${item.isCustom ? 'var(--primary-color)' : '#64748b'}; font-weight: 600;">
+                        ⏱️ ${item.dur}m sesión · ☕ ${item.rec}m receso · ⏳ ${item.ant}h
+                    </span>
+                </div>
+                <span style="font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; background: ${item.isCustom ? 'rgba(152,75,128,0.12)' : '#f1f5f9'}; color: ${item.isCustom ? 'var(--primary-color)' : '#64748b'}; text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0; margin-left: 0.5rem;">
+                    ${item.isCustom ? 'Propio' : 'Global'}
+                </span>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+    summaryBox.innerHTML = html;
+}
+window.updateCustomModalitiesSummary = updateCustomModalitiesSummary;
 
 async function handleSaveAvailability(e) {
     if (e && e.preventDefault) e.preventDefault();
