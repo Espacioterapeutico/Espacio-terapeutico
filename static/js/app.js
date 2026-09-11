@@ -2320,6 +2320,29 @@ function changeBookingMonth(offset) {
     renderBookingCalendar();
 }
 
+function updatePatientBookingModalityDescription() {
+    const select = document.getElementById('pat-req-modalidad');
+    const descBox = document.getElementById('pat-modalidad-desc-box');
+    const descText = document.getElementById('pat-modalidad-desc-text');
+    if (!select) return;
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.dataset.desc && selectedOption.dataset.desc.trim()) {
+        if (descBox) descBox.classList.remove('hide');
+        if (descText) descText.textContent = selectedOption.dataset.desc.trim();
+    } else {
+        if (descBox) descBox.classList.add('hide');
+    }
+}
+window.updatePatientBookingModalityDescription = updatePatientBookingModalityDescription;
+
+function onPatientBookingModalityChange() {
+    updatePatientBookingModalityDescription();
+    if (typeof renderBookingCalendar === 'function') {
+        renderBookingCalendar();
+    }
+}
+window.onPatientBookingModalityChange = onPatientBookingModalityChange;
+
 async function renderBookingCalendar() {
     const headerTitle = document.getElementById('pat-cal-month-year');
     if (!headerTitle) return;
@@ -2522,13 +2545,23 @@ async function fetchAvailableHours(dateStr) {
                     
                     // Actualizar dinámicamente las opciones de modalidad permitidas para esta hora
                     const modSelect = document.getElementById('pat-req-modalidad');
+                    const prevVal = modSelect.value;
                     modSelect.innerHTML = '';
                     slot.modalidades.forEach(m => {
                         const opt = document.createElement('option');
                         opt.value = m;
                         opt.textContent = m;
+                        if (window.cachedPatientModalidadesMap && window.cachedPatientModalidadesMap[m]) {
+                            opt.dataset.desc = window.cachedPatientModalidadesMap[m].descripcion || '';
+                        }
                         modSelect.appendChild(opt);
                     });
+                    if (prevVal && slot.modalidades.includes(prevVal)) {
+                        modSelect.value = prevVal;
+                    }
+                    if (typeof updatePatientBookingModalityDescription === 'function') {
+                        updatePatientBookingModalityDescription();
+                    }
                 };
                 
                 hoursGrid.appendChild(btn);
@@ -2950,21 +2983,39 @@ async function loadPatientPortalData(patientId) {
             }
         }
         
-        if (data.modalidades && data.modalidades.length > 0) {
+        if ((data.modalidades_detalladas && data.modalidades_detalladas.length > 0) || (data.modalidades && data.modalidades.length > 0)) {
+            window.cachedPatientModalidadesMap = {};
+            const items = (data.modalidades_detalladas && data.modalidades_detalladas.length > 0) 
+                ? data.modalidades_detalladas 
+                : data.modalidades;
+            
+            items.forEach(m => {
+                const name = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
+                const desc = typeof m === 'object' ? (m.descripcion || '') : '';
+                window.cachedPatientModalidadesMap[name] = { descripcion: desc };
+            });
+
             const selectElement = document.getElementById('pat-req-modalidad');
             if (selectElement) {
                 const currentVal = selectElement.value;
                 selectElement.innerHTML = '';
-                data.modalidades.forEach(m => {
+                items.forEach(m => {
                     const opt = document.createElement('option');
-                    opt.value = m;
-                    opt.textContent = m;
+                    const val = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
+                    const text = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
+                    const desc = typeof m === 'object' ? (m.descripcion || '') : '';
+                    opt.value = val;
+                    opt.textContent = text;
+                    opt.dataset.desc = desc;
                     selectElement.appendChild(opt);
                 });
-                if (currentVal && data.modalidades.includes(currentVal)) {
+                if (currentVal && Array.from(selectElement.options).some(o => o.value === currentVal)) {
                     selectElement.value = currentVal;
-                } else {
-                    selectElement.value = data.modalidades[0];
+                } else if (selectElement.options.length > 0) {
+                    selectElement.selectedIndex = 0;
+                }
+                if (typeof updatePatientBookingModalityDescription === 'function') {
+                    updatePatientBookingModalityDescription();
                 }
                 if (typeof renderBookingCalendar === 'function') {
                     renderBookingCalendar();
@@ -7065,49 +7116,79 @@ async function cancelEvent(eventId) {
 // CONFIGURACIÓN DE DISPONIBILIDAD DEL PSICÓLOGO
 // ==========================================
 // Helper para crear fila de rango de horas
+// Helper para crear fila de rango de horas moderna
 function createRangeRow(parentContainer, inicioVal = "", finVal = "") {
     const row = document.createElement('div');
     row.className = 'avail-range-row';
-    row.style.display = 'flex';
+    row.style.display = 'inline-flex';
     row.style.alignItems = 'center';
-    row.style.gap = '0.5rem';
-    row.style.marginTop = '0.25rem';
+    row.style.gap = '0.35rem';
+    row.style.margin = '0.2rem 0.35rem 0.2rem 0';
     
     const startInput = document.createElement('input');
     startInput.type = 'time';
     startInput.className = 'range-start';
-    startInput.value = inicioVal || '08:00';
+    startInput.value = inicioVal || '09:00';
     startInput.required = true;
-    startInput.style.padding = '0.25rem';
-    startInput.style.borderRadius = 'var(--radius-sm)';
-    startInput.style.border = '1px solid var(--border-color)';
+    startInput.style.padding = '0.35rem 0.55rem';
+    startInput.style.borderRadius = '8px';
+    startInput.style.border = '1.5px solid #e2e8f0';
+    startInput.style.fontSize = '0.88rem';
+    startInput.style.fontWeight = '600';
+    startInput.style.color = '#1e293b';
+    startInput.style.backgroundColor = '#ffffff';
+    startInput.style.outline = 'none';
     
     const labelTo = document.createElement('span');
-    labelTo.textContent = 'a';
-    labelTo.style.fontSize = '0.85rem';
-    labelTo.style.color = 'var(--text-muted)';
+    labelTo.textContent = '-';
+    labelTo.style.fontSize = '0.95rem';
+    labelTo.style.fontWeight = '600';
+    labelTo.style.color = '#94a3b8';
+    labelTo.style.padding = '0 0.15rem';
     
     const endInput = document.createElement('input');
     endInput.type = 'time';
     endInput.className = 'range-end';
-    endInput.value = finVal || '12:00';
+    endInput.value = finVal || '17:00';
     endInput.required = true;
-    endInput.style.padding = '0.25rem';
-    endInput.style.borderRadius = 'var(--radius-sm)';
-    endInput.style.border = '1px solid var(--border-color)';
+    endInput.style.padding = '0.35rem 0.55rem';
+    endInput.style.borderRadius = '8px';
+    endInput.style.border = '1.5px solid #e2e8f0';
+    endInput.style.fontSize = '0.88rem';
+    endInput.style.fontWeight = '600';
+    endInput.style.color = '#1e293b';
+    endInput.style.backgroundColor = '#ffffff';
+    endInput.style.outline = 'none';
     
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.textContent = '✕';
+    delBtn.title = 'Eliminar este bloque';
     delBtn.style.background = 'none';
     delBtn.style.border = 'none';
-    delBtn.style.color = '#ef4444';
-    delBtn.style.fontSize = '1rem';
+    delBtn.style.color = '#94a3b8';
+    delBtn.style.fontSize = '0.85rem';
     delBtn.style.cursor = 'pointer';
-    delBtn.style.padding = '0.25rem';
+    delBtn.style.padding = '0.2rem 0.35rem';
+    delBtn.style.borderRadius = '6px';
+    delBtn.style.transition = 'color 0.2s, background-color 0.2s';
+    
+    delBtn.onmouseover = () => { delBtn.style.color = '#ef4444'; delBtn.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'; };
+    delBtn.onmouseout = () => { delBtn.style.color = '#94a3b8'; delBtn.style.backgroundColor = 'transparent'; };
     
     delBtn.onclick = () => {
-        row.remove();
+        if (parentContainer.children.length > 1) {
+            row.remove();
+        } else {
+            const dayRow = parentContainer.closest('.profile-day-row');
+            if (dayRow) {
+                const check = dayRow.querySelector('.day-check');
+                if (check && check.checked) {
+                    check.checked = false;
+                    check.dispatchEvent(new Event('change'));
+                }
+            }
+        }
     };
     
     row.appendChild(startInput);
@@ -7117,140 +7198,296 @@ function createRangeRow(parentContainer, inicioVal = "", finVal = "") {
     parentContainer.appendChild(row);
 }
 
-// Renderizar un perfil de horario en forma de tarjeta
+let currentHorariosPersonalMode = 'dias';
+
+function switchHorariosMode(mode) {
+    currentHorariosPersonalMode = mode || 'dias';
+    const btnDias = document.getElementById('btn-mode-horarios-dias');
+    const btnConfig = document.getElementById('btn-mode-horarios-config');
+    const panelDias = document.getElementById('horarios-panel-dias');
+    const panelConfig = document.getElementById('horarios-panel-config');
+
+    if (!panelDias || !panelConfig) return;
+
+    if (currentHorariosPersonalMode === 'dias') {
+        panelDias.classList.remove('hide');
+        panelConfig.classList.add('hide');
+        if (btnDias) {
+            btnDias.style.background = 'var(--primary-color)';
+            btnDias.style.color = '#ffffff';
+            btnDias.style.boxShadow = '0 2px 8px rgba(152,75,128,0.25)';
+        }
+        if (btnConfig) {
+            btnConfig.style.background = 'transparent';
+            btnConfig.style.color = 'var(--text-secondary, #64748b)';
+            btnConfig.style.boxShadow = 'none';
+        }
+    } else {
+        panelDias.classList.add('hide');
+        panelConfig.classList.remove('hide');
+        if (btnDias) {
+            btnDias.style.background = 'transparent';
+            btnDias.style.color = 'var(--text-secondary, #64748b)';
+            btnDias.style.boxShadow = 'none';
+        }
+        if (btnConfig) {
+            btnConfig.style.background = 'var(--primary-color)';
+            btnConfig.style.color = '#ffffff';
+            btnConfig.style.boxShadow = '0 2px 8px rgba(152,75,128,0.25)';
+        }
+    }
+}
+
+// Renderizar un perfil de horario en forma de acordeón exclusivo y vista limpia estilo Calendly
 function renderProfileBlock(container, profileData, availableConsultorios = null) {
     const card = document.createElement('div');
     card.className = 'avail-profile-card';
     card.setAttribute('data-id', profileData.id);
     card.style.border = '1.5px solid var(--border-color)';
-    card.style.borderRadius = 'var(--radius-md)';
-    card.style.padding = '1.25rem';
-    card.style.marginBottom = '1.5rem';
-    card.style.backgroundColor = 'var(--card-bg)';
-    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.02)';
+    card.style.borderRadius = '14px';
+    card.style.marginBottom = '1.25rem';
+    card.style.backgroundColor = 'var(--card-bg, #ffffff)';
+    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)';
+    card.style.transition = 'all 0.25s ease';
+    card.style.overflow = 'hidden';
     
-    // Grid de días de la semana
-    const daysList = document.createElement('div');
-    daysList.className = 'profile-days-list';
-    daysList.style.display = 'none'; // Recogido por defecto
-    daysList.style.flexDirection = 'column';
-    daysList.style.gap = '0.75rem';
-    daysList.style.marginTop = '0.75rem';
+    // Contenedor expandible del perfil (Acordeón)
+    const bodyContainer = document.createElement('div');
+    bodyContainer.className = 'profile-days-list';
+    bodyContainer.style.display = 'none'; // Colapsado por defecto
+    bodyContainer.style.padding = '1.35rem';
+    bodyContainer.style.borderTop = '1.5px solid var(--border-color)';
+    bodyContainer.style.backgroundColor = 'var(--bg-body, #f8fafc)';
     
-    // Cabecera del perfil
+    // Cabecera interactiva del perfil
     const header = document.createElement('div');
+    header.className = 'profile-card-header';
     header.style.display = 'flex';
     header.style.justifyContent = 'space-between';
     header.style.alignItems = 'center';
-    header.style.gap = '1rem';
-    header.style.borderBottom = '1.5px solid var(--border-color)';
-    header.style.paddingBottom = '0.75rem';
+    header.style.padding = '1.1rem 1.35rem';
+    header.style.cursor = 'pointer';
+    header.style.userSelect = 'none';
+    header.style.gap = '0.75rem';
+    header.style.backgroundColor = '#ffffff';
+    header.style.transition = 'background-color 0.2s';
+    
+    header.onmouseover = () => {
+        if (bodyContainer.style.display === 'none') header.style.backgroundColor = '#fafafa';
+    };
+    header.onmouseout = () => {
+        if (bodyContainer.style.display === 'none') header.style.backgroundColor = '#ffffff';
+    };
     
     const leftPart = document.createElement('div');
     leftPart.style.display = 'flex';
-    leftPart.style.gap = '0.5rem';
+    leftPart.style.gap = '0.75rem';
     leftPart.style.alignItems = 'center';
     leftPart.style.flex = '1';
     leftPart.style.flexWrap = 'wrap';
     
-    // Botón de flecha desplegable
-    const toggleBtn = document.createElement('button');
-    toggleBtn.type = 'button';
-    toggleBtn.innerHTML = '▼';
-    toggleBtn.style.background = 'none';
-    toggleBtn.style.border = 'none';
-    toggleBtn.style.cursor = 'pointer';
-    toggleBtn.style.padding = '0.25rem 0.5rem';
-    toggleBtn.style.fontSize = '0.8rem';
-    toggleBtn.style.color = 'var(--text-muted)';
-    toggleBtn.style.transform = 'rotate(-90deg)'; // Recogido por defecto
-    toggleBtn.style.transition = 'transform 0.2s';
+    // Indicador de flecha desplegable
+    const toggleArrow = document.createElement('span');
+    toggleArrow.className = 'profile-toggle-arrow';
+    toggleArrow.innerHTML = '❯';
+    toggleArrow.style.display = 'inline-flex';
+    toggleArrow.style.alignItems = 'center';
+    toggleArrow.style.justifyContent = 'center';
+    toggleArrow.style.width = '28px';
+    toggleArrow.style.height = '28px';
+    toggleArrow.style.borderRadius = '50%';
+    toggleArrow.style.backgroundColor = '#f1f5f9';
+    toggleArrow.style.fontSize = '0.75rem';
+    toggleArrow.style.fontWeight = '800';
+    toggleArrow.style.color = '#64748b';
+    toggleArrow.style.transition = 'all 0.25s ease';
+    toggleArrow.style.flexShrink = '0';
     
-    toggleBtn.onclick = () => {
-        if (daysList.style.display === 'none') {
-            daysList.style.display = 'flex';
-            toggleBtn.style.transform = 'rotate(0deg)';
-        } else {
-            daysList.style.display = 'none';
-            toggleBtn.style.transform = 'rotate(-90deg)';
+    // Título visible en el encabezado
+    const headerTitle = document.createElement('span');
+    headerTitle.className = 'profile-header-title';
+    headerTitle.textContent = profileData.nombre || 'Horario';
+    headerTitle.style.fontWeight = '800';
+    headerTitle.style.fontSize = '1.08rem';
+    headerTitle.style.color = '#1e293b';
+    
+    // Badge de Resumen Dinámico de Días Activos
+    const summaryBadge = document.createElement('span');
+    summaryBadge.className = 'profile-days-summary';
+    summaryBadge.style.fontSize = '0.78rem';
+    summaryBadge.style.fontWeight = '600';
+    summaryBadge.style.padding = '0.25rem 0.65rem';
+    summaryBadge.style.borderRadius = '20px';
+    summaryBadge.style.display = 'inline-flex';
+    summaryBadge.style.alignItems = 'center';
+    summaryBadge.style.gap = '0.35rem';
+    summaryBadge.style.transition = 'all 0.2s';
+    
+    // Badge opcional si tiene consultorio asignado
+    const consultorioBadge = document.createElement('span');
+    consultorioBadge.className = 'profile-header-consultorio';
+    consultorioBadge.style.fontSize = '0.78rem';
+    consultorioBadge.style.fontWeight = '600';
+    consultorioBadge.style.padding = '0.25rem 0.6rem';
+    consultorioBadge.style.borderRadius = '8px';
+    consultorioBadge.style.backgroundColor = '#f1f5f9';
+    consultorioBadge.style.color = '#475569';
+    consultorioBadge.style.display = profileData.consultorio ? 'inline-flex' : 'none';
+    consultorioBadge.textContent = profileData.consultorio ? `🏛️ ${profileData.consultorio}` : '';
+    
+    leftPart.appendChild(toggleArrow);
+    leftPart.appendChild(headerTitle);
+    leftPart.appendChild(summaryBadge);
+    leftPart.appendChild(consultorioBadge);
+    
+    // Botón de eliminar perfil
+    const delProfileBtn = document.createElement('button');
+    delProfileBtn.type = 'button';
+    delProfileBtn.className = 'btn text-xs';
+    delProfileBtn.textContent = '✕ Eliminar Perfil';
+    delProfileBtn.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+    delProfileBtn.style.color = '#ef4444';
+    delProfileBtn.style.border = 'none';
+    delProfileBtn.style.padding = '0.4rem 0.75rem';
+    delProfileBtn.style.borderRadius = '8px';
+    delProfileBtn.style.fontWeight = '700';
+    delProfileBtn.style.cursor = 'pointer';
+    delProfileBtn.style.transition = 'all 0.2s';
+    delProfileBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm(`¿Eliminar el perfil "${headerTitle.textContent}"?`)) {
+            card.remove();
         }
     };
+    delProfileBtn.onmouseover = () => { delProfileBtn.style.backgroundColor = 'rgba(239, 68, 68, 0.16)'; };
+    delProfileBtn.onmouseout = () => { delProfileBtn.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'; };
     
-    // Input de Nombre
+    header.appendChild(leftPart);
+    header.appendChild(delProfileBtn);
+    card.appendChild(header);
+    
+    // Lógica del acordeón exclusivo (cierra las demás tarjetas para no saturar)
+    function toggleAccordion() {
+        const isCollapsed = bodyContainer.style.display === 'none';
+        if (isCollapsed) {
+            // Cerrar todas las demás tarjetas abiertas en el mismo contenedor
+            const allCards = container.querySelectorAll('.avail-profile-card');
+            allCards.forEach(c => {
+                if (c !== card) {
+                    const cBody = c.querySelector('.profile-days-list');
+                    const cArrow = c.querySelector('.profile-toggle-arrow');
+                    if (cBody) cBody.style.display = 'none';
+                    if (cArrow) {
+                        cArrow.style.transform = 'rotate(0deg)';
+                        cArrow.style.backgroundColor = '#f1f5f9';
+                        cArrow.style.color = '#64748b';
+                    }
+                    c.style.borderColor = 'var(--border-color)';
+                    c.style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)';
+                }
+            });
+            
+            bodyContainer.style.display = 'block';
+            toggleArrow.style.transform = 'rotate(90deg)';
+            toggleArrow.style.backgroundColor = 'rgba(152,75,128,0.15)';
+            toggleArrow.style.color = 'var(--primary-color, #984b80)';
+            card.style.borderColor = 'rgba(152,75,128,0.4)';
+            card.style.boxShadow = '0 6px 20px rgba(152,75,128,0.08)';
+        } else {
+            bodyContainer.style.display = 'none';
+            toggleArrow.style.transform = 'rotate(0deg)';
+            toggleArrow.style.backgroundColor = '#f1f5f9';
+            toggleArrow.style.color = '#64748b';
+            card.style.borderColor = 'var(--border-color)';
+            card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)';
+        }
+    }
+    
+    header.onclick = (e) => {
+        if (e.target.closest('button')) return;
+        toggleAccordion();
+    };
+    
+    // -------------------------------------------------------------
+    // CONTENIDO EXPANDIBLE DEL ACORDEÓN (CONFIGURACIÓN EDITABLE)
+    // -------------------------------------------------------------
+    
+    // Fila 1: Título editable y Consultorio
+    const rowInfo = document.createElement('div');
+    rowInfo.style.display = 'flex';
+    rowInfo.style.gap = '1rem';
+    rowInfo.style.marginBottom = '1rem';
+    rowInfo.style.flexWrap = 'wrap';
+    
+    const colName = document.createElement('div');
+    colName.style.flex = '2';
+    colName.style.minWidth = '220px';
+    
+    const labelName = document.createElement('label');
+    labelName.textContent = '🏷️ Nombre de la Modalidad / Horario *';
+    labelName.style.fontSize = '0.82rem';
+    labelName.style.fontWeight = '700';
+    labelName.style.color = '#475569';
+    labelName.style.marginBottom = '0.35rem';
+    labelName.style.display = 'block';
+    
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.className = 'profile-name';
-    nameInput.value = profileData.nombre;
-    nameInput.placeholder = 'Nombre del Horario';
+    nameInput.value = profileData.nombre || 'Online';
+    nameInput.placeholder = 'Ej. Online, Presencial, UPTAEB...';
     nameInput.required = true;
+    nameInput.style.width = '100%';
+    nameInput.style.border = '1.5px solid var(--border-color)';
+    nameInput.style.borderRadius = '8px';
+    nameInput.style.padding = '0.6rem 0.85rem';
+    nameInput.style.fontSize = '0.95rem';
     nameInput.style.fontWeight = '700';
-    nameInput.style.fontSize = '1.1rem';
-    nameInput.style.padding = '0.2rem 0.4rem';
-    nameInput.style.border = 'none';
-    nameInput.style.borderBottom = '1.5px dashed transparent';
-    nameInput.style.backgroundColor = 'transparent';
-    nameInput.style.outline = 'none';
-    nameInput.style.width = '160px';
+    nameInput.style.backgroundColor = '#ffffff';
     nameInput.style.color = 'var(--text-color)';
-    nameInput.style.transition = 'border-color 0.2s';
+    nameInput.style.outline = 'none';
+    nameInput.oninput = () => {
+        headerTitle.textContent = nameInput.value.trim() || 'Horario';
+    };
     
-    nameInput.onmouseover = () => { nameInput.style.borderBottomColor = 'var(--border-color)'; };
-    nameInput.onmouseout = () => { if (document.activeElement !== nameInput) nameInput.style.borderBottomColor = 'transparent'; };
-    nameInput.onfocus = () => { nameInput.style.borderBottomColor = 'var(--primary-color)'; };
-    nameInput.onblur = () => { nameInput.style.borderBottomColor = 'transparent'; };
+    colName.appendChild(labelName);
+    colName.appendChild(nameInput);
+    rowInfo.appendChild(colName);
     
-    // Icono de editar
-    const editIcon = document.createElement('span');
-    editIcon.innerHTML = '✏️';
-    editIcon.style.cursor = 'pointer';
-    editIcon.style.fontSize = '0.85rem';
-    editIcon.style.opacity = '0.5';
-    editIcon.style.marginRight = '0.5rem';
-    editIcon.style.transition = 'opacity 0.2s';
-    editIcon.onmouseover = () => { editIcon.style.opacity = '1'; };
-    editIcon.onmouseout = () => { editIcon.style.opacity = '0.5'; };
-    editIcon.onclick = () => { nameInput.focus(); };
-    
-    // Selector de Modalidad
+    // Selector de Modalidad oculto (mantiene compatibilidad con endpoints)
     const modSelect = document.createElement('select');
     modSelect.className = 'profile-modalidad';
     modSelect.style.display = 'none';
-    modSelect.style.padding = '0.35rem 0.5rem';
-    modSelect.style.border = '1.5px solid var(--border-color)';
-    modSelect.style.borderRadius = 'var(--radius-sm)';
-    modSelect.style.fontWeight = '600';
-    modSelect.style.fontSize = '0.9rem';
-    
     const optOnline = document.createElement('option');
     optOnline.value = 'Online';
     optOnline.textContent = 'Online';
     if (profileData.modalidad === 'Online') optOnline.selected = true;
-    
     const optPresencial = document.createElement('option');
     optPresencial.value = 'Presencial';
     optPresencial.textContent = 'Presencial';
     if (profileData.modalidad === 'Presencial') optPresencial.selected = true;
-    
     modSelect.appendChild(optOnline);
     modSelect.appendChild(optPresencial);
-
-    // Selector de Consultorio Físico Asignado (Opcional)
+    rowInfo.appendChild(modSelect);
+    
+    // Consultorio Físico Asignado (si existen consultorios disponibles)
+    const cList = Array.isArray(availableConsultorios) ? availableConsultorios : (window.globalConsultoriosList || []);
     const consSelect = document.createElement('select');
     consSelect.className = 'profile-consultorio';
-    consSelect.style.padding = '0.35rem 0.5rem';
+    consSelect.style.width = '100%';
+    consSelect.style.padding = '0.6rem 0.85rem';
     consSelect.style.border = '1.5px solid var(--border-color)';
-    consSelect.style.borderRadius = 'var(--radius-sm)';
+    consSelect.style.borderRadius = '8px';
     consSelect.style.fontWeight = '600';
-    consSelect.style.fontSize = '0.85rem';
-    consSelect.style.backgroundColor = 'var(--card-bg)';
-    consSelect.title = 'Consultorio físico asignado (Opcional)';
-
+    consSelect.style.fontSize = '0.9rem';
+    consSelect.style.backgroundColor = '#ffffff';
+    consSelect.style.outline = 'none';
+    
     const optNone = document.createElement('option');
     optNone.value = '';
-    optNone.textContent = '🏥 Sin consultorio (Libre)';
+    optNone.textContent = '🏥 Sin consultorio específico';
     consSelect.appendChild(optNone);
-
-    const cList = Array.isArray(availableConsultorios) ? availableConsultorios : (window.globalConsultoriosList || []);
+    
     cList.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c;
@@ -7259,32 +7496,120 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
         consSelect.appendChild(opt);
     });
     
-    leftPart.appendChild(toggleBtn);
-    leftPart.appendChild(nameInput);
-    leftPart.appendChild(editIcon);
-    leftPart.appendChild(modSelect);
-    if (cList && cList.length > 0) {
-        leftPart.appendChild(consSelect);
-    }
-    
-    const delProfileBtn = document.createElement('button');
-    delProfileBtn.type = 'button';
-    delProfileBtn.className = 'btn text-xs';
-    delProfileBtn.textContent = '✕ Eliminar Perfil';
-    delProfileBtn.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-    delProfileBtn.style.color = '#ef4444';
-    delProfileBtn.style.border = 'none';
-    delProfileBtn.style.padding = '0.4rem 0.6rem';
-    delProfileBtn.style.borderRadius = 'var(--radius-sm)';
-    delProfileBtn.style.fontWeight = '700';
-    delProfileBtn.style.cursor = 'pointer';
-    delProfileBtn.onclick = () => {
-        card.remove();
+    consSelect.onchange = () => {
+        if (consSelect.value) {
+            consultorioBadge.textContent = `🏛️ ${consSelect.value}`;
+            consultorioBadge.style.display = 'inline-flex';
+        } else {
+            consultorioBadge.style.display = 'none';
+        }
     };
     
-    header.appendChild(leftPart);
-    header.appendChild(delProfileBtn);
-    card.appendChild(header);
+    if (cList && cList.length > 0) {
+        const colCons = document.createElement('div');
+        colCons.style.flex = '1';
+        colCons.style.minWidth = '200px';
+        const labelCons = document.createElement('label');
+        labelCons.textContent = '🏛️ Consultorio Físico Asignado';
+        labelCons.style.fontSize = '0.82rem';
+        labelCons.style.fontWeight = '700';
+        labelCons.style.color = '#475569';
+        labelCons.style.marginBottom = '0.35rem';
+        labelCons.style.display = 'block';
+        colCons.appendChild(labelCons);
+        colCons.appendChild(consSelect);
+        rowInfo.appendChild(colCons);
+    }
+    
+    bodyContainer.appendChild(rowInfo);
+    
+    // Fila 2: Descripción editable de la Modalidad
+    const descGroup = document.createElement('div');
+    descGroup.style.marginBottom = '1.35rem';
+    
+    const labelDesc = document.createElement('label');
+    labelDesc.textContent = '📝 Descripción o Instrucciones para el Consultante (Editable)';
+    labelDesc.style.fontSize = '0.82rem';
+    labelDesc.style.fontWeight = '700';
+    labelDesc.style.color = '#475569';
+    labelDesc.style.marginBottom = '0.35rem';
+    labelDesc.style.display = 'block';
+    
+    const descInput = document.createElement('input');
+    descInput.type = 'text';
+    descInput.className = 'profile-descripcion';
+    descInput.value = profileData.descripcion || '';
+    descInput.placeholder = 'Ej. Consultas a través de WhatsApp y Google Meet videollamadas';
+    descInput.style.width = '100%';
+    descInput.style.border = '1.5px solid var(--border-color)';
+    descInput.style.borderRadius = '8px';
+    descInput.style.padding = '0.6rem 0.85rem';
+    descInput.style.fontSize = '0.9rem';
+    descInput.style.backgroundColor = '#ffffff';
+    descInput.style.color = 'var(--text-color)';
+    descInput.style.outline = 'none';
+    
+    const descHelp = document.createElement('small');
+    descHelp.textContent = 'Esta descripción informativa detalla cómo se realizarán las consultas de esta modalidad.';
+    descHelp.style.color = '#94a3b8';
+    descHelp.style.fontSize = '0.78rem';
+    descHelp.style.marginTop = '0.25rem';
+    descHelp.style.display = 'block';
+    
+    descGroup.appendChild(labelDesc);
+    descGroup.appendChild(descInput);
+    descGroup.appendChild(descHelp);
+    bodyContainer.appendChild(descGroup);
+    
+    // Fila 3: Encabezado de Horario Regular
+    const scheduleHeader = document.createElement('div');
+    scheduleHeader.style.marginBottom = '0.75rem';
+    scheduleHeader.innerHTML = `
+        <h5 style="margin: 0 0 0.2rem 0; font-size: 1rem; font-weight: 800; color: #1e293b;">Horario regular</h5>
+        <p class="text-secondary" style="font-size: 0.85rem; margin: 0;">Define las horas en las que estás disponible cada día.</p>
+    `;
+    bodyContainer.appendChild(scheduleHeader);
+    
+    // Caja contenedor con bordes redondeados para los días de la semana
+    const daysBox = document.createElement('div');
+    daysBox.className = 'calendar-days-box';
+    daysBox.style.backgroundColor = '#ffffff';
+    daysBox.style.border = '1.5px solid #e2e8f0';
+    daysBox.style.borderRadius = '12px';
+    daysBox.style.overflow = 'hidden';
+    daysBox.style.boxShadow = '0 1px 4px rgba(0,0,0,0.02)';
+    
+    // Función para recalcular el badge de días en la cabecera
+    function updateDaysSummary() {
+        const dayRows = daysBox.querySelectorAll('.profile-day-row');
+        const activeNames = [];
+        dayRows.forEach(row => {
+            const check = row.querySelector('.day-check');
+            if (check && check.checked) {
+                const label = row.querySelector('.day-name-text');
+                if (label) {
+                    activeNames.push(label.textContent.trim().substring(0, 3));
+                }
+            }
+        });
+        
+        if (activeNames.length === 0) {
+            summaryBadge.innerHTML = '⚪ Inactivo';
+            summaryBadge.style.backgroundColor = '#f1f5f9';
+            summaryBadge.style.color = '#64748b';
+            summaryBadge.title = 'No hay días activos en este horario';
+        } else if (activeNames.length === 7) {
+            summaryBadge.innerHTML = '🟢 Todos los días';
+            summaryBadge.style.backgroundColor = 'rgba(16, 185, 129, 0.12)';
+            summaryBadge.style.color = '#059669';
+            summaryBadge.title = 'Activo de Lunes a Domingo';
+        } else {
+            summaryBadge.innerHTML = `🟢 ${activeNames.join(', ')}`;
+            summaryBadge.style.backgroundColor = 'rgba(152, 75, 128, 0.1)';
+            summaryBadge.style.color = 'var(--primary-color, #984b80)';
+            summaryBadge.title = `Días activos: ${activeNames.join(', ')}`;
+        }
+    }
     
     const diasList = (profileData && Array.isArray(profileData.dias)) ? profileData.dias : [
         {"dia": 1, "nombre": "Lunes", "activo": false, "rangos": []},
@@ -7295,93 +7620,202 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
         {"dia": 6, "nombre": "Sábado", "activo": false, "rangos": []},
         {"dia": 0, "nombre": "Domingo", "activo": false, "rangos": []}
     ];
-    diasList.forEach(day => {
+    
+    diasList.forEach((day, index) => {
         const dayRow = document.createElement('div');
         dayRow.className = 'profile-day-row';
         dayRow.setAttribute('data-dia', day.dia);
         dayRow.style.display = 'flex';
-        dayRow.style.flexDirection = 'column';
-        dayRow.style.gap = '0.4rem';
-        dayRow.style.padding = '0.75rem';
-        dayRow.style.borderRadius = 'var(--radius-sm)';
-        dayRow.style.border = '1px solid var(--border-color)';
-        dayRow.style.backgroundColor = day.activo ? 'rgba(16, 185, 129, 0.02)' : 'var(--bg-light)';
+        dayRow.style.alignItems = 'center';
+        dayRow.style.justifyContent = 'space-between';
+        dayRow.style.padding = '0.9rem 1.25rem';
+        dayRow.style.borderBottom = (index === diasList.length - 1) ? 'none' : '1px solid #f1f5f9';
+        dayRow.style.gap = '1rem';
+        dayRow.style.flexWrap = 'wrap';
+        dayRow.style.backgroundColor = day.activo ? '#ffffff' : '#fafafa';
+        dayRow.style.transition = 'background-color 0.2s ease';
         
-        const dayHeader = document.createElement('div');
-        dayHeader.style.display = 'flex';
-        dayHeader.style.justifyContent = 'space-between';
-        dayHeader.style.alignItems = 'center';
+        // 1. Columna Izquierda: Switch + Nombre del Día
+        const colLeft = document.createElement('div');
+        colLeft.style.display = 'flex';
+        colLeft.style.alignItems = 'center';
+        colLeft.style.gap = '0.85rem';
+        colLeft.style.minWidth = '160px';
         
-        const dayLeft = document.createElement('div');
-        dayLeft.style.display = 'flex';
-        dayLeft.style.alignItems = 'center';
-        dayLeft.style.gap = '0.5rem';
+        const switchBox = document.createElement('div');
+        switchBox.style.position = 'relative';
+        switchBox.style.width = '42px';
+        switchBox.style.height = '24px';
+        switchBox.style.cursor = 'pointer';
+        switchBox.style.flexShrink = '0';
         
         const check = document.createElement('input');
         check.type = 'checkbox';
         check.className = 'day-check';
         check.checked = day.activo;
         check.id = `check-${profileData.id}-${day.dia}`;
+        check.style.position = 'absolute';
+        check.style.opacity = '0';
+        check.style.width = '0';
+        check.style.height = '0';
         
-        const label = document.createElement('label');
-        label.htmlFor = `check-${profileData.id}-${day.dia}`;
-        label.textContent = day.nombre;
-        label.style.fontWeight = '700';
-        label.style.fontSize = '0.9rem';
-        label.style.cursor = 'pointer';
-        label.style.margin = '0';
+        const slider = document.createElement('span');
+        slider.style.position = 'absolute';
+        slider.style.inset = '0';
+        slider.style.borderRadius = '24px';
+        slider.style.backgroundColor = day.activo ? 'var(--primary-color, #984b80)' : '#cbd5e1';
+        slider.style.transition = 'background-color 0.25s ease';
         
-        dayLeft.appendChild(check);
-        dayLeft.appendChild(label);
-        dayHeader.appendChild(dayLeft);
+        const dot = document.createElement('span');
+        dot.style.position = 'absolute';
+        dot.style.height = '18px';
+        dot.style.width = '18px';
+        dot.style.left = '3px';
+        dot.style.bottom = '3px';
+        dot.style.borderRadius = '50%';
+        dot.style.backgroundColor = '#ffffff';
+        dot.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        dot.style.transition = 'transform 0.25s ease';
+        dot.style.transform = day.activo ? 'translateX(18px)' : 'translateX(0)';
+        
+        slider.appendChild(dot);
+        switchBox.appendChild(check);
+        switchBox.appendChild(slider);
+        
+        const dayLabel = document.createElement('label');
+        dayLabel.className = 'day-name-text';
+        dayLabel.htmlFor = `check-${profileData.id}-${day.dia}`;
+        dayLabel.textContent = day.nombre;
+        dayLabel.style.fontWeight = '700';
+        dayLabel.style.fontSize = '0.95rem';
+        dayLabel.style.color = '#1e293b';
+        dayLabel.style.margin = '0';
+        dayLabel.style.cursor = 'pointer';
+        
+        colLeft.appendChild(switchBox);
+        colLeft.appendChild(dayLabel);
+        
+        switchBox.onclick = (e) => {
+            e.stopPropagation();
+            check.checked = !check.checked;
+            check.dispatchEvent(new Event('change'));
+        };
+        
+        // 2. Columna Central: Horas [09:00] - [17:00] ✕ o "No disponible"
+        const colCenter = document.createElement('div');
+        colCenter.style.display = 'flex';
+        colCenter.style.flex = '1';
+        colCenter.style.alignItems = 'center';
+        colCenter.style.gap = '0.5rem';
+        colCenter.style.flexWrap = 'wrap';
+        colCenter.style.minWidth = '220px';
         
         const dayRanges = document.createElement('div');
         dayRanges.className = 'day-ranges-container';
         dayRanges.style.display = day.activo ? 'flex' : 'none';
-        dayRanges.style.flexDirection = 'column';
-        dayRanges.style.gap = '0.4rem';
+        dayRanges.style.flexWrap = 'wrap';
+        dayRanges.style.alignItems = 'center';
+        dayRanges.style.gap = '0.35rem';
         
         const listRanges = document.createElement('div');
         listRanges.className = 'day-list-ranges';
+        listRanges.style.display = 'flex';
+        listRanges.style.flexWrap = 'wrap';
+        listRanges.style.alignItems = 'center';
+        listRanges.style.gap = '0.35rem';
         dayRanges.appendChild(listRanges);
         
         if (day.rangos && day.rangos.length > 0) {
-            day.rangos.forEach(r => {
-                createRangeRow(listRanges, r.inicio, r.fin);
-            });
+            day.rangos.forEach(r => createRangeRow(listRanges, r.inicio, r.fin));
         } else {
-            createRangeRow(listRanges, '08:00', '12:00');
+            createRangeRow(listRanges, '09:00', '17:00');
         }
         
-        const addRangeBtn = document.createElement('button');
-        addRangeBtn.type = 'button';
-        addRangeBtn.className = 'btn text-xs btn-secondary';
-        addRangeBtn.style.alignSelf = 'flex-start';
-        addRangeBtn.style.padding = '0.2rem 0.5rem';
-        addRangeBtn.textContent = '+ Agregar Bloque';
-        addRangeBtn.onclick = () => {
-            const hasExisting = listRanges.children.length > 0;
-            createRangeRow(listRanges, hasExisting ? '14:00' : '08:00', hasExisting ? '18:00' : '12:00');
+        const unavailText = document.createElement('span');
+        unavailText.className = 'day-unavail-text';
+        unavailText.textContent = 'No disponible';
+        unavailText.style.display = day.activo ? 'none' : 'inline-block';
+        unavailText.style.color = '#94a3b8';
+        unavailText.style.fontSize = '0.92rem';
+        unavailText.style.fontWeight = '500';
+        
+        colCenter.appendChild(dayRanges);
+        colCenter.appendChild(unavailText);
+        
+        // 3. Columna Derecha: Botón +
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.innerHTML = '+';
+        addBtn.title = 'Agregar otro bloque horario a este día';
+        addBtn.style.width = '32px';
+        addBtn.style.height = '32px';
+        addBtn.style.borderRadius = '8px';
+        addBtn.style.border = '1.5px solid #e2e8f0';
+        addBtn.style.backgroundColor = '#ffffff';
+        addBtn.style.color = '#64748b';
+        addBtn.style.fontSize = '1.15rem';
+        addBtn.style.fontWeight = '700';
+        addBtn.style.display = 'flex';
+        addBtn.style.alignItems = 'center';
+        addBtn.style.justifyContent = 'center';
+        addBtn.style.cursor = 'pointer';
+        addBtn.style.transition = 'all 0.2s';
+        addBtn.style.flexShrink = '0';
+        
+        addBtn.onmouseover = () => {
+            addBtn.style.borderColor = 'var(--primary-color, #984b80)';
+            addBtn.style.color = 'var(--primary-color, #984b80)';
+            addBtn.style.backgroundColor = 'rgba(152,75,128,0.06)';
         };
-        dayRanges.appendChild(addRangeBtn);
+        addBtn.onmouseout = () => {
+            addBtn.style.borderColor = '#e2e8f0';
+            addBtn.style.color = '#64748b';
+            addBtn.style.backgroundColor = '#ffffff';
+        };
+        
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (!check.checked) {
+                check.checked = true;
+                check.dispatchEvent(new Event('change'));
+            } else {
+                const hasExisting = listRanges.children.length > 0;
+                createRangeRow(listRanges, hasExisting ? '14:00' : '09:00', hasExisting ? '18:00' : '17:00');
+            }
+        };
         
         check.onchange = () => {
             if (check.checked) {
                 dayRanges.style.display = 'flex';
-                dayRow.style.backgroundColor = 'rgba(16, 185, 129, 0.02)';
+                unavailText.style.display = 'none';
+                slider.style.backgroundColor = 'var(--primary-color, #984b80)';
+                dot.style.transform = 'translateX(18px)';
+                dayRow.style.backgroundColor = '#ffffff';
+                if (listRanges.children.length === 0) {
+                    createRangeRow(listRanges, '09:00', '17:00');
+                }
             } else {
                 dayRanges.style.display = 'none';
-                dayRow.style.backgroundColor = 'var(--bg-light)';
+                unavailText.style.display = 'inline-block';
+                slider.style.backgroundColor = '#cbd5e1';
+                dot.style.transform = 'translateX(0)';
+                dayRow.style.backgroundColor = '#fafafa';
             }
+            updateDaysSummary();
         };
         
-        dayRow.appendChild(dayHeader);
-        dayRow.appendChild(dayRanges);
-        daysList.appendChild(dayRow);
+        dayRow.appendChild(colLeft);
+        dayRow.appendChild(colCenter);
+        dayRow.appendChild(addBtn);
+        daysBox.appendChild(dayRow);
     });
     
-    card.appendChild(daysList);
+    bodyContainer.appendChild(daysBox);
+    card.appendChild(bodyContainer);
     container.appendChild(card);
+    
+    // Inicializar el resumen de días activos
+    updateDaysSummary();
 }
 
 function toggleCancelRuleInputs() {
@@ -7435,6 +7869,7 @@ async function loadAdminAvailability() {
             document.getElementById('avail-limite-cancelacion-time').value = cVal;
         }
         toggleCancelRuleInputs();
+        switchHorariosMode(currentHorariosPersonalMode);
         
         listContainer.innerHTML = '';
 
@@ -7585,10 +8020,12 @@ async function handleSaveAvailability(e) {
         });
         
         const consultorio = card.querySelector('.profile-consultorio')?.value || '';
+        const descripcion = card.querySelector('.profile-descripcion')?.value || '';
         
         perfiles.push({
             id,
             nombre,
+            descripcion,
             modalidad,
             consultorio,
             dias
@@ -7768,6 +8205,7 @@ async function handleSaveTeamAvailability(e) {
     profileCards.forEach(card => {
         const id = card.getAttribute('data-id');
         const nombre = card.querySelector('.profile-name').value;
+        const descripcion = card.querySelector('.profile-descripcion')?.value || '';
         const consultorio = card.querySelector('.profile-consultorio')?.value || '';
 
         const dias = [];
@@ -7788,7 +8226,7 @@ async function handleSaveTeamAvailability(e) {
             dias.push({ dia, nombre: name, activo, rangos });
         });
 
-        perfiles.push({ id, nombre, modalidad: nombre, consultorio, dias });
+        perfiles.push({ id, nombre, descripcion, modalidad: nombre, consultorio, dias });
     });
 
     const payload = { duracion, receso, perfiles };
@@ -12377,10 +12815,17 @@ async function checkFastBookingQuery() {
                     selectElement.innerHTML = '';
                     modalities.forEach(m => {
                         const opt = document.createElement('option');
-                        opt.value = m;
-                        opt.textContent = m;
+                        const val = typeof m === 'object' ? (m.modalidad || m.nombre) : m;
+                        const label = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
+                        const desc = typeof m === 'object' ? (m.descripcion || '') : '';
+                        opt.value = val;
+                        opt.textContent = label;
+                        opt.dataset.desc = desc;
                         selectElement.appendChild(opt);
                     });
+                    if (typeof updateFastModalityDescription === 'function') {
+                        updateFastModalityDescription();
+                    }
                 }
             }
         } catch (e) {
@@ -12398,6 +12843,29 @@ async function checkFastBookingQuery() {
     
     return false;
 }
+
+function updateFastModalityDescription() {
+    const select = document.getElementById('fast-modalidad');
+    const descBox = document.getElementById('fast-modalidad-desc-box');
+    const descTitle = document.getElementById('fast-modalidad-desc-title');
+    const descText = document.getElementById('fast-modalidad-desc-text');
+    if (!select) return;
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.dataset.desc && selectedOption.dataset.desc.trim()) {
+        if (descBox) descBox.classList.remove('hide');
+        if (descTitle) descTitle.textContent = selectedOption.textContent;
+        if (descText) descText.textContent = selectedOption.dataset.desc.trim();
+    } else {
+        if (descBox) descBox.classList.add('hide');
+    }
+}
+window.updateFastModalityDescription = updateFastModalityDescription;
+
+function onFastModalityChange() {
+    updateFastModalityDescription();
+    renderFastCalendar();
+}
+window.onFastModalityChange = onFastModalityChange;
 
 function changeFastBookingMonth(dir) {
     fastBookingMonth += dir;

@@ -1080,10 +1080,17 @@
                 <!-- 1. Modalidad -->
                 <div class="form-group mb-3">
                     <label for="fast-modalidad" style="font-weight: 700;">1. Modalidad de Consulta *</label>
-                    <select id="fast-modalidad" required onchange="renderFastCalendar()" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
+                    <select id="fast-modalidad" required onchange="onFastModalityChange()" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
                         <option value="Online">Online</option>
                         <option value="Presencial">Presencial</option>
                     </select>
+                    <div id="fast-modalidad-desc-box" class="hide" style="margin-top: 0.5rem; padding: 0.65rem 0.9rem; border-radius: 8px; background: rgba(152,75,128,0.06); border: 1px solid rgba(152,75,128,0.2); font-size: 0.85rem; line-height: 1.45; display: flex; align-items: flex-start; gap: 0.5rem;">
+                        <span style="font-size: 1rem; line-height: 1;">ℹ️</span>
+                        <div>
+                            <strong id="fast-modalidad-desc-title" style="color: var(--primary-color); display: block; margin-bottom: 0.15rem;"></strong>
+                            <span id="fast-modalidad-desc-text" style="color: #475569;"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <p class="text-secondary text-sm mb-2">2. Selecciona un día disponible (marcado con círculo verde):</p>
@@ -2697,67 +2704,121 @@
                             <div class="card-body">
                                 <!-- Pestaña Horario Personal -->
                                 <div id="horarios-subtab-container-personal">
-                                    <p class="text-secondary mb-4">Define tus días laborables y las horas exactas en los que tus pacientes pueden solicitar consultas personales:</p>
-                                    
+                                    <!-- Selector de Modo: Asignar Horarios vs Configuración y Reglas -->
+                                    <div class="horarios-mode-switcher mb-4" style="display: flex; gap: 0.5rem; background: var(--bg-body, #f8fafc); padding: 0.35rem; border-radius: 12px; border: 1.5px solid var(--border-color); width: fit-content; max-width: 100%;">
+                                        <button type="button" id="btn-mode-horarios-dias" class="btn btn-sm" onclick="switchHorariosMode('dias')" style="font-weight: 700; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.2s; background: var(--primary-color); color: #ffffff; border: none; box-shadow: 0 2px 8px rgba(152,75,128,0.25); cursor: pointer;">
+                                            📅 Asignar Horarios y Bloques
+                                        </button>
+                                        <button type="button" id="btn-mode-horarios-config" class="btn btn-sm" onclick="switchHorariosMode('config')" style="font-weight: 700; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.2s; background: transparent; color: var(--text-secondary, #64748b); border: none; cursor: pointer;">
+                                            ⚙️ Configuración y Reglas de Agenda
+                                        </button>
+                                    </div>
+
                                     <form id="admin-availability-form" onsubmit="handleSaveAvailability(event)">
-                                        <div class="form-row mb-4">
-                                            <div class="form-group col-6">
-                                                <label for="avail-duracion">Duración de la Sesión (minutos)</label>
-                                                <input type="number" id="avail-duracion" value="60" min="15" max="180" required>
+                                        <!-- PANEL 1: DÍAS Y BLOQUES DE ATENCIÓN (ACTIVO POR DEFECTO) -->
+                                        <div id="horarios-panel-dias">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+                                                <div>
+                                                    <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.25rem 0;">Perfiles de Horario de Atención</h4>
+                                                    <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">Define tus días laborables y las horas exactas en los que tus consultantes pueden agendar:</p>
+                                                </div>
                                             </div>
-                                            <div class="form-group col-6">
-                                                <label for="avail-receso">Receso entre Sesiones (minutos)</label>
-                                                <input type="number" id="avail-receso" value="15" min="0" max="120" required>
+
+                                            <div id="availability-days-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                                                <!-- Generado dinámicamente -->
                                             </div>
+
+                                            <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; padding: 0.75rem; font-size: 1rem; border-radius: 10px; box-shadow: 0 4px 14px rgba(152,75,128,0.25); cursor: pointer;">
+                                                💾 Guardar Horarios y Bloques
+                                            </button>
                                         </div>
-                                        
-                                        <h4 class="mb-3" style="font-size: 1rem; font-weight: 700; color: var(--text-dark); border-top: 1.5px dashed var(--border-color); padding-top: 1.5rem; margin-top: 1rem;">Parámetros de Agenda y Tiempos de Alerta:</h4>
-                                        <div class="form-row mb-3">
-                                            <div class="form-group col-6">
-                                                <label for="avail-antelacion">Antelación mínima para agendar (horas)</label>
-                                                <input type="number" id="avail-antelacion" value="24" min="0" max="168" required>
+
+                                        <!-- PANEL 2: PARÁMETROS Y REGLAS DE AGENDA -->
+                                        <div id="horarios-panel-config" class="hide">
+                                            <div style="margin-bottom: 1.25rem;">
+                                                <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.25rem 0;">Parámetros y Reglas de Consulta</h4>
+                                                <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">Ajusta la duración de las consultas, tiempos de alerta automática y límites de cancelación:</p>
                                             </div>
-                                            <div class="form-group col-6">
-                                                <label for="avail-tiempo-confirmacion">Alerta de Confirmación (horas antes)</label>
-                                                <input type="number" id="avail-tiempo-confirmacion" value="24" min="1" max="168" required>
+
+                                            <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.5rem;">
+                                                
+                                                <!-- Tarjeta 1: Tiempos de Sesión -->
+                                                <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+                                                    <h5 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
+                                                        ⏱️ Duración de Consulta y Recesos
+                                                    </h5>
+                                                    <div class="form-row">
+                                                        <div class="form-group col-6">
+                                                            <label for="avail-duracion" style="font-weight: 600; font-size: 0.88rem;">Duración de la Sesión (minutos)</label>
+                                                            <input type="number" id="avail-duracion" value="60" min="15" max="180" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                        <div class="form-group col-6">
+                                                            <label for="avail-receso" style="font-weight: 600; font-size: 0.88rem;">Receso entre Sesiones (minutos)</label>
+                                                            <input type="number" id="avail-receso" value="15" min="0" max="120" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Tarjeta 2: Tiempos de Alerta y Antelación -->
+                                                <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+                                                    <h5 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
+                                                        🔔 Parámetros de Agenda y Notificaciones
+                                                    </h5>
+                                                    <div class="form-row mb-3">
+                                                        <div class="form-group col-6">
+                                                            <label for="avail-antelacion" style="font-weight: 600; font-size: 0.88rem;">Antelación mínima para agendar (horas)</label>
+                                                            <input type="number" id="avail-antelacion" value="24" min="0" max="168" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                        <div class="form-group col-6">
+                                                            <label for="avail-tiempo-confirmacion" style="font-weight: 600; font-size: 0.88rem;">Alerta de Confirmación (horas antes)</label>
+                                                            <input type="number" id="avail-tiempo-confirmacion" value="24" min="1" max="168" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-row">
+                                                        <div class="form-group col-6">
+                                                            <label for="avail-tiempo-recordatorio" style="font-weight: 600; font-size: 0.88rem;">Alerta de Recordatorio (horas antes)</label>
+                                                            <input type="number" id="avail-tiempo-recordatorio" value="2" min="1" max="72" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                        <div class="form-group col-6">
+                                                            <label for="avail-tiempo-cierre" style="font-weight: 600; font-size: 0.88rem;">Alerta de Cierre (horas después)</label>
+                                                            <input type="number" id="avail-tiempo-cierre" value="2" min="1" max="72" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Tarjeta 3: Regla de Cancelación -->
+                                                <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+                                                    <h5 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
+                                                        🛡️ Política de Cancelación sin Cobro
+                                                    </h5>
+                                                    <div class="form-row">
+                                                        <div class="form-group col-6">
+                                                            <label for="avail-limite-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Regla de Límite de Cancelación *</label>
+                                                            <select id="avail-limite-cancelacion-tipo" required onchange="toggleCancelRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">
+                                                                <option value="horas">Cantidad de horas antes de la cita</option>
+                                                                <option value="previo">Condición: El día previo a la hora especificada</option>
+                                                                <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="form-group col-6" id="cancel-rule-value-hours-group">
+                                                            <label for="avail-limite-cancelacion" style="font-weight: 600; font-size: 0.88rem;">Cantidad de Horas *</label>
+                                                            <input type="number" id="avail-limite-cancelacion" value="24" min="0" max="168" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                        <div class="form-group col-6 hide" id="cancel-rule-value-time-group">
+                                                            <label for="avail-limite-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora de Cierre (Límite) *</label>
+                                                            <input type="time" id="avail-limite-cancelacion-time" value="08:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                                             </div>
+
+                                            <button type="submit" class="btn btn-primary btn-block" style="width: 100%; font-weight: 700; padding: 0.75rem; font-size: 1rem; border-radius: 10px; box-shadow: 0 4px 14px rgba(152,75,128,0.25); cursor: pointer;">
+                                                💾 Guardar Configuración y Reglas
+                                            </button>
                                         </div>
-                                        <div class="form-row mb-3">
-                                            <div class="form-group col-6">
-                                                <label for="avail-tiempo-recordatorio">Alerta de Recordatorio (horas antes)</label>
-                                                <input type="number" id="avail-tiempo-recordatorio" value="2" min="1" max="72" required>
-                                            </div>
-                                            <div class="form-group col-6">
-                                                <label for="avail-tiempo-cierre">Alerta de Cierre (horas después)</label>
-                                                <input type="number" id="avail-tiempo-cierre" value="2" min="1" max="72" required>
-                                            </div>
-                                        </div>
-                                        <div class="form-row mb-4">
-                                            <div class="form-group col-6">
-                                                <label for="avail-limite-cancelacion-tipo" style="font-weight: 600;">Límite para Cancelar sin Cobro (Regla) *</label>
-                                                <select id="avail-limite-cancelacion-tipo" required onchange="toggleCancelRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
-                                                    <option value="horas">Cantidad de horas antes de la cita</option>
-                                                    <option value="previo">Condición: El día previo a la hora especificada</option>
-                                                    <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group col-6" id="cancel-rule-value-hours-group">
-                                                <label for="avail-limite-cancelacion" style="font-weight: 600;">Cantidad de Horas *</label>
-                                                <input type="number" id="avail-limite-cancelacion" value="24" min="0" max="168">
-                                            </div>
-                                            <div class="form-group col-6 hide" id="cancel-rule-value-time-group">
-                                                <label for="avail-limite-cancelacion-time" style="font-weight: 600;">Hora de Cierre (Límite) *</label>
-                                                <input type="time" id="avail-limite-cancelacion-time" value="08:00">
-                                            </div>
-                                        </div>
-                                        
-                                        <h4 class="mb-3" style="font-size: 1rem; font-weight: 700; color: var(--text-dark);">Días y Bloques de Atención:</h4>
-                                        <div id="availability-days-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
-                                            <!-- Generado dinámicamente -->
-                                        </div>
-                                        <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Guardar Horarios y Bloques</button>
                                     </form>
-                                    <div id="availability-status-msg" class="status-msg hide mt-2"></div>
+                                    <div id="availability-status-msg" class="status-msg hide mt-3"></div>
                                 </div>
 
                                 <!-- Pestaña Horario del Equipo (Administrador de Clínica) -->
@@ -4335,10 +4396,13 @@
                                 <div class="form-row mb-4">
                                     <div class="form-group col-6">
                                         <label for="pat-req-modalidad" style="font-weight: 700; color: var(--text-dark);">1. Modalidad de Consulta *</label>
-                                        <select id="pat-req-modalidad" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.95rem; font-weight: 600; cursor: pointer;" onchange="renderBookingCalendar()">
+                                        <select id="pat-req-modalidad" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.95rem; font-weight: 600; cursor: pointer;" onchange="onPatientBookingModalityChange()">
                                             <option value="Horario Online">Horario Online</option>
                                             <option value="Horario Presencial">Horario Presencial</option>
                                         </select>
+                                        <div id="pat-modalidad-desc-box" class="hide" style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: rgba(152,75,128,0.06); border: 1px solid rgba(152,75,128,0.2); font-size: 0.82rem; color: #475569; line-height: 1.4;">
+                                            <span id="pat-modalidad-desc-text"></span>
+                                        </div>
                                     </div>
                                     <div class="form-group col-6">
                                         <label for="pat-booking-timezone" style="font-weight: 700; color: var(--text-dark);">🌐 Tu Zona Horaria *</label>

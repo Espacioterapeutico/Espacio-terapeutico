@@ -955,7 +955,10 @@ def get_psychologist_modalities(identifier):
     psic_id = psych['id'] if psych else 1
     cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
     u_row = cursor.fetchone()
-    modalities = ["Online", "Presencial"] # Default fallback
+    modalities = [
+        {"nombre": "Online", "modalidad": "Online", "descripcion": "Consultas a través de WhatsApp y Google Meet videollamadas"},
+        {"nombre": "Presencial", "modalidad": "Presencial", "descripcion": "Consultas presenciales en consultorio físico"}
+    ]
     if u_row and u_row[0]:
         try:
             import json
@@ -964,11 +967,20 @@ def get_psychologist_modalities(identifier):
             if isinstance(raw_perfiles, dict):
                 m_names = list(raw_perfiles.keys())
                 if m_names:
-                    modalities = m_names
-            elif isinstance(raw_perfiles, list):
-                m_names = [p.get('nombre') or p.get('modalidad') for p in raw_perfiles if (p.get('nombre') or p.get('modalidad'))]
-                if m_names:
-                    modalities = list(set(m_names))
+                    modalities = [{"nombre": k, "modalidad": k, "descripcion": ""} for k in m_names]
+            elif isinstance(raw_perfiles, list) and len(raw_perfiles) > 0:
+                result = []
+                for p in raw_perfiles:
+                    nom = p.get('nombre') or p.get('modalidad')
+                    if nom:
+                        result.append({
+                            "nombre": nom,
+                            "modalidad": p.get('modalidad') or nom,
+                            "descripcion": p.get('descripcion') or '',
+                            "consultorio": p.get('consultorio') or ''
+                        })
+                if result:
+                    modalities = result
         except:
             pass
     return jsonify(modalities)

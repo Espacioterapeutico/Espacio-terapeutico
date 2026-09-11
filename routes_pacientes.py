@@ -1687,7 +1687,28 @@ def get_patient_portal_data_dict(patient_id):
     p_dict['psicologo_asignado'] = psic_nom
     
     modalidades = ["Online", "Presencial"]
-    if p_dict.get('psicologo_modalidades_json'):
+    modalidades_detalladas = []
+    psicologo_id = p_dict.get('psicologo_id')
+    if psicologo_id:
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+        u_vis = cursor.fetchone()
+        if u_vis and u_vis[0]:
+            try:
+                c_vis = json.loads(u_vis[0])
+                for p in c_vis.get('perfiles', []):
+                    nom = p.get('nombre') or p.get('modalidad')
+                    if nom:
+                        modalidades_detalladas.append({
+                            'nombre': nom,
+                            'modalidad': p.get('modalidad') or nom,
+                            'descripcion': p.get('descripcion') or '',
+                            'consultorio': p.get('consultorio') or ''
+                        })
+                if modalidades_detalladas:
+                    modalidades = [m['nombre'] for m in modalidades_detalladas]
+            except Exception:
+                pass
+    if not modalidades_detalladas and p_dict.get('psicologo_modalidades_json'):
         try:
             m_raw = json.loads(p_dict['psicologo_modalidades_json'])
             if isinstance(m_raw, list):
@@ -1803,6 +1824,7 @@ def get_patient_portal_data_dict(patient_id):
     return {
         'perfil': p_dict,
         'modalidades': modalidades,
+        'modalidades_detalladas': modalidades_detalladas,
         'metodos_pago': metodos,
         'terminos_texto': terms,
         'terminos_requeridos': (p_dict.get('terminos_aceptados') != 1),
