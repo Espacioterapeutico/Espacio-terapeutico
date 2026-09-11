@@ -4,6 +4,7 @@ const QRCode = require('qrcode');
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const {
     default: makeWASocket,
@@ -75,20 +76,36 @@ function getUserAuthDir(userId) {
     return userDir;
 }
 
-// Persistencia remota en BD Flask para sobrevivir a reinicios/despliegues de servidores efímeros
+// Persistencia remota optimizada en BD Flask (Sincronización diferencial para ahorro de ancho de banda)
 const _syncDebounceMap = {};
+const _syncedHashesMap = new Map(); // key = userId -> { filename: md5 }
 
 async function _syncSessionToFlaskActual(userId, userAuthDir) {
     try {
         if (!fs.existsSync(userAuthDir)) return;
+        const key = String(userId || 1);
+        if (!_syncedHashesMap.has(key)) {
+            _syncedHashesMap.set(key, {});
+        }
+        const userHashes = _syncedHashesMap.get(key);
+
         const fileNames = fs.readdirSync(userAuthDir);
         const filesMap = {};
+
         for (const f of fileNames) {
             const fullPath = path.join(userAuthDir, f);
             if (fs.statSync(fullPath).isFile()) {
-                filesMap[f] = fs.readFileSync(fullPath, 'utf8');
+                const content = fs.readFileSync(fullPath, 'utf8');
+                const hash = crypto.createHash('md5').update(content).digest('hex');
+                // Sincronizar ÚNICAMENTE si el archivo es nuevo o su contenido cambió
+                if (userHashes[f] !== hash) {
+                    filesMap[f] = content;
+                    userHashes[f] = hash;
+                }
             }
         }
+
+        // Si ningún archivo cambió, evitar la petición HTTP por completo (0 consumo de ancho de banda)
         if (Object.keys(filesMap).length > 0) {
             const syncUrl = `${FLASK_BASE_URL}/api/whatsapp/sync-session`;
             await axios.post(syncUrl, { user_id: userId, files: filesMap }, { timeout: 8000 }).catch(() => {});
@@ -102,10 +119,11 @@ function syncSessionToFlask(userId, userAuthDir) {
     if (_syncDebounceMap[userId]) {
         clearTimeout(_syncDebounceMap[userId]);
     }
+    // Debounce de 15 segundos para agrupar micro-cambios y ahorrar peticiones
     _syncDebounceMap[userId] = setTimeout(() => {
         _syncSessionToFlaskActual(userId, userAuthDir);
         delete _syncDebounceMap[userId];
-    }, 2000); // 2 segundos de debounce para no perder credenciales
+    }, 15000);
 }
 
 async function restoreSessionFromFlask(userId, userAuthDir) {
@@ -179,6 +197,9 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             maxMsgRetryCount: 5,
             markOnlineOnConnect: true,
             syncFullHistory: false,
+            shouldIgnoreJid: (jid) => {
+                return !jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid.includes('newsletter');
+            },
             msgRetryCounterCache,
             getMessage: async (key) => {
                 if (key && key.id && messageStore.has(String(key.id))) {
