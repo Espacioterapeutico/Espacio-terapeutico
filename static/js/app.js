@@ -673,7 +673,7 @@ function generateGoogleCalendarUrl(title, description, fechaStr, horaStr, durati
 let deferredPwaPrompt = null;
 
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
+    const registerSWAndInitFCM = () => {
         navigator.serviceWorker.register('/sw.js')
             .then(reg => {
                 reg.update(); // FORCE SW UPDATE EVERY LOAD
@@ -683,7 +683,13 @@ if ('serviceWorker' in navigator) {
                 }, 1000);
             })
             .catch(err => console.error('Error al registrar PWA Service Worker:', err));
-    });
+    };
+
+    if (document.readyState === 'complete') {
+        registerSWAndInitFCM();
+    } else {
+        window.addEventListener('load', registerSWAndInitFCM);
+    }
 }
 
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -752,6 +758,7 @@ async function requestNotificationPermission() {
     if (Notification.permission === 'granted') {
         showOnboardingTutorialIfNeeded();
         try { updateNotificationBannerVisibility(); } catch(e) {}
+        try { initFirebaseMessagingFlow(); } catch(e) {}
         return true;
     }
     if (Notification.permission !== 'denied') {
@@ -760,6 +767,7 @@ async function requestNotificationPermission() {
             if (permission === 'granted') {
                 showOnboardingTutorialIfNeeded();
                 try { updateNotificationBannerVisibility(); } catch(e) {}
+                try { initFirebaseMessagingFlow(); } catch(e) {}
                 return true;
             }
             openNotificationGuideModal();
@@ -2063,8 +2071,13 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         applyUserBlocks(window.currentUser ? window.currentUser.bloqueos : bloqueos);
     }
     
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetView = urlParams.get('view') || window.location.hash.replace(/^#/, '');
+
     if (isPureSuperadmin) {
         switchView('superadmin-dashboard');
+    } else if (targetView && typeof switchView === 'function') {
+        switchView(targetView);
     } else {
         switchView('dashboard');
     }
@@ -2072,6 +2085,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     if (typeof checkAndInitClinicaNav === 'function') checkAndInitClinicaNav();
     loadNotifications();
     notificationIntervalId = setInterval(loadNotifications, 30000);
+    setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1000);
     loadMessageTemplates();
     loadSMTPSettings();
     if (typeof loadPublicProfileSettings === 'function') {
@@ -2134,6 +2148,7 @@ function showPatientLayout(username, patientId) {
     clearAllNotificationIntervals();
     loadPatientNotifications(patientId);
     patientNotificationIntervalId = setInterval(() => loadPatientNotifications(patientId), 30000);
+    setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1000);
 
     // Sincronizar automáticamente la zona horaria del paciente (para recordatorios a las 8:00 PM local)
     try {
@@ -11566,7 +11581,7 @@ async function initFirebaseMessagingFlow(registration) {
         }
         
         // Inicializar Firebase Web Client
-        const config = JSON.parse(data.config);
+        const config = typeof data.config === 'string' ? JSON.parse(data.config) : data.config;
         if (firebase.apps.length === 0) {
             firebase.initializeApp(config);
         }
@@ -11574,7 +11589,10 @@ async function initFirebaseMessagingFlow(registration) {
         const messaging = firebase.messaging();
         
         // Solicitar permisos de notificación nativa
-        const permission = await Notification.requestPermission();
+        let permission = ('Notification' in window) ? Notification.permission : 'default';
+        if (permission !== 'granted' && 'Notification' in window) {
+            permission = await Notification.requestPermission();
+        }
         if (permission !== 'granted') {
             console.warn("Permiso de notificaciones push FCM no otorgado.");
             return;

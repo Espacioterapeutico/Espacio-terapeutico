@@ -1292,13 +1292,13 @@ def patient_confirm_appointment():
         
         if appt_id:
             cursor.execute("""
-                SELECT id, fecha, hora
+                SELECT id, fecha, hora, creado_por_user_id
                 FROM agenda_finanzas
                 WHERE id = ? AND paciente_id = ? AND confirmada = 0
             """, (appt_id, patient_id))
         else:
             cursor.execute("""
-                SELECT id, fecha, hora
+                SELECT id, fecha, hora, creado_por_user_id
                 FROM agenda_finanzas
                 WHERE paciente_id = ? 
                   AND (fecha > ? OR (fecha = ? AND hora >= ?))
@@ -1313,9 +1313,9 @@ def patient_confirm_appointment():
             
         cursor.execute("SELECT psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         pac = cursor.fetchone()
-        psicologo_id = pac['psicologo_id']
+        psicologo_id = pac['psicologo_id'] if pac else None
         
-        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id or appt['creado_por_user_id'] or 1,))
         u_row = cursor.fetchone()
         alerta_confirmacion = 24
         if u_row and u_row[0]:
@@ -1342,7 +1342,7 @@ def patient_confirm_appointment():
         cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         p_info = cursor.fetchone()
         pac_nombre = f"{p_info['nombres']} {p_info['apellidos']}" if p_info else "El consultante"
-        psic_id = (p_info['psicologo_id'] if p_info and p_info['psicologo_id'] else 1)
+        psic_id = (p_info['psicologo_id'] if p_info and p_info['psicologo_id'] else (appt['creado_por_user_id'] or 1))
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         cursor.execute("""

@@ -1362,7 +1362,7 @@ def accion_cita_publica():
                u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.username as psic_username
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
-        LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR af.creado_por_user_id = u.id)
+        LEFT JOIN usuarios u ON u.id = COALESCE(p.psicologo_id, af.creado_por_user_id, 1)
         WHERE af.token_confirmacion = ?
     """, (token,))
     cita = cursor.fetchone()
@@ -1421,6 +1421,8 @@ def accion_cita_publica():
         except Exception as _ne:
             print("Error guardando notificacion de confirmacion:", _ne)
 
+        db.commit()
+
         # 2. Notificación Push en segundo plano para el psicólogo
         try:
             from app import send_webpush_notification
@@ -1461,6 +1463,12 @@ def accion_cita_publica():
                 INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
                 VALUES (?, 'cita', '❌ Cita Cancelada por Consultante', ?, ?, 0, 'agenda')
             """, (psych_id, f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']}.", now_str))
+        except Exception as _ne:
+            print("Error notificando cancelacion publica:", _ne)
+
+        db.commit()
+
+        try:
             from app import send_webpush_notification
             send_webpush_notification(
                 user_id=psych_id,
@@ -1468,8 +1476,8 @@ def accion_cita_publica():
                 body=f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']}.",
                 url="/?view=agenda"
             )
-        except Exception as _ne:
-            print("Error notificando cancelacion publica:", _ne)
+        except Exception as _wp_ex:
+            print("Error enviando WebPush de cancelacion publica:", _wp_ex)
         
     elif accion == 'reprogramar':
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
@@ -1482,6 +1490,12 @@ def accion_cita_publica():
                 INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
                 VALUES (?, 'cita', '🔄 Solicitud de Reprogramación', ?, ?, 0, 'agenda')
             """, (psych_id, f"{pat_full_name} solicitó reprogramar su cita del {cita['fecha']} a las {cita['hora']}.", now_str))
+        except Exception as _ne:
+            print("Error notificando reprogramacion publica:", _ne)
+
+        db.commit()
+
+        try:
             from app import send_webpush_notification
             send_webpush_notification(
                 user_id=psych_id,
@@ -1489,8 +1503,8 @@ def accion_cita_publica():
                 body=f"{pat_full_name} solicitó reprogramar su cita del {cita['fecha']} a las {cita['hora']}.",
                 url="/?view=agenda"
             )
-        except Exception as _ne:
-            print("Error notificando reprogramacion publica:", _ne)
+        except Exception as _wp_ex:
+            print("Error enviando WebPush de reprogramacion publica:", _wp_ex)
         
     db.commit()
     
