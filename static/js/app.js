@@ -6984,6 +6984,9 @@ async function deleteAgendaBlock(blockId) {
                 renderFullCalendar();
                 loadAgenda();
             }
+            if (document.getElementById('horarios-bloqueos-list')) {
+                loadHorariosBloqueos();
+            }
         } else {
             alert(data.error || 'Error al eliminar bloqueo.');
         }
@@ -7203,40 +7206,338 @@ let currentHorariosPersonalMode = 'dias';
 function switchHorariosMode(mode) {
     currentHorariosPersonalMode = mode || 'dias';
     const btnDias = document.getElementById('btn-mode-horarios-dias');
+    const btnBloqueos = document.getElementById('btn-mode-horarios-bloqueos');
     const btnConfig = document.getElementById('btn-mode-horarios-config');
     const panelDias = document.getElementById('horarios-panel-dias');
+    const panelBloqueos = document.getElementById('horarios-panel-bloqueos');
     const panelConfig = document.getElementById('horarios-panel-config');
 
     if (!panelDias || !panelConfig) return;
 
+    const resetBtnStyle = (btn) => {
+        if (!btn) return;
+        btn.style.background = 'transparent';
+        btn.style.color = 'var(--text-secondary, #64748b)';
+        btn.style.boxShadow = 'none';
+    };
+    const setActiveBtnStyle = (btn, color = 'var(--primary-color)', shadowColor = 'rgba(152,75,128,0.25)') => {
+        if (!btn) return;
+        btn.style.background = color;
+        btn.style.color = '#ffffff';
+        btn.style.boxShadow = `0 2px 8px ${shadowColor}`;
+    };
+
+    resetBtnStyle(btnDias);
+    resetBtnStyle(btnBloqueos);
+    resetBtnStyle(btnConfig);
+
+    if (panelDias) panelDias.classList.add('hide');
+    if (panelBloqueos) panelBloqueos.classList.add('hide');
+    if (panelConfig) panelConfig.classList.add('hide');
+
     if (currentHorariosPersonalMode === 'dias') {
         panelDias.classList.remove('hide');
-        panelConfig.classList.add('hide');
-        if (btnDias) {
-            btnDias.style.background = 'var(--primary-color)';
-            btnDias.style.color = '#ffffff';
-            btnDias.style.boxShadow = '0 2px 8px rgba(152,75,128,0.25)';
-        }
-        if (btnConfig) {
-            btnConfig.style.background = 'transparent';
-            btnConfig.style.color = 'var(--text-secondary, #64748b)';
-            btnConfig.style.boxShadow = 'none';
-        }
+        setActiveBtnStyle(btnDias, 'var(--primary-color)', 'rgba(152,75,128,0.25)');
+    } else if (currentHorariosPersonalMode === 'bloqueos') {
+        if (panelBloqueos) panelBloqueos.classList.remove('hide');
+        setActiveBtnStyle(btnBloqueos, '#e11d48', 'rgba(225,29,72,0.25)');
+        loadHorariosBloqueos();
     } else {
-        panelDias.classList.add('hide');
         panelConfig.classList.remove('hide');
-        if (btnDias) {
-            btnDias.style.background = 'transparent';
-            btnDias.style.color = 'var(--text-secondary, #64748b)';
-            btnDias.style.boxShadow = 'none';
-        }
-        if (btnConfig) {
-            btnConfig.style.background = 'var(--primary-color)';
-            btnConfig.style.color = '#ffffff';
-            btnConfig.style.boxShadow = '0 2px 8px rgba(152,75,128,0.25)';
-        }
+        setActiveBtnStyle(btnConfig, 'var(--primary-color)', 'rgba(152,75,128,0.25)');
     }
 }
+
+async function loadHorariosBloqueos() {
+    const listContainer = document.getElementById('horarios-bloqueos-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+            <i class="fas fa-spinner fa-spin" style="font-size: 1.6rem; color: #e11d48;"></i>
+            <div style="margin-top: 0.6rem; font-size: 0.9rem;">Cargando bloqueos de espacios...</div>
+        </div>
+    `;
+
+    try {
+        const res = await fetch('/api/agenda/blocks');
+        if (!res.ok) throw new Error('Error al consultar bloqueos');
+        const blocks = await res.json();
+
+        if (!blocks || blocks.length === 0) {
+            listContainer.innerHTML = `
+                <div style="text-align: center; padding: 2.5rem 1.5rem; background: #ffffff; border: 1.5px dashed var(--border-color); border-radius: 14px;">
+                    <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🎉</div>
+                    <div style="font-weight: 700; font-size: 1rem; color: var(--text-dark); margin-bottom: 0.25rem;">No tienes bloqueos de espacios activos</div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 auto; max-width: 500px;">
+                        Tu disponibilidad se rige actualmente por tus horarios de atención configurados. Si deseas pausar días libres, vacaciones o suspender la atención presencial manteniendo la atención online, utiliza el botón superior para crear un bloqueo.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        blocks.forEach(b => {
+            const card = document.createElement('div');
+            card.style.background = 'var(--card-bg, #ffffff)';
+            card.style.border = '1.5px solid var(--border-color)';
+            card.style.borderLeft = '4px solid #e11d48';
+            card.style.borderRadius = '12px';
+            card.style.padding = '1.15rem 1.25rem';
+            card.style.display = 'flex';
+            card.style.justifyContent = 'space-between';
+            card.style.alignItems = 'center';
+            card.style.gap = '1rem';
+            card.style.flexWrap = 'wrap';
+            card.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
+
+            // Badge de Modalidad
+            const mod = (b.modalidad || 'Todas').trim();
+            let modBadge = '';
+            if (mod.toLowerCase() === 'presencial') {
+                modBadge = `<span style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #c7d2fe; display: inline-flex; align-items: center; gap: 0.35rem;">🏛️ Solo Presencial</span>`;
+            } else if (mod.toLowerCase() === 'online') {
+                modBadge = `<span style="background: #ecfdf5; color: #065f46; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 0.35rem;">💻 Solo Online</span>`;
+            } else {
+                modBadge = `<span style="background: #fee2e2; color: #991b1b; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 0.35rem;">⛔ Todas las modalidades</span>`;
+            }
+
+            // Texto de Fechas
+            let datesText = '';
+            if (b.fecha_fin && b.fecha_fin !== b.fecha) {
+                datesText = `<span style="font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">📅 Del <strong>${b.fecha}</strong> al <strong>${b.fecha_fin}</strong></span>`;
+            } else {
+                datesText = `<span style="font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">📅 Fecha: <strong>${b.fecha}</strong></span>`;
+            }
+
+            // Texto de Horas
+            let hoursText = '';
+            if (b.todo_el_dia) {
+                hoursText = `<span style="background: #f1f5f9; color: #475569; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">⏰ Todo el día</span>`;
+            } else {
+                hoursText = `<span style="background: #f1f5f9; color: #475569; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">⏰ ${b.hora_inicio || '08:00'} - ${b.hora_fin || '18:00'}</span>`;
+            }
+
+            const motivoText = b.motivo ? `<div style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 0.25rem;"><i class="fas fa-comment-alt" style="opacity: 0.6; margin-right: 0.35rem;"></i>"${b.motivo}"</div>` : '';
+
+            card.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 260px;">
+                    <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                        ${datesText}
+                        ${hoursText}
+                        ${modBadge}
+                    </div>
+                    ${motivoText}
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem;">
+                        <span style="font-size: 0.76rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 0.3rem;">
+                            <i class="fas fa-lock" style="font-size: 0.7rem;"></i> Exclusivo del sistema (sin Google Calendar)
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAgendaBlock(${b.id})" style="font-weight: 600; border-radius: 8px; padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; border: 1.5px solid #e11d48; color: #e11d48; background: transparent; cursor: pointer;">
+                        <i class="fas fa-trash-alt"></i> Eliminar
+                    </button>
+                </div>
+            `;
+            listContainer.appendChild(card);
+        });
+    } catch (err) {
+        console.error("Error cargando bloqueos:", err);
+        listContainer.innerHTML = `
+            <div style="padding: 1rem; color: #b91c1c; background: #fee2e2; border-radius: 8px; font-size: 0.88rem;">
+                ⚠️ No se pudieron cargar los bloqueos de espacio. Por favor, intenta de nuevo.
+            </div>
+        `;
+    }
+}
+
+function openNuevoBloqueoModal() {
+    const form = document.getElementById('form-nuevo-bloqueo-espacio');
+    if (form) form.reset();
+
+    // Default dates to today
+    const today = new Date().toISOString().split('T')[0];
+    const fechaEl = document.getElementById('block-modal-fecha');
+    const fechaIniEl = document.getElementById('block-modal-fecha-inicio');
+    const fechaFinEl = document.getElementById('block-modal-fecha-fin');
+    if (fechaEl) fechaEl.value = today;
+    if (fechaIniEl) fechaIniEl.value = today;
+    if (fechaFinEl) fechaFinEl.value = today;
+
+    // Default hours
+    const hInEl = document.getElementById('block-modal-hora-inicio');
+    const hFiEl = document.getElementById('block-modal-hora-fin');
+    if (hInEl) hInEl.value = "08:00";
+    if (hFiEl) hFiEl.value = "18:00";
+
+    // Radio to unico
+    const rUnico = document.getElementById('bloqueo-periodo-unico') || document.querySelector('input[name="block_modal_tipo_periodo"][value="unico"]');
+    if (rUnico) rUnico.checked = true;
+    toggleBloqueoTipoPeriodo('unico');
+
+    // Checkbox todo_dia
+    const chkTodoDia = document.getElementById('block-modal-todo-dia');
+    if (chkTodoDia) chkTodoDia.checked = true;
+    toggleBloqueoHoras(true);
+
+    // Populate modalities dynamically if there are custom profile names
+    const selectMod = document.getElementById('block-modal-modalidad');
+    if (selectMod) {
+        const standardOptions = [
+            { value: 'Todas', text: '⛔ Todas las modalidades (Cierre total)' },
+            { value: 'Presencial', text: '🏛️ Solo Presencial (Permite Online)' },
+            { value: 'Online', text: '💻 Solo Online (Permite Presencial)' }
+        ];
+        selectMod.innerHTML = '';
+        standardOptions.forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt.value;
+            o.textContent = opt.text;
+            selectMod.appendChild(o);
+        });
+
+        // Add custom profile names if any
+        if (typeof currentAvailabilityProfiles !== 'undefined' && Array.isArray(currentAvailabilityProfiles)) {
+            currentAvailabilityProfiles.forEach(p => {
+                const name = (p.nombre || '').trim();
+                if (name && name.toLowerCase() !== 'presencial' && name.toLowerCase() !== 'online' && name.toLowerCase() !== 'todas') {
+                    const o = document.createElement('option');
+                    o.value = name;
+                    o.textContent = `🏷️ Solo ${name}`;
+                    selectMod.appendChild(o);
+                }
+            });
+        }
+    }
+
+    if (typeof openModal === 'function') {
+        openModal('modal-nuevo-bloqueo-espacio');
+    } else {
+        const m = document.getElementById('modal-nuevo-bloqueo-espacio');
+        if (m) m.classList.remove('hide');
+    }
+}
+
+function toggleBloqueoTipoPeriodo(val) {
+    const cUnica = document.getElementById('block-container-fecha-unica');
+    const cRango = document.getElementById('block-container-fecha-rango');
+    if (!cUnica || !cRango) return;
+
+    if (val === 'rango') {
+        cUnica.classList.add('hide');
+        cRango.classList.remove('hide');
+        const fUnica = document.getElementById('block-modal-fecha');
+        const fIni = document.getElementById('block-modal-fecha-inicio');
+        const fFin = document.getElementById('block-modal-fecha-fin');
+        if (fUnica && fIni && fUnica.value && !fIni.value) {
+            fIni.value = fUnica.value;
+            if (fFin) fFin.value = fUnica.value;
+        }
+    } else {
+        cUnica.classList.remove('hide');
+        cRango.classList.add('hide');
+    }
+}
+
+function toggleBloqueoHoras(isTodoDia) {
+    const cHoras = document.getElementById('block-container-horas');
+    if (!cHoras) return;
+    if (isTodoDia) {
+        cHoras.classList.add('hide');
+    } else {
+        cHoras.classList.remove('hide');
+    }
+}
+
+async function handleSaveBloqueoEspacio(e) {
+    if (e) e.preventDefault();
+
+    const modalidad = (document.getElementById('block-modal-modalidad')?.value || 'Todas').trim();
+    const tipoPeriodo = document.querySelector('input[name="block_modal_tipo_periodo"]:checked')?.value || 'unico';
+    const isTodoDia = document.getElementById('block-modal-todo-dia')?.checked ?? true;
+    const motivo = (document.getElementById('block-modal-motivo')?.value || '').trim();
+
+    let fecha = '';
+    let fecha_fin = '';
+
+    if (tipoPeriodo === 'unico') {
+        fecha = (document.getElementById('block-modal-fecha')?.value || '').trim();
+        if (!fecha) {
+            alert('Por favor selecciona la fecha a bloquear.');
+            return;
+        }
+    } else {
+        fecha = (document.getElementById('block-modal-fecha-inicio')?.value || '').trim();
+        fecha_fin = (document.getElementById('block-modal-fecha-fin')?.value || '').trim();
+        if (!fecha || !fecha_fin) {
+            alert('Por favor especifica tanto la fecha inicial como la fecha final del intervalo.');
+            return;
+        }
+        if (fecha > fecha_fin) {
+            alert('La fecha de inicio no puede ser posterior a la fecha fin.');
+            return;
+        }
+    }
+
+    let hora_inicio = '';
+    let hora_fin = '';
+    if (!isTodoDia) {
+        hora_inicio = (document.getElementById('block-modal-hora-inicio')?.value || '').trim();
+        hora_fin = (document.getElementById('block-modal-hora-fin')?.value || '').trim();
+        if (!hora_inicio || !hora_fin) {
+            alert('Por favor especifica las horas de inicio y fin del bloqueo.');
+            return;
+        }
+        if (hora_inicio >= hora_fin) {
+            alert('La hora de inicio debe ser anterior a la hora de fin.');
+            return;
+        }
+    }
+
+    const payload = {
+        modalidad: modalidad,
+        fecha: fecha,
+        fecha_fin: fecha_fin || null,
+        todo_el_dia: isTodoDia,
+        hora_inicio: hora_inicio || null,
+        hora_fin: hora_fin || null,
+        motivo: motivo || 'Bloqueo de Espacio',
+        sincronizar_google: false // Exclusivo del sistema interno, no se actualiza en Google Calendar
+    };
+
+    try {
+        const res = await fetch('/api/agenda/blocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.success || data.message || 'Bloqueo de espacio registrado correctamente.');
+            if (typeof closeModal === 'function') {
+                closeModal('modal-nuevo-bloqueo-espacio');
+            } else {
+                const m = document.getElementById('modal-nuevo-bloqueo-espacio');
+                if (m) m.classList.add('hide');
+            }
+            loadHorariosBloqueos();
+        } else {
+            alert(data.error || 'Ocurrió un error al guardar el bloqueo de espacio.');
+        }
+    } catch (err) {
+        console.error("Error guardando bloqueo de espacio:", err);
+        alert('Error de conexión al intentar guardar el bloqueo.');
+    }
+}
+
+window.switchHorariosMode = switchHorariosMode;
+window.loadHorariosBloqueos = loadHorariosBloqueos;
+window.openNuevoBloqueoModal = openNuevoBloqueoModal;
+window.toggleBloqueoTipoPeriodo = toggleBloqueoTipoPeriodo;
+window.toggleBloqueoHoras = toggleBloqueoHoras;
+window.handleSaveBloqueoEspacio = handleSaveBloqueoEspacio;
 
 // Renderizar un perfil de horario en forma de acordeón exclusivo y vista limpia estilo Calendly
 function renderProfileBlock(container, profileData, availableConsultorios = null) {

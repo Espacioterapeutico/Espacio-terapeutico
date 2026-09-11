@@ -1042,6 +1042,15 @@ def init_db():
         )
     """)
     db.commit()
+
+    cursor.execute("PRAGMA table_info(bloqueos_agenda_especificos)")
+    cols_blk = [c[1] for c in cursor.fetchall()]
+    if 'modalidad' not in cols_blk:
+        cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN modalidad TEXT DEFAULT 'Todas'")
+    if 'fecha_fin' not in cols_blk:
+        cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN fecha_fin TEXT")
+    db.commit()
+
     # Asegurar existencia de la tabla notificaciones
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS notificaciones (

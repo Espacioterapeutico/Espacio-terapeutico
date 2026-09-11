@@ -2704,10 +2704,13 @@
                             <div class="card-body">
                                 <!-- Pestaña Horario Personal -->
                                 <div id="horarios-subtab-container-personal">
-                                    <!-- Selector de Modo: Asignar Horarios vs Configuración y Reglas -->
-                                    <div class="horarios-mode-switcher mb-4" style="display: flex; gap: 0.5rem; background: var(--bg-body, #f8fafc); padding: 0.35rem; border-radius: 12px; border: 1.5px solid var(--border-color); width: fit-content; max-width: 100%;">
+                                    <!-- Selector de Modo: Asignar Horarios vs Bloqueo de Espacios vs Configuración y Reglas -->
+                                    <div class="horarios-mode-switcher mb-4" style="display: flex; gap: 0.5rem; background: var(--bg-body, #f8fafc); padding: 0.35rem; border-radius: 12px; border: 1.5px solid var(--border-color); width: fit-content; max-width: 100%; flex-wrap: wrap;">
                                         <button type="button" id="btn-mode-horarios-dias" class="btn btn-sm" onclick="switchHorariosMode('dias')" style="font-weight: 700; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.2s; background: var(--primary-color); color: #ffffff; border: none; box-shadow: 0 2px 8px rgba(152,75,128,0.25); cursor: pointer;">
                                             📅 Asignar Horarios y Bloques
+                                        </button>
+                                        <button type="button" id="btn-mode-horarios-bloqueos" class="btn btn-sm" onclick="switchHorariosMode('bloqueos')" style="font-weight: 700; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.2s; background: transparent; color: var(--text-secondary, #64748b); border: none; cursor: pointer;">
+                                            🚫 Bloqueo de Espacios
                                         </button>
                                         <button type="button" id="btn-mode-horarios-config" class="btn btn-sm" onclick="switchHorariosMode('config')" style="font-weight: 700; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.2s; background: transparent; color: var(--text-secondary, #64748b); border: none; cursor: pointer;">
                                             ⚙️ Configuración y Reglas de Agenda
@@ -2733,7 +2736,24 @@
                                             </button>
                                         </div>
 
-                                        <!-- PANEL 2: PARÁMETROS Y REGLAS DE AGENDA -->
+                                        <!-- PANEL 2: BLOQUEO DE ESPACIOS Y FECHAS ESPECIALES -->
+                                        <div id="horarios-panel-bloqueos" class="hide">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                                                <div>
+                                                    <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.25rem 0;">Bloqueo de Espacios y Fechas Especiales</h4>
+                                                    <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">Pausa o bloquea fechas, fines de semana o franjas horarias específicas (ej. pausar atención presencial mientras sigues atendiendo online):</p>
+                                                </div>
+                                                <button type="button" class="btn btn-danger" onclick="openNuevoBloqueoModal()" style="font-weight: 700; border-radius: 10px; padding: 0.55rem 1.15rem; display: inline-flex; align-items: center; gap: 0.45rem; background: #e11d48; border-color: #e11d48; box-shadow: 0 4px 12px rgba(225,29,72,0.25); cursor: pointer; color: white;">
+                                                    ➕ Crear Nuevo Bloqueo de Espacio
+                                                </button>
+                                            </div>
+
+                                            <div id="horarios-bloqueos-list" style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
+                                                <!-- Cargado dinámicamente por loadHorariosBloqueos() -->
+                                            </div>
+                                        </div>
+
+                                        <!-- PANEL 3: PARÁMETROS Y REGLAS DE AGENDA -->
                                         <div id="horarios-panel-config" class="hide">
                                             <div style="margin-bottom: 1.25rem;">
                                                 <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.25rem 0;">Parámetros y Reglas de Consulta</h4>
@@ -6053,6 +6073,131 @@
                 <button type="button" class="btn btn-secondary" onclick="closeModal('modal-reglas-modalidades')">Cancelar</button>
                 <button type="button" class="btn btn-primary" onclick="saveModalityParamsModal()" style="font-weight: 700;">💾 Guardar Parámetros</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO BLOQUEO DE ESPACIO / FECHAS ESPECIALES -->
+    <div id="modal-nuevo-bloqueo-espacio" class="modal hide">
+        <div class="modal-content modal-md" style="max-width: 580px; width: 95%;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">🚫</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.15rem; color: white; font-weight: 800;">Bloquear Espacio o Fecha</h3>
+                        <p style="margin: 0; font-size: 0.8rem; opacity: 0.9; color: white;">Pausa citas en fechas, rangos o modalidades específicas.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-modal white-close" onclick="closeModal('modal-nuevo-bloqueo-espacio')" style="color: white; opacity: 0.85; font-size: 1.1rem;">✕</button>
+            </div>
+            <form id="form-nuevo-bloqueo-espacio" onsubmit="handleSaveBloqueoEspacio(event)">
+                <div class="modal-body" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: #ffffff;">
+                    
+                    <!-- Nota informativa sobre Google Calendar -->
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 4px solid #64748b; border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.84rem; color: #475569; display: flex; align-items: flex-start; gap: 0.65rem;">
+                        <i class="fas fa-info-circle" style="color: #64748b; font-size: 1rem; margin-top: 0.15rem;"></i>
+                        <div>
+                            <strong>Bloqueo Interno:</strong> Este bloqueo se aplica exclusivamente a tu agenda del consultorio y portal de reserva de pacientes. <strong>No se actualiza ni crea eventos en tu Google Calendar personal.</strong>
+                        </div>
+                    </div>
+
+                    <!-- Selección de Modalidad -->
+                    <div class="form-group" style="margin: 0;">
+                        <label for="block-modal-modalidad" style="font-weight: 700; font-size: 0.9rem; color: var(--text-dark); margin-bottom: 0.35rem; display: block;">
+                            ¿Qué modalidad deseas bloquear?
+                        </label>
+                        <select id="block-modal-modalidad" class="form-control" style="width: 100%; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 0.6rem 0.75rem; font-weight: 600; font-size: 0.92rem;">
+                            <option value="Todas">⛔ Todas las modalidades (Cierre total)</option>
+                            <option value="Presencial">🏛️ Solo Presencial (Permite Online)</option>
+                            <option value="Online">💻 Solo Online (Permite Presencial)</option>
+                        </select>
+                        <small class="text-secondary" style="font-size: 0.78rem; display: block; margin-top: 0.25rem;">
+                            Si seleccionas "Solo Presencial", tus pacientes podrán seguir reservando turnos online para este período.
+                        </small>
+                    </div>
+
+                    <!-- Tipo de período (Día único vs Rango de fechas) -->
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-weight: 700; font-size: 0.9rem; color: var(--text-dark); margin-bottom: 0.45rem; display: block;">
+                            Período a bloquear:
+                        </label>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <label style="display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.88rem; font-weight: 600; cursor: pointer;">
+                                <input type="radio" name="block_modal_tipo_periodo" value="unico" checked onchange="toggleBloqueoTipoPeriodo('unico')">
+                                <span>📅 Un solo día</span>
+                            </label>
+                            <label style="display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.88rem; font-weight: 600; cursor: pointer;">
+                                <input type="radio" name="block_modal_tipo_periodo" value="rango" onchange="toggleBloqueoTipoPeriodo('rango')">
+                                <span>📆 Intervalo de fechas (ej. fin de semana, viaje)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Campo Fecha Única -->
+                    <div id="block-container-fecha-unica" class="form-group" style="margin: 0;">
+                        <label for="block-modal-fecha" style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); margin-bottom: 0.35rem; display: block;">
+                            Fecha a bloquear:
+                        </label>
+                        <input type="date" id="block-modal-fecha" class="form-control" style="width: 100%; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 0.55rem 0.75rem;">
+                    </div>
+
+                    <!-- Campos Rango de Fechas -->
+                    <div id="block-container-fecha-rango" class="form-group hide" style="margin: 0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <div>
+                                <label for="block-modal-fecha-inicio" style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); margin-bottom: 0.35rem; display: block;">
+                                    Fecha Inicio:
+                                </label>
+                                <input type="date" id="block-modal-fecha-inicio" class="form-control" style="width: 100%; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 0.55rem 0.75rem;">
+                            </div>
+                            <div>
+                                <label for="block-modal-fecha-fin" style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); margin-bottom: 0.35rem; display: block;">
+                                    Fecha Fin (inclusive):
+                                </label>
+                                <input type="date" id="block-modal-fecha-fin" class="form-control" style="width: 100%; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 0.55rem 0.75rem;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Horario (Todo el día vs Franja horaria) -->
+                    <div class="form-group" style="margin: 0; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem;">
+                        <label style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dark); cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="block-modal-todo-dia" checked onchange="toggleBloqueoHoras(this.checked)" style="width: 17px; height: 17px; accent-color: #e11d48; cursor: pointer;">
+                            <span>Bloquear todo el día</span>
+                        </label>
+                        
+                        <div id="block-container-horas" class="hide" style="margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed var(--border-color);">
+                            <label style="font-weight: 700; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">
+                                Franja horaria específica:
+                            </label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                <div>
+                                    <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Desde:</span>
+                                    <input type="time" id="block-modal-hora-inicio" class="form-control" value="08:00" style="width: 100%; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 0.5rem;">
+                                </div>
+                                <div>
+                                    <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Hasta:</span>
+                                    <input type="time" id="block-modal-hora-fin" class="form-control" value="18:00" style="width: 100%; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 0.5rem;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Motivo / Justificación -->
+                    <div class="form-group" style="margin: 0;">
+                        <label for="block-modal-motivo" style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); margin-bottom: 0.35rem; display: block;">
+                            Motivo o Nota (Opcional):
+                        </label>
+                        <input type="text" id="block-modal-motivo" class="form-control" placeholder="Ej: No atiendo presencial este fin de semana, Vacaciones, etc." style="width: 100%; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 0.55rem 0.75rem;">
+                    </div>
+
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; background: #ffffff; border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-nuevo-bloqueo-espacio')">Cancelar</button>
+                    <button type="submit" class="btn btn-danger" style="background: #e11d48; border-color: #e11d48; font-weight: 700; box-shadow: 0 3px 10px rgba(225,29,72,0.25);">
+                        🚫 Guardar Bloqueo
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

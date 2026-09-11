@@ -327,22 +327,51 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
         if h_val:
             busy_hours.add(h_val[:5])
 
-    # Bloqueos personales del psicólogo
+    # Bloqueos personales y de espacios del psicólogo (soporta modalidad específica y rangos de fecha)
+    try:
+        cursor.execute("PRAGMA table_info(bloqueos_agenda_especificos)")
+        cols_b = [c[1] for c in cursor.fetchall()]
+        if 'modalidad' not in cols_b:
+            cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN modalidad TEXT DEFAULT 'Todas'")
+        if 'fecha_fin' not in cols_b:
+            cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN fecha_fin TEXT")
+        db.commit()
+    except:
+        pass
+
     cursor.execute("""
-        SELECT hora_inicio, hora_fin, todo_el_dia FROM bloqueos_agenda_especificos
-        WHERE psicologo_id = ? AND fecha = ?
-    """, (psicologo_id, target_date_str))
+        SELECT hora_inicio, hora_fin, todo_el_dia, modalidad, fecha, fecha_fin 
+        FROM bloqueos_agenda_especificos
+        WHERE psicologo_id = ? 
+          AND (fecha = ? OR (fecha_fin IS NOT NULL AND fecha_fin != '' AND fecha <= ? AND fecha_fin >= ?))
+    """, (psicologo_id, target_date_str, target_date_str, target_date_str))
     blocks = cursor.fetchall()
     
+    slots_to_remove = set()
     for blk in blocks:
-        if blk['todo_el_dia'] == 1:
-            return []
-        b_in = blk['hora_inicio']
-        b_fi = blk['hora_fin']
-        if b_in and b_fi:
-            for s in list(candidate_slots):
+        blk_dict = dict(blk)
+        blk_mod = (blk_dict.get('modalidad') or 'Todas').strip().lower()
+        is_all_modalities = blk_mod in ('todas', 'all', '', 'todas las modalidades')
+        is_all_day = (blk_dict.get('todo_el_dia') == 1)
+        b_in = (blk_dict.get('hora_inicio') or '').strip()
+        b_fi = (blk_dict.get('hora_fin') or '').strip()
+
+        for s in candidate_slots:
+            slot_mod = (s.get('modalidad') or s.get('perfil') or '').strip().lower()
+            slot_perf = (s.get('perfil') or s.get('modalidad') or '').strip().lower()
+            
+            matches_modality = is_all_modalities or (blk_mod in slot_mod or slot_mod in blk_mod or blk_mod in slot_perf or slot_perf in blk_mod)
+            if not matches_modality:
+                continue
+
+            if is_all_day:
+                slots_to_remove.add(id(s))
+            elif b_in and b_fi:
                 if b_in <= s['hora_inicio'] < b_fi:
-                    busy_hours.add(s['hora_literal'])
+                    slots_to_remove.add(id(s))
+
+    if slots_to_remove:
+        candidate_slots = [s for s in candidate_slots if id(s) not in slots_to_remove]
 
     now_dt = datetime.now()
 
@@ -514,53 +543,72 @@ def manage_agenda_blocks():
     if request.method == 'POST':
         data = request.json or {}
         fecha = (data.get('fecha') or '').strip()
+        fecha_fin = (data.get('fecha_fin') or '').strip()
+        modalidad = (data.get('modalidad') or 'Todas').strip()
         hora_inicio = (data.get('hora_inicio') or '').strip()
         hora_fin = (data.get('hora_fin') or '').strip()
-        motivo = (data.get('motivo') or 'Evento Personal / Bloqueo').strip()
+        motivo = (data.get('motivo') or 'Bloqueo de Espacio / Horario').strip()
         todo_el_dia = 1 if data.get('todo_el_dia') else 0
 
         if not fecha:
-            return jsonify({'error': 'La fecha es obligatoria para agendar un evento personal / bloqueo.'}), 400
+            return jsonify({'error': 'La fecha es obligatoria para registrar un bloqueo de espacio / horario.'}), 400
+
+        try:
+            cursor.execute("PRAGMA table_info(bloqueos_agenda_especificos)")
+            cols_b = [c[1] for c in cursor.fetchall()]
+            if 'modalidad' not in cols_b:
+                cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN modalidad TEXT DEFAULT 'Todas'")
+            if 'fecha_fin' not in cols_b:
+                cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN fecha_fin TEXT")
+            db.commit()
+        except:
+            pass
 
         google_event_id = None
-        try:
-            from routes_admin import get_calendar_service
-            service = get_calendar_service(target_psic_id)
-            if service:
-                if todo_el_dia or not hora_inicio:
-                    start_dict = {'date': fecha}
-                    end_dict = {'date': fecha}
-                else:
-                    h_start = hora_inicio if len(hora_inicio) == 5 else f"{hora_inicio}:00"
-                    h_end = hora_fin if hora_fin and len(hora_fin) == 5 else f"{h_start[:2]}:59"
-                    start_dict = {'dateTime': f"{fecha}T{h_start}:00-04:00", 'timeZone': 'America/Caracas'}
-                    end_dict = {'dateTime': f"{fecha}T{h_end}:00-04:00", 'timeZone': 'America/Caracas'}
-                
-                event_body = {
-                    'summary': f"⛔ {motivo}",
-                    'description': "Bloqueo de agenda / Evento personal en Espacio Terapéutico",
-                    'start': start_dict,
-                    'end': end_dict
-                }
-                g_event = service.events().insert(calendarId='primary', body=event_body).execute()
-                google_event_id = g_event.get('id')
-        except Exception as ge:
-            print("Error sincronizando bloqueo con Google Calendar:", ge)
+        sincronizar_google = bool(data.get('sincronizar_google', False))
+        if sincronizar_google:
+            try:
+                from routes_admin import get_calendar_service
+                service = get_calendar_service(target_psic_id)
+                if service:
+                    end_date_for_g = fecha_fin if fecha_fin else fecha
+                    if todo_el_dia or not hora_inicio:
+                        start_dict = {'date': fecha}
+                        end_dict = {'date': end_date_for_g}
+                    else:
+                        h_start = hora_inicio if len(hora_inicio) == 5 else f"{hora_inicio}:00"
+                        h_end = hora_fin if hora_fin and len(hora_fin) == 5 else f"{h_start[:2]}:59"
+                        start_dict = {'dateTime': f"{fecha}T{h_start}:00-04:00", 'timeZone': 'America/Caracas'}
+                        end_dict = {'dateTime': f"{end_date_for_g}T{h_end}:00-04:00", 'timeZone': 'America/Caracas'}
+                    
+                    mod_label = f" [{modalidad}]" if modalidad and modalidad != 'Todas' else ""
+                    event_body = {
+                        'summary': f"⛔ {motivo}{mod_label}",
+                        'description': f"Bloqueo de espacio en Espacio Terapéutico (Modalidad: {modalidad})",
+                        'start': start_dict,
+                        'end': end_dict
+                    }
+                    g_event = service.events().insert(calendarId='primary', body=event_body).execute()
+                    google_event_id = g_event.get('id')
+            except Exception as ge:
+                print("Error sincronizando bloqueo con Google Calendar:", ge)
 
         cursor.execute("""
-            INSERT INTO bloqueos_agenda_especificos (psicologo_id, fecha, hora_inicio, hora_fin, motivo, todo_el_dia)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (target_psic_id, fecha, hora_inicio, hora_fin, motivo, todo_el_dia))
+            INSERT INTO bloqueos_agenda_especificos (psicologo_id, fecha, fecha_fin, modalidad, hora_inicio, hora_fin, motivo, todo_el_dia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (target_psic_id, fecha, fecha_fin or None, modalidad, hora_inicio, hora_fin, motivo, todo_el_dia))
         db.commit()
         block_id = cursor.lastrowid
         return jsonify({
-            'success': 'Evento personal / bloqueo registrado correctamente.',
-            'message': 'Evento personal / bloqueo registrado correctamente.',
+            'success': 'Bloqueo de espacio / horario registrado correctamente.',
+            'message': 'Bloqueo de espacio / horario registrado correctamente.',
             'google_synced': bool(google_event_id),
             'block': {
                 'id': block_id,
                 'psicologo_id': target_psic_id,
                 'fecha': fecha,
+                'fecha_fin': fecha_fin or None,
+                'modalidad': modalidad,
                 'hora_inicio': hora_inicio,
                 'hora_fin': hora_fin,
                 'motivo': motivo,
@@ -571,7 +619,7 @@ def manage_agenda_blocks():
     cursor.execute("""
         SELECT * FROM bloqueos_agenda_especificos
         WHERE psicologo_id = ?
-        ORDER BY fecha ASC, hora_inicio ASC
+        ORDER BY fecha DESC, hora_inicio ASC
     """, (target_psic_id,))
     rows = [dict(r) for r in cursor.fetchall()]
     return jsonify(rows)
