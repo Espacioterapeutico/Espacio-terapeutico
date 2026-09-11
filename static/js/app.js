@@ -6541,8 +6541,15 @@ async function loadAgenda() {
             return;
         }
 
-        // Renderizar Bloqueos de Agenda primero si existen
+        // Renderizar Bloqueos de Agenda primero si existen (solo activos o futuros)
+        const todayAgendaStr = (typeof getLocalDateString === 'function') 
+            ? getLocalDateString() 
+            : new Date().toISOString().split('T')[0];
+
         blocksList.forEach(b => {
+            const bEnd = (b.fecha_fin && b.fecha_fin.trim()) ? b.fecha_fin.trim() : (b.fecha || '').trim();
+            if (bEnd < todayAgendaStr) return; // Omitir bloqueos pasados
+
             const tr = document.createElement('tr');
             const horStr = b.todo_el_dia ? 'Todo el día' : `${b.hora_inicio} - ${b.hora_fin}`;
             tr.innerHTML = `
@@ -7248,6 +7255,91 @@ function switchHorariosMode(mode) {
     }
 }
 
+let showPastBloqueos = false;
+
+function getLocalDateString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function renderBloqueoCard(b, isPast = false) {
+    const card = document.createElement('div');
+    card.style.background = isPast ? 'var(--bg-body, #f8fafc)' : 'var(--card-bg, #ffffff)';
+    card.style.border = '1.5px solid var(--border-color)';
+    card.style.borderLeft = isPast ? '4px solid #94a3b8' : '4px solid #e11d48';
+    card.style.borderRadius = '12px';
+    card.style.padding = '1.15rem 1.25rem';
+    card.style.display = 'flex';
+    card.style.justifyContent = 'space-between';
+    card.style.alignItems = 'center';
+    card.style.gap = '1rem';
+    card.style.flexWrap = 'wrap';
+    card.style.boxShadow = isPast ? 'none' : '0 2px 6px rgba(0,0,0,0.02)';
+    if (isPast) {
+        card.style.opacity = '0.85';
+    }
+
+    // Badge de Modalidad
+    const mod = (b.modalidad || 'Todas').trim();
+    let modBadge = '';
+    if (mod.toLowerCase() === 'presencial') {
+        modBadge = `<span style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #c7d2fe; display: inline-flex; align-items: center; gap: 0.35rem;">🏛️ Solo Presencial</span>`;
+    } else if (mod.toLowerCase() === 'online') {
+        modBadge = `<span style="background: #ecfdf5; color: #065f46; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 0.35rem;">💻 Solo Online</span>`;
+    } else {
+        modBadge = `<span style="background: #fee2e2; color: #991b1b; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 0.35rem;">⛔ Todas las modalidades</span>`;
+    }
+
+    // Badge de Estado Pasado / Activo
+    const statusBadge = isPast 
+        ? `<span style="background: #e2e8f0; color: #475569; font-weight: 700; font-size: 0.76rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #cbd5e1;">⌛ Finalizado</span>`
+        : `<span style="background: #dcfce7; color: #166534; font-weight: 700; font-size: 0.76rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #bbf7d0;">🟢 Activo / Próximo</span>`;
+
+    // Texto de Fechas
+    let datesText = '';
+    if (b.fecha_fin && b.fecha_fin !== b.fecha) {
+        datesText = `<span style="font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">📅 Del <strong>${b.fecha}</strong> al <strong>${b.fecha_fin}</strong></span>`;
+    } else {
+        datesText = `<span style="font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">📅 Fecha: <strong>${b.fecha}</strong></span>`;
+    }
+
+    // Texto de Horas
+    let hoursText = '';
+    if (b.todo_el_dia) {
+        hoursText = `<span style="background: #f1f5f9; color: #475569; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">⏰ Todo el día</span>`;
+    } else {
+        hoursText = `<span style="background: #f1f5f9; color: #475569; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">⏰ ${b.hora_inicio || '08:00'} - ${b.hora_fin || '18:00'}</span>`;
+    }
+
+    const motivoText = b.motivo ? `<div style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 0.25rem;"><i class="fas fa-comment-alt" style="opacity: 0.6; margin-right: 0.35rem;"></i>"${b.motivo}"</div>` : '';
+
+    card.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 260px;">
+            <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                ${datesText}
+                ${hoursText}
+                ${modBadge}
+                ${statusBadge}
+            </div>
+            ${motivoText}
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem;">
+                <span style="font-size: 0.76rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-lock" style="font-size: 0.7rem;"></i> Exclusivo del sistema (sin Google Calendar)
+                </span>
+            </div>
+        </div>
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAgendaBlock(${b.id})" style="font-weight: 600; border-radius: 8px; padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; border: 1.5px solid #e11d48; color: #e11d48; background: transparent; cursor: pointer;">
+                <i class="fas fa-trash-alt"></i> Eliminar
+            </button>
+        </div>
+    `;
+    return card;
+}
+
 async function loadHorariosBloqueos() {
     const listContainer = document.getElementById('horarios-bloqueos-list');
     if (!listContainer) return;
@@ -7264,7 +7356,27 @@ async function loadHorariosBloqueos() {
         if (!res.ok) throw new Error('Error al consultar bloqueos');
         const blocks = await res.json();
 
-        if (!blocks || blocks.length === 0) {
+        const todayStr = getLocalDateString();
+
+        // Separar entre activos/futuros y pasados
+        const activeBlocks = [];
+        const pastBlocks = [];
+
+        (blocks || []).forEach(b => {
+            const endDate = (b.fecha_fin && b.fecha_fin.trim()) ? b.fecha_fin.trim() : (b.fecha || '').trim();
+            if (endDate < todayStr) {
+                pastBlocks.push(b);
+            } else {
+                activeBlocks.push(b);
+            }
+        });
+
+        // Ordenar activos por fecha ascendente (los más próximos primero)
+        activeBlocks.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '') || (a.hora_inicio || '').localeCompare(b.hora_inicio || ''));
+        // Ordenar pasados por fecha descendente (los más recientes primero)
+        pastBlocks.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.hora_inicio || '').localeCompare(a.hora_inicio || ''));
+
+        if (activeBlocks.length === 0 && pastBlocks.length === 0) {
             listContainer.innerHTML = `
                 <div style="text-align: center; padding: 2.5rem 1.5rem; background: #ffffff; border: 1.5px dashed var(--border-color); border-radius: 14px;">
                     <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🎉</div>
@@ -7278,71 +7390,74 @@ async function loadHorariosBloqueos() {
         }
 
         listContainer.innerHTML = '';
-        blocks.forEach(b => {
-            const card = document.createElement('div');
-            card.style.background = 'var(--card-bg, #ffffff)';
-            card.style.border = '1.5px solid var(--border-color)';
-            card.style.borderLeft = '4px solid #e11d48';
-            card.style.borderRadius = '12px';
-            card.style.padding = '1.15rem 1.25rem';
-            card.style.display = 'flex';
-            card.style.justifyContent = 'space-between';
-            card.style.alignItems = 'center';
-            card.style.gap = '1rem';
-            card.style.flexWrap = 'wrap';
-            card.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
 
-            // Badge de Modalidad
-            const mod = (b.modalidad || 'Todas').trim();
-            let modBadge = '';
-            if (mod.toLowerCase() === 'presencial') {
-                modBadge = `<span style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #c7d2fe; display: inline-flex; align-items: center; gap: 0.35rem;">🏛️ Solo Presencial</span>`;
-            } else if (mod.toLowerCase() === 'online') {
-                modBadge = `<span style="background: #ecfdf5; color: #065f46; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 0.35rem;">💻 Solo Online</span>`;
-            } else {
-                modBadge = `<span style="background: #fee2e2; color: #991b1b; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 0.35rem;">⛔ Todas las modalidades</span>`;
-            }
-
-            // Texto de Fechas
-            let datesText = '';
-            if (b.fecha_fin && b.fecha_fin !== b.fecha) {
-                datesText = `<span style="font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">📅 Del <strong>${b.fecha}</strong> al <strong>${b.fecha_fin}</strong></span>`;
-            } else {
-                datesText = `<span style="font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">📅 Fecha: <strong>${b.fecha}</strong></span>`;
-            }
-
-            // Texto de Horas
-            let hoursText = '';
-            if (b.todo_el_dia) {
-                hoursText = `<span style="background: #f1f5f9; color: #475569; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">⏰ Todo el día</span>`;
-            } else {
-                hoursText = `<span style="background: #f1f5f9; color: #475569; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">⏰ ${b.hora_inicio || '08:00'} - ${b.hora_fin || '18:00'}</span>`;
-            }
-
-            const motivoText = b.motivo ? `<div style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 0.25rem;"><i class="fas fa-comment-alt" style="opacity: 0.6; margin-right: 0.35rem;"></i>"${b.motivo}"</div>` : '';
-
-            card.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 260px;">
-                    <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-                        ${datesText}
-                        ${hoursText}
-                        ${modBadge}
-                    </div>
-                    ${motivoText}
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem;">
-                        <span style="font-size: 0.76rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 0.3rem;">
-                            <i class="fas fa-lock" style="font-size: 0.7rem;"></i> Exclusivo del sistema (sin Google Calendar)
-                        </span>
-                    </div>
-                </div>
-                <div>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAgendaBlock(${b.id})" style="font-weight: 600; border-radius: 8px; padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; border: 1.5px solid #e11d48; color: #e11d48; background: transparent; cursor: pointer;">
-                        <i class="fas fa-trash-alt"></i> Eliminar
-                    </button>
-                </div>
+        // Si no hay activos pero sí pasados
+        if (activeBlocks.length === 0) {
+            const emptyActive = document.createElement('div');
+            emptyActive.style.textAlign = 'center';
+            emptyActive.style.padding = '2rem 1.5rem';
+            emptyActive.style.background = '#ffffff';
+            emptyActive.style.border = '1.5px dashed var(--border-color)';
+            emptyActive.style.borderRadius = '14px';
+            emptyActive.style.marginBottom = '0.5rem';
+            emptyActive.innerHTML = `
+                <div style="font-size: 2rem; margin-bottom: 0.35rem;">✅</div>
+                <div style="font-weight: 700; font-size: 0.98rem; color: var(--text-dark); margin-bottom: 0.2rem;">No tienes bloqueos activos ni próximos</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">Los bloqueos anteriores ya han expirado y se encuentran ocultos en el historial.</div>
             `;
-            listContainer.appendChild(card);
-        });
+            listContainer.appendChild(emptyActive);
+        } else {
+            // Renderizar bloques activos/futuros
+            activeBlocks.forEach(b => {
+                listContainer.appendChild(renderBloqueoCard(b, false));
+            });
+        }
+
+        // Sección de bloques pasados (oculta por defecto)
+        if (pastBlocks.length > 0) {
+            const pastSection = document.createElement('div');
+            pastSection.style.marginTop = '1.25rem';
+            pastSection.style.borderTop = '1px dashed var(--border-color)';
+            pastSection.style.paddingTop = '1rem';
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'btn btn-sm btn-secondary';
+            toggleBtn.style.fontWeight = '600';
+            toggleBtn.style.borderRadius = '8px';
+            toggleBtn.style.padding = '0.4rem 0.85rem';
+            toggleBtn.style.display = 'inline-flex';
+            toggleBtn.style.alignItems = 'center';
+            toggleBtn.style.gap = '0.45rem';
+            toggleBtn.style.cursor = 'pointer';
+            toggleBtn.innerHTML = showPastBloqueos 
+                ? `<span>🙈 Ocultar bloqueos pasados (${pastBlocks.length})</span>` 
+                : `<span>👁️ Mostrar bloqueos pasados que ya finalizaron (${pastBlocks.length})</span>`;
+
+            const pastList = document.createElement('div');
+            pastList.id = 'horarios-bloqueos-past-list';
+            pastList.style.display = showPastBloqueos ? 'flex' : 'none';
+            pastList.style.flexDirection = 'column';
+            pastList.style.gap = '0.75rem';
+            pastList.style.marginTop = '0.85rem';
+
+            pastBlocks.forEach(b => {
+                pastList.appendChild(renderBloqueoCard(b, true));
+            });
+
+            toggleBtn.onclick = () => {
+                showPastBloqueos = !showPastBloqueos;
+                pastList.style.display = showPastBloqueos ? 'flex' : 'none';
+                toggleBtn.innerHTML = showPastBloqueos 
+                    ? `<span>🙈 Ocultar bloqueos pasados (${pastBlocks.length})</span>` 
+                    : `<span>👁️ Mostrar bloqueos pasados que ya finalizaron (${pastBlocks.length})</span>`;
+            };
+
+            pastSection.appendChild(toggleBtn);
+            pastSection.appendChild(pastList);
+            listContainer.appendChild(pastSection);
+        }
+
     } catch (err) {
         console.error("Error cargando bloqueos:", err);
         listContainer.innerHTML = `
