@@ -1039,6 +1039,8 @@ def send_queue_item_now(item_id):
             if not cita:
                 return jsonify({'error': 'Cita no encontrada'}), 404
 
+            cita = dict(cita)
+
             phone = cita['pat_telefono']
             if not phone:
                 return jsonify({'error': 'El paciente no tiene teléfono registrado'}), 400
