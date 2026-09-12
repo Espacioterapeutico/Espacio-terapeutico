@@ -1101,6 +1101,11 @@ function switchView(viewId) {
     sidebar.classList.remove('open');
     overlay.classList.add('hide');
 
+    // Restablecer scroll al inicio para ver cabecera y pestañas superiores
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    const mainContentEl = document.querySelector('.main-content');
+    if (mainContentEl) mainContentEl.scrollTop = 0;
+
     // Cargar datos dinámicos según vista
     if (viewId === 'dashboard') {
         loadDashboardStats();
@@ -17103,7 +17108,6 @@ function switchTherapistToolsTab(tab) {
         const searchInput = document.getElementById('tt-patient-search');
         if (searchInput) {
             searchInput.value = '';
-            searchInput.focus();
         }
         const dropdown = document.getElementById('tt-patient-dropdown');
         if (dropdown) {
