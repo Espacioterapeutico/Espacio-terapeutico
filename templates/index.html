@@ -3463,6 +3463,9 @@
                         <button type="button" id="tt-tab-catalogo" class="btn btn-sm btn-secondary" onclick="switchTherapistToolsTab('catalogo')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">
                             📚 Catálogo de Herramientas
                         </button>
+                        <button type="button" id="tt-tab-activas" class="btn btn-sm btn-secondary" onclick="switchTherapistToolsTab('activas')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">
+                            ⚡ Herramientas Activas
+                        </button>
                     </div>
 
                     <!-- SUB-VISTA 1: ASIGNACIÓN DE HERRAMIENTAS -->
@@ -3471,31 +3474,16 @@
                         <div class="card mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%); border: 1.5px solid #e9d5ff;">
                             <div class="card-header" style="border-bottom: 1.5px solid #f3e8ff;">
                                 <h3 style="color: #6b21a8; display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.15rem;">
-                                    🔍 Asignación de Herramientas por Consultante
+                                    🔍 Asignación Rápida por Consultante
                                 </h3>
                             </div>
                             <div class="card-body">
-                                <p class="text-secondary mb-3" style="font-size: 0.88rem;">Busca o selecciona un paciente para abrir la ventana de configuración y activar o desactivar herramientas con interruptores On/Off:</p>
+                                <p class="text-secondary mb-3" style="font-size: 0.88rem;">Busca un paciente para abrir la ventana de configuración y activar o desactivar herramientas con interruptores On/Off:</p>
                                 
-                                <div class="form-group mb-3" style="position: relative;">
+                                <div class="form-group mb-0" style="position: relative;">
                                     <label for="tt-patient-search" style="font-weight: 700;">Buscar Consultante:</label>
                                     <input type="text" id="tt-patient-search" placeholder="Escribe Nombre, Apellido o Cédula..." oninput="onTherapistToolPatientSearch(this.value)" onfocus="onTherapistToolPatientSearch(this.value)" autocomplete="off" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.95rem;">
                                     <div id="tt-patient-dropdown" class="search-results-dropdown hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 100;"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- LISTA RÁPIDA DE CONSULTANTES PARA ASIGNACIÓN -->
-                        <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color);">
-                            <div class="card-header" style="background: #f8fafc; border-bottom: 1.5px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.25rem;">
-                                <h4 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-dark);">
-                                    👥 Directorio de Consultantes
-                                </h4>
-                                <span class="badge" id="tt-patients-count-badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; padding: 0.25rem 0.6rem;">Cargando...</span>
-                            </div>
-                            <div class="card-body p-0">
-                                <div id="tt-patients-quick-list" style="display: flex; flex-direction: column;">
-                                    <p class="text-muted p-4 text-center">Cargando consultantes...</p>
                                 </div>
                             </div>
                         </div>
@@ -3505,16 +3493,44 @@
                     <div id="tt-sub-view-catalogo" class="hide">
                         <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); padding: 1.25rem;">
                             <h3 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
-                                📚 Catálogo de Módulos &amp; Consultantes Activos
+                                📚 Catálogo de Herramientas Terapéuticas
                             </h3>
                             <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">
-                                Consulta las herramientas terapéuticas disponibles, revisa qué pacientes tienen asignada cada una y previsualiza cómo se presenta cada formulario desde la vista del consultante.
+                                Conoce las herramientas clínicas disponibles, revisa el número de consultantes activos en cada una y previsualiza cómo se le presenta cada formulario al paciente.
                             </p>
                         </div>
                         <div id="tt-modules-accordion" style="display: flex; flex-direction: column; gap: 1rem;">
                             <p class="text-muted">Cargando catálogo de herramientas...</p>
                         </div>
                         <div id="tools-catalog-pagination-controls" class="mt-3"></div>
+                    </div>
+
+                    <!-- SUB-VISTA 3: HERRAMIENTAS ACTIVAS -->
+                    <div id="tt-sub-view-activas" class="hide">
+                        <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <div>
+                                    <h3 style="margin: 0 0 0.25rem 0; font-family: var(--font-title); color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+                                        ⚡ Consultantes con Herramientas Activas
+                                    </h3>
+                                    <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">
+                                        Supervisa únicamente a los consultantes que tienen módulos o recordatorios terapéuticos en curso.
+                                    </p>
+                                </div>
+                                <span class="badge" id="tt-activas-count-badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; padding: 0.35rem 0.75rem; font-size: 0.85rem; border-radius: 20px;">
+                                    Cargando...
+                                </span>
+                            </div>
+
+                            <!-- FILTRO EN TIEMPO REAL -->
+                            <div style="position: relative;">
+                                <input type="text" id="tt-activas-filter-input" placeholder="🔍 Filtrar por nombre, apellido o cédula..." oninput="filterActiveToolsPatients(this.value)" autocomplete="off" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.9rem;">
+                            </div>
+                        </div>
+
+                        <div id="tt-active-tools-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                            <p class="text-muted text-center py-4">Cargando consultantes con herramientas activas...</p>
+                        </div>
                     </div>
                 </section>
 

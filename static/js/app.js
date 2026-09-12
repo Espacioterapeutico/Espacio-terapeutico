@@ -16920,7 +16920,7 @@ window.triggerManualCronReminders = triggerManualCronReminders;
 // ==========================================
 
 function switchTherapistToolsTab(tab) {
-    const views = ['asignar', 'catalogo'];
+    const views = ['asignar', 'catalogo', 'activas'];
     views.forEach(v => {
         const viewEl = document.getElementById(`tt-sub-view-${v}`);
         const tabEl = document.getElementById(`tt-tab-${v}`);
@@ -16945,9 +16945,12 @@ function switchTherapistToolsTab(tab) {
     });
 
     if (tab === 'asignar') {
-        loadTherapistToolsPatientsList();
+        const searchInput = document.getElementById('tt-patient-search');
+        if (searchInput) searchInput.focus();
     } else if (tab === 'catalogo') {
         loadTherapistToolsCatalog();
+    } else if (tab === 'activas') {
+        loadActiveToolsPatients();
     }
 }
 window.switchTherapistToolsTab = switchTherapistToolsTab;
@@ -17535,102 +17538,35 @@ function renderTherapistToolsCatalog() {
     const pageRecords = currentToolsCatalogList.slice(start, start + TOOLS_CATALOG_PER_PAGE);
 
     container.innerHTML = pageRecords.map(m => {
-        const toolType = claveToToolMap[m.clave] || m.clave;
-        const targetId = `acc-body-${m.clave}`;
         const activeCount = m.activos || 0;
-        const patients = m.pacientes || [];
-
-        let patientsHtml = '';
-        if (patients.length === 0) {
-            patientsHtml = `
-                <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
-                    📭 No hay consultantes con esta herramienta activa actualmente.
-                </div>
-            `;
-        } else {
-            patientsHtml = patients.map(p => {
-                const inlineContainerId = `inline-history-acc-${p.patient_id}-${toolType}`;
-                const safePName = (p.nombre_paciente || '').replace(/'/g, "\\'");
-                const safePCedula = (p.cedula || '').replace(/'/g, "\\'");
-
-                if (m.clave === 'meditacion') {
-                    return `
-                        <div style="display: flex; flex-direction: column; width: 100%;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
-                                <div style="flex: 1; min-width: 220px;">
-                                    <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
-                                    <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
-                                </div>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="selectPatientForTherapistTools(${p.patient_id}, '${safePName}', '${safePCedula}'); window.scrollTo({top: 0, behavior: 'smooth'});" style="font-weight: 600; padding: 0.35rem 0.75rem; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.2);">
-                                        ⚙️ Horarios &amp; Asignación
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                return `
-                    <div style="display: flex; flex-direction: column; width: 100%;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.6rem;">
-                            <div style="flex: 1; min-width: 220px;">
-                                <strong style="font-size: 0.92rem; color: var(--text-dark); display: block;">👤 ${p.nombre_paciente}</strong>
-                                <span style="font-size: 0.8rem; color: var(--text-muted);">${p.cedula ? 'Cédula: ' + p.cedula + ' | ' : ''}${p.metric_text}</span>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <button type="button" class="btn btn-secondary btn-sm" onclick="showPatientToolSummary(${p.patient_id}, '${toolType}', '${p.nombre_paciente.replace(/'/g, "\\'")}')" style="font-weight: 600; padding: 0.35rem 0.75rem; border: 1.5px solid var(--border-color); background: white; color: var(--text-dark);">
-                                    📄 Ver Ficha
-                                </button>
-                                <button type="button" class="btn btn-primary btn-sm btn-view-history" onclick="toggleInlinePatientHistory(${p.patient_id}, '${toolType}', '${inlineContainerId}')" style="font-weight: 600; padding: 0.35rem 0.75rem;">
-                                    📋 Ver Historial
-                                </button>
-                            </div>
-                        </div>
-                        <div id="${inlineContainerId}" class="inline-patient-history hide" style="display: none; margin-top: 0.5rem; width: 100%;"></div>
-                    </div>
-                `;
-            }).join('<div style="height: 0.5rem;"></div>');
-        }
 
         return `
-        <div class="card accordion-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm);">
-            <!-- CABECERA ACORDEÓN: Solo Ícono + Nombre + Flecha -->
-            <div class="accordion-tool-header" data-target="${targetId}" style="padding: 0.55rem 0.85rem; background: white; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; user-select: none; transition: background 0.2s;">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
-                        <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${m.icono}</span>
-                        <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 0.92rem; line-height: 1.2; word-break: break-word;">${m.nombre}</h4>
+        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.85rem; box-shadow: var(--shadow-sm);">
+            <div style="padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 220px;">
+                    <span style="font-size: 1.8rem; line-height: 1;">${m.icono}</span>
+                    <div>
+                        <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 1.05rem; line-height: 1.2;">${m.nombre}</h4>
+                        <div style="margin-top: 0.35rem;">
+                            <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.78rem; padding: 0.2rem 0.55rem; border-radius: 12px;">
+                                👥 ${activeCount} consultante${activeCount === 1 ? '' : 's'} activo${activeCount === 1 ? '' : 's'}
+                            </span>
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary accordion-toggle-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #f9fafb;">
-                        <span class="accordion-arrow" style="font-size: 0.85rem; transition: transform 0.25s ease;">🔽</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    ${m.clave === 'meditacion' ? `
+                        <button type="button" class="btn btn-sm" onclick="openModal('modal-meditaciones-library'); loadMeditacionesLibrary();" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); color: white; border: none; box-shadow: 0 2px 5px rgba(112,46,94,0.25); cursor: pointer;">
+                            📚 Biblioteca de Meditaciones
+                        </button>
+                    ` : ''}
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openToolPreviewModal('${m.clave}')" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; cursor: pointer;">
+                        👁️ Previsualizar Formulario
                     </button>
                 </div>
-                <div style="margin-left: 1.75rem; line-height: 1;">
-                    <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.72rem; padding: 0.12rem 0.4rem;">
-                        ${activeCount} Paciente(s) Activos
-                    </span>
-                </div>
             </div>
-            <!-- BARRA INDEPENDIENTE: Botones de Acción (FUERA del accordion-header) -->
-            <div style="padding: 0.35rem 0.85rem; border-top: 1px solid #f3e8ff; background: #faf5ff; display: flex; justify-content: flex-end; gap: 0.5rem; align-items: center;">
-                ${m.clave === 'meditacion' ? `
-                    <button type="button" class="btn btn-sm" onclick="openModal('modal-meditaciones-library'); loadMeditacionesLibrary();" style="padding: 0.25rem 0.75rem; font-size: 0.78rem; border-radius: 5px; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); color: white; border: none; box-shadow: 0 2px 5px rgba(112,46,94,0.25); cursor: pointer;">
-                        📚 Biblioteca de Meditaciones
-                    </button>
-                ` : ''}
-                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openToolPreviewModal('${m.clave}')" style="padding: 0.2rem 0.65rem; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; position: relative; z-index: 10;">👁️ Previsualizar Formulario</button>
-            </div>
-            <!-- CONTENEDOR DE PREVISUALIZACIÓN INLINE (legacy, oculto) -->
-            <div id="inline-tool-preview-${m.clave}" class="inline-tool-preview hide" style="display: none; padding: 0.85rem 1rem; border-top: 1.5px solid #d8b4fe; background: #faf5ff;"></div>
-            <!-- CUERPO DESPLEGABLE: Descripción + Lista de Consultantes -->
-            <div id="${targetId}" class="accordion-tool-body hide" style="display: none; padding: 0.85rem 1rem; border-top: 1.5px solid var(--border-color); background: #fafafa;">
-                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <p style="font-size: 0.83rem; color: var(--text-muted); margin: 0; line-height: 1.4; background: white; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                        ℹ️ <strong>Descripción:</strong> ${m.descripcion}
-                    </p>
-                    ${patientsHtml}
-                </div>
+            <div style="padding: 0.85rem 1.25rem; background: #fafafa; font-size: 0.88rem; color: var(--text-dark); line-height: 1.5;">
+                <p style="margin: 0;">ℹ️ <strong>Descripción Clínica:</strong> ${m.descripcion}</p>
             </div>
         </div>
         `;
@@ -18075,83 +18011,137 @@ document.addEventListener('click', function(e) {
 let cachedTherapistPatients = null;
 let currentMedPatientName = '';
 let currentMedPatientCode = '';
+let cachedActiveToolsPatients = [];
 
 async function loadTherapistToolsPatientsList(filterText = '') {
-    const container = document.getElementById('tt-patients-quick-list');
-    const badge = document.getElementById('tt-patients-count-badge');
+    // Retenido por compatibilidad. El directorio masivo fue retirado para evitar sobrecarga visual.
+}
+
+async function loadActiveToolsPatients() {
+    const container = document.getElementById('tt-active-tools-container');
+    const badge = document.getElementById('tt-activas-count-badge');
     if (!container) return;
 
+    container.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+            <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">⏳</div>
+            <p style="margin: 0; font-size: 0.95rem; font-weight: 600;">Cargando consultantes con herramientas activas...</p>
+        </div>
+    `;
+
     try {
-        if (!cachedTherapistPatients) {
-            const res = await fetch('/api/patients');
-            cachedTherapistPatients = await res.json();
-        }
-        const patients = cachedTherapistPatients || [];
-        const q = (filterText || '').trim().toLowerCase();
+        const res = await fetch('/api/therapist/patients-active-tools');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al cargar herramientas activas');
 
-        const filtered = q.length === 0
-            ? patients
-            : patients.filter(p => {
-                const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
-                const cedula = (p.cedula || '').toLowerCase();
-                return fullName.includes(q) || cedula.includes(q);
-            });
-
-        if (badge) {
-            badge.textContent = `${filtered.length} consultante(s)`;
-        }
-
-        if (filtered.length === 0) {
-            container.innerHTML = `
-                <div style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
-                    <div style="font-size: 1.6rem; margin-bottom: 0.4rem;">🔍</div>
-                    <p style="margin: 0; font-size: 0.92rem;">No se encontraron consultantes ${q ? 'con ese criterio de búsqueda' : 'registrados'}.</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = filtered.map((p, idx) => {
-            const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || `Consultante #${p.id}`;
-            const safeFullName = fullName.replace(/'/g, "\\'");
-            const cedula = p.cedula || '';
-            const safeCedula = cedula.replace(/'/g, "\\'");
-            const telefono = p.telefono || '';
-            const isLast = idx === filtered.length - 1;
-
-            return `
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; border-bottom: ${isLast ? 'none' : '1px solid var(--border-color)'}; flex-wrap: wrap; gap: 0.75rem; transition: background 0.15s; background: white;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='white'">
-                    <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 220px; cursor: pointer;" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')">
-                        <div style="width: 42px; height: 42px; border-radius: 50%; background: #f3e8ff; color: #7e22ce; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; border: 1.5px solid #d8b4fe;">
-                            ${(p.nombres || 'P').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <strong style="font-size: 0.96rem; color: #1e293b; display: block;">${fullName}</strong>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #64748b; margin-top: 2px; flex-wrap: wrap;">
-                                <span>${cedula ? '🪪 ' + cedula : 'Sin cédula'}</span>
-                                ${telefono ? `<span>· 📱 ${telefono}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <button type="button" class="btn btn-sm btn-primary" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="font-weight: 700; padding: 0.45rem 0.95rem; border-radius: 8px; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 5px rgba(112,46,94,0.25); display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-                            ⚙️ Asignar Herramientas
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        cachedActiveToolsPatients = data.patients || [];
+        renderActiveToolsPatients(cachedActiveToolsPatients);
     } catch (err) {
-        if (container) container.innerHTML = `<p class="text-danger p-3">Error al cargar consultantes: ${err.message}</p>`;
+        container.innerHTML = `<p class="text-danger p-3 text-center">Error: ${err.message}</p>`;
     }
 }
+window.loadActiveToolsPatients = loadActiveToolsPatients;
+
+function filterActiveToolsPatients(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (!cachedActiveToolsPatients) return;
+
+    if (q.length === 0) {
+        renderActiveToolsPatients(cachedActiveToolsPatients);
+        return;
+    }
+
+    const filtered = cachedActiveToolsPatients.filter(p => {
+        const name = (p.nombre_completo || '').toLowerCase();
+        const cedula = (p.cedula || '').toLowerCase();
+        const phone = (p.telefono || '').toLowerCase();
+        const toolsMatch = (p.tools || []).some(t => (t.nombre || '').toLowerCase().includes(q));
+        return name.includes(q) || cedula.includes(q) || phone.includes(q) || toolsMatch;
+    });
+
+    renderActiveToolsPatients(filtered);
+}
+window.filterActiveToolsPatients = filterActiveToolsPatients;
+
+function renderActiveToolsPatients(patients) {
+    const container = document.getElementById('tt-active-tools-container');
+    const badge = document.getElementById('tt-activas-count-badge');
+    if (!container) return;
+
+    if (badge) {
+        badge.textContent = `${patients.length} consultante(s) activo(s)`;
+    }
+
+    if (!patients || patients.length === 0) {
+        container.innerHTML = `
+            <div class="card" style="background: white; border: 1.5px dashed var(--border-color); padding: 3rem 1.5rem; text-align: center; border-radius: var(--radius-md);">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📭</div>
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--text-dark); font-weight: 700;">No hay consultantes con herramientas activas</h4>
+                <p class="text-secondary" style="margin: 0 0 1.25rem 0; font-size: 0.9rem; max-width: 450px; margin-inline: auto;">
+                    Puedes ir a la pestaña <strong>"Asignación de Herramientas"</strong> para buscar un paciente y asignarle higiene del sueño, diario de ansiedad u otros módulos.
+                </p>
+                <button type="button" class="btn btn-sm btn-primary" onclick="switchTherapistToolsTab('asignar')" style="font-weight: 700; padding: 0.5rem 1.25rem;">
+                    📋 Ir a Asignación
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = patients.map(p => {
+        const safeFullName = (p.nombre_completo || '').replace(/'/g, "\\'");
+        const safeCedula = (p.cedula || '').replace(/'/g, "\\'");
+        const tools = p.tools || [];
+
+        const toolsBadges = tools.map(t => `
+            <span class="badge" style="background: #faf5ff; color: #6b21a8; border: 1px solid #d8b4fe; font-size: 0.8rem; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <span>${t.icono}</span> ${t.nombre}
+            </span>
+        `).join('');
+
+        return `
+        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.15rem 1.35rem; box-shadow: var(--shadow-sm); transition: transform 0.15s, box-shadow 0.15s;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.9rem; flex: 1; min-width: 250px;">
+                    <div style="width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); color: #7e22ce; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; flex-shrink: 0; border: 1.5px solid #d8b4fe;">
+                        ${(p.nombres || 'P').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b;">${p.nombre_completo}</h4>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: #64748b; margin-top: 3px; flex-wrap: wrap;">
+                            <span>🪪 ${p.cedula ? p.cedula : 'Sin cédula'}</span>
+                            ${p.telefono ? `<span>· 📱 ${p.telefono}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openSummaryModal(${p.id})" style="font-weight: 700; padding: 0.45rem 0.9rem; border-radius: 6px; border: 1.5px solid var(--border-color); background: white; color: var(--text-dark); display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                        👁️ Ver Ficha
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="font-weight: 700; padding: 0.45rem 0.95rem; border-radius: 6px; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.25); display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                        ⚙️ Gestionar
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid #f1f5f9;">
+                <div style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.45rem;">
+                    Herramientas en Curso (${tools.length}):
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center;">
+                    ${toolsBadges}
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+window.renderActiveToolsPatients = renderActiveToolsPatients;
 
 async function onTherapistToolPatientSearch(query) {
     const dropdown = document.getElementById('tt-patient-dropdown');
     const q = (query || '').trim().toLowerCase();
-
-    // Filtrar en tiempo real también la lista principal de consultantes
-    loadTherapistToolsPatientsList(q);
 
     if (!dropdown) return;
 
@@ -18190,6 +18180,7 @@ async function onTherapistToolPatientSearch(query) {
         console.error('Error en búsqueda de pacientes para herramientas:', err);
     }
 }
+window.onTherapistToolPatientSearch = onTherapistToolPatientSearch;
 
 async function selectPatientForTherapistTools(id, name, code) {
     currentMedPatientId = id;

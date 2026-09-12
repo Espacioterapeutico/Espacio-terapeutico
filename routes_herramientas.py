@@ -437,6 +437,92 @@ def get_patient_sobriety_history():
             break
     return jsonify({'streak': streak, 'history': rows})
 
+@herramientas_bp.route('/api/therapist/patients-active-tools', methods=['GET'])
+@login_required
+def get_therapist_patients_active_tools():
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+
+    tools_meta = {
+        'sueno': {'nombre': 'Higiene del Sueño', 'icono': '🌙'},
+        'ansiedad': {'nombre': 'Diario de Ansiedad', 'icono': '⚡'},
+        'sobriedad': {'nombre': 'Control de Sobriedad', 'icono': '🛡️'},
+        'adherencia': {'nombre': 'Adherencia a Medicación', 'icono': '💊'},
+        'activacion': {'nombre': 'Activación Conductual', 'icono': '🎯'},
+        'ingesta': {'nombre': 'Ingesta y Apetito', 'icono': '🥗'},
+        'cognitivo': {'nombre': 'Registro Cognitivo', 'icono': '🧠'},
+        'pantalla': {'nombre': 'Consumo de Pantallas', 'icono': '📱'},
+        'meditacion': {'nombre': 'Meditaciones Guiadas', 'icono': '🧘‍♀️'}
+    }
+
+    cursor.execute("""
+        SELECT mt.paciente_id, mt.modulo_clave, p.nombres, p.apellidos, p.cedula, p.telefono, p.email
+        FROM modulos_terapeuticos_paciente mt
+        JOIN pacientes p ON mt.paciente_id = p.id
+        WHERE p.psicologo_id = ? AND mt.activo = 1
+        ORDER BY p.apellidos ASC, p.nombres ASC
+    """, (user_id,))
+    mod_rows = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT pm.paciente_id, COUNT(pm.id) as total_meds, p.nombres, p.apellidos, p.cedula, p.telefono, p.email
+        FROM paciente_meditaciones pm
+        JOIN pacientes p ON pm.paciente_id = p.id
+        WHERE p.psicologo_id = ?
+        GROUP BY pm.paciente_id
+    """, (user_id,))
+    med_rows = cursor.fetchall()
+
+    patients_map = {}
+
+    for r in mod_rows:
+        pid = r['paciente_id']
+        if pid not in patients_map:
+            patients_map[pid] = {
+                'id': pid,
+                'nombres': r['nombres'] or '',
+                'apellidos': r['apellidos'] or '',
+                'nombre_completo': f"{r['nombres'] or ''} {r['apellidos'] or ''}".strip() or f"Consultante #{pid}",
+                'cedula': r['cedula'] or '',
+                'telefono': r['telefono'] or '',
+                'email': r['email'] or '',
+                'tools': []
+            }
+        clave = r['modulo_clave']
+        meta = tools_meta.get(clave, {'nombre': clave.capitalize(), 'icono': '🛠️'})
+        patients_map[pid]['tools'].append({
+            'clave': clave,
+            'nombre': meta['nombre'],
+            'icono': meta['icono']
+        })
+
+    for r in med_rows:
+        pid = r['paciente_id']
+        if pid not in patients_map:
+            patients_map[pid] = {
+                'id': pid,
+                'nombres': r['nombres'] or '',
+                'apellidos': r['apellidos'] or '',
+                'nombre_completo': f"{r['nombres'] or ''} {r['apellidos'] or ''}".strip() or f"Consultante #{pid}",
+                'cedula': r['cedula'] or '',
+                'telefono': r['telefono'] or '',
+                'email': r['email'] or '',
+                'tools': []
+            }
+        if not any(t['clave'] == 'meditacion' for t in patients_map[pid]['tools']):
+            total_meds = r['total_meds']
+            patients_map[pid]['tools'].append({
+                'clave': 'meditacion',
+                'nombre': f"Meditaciones ({total_meds})",
+                'icono': '🧘‍♀️'
+            })
+
+    patients_list = list(patients_map.values())
+    patients_list.sort(key=lambda x: x['nombre_completo'].lower())
+
+    return jsonify({'patients': patients_list, 'total': len(patients_list)})
+
 @herramientas_bp.route('/api/therapist/modules/catalog', methods=['GET'])
 @login_required
 def get_therapist_modules_catalog():
