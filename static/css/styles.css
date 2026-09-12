@@ -3245,5 +3245,101 @@ body.is-patient .main-content {
     }
 }
 
+/* ==========================================
+   PAGINACIÓN MINIMALISTA ("PAGE-TO-PAGE")
+   ========================================== */
+.pagination-capsule-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-top: 0.65rem;
+    margin-bottom: 0.25rem;
+}
+
+.pagination-capsule {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    padding: 3px 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-sizing: border-box;
+    max-width: 100%;
+    user-select: none;
+}
+
+.pagination-nav-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    background: #ffffff;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    transition: all 0.18s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.pagination-nav-btn:hover:not(:disabled) {
+    background: var(--primary-color, #702e5e);
+    color: #ffffff;
+    box-shadow: 0 2px 5px rgba(112, 46, 94, 0.25);
+    transform: scale(1.06);
+}
+
+.pagination-nav-btn:active:not(:disabled) {
+    transform: scale(0.96);
+}
+
+.pagination-nav-btn:disabled {
+    background: transparent;
+    color: #cbd5e1;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.45;
+}
+
+.pagination-capsule-info {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    white-space: nowrap;
+    padding: 0 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pagination-capsule-info strong {
+    color: var(--primary-color, #702e5e);
+    font-weight: 700;
+}
+
+.pagination-pill-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: #ede9fe;
+    color: #7c3aed;
+    padding: 1px 7px;
+    border-radius: 9999px;
+    letter-spacing: 0.2px;
+}
+
+.pagination-muted-tag {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted, #64748b);
+}
+
 
 

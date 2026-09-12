@@ -4056,17 +4056,23 @@ function renderPizarraPaginationControls(totalRecords, totalPages) {
         return;
     }
 
+    const prevDisabled = currentPizarraPage <= 1 ? 'disabled' : '';
+    const nextDisabled = currentPizarraPage >= totalPages ? 'disabled' : '';
+
     container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePizarraPage(${currentPizarraPage - 1})" ${currentPizarraPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
-                ◀️ Tarjetas Anteriores
-            </button>
-            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
-                Página ${currentPizarraPage} de ${totalPages} (${totalRecords} publicaciones)
-            </span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePizarraPage(${currentPizarraPage + 1})" ${currentPizarraPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
-                Tarjetas Siguientes ▶️
-            </button>
+        <div class="pagination-capsule-wrapper">
+            <div class="pagination-capsule">
+                <button type="button" class="pagination-nav-btn" onclick="changePizarraPage(${currentPizarraPage - 1})" ${prevDisabled} title="Tarjetas Anteriores" aria-label="Tarjetas Anteriores">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="pagination-capsule-info">
+                    <span>Página <strong>${currentPizarraPage}</strong> de <strong>${totalPages}</strong></span>
+                    <span class="pagination-muted-tag">(${totalRecords})</span>
+                </div>
+                <button type="button" class="pagination-nav-btn" onclick="changePizarraPage(${currentPizarraPage + 1})" ${nextDisabled} title="Tarjetas Siguientes" aria-label="Tarjetas Siguientes">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
         </div>
     `;
 }
@@ -4300,17 +4306,23 @@ function renderPatientsPaginationControls(totalRecords, totalPages) {
         return;
     }
 
+    const prevDisabled = currentPatientsPage <= 1 ? 'disabled' : '';
+    const nextDisabled = currentPatientsPage >= totalPages ? 'disabled' : '';
+
     container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePatientsPage(${currentPatientsPage - 1})" ${currentPatientsPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
-                ◀️ Anterior
-            </button>
-            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
-                Página ${currentPatientsPage} de ${totalPages} (${totalRecords} consultantes)
-            </span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changePatientsPage(${currentPatientsPage + 1})" ${currentPatientsPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
-                Siguiente ▶️
-            </button>
+        <div class="pagination-capsule-wrapper">
+            <div class="pagination-capsule">
+                <button type="button" class="pagination-nav-btn" onclick="changePatientsPage(${currentPatientsPage - 1})" ${prevDisabled} title="Página Anterior" aria-label="Página Anterior">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="pagination-capsule-info">
+                    <span>Página <strong>${currentPatientsPage}</strong> de <strong>${totalPages}</strong></span>
+                    <span class="pagination-muted-tag">(${totalRecords} consultantes)</span>
+                </div>
+                <button type="button" class="pagination-nav-btn" onclick="changePatientsPage(${currentPatientsPage + 1})" ${nextDisabled} title="Página Siguiente" aria-label="Página Siguiente">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
         </div>
     `;
 }
@@ -5299,17 +5311,24 @@ function renderSessionsPaginationControls(totalRecords, totalPages) {
         return;
     }
 
+    const prevDisabled = currentSessionsPage <= 1 ? 'disabled' : '';
+    const nextDisabled = currentSessionsPage >= totalPages ? 'disabled' : '';
+    const lastBadge = currentSessionsPage === 1 ? '<span class="pagination-pill-tag">Última</span>' : '';
+
     container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeSessionsPage(${currentSessionsPage - 1})" ${currentSessionsPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
-                ◀️ Evolución Anterior
-            </button>
-            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
-                Evolución ${currentSessionsPage} de ${totalPages} ${currentSessionsPage === 1 ? '(Última Sesión)' : ''}
-            </span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeSessionsPage(${currentSessionsPage + 1})" ${currentSessionsPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
-                Evolución Siguiente ▶️
-            </button>
+        <div class="pagination-capsule-wrapper">
+            <div class="pagination-capsule">
+                <button type="button" class="pagination-nav-btn" onclick="changeSessionsPage(${currentSessionsPage - 1})" ${prevDisabled} title="Evolución Anterior" aria-label="Evolución Anterior">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="pagination-capsule-info">
+                    <span>Evolución <strong>${currentSessionsPage}</strong> de <strong>${totalPages}</strong></span>
+                    ${lastBadge}
+                </div>
+                <button type="button" class="pagination-nav-btn" onclick="changeSessionsPage(${currentSessionsPage + 1})" ${nextDisabled} title="Evolución Siguiente" aria-label="Evolución Siguiente">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
         </div>
     `;
 }
@@ -5897,13 +5916,21 @@ function renderUpcomingConsultationPage(idx) {
 
     const btnEliminar = `<button class="btn btn-sm btn-danger" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #ef4444; color: white; border: none;" onclick="deleteAgendaEventFromDashboard(${nextE.id})">🗑️ Eliminar</button>`;
 
-    const paginationControls = `
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; background: var(--bg-light); padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color);">
-            <button type="button" class="btn btn-sm btn-secondary" style="padding: 2px 10px; font-size: 0.8rem; font-weight: 700;" ${idx === 0 ? 'disabled style="opacity:0.35; cursor:not-allowed;"' : ''} onclick="renderUpcomingConsultationPage(${idx - 1})">◀ Anterior</button>
-            <span style="font-size: 0.82rem; font-weight: 700; color: var(--primary-color);">Consulta ${idx + 1} de ${totalCount}</span>
-            <button type="button" class="btn btn-sm btn-secondary" style="padding: 2px 10px; font-size: 0.8rem; font-weight: 700;" ${idx === totalCount - 1 ? 'disabled style="opacity:0.35; cursor:not-allowed;"' : ''} onclick="renderUpcomingConsultationPage(${idx + 1})">Siguiente ▶</button>
+    const paginationControls = totalCount > 1 ? `
+        <div class="pagination-capsule-wrapper" style="margin-top: 0; margin-bottom: 0.65rem;">
+            <div class="pagination-capsule">
+                <button type="button" class="pagination-nav-btn" ${idx === 0 ? 'disabled' : ''} onclick="renderUpcomingConsultationPage(${idx - 1})" title="Consulta Anterior" aria-label="Consulta Anterior">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="pagination-capsule-info">
+                    <span>Consulta <strong>${idx + 1}</strong> de <strong>${totalCount}</strong></span>
+                </div>
+                <button type="button" class="pagination-nav-btn" ${idx === totalCount - 1 ? 'disabled' : ''} onclick="renderUpcomingConsultationPage(${idx + 1})" title="Consulta Siguiente" aria-label="Consulta Siguiente">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
         </div>
-    `;
+    ` : '';
 
     // Renderizar la tarjeta de la consulta inmediatamente
     nextConsultation.innerHTML = `
@@ -17599,17 +17626,23 @@ function renderTtTemplatesPaginationControls(totalRecords, totalPages) {
         return;
     }
 
+    const prevDisabled = currentTtPreviewPage <= 1 ? 'disabled' : '';
+    const nextDisabled = currentTtPreviewPage >= totalPages ? 'disabled' : '';
+
     container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeTtPreviewPage(${currentTtPreviewPage - 1})" ${currentTtPreviewPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.35rem 0.85rem;">
-                ◀️ Plantillas Anteriores
-            </button>
-            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
-                Página ${currentTtPreviewPage} de ${totalPages} (${totalRecords} plantillas disponibles)
-            </span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeTtPreviewPage(${currentTtPreviewPage + 1})" ${currentTtPreviewPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.35rem 0.85rem;">
-                Plantillas Siguientes ▶️
-            </button>
+        <div class="pagination-capsule-wrapper">
+            <div class="pagination-capsule">
+                <button type="button" class="pagination-nav-btn" onclick="changeTtPreviewPage(${currentTtPreviewPage - 1})" ${prevDisabled} title="Plantillas Anteriores" aria-label="Plantillas Anteriores">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="pagination-capsule-info">
+                    <span>Página <strong>${currentTtPreviewPage}</strong> de <strong>${totalPages}</strong></span>
+                    <span class="pagination-muted-tag">(${totalRecords} plantillas)</span>
+                </div>
+                <button type="button" class="pagination-nav-btn" onclick="changeTtPreviewPage(${currentTtPreviewPage + 1})" ${nextDisabled} title="Plantillas Siguientes" aria-label="Plantillas Siguientes">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
         </div>
     `;
 }
@@ -17733,17 +17766,23 @@ function renderToolsCatalogPaginationControls(totalRecords, totalPages) {
         return;
     }
 
+    const prevDisabled = currentToolsCatalogPage <= 1 ? 'disabled' : '';
+    const nextDisabled = currentToolsCatalogPage >= totalPages ? 'disabled' : '';
+
     container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: white; border: 1.5px solid var(--border-color); border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeToolsCatalogPage(${currentToolsCatalogPage - 1})" ${currentToolsCatalogPage <= 1 ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
-                ◀️ Módulos Anteriores
-            </button>
-            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
-                Página ${currentToolsCatalogPage} de ${totalPages} (${totalRecords} módulos)
-            </span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeToolsCatalogPage(${currentToolsCatalogPage + 1})" ${currentToolsCatalogPage >= totalPages ? 'disabled' : ''} style="font-weight: 700; padding: 0.3rem 0.75rem;">
-                Módulos Siguientes ▶️
-            </button>
+        <div class="pagination-capsule-wrapper">
+            <div class="pagination-capsule">
+                <button type="button" class="pagination-nav-btn" onclick="changeToolsCatalogPage(${currentToolsCatalogPage - 1})" ${prevDisabled} title="Módulos Anteriores" aria-label="Módulos Anteriores">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="pagination-capsule-info">
+                    <span>Página <strong>${currentToolsCatalogPage}</strong> de <strong>${totalPages}</strong></span>
+                    <span class="pagination-muted-tag">(${totalRecords} módulos)</span>
+                </div>
+                <button type="button" class="pagination-nav-btn" onclick="changeToolsCatalogPage(${currentToolsCatalogPage + 1})" ${nextDisabled} title="Módulos Siguientes" aria-label="Módulos Siguientes">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
         </div>
     `;
 }
@@ -23854,17 +23893,21 @@ function renderCatalogViewWithFiltersAndPagination() {
     const prevDisabled = currentCatalogPage <= 1 ? 'disabled' : '';
     const nextDisabled = currentCatalogPage >= totalPages ? 'disabled' : '';
 
-    const controlsHtml = `
-        <button type="button" onclick="changeCatalogPage(-1)" ${prevDisabled} style="background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; color: #334155; cursor: pointer; opacity: ${prevDisabled ? 0.5 : 1};">
-            ← Anterior
-        </button>
-        <span style="font-size: 0.82rem; font-weight: 800; color: #702e5e; padding: 0 4px;">
-            Página ${currentCatalogPage} de ${totalPages}
-        </span>
-        <button type="button" onclick="changeCatalogPage(1)" ${nextDisabled} style="background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; color: #334155; cursor: pointer; opacity: ${nextDisabled ? 0.5 : 1};">
-            Siguiente →
-        </button>
-    `;
+    const controlsHtml = totalPages > 1 ? `
+        <div class="pagination-capsule-wrapper">
+            <div class="pagination-capsule">
+                <button type="button" class="pagination-nav-btn" onclick="changeCatalogPage(-1)" ${prevDisabled} title="Página Anterior" aria-label="Página Anterior">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="pagination-capsule-info">
+                    <span>Página <strong>${currentCatalogPage}</strong> de <strong>${totalPages}</strong></span>
+                </div>
+                <button type="button" class="pagination-nav-btn" onclick="changeCatalogPage(1)" ${nextDisabled} title="Página Siguiente" aria-label="Página Siguiente">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    ` : '';
 
     if (topCtrl) topCtrl.innerHTML = '';
     if (btmCtrl) btmCtrl.innerHTML = controlsHtml;
