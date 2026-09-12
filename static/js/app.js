@@ -17660,6 +17660,31 @@ window.changeToolsCatalogPage = changeToolsCatalogPage;
 // ESTADO Y RENDERIZADO DE HISTORIAL DESPLEGABLE CON PAGINACIÓN (5 REGISTROS POR PÁGINA)
 // ==========================================
 
+function calculateSleepHours(sleepStr, wakeStr) {
+    if (!sleepStr || !wakeStr) return null;
+    const parseTimeToHours = (t) => {
+        if (!t) return null;
+        const clean = String(t).trim().toLowerCase().replace(/\./g, '');
+        const isPM = clean.includes('pm') || clean.includes('p m');
+        const isAM = clean.includes('am') || clean.includes('a m');
+        const match = clean.match(/(\d{1,2}):(\d{2})/);
+        if (!match) return null;
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        if (isNaN(h) || isNaN(m)) return null;
+        if (isPM && h < 12) h += 12;
+        if (isAM && h === 12) h = 0;
+        return h + (m / 60);
+    };
+    const hSleep = parseTimeToHours(sleepStr);
+    const hWake = parseTimeToHours(wakeStr);
+    if (hSleep === null || hWake === null) return null;
+    let diff = hWake - hSleep;
+    if (diff < 0) diff += 24;
+    return (diff > 0 && diff <= 24) ? diff : null;
+}
+window.calculateSleepHours = calculateSleepHours;
+
 const patientHistoryState = {};
 
 async function toggleInlinePatientHistory(patientId, toolKey, containerId) {
@@ -17736,6 +17761,33 @@ function renderPaginatedHistoryTable(stateKey) {
     const pageRecords = state.records.slice(startIndex, endIndex);
 
     const moduloClave = state.clave;
+    let summaryHeaderHtml = '';
+
+    if (moduloClave === 'sueno') {
+        let totalSleepHours = 0;
+        let validSleepCount = 0;
+        let restfulCount = 0;
+        state.records.forEach(r => {
+            const h = calculateSleepHours(r.hora_dormi, r.hora_desperto);
+            if (h !== null) {
+                totalSleepHours += h;
+                validSleepCount++;
+            }
+            if (r.senti_descanso === 1) restfulCount++;
+        });
+        const avgHours = validSleepCount > 0 ? (totalSleepHours / validSleepCount).toFixed(1) : null;
+        summaryHeaderHtml = `
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center;">
+                <span class="badge" style="background:#eff6ff; color:#1d4ed8; font-weight:800; padding:0.35rem 0.65rem; border: 1px solid #bfdbfe;">
+                    ⏱️ Promedio: ${avgHours !== null ? avgHours + ' hrs/noche' : 'Sin horario registrado'}
+                </span>
+                <span class="badge" style="background:#f3e8ff; color:#6b21a8; font-weight:700; padding:0.35rem 0.65rem; border: 1px solid #e9d5ff;">
+                    🌙 Descanso Reparador: ${restfulCount} / ${state.records.length} noches
+                </span>
+            </div>
+        `;
+    }
+
     let cardsHtml = '';
 
     if (moduloClave === 'sobriedad') {
@@ -17770,6 +17822,8 @@ function renderPaginatedHistoryTable(stateKey) {
         }).join('');
     } else if (moduloClave === 'sueno') {
         cardsHtml = pageRecords.map(r => {
+            const durHours = calculateSleepHours(r.hora_dormi, r.hora_desperto);
+            const durText = durHours !== null ? `${durHours.toFixed(1)} hrs` : null;
             const descansoBadge = r.senti_descanso ?
                 `<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700;">🟢 Reparador</span>` :
                 `<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700;">🔴 No reparador</span>`;
@@ -17783,14 +17837,17 @@ function renderPaginatedHistoryTable(stateKey) {
 
             return `
                 <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
-                    <!-- Línea 1: Fecha / Estado Descanso -->
+                    <!-- Línea 1: Fecha / Horas / Estado Descanso -->
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
                         <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha}</strong>
-                        <div>${descansoBadge}</div>
+                        <div style="display: flex; gap: 0.4rem; align-items: center;">
+                            ${durText ? `<span class="badge" style="background:#eff6ff; color:#1d4ed8; font-weight:800; border: 1px solid #bfdbfe;">⏱️ ${durText}</span>` : ''}
+                            ${descansoBadge}
+                        </div>
                     </div>
                     <!-- Línea 2: Horario y Despertares -->
                     <div style="font-size: 0.84rem; color: var(--text-dark);">
-                        ⏰ <strong>Horario de Sueño:</strong> ${horarioText} | 🥱 <strong>Despertares nocturnos:</strong> ${despertaresText}
+                        ⏰ <strong>Horario de Sueño:</strong> ${horarioText} ${durText ? `(${durText})` : ''} | 🥱 <strong>Despertares nocturnos:</strong> ${despertaresText}
                     </div>
                     <!-- Línea 3: Síntomas del día -->
                     <div style="font-size: 0.84rem; color: var(--text-dark);">
@@ -17963,6 +18020,7 @@ function renderPaginatedHistoryTable(stateKey) {
 
     const fullContentHtml = `
         <div style="margin-top: 0.5rem;">
+            ${summaryHeaderHtml}
             ${cardsHtml}
             ${paginationControls}
         </div>
@@ -18611,9 +18669,22 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                 const totalNoches = recs.length;
                 const descansoRestful = recs.filter(r => r.senti_descanso === 1).length;
                 const despertares = recs.filter(r => r.desperto_noche === 1).length;
+
+                let totalSleepHours = 0;
+                let validSleepCount = 0;
+                recs.forEach(r => {
+                    const h = calculateSleepHours(r.hora_dormi, r.hora_desperto);
+                    if (h !== null) {
+                        totalSleepHours += h;
+                        validSleepCount++;
+                    }
+                });
+                const avgHours = validSleepCount > 0 ? (totalSleepHours / validSleepCount).toFixed(1) : null;
+
                 summaryBadgesHtml = `
+                    <span class="badge" style="background:#eff6ff; color:#1d4ed8; font-weight:800; padding:0.4rem 0.65rem; border: 1px solid #bfdbfe;">⏱️ Promedio: ${avgHours !== null ? avgHours + ' hrs/noche' : 'Sin horario registrado'}</span>
                     <span class="badge" style="background:#f3e8ff; color:#6b21a8; font-weight:700; padding:0.4rem 0.6rem;">🌙 Descanso Reparador: ${descansoRestful} / ${totalNoches} noches</span>
-                    <span class="badge" style="background:#eff6ff; color:#1d4ed8; font-weight:600; padding:0.4rem 0.6rem;">🥱 Noches con despertares: ${despertares}</span>
+                    <span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:600; padding:0.4rem 0.6rem;">🥱 Noches con despertares: ${despertares}</span>
                 `;
             } else if (moduloClave === 'adherencia') {
                 const tomados = recs.filter(r => r.tomado === 1).length;
@@ -18690,11 +18761,15 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                     </tr>
                 `).join('');
             } else if (moduloClave === 'sueno') {
-                detailHeaders = `<th>📅 Fecha</th><th>Horario Sueño</th><th>¿Descansó?</th><th>Despertares</th><th>Síntomas Día</th><th>Detalles Día & Conciliación</th>`;
-                detailTableRows = recs.map(r => `
+                detailHeaders = `<th>📅 Fecha</th><th>Horario Sueño</th><th>Horas Dormidas</th><th>¿Descansó?</th><th>Despertares</th><th>Síntomas Día</th><th>Detalles Día & Conciliación</th>`;
+                detailTableRows = recs.map(r => {
+                    const durHours = calculateSleepHours(r.hora_dormi, r.hora_desperto);
+                    const durText = durHours !== null ? `${durHours.toFixed(1)} hrs` : '-';
+                    return `
                     <tr style="border-bottom: 1px solid var(--border-color);">
                         <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
-                        <td style="padding: 0.6rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
+                        <td style="padding: 0.6rem;">${r.hora_dormi || '--:--'} - ${r.hora_desperto || '--:--'}</td>
+                        <td style="padding: 0.6rem;"><span class="badge" style="background:#eff6ff; color:#1e40af; font-weight:800; padding:0.25rem 0.55rem; border: 1px solid #bfdbfe;">⏱️ ${durText}</span></td>
                         <td style="padding: 0.6rem;">${r.senti_descanso ? '🟢 Reparador' : '🔴 No reparador'}</td>
                         <td style="padding: 0.6rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1} veces)` : 'No'}</td>
                         <td style="padding: 0.6rem;">
@@ -18706,7 +18781,8 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             ${r.emociones_dia ? `<div><strong>Emociones:</strong> ${r.emociones_dia}</div>` : ''}
                         </td>
                     </tr>
-                `).join('');
+                    `;
+                }).join('');
             } else if (moduloClave === 'adherencia') {
                 detailHeaders = `<th>📅 Fecha</th><th>Medicamento</th><th>Dosis / Prescripción</th><th>Estado Toma</th><th>Hora Real</th><th>Notas</th>`;
                 detailTableRows = recs.map(r => `
@@ -18913,19 +18989,25 @@ async function loadPatientSleepHistory() {
                     <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
                         <th style="padding: 0.5rem;">Fecha</th>
                         <th style="padding: 0.5rem;">Horario</th>
+                        <th style="padding: 0.5rem;">Horas</th>
                         <th style="padding: 0.5rem;">Sensación Descanso</th>
                         <th style="padding: 0.5rem;">Despertares</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.map(r => `
+                    ${data.map(r => {
+                        const durHours = calculateSleepHours(r.hora_dormi, r.hora_desperto);
+                        const durText = durHours !== null ? `${durHours.toFixed(1)} hrs` : '-';
+                        return `
                         <tr style="border-bottom: 1px solid var(--border-color);">
                             <td style="padding: 0.5rem;"><strong>${r.fecha}</strong></td>
-                            <td style="padding: 0.5rem;">${r.hora_dormi || ''} - ${r.hora_desperto || ''}</td>
+                            <td style="padding: 0.5rem;">${r.hora_dormi || '--:--'} - ${r.hora_desperto || '--:--'}</td>
+                            <td style="padding: 0.5rem;"><span class="badge" style="background:#eff6ff; color:#1e40af; font-weight:700;">⏱️ ${durText}</span></td>
                             <td style="padding: 0.5rem;">${r.senti_descanso ? '🟢 Descansado' : '🔴 Fatigado'}</td>
                             <td style="padding: 0.5rem;">${r.desperto_noche ? `Sí (${r.cant_despertares || 1})` : 'No'}</td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
