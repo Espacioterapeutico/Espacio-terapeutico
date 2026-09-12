@@ -7385,22 +7385,14 @@ function switchHorariosMode(mode) {
 
     if (!panelDias || !panelConfig) return;
 
-    const resetBtnStyle = (btn) => {
+    [btnDias, btnBloqueos, btnConfig].forEach(btn => {
         if (!btn) return;
-        btn.style.background = 'transparent';
-        btn.style.color = 'var(--text-secondary, #64748b)';
-        btn.style.boxShadow = 'none';
-    };
-    const setActiveBtnStyle = (btn, color = 'var(--primary-color)', shadowColor = 'rgba(152,75,128,0.25)') => {
-        if (!btn) return;
-        btn.style.background = color;
-        btn.style.color = '#ffffff';
-        btn.style.boxShadow = `0 2px 8px ${shadowColor}`;
-    };
-
-    resetBtnStyle(btnDias);
-    resetBtnStyle(btnBloqueos);
-    resetBtnStyle(btnConfig);
+        btn.classList.remove('active', 'active-bloqueo');
+        btn.style.background = 'var(--card-bg, #ffffff)';
+        btn.style.color = 'var(--text-secondary, #475569)';
+        btn.style.borderColor = 'var(--border-color, #cbd5e1)';
+        btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.04)';
+    });
 
     if (panelDias) panelDias.classList.add('hide');
     if (panelBloqueos) panelBloqueos.classList.add('hide');
@@ -7408,14 +7400,32 @@ function switchHorariosMode(mode) {
 
     if (currentHorariosPersonalMode === 'dias') {
         panelDias.classList.remove('hide');
-        setActiveBtnStyle(btnDias, 'var(--primary-color)', 'rgba(152,75,128,0.25)');
+        if (btnDias) {
+            btnDias.classList.add('active');
+            btnDias.style.background = 'var(--primary-color)';
+            btnDias.style.color = '#ffffff';
+            btnDias.style.borderColor = 'var(--primary-color)';
+            btnDias.style.boxShadow = '0 2px 8px rgba(152,75,128,0.28)';
+        }
     } else if (currentHorariosPersonalMode === 'bloqueos') {
         if (panelBloqueos) panelBloqueos.classList.remove('hide');
-        setActiveBtnStyle(btnBloqueos, '#e11d48', 'rgba(225,29,72,0.25)');
+        if (btnBloqueos) {
+            btnBloqueos.classList.add('active-bloqueo');
+            btnBloqueos.style.background = '#e11d48';
+            btnBloqueos.style.color = '#ffffff';
+            btnBloqueos.style.borderColor = '#e11d48';
+            btnBloqueos.style.boxShadow = '0 2px 8px rgba(225,29,72,0.28)';
+        }
         loadHorariosBloqueos();
     } else {
         panelConfig.classList.remove('hide');
-        setActiveBtnStyle(btnConfig, 'var(--primary-color)', 'rgba(152,75,128,0.25)');
+        if (btnConfig) {
+            btnConfig.classList.add('active');
+            btnConfig.style.background = 'var(--primary-color)';
+            btnConfig.style.color = '#ffffff';
+            btnConfig.style.borderColor = 'var(--primary-color)';
+            btnConfig.style.boxShadow = '0 2px 8px rgba(152,75,128,0.28)';
+        }
     }
 }
 
@@ -8239,24 +8249,7 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     card.updateNoticeTimingText = updateNoticeTimingText;
     updateNoticeTimingText();
 
-    const pNoticeBtn = document.createElement('button');
-    pNoticeBtn.type = 'button';
-    pNoticeBtn.className = 'btn text-xs';
-    pNoticeBtn.innerHTML = '⚙️ Personalizar Tiempos';
-    pNoticeBtn.style.backgroundColor = 'rgba(152,75,128,0.08)';
-    pNoticeBtn.style.color = 'var(--primary-color, #984b80)';
-    pNoticeBtn.style.border = '1px solid rgba(152,75,128,0.25)';
-    pNoticeBtn.style.borderRadius = '8px';
-    pNoticeBtn.style.fontWeight = '700';
-    pNoticeBtn.style.padding = '0.35rem 0.75rem';
-    pNoticeBtn.style.cursor = 'pointer';
-    pNoticeBtn.onclick = (e) => {
-        e.stopPropagation();
-        openModalityParamsModal();
-    };
-
     paramsNotice.appendChild(pNoticeText);
-    paramsNotice.appendChild(pNoticeBtn);
     bodyContainer.appendChild(paramsNotice);
     
     // Fila 3: Encabezado de Horario Regular
@@ -8335,6 +8328,7 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
         
         // 1. Columna Izquierda: Switch + Nombre del Día
         const colLeft = document.createElement('div');
+        colLeft.className = 'profile-col-left';
         colLeft.style.display = 'flex';
         colLeft.style.alignItems = 'center';
         colLeft.style.gap = '0.85rem';
@@ -8401,6 +8395,7 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
         
         // 2. Columna Central: Horas [09:00] - [17:00] ✕ o "No disponible"
         const colCenter = document.createElement('div');
+        colCenter.className = 'profile-col-center';
         colCenter.style.display = 'flex';
         colCenter.style.flex = '1';
         colCenter.style.alignItems = 'center';
@@ -8443,6 +8438,7 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
         // 3. Columna Derecha: Botón +
         const addBtn = document.createElement('button');
         addBtn.type = 'button';
+        addBtn.className = 'profile-add-btn';
         addBtn.innerHTML = '+';
         addBtn.title = 'Agregar otro bloque horario a este día';
         addBtn.style.width = '32px';
@@ -12671,10 +12667,12 @@ function onSuperadminPerPageChange(val) {
 
 function renderSuperadminTherapistsTable() {
     const tbody = document.getElementById('superadmin-therapists-body');
+    const cardsContainer = document.getElementById('superadmin-therapists-cards');
     const paginationContainer = document.getElementById('superadmin-pagination-container');
     if (!tbody) return;
     
     tbody.innerHTML = '';
+    if (cardsContainer) cardsContainer.innerHTML = '';
     
     // 1. Filtrar lista por Búsqueda y Filtro de Clínica/Independiente
     let filtered = _superadminTherapistsList.filter(p => {
@@ -12695,6 +12693,7 @@ function renderSuperadminTherapistsTable() {
     
     if (totalFiltered === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center text-secondary" style="padding: 2rem;">🔍 No se encontraron psicólogos para la búsqueda/filtro seleccionado.</td></tr>`;
+        if (cardsContainer) cardsContainer.innerHTML = `<div class="text-center text-secondary" style="padding: 2rem;">🔍 No se encontraron psicólogos para la búsqueda/filtro seleccionado.</div>`;
         if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
@@ -13019,11 +13018,358 @@ function renderSuperadminTherapistsTable() {
             </td>
         `;
         tbody.appendChild(trAccordion);
+
+        // 3.B. Renderizar Tarjeta Móvil
+        if (cardsContainer) {
+            const card = document.createElement('div');
+            card.className = 'sa-therapist-card';
+            card.setAttribute('data-therapist-id', p.id);
+            card.innerHTML = `
+                <div class="sa-therapist-card-header">
+                    <div class="sa-therapist-avatar">
+                        ${(p.nombres || p.username || 'P')[0].toUpperCase()}
+                    </div>
+                    <div class="sa-therapist-details">
+                        <div class="sa-therapist-name">
+                            ${fullName}
+                            ${p.role === 'superadmin' ? '<span class="badge" style="background: #fbbf24; color: #78350f; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px;">👑 Admin</span>' : ''}
+                        </div>
+                        <div class="sa-therapist-subinfo">@${p.username} · ${p.cedula || 'Sin cédula'}</div>
+                        <div class="sa-therapist-badges">
+                            ${p.organizacion_nombre ? `
+                                <span class="badge" style="background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; font-size: 0.70rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;">
+                                    🏢 ${p.organizacion_nombre}
+                                </span>
+                            ` : `
+                                <span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 0.68rem; font-weight: 600; padding: 2px 6px; border-radius: 6px;">
+                                    👤 Independiente
+                                </span>
+                            `}
+                            <button type="button" class="btn btn-sm ${p.mostrar_en_directorio === 1 ? 'btn-outline-success' : 'btn-outline-secondary'}" style="padding: 2px 6px; font-size: 0.68rem; font-weight: 700; border-radius: 12px;" onclick="toggleTherapistDirectorio(${p.id})">
+                                ${p.mostrar_en_directorio === 1 ? '🌐 Directorio' : '🚫 Oculto'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.65rem; text-align: center;">
+                    ${subBadgeHtml}
+                </div>
+
+                <div style="display: flex; gap: 0.4rem; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.76rem; font-weight: 700; color: #64748b;">Documentos:</span>
+                    <div style="display: flex; gap: 0.35rem;">
+                        ${tituloBtn}
+                        ${docBtn}
+                    </div>
+                </div>
+
+                <div class="sa-therapist-actions-row">
+                    <button type="button" class="sa-btn-manage-therapist" onclick="openSuperadminManageTherapistModal(${p.id})">
+                        ✏️ Gestionar Psicólogo
+                    </button>
+                </div>
+            `;
+            cardsContainer.appendChild(card);
+        }
     });
 
     // 4. Renderizar Paginación
     renderSuperadminPaginationControls(totalFiltered, startIndex, endIndex, totalPages);
 }
+
+function openSuperadminManageTherapistModal(userId) {
+    const p = (_superadminTherapistsList || []).find(t => t.id === parseInt(userId));
+    if (!p) {
+        alert("No se encontró el psicólogo seleccionado.");
+        return;
+    }
+    
+    document.getElementById('sa-manage-therapist-id').value = p.id;
+    const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || p.username;
+    
+    // Header
+    const avatarEl = document.getElementById('sa-manage-avatar');
+    if (avatarEl) avatarEl.textContent = (p.nombres || p.username || 'P')[0].toUpperCase();
+    const titleEl = document.getElementById('sa-manage-title');
+    if (titleEl) titleEl.textContent = fullName;
+    const subTitleEl = document.getElementById('sa-manage-subtitle');
+    if (subTitleEl) subTitleEl.textContent = `@${p.username} · ${p.cedula || 'Sin cédula'}`;
+
+    // Ficha
+    const nomEl = document.getElementById('sa-edit-nombres');
+    const apeEl = document.getElementById('sa-edit-apellidos');
+    const usrEl = document.getElementById('sa-edit-username');
+    const cedEl = document.getElementById('sa-edit-cedula');
+    const emlEl = document.getElementById('sa-edit-email');
+    const emlPubEl = document.getElementById('sa-edit-email-pub');
+    const wsEl = document.getElementById('sa-edit-whatsapp');
+    const bioEl = document.getElementById('sa-edit-bio');
+
+    if (nomEl) nomEl.value = p.nombres || '';
+    if (apeEl) apeEl.value = p.apellidos || '';
+    if (usrEl) usrEl.value = p.username || '';
+    if (cedEl) cedEl.value = p.cedula || '';
+    if (emlEl) emlEl.value = p.email || '';
+    if (emlPubEl) emlPubEl.value = p.email_publico || '';
+    if (wsEl) wsEl.value = p.whatsapp_publico || p.telefono || '';
+    if (bioEl) bioEl.value = p.descripcion_biografia || '';
+
+    // Suscripción
+    const expDate = p.fecha_expiracion_prueba ? new Date(p.fecha_expiracion_prueba) : null;
+    const diffHours = expDate ? (expDate - new Date()) / (1000 * 60 * 60) : 0;
+    const daysLeft = expDate ? Math.max(0, Math.ceil(diffHours / 24)) : 0;
+    const expStatusText = p.suscripcion_paga === 1 
+        ? `🟢 Suscripción Activa (${daysLeft} días restantes)`
+        : (diffHours > 0 
+            ? `⏳ Período de Prueba (${daysLeft} días restantes)` 
+            : `🔴 Sin Suscripción Activa / Expirada`);
+    const defaultExpDate = p.fecha_expiracion_prueba ? p.fecha_expiracion_prueba.split('T')[0] : new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+
+    const subStatusEl = document.getElementById('sa-sub-current-status');
+    if (subStatusEl) subStatusEl.textContent = `Estado actual: ${expStatusText}`;
+    const subEndEl = document.getElementById('sa-edit-sub-end');
+    if (subEndEl) subEndEl.value = defaultExpDate;
+
+    // Documentos
+    const escName = (p.nombres || '').replace(/'/g, "\\'");
+    const docTituloStat = document.getElementById('sa-docs-titulo-status');
+    const docTituloAct = document.getElementById('sa-docs-titulo-action');
+    if (docTituloStat) docTituloStat.textContent = p.foto_titulo ? 'Cargado correctamente' : 'No cargado aún';
+    if (docTituloAct) {
+        docTituloAct.innerHTML = p.foto_titulo
+            ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="viewDocumentPreview(\`${p.foto_titulo}\`, 'Título de ${escName}', ${p.id}, 'titulo')">📄 Ver Título</button>`
+            : `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDocumentPreview('', 'Título de ${escName}', ${p.id}, 'titulo')">➕ Adjuntar Título</button>`;
+    }
+
+    const docCedulaStat = document.getElementById('sa-docs-cedula-status');
+    const docCedulaAct = document.getElementById('sa-docs-cedula-action');
+    if (docCedulaStat) docCedulaStat.textContent = p.foto_documento ? 'Cargado correctamente' : 'No cargada aún';
+    if (docCedulaAct) {
+        docCedulaAct.innerHTML = p.foto_documento
+            ? `<button type="button" class="btn btn-sm btn-outline-info" onclick="viewDocumentPreview(\`${p.foto_documento}\`, 'Documento de ${escName}', ${p.id}, 'documento')">🆔 Ver Cédula</button>`
+            : `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDocumentPreview('', 'Documento de ${escName}', ${p.id}, 'documento')">➕ Adjuntar Cédula</button>`;
+    }
+
+    const docDirAct = document.getElementById('sa-docs-directorio-action');
+    if (docDirAct) {
+        docDirAct.innerHTML = `
+            <button type="button" class="btn btn-sm ${p.mostrar_en_directorio === 1 ? 'btn-outline-success' : 'btn-outline-secondary'}" onclick="toggleTherapistDirectorio(${p.id})">
+                ${p.mostrar_en_directorio === 1 ? '🌐 Visible en Directorio' : '🚫 Oculto del Directorio'}
+            </button>
+        `;
+    }
+
+    // Permisos checks
+    const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = (val === 1); };
+    setChk('sa-chk-bloqueo-registro', p.bloqueo_registro);
+    setChk('sa-chk-bloqueo-registro-rapido', p.bloqueo_registro_rapido);
+    setChk('sa-chk-bloqueo-evoluciones', p.bloqueo_evoluciones);
+    setChk('sa-chk-bloqueo-finanzas', p.bloqueo_finanzas);
+    setChk('sa-chk-bloqueo-agenda', p.bloqueo_agenda);
+    setChk('sa-chk-bloqueo-confirmaciones', p.bloqueo_confirmaciones);
+    setChk('sa-chk-bloqueo-pizarra', p.bloqueo_pizarra);
+    setChk('sa-chk-bloqueo-herramientas', p.bloqueo_herramientas);
+    setChk('sa-chk-bloqueo-examen-mental', p.bloqueo_examen_mental);
+    setChk('sa-chk-bloqueo-tests', p.bloqueo_tests);
+    setChk('sa-chk-aviso-pago', p.aviso_pago);
+
+    switchSuperadminManageTab('ficha');
+    openModal('modal-superadmin-manage-therapist');
+}
+window.openSuperadminManageTherapistModal = openSuperadminManageTherapistModal;
+
+function switchSuperadminManageTab(tab) {
+    const tabs = ['ficha', 'sub', 'docs', 'perm'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`btn-sa-manage-tab-${t}`);
+        const panel = document.getElementById(`sa-manage-panel-${t}`);
+        if (btn) btn.classList.toggle('active', t === tab);
+        if (panel) panel.classList.toggle('hide', t !== tab);
+    });
+}
+window.switchSuperadminManageTab = switchSuperadminManageTab;
+
+function setSuperadminModalSubPreset(days) {
+    const endInput = document.getElementById('sa-edit-sub-end');
+    if (!endInput) return;
+    let baseDate = new Date();
+    if (endInput.value) {
+        const parsed = new Date(endInput.value);
+        if (!isNaN(parsed.getTime()) && parsed > new Date()) {
+            baseDate = parsed;
+        }
+    }
+    baseDate.setDate(baseDate.getDate() + days);
+    endInput.value = baseDate.toISOString().split('T')[0];
+}
+window.setSuperadminModalSubPreset = setSuperadminModalSubPreset;
+
+async function saveSuperadminModalProfile() {
+    const userId = document.getElementById('sa-manage-therapist-id')?.value;
+    if (!userId) return;
+    const payload = {
+        nombres: document.getElementById('sa-edit-nombres')?.value || '',
+        apellidos: document.getElementById('sa-edit-apellidos')?.value || '',
+        username: document.getElementById('sa-edit-username')?.value || '',
+        email: document.getElementById('sa-edit-email')?.value || '',
+        email_publico: document.getElementById('sa-edit-email-pub')?.value || '',
+        cedula: document.getElementById('sa-edit-cedula')?.value || '',
+        whatsapp_publico: document.getElementById('sa-edit-whatsapp')?.value || '',
+        descripcion_biografia: document.getElementById('sa-edit-bio')?.value || ''
+    };
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/update-profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ Ficha del psicólogo actualizada con éxito.");
+            closeModal('modal-superadmin-manage-therapist');
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo actualizar la ficha."));
+        }
+    } catch(err) {
+        alert("Error de conexión al guardar la ficha.");
+    }
+}
+window.saveSuperadminModalProfile = saveSuperadminModalProfile;
+
+async function saveSuperadminModalSub() {
+    const userId = document.getElementById('sa-manage-therapist-id')?.value;
+    const expStr = document.getElementById('sa-edit-sub-end')?.value;
+    if (!userId || !expStr) {
+        alert("Por favor selecciona una fecha válida.");
+        return;
+    }
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/set-expiration`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fecha_expiracion: expStr, suscripcion_paga: 1 })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(`✅ Suscripción activada exitosamente hasta el ${expStr}.`);
+            closeModal('modal-superadmin-manage-therapist');
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudo activar la suscripción."));
+        }
+    } catch(err) {
+        alert("Error de conexión al activar la suscripción.");
+    }
+}
+window.saveSuperadminModalSub = saveSuperadminModalSub;
+
+async function deactivateSuperadminModalSub() {
+    const userId = document.getElementById('sa-manage-therapist-id')?.value;
+    if (!userId) return;
+    await deactivateTherapistSubscription(userId);
+    closeModal('modal-superadmin-manage-therapist');
+}
+window.deactivateSuperadminModalSub = deactivateSuperadminModalSub;
+
+function applySuperadminModalPlanPreset(planType) {
+    const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+    if (planType === 'basico') {
+        setChk('sa-chk-bloqueo-registro', true);
+        setChk('sa-chk-bloqueo-registro-rapido', true);
+        setChk('sa-chk-bloqueo-evoluciones', true);
+        setChk('sa-chk-bloqueo-finanzas', false);
+        setChk('sa-chk-bloqueo-agenda', false);
+        setChk('sa-chk-bloqueo-confirmaciones', false);
+        setChk('sa-chk-bloqueo-pizarra', true);
+        setChk('sa-chk-bloqueo-herramientas', true);
+        setChk('sa-chk-bloqueo-examen-mental', true);
+        setChk('sa-chk-bloqueo-tests', true);
+    } else if (planType === 'estandar') {
+        setChk('sa-chk-bloqueo-registro', false);
+        setChk('sa-chk-bloqueo-registro-rapido', false);
+        setChk('sa-chk-bloqueo-evoluciones', false);
+        setChk('sa-chk-bloqueo-finanzas', false);
+        setChk('sa-chk-bloqueo-agenda', false);
+        setChk('sa-chk-bloqueo-confirmaciones', false);
+        setChk('sa-chk-bloqueo-pizarra', false);
+        setChk('sa-chk-bloqueo-herramientas', false);
+        setChk('sa-chk-bloqueo-examen-mental', true);
+        setChk('sa-chk-bloqueo-tests', true);
+    } else if (planType === 'profesional') {
+        setChk('sa-chk-bloqueo-registro', false);
+        setChk('sa-chk-bloqueo-registro-rapido', false);
+        setChk('sa-chk-bloqueo-evoluciones', false);
+        setChk('sa-chk-bloqueo-finanzas', false);
+        setChk('sa-chk-bloqueo-agenda', false);
+        setChk('sa-chk-bloqueo-confirmaciones', false);
+        setChk('sa-chk-bloqueo-pizarra', false);
+        setChk('sa-chk-bloqueo-herramientas', false);
+        setChk('sa-chk-bloqueo-examen-mental', false);
+        setChk('sa-chk-bloqueo-tests', false);
+    }
+}
+window.applySuperadminModalPlanPreset = applySuperadminModalPlanPreset;
+
+async function saveSuperadminModalPermissions() {
+    const userId = document.getElementById('sa-manage-therapist-id')?.value;
+    if (!userId) return;
+    const isChecked = (id) => document.getElementById(id)?.checked ? 1 : 0;
+    const payload = {
+        aviso_pago: isChecked('sa-chk-aviso-pago'),
+        bloqueo_registro: isChecked('sa-chk-bloqueo-registro'),
+        bloqueo_registro_rapido: isChecked('sa-chk-bloqueo-registro-rapido'),
+        bloqueo_evoluciones: isChecked('sa-chk-bloqueo-evoluciones'),
+        bloqueo_finanzas: isChecked('sa-chk-bloqueo-finanzas'),
+        bloqueo_agenda: isChecked('sa-chk-bloqueo-agenda'),
+        bloqueo_confirmaciones: isChecked('sa-chk-bloqueo-confirmaciones'),
+        bloqueo_pizarra: isChecked('sa-chk-bloqueo-pizarra'),
+        bloqueo_herramientas: isChecked('sa-chk-bloqueo-herramientas'),
+        bloqueo_examen_mental: isChecked('sa-chk-bloqueo-examen-mental'),
+        bloqueo_tests: isChecked('sa-chk-bloqueo-tests')
+    };
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/save-settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ Permisos actualizados con éxito.");
+            closeModal('modal-superadmin-manage-therapist');
+            loadSuperadminData();
+        } else {
+            alert("Error: " + (data.error || "No se pudieron guardar los permisos."));
+        }
+    } catch(err) {
+        alert("Error de conexión al guardar los permisos.");
+    }
+}
+window.saveSuperadminModalPermissions = saveSuperadminModalPermissions;
+
+function deleteSuperadminModalTherapist() {
+    const userId = document.getElementById('sa-manage-therapist-id')?.value;
+    const p = (_superadminTherapistsList || []).find(t => t.id === parseInt(userId));
+    const name = p ? (p.nombres || p.username) : 'Psicólogo';
+    if (userId) {
+        deleteTherapistAccount(userId, name);
+        closeModal('modal-superadmin-manage-therapist');
+    }
+}
+window.deleteSuperadminModalTherapist = deleteSuperadminModalTherapist;
+
+function triggerSuperadminPasswordReset() {
+    const userId = document.getElementById('sa-manage-therapist-id')?.value;
+    const cedula = document.getElementById('sa-edit-cedula')?.value;
+    const p = (_superadminTherapistsList || []).find(t => t.id === parseInt(userId));
+    const name = p ? (p.nombres || p.username) : 'Psicólogo';
+    if (userId) {
+        promptResetTherapistPassword(userId, name, cedula);
+    }
+}
+window.triggerSuperadminPasswordReset = triggerSuperadminPasswordReset;
 
 async function toggleTherapistDirectorio(userId) {
     if (!confirm('¿Estás seguro de que deseas cambiar la visibilidad de este psicólogo en el directorio?')) return;

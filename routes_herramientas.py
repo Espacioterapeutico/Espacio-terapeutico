@@ -1080,10 +1080,11 @@ def generar_link_directo_herramienta():
     
     pac_nombre = f"{paciente['nombres']} {paciente['apellidos']}".strip()
     nombre_tool = TOOL_NAMES.get(herramienta_tipo, 'Herramienta Terapéutica')
+    fecha_fmt = now.strftime("%d/%m/%Y")
     
     mensaje_wa = (
         f"Hola *{paciente['nombres']}* 👋 Espero te encuentres muy bien.\n\n"
-        f"Te recuerdo completar tu *{nombre_tool}* del día de hoy. "
+        f"Te recuerdo completar tu *{nombre_tool}* del día {fecha_fmt}. "
         f"Puedes llenarlo directamente haciendo clic aquí (sin iniciar sesión):\n"
         f"👉 {link_directo}\n\n"
         f"¡Gracias por tu compromiso con el proceso terapéutico!"

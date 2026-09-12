@@ -994,15 +994,22 @@ def send_queue_item_now(item_id):
                 cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_herramientas'")
                 tmpl_row = cursor.fetchone()
 
+            try:
+                dt_obj = datetime.strptime(str(today_str), "%Y-%m-%d")
+                fecha_fmt = dt_obj.strftime("%d/%m/%Y")
+            except Exception:
+                fecha_fmt = str(today_str)
+
             default_tmpl = (
                 "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
-                "Te recuerdo completar tu *{herramienta}* del día de hoy. "
+                "Te recuerdo completar tu *{herramienta}* del día {fecha}. "
                 "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
                 "👉 {link}\n\n"
                 "¡Gracias por tu constancia!"
             )
             raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
-            msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link)
+            msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link).replace('{fecha}', fecha_fmt)
+            msg_wa = msg_wa.replace('del día de hoy', f'del día {fecha_fmt}')
 
             from routes_herramientas import clean_phone_number
             clean_phone = clean_phone_number(phone)

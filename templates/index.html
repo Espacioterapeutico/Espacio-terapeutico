@@ -1487,7 +1487,8 @@
                                 </div>
 
                                 <!-- Tabla de Psicólogos (Opción B) -->
-                                <div class="table-responsive" style="border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+                                <!-- Tabla de Psicólogos (Desktop) -->
+                                <div class="table-responsive superadmin-desktop-table" style="border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
                                     <table class="table" style="width: 100%; border-collapse: collapse; margin: 0;">
                                         <thead>
                                             <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left; font-size: 0.85rem; color: #0f172a;">
@@ -1502,6 +1503,11 @@
                                             <!-- Contenido Dinámico Limpio + Sub-filas Accordion -->
                                         </tbody>
                                     </table>
+                                </div>
+
+                                <!-- Tarjetas de Psicólogos (Móvil) -->
+                                <div id="superadmin-therapists-cards" class="superadmin-mobile-cards">
+                                    <!-- Renderizado en móvil por JavaScript -->
                                 </div>
 
                                 <!-- Footer de Paginación Page-to-Page -->
@@ -2485,27 +2491,33 @@
                                 <div class="form-group mb-4" style="background-color: var(--bg-light); padding: 1rem; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
                                     <label style="font-weight: 700; color: var(--primary-color);">1. Enlace para Registro Dirigido</label>
                                     <p class="text-secondary text-sm mb-2" style="font-size:0.85rem;">Permite que un paciente de primera vez se registre vinculándose automáticamente a ti y ocultando a otros psicólogos.</p>
-                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                        <input type="text" id="link-registro-paciente" readonly style="flex: 1; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.9rem;" value="Cargando enlace...">
-                                        <button class="btn btn-primary btn-sm" onclick="copyToClipboard('link-registro-paciente')" style="padding: 0.65rem 1rem;">Copiar</button>
+                                    <div class="patient-link-card-row">
+                                        <input type="text" id="link-registro-paciente" class="patient-link-input" readonly value="Cargando enlace...">
+                                        <div style="display: flex; gap: 0.35rem;">
+                                            <button type="button" class="btn btn-primary btn-sm" onclick="copyToClipboard('link-registro-paciente')" style="padding: 0.6rem 0.9rem; font-weight: 700; white-space: nowrap;">📋 Copiar</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="window.open(document.getElementById('link-registro-paciente').value, '_blank')" style="padding: 0.6rem 0.75rem; font-weight: 600;" title="Abrir enlace">🔗</button>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div class="form-group mb-4" style="background-color: var(--bg-light); padding: 1rem; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
                                     <label style="font-weight: 700; color: var(--primary-color);">2. Enlace de Auto-agenda Rápida</label>
                                     <p class="text-secondary text-sm mb-2" style="font-size:0.85rem;">Enlace público para que tus pacientes agenden citas rápidas de forma directa (sin contraseñas) ingresando su cédula y teléfono.</p>
-                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                        <input type="text" id="link-agenda-rapida" readonly style="flex: 1; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.9rem;" value="Cargando enlace...">
-                                        <button class="btn btn-primary btn-sm" onclick="copyToClipboard('link-agenda-rapida')" style="padding: 0.65rem 1rem;">Copiar</button>
+                                    <div class="patient-link-card-row">
+                                        <input type="text" id="link-agenda-rapida" class="patient-link-input" readonly value="Cargando enlace...">
+                                        <div style="display: flex; gap: 0.35rem;">
+                                            <button type="button" class="btn btn-primary btn-sm" onclick="copyToClipboard('link-agenda-rapida')" style="padding: 0.6rem 0.9rem; font-weight: 700; white-space: nowrap;">📋 Copiar</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="window.open(document.getElementById('link-agenda-rapida').value, '_blank')" style="padding: 0.6rem 0.75rem; font-weight: 600;" title="Abrir enlace">🔗</button>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div class="form-group mb-4" style="background-color: var(--bg-light); padding: 1rem; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
                                     <label style="font-weight: 700; color: var(--primary-color);">3. Identificador Personalizado (Slug)</label>
-                                    <p class="text-secondary text-sm mb-2" style="font-size:0.85rem;">Personaliza el identificador amigable de tus enlaces (ej: psic.paulomora). Tus enlaces de registro y agenda se actualizarán automáticamente.</p>
-                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                        <input type="text" id="psychologist-slug-input" style="flex: 1; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.9rem;" placeholder="ej: psic.paulomora">
-                                        <button class="btn btn-primary btn-sm" onclick="savePsychologistSlug()" style="padding: 0.65rem 1rem;">Guardar Identificador</button>
+                                    <p class="text-secondary text-sm mb-2" style="font-size:0.85rem;">Personaliza el identificador amigable de tus enlaces (ej: <code>psic.paulomora</code>). Tus enlaces de registro y agenda se actualizarán automáticamente.</p>
+                                    <div class="patient-link-card-row">
+                                        <input type="text" id="psychologist-slug-input" class="patient-link-input" placeholder="ej: psic.paulomora">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="savePsychologistSlug()" style="padding: 0.6rem 1rem; font-weight: 700; white-space: nowrap;">Guardar Identificador</button>
                                     </div>
                                     <div id="slug-status-msg" class="status-msg hide mt-2"></div>
                                 </div>
@@ -2705,15 +2717,15 @@
                                 <!-- Pestaña Horario Personal -->
                                 <div id="horarios-subtab-container-personal">
                                     <!-- Selector de Modo: Asignar Horarios vs Bloqueo de Espacios vs Configuración y Reglas -->
-                                    <div class="horarios-mode-switcher mb-4" style="display: flex; gap: 0.5rem; background: var(--bg-body, #f8fafc); padding: 0.35rem; border-radius: 12px; border: 1.5px solid var(--border-color); width: fit-content; max-width: 100%; flex-wrap: wrap;">
-                                        <button type="button" id="btn-mode-horarios-dias" class="btn btn-sm" onclick="switchHorariosMode('dias')" style="font-weight: 700; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.2s; background: var(--primary-color); color: #ffffff; border: none; box-shadow: 0 2px 8px rgba(152,75,128,0.25); cursor: pointer;">
-                                            📅 Asignar Horarios y Bloques
+                                    <div class="horarios-mode-switcher mb-4">
+                                        <button type="button" id="btn-mode-horarios-dias" class="horarios-mode-btn active" onclick="switchHorariosMode('dias')">
+                                            Asignar Horarios y Bloques
                                         </button>
-                                        <button type="button" id="btn-mode-horarios-bloqueos" class="btn btn-sm" onclick="switchHorariosMode('bloqueos')" style="font-weight: 700; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.2s; background: transparent; color: var(--text-secondary, #64748b); border: none; cursor: pointer;">
-                                            🚫 Bloqueo de Espacios
+                                        <button type="button" id="btn-mode-horarios-bloqueos" class="horarios-mode-btn" onclick="switchHorariosMode('bloqueos')">
+                                            Bloqueo de Espacios
                                         </button>
-                                        <button type="button" id="btn-mode-horarios-config" class="btn btn-sm" onclick="switchHorariosMode('config')" style="font-weight: 700; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.2s; background: transparent; color: var(--text-secondary, #64748b); border: none; cursor: pointer;">
-                                            ⚙️ Configuración y Reglas de Agenda
+                                        <button type="button" id="btn-mode-horarios-config" class="horarios-mode-btn" onclick="switchHorariosMode('config')">
+                                            Configuración y Reglas de Agenda
                                         </button>
                                     </div>
 
@@ -5531,7 +5543,7 @@
 
     <!-- 2. MODAL "NUEVA SESIÓN / EVOLUCIÓN" -->
     <div id="session-modal" class="modal hide">
-        <div class="modal-content" style="width: 80%; max-width: 1100px;">
+        <div class="modal-content modal-session-content" style="max-width: 1100px;">
             <div class="modal-header">
                 <h3 id="session-modal-title">Registrar Evolución de Consulta</h3>
                 <button class="btn-close-modal" onclick="closeModal('session-modal')">✕</button>
@@ -7622,6 +7634,185 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL GESTIONAR PSICÓLOGO PARA SUPERADMIN (RESPONSIVE MÓVIL Y DESKTOP) -->
+    <div id="modal-superadmin-manage-therapist" class="modal hide" style="z-index: 3800;">
+        <div class="modal-content modal-lg" style="max-width: 720px; width: 96%; max-height: 94vh; border-radius: 18px; padding: 1.25rem 1.4rem; background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.18);">
+            <input type="hidden" id="sa-manage-therapist-id">
+            <!-- Modal Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 0.85rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+                    <div id="sa-manage-avatar" class="sa-therapist-avatar" style="width: 38px; height: 38px; font-size: 0.95rem;">P</div>
+                    <div style="min-width: 0;">
+                        <h3 id="sa-manage-title" style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            Gestionar Psicólogo
+                        </h3>
+                        <span id="sa-manage-subtitle" style="font-size: 0.78rem; color: #64748b; font-weight: 600;">@usuario</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modal-superadmin-manage-therapist')">✕</button>
+            </div>
+
+            <!-- Sub Tabs Header -->
+            <div class="modal-sa-therapist-tabs">
+                <button type="button" id="btn-sa-manage-tab-ficha" class="modal-sa-therapist-tab-btn active" onclick="switchSuperadminManageTab('ficha')">
+                    📋 Ficha
+                </button>
+                <button type="button" id="btn-sa-manage-tab-sub" class="modal-sa-therapist-tab-btn" onclick="switchSuperadminManageTab('sub')">
+                    ⭐ Suscripción
+                </button>
+                <button type="button" id="btn-sa-manage-tab-docs" class="modal-sa-therapist-tab-btn" onclick="switchSuperadminManageTab('docs')">
+                    📁 Documentos
+                </button>
+                <button type="button" id="btn-sa-manage-tab-perm" class="modal-sa-therapist-tab-btn" onclick="switchSuperadminManageTab('perm')">
+                    ⚙️ Permisos
+                </button>
+            </div>
+
+            <!-- TAB 1: FICHA -->
+            <div id="sa-manage-panel-ficha" class="sa-manage-panel">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Nombres</label>
+                        <input type="text" id="sa-edit-nombres" class="form-control form-control-sm" style="border-radius: 6px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Apellidos</label>
+                        <input type="text" id="sa-edit-apellidos" class="form-control form-control-sm" style="border-radius: 6px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Usuario (@)</label>
+                        <input type="text" id="sa-edit-username" class="form-control form-control-sm" style="border-radius: 6px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Cédula / Documento</label>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <input type="text" id="sa-edit-cedula" class="form-control form-control-sm" style="border-radius: 6px; flex: 1;">
+                            <button type="button" class="btn btn-sm" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 0.72rem; border-radius: 6px; padding: 0 6px; white-space: nowrap;" onclick="triggerSuperadminPasswordReset()" title="Resetear contraseña con su cédula">
+                                🔑 Reset
+                            </button>
+                        </div>
+                    </div>
+                    <div style="grid-column: 1 / -1;">
+                        <label style="font-size: 0.78rem; font-weight: 800; color: #0d9488; display: block; margin-bottom: 0.25rem;">
+                            📧 Correo Notificaciones y Cuenta
+                        </label>
+                        <input type="email" id="sa-edit-email" class="form-control form-control-sm" style="border-radius: 6px; border: 1.5px solid #0d9488; background: #ffffff;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Correo Público</label>
+                        <input type="email" id="sa-edit-email-pub" class="form-control form-control-sm" style="border-radius: 6px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Teléfono / WhatsApp</label>
+                        <input type="text" id="sa-edit-whatsapp" class="form-control form-control-sm" style="border-radius: 6px;">
+                    </div>
+                    <div style="grid-column: 1 / -1;">
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.25rem;">Especialidad / Biografía</label>
+                        <textarea id="sa-edit-bio" class="form-control form-control-sm" rows="2" style="border-radius: 6px;"></textarea>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-superadmin-manage-therapist')">Cerrar</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="saveSuperadminModalProfile()" style="font-weight: 700;">
+                        💾 Guardar Cambios de Ficha
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 2: SUSCRIPCIÓN -->
+            <div id="sa-manage-panel-sub" class="sa-manage-panel hide">
+                <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="margin-bottom: 0.75rem;">
+                        <span id="sa-sub-current-status" style="font-size: 0.82rem; font-weight: 700; color: #15803d; background: #dcfce7; padding: 0.35rem 0.75rem; border-radius: 20px; border: 1px solid #86efac; display: inline-block;">
+                            Cargando suscripción...
+                        </span>
+                    </div>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #166534; display: block; margin-bottom: 0.4rem;">Sumar o asignar días:</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem;">
+                        <button type="button" class="btn btn-sm" style="background: #ffffff; border: 1.5px solid #16a34a; color: #15803d; font-weight: 700; font-size: 0.76rem; border-radius: 8px; padding: 0.35rem 0.65rem;" onclick="setSuperadminModalSubPreset(30)">+30 Días</button>
+                        <button type="button" class="btn btn-sm" style="background: #ffffff; border: 1.5px solid #16a34a; color: #15803d; font-weight: 700; font-size: 0.76rem; border-radius: 8px; padding: 0.35rem 0.65rem;" onclick="setSuperadminModalSubPreset(60)">+60 Días</button>
+                        <button type="button" class="btn btn-sm" style="background: #ffffff; border: 1.5px solid #16a34a; color: #15803d; font-weight: 700; font-size: 0.76rem; border-radius: 8px; padding: 0.35rem 0.65rem;" onclick="setSuperadminModalSubPreset(90)">+90 Días</button>
+                        <button type="button" class="btn btn-sm" style="background: #ffffff; border: 1.5px solid #16a34a; color: #15803d; font-weight: 700; font-size: 0.76rem; border-radius: 8px; padding: 0.35rem 0.65rem;" onclick="setSuperadminModalSubPreset(365)">+1 Año</button>
+                    </div>
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #166534; display: block; margin-bottom: 0.25rem;">Fecha de Expiración / Fin</label>
+                        <input type="date" id="sa-edit-sub-end" class="form-control form-control-sm" style="font-size: 0.85rem; font-weight: 700; border-radius: 6px; border: 1px solid #86efac;">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deactivateSuperadminModalSub()" style="border-radius: 8px; font-weight: 600;">
+                            ⛔ Desactivar Suscripción
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success" onclick="saveSuperadminModalSub()" style="background: #10b981; border: none; font-weight: 700; border-radius: 8px; padding: 0.45rem 1rem;">
+                            ✅ Guardar y Activar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DOCUMENTOS -->
+            <div id="sa-manage-panel-docs" class="sa-manage-panel hide">
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            <span style="font-weight: 700; color: #0f172a; font-size: 0.88rem; display: block;">📄 Título Profesional</span>
+                            <span id="sa-docs-titulo-status" style="font-size: 0.76rem; color: #64748b;">No cargado</span>
+                        </div>
+                        <div id="sa-docs-titulo-action"></div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            <span style="font-weight: 700; color: #0f172a; font-size: 0.88rem; display: block;">🆔 Cédula de Identidad</span>
+                            <span id="sa-docs-cedula-status" style="font-size: 0.76rem; color: #64748b;">No cargada</span>
+                        </div>
+                        <div id="sa-docs-cedula-action"></div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            <span style="font-weight: 700; color: #0f172a; font-size: 0.88rem; display: block;">🌐 Directorio Público</span>
+                            <span style="font-size: 0.76rem; color: #64748b;">Controla si el perfil aparece en la búsqueda de psicólogos</span>
+                        </div>
+                        <div id="sa-docs-directorio-action"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: PERMISOS -->
+            <div id="sa-manage-panel-perm" class="sa-manage-panel hide">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.78rem; font-weight: 800; color: #334155; display: block; margin-bottom: 0.35rem;">⚡ Selección Rápida de Plan:</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                        <button type="button" class="btn btn-sm" style="background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-weight: 700; font-size: 0.74rem; border-radius: 6px; padding: 0.3rem 0.6rem;" onclick="applySuperadminModalPlanPreset('basico')">Plan Básico</button>
+                        <button type="button" class="btn btn-sm" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700; font-size: 0.74rem; border-radius: 6px; padding: 0.3rem 0.6rem;" onclick="applySuperadminModalPlanPreset('estandar')">Plan Estándar</button>
+                        <button type="button" class="btn btn-sm" style="background: #f0fdf4; color: #166534; border: 1px solid #86efac; font-weight: 700; font-size: 0.74rem; border-radius: 6px; padding: 0.3rem 0.6rem;" onclick="applySuperadminModalPlanPreset('profesional')">Plan Pro Full</button>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem; font-size: 0.82rem; margin-bottom: 1rem;" id="sa-modal-perm-checks">
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-registro"> Bloquear Historia Detallada</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-registro-rapido"> Bloquear Registro Rápido</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-evoluciones"> Bloquear Evoluciones</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-finanzas"> Bloquear Finanzas</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-agenda"> Bloquear Agenda</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-confirmaciones"> Bloquear Confirmaciones</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-pizarra"> Bloquear Pizarra</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-herramientas"> Bloquear Herramientas</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-examen-mental"> Bloquear Examen Mental</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-tests"> Bloquear Tests</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.5rem; margin-top: 0.25rem;">
+                        <input type="checkbox" id="sa-chk-aviso-pago"> ⚠️ Activar Aviso de Pago (Marcar No Solvente)
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSuperadminModalTherapist()">
+                        🗑️ Eliminar Cuenta
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="saveSuperadminModalPermissions()" style="font-weight: 700;">
+                        💾 Guardar Permisos
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

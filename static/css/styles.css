@@ -2395,4 +2395,311 @@ body.is-patient .main-content {
     }
 }
 
+/* ── Evoluciones Modal Responsive (Item 4) ── */
+@media (max-width: 768px) {
+    #session-modal {
+        padding: 0.25rem !important;
+    }
+    #session-modal .modal-content,
+    .modal-session-content {
+        width: 98% !important;
+        max-width: 98% !important;
+        margin: 0.25rem auto !important;
+        max-height: 96vh !important;
+        padding: 0.5rem 0.65rem !important;
+        border-radius: 12px !important;
+    }
+    #session-modal .modal-body {
+        padding: 0.5rem !important;
+    }
+    #session-modal .modal-header {
+        padding: 0.75rem !important;
+    }
+    #session-modal .modal-footer {
+        padding: 0.6rem !important;
+    }
+}
+
+/* ── Botones Selector de Modo Horarios (Item 5) ── */
+.horarios-mode-switcher {
+    display: flex;
+    width: 100%;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+}
+.horarios-mode-btn {
+    flex: 1 1 0;
+    min-width: 140px;
+    text-align: center;
+    justify-content: center;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    font-weight: 700;
+    font-size: 0.86rem;
+    border: 1.5px solid var(--border-color, #cbd5e1);
+    background: var(--card-bg, #ffffff);
+    color: var(--text-secondary, #475569);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.horarios-mode-btn:hover {
+    border-color: var(--primary-color, #984b80);
+    color: var(--primary-color, #984b80);
+}
+.horarios-mode-btn.active {
+    background: var(--primary-color, #984b80) !important;
+    color: #ffffff !important;
+    border-color: var(--primary-color, #984b80) !important;
+    box-shadow: 0 2px 8px rgba(152,75,128,0.28) !important;
+}
+.horarios-mode-btn.active-bloqueo {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+    border-color: #e11d48 !important;
+    box-shadow: 0 2px 8px rgba(225,29,72,0.28) !important;
+}
+@media (max-width: 640px) {
+    .horarios-mode-btn {
+        flex: 1 1 100%;
+        min-width: 100%;
+        padding: 0.55rem 0.75rem;
+        font-size: 0.82rem;
+    }
+}
+
+/* ── Configuración de Días y Horas en Móvil (Item 6) ── */
+@media (max-width: 640px) {
+    .profile-day-row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 0.65rem 0.75rem !important;
+        gap: 0.4rem !important;
+    }
+    .profile-day-row > .profile-col-left {
+        order: 1 !important;
+        min-width: auto !important;
+        flex: 1 1 auto !important;
+        gap: 0.5rem !important;
+    }
+    .profile-day-row > .profile-col-left .day-name-text {
+        font-size: 0.88rem !important;
+    }
+    .profile-day-row > .profile-add-btn {
+        order: 2 !important;
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 1rem !important;
+        margin-left: auto !important;
+    }
+    .profile-day-row > .profile-col-center {
+        order: 3 !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+        margin-top: 0.15rem !important;
+    }
+    .profile-day-row .day-ranges-container,
+    .profile-day-row .day-list-ranges {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.35rem !important;
+    }
+    .avail-range-row {
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.25rem !important;
+        margin: 0 !important;
+    }
+    .avail-range-row input[type="time"] {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        padding: 0.25rem 0.3rem !important;
+        font-size: 0.82rem !important;
+        text-align: center !important;
+        border-radius: 6px !important;
+    }
+    .avail-range-row span {
+        padding: 0 0.15rem !important;
+        font-size: 0.85rem !important;
+        flex-shrink: 0;
+    }
+    .avail-range-row button {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.8rem !important;
+        flex-shrink: 0;
+    }
+    .day-unavail-text {
+        font-size: 0.82rem !important;
+    }
+}
+
+/* ── Enlaces de Paciente y Slug Móvil (Item 8) ── */
+.patient-link-card-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.patient-link-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.65rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border-color);
+    font-size: 0.88rem;
+    word-break: break-all;
+    font-family: monospace;
+}
+@media (max-width: 640px) {
+    .patient-link-card-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .patient-link-card-row input,
+    .patient-link-card-row button {
+        width: 100% !important;
+    }
+    .patient-link-input {
+        font-size: 0.80rem !important;
+        padding: 0.5rem !important;
+    }
+}
+
+/* ── Super Admin Móvil: Cards y Modal (Item 9) ── */
+.superadmin-desktop-table {
+    display: block;
+}
+.superadmin-mobile-cards {
+    display: none;
+}
+@media (max-width: 768px) {
+    .superadmin-desktop-table {
+        display: none !important;
+    }
+    .superadmin-mobile-cards {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+    .sa-therapist-card {
+        background: var(--card-bg, #ffffff);
+        border: 1.5px solid var(--border-color, #e2e8f0);
+        border-radius: 14px;
+        padding: 0.85rem 1rem;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+    .sa-therapist-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+    .sa-therapist-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .sa-therapist-details {
+        flex: 1;
+        min-width: 0;
+    }
+    .sa-therapist-name {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 0.92rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .sa-therapist-subinfo {
+        font-size: 0.76rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .sa-therapist-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        align-items: center;
+        margin-top: 0.2rem;
+    }
+    .sa-therapist-actions-row {
+        display: flex;
+        gap: 0.45rem;
+        margin-top: 0.25rem;
+    }
+    .sa-btn-manage-therapist {
+        width: 100%;
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        padding: 0.55rem 0.85rem;
+        font-weight: 700;
+        font-size: 0.84rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(13,148,136,0.25);
+    }
+}
+
+/* Modal de Gestión de Psicólogo para Superadmin */
+.modal-sa-therapist-tabs {
+    display: flex;
+    gap: 0.35rem;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+}
+.modal-sa-therapist-tab-btn {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    text-align: center;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.modal-sa-therapist-tab-btn.active {
+    background: #ffffff;
+    color: var(--primary-color, #984b80);
+    border-color: #e2e8f0;
+    border-bottom: 2px solid #ffffff;
+    margin-bottom: -2px;
+}
+
+
 
