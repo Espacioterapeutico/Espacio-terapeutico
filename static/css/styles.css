@@ -902,13 +902,13 @@ h1, h2, h3, h4, h5, h6 {
    ========================================== */
 
 .filter-row {
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
 }
 
 .sessions-timeline {
     position: relative;
     padding-left: 2rem;
-    margin-top: 1.5rem;
+    margin-top: 0.85rem;
 }
 
 .sessions-timeline::before {
@@ -2982,6 +2982,44 @@ body.is-patient .main-content {
         padding-left: 0 !important;
         padding-right: 0 !important;
         box-sizing: border-box !important;
+    }
+
+    /* Optimización de Espacios: Filtros y Horarios en Móvil */
+    #view-pizarra-visual .card {
+        padding: 0.65rem 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    .filter-row.card {
+        padding: 0.65rem 0.75rem !important;
+        margin-bottom: 0.65rem !important;
+        gap: 0.45rem !important;
+    }
+
+    .sessions-timeline {
+        padding-left: 1.5rem !important;
+        margin-top: 0.65rem !important;
+    }
+
+    .sessions-timeline::before {
+        left: 5px !important;
+    }
+
+    .timeline-dot {
+        left: -1.5rem !important;
+    }
+
+    .profile-title-group {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .profile-header-title {
+        font-size: 0.9rem !important;
+        word-break: break-word !important;
     }
 }
 

@@ -1819,28 +1819,28 @@
                     </div>
 
                     <!-- Menú de Sub-pestañas Horizontales (Pills estilo Agenda) -->
-                    <div class="sub-nav-tabs mt-4 mb-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                        <button type="button" id="exp-tab-evoluciones" class="btn btn-sm btn-primary" onclick="switchExpedientesTab('evoluciones')" style="font-weight: 600; padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Evoluciones & Notas Clínicas</button>
-                        <button type="button" id="exp-tab-historias" class="btn btn-sm btn-secondary" onclick="switchExpedientesTab('historias')" style="font-weight: 600; padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Historias Clínicas</button>
+                    <div class="sub-nav-tabs mt-2 mb-3" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
+                        <button type="button" id="exp-tab-evoluciones" class="btn btn-sm btn-primary" onclick="switchExpedientesTab('evoluciones')" style="font-weight: 600; padding: 0.4rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Evoluciones & Notas Clínicas</button>
+                        <button type="button" id="exp-tab-historias" class="btn btn-sm btn-secondary" onclick="switchExpedientesTab('historias')" style="font-weight: 600; padding: 0.4rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Historias Clínicas</button>
                     </div>
 
                     <!-- Pestaña 1: Evoluciones & Notas Clínicas -->
                     <div id="exp-content-evoluciones" class="exp-tab-content">
-                        <div class="filter-row card" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1.25rem;">
-                            <div class="form-group mb-0" style="flex: 2; min-width: 250px;">
-                                <label for="session-search-patient">Buscar Consultante (Nombre, Apellidos o Cédula)</label>
-                                <input type="text" id="session-search-patient" placeholder="Escribe nombre, apellido o cédula para buscar..." oninput="applySessionsFilters()" style="width: 100%;">
+                        <div class="filter-row card" style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.75rem !important; padding: 0.65rem 0.85rem !important; border-radius: 10px; box-shadow: var(--shadow-sm); border: 1.5px solid var(--border-color); background: var(--card-bg);">
+                            <div class="form-group mb-0" style="flex: 2; min-width: 180px;">
+                                <label for="session-search-patient" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.2rem; display: block;">Buscar Consultante (Nombre o Cédula)</label>
+                                <input type="text" id="session-search-patient" placeholder="Escribe nombre, apellido o cédula..." oninput="applySessionsFilters()" style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.85rem; border-radius: 6px; border: 1.5px solid var(--border-color);">
                             </div>
-                            <div class="form-group mb-0" style="flex: 1; min-width: 180px;">
-                                <label for="session-filter-modalidad">Filtrar por Modalidad</label>
-                                <select id="session-filter-modalidad" onchange="applySessionsFilters()" style="width: 100%;">
+                            <div class="form-group mb-0" style="flex: 1; min-width: 140px;">
+                                <label for="session-filter-modalidad" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.2rem; display: block;">Modalidad</label>
+                                <select id="session-filter-modalidad" onchange="applySessionsFilters()" style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.85rem; border-radius: 6px; border: 1.5px solid var(--border-color); font-weight: 600;">
                                     <option value="">Todas las modalidades</option>
                                     <option value="Presencial">Presencial</option>
                                     <option value="Online">Online</option>
                                     <option value="Uptaeb">Uptaeb</option>
                                 </select>
                             </div>
-                            <div id="session-filter-count" style="font-size: 0.95rem; font-weight: 600; color: var(--primary-color); min-width: 120px; padding-bottom: 0.5rem; white-space: nowrap;">
+                            <div id="session-filter-count" style="font-size: 0.78rem; font-weight: 700; color: var(--primary-color); padding: 0.35rem 0.6rem; background: rgba(152,75,128,0.08); border-radius: 6px; white-space: nowrap; align-self: flex-end; height: fit-content; text-align: center;">
                                 0 de 0 consultas
                             </div>
                         </div>
@@ -2036,16 +2036,18 @@
                         <h2>Pizarra Terapéutica</h2>
                     </div>
                     
-                    <div class="card mb-4">
-                        <div class="card-body" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 250px;">
-                                <label for="pizarra-patient-filter" style="font-weight: 700; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">Filtrar por Paciente:</label>
-                                <select id="pizarra-patient-filter" onchange="loadPizarraVisual()" style="width: 100%; padding: 0.5rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; cursor: pointer;">
+                    <div class="card p-2 mb-3" style="padding: 0.65rem 0.85rem !important; margin-bottom: 0.85rem !important; border-radius: 10px; background-color: var(--card-bg); border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                        <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label for="pizarra-patient-filter" style="font-weight: 700; display: block; margin-bottom: 0.25rem; font-size: 0.8rem; color: var(--text-muted);">Filtrar por Paciente:</label>
+                                <select id="pizarra-patient-filter" onchange="loadPizarraVisual()" style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.85rem; border-radius: 6px; border: 1.5px solid var(--border-color); font-weight: 600; cursor: pointer; background: var(--card-bg); color: var(--text-dark);">
                                     <option value="">-- Todos los Pacientes --</option>
                                     <!-- Dinámico -->
                                 </select>
                             </div>
-                            <button type="button" class="btn btn-secondary" onclick="loadPizarraVisual()" style="margin-top: 1.35rem; padding: 0.5rem 1rem;">Actualizar Pizarra</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="loadPizarraVisual()" style="padding: 0.42rem 0.75rem; font-size: 0.82rem; font-weight: 600; border-radius: 6px; white-space: nowrap; height: fit-content; display: inline-flex; align-items: center; gap: 4px;">
+                                🔄 Actualizar Pizarra
+                            </button>
                         </div>
                     </div>
 

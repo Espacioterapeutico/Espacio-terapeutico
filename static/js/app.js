@@ -7953,10 +7953,10 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     header.style.display = 'flex';
     header.style.justifyContent = 'space-between';
     header.style.alignItems = 'center';
-    header.style.padding = '1.1rem 1.35rem';
+    header.style.padding = '0.75rem 0.95rem';
     header.style.cursor = 'pointer';
     header.style.userSelect = 'none';
-    header.style.gap = '0.75rem';
+    header.style.gap = '0.5rem';
     header.style.backgroundColor = '#ffffff';
     header.style.transition = 'background-color 0.2s';
     
@@ -7969,10 +7969,20 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     
     const leftPart = document.createElement('div');
     leftPart.style.display = 'flex';
-    leftPart.style.gap = '0.75rem';
+    leftPart.style.gap = '0.5rem';
     leftPart.style.alignItems = 'center';
     leftPart.style.flex = '1';
     leftPart.style.flexWrap = 'wrap';
+    leftPart.style.minWidth = '0';
+
+    // Grupo de título y flecha: garantiza que la flecha y el inicio del texto siempre estén juntos en la misma línea
+    const titleGroup = document.createElement('div');
+    titleGroup.className = 'profile-title-group';
+    titleGroup.style.display = 'inline-flex';
+    titleGroup.style.alignItems = 'center';
+    titleGroup.style.gap = '0.45rem';
+    titleGroup.style.minWidth = '0';
+    titleGroup.style.maxWidth = '100%';
     
     // Indicador de flecha desplegable
     const toggleArrow = document.createElement('span');
@@ -7981,30 +7991,35 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     toggleArrow.style.display = 'inline-flex';
     toggleArrow.style.alignItems = 'center';
     toggleArrow.style.justifyContent = 'center';
-    toggleArrow.style.width = '28px';
-    toggleArrow.style.height = '28px';
+    toggleArrow.style.width = '24px';
+    toggleArrow.style.height = '24px';
     toggleArrow.style.borderRadius = '50%';
     toggleArrow.style.backgroundColor = '#f1f5f9';
-    toggleArrow.style.fontSize = '0.75rem';
+    toggleArrow.style.fontSize = '0.7rem';
     toggleArrow.style.fontWeight = '800';
     toggleArrow.style.color = '#64748b';
     toggleArrow.style.transition = 'all 0.25s ease';
     toggleArrow.style.flexShrink = '0';
     
-    // Título visible en el encabezado
+    // Título visible en el encabezado (fuente optimizada para que calce en una sola línea y ahorre espacio)
     const headerTitle = document.createElement('span');
     headerTitle.className = 'profile-header-title';
     headerTitle.textContent = profileData.nombre || 'Horario';
     headerTitle.style.fontWeight = '800';
-    headerTitle.style.fontSize = '1.08rem';
+    headerTitle.style.fontSize = '0.94rem';
     headerTitle.style.color = '#1e293b';
+    headerTitle.style.lineHeight = '1.25';
+    headerTitle.style.wordBreak = 'break-word';
+
+    titleGroup.appendChild(toggleArrow);
+    titleGroup.appendChild(headerTitle);
     
     // Badge de Resumen Dinámico de Días Activos
     const summaryBadge = document.createElement('span');
     summaryBadge.className = 'profile-days-summary';
-    summaryBadge.style.fontSize = '0.78rem';
+    summaryBadge.style.fontSize = '0.74rem';
     summaryBadge.style.fontWeight = '600';
-    summaryBadge.style.padding = '0.25rem 0.65rem';
+    summaryBadge.style.padding = '0.2rem 0.55rem';
     summaryBadge.style.borderRadius = '20px';
     summaryBadge.style.display = 'inline-flex';
     summaryBadge.style.alignItems = 'center';
@@ -8078,8 +8093,7 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     consultorioBadge.style.display = profileData.consultorio ? 'inline-flex' : 'none';
     consultorioBadge.textContent = profileData.consultorio ? `🏛️ ${profileData.consultorio}` : '';
     
-    leftPart.appendChild(toggleArrow);
-    leftPart.appendChild(headerTitle);
+    leftPart.appendChild(titleGroup);
     leftPart.appendChild(summaryBadge);
     // timeBadge no se agrega a leftPart en la cabecera cerrada para evitar duplicidad y dejar solo Nombre, días y botón eliminar
     leftPart.appendChild(consultorioBadge);
@@ -8093,10 +8107,11 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     delProfileBtn.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
     delProfileBtn.style.color = '#ef4444';
     delProfileBtn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
-    delProfileBtn.style.padding = '0.25rem 0.55rem';
+    delProfileBtn.style.padding = '0.25rem 0.45rem';
     delProfileBtn.style.borderRadius = '6px';
-    delProfileBtn.style.fontSize = '0.88rem';
+    delProfileBtn.style.fontSize = '0.82rem';
     delProfileBtn.style.fontWeight = '700';
+    delProfileBtn.style.flexShrink = '0';
     delProfileBtn.style.cursor = 'pointer';
     delProfileBtn.style.transition = 'all 0.2s';
     delProfileBtn.onclick = (e) => {
