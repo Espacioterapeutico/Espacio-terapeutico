@@ -935,6 +935,20 @@
                 try { window.history.pushState({}, '', '/'); } catch(err) {}
             }
         }
+        function togglePasswordVisibility(inputId, btn) {
+            var input = document.getElementById(inputId);
+            if (!input) return;
+            var isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            if (btn) {
+                btn.setAttribute('title', isPassword ? 'Ocultar contraseña' : 'Ver contraseña');
+                btn.setAttribute('aria-label', isPassword ? 'Ocultar contraseña' : 'Ver contraseña');
+                btn.innerHTML = isPassword 
+                    ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#702e5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>'
+                    : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            }
+        }
+        window.togglePasswordVisibility = togglePasswordVisibility;
         window.openAuthModal = openAuthModal;
         window.closeAuthModal = closeAuthModal;
     </script>
@@ -958,7 +972,12 @@
                 </div>
                 <div class="form-group">
                     <label for="auth-password">Contraseña</label>
-                    <input type="password" id="auth-password" required placeholder="Introduce tu contraseña">
+                    <div class="password-toggle-wrapper">
+                        <input type="password" id="auth-password" required placeholder="Introduce tu contraseña">
+                        <button type="button" id="btn-toggle-auth-password" class="btn-password-toggle" onclick="togglePasswordVisibility('auth-password', this)" title="Ver contraseña" aria-label="Ver contraseña" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
                 </div>
                 <div id="auth-error-msg" class="error-msg hide"></div>
                 <button type="submit" id="auth-btn" class="btn btn-primary btn-block">Iniciar Sesión</button>
@@ -1010,11 +1029,21 @@
                         <div style="border-top: 1.5px dashed var(--border-color); padding-top: 1rem; margin-top: 1rem;">
                             <div class="form-group mb-3">
                                 <label for="recovery-new-password" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Nueva Contraseña</label>
-                                <input type="password" id="recovery-new-password" placeholder="Mínimo 6 caracteres" style="width: 100%;">
+                                <div class="password-toggle-wrapper">
+                                    <input type="password" id="recovery-new-password" placeholder="Mínimo 6 caracteres" style="width: 100%;">
+                                    <button type="button" class="btn-password-toggle" onclick="togglePasswordVisibility('recovery-new-password', this)" title="Ver contraseña" aria-label="Ver contraseña" tabindex="-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </button>
+                                </div>
                             </div>
                             <div class="form-group mb-3">
                                 <label for="recovery-confirm-password" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.88rem;">Confirmar Contraseña</label>
-                                <input type="password" id="recovery-confirm-password" placeholder="Repite la nueva contraseña" style="width: 100%;">
+                                <div class="password-toggle-wrapper">
+                                    <input type="password" id="recovery-confirm-password" placeholder="Repite la nueva contraseña" style="width: 100%;">
+                                    <button type="button" class="btn-password-toggle" onclick="togglePasswordVisibility('recovery-confirm-password', this)" title="Ver contraseña" aria-label="Ver contraseña" tabindex="-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </button>
+                                </div>
                             </div>
                             
                             <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1rem;">
@@ -6473,7 +6502,12 @@
                         </div>
                         <div class="form-group col-6">
                             <label for="reg-password">Contraseña *</label>
-                            <input type="password" id="reg-password" placeholder="Tu contraseña segura">
+                            <div class="password-toggle-wrapper">
+                                <input type="password" id="reg-password" placeholder="Tu contraseña segura">
+                                <button type="button" class="btn-password-toggle" onclick="togglePasswordVisibility('reg-password', this)" title="Ver contraseña" aria-label="Ver contraseña" tabindex="-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="form-row">
