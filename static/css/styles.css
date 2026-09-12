@@ -2395,28 +2395,48 @@ body.is-patient .main-content {
     }
 }
 
-/* ── Evoluciones Modal Responsive (Item 4) ── */
-@media (max-width: 768px) {
-    #session-modal {
+/* ── Modales Ampliados en Móvil: Evolución, Registro Rápido y Ficha Clínica (98% ancho y 96% alto) ── */
+@media (max-width: 850px) {
+    #session-modal,
+    #patient-modal,
+    #quick-add-patient-modal {
         padding: 0.25rem !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     #session-modal .modal-content,
-    .modal-session-content {
+    .modal-session-content,
+    #patient-modal .modal-content,
+    #quick-add-patient-modal .modal-content {
         width: 98% !important;
         max-width: 98% !important;
         margin: 0.25rem auto !important;
         max-height: 96vh !important;
+        height: auto !important;
         padding: 0.5rem 0.65rem !important;
         border-radius: 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
-    #session-modal .modal-body {
-        padding: 0.5rem !important;
+    #session-modal .modal-body,
+    #patient-modal .modal-body,
+    #quick-add-patient-modal .modal-body {
+        padding: 0.65rem 0.5rem !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        flex: 1 1 auto !important;
     }
-    #session-modal .modal-header {
-        padding: 0.75rem !important;
+    #session-modal .modal-header,
+    #patient-modal .modal-header,
+    #quick-add-patient-modal .modal-header {
+        padding: 0.75rem 0.85rem !important;
+        flex-shrink: 0 !important;
     }
-    #session-modal .modal-footer {
-        padding: 0.6rem !important;
+    #session-modal .modal-footer,
+    #patient-modal .modal-footer,
+    #quick-add-patient-modal .modal-footer {
+        padding: 0.6rem 0.75rem !important;
+        flex-shrink: 0 !important;
     }
 }
 
