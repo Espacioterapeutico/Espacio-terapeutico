@@ -1155,6 +1155,7 @@ function switchView(viewId) {
         populateMainViewPatientSelect();
         loadTestsCatalogCards();
     } else if (viewId === 'therapist-tools') {
+        switchTherapistToolsTab('asignar');
         loadTherapistToolsCatalog();
     } else if (viewId === 'manual-confirmations') {
         renderManualConfirmationsView();
@@ -7983,19 +7984,21 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     leftPart.appendChild(toggleArrow);
     leftPart.appendChild(headerTitle);
     leftPart.appendChild(summaryBadge);
-    leftPart.appendChild(timeBadge);
+    // timeBadge no se agrega a leftPart en la cabecera cerrada para evitar duplicidad y dejar solo Nombre, días y botón eliminar
     leftPart.appendChild(consultorioBadge);
     
-    // Botón de eliminar perfil
+    // Botón de eliminar perfil (diseño compacto para ahorrar espacio)
     const delProfileBtn = document.createElement('button');
     delProfileBtn.type = 'button';
     delProfileBtn.className = 'btn text-xs';
-    delProfileBtn.textContent = '✕ Eliminar Perfil';
+    delProfileBtn.innerHTML = '🗑️';
+    delProfileBtn.title = 'Eliminar este perfil de horario';
     delProfileBtn.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
     delProfileBtn.style.color = '#ef4444';
-    delProfileBtn.style.border = 'none';
-    delProfileBtn.style.padding = '0.4rem 0.75rem';
-    delProfileBtn.style.borderRadius = '8px';
+    delProfileBtn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+    delProfileBtn.style.padding = '0.25rem 0.55rem';
+    delProfileBtn.style.borderRadius = '6px';
+    delProfileBtn.style.fontSize = '0.88rem';
     delProfileBtn.style.fontWeight = '700';
     delProfileBtn.style.cursor = 'pointer';
     delProfileBtn.style.transition = 'all 0.2s';
@@ -8061,52 +8064,20 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     // CONTENIDO EXPANDIBLE DEL ACORDEÓN (CONFIGURACIÓN EDITABLE)
     // -------------------------------------------------------------
     
-    // Fila 1: Título editable y Consultorio
-    const rowInfo = document.createElement('div');
-    rowInfo.style.display = 'flex';
-    rowInfo.style.gap = '1rem';
-    rowInfo.style.marginBottom = '1rem';
-    rowInfo.style.flexWrap = 'wrap';
-    
-    const colName = document.createElement('div');
-    colName.style.flex = '2';
-    colName.style.minWidth = '220px';
-    
-    const labelName = document.createElement('label');
-    labelName.textContent = '🏷️ Nombre de la Modalidad / Horario *';
-    labelName.style.fontSize = '0.82rem';
-    labelName.style.fontWeight = '700';
-    labelName.style.color = '#475569';
-    labelName.style.marginBottom = '0.35rem';
-    labelName.style.display = 'block';
-    
+    // Inputs ocultos para sincronización con handleSaveAvailability
     const nameInput = document.createElement('input');
-    nameInput.type = 'text';
+    nameInput.type = 'hidden';
     nameInput.className = 'profile-name';
     nameInput.value = profileData.nombre || 'Online';
-    nameInput.placeholder = 'Ej. Online, Presencial, UPTAEB...';
-    nameInput.required = true;
-    nameInput.style.width = '100%';
-    nameInput.style.border = '1.5px solid var(--border-color)';
-    nameInput.style.borderRadius = '8px';
-    nameInput.style.padding = '0.6rem 0.85rem';
-    nameInput.style.fontSize = '0.95rem';
-    nameInput.style.fontWeight = '700';
-    nameInput.style.backgroundColor = '#ffffff';
-    nameInput.style.color = 'var(--text-color)';
-    nameInput.style.outline = 'none';
-    nameInput.oninput = () => {
-        headerTitle.textContent = nameInput.value.trim() || 'Horario';
-        if (typeof updateCustomModalitiesSummary === 'function') {
-            updateCustomModalitiesSummary();
-        }
-    };
-    
-    colName.appendChild(labelName);
-    colName.appendChild(nameInput);
-    rowInfo.appendChild(colName);
-    
-    // Selector de Modalidad oculto (mantiene compatibilidad con endpoints)
+    bodyContainer.appendChild(nameInput);
+
+    const descInput = document.createElement('input');
+    descInput.type = 'hidden';
+    descInput.className = 'profile-descripcion';
+    descInput.value = profileData.descripcion || '';
+    bodyContainer.appendChild(descInput);
+
+    // Selector de Modalidad oculto (compatibilidad)
     const modSelect = document.createElement('select');
     modSelect.className = 'profile-modalidad';
     modSelect.style.display = 'none';
@@ -8120,100 +8091,112 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     if (profileData.modalidad === 'Presencial') optPresencial.selected = true;
     modSelect.appendChild(optOnline);
     modSelect.appendChild(optPresencial);
-    rowInfo.appendChild(modSelect);
-    
+    bodyContainer.appendChild(modSelect);
+
+    // Barra de edición de descripción
+    const configBar = document.createElement('div');
+    configBar.style.display = 'flex';
+    configBar.style.alignItems = 'center';
+    configBar.style.justifyContent = 'space-between';
+    configBar.style.flexWrap = 'wrap';
+    configBar.style.gap = '0.75rem';
+    configBar.style.padding = '0.65rem 0.9rem';
+    configBar.style.backgroundColor = '#f8fafc';
+    configBar.style.border = '1.5px solid #e2e8f0';
+    configBar.style.borderRadius = '10px';
+    configBar.style.marginBottom = '1rem';
+
+    const descCol = document.createElement('div');
+    descCol.style.flex = '1';
+    descCol.style.minWidth = '200px';
+
+    const descDisplay = document.createElement('div');
+    descDisplay.className = 'profile-desc-display';
+    descDisplay.style.fontSize = '0.84rem';
+    descDisplay.style.color = profileData.descripcion ? '#334155' : '#94a3b8';
+    descDisplay.style.fontStyle = profileData.descripcion ? 'normal' : 'italic';
+    descDisplay.innerHTML = profileData.descripcion 
+        ? `📝 <strong>Descripción:</strong> <span>${(profileData.descripcion || '').replace(/</g, '&lt;')}</span>` 
+        : `📝 <span>(Sin descripción informativa para el consultante)</span>`;
+    descCol.appendChild(descDisplay);
+    configBar.appendChild(descCol);
+
+    const editDescBtn = document.createElement('button');
+    editDescBtn.type = 'button';
+    editDescBtn.className = 'btn btn-sm btn-outline-secondary';
+    editDescBtn.innerHTML = '✏️ Editar descripción';
+    editDescBtn.style.fontWeight = '700';
+    editDescBtn.style.fontSize = '0.82rem';
+    editDescBtn.style.borderRadius = '8px';
+    editDescBtn.style.padding = '0.35rem 0.75rem';
+    editDescBtn.style.backgroundColor = '#ffffff';
+    editDescBtn.style.border = '1.5px solid #cbd5e1';
+    editDescBtn.style.color = '#334155';
+    editDescBtn.style.cursor = 'pointer';
+    editDescBtn.onclick = (e) => {
+        e.stopPropagation();
+        openEditProfileDescModal(card);
+    };
+    configBar.appendChild(editDescBtn);
+    bodyContainer.appendChild(configBar);
+
     // Consultorio Físico Asignado (si existen consultorios disponibles)
     const cList = Array.isArray(availableConsultorios) ? availableConsultorios : (window.globalConsultoriosList || []);
-    const consSelect = document.createElement('select');
-    consSelect.className = 'profile-consultorio';
-    consSelect.style.width = '100%';
-    consSelect.style.padding = '0.6rem 0.85rem';
-    consSelect.style.border = '1.5px solid var(--border-color)';
-    consSelect.style.borderRadius = '8px';
-    consSelect.style.fontWeight = '600';
-    consSelect.style.fontSize = '0.9rem';
-    consSelect.style.backgroundColor = '#ffffff';
-    consSelect.style.outline = 'none';
-    
-    const optNone = document.createElement('option');
-    optNone.value = '';
-    optNone.textContent = '🏥 Sin consultorio específico';
-    consSelect.appendChild(optNone);
-    
-    cList.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = `🏛️ ${c}`;
-        if (profileData.consultorio === c) opt.selected = true;
-        consSelect.appendChild(opt);
-    });
-    
-    consSelect.onchange = () => {
-        if (consSelect.value) {
-            consultorioBadge.textContent = `🏛️ ${consSelect.value}`;
-            consultorioBadge.style.display = 'inline-flex';
-        } else {
-            consultorioBadge.style.display = 'none';
-        }
-    };
-    
     if (cList && cList.length > 0) {
-        const colCons = document.createElement('div');
-        colCons.style.flex = '1';
-        colCons.style.minWidth = '200px';
+        const consRow = document.createElement('div');
+        consRow.style.display = 'flex';
+        consRow.style.alignItems = 'center';
+        consRow.style.gap = '0.75rem';
+        consRow.style.marginBottom = '1rem';
+        consRow.style.flexWrap = 'wrap';
+
         const labelCons = document.createElement('label');
-        labelCons.textContent = '🏛️ Consultorio Físico Asignado';
+        labelCons.textContent = '🏛️ Consultorio Físico:';
         labelCons.style.fontSize = '0.82rem';
         labelCons.style.fontWeight = '700';
         labelCons.style.color = '#475569';
-        labelCons.style.marginBottom = '0.35rem';
-        labelCons.style.display = 'block';
-        colCons.appendChild(labelCons);
-        colCons.appendChild(consSelect);
-        rowInfo.appendChild(colCons);
+        labelCons.style.margin = '0';
+
+        const consSelect = document.createElement('select');
+        consSelect.className = 'profile-consultorio';
+        consSelect.style.flex = '1';
+        consSelect.style.minWidth = '180px';
+        consSelect.style.padding = '0.45rem 0.75rem';
+        consSelect.style.border = '1.5px solid var(--border-color)';
+        consSelect.style.borderRadius = '8px';
+        consSelect.style.fontWeight = '600';
+        consSelect.style.fontSize = '0.85rem';
+        consSelect.style.backgroundColor = '#ffffff';
+        consSelect.style.outline = 'none';
+
+        const optNone = document.createElement('option');
+        optNone.value = '';
+        optNone.textContent = '🏥 Sin consultorio específico';
+        consSelect.appendChild(optNone);
+
+        cList.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = `🏛️ ${c}`;
+            if (profileData.consultorio === c) opt.selected = true;
+            consSelect.appendChild(opt);
+        });
+
+        consSelect.onchange = () => {
+            if (consSelect.value) {
+                consultorioBadge.textContent = `🏛️ ${consSelect.value}`;
+                consultorioBadge.style.display = 'inline-flex';
+            } else {
+                consultorioBadge.style.display = 'none';
+            }
+        };
+
+        consRow.appendChild(labelCons);
+        consRow.appendChild(consSelect);
+        bodyContainer.appendChild(consRow);
     }
     
-    bodyContainer.appendChild(rowInfo);
-    
-    // Fila 2: Descripción editable de la Modalidad
-    const descGroup = document.createElement('div');
-    descGroup.style.marginBottom = '1.35rem';
-    
-    const labelDesc = document.createElement('label');
-    labelDesc.textContent = '📝 Descripción o Instrucciones para el Consultante (Editable)';
-    labelDesc.style.fontSize = '0.82rem';
-    labelDesc.style.fontWeight = '700';
-    labelDesc.style.color = '#475569';
-    labelDesc.style.marginBottom = '0.35rem';
-    labelDesc.style.display = 'block';
-    
-    const descInput = document.createElement('input');
-    descInput.type = 'text';
-    descInput.className = 'profile-descripcion';
-    descInput.value = profileData.descripcion || '';
-    descInput.placeholder = 'Ej. Consultas a través de WhatsApp y Google Meet videollamadas';
-    descInput.style.width = '100%';
-    descInput.style.border = '1.5px solid var(--border-color)';
-    descInput.style.borderRadius = '8px';
-    descInput.style.padding = '0.6rem 0.85rem';
-    descInput.style.fontSize = '0.9rem';
-    descInput.style.backgroundColor = '#ffffff';
-    descInput.style.color = 'var(--text-color)';
-    descInput.style.outline = 'none';
-    
-    const descHelp = document.createElement('small');
-    descHelp.textContent = 'Esta descripción informativa detalla cómo se realizarán las consultas de esta modalidad.';
-    descHelp.style.color = '#94a3b8';
-    descHelp.style.fontSize = '0.78rem';
-    descHelp.style.marginTop = '0.25rem';
-    descHelp.style.display = 'block';
-    
-    descGroup.appendChild(labelDesc);
-    descGroup.appendChild(descInput);
-    descGroup.appendChild(descHelp);
-    bodyContainer.appendChild(descGroup);
-    
-    // Fila 2.5: Resumen de parámetros de tiempo y acceso rápido a personalización
+    // Fila 2.5: Resumen de parámetros de tiempo (sesión y receso, sin antelación)
     const paramsNotice = document.createElement('div');
     paramsNotice.style.display = 'flex';
     paramsNotice.style.justifyContent = 'space-between';
@@ -8234,17 +8217,14 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     function updateNoticeTimingText() {
         const dVal = card.getAttribute('data-duracion');
         const rVal = card.getAttribute('data-receso');
-        const aVal = card.getAttribute('data-antelacion');
         const gDur = document.getElementById('avail-duracion')?.value || 60;
         const gRec = document.getElementById('avail-receso')?.value || 15;
-        const gAnt = document.getElementById('avail-antelacion')?.value || 24;
 
-        const dur = (dVal !== null && dVal !== '') ? `${dVal} min` : `${gDur} min (global)`;
-        const rec = (rVal !== null && rVal !== '') ? `${rVal} min` : `${gRec} min (global)`;
-        const ant = (aVal !== null && aVal !== '') ? `${aVal}h` : `${gAnt}h (global)`;
+        const dur = (dVal !== null && dVal !== '') ? `${dVal} min` : `${gDur} min`;
+        const rec = (rVal !== null && rVal !== '') ? `${rVal} min` : `${gRec} min`;
 
         const span = pNoticeText.querySelector('.profile-timing-text');
-        if (span) span.textContent = `${dur} sesión · ${rec} receso · ${ant} antelación`;
+        if (span) span.textContent = `${dur} sesión · ${rec} receso`;
     }
     card.updateNoticeTimingText = updateNoticeTimingText;
     updateNoticeTimingText();
@@ -8511,6 +8491,71 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     // Inicializar el resumen de días activos
     updateDaysSummary();
 }
+
+let activeEditingProfileCard = null;
+
+function openEditProfileDescModal(cardOrId) {
+    let card = null;
+    if (typeof cardOrId === 'string') {
+        card = document.getElementById(cardOrId);
+    } else {
+        card = cardOrId;
+    }
+    if (!card) return;
+    activeEditingProfileCard = card;
+
+    const currentName = card.querySelector('.profile-name')?.value || card.querySelector('.profile-header-title')?.textContent || '';
+    const currentDesc = card.querySelector('.profile-descripcion')?.value || '';
+
+    const nameInput = document.getElementById('modal-edit-profile-name');
+    const descInput = document.getElementById('modal-edit-profile-desc');
+
+    if (nameInput) nameInput.value = currentName.trim();
+    if (descInput) descInput.value = currentDesc.trim();
+
+    openModal('modal-edit-profile-desc');
+}
+
+function saveEditProfileDescModal() {
+    if (!activeEditingProfileCard) return;
+
+    const nameInput = document.getElementById('modal-edit-profile-name');
+    const descInput = document.getElementById('modal-edit-profile-desc');
+
+    const newName = (nameInput?.value || '').trim() || 'Horario';
+    const newDesc = (descInput?.value || '').trim();
+
+    const nameEl = activeEditingProfileCard.querySelector('.profile-name');
+    if (nameEl) nameEl.value = newName;
+
+    const descEl = activeEditingProfileCard.querySelector('.profile-descripcion');
+    if (descEl) descEl.value = newDesc;
+
+    const titleEl = activeEditingProfileCard.querySelector('.profile-header-title');
+    if (titleEl) titleEl.textContent = newName;
+
+    const descDisplay = activeEditingProfileCard.querySelector('.profile-desc-display');
+    if (descDisplay) {
+        if (newDesc) {
+            descDisplay.innerHTML = `📝 <strong>Descripción:</strong> <span>${newDesc.replace(/</g, '&lt;')}</span>`;
+            descDisplay.style.color = '#334155';
+            descDisplay.style.fontStyle = 'normal';
+        } else {
+            descDisplay.innerHTML = `📝 <span>(Sin descripción informativa para el consultante)</span>`;
+            descDisplay.style.color = '#94a3b8';
+            descDisplay.style.fontStyle = 'italic';
+        }
+    }
+
+    if (typeof updateCustomModalitiesSummary === 'function') {
+        updateCustomModalitiesSummary();
+    }
+
+    closeModal('modal-edit-profile-desc');
+}
+
+window.openEditProfileDescModal = openEditProfileDescModal;
+window.saveEditProfileDescModal = saveEditProfileDescModal;
 
 function toggleCancelRuleInputs() {
     const tipo = document.getElementById('avail-limite-cancelacion-tipo').value;
@@ -16875,7 +16920,7 @@ window.triggerManualCronReminders = triggerManualCronReminders;
 // ==========================================
 
 function switchTherapistToolsTab(tab) {
-    const views = ['asignar', 'plantillas'];
+    const views = ['asignar', 'catalogo'];
     views.forEach(v => {
         const viewEl = document.getElementById(`tt-sub-view-${v}`);
         const tabEl = document.getElementById(`tt-tab-${v}`);
@@ -16883,8 +16928,10 @@ function switchTherapistToolsTab(tab) {
         if (viewEl) {
             if (v === tab) {
                 viewEl.classList.remove('hide');
+                viewEl.style.display = 'block';
             } else {
                 viewEl.classList.add('hide');
+                viewEl.style.display = 'none';
             }
         }
         
@@ -16897,8 +16944,10 @@ function switchTherapistToolsTab(tab) {
         }
     });
 
-    if (tab === 'plantillas') {
-        renderTherapistPreviewTemplates();
+    if (tab === 'asignar') {
+        loadTherapistToolsPatientsList();
+    } else if (tab === 'catalogo') {
+        loadTherapistToolsCatalog();
     }
 }
 window.switchTherapistToolsTab = switchTherapistToolsTab;
@@ -18024,9 +18073,86 @@ document.addEventListener('click', function(e) {
 });
 
 let cachedTherapistPatients = null;
+let currentMedPatientName = '';
+let currentMedPatientCode = '';
+
+async function loadTherapistToolsPatientsList(filterText = '') {
+    const container = document.getElementById('tt-patients-quick-list');
+    const badge = document.getElementById('tt-patients-count-badge');
+    if (!container) return;
+
+    try {
+        if (!cachedTherapistPatients) {
+            const res = await fetch('/api/patients');
+            cachedTherapistPatients = await res.json();
+        }
+        const patients = cachedTherapistPatients || [];
+        const q = (filterText || '').trim().toLowerCase();
+
+        const filtered = q.length === 0
+            ? patients
+            : patients.filter(p => {
+                const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
+                const cedula = (p.cedula || '').toLowerCase();
+                return fullName.includes(q) || cedula.includes(q);
+            });
+
+        if (badge) {
+            badge.textContent = `${filtered.length} consultante(s)`;
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
+                    <div style="font-size: 1.6rem; margin-bottom: 0.4rem;">🔍</div>
+                    <p style="margin: 0; font-size: 0.92rem;">No se encontraron consultantes ${q ? 'con ese criterio de búsqueda' : 'registrados'}.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filtered.map((p, idx) => {
+            const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || `Consultante #${p.id}`;
+            const safeFullName = fullName.replace(/'/g, "\\'");
+            const cedula = p.cedula || '';
+            const safeCedula = cedula.replace(/'/g, "\\'");
+            const telefono = p.telefono || '';
+            const isLast = idx === filtered.length - 1;
+
+            return `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; border-bottom: ${isLast ? 'none' : '1px solid var(--border-color)'}; flex-wrap: wrap; gap: 0.75rem; transition: background 0.15s; background: white;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='white'">
+                    <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 220px; cursor: pointer;" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')">
+                        <div style="width: 42px; height: 42px; border-radius: 50%; background: #f3e8ff; color: #7e22ce; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; border: 1.5px solid #d8b4fe;">
+                            ${(p.nombres || 'P').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <strong style="font-size: 0.96rem; color: #1e293b; display: block;">${fullName}</strong>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #64748b; margin-top: 2px; flex-wrap: wrap;">
+                                <span>${cedula ? '🪪 ' + cedula : 'Sin cédula'}</span>
+                                ${telefono ? `<span>· 📱 ${telefono}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="font-weight: 700; padding: 0.45rem 0.95rem; border-radius: 8px; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 5px rgba(112,46,94,0.25); display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                            ⚙️ Asignar Herramientas
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        if (container) container.innerHTML = `<p class="text-danger p-3">Error al cargar consultantes: ${err.message}</p>`;
+    }
+}
 
 async function onTherapistToolPatientSearch(query) {
     const dropdown = document.getElementById('tt-patient-dropdown');
+    const q = (query || '').trim().toLowerCase();
+
+    // Filtrar en tiempo real también la lista principal de consultantes
+    loadTherapistToolsPatientsList(q);
+
     if (!dropdown) return;
 
     try {
@@ -18035,7 +18161,6 @@ async function onTherapistToolPatientSearch(query) {
             cachedTherapistPatients = await res.json();
         }
         const patients = cachedTherapistPatients || [];
-        const q = (query || '').trim().toLowerCase();
         
         const filtered = q.length === 0 
             ? patients.slice(0, 15) 
@@ -18068,81 +18193,115 @@ async function onTherapistToolPatientSearch(query) {
 
 async function selectPatientForTherapistTools(id, name, code) {
     currentMedPatientId = id;
+    if (name) currentMedPatientName = name;
+    if (code !== undefined) currentMedPatientCode = code;
+
     const searchInput = document.getElementById('tt-patient-search');
-    if (searchInput) searchInput.value = name;
+    if (searchInput && currentMedPatientName) searchInput.value = currentMedPatientName;
     
     const dropdown = document.getElementById('tt-patient-dropdown');
     if (dropdown) {
         dropdown.classList.add('hide');
         dropdown.style.display = 'none';
     }
-    
-    const nameEl = document.getElementById('tt-selected-patient-name');
-    if (nameEl) nameEl.innerText = name;
-    
-    const codeEl = document.getElementById('tt-selected-patient-code');
-    if (codeEl) codeEl.innerText = code ? `Cédula: ${code}` : 'Sin Cédula';
-    
-    const panel = document.getElementById('tt-patient-toggle-panel') || document.getElementById('tt-patient-details-panel');
-    const list = document.getElementById('tt-patient-switches-list') || document.getElementById('tt-patient-modules-list');
-    
-    if (list) list.innerHTML = '<p class="text-muted">Cargando módulos asignados...</p>';
-    if (panel) {
-        panel.classList.remove('hide');
-        panel.style.setProperty('display', 'block', 'important');
+
+    // Cabecera del modal #modal-assign-patient-tools
+    const matName = document.getElementById('mat-patient-name');
+    if (matName) matName.textContent = currentMedPatientName || `Consultante #${id}`;
+
+    const matCedula = document.getElementById('mat-patient-cedula');
+    if (matCedula) matCedula.textContent = currentMedPatientCode ? `Cédula: ${currentMedPatientCode}` : 'Sin Cédula registrada';
+
+    const matList = document.getElementById('mat-modules-list');
+    if (matList) {
+        matList.innerHTML = `
+            <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+                <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">⏳</div>
+                <p style="margin: 0; font-size: 0.95rem; font-weight: 600;">Cargando módulos y herramientas...</p>
+            </div>
+        `;
     }
+
+    // Abrir modal de asignación con switches
+    openModal('modal-assign-patient-tools');
 
     try {
         const res = await fetch(`/api/patients/${id}/modules`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al cargar módulos');
 
-        if (list) {
-            list.innerHTML = data.modules.map(m => {
-                const safeName = (name || '').replace(/'/g, "\\'");
-                const safeModName = (m.nombre || '').replace(/'/g, "\\'");
-                const inlineId = `inline-history-sel-${id}-${m.clave}`;
-                
+        const toolIcons = {
+            'sueno': '🌙',
+            'ansiedad': '⚡',
+            'sobriedad': '🛡️',
+            'adherencia': '💊',
+            'activacion': '🎯',
+            'pantalla': '📱',
+            'ingesta': '🥗',
+            'cognitivo': '🧠',
+            'meditacion': '🧘‍♀️'
+        };
+
+        const toolDescriptions = {
+            'sueno': 'Cuestionario diario de horas de sueño, despertares y calidad de descanso percibido.',
+            'ansiedad': 'Checklist somático de síntomas físicos y termómetro emocional de malestar.',
+            'sobriedad': 'Contador de días continuos sobrio/a y registro de prevención de recaídas.',
+            'adherencia': 'Control de tomas farmacológicas prescritas con confirmación diaria de adherencia.',
+            'activacion': 'Plan interactivo de tareas cotidianas, placenteras y necesarias (depresión).',
+            'pantalla': 'Bitácora de tiempo frente a pantallas y autorregulación de consumo digital.',
+            'ingesta': 'Diario conductual de comidas, balance de apetito y hábitos alimentarios.',
+            'cognitivo': 'Hoja de registro de pensamientos automáticos, distorsiones y reestructuración.',
+            'meditacion': 'Audios y videos de relajación guiada con recordatorios programados por WhatsApp.'
+        };
+
+        if (matList) {
+            matList.innerHTML = data.modules.map(m => {
+                const safePName = (currentMedPatientName || '').replace(/'/g, "\\'");
+                const icon = toolIcons[m.clave] || '🛠️';
+                const desc = toolDescriptions[m.clave] || 'Herramienta interactiva de seguimiento terapéutico.';
+                const isActivo = Boolean(m.activo);
+
+                // Caso especial: Meditaciones
                 if (m.clave === 'meditacion') {
                     const medAsigs = m.meditaciones_asignadas || [];
                     let asigsHtml = '';
                     if (medAsigs.length === 0) {
                         asigsHtml = `
-                            <div style="padding: 0.65rem 0.85rem; background: #fdf2f8; border-radius: 6px; border: 1px dashed #f472b6; font-size: 0.84rem; color: #9d174d; margin-top: 0.5rem;">
-                                ℹ️ No tiene meditaciones asignadas actualmente. Haz clic en <strong>"+ Asignar Meditación &amp; Horarios"</strong> para programar audios/videos con recordatorios.
+                            <div style="padding: 0.65rem 0.85rem; background: #fdf2f8; border-radius: 6px; border: 1px dashed #f472b6; font-size: 0.82rem; color: #9d174d; margin-top: 0.65rem;">
+                                ℹ️ Sin meditaciones asignadas actualmente. Haz clic en <strong>"+ Asignar Meditación"</strong> para programar audios/videos con recordatorios WhatsApp.
                             </div>
                         `;
                     } else {
                         asigsHtml = `
-                            <div style="margin-top: 0.65rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                                <div style="font-size: 0.82rem; font-weight: 700; color: #702e5e; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    Meditaciones y Horarios Asignados (${medAsigs.length}):
+                            <div style="margin-top: 0.65rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                                <div style="font-size: 0.78rem; font-weight: 700; color: #702e5e; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Meditaciones y Recordatorios Asignados (${medAsigs.length}):
                                 </div>
                                 ${medAsigs.map(a => {
                                     const horasList = (a.hora_recordatorio || '').split(',').map(h => h.trim()).filter(Boolean);
                                     const horasBadges = horasList.length > 0 
-                                        ? horasList.map(h => `<span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.78rem; font-weight: 700; padding: 0.2rem 0.45rem; border-radius: 4px;">⏰ ${h}</span>`).join(' ')
-                                        : '<span style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">Sin horarios</span>';
+                                        ? horasList.map(h => `<span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px;">⏰ ${h}</span>`).join(' ')
+                                        : '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sin horarios</span>';
                                     const tipoIcon = a.tipo_contenido === 'youtube' ? '🎥' : '🎵';
                                     
                                     return `
-                                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.75rem; background: white; border-radius: 6px; border: 1.5px solid #f3e8ff; flex-wrap: wrap; gap: 0.5rem;">
-                                            <div style="flex: 1; min-width: 200px;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: white; border-radius: 6px; border: 1px solid #e9d5ff; flex-wrap: wrap; gap: 0.5rem;">
+                                            <div style="flex: 1; min-width: 180px;">
                                                 <div style="display: flex; align-items: center; gap: 0.35rem;">
                                                     <span>${tipoIcon}</span>
-                                                    <strong style="font-size: 0.88rem; color: var(--text-dark);">${a.titulo || 'Meditación'}</strong>
+                                                    <strong style="font-size: 0.85rem; color: #1e293b;">${a.titulo || 'Meditación'}</strong>
                                                 </div>
-                                                <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.25rem; flex-wrap: wrap;">
-                                                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Recordatorios:</span>
+                                                <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.2rem; flex-wrap: wrap;">
+                                                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Recordatorios:</span>
                                                     ${horasBadges}
                                                 </div>
                                             </div>
-                                            <div style="display: flex; gap: 0.4rem; align-items: center;">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editMeditacionAssignment(${a.asignacion_id}, ${a.meditacion_id}, '${(a.hora_recordatorio || '').replace(/'/g, "\\'")}', '${safeName}')" style="padding: 0.25rem 0.55rem; font-size: 0.75rem; font-weight: 600; border-radius: 4px;">
-                                                    ✏️ Editar Horarios
+                                            <div style="display: flex; gap: 0.35rem; align-items: center;">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editMeditacionAssignment(${a.asignacion_id}, ${a.meditacion_id}, '${(a.hora_recordatorio || '').replace(/'/g, "\\'")}', '${safePName}')" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; border-radius: 4px;">
+                                                    ✏️ Horarios
                                                 </button>
-                                                <button type="button" class="btn btn-sm" onclick="unassignMeditacion(${a.asignacion_id})" style="padding: 0.25rem 0.55rem; font-size: 0.75rem; font-weight: 600; background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer;">
-                                                    🗑️ Eliminar
+                                                <button type="button" class="btn btn-sm" onclick="unassignMeditacion(${a.asignacion_id})" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer;">
+                                                    🗑️
                                                 </button>
                                             </div>
                                         </div>
@@ -18152,53 +18311,74 @@ async function selectPatientForTherapistTools(id, name, code) {
                         `;
                     }
 
-                    const medTokenBanner = (m.activo && m.link) ? `
-                        <div style="margin-top: 0.45rem; padding: 0.35rem 0.65rem; background: rgba(112, 46, 94, 0.08); border: 1.5px solid rgba(112, 46, 94, 0.25); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
-                            <span style="font-size: 0.78rem; font-family: monospace; color: #702e5e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px;">
-                                🔑 Link Directo Meditaciones: ${m.link}
+                    const medLinkBanner = (isActivo && m.link) ? `
+                        <div style="margin-top: 0.65rem; padding: 0.4rem 0.75rem; background: rgba(112, 46, 94, 0.08); border: 1.5px solid rgba(112, 46, 94, 0.25); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.76rem; font-family: monospace; color: #702e5e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px;">
+                                🔑 Link Directo: ${m.link}
                             </span>
-                            <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${m.link}')" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #702e5e; color: white; border: none; font-weight: 700; border-radius: 4px; cursor: pointer;">
-                                📋 Copiar Link Directo
+                            <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${m.link}')" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; background: #702e5e; color: white; border: none; font-weight: 700; border-radius: 4px; cursor: pointer;">
+                                📋 Copiar Link
                             </button>
                         </div>
                     ` : '';
 
                     return `
-                    <div style="display: flex; flex-direction: column; width: 100%; border: 1.5px solid #d8b4fe; border-radius: 8px; padding: 0.85rem; background: #fdf4f9; margin-bottom: 0.25rem;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                            <div>
-                                <strong style="font-size: 0.95rem; color: #702e5e; display: flex; align-items: center; gap: 0.35rem;">
-                                    🧘‍♀️ ${m.nombre}
-                                </strong>
-                                <span style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-                                    ${m.activo ? '🟢 Activo (' + medAsigs.length + ' meditación/es asignada/s)' : '⚪ Sin meditaciones activas'}
-                                </span>
+                    <div class="tool-assign-card" style="background: ${isActivo ? '#fdf4f9' : 'white'}; border: 1.5px solid ${isActivo ? '#d8b4fe' : '#e2e8f0'}; border-radius: 10px; padding: 0.85rem 1rem; transition: all 0.2s;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.65rem; flex: 1; min-width: 200px;">
+                                <span style="font-size: 1.4rem; line-height: 1;">${icon}</span>
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                        <strong style="font-size: 0.95rem; color: #1e293b;">${m.nombre}</strong>
+                                        <span class="badge" style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.45rem; background: ${isActivo ? '#dcfce7' : '#f1f5f9'}; color: ${isActivo ? '#15803d' : '#64748b'}; border: 1px solid ${isActivo ? '#86efac' : '#cbd5e1'}; border-radius: 4px;">
+                                            ${isActivo ? '🟢 ACTIVA' : '⚪ INACTIVA'}
+                                        </span>
+                                    </div>
+                                    <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #64748b; line-height: 1.3;">${desc}</p>
+                                </div>
                             </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <button type="button" class="btn btn-sm btn-primary" onclick="openAssignMeditacionModalForPatient(${id}, '${safeName}')" style="padding: 0.35rem 0.75rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.25);">
-                                    + Asignar Meditación &amp; Horarios
-                                </button>
-                                ${m.activo ? `
-                                    <button type="button" class="btn btn-sm btn-secondary" onclick="togglePatientModuleBackend(${id}, 'meditacion', 0)" style="padding: 0.35rem 0.75rem; font-weight: 600;">
-                                        Desactivar Todo
-                                    </button>
-                                ` : ''}
+                            
+                            <!-- INTERRUPTOR ON / OFF -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 0.8rem; font-weight: 800; color: ${isActivo ? '#15803d' : '#94a3b8'};">${isActivo ? 'ON' : 'OFF'}</span>
+                                <label style="position: relative; display: inline-block; width: 48px; height: 26px; margin: 0; cursor: pointer;">
+                                    <input type="checkbox" ${isActivo ? 'checked' : ''} onchange="togglePatientModuleBackend(${id}, 'meditacion', this.checked ? 1 : 0)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                    <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${isActivo ? '#10b981' : '#cbd5e1'}; transition: .25s ease; border-radius: 26px;">
+                                        <span style="position: absolute; height: 20px; width: 20px; left: ${isActivo ? '25px' : '3px'}; bottom: 3px; background-color: white; transition: .25s ease; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                    </span>
+                                </label>
                             </div>
                         </div>
-                        ${asigsHtml}
-                        ${medTokenBanner}
+
+                        ${isActivo ? `
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.65rem; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-sm btn-primary" onclick="openAssignMeditacionModalForPatient(${id}, '${safePName}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); border: none; border-radius: 6px; box-shadow: 0 2px 4px rgba(112,46,94,0.2);">
+                                    + Asignar Meditación &amp; Horarios
+                                </button>
+                            </div>
+                            ${asigsHtml}
+                            ${medLinkBanner}
+                        ` : ''}
                     </div>
                     `;
                 }
 
-                const actBtn = (m.clave === 'activacion') ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistActivationModal(${id}, '${safeName}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">⚙️ Configurar Actividades</button>` : '';
-                const waBtn = `<button type="button" class="btn btn-sm" onclick="enviarWhatsAppDirectoHerramienta(${id}, '${m.clave}')" style="padding: 0.35rem 0.65rem; font-weight: 600; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0;">💬 WhatsApp Directo</button>`;
-                const progBtn = `<button type="button" class="btn btn-sm" onclick="programarRecordatorioWhatsApp(${id}, '${m.clave}', '20:00')" style="padding: 0.35rem 0.65rem; font-weight: 600; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe;">⏰ Recordatorio 8 PM</button>`;
-                
-                const toolTokenBanner = (m.activo && m.link) ? `
-                    <div style="margin-top: 0.45rem; padding: 0.35rem 0.65rem; background: rgba(59, 130, 246, 0.08); border: 1.5px solid rgba(59, 130, 246, 0.25); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
-                        <span style="font-size: 0.78rem; font-family: monospace; color: #1e40af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px;">
-                            🔑 Link Rápido (Sin Inicio de Sesión): ${m.link}
+                // Módulos estándar
+                const actBtn = (m.clave === 'activacion' && isActivo) 
+                    ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="openTherapistActivationModal(${id}, '${safePName}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; border-radius: 5px;">⚙️ Actividades</button>` 
+                    : '';
+                const waBtn = isActivo 
+                    ? `<button type="button" class="btn btn-sm" onclick="enviarWhatsAppDirectoHerramienta(${id}, '${m.clave}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 5px; cursor: pointer;">💬 WhatsApp Directo</button>` 
+                    : '';
+                const progBtn = isActivo 
+                    ? `<button type="button" class="btn btn-sm" onclick="programarRecordatorioWhatsApp(${id}, '${m.clave}', '20:00')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; cursor: pointer;">⏰ Recordatorio 8 PM</button>` 
+                    : '';
+                const histBtn = `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="openPatientToolHistoryModal(${id}, '${m.clave}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; border-radius: 5px; cursor: pointer;">📄 Historial</button>`;
+
+                const linkBanner = (isActivo && m.link) ? `
+                    <div style="margin-top: 0.5rem; padding: 0.35rem 0.65rem; background: rgba(59, 130, 246, 0.08); border: 1.5px solid rgba(59, 130, 246, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.76rem; font-family: monospace; color: #1e40af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px;">
+                            🔑 Link Rápido: ${m.link}
                         </span>
                         <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${m.link}')" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #1e40af; color: white; border: none; font-weight: 700; border-radius: 4px; cursor: pointer;">
                             📋 Copiar Link Directo
@@ -18207,32 +18387,48 @@ async function selectPatientForTherapistTools(id, name, code) {
                 ` : '';
 
                 return `
-                <div style="display: flex; flex-direction: column; width: 100%;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
-                        <div>
-                            <strong style="font-size: 0.92rem; color: var(--text-dark);">${m.nombre}</strong>
-                            <span style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-                                ${m.activo ? '🟢 Activo en portal del paciente' : '🔴 Desactivado'}
-                            </span>
+                <div class="tool-assign-card" style="background: ${isActivo ? '#faf5ff' : 'white'}; border: 1.5px solid ${isActivo ? '#c084fc' : '#e2e8f0'}; border-radius: 10px; padding: 0.85rem 1rem; transition: all 0.2s;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.65rem; flex: 1; min-width: 200px;">
+                            <span style="font-size: 1.4rem; line-height: 1;">${icon}</span>
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <strong style="font-size: 0.95rem; color: #1e293b;">${m.nombre}</strong>
+                                    <span class="badge" style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.45rem; background: ${isActivo ? '#dcfce7' : '#f1f5f9'}; color: ${isActivo ? '#15803d' : '#64748b'}; border: 1px solid ${isActivo ? '#86efac' : '#cbd5e1'}; border-radius: 4px;">
+                                        ${isActivo ? '🟢 ACTIVA' : '⚪ INACTIVA'}
+                                    </span>
+                                </div>
+                                <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #64748b; line-height: 1.3;">${desc}</p>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                            <button type="button" class="btn btn-sm btn-info" onclick="toggleInlinePatientHistory(${id}, '${m.clave}', '${inlineId}')" style="padding: 0.35rem 0.65rem; font-weight: 600;">📄 Historial</button>
-                            ${actBtn}
-                            ${waBtn}
-                            ${progBtn}
-                            <button type="button" class="btn btn-sm ${m.activo ? 'btn-secondary' : 'btn-primary'}" onclick="togglePatientModuleBackend(${id}, '${m.clave}', ${m.activo ? 0 : 1})" style="padding: 0.35rem 0.75rem; font-weight: 700;">
-                                ${m.activo ? ' Desactivar' : ' Activar'}
-                            </button>
+
+                        <!-- INTERRUPTOR ON / OFF -->
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 0.8rem; font-weight: 800; color: ${isActivo ? '#15803d' : '#94a3b8'};">${isActivo ? 'ON' : 'OFF'}</span>
+                            <label style="position: relative; display: inline-block; width: 48px; height: 26px; margin: 0; cursor: pointer;">
+                                <input type="checkbox" ${isActivo ? 'checked' : ''} onchange="togglePatientModuleBackend(${id}, '${m.clave}', this.checked ? 1 : 0)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${isActivo ? '#10b981' : '#cbd5e1'}; transition: .25s ease; border-radius: 26px;">
+                                    <span style="position: absolute; height: 20px; width: 20px; left: ${isActivo ? '25px' : '3px'}; bottom: 3px; background-color: white; transition: .25s ease; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                </span>
+                            </label>
                         </div>
                     </div>
-                    ${toolTokenBanner}
-                    <div id="${inlineId}" class="inline-patient-history hide" style="display: none; margin-top: 0.5rem; width: 100%;"></div>
+
+                    ${isActivo ? `
+                        <div style="display: flex; gap: 0.45rem; margin-top: 0.65rem; align-items: center; flex-wrap: wrap;">
+                            ${waBtn}
+                            ${progBtn}
+                            ${actBtn}
+                            ${histBtn}
+                        </div>
+                        ${linkBanner}
+                    ` : ''}
                 </div>
                 `;
-            }).join('<div style="height: 0.5rem;"></div>');
+            }).join('');
         }
     } catch (err) {
-        if (list) list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        if (matList) matList.innerHTML = `<p class="text-danger p-3">Error al cargar módulos: ${err.message}</p>`;
     }
 }
 
@@ -18246,12 +18442,12 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al actualizar');
         
-        const name = document.getElementById('tt-selected-patient-name').innerText;
-        const code = document.getElementById('tt-selected-patient-code').innerText.replace('Cédula: ', '');
-        selectPatientForTherapistTools(patientId, name, code);
+        // Re-renderizar modal inmediatamente con el nuevo estado
+        selectPatientForTherapistTools(patientId, currentMedPatientName, currentMedPatientCode);
         loadTherapistToolsCatalog();
+        loadTherapistToolsPatientsList();
     } catch (err) {
-        alert(err.message);
+        alert('Error: ' + err.message);
     }
 }
 
@@ -18559,6 +18755,7 @@ window.openConsumptionReportModal = openConsumpionReportModal;
 window.openMedicationReportModal = openMedicationReportModal;
 window.openBehavioralReportModal = openBehavioralReportModal;
 window.loadTherapistToolsCatalog = loadTherapistToolsCatalog;
+window.loadTherapistToolsPatientsList = loadTherapistToolsPatientsList;
 window.onTherapistToolPatientSearch = onTherapistToolPatientSearch;
 window.selectPatientForTherapistTools = selectPatientForTherapistTools;
 window.togglePatientModuleBackend = togglePatientModuleBackend;

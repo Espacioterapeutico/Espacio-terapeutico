@@ -3458,67 +3458,63 @@
                     <!-- PESTAÑAS SUB-NAVEGADORAS DE HERRAMIENTAS TERAPÉUTICAS -->
                     <div class="sub-nav-tabs mb-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; flex-wrap: wrap;">
                         <button type="button" id="tt-tab-asignar" class="btn btn-sm btn-primary" onclick="switchTherapistToolsTab('asignar')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">
-                            🔍 Asignación &amp; Módulos Activos
+                            📋 Asignación de Herramientas
                         </button>
-                        <button type="button" id="tt-tab-plantillas" class="btn btn-sm btn-secondary" onclick="switchTherapistToolsTab('plantillas')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">
-                            📋 Plantillas de Previsualización (Vista Paciente)
+                        <button type="button" id="tt-tab-catalogo" class="btn btn-sm btn-secondary" onclick="switchTherapistToolsTab('catalogo')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">
+                            📚 Catálogo de Herramientas
                         </button>
                     </div>
 
-                    <!-- SUB-VISTA 1: ASIGNACIÓN Y MÓDULOS ACTIVOS -->
+                    <!-- SUB-VISTA 1: ASIGNACIÓN DE HERRAMIENTAS -->
                     <div id="tt-sub-view-asignar">
                         <!-- BUSCADOR RÁPIDO Y PANEL DE ASIGNACIÓN AL PACIENTE -->
                         <div class="card mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%); border: 1.5px solid #e9d5ff;">
                             <div class="card-header" style="border-bottom: 1.5px solid #f3e8ff;">
-                                <h3 style="color: #6b21a8; display: flex; align-items: center; gap: 0.5rem;">
-                                    🔍 Asignar Herramientas a un Consultante
+                                <h3 style="color: #6b21a8; display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.15rem;">
+                                    🔍 Asignación de Herramientas por Consultante
                                 </h3>
                             </div>
                             <div class="card-body">
-                                <p class="text-secondary mb-3" style="font-size: 0.88rem;">Selecciona o busca a un paciente para activar o desactivar las funciones especiales que podrá ver en su portal:</p>
+                                <p class="text-secondary mb-3" style="font-size: 0.88rem;">Busca o selecciona un paciente para abrir la ventana de configuración y activar o desactivar herramientas con interruptores On/Off:</p>
                                 
                                 <div class="form-group mb-3" style="position: relative;">
                                     <label for="tt-patient-search" style="font-weight: 700;">Buscar Consultante:</label>
                                     <input type="text" id="tt-patient-search" placeholder="Escribe Nombre, Apellido o Cédula..." oninput="onTherapistToolPatientSearch(this.value)" onfocus="onTherapistToolPatientSearch(this.value)" autocomplete="off" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.95rem;">
                                     <div id="tt-patient-dropdown" class="search-results-dropdown hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 100;"></div>
                                 </div>
-
-                                <!-- Panel interactivo de switches (se carga al seleccionar paciente) -->
-                                <div id="tt-patient-toggle-panel" class="hide" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-top: 1rem; box-shadow: var(--shadow-sm);">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.65rem; margin-bottom: 0.85rem;">
-                                        <h4 id="tt-selected-patient-name" style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--primary-color);"></h4>
-                                        <span id="tt-selected-patient-code" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);"></span>
-                                    </div>
-                                    <div id="tt-patient-switches-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
-                                        <!-- Dinámico con JS -->
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
-                        <!-- CATÁLOGO DE HERRAMIENTAS - VISTA ACORDEÓN POR MÓDULO -->
-                        <h3 class="mb-3" style="font-family: var(--font-title); color: var(--text-dark);">Catálogo de Módulos &amp; Consultantes Activos</h3>
+                        <!-- LISTA RÁPIDA DE CONSULTANTES PARA ASIGNACIÓN -->
+                        <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color);">
+                            <div class="card-header" style="background: #f8fafc; border-bottom: 1.5px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.25rem;">
+                                <h4 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-dark);">
+                                    👥 Directorio de Consultantes
+                                </h4>
+                                <span class="badge" id="tt-patients-count-badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; padding: 0.25rem 0.6rem;">Cargando...</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="tt-patients-quick-list" style="display: flex; flex-direction: column;">
+                                    <p class="text-muted p-4 text-center">Cargando consultantes...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-VISTA 2: CATÁLOGO DE HERRAMIENTAS -->
+                    <div id="tt-sub-view-catalogo" class="hide">
+                        <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); padding: 1.25rem;">
+                            <h3 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+                                📚 Catálogo de Módulos &amp; Consultantes Activos
+                            </h3>
+                            <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">
+                                Consulta las herramientas terapéuticas disponibles, revisa qué pacientes tienen asignada cada una y previsualiza cómo se presenta cada formulario desde la vista del consultante.
+                            </p>
+                        </div>
                         <div id="tt-modules-accordion" style="display: flex; flex-direction: column; gap: 1rem;">
                             <p class="text-muted">Cargando catálogo de herramientas...</p>
                         </div>
                         <div id="tools-catalog-pagination-controls" class="mt-3"></div>
-                    </div>
-
-                    <!-- SUB-VISTA 2: PLANTILLAS DE PREVISUALIZACIÓN VISTA PACIENTE (PAGINADAS DE 2 EN 2) -->
-                    <div id="tt-sub-view-plantillas" class="hide">
-                        <div class="card mb-4" style="background: white; border: 1.5px solid var(--border-color); padding: 1.25rem;">
-                            <h3 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
-                                📋 Plantillas e Ítems del Portal del Consultante
-                            </h3>
-                            <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">
-                                Previsualiza cómo interactúa tu paciente con cada herramienta en su portal privado. Se muestran paginadas de <strong>2 en 2 plantillas</strong>.
-                            </p>
-                        </div>
-
-                        <div id="tt-preview-templates-container" class="tt-templates-grid">
-                            <!-- Dinámico con JS -->
-                        </div>
-                        <div id="tt-templates-pagination-controls" class="mt-3"></div>
                     </div>
                 </section>
 
@@ -8279,6 +8275,75 @@ async function handleQuickAddPatientSubmit(e) {
                     </div>
                     <button type="submit" id="med-assign-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Asignar</button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ASIGNACIÓN DE HERRAMIENTAS AL PACIENTE (CON SWITCHES ON/OFF) -->
+    <div id="modal-assign-patient-tools" class="modal hide" role="dialog" style="z-index: 10020;">
+        <div class="modal-content" style="max-width: 680px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; border: 1.5px solid #d8b4fe;">
+            <!-- CABECERA MODAL -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #702e5e 0%, #984b80 100%); color: white; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-size: 1.6rem; line-height: 1;">🛠️</span>
+                    <div>
+                        <h3 id="mat-patient-name" style="margin: 0; color: white; font-family: var(--font-title); font-size: 1.15rem; font-weight: 700;">
+                            Consultante
+                        </h3>
+                        <span id="mat-patient-cedula" style="font-size: 0.82rem; color: #fce7f3; font-weight: 500;">
+                            Cédula / Teléfono
+                        </span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modal-assign-patient-tools')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; line-height: 1;">✕</button>
+            </div>
+            <!-- CUERPO MODAL CON SCROLL -->
+            <div class="modal-body" style="padding: 1.25rem; background: #fafafa; overflow-y: auto; flex: 1;">
+                <div style="background: #fdf4f9; border: 1.5px solid #fbcfe8; border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 1rem;">
+                    <p style="margin: 0; font-size: 0.84rem; color: #831843; line-height: 1.4;">
+                        💡 <strong>Instrucciones:</strong> Enciende o apaga el interruptor <strong>ON / OFF</strong> de cada herramienta para habilitarla o deshabilitarla en el portal privado de este consultante.
+                    </p>
+                </div>
+                <div id="mat-modules-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <p class="text-muted text-center py-4">Cargando herramientas...</p>
+                </div>
+            </div>
+            <!-- PIE DE MODAL -->
+            <div class="modal-footer" style="padding: 0.75rem 1.25rem; background: white; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-assign-patient-tools')">Listo / Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA EDITAR NOMBRE Y DESCRIPCIÓN DE PERFIL DE HORARIO -->
+    <div id="modal-edit-profile-desc" class="modal hide" role="dialog" style="z-index: 10050;">
+        <div class="modal-content" style="max-width: 500px; width: 95%; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border-color);">
+            <div class="modal-header" style="background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.4rem;">
+                    ✏️ Editar Nombre y Descripción
+                </h3>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modal-edit-profile-desc')" style="background: none; border: none; font-size: 1.35rem; cursor: pointer; color: #64748b;">✕</button>
+            </div>
+            <div class="modal-body" style="padding: 1.25rem; background: white;">
+                <div class="form-group mb-3">
+                    <label for="modal-edit-profile-name" style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: #334155;">
+                        🏷️ Nombre del Perfil / Modalidad *
+                    </label>
+                    <input type="text" id="modal-edit-profile-name" placeholder="Ej. Online, Presencial..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-size: 0.95rem; font-weight: 700;">
+                </div>
+                <div class="form-group mb-2">
+                    <label for="modal-edit-profile-desc" style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: #334155;">
+                        📝 Descripción o Instrucciones para el Consultante
+                    </label>
+                    <textarea id="modal-edit-profile-desc" rows="3" placeholder="Ej. Consultas a través de Google Meet o WhatsApp videollamada..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-size: 0.9rem; resize: vertical;"></textarea>
+                    <small style="color: #64748b; font-size: 0.78rem; display: block; margin-top: 0.35rem;">
+                        Esta descripción se muestra a tus consultantes al agendar una cita en esta modalidad.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 0.75rem 1.25rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-profile-desc')">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditProfileDescModal()" style="font-weight: 700;">💾 Guardar Cambios</button>
             </div>
         </div>
     </div>
