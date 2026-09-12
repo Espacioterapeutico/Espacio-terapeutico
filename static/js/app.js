@@ -5735,18 +5735,30 @@ async function loadDashboardStats() {
         
         const container = document.getElementById('stat-month-modalities-container');
         if (container) {
-            container.innerHTML = '';
             const mods = data.stats.month_modalities || {
                 'Presencial': data.stats.month_presencial || 0,
                 'Online': data.stats.month_online || 0
             };
-            
+            let totalMonth = 0;
+            const detailParts = [];
             Object.keys(mods).forEach(modName => {
                 const count = mods[modName] || 0;
-                const item = document.createElement('div');
-                item.innerHTML = `${modName}: <span style="font-weight: bold; color: var(--text-color);">${count}</span>`;
-                container.appendChild(item);
+                totalMonth += count;
+                const cleanName = modName.replace(/^Horario\s+/i, '');
+                detailParts.push(`${cleanName}: ${count}`);
             });
+            
+            const totalEl = document.getElementById('stat-month-total');
+            const subEl = document.getElementById('stat-month-modalities-sub');
+            if (totalEl && subEl) {
+                totalEl.textContent = totalMonth;
+                subEl.textContent = detailParts.join(' · ') || '0 citas';
+            } else {
+                container.innerHTML = `
+                    <h3 id="stat-month-total" class="stat-number">${totalMonth}</h3>
+                    <span id="stat-month-modalities-sub" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; line-height: 1.1; margin-top: 0.15rem; white-space: nowrap;">${detailParts.join(' · ') || '0 citas'}</span>
+                `;
+            }
         }
     } catch (err) {
         console.error("Error al cargar estadísticas del dashboard:", err);
