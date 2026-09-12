@@ -5932,6 +5932,100 @@
         </div>
     </div>
 
+    <!-- MODAL DE CANCELACIÓN MANUAL DE CITAS -->
+    <div id="cancel-appointment-modal" class="modal hide">
+        <div class="modal-content modal-md" style="max-width: 540px; border-radius: var(--radius-lg); padding: 0; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+            <div class="modal-header" style="background: #fff; border-bottom: 1px solid var(--border-color); padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <div style="background: rgba(245, 158, 11, 0.12); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d97706; font-size: 1.1rem;">
+                        ⚠️
+                    </div>
+                    <div>
+                        <h3 id="cancel-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-dark);">Cancelar Cita</h3>
+                        <p style="margin: 0; font-size: 0.78rem; color: var(--text-secondary);">Selecciona el tipo de cancelación a aplicar en agenda y finanzas</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="closeModal('cancel-appointment-modal')" style="background: transparent; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-secondary); line-height: 1;">✕</button>
+            </div>
+            <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+                <!-- Tarjeta Resumen de la Cita -->
+                <div id="cancel-modal-appt-summary" style="background: var(--bg-light); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <span id="cancel-modal-patient-name" style="font-weight: 700; font-size: 1rem; color: var(--text-dark);">Cargando...</span>
+                        <span id="cancel-modal-status-badge" class="badge" style="background: #10b981; color: white; padding: 2px 8px; font-size: 0.72rem; border-radius: 4px; font-weight: 700;">Confirmada</span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                        <span>📅 <strong id="cancel-modal-date-time">--</strong></span>
+                        <span>🏷️ Modalidad: <strong id="cancel-modal-modality">--</strong></span>
+                    </div>
+                </div>
+
+                <form id="cancel-appointment-form" onsubmit="handleCancelAppointmentSubmit(event)">
+                    <input type="hidden" id="cancel-modal-appt-id">
+
+                    <!-- Opciones de Cancelación -->
+                    <label style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); margin-bottom: 0.65rem; display: block;">
+                        Tipo de Cancelación *
+                    </label>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+                        <!-- Opción 1: Cancelar con aviso -->
+                        <label id="lbl-opt-con-aviso" style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem; border: 2px solid #10b981; border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.04); cursor: pointer; transition: all 0.2s ease;">
+                            <input type="radio" name="tipo_cancelacion" id="cancel-opt-con-aviso" value="Cancelada con aviso" checked onchange="updateCancelRadioStyles()" style="margin-top: 0.2rem; transform: scale(1.2); accent-color: #10b981;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <strong style="font-size: 0.92rem; color: #047857;">🟢 Cancelar con aviso (Justificada / Sin cargo)</strong>
+                                </div>
+                                <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.35;">
+                                    <strong>No genera cobro ni deuda</strong> al consultante (fuerza mayor, luto familiar, enfermedad o acuerdo previo). Si la cita fue prepagada, se libera o conserva el saldo del paquete.
+                                </p>
+                            </div>
+                        </label>
+
+                        <!-- Opción 2: Cancelar sin aviso -->
+                        <label id="lbl-opt-sin-aviso" style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); background: #fff; cursor: pointer; transition: all 0.2s ease;">
+                            <input type="radio" name="tipo_cancelacion" id="cancel-opt-sin-aviso" value="Cancelada sin aviso" onchange="updateCancelRadioStyles()" style="margin-top: 0.2rem; transform: scale(1.2); accent-color: #ef4444;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <strong style="font-size: 0.92rem; color: #b91c1c;">🔴 Cancelar sin aviso (Injustificada / Con cargo)</strong>
+                                </div>
+                                <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.35;">
+                                    Inasistencia sin previo aviso o fuera de la política de cancelación. <strong>Se registra para cobro / queda como deuda pendiente</strong> (o se descuenta de prepago si ya estaba pagada).
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Motivo / Justificación -->
+                    <div class="form-group" style="margin-bottom: 1.15rem;">
+                        <label for="cancel-modal-motivo" style="font-weight: 700; font-size: 0.85rem; color: var(--text-dark); margin-bottom: 0.35rem; display: block;">
+                            Motivo o Justificación <span style="font-weight: normal; color: var(--text-secondary); font-size: 0.78rem;">(opcional)</span>
+                        </label>
+                        <textarea id="cancel-modal-motivo" rows="2" placeholder="Ej: Fallecimiento de un familiar cercano, reprogramarán más adelante..." style="width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.85rem; font-family: inherit; resize: vertical;"></textarea>
+                        <small class="text-secondary" style="font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                            ℹ️ Este motivo se registrará en el expediente clínico de la sesión y en la referencia de la cita.
+                        </small>
+                    </div>
+
+                    <!-- Notificación WhatsApp -->
+                    <div style="background: rgba(37, 211, 102, 0.06); border: 1px solid rgba(37, 211, 102, 0.25); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem;">
+                        <input type="checkbox" id="cancel-modal-notificar-wa" checked style="transform: scale(1.2); accent-color: #25d366; cursor: pointer;">
+                        <label for="cancel-modal-notificar-wa" style="font-size: 0.82rem; font-weight: 600; color: #166534; margin: 0; cursor: pointer;">
+                            📱 Enviar mensaje de cancelación por WhatsApp al consultante
+                        </label>
+                    </div>
+
+                    <div class="modal-footer" style="padding: 0.75rem 0 0 0; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('cancel-appointment-modal')" style="font-size: 0.85rem; padding: 0.45rem 1rem;">Volver</button>
+                        <button type="submit" id="cancel-modal-submit-btn" class="btn btn-danger" style="font-size: 0.85rem; font-weight: 700; padding: 0.45rem 1.15rem; background: #dc2626; border-color: #dc2626;">
+                            Confirmar Cancelación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL INFORMATIVO DE SUSCRIPCIONES Y MÉTODOS DE PAGO -->
     <div id="subscription-info-modal" class="modal hide">
         <div class="modal-content modal-md" style="max-width: 580px; border-radius: var(--radius-lg); padding: 0; overflow: hidden;">

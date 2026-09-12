@@ -738,22 +738,106 @@ def update_agenda_event_status(event_id):
     estado = data.get('estado')
     confirmada = data.get('confirmada')
     estado_pago = data.get('estado_pago')
+    motivo = (data.get('motivo') or '').strip()
+    notificar_wa = data.get('notificar_wa', True)
     
+    # 1. Consultar datos actuales de la cita y paciente
+    cursor.execute("""
+        SELECT af.*, p.nombres, p.apellidos, p.telefono, p.pais, p.psicologo_id,
+               p.costo_personalizado, p.moneda_personalizada,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos
+        FROM agenda_finanzas af 
+        JOIN pacientes p ON af.paciente_id = p.id 
+        LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
+        WHERE af.id = ?
+    """, (event_id,))
+    cita = cursor.fetchone()
+    if not cita:
+        return jsonify({'error': 'Cita no encontrada.'}), 404
+
     updates = []
     params = []
     
-    if confirmada is not None:
-        updates.append("confirmada = ?")
-        params.append(int(confirmada))
-        
-    if estado_pago is not None:
-        updates.append("estado_pago = ?")
-        params.append(estado_pago)
-    elif estado == 'Confirmada':
-        updates.append("confirmada = 1")
-    elif estado == 'Cancelada':
+    target_cancellation = None
+    if estado_pago in ['Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada']:
+        target_cancellation = estado_pago
+    elif estado in ['Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada']:
+        target_cancellation = estado
+
+    if target_cancellation == 'Cancelada con aviso':
+        updates.append("estado_pago = 'Cancelada con aviso'")
+        updates.append("confirmada = 0")
+        if cita['estado_pago'] == 'Prepagada' or cita['tipo_consulta'] == 'Paquete Prepagado':
+            updates.append("control_uso = 'No consumida'")
+        else:
+            updates.append("monto = 0.0")
+        if motivo:
+            new_ref = f"Cancelada con aviso: {motivo}" if not cita['referencia'] else f"{cita['referencia']} | Cancelada con aviso: {motivo}"
+            updates.append("referencia = ?")
+            params.append(new_ref)
+            
+        try:
+            from app import create_auto_cancellation_session
+            cancellation_reason = f"Consulta cancelada con aviso por el terapeuta. Motivo: {motivo}" if motivo else "Consulta cancelada con aviso por el terapeuta."
+            create_auto_cancellation_session(db, cita['paciente_id'], event_id, cita['fecha'], cita['tipo_consulta'], 'Cancelada con aviso', cancellation_reason)
+        except Exception as se:
+            print("Error creando sesion de cancelacion con aviso:", se)
+            
+        _update_google_calendar_status_bg(event_id, 'cancelada')
+
+    elif target_cancellation == 'Cancelada sin aviso':
+        updates.append("estado_pago = 'Cancelada sin aviso'")
+        updates.append("confirmada = 0")
+        if cita['estado_pago'] == 'Prepagada' or cita['tipo_consulta'] == 'Paquete Prepagado':
+            updates.append("control_uso = 'Consumida'")
+        else:
+            if cita['monto'] == 0.0:
+                costo_real = cita['costo_personalizado'] or 0.0
+                moneda_real = cita['moneda_personalizada'] or cita['moneda'] or 'USD'
+                if costo_real == 0.0:
+                    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'costo_consulta_general'")
+                    cfg_costo = cursor.fetchone()
+                    if cfg_costo and cfg_costo['valor']:
+                        try:
+                            costo_real = float(cfg_costo['valor'])
+                        except Exception:
+                            pass
+                if costo_real > 0:
+                    updates.append("monto = ?")
+                    params.append(costo_real)
+                    updates.append("moneda = ?")
+                    params.append(moneda_real)
+        if motivo:
+            new_ref = f"Cancelada sin aviso: {motivo}" if not cita['referencia'] else f"{cita['referencia']} | Cancelada sin aviso: {motivo}"
+            updates.append("referencia = ?")
+            params.append(new_ref)
+
+        try:
+            from app import create_auto_cancellation_session
+            cancellation_reason = f"Consulta cancelada sin aviso. Registrada para cobro. Motivo: {motivo}" if motivo else "Consulta cancelada sin aviso. Registrada para cobro."
+            create_auto_cancellation_session(db, cita['paciente_id'], event_id, cita['fecha'], cita['tipo_consulta'], 'Cancelada sin aviso', cancellation_reason)
+        except Exception as se:
+            print("Error creando sesion de cancelacion sin aviso:", se)
+
+        _update_google_calendar_status_bg(event_id, 'cancelada')
+
+    elif target_cancellation == 'Cancelada':
         updates.append("estado_pago = 'Cancelada'")
         updates.append("confirmada = 0")
+        _update_google_calendar_status_bg(event_id, 'cancelada')
+    else:
+        if confirmada is not None:
+            updates.append("confirmada = ?")
+            params.append(int(confirmada))
+            if int(confirmada) == 1:
+                _update_google_calendar_status_bg(event_id, 'confirmada')
+            
+        if estado_pago is not None:
+            updates.append("estado_pago = ?")
+            params.append(estado_pago)
+        elif estado == 'Confirmada':
+            updates.append("confirmada = 1")
+            _update_google_calendar_status_bg(event_id, 'confirmada')
         
     if not updates:
         return jsonify({'success': True, 'message': 'Sin cambios'}), 200
@@ -763,58 +847,57 @@ def update_agenda_event_status(event_id):
     cursor.execute(sql, params)
     db.commit()
     
-    # Enviar mensaje de WhatsApp si se confirmó o canceló manualmente
+    # Enviar mensaje de WhatsApp si corresponde
     try:
         from routes_notificaciones import make_wa_http_request, format_whatsapp_message
         from routes_herramientas import clean_phone_number
-        if confirmada == 1 or estado == 'Confirmada' or estado == 'Cancelada':
-            cursor.execute("""
-                SELECT p.telefono, p.nombres, p.apellidos, p.pais, af.fecha, af.hora, af.tipo_consulta, p.psicologo_id,
-                       u.nombres as psic_nombres, u.apellidos as psic_apellidos
-                FROM agenda_finanzas af 
-                JOIN pacientes p ON af.paciente_id = p.id 
-                LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
-                WHERE af.id = ?
-            """, (event_id,))
-            cita = cursor.fetchone()
-            if cita and cita['telefono']:
-                phone_clean = clean_phone_number(cita['telefono'])
-                psych_id = cita['psicologo_id'] or session.get('user_id') or 1
-                
-                # Fetch templates
-                cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok')")
-                templates = {r['clave']: r['valor'] for r in cursor.fetchall()}
-                
-                patient_dict = {
-                    'nombres': cita['nombres'],
-                    'apellidos': cita['apellidos'],
-                    'pais': cita['pais'] or ''
-                }
-                cita_dict = {
-                    'nombre': f"{cita['nombres']} {cita['apellidos']}".strip(),
-                    'fecha': cita['fecha'],
-                    'hora': cita['hora'],
-                    'modalidad': cita['tipo_consulta'] or 'Presencial'
-                }
-                psicologo_data = {
-                    'nombres': cita['psic_nombres'],
-                    'apellidos': cita['psic_apellidos']
-                }
-                
-                if confirmada == 1 or estado == 'Confirmada':
-                    template = templates.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
-                    _update_google_calendar_status_bg(event_id, 'confirmada')
-                else:
-                    template = templates.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
-                    _update_google_calendar_status_bg(event_id, 'cancelada')
-                
-                msg = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
-                
-                make_wa_http_request('POST', '/send', json_data={'phone': phone_clean, 'text': msg, 'user_id': psych_id}, timeout=10, user_id=psych_id)
+        is_confirming = (confirmada == 1 or estado == 'Confirmada')
+        is_cancelling = bool(target_cancellation)
+
+        if (is_confirming or (is_cancelling and notificar_wa)) and cita and cita['telefono']:
+            phone_clean = clean_phone_number(cita['telefono'])
+            psych_id = cita['psicologo_id'] or session.get('user_id') or 1
+            
+            # Fetch templates
+            cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok')")
+            templates = {r['clave']: r['valor'] for r in cursor.fetchall()}
+            
+            patient_dict = {
+                'nombres': cita['nombres'],
+                'apellidos': cita['apellidos'],
+                'pais': cita['pais'] or ''
+            }
+            cita_dict = {
+                'nombre': f"{cita['nombres']} {cita['apellidos']}".strip(),
+                'fecha': cita['fecha'],
+                'hora': cita['hora'],
+                'modalidad': cita['tipo_consulta'] or 'Presencial'
+            }
+            psicologo_data = {
+                'nombres': cita['psic_nombres'],
+                'apellidos': cita['psic_apellidos']
+            }
+            
+            if is_confirming:
+                template = templates.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+            else:
+                template = templates.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
+            
+            msg = format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data)
+            make_wa_http_request('POST', '/send', json_data={'phone': phone_clean, 'text': msg, 'user_id': psych_id}, timeout=10, user_id=psych_id)
     except Exception as e:
         print("Error sending manual confirmation WA:", e)
+
+    try:
+        if cita and cita['paciente_id']:
+            from app import sync_patient_to_firebase
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(cita['paciente_id'],), daemon=True).start()
+    except Exception as fe:
+        print("Error al sincronizar paciente tras actualizar cita:", fe)
     
     return jsonify({'success': True, 'message': 'Cita actualizada exitosamente.'})
+
 
 @agenda_bp.route('/api/agenda/<int:event_id>', methods=['DELETE'])
 @agenda_bp.route('/api/agenda/events/<int:event_id>', methods=['DELETE'])

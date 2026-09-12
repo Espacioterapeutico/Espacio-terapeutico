@@ -5781,7 +5781,7 @@ function renderUpcomingConsultationPage(idx) {
 
     const btnConfirmar = `<button class="btn btn-sm ${isConfirmed ? 'btn-outline-success' : 'btn-success'}" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; ${isConfirmed ? 'border: 1px solid #10b981; color: #047857; background: transparent;' : 'background: #10b981; color: white; border: none;'}" onclick="quickMarkApptStatusFromDashboard(${nextE.id}, 'Confirmada')">✅ Confirmar</button>`;
 
-    const btnCancelar = `<button class="btn btn-sm btn-warning" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #f59e0b; color: white; border: none;" onclick="quickMarkApptStatusFromDashboard(${nextE.id}, 'Cancelada')">🟡 Cancelar</button>`;
+    const btnCancelar = `<button class="btn btn-sm btn-warning" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #f59e0b; color: white; border: none;" onclick="openCancelAppointmentModal(${nextE.id})">🟡 Cancelar</button>`;
 
     const btnEliminar = `<button class="btn btn-sm btn-danger" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #ef4444; color: white; border: none;" onclick="deleteAgendaEventFromDashboard(${nextE.id})">🗑️ Eliminar</button>`;
 
@@ -5846,16 +5846,176 @@ function renderUpcomingConsultationPage(idx) {
 }
 window.renderUpcomingConsultationPage = renderUpcomingConsultationPage;
 
+function updateCancelRadioStyles() {
+    const optConAviso = document.getElementById('cancel-opt-con-aviso');
+    const lblConAviso = document.getElementById('lbl-opt-con-aviso');
+    const lblSinAviso = document.getElementById('lbl-opt-sin-aviso');
+    const submitBtn = document.getElementById('cancel-modal-submit-btn');
+
+    if (!optConAviso || !lblConAviso || !lblSinAviso) return;
+
+    if (optConAviso.checked) {
+        lblConAviso.style.borderColor = '#10b981';
+        lblConAviso.style.background = 'rgba(16, 185, 129, 0.06)';
+        lblSinAviso.style.borderColor = 'var(--border-color)';
+        lblSinAviso.style.background = '#fff';
+        if (submitBtn) {
+            submitBtn.textContent = 'Confirmar Cancelación con Aviso';
+            submitBtn.style.background = '#059669';
+            submitBtn.style.borderColor = '#059669';
+        }
+    } else {
+        lblConAviso.style.borderColor = 'var(--border-color)';
+        lblConAviso.style.background = '#fff';
+        lblSinAviso.style.borderColor = '#ef4444';
+        lblSinAviso.style.background = 'rgba(239, 68, 68, 0.06)';
+        if (submitBtn) {
+            submitBtn.textContent = 'Confirmar Cancelación sin Aviso';
+            submitBtn.style.background = '#dc2626';
+            submitBtn.style.borderColor = '#dc2626';
+        }
+    }
+}
+window.updateCancelRadioStyles = updateCancelRadioStyles;
+
+async function openCancelAppointmentModal(apptId, eventData = null) {
+    const modal = document.getElementById('cancel-appointment-modal');
+    if (!modal) return;
+
+    document.getElementById('cancel-modal-appt-id').value = apptId;
+    document.getElementById('cancel-modal-motivo').value = '';
+    const chkNotificar = document.getElementById('cancel-modal-notificar-wa');
+    if (chkNotificar) chkNotificar.checked = true;
+
+    const optConAviso = document.getElementById('cancel-opt-con-aviso');
+    if (optConAviso) optConAviso.checked = true;
+    updateCancelRadioStyles();
+
+    // Rellenar datos preliminares si vienen en caché o argumentos
+    let appt = eventData;
+    if (!appt && typeof _upcomingEventsCache !== 'undefined' && Array.isArray(_upcomingEventsCache)) {
+        appt = _upcomingEventsCache.find(e => e.id == apptId);
+    }
+
+    const patientNameEl = document.getElementById('cancel-modal-patient-name');
+    const dateTimeEl = document.getElementById('cancel-modal-date-time');
+    const modalityEl = document.getElementById('cancel-modal-modality');
+    const statusBadgeEl = document.getElementById('cancel-modal-status-badge');
+
+    if (appt) {
+        if (patientNameEl) patientNameEl.textContent = `${appt.nombres || ''} ${appt.apellidos || ''}`.trim() || 'Consultante';
+        if (dateTimeEl) dateTimeEl.textContent = `${appt.fecha || ''} a las ${appt.hora || ''}`;
+        if (modalityEl) modalityEl.textContent = appt.tipo_consulta || 'Consulta';
+        if (statusBadgeEl) {
+            const isConfirmed = appt.confirmada === 1;
+            statusBadgeEl.textContent = isConfirmed ? '✓ Confirmada' : '⏳ Pendiente';
+            statusBadgeEl.style.background = isConfirmed ? '#10b981' : '#f59e0b';
+        }
+    } else {
+        if (patientNameEl) patientNameEl.textContent = 'Cargando información...';
+        if (dateTimeEl) dateTimeEl.textContent = '--';
+        if (modalityEl) modalityEl.textContent = '--';
+    }
+
+    openModal('cancel-appointment-modal');
+
+    // Cargar información completa del backend si no venía en caché
+    if (!appt || !appt.nombres) {
+        try {
+            const res = await fetch(`/api/finance/transactions/${apptId}`);
+            if (res.ok) {
+                const fullAppt = await res.json();
+                if (patientNameEl) patientNameEl.textContent = `${fullAppt.nombres || ''} ${fullAppt.apellidos || ''}`.trim() || 'Consultante';
+                if (dateTimeEl) dateTimeEl.textContent = `${fullAppt.fecha || ''} a las ${fullAppt.hora || ''}`;
+                if (modalityEl) modalityEl.textContent = fullAppt.tipo_consulta || 'Consulta';
+                if (statusBadgeEl) {
+                    const isConfirmed = fullAppt.confirmada === 1;
+                    statusBadgeEl.textContent = isConfirmed ? '✓ Confirmada' : '⏳ Pendiente';
+                    statusBadgeEl.style.background = isConfirmed ? '#10b981' : '#f59e0b';
+                }
+            }
+        } catch (err) {
+            console.error("Error al cargar detalles de la cita para cancelar:", err);
+        }
+    }
+}
+window.openCancelAppointmentModal = openCancelAppointmentModal;
+
+async function handleCancelAppointmentSubmit(event) {
+    event.preventDefault();
+    const apptId = document.getElementById('cancel-modal-appt-id').value;
+    if (!apptId) return;
+
+    const optConAviso = document.getElementById('cancel-opt-con-aviso');
+    const tipoCancelacion = (optConAviso && optConAviso.checked) ? 'Cancelada con aviso' : 'Cancelada sin aviso';
+    const motivo = (document.getElementById('cancel-modal-motivo').value || '').trim();
+    const notificarWa = document.getElementById('cancel-modal-notificar-wa')?.checked ?? true;
+    const submitBtn = document.getElementById('cancel-modal-submit-btn');
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Procesando...';
+    }
+
+    try {
+        const payload = {
+            estado: tipoCancelacion,
+            estado_pago: tipoCancelacion,
+            motivo: motivo,
+            notificar_wa: notificarWa
+        };
+
+        const res = await fetch(`/api/agenda/${apptId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok) {
+            closeModal('cancel-appointment-modal');
+            alert(`Cita cancelada con éxito (${tipoCancelacion}).`);
+
+            // Actualizar caché de próximas consultas en Dashboard
+            if (typeof _upcomingEventsCache !== 'undefined' && Array.isArray(_upcomingEventsCache)) {
+                _upcomingEventsCache = _upcomingEventsCache.filter(e => e.id != apptId);
+                if (typeof renderUpcomingConsultationPage === 'function') {
+                    renderUpcomingConsultationPage(_upcomingCurrentIndex);
+                }
+            }
+
+            // Recargar datos en las distintas vistas
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
+            if (typeof loadAgenda === 'function' && typeof activeView !== 'undefined' && activeView === 'agenda') loadAgenda();
+            if (typeof loadFinanceData === 'function' && typeof activeView !== 'undefined' && activeView === 'finanzas') loadFinanceData();
+            if (typeof renderManualConfirmationsView === 'function') renderManualConfirmationsView();
+            if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+        } else {
+            alert("Error al cancelar la cita: " + (data.error || "Ocurrió un error inesperado."));
+        }
+    } catch (err) {
+        console.error("Error de conexión al cancelar la cita:", err);
+        alert("Error de conexión al procesar la cancelación.");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            updateCancelRadioStyles();
+        }
+    }
+}
+window.handleCancelAppointmentSubmit = handleCancelAppointmentSubmit;
+
 async function quickMarkApptStatusFromDashboard(citaId, status) {
+    if (status === 'Cancelada' || status === 'Cancelada con aviso' || status === 'Cancelada sin aviso') {
+        return openCancelAppointmentModal(citaId);
+    }
     const success = await quickMarkApptStatus(citaId, status);
     if (success) {
         if (_upcomingEventsCache && _upcomingEventsCache.length > 0) {
             const item = _upcomingEventsCache.find(e => e.id === citaId);
             if (item) {
                 item.confirmada = (status === 'Confirmada') ? 1 : 0;
-                if (status === 'Cancelada') {
-                    item.estado_pago = 'Cancelada';
-                }
                 renderUpcomingConsultationPage(_upcomingCurrentIndex);
             }
         }
@@ -6604,7 +6764,7 @@ async function loadAgenda() {
                 <td class="actions-cell">
                     ${btnEvolucionar}
                     <button class="btn btn-secondary btn-sm" onclick="openEditEventModal(${e.id})">Editar</button>
-                    <button class="btn btn-secondary btn-sm text-danger" onclick="cancelEvent(${e.id})">Cancelar</button>
+                    <button class="btn btn-secondary btn-sm text-danger" onclick="openCancelAppointmentModal(${e.id})">Cancelar</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -7121,19 +7281,8 @@ async function handleEventSubmit(e) {
 }
 
 async function cancelEvent(eventId) {
-    if (!confirm("¿Está seguro de que desea cancelar y eliminar esta cita de la agenda? Si fue sincronizada, se eliminará del calendario de Google.")) return;
-    
-    try {
-        const res = await fetch(`/api/agenda/${eventId}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (res.ok) {
-            alert(data.success);
-            loadAgenda();
-        } else {
-            alert(data.error);
-        }
-    } catch (err) {
-        alert("Error al cancelar cita.");
+    if (typeof openCancelAppointmentModal === 'function') {
+        return openCancelAppointmentModal(eventId);
     }
 }
 
@@ -19510,7 +19659,7 @@ async function renderManualConfirmationsView() {
                                     ✅ Marcar Confirmada
                                 </button>
                             ` : ''}
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="quickMarkApptStatus(${appt.id}, 'Cancelada')" style="border: 1px solid #fca5a5; color: #dc2626; font-size: 0.78rem; padding: 0.35rem 0.65rem; background: white;">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="openCancelAppointmentModal(${appt.id})" style="border: 1px solid #fca5a5; color: #dc2626; font-size: 0.78rem; padding: 0.35rem 0.65rem; background: white;">
                                 ❌ Cancelar
                             </button>
                         </div>
@@ -19564,6 +19713,12 @@ async function sendWhatsappTemplateFromMc(apptId, type) {
 window.sendWhatsappTemplateFromMc = sendWhatsappTemplateFromMc;
 
 async function quickMarkApptStatus(apptId, newStatus) {
+    if (newStatus === 'Cancelada' || newStatus === 'Cancelada con aviso' || newStatus === 'Cancelada sin aviso') {
+        if (typeof openCancelAppointmentModal === 'function') {
+            openCancelAppointmentModal(apptId);
+            return false;
+        }
+    }
     if (!confirm(`¿Deseas cambiar el estado de esta cita a "${newStatus}"?`)) return false;
 
     try {
