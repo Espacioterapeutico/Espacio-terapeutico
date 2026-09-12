@@ -18037,13 +18037,13 @@ function changePatientHistoryPage(stateKey, newPage) {
     }
 }
 
-function openPatientToolHistoryModal(patientId, toolType) {
+function openPatientToolHistoryModal(patientId, toolType, patientName = '') {
     const inlineId = `inline-history-acc-${patientId}-${toolType}`;
     const el = document.getElementById(inlineId);
     if (el) {
         toggleInlinePatientHistory(patientId, toolType, inlineId);
     } else {
-        openTherapistModuleReport(toolType, '', patientId);
+        openTherapistModuleReport(toolType, '', patientId, patientName);
     }
 }
 
@@ -18110,9 +18110,10 @@ document.addEventListener('click', function(e) {
         e.stopPropagation();
         const patientId = btn.getAttribute('data-patient-id');
         const toolType = btn.getAttribute('data-tool');
+        const patientName = btn.getAttribute('data-patient-name') || '';
         
         if (toolType) {
-            openPatientToolHistoryModal(patientId, toolType);
+            openPatientToolHistoryModal(patientId, toolType, patientName);
         }
     }
 });
@@ -18211,7 +18212,7 @@ function renderActiveToolsPatients(patients) {
                     <strong style="font-size: 0.92rem; color: #4a154b;">${t.nombre}</strong>
                 </div>
                 <div style="display: flex; gap: 0.45rem; align-items: center;">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistModuleReport('${t.clave}', '${safeToolName}', ${p.id})" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; border: 1.5px solid var(--border-color); background: white;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistModuleReport('${t.clave}', '${safeToolName}', ${p.id}, '${safeFullName}')" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; border: 1.5px solid var(--border-color); background: white;">
                         📊 Historial
                     </button>
                     <button type="button" class="btn btn-sm btn-primary" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.2);">
@@ -18563,8 +18564,8 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
     }
 }
 
-async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatientId) {
-    console.log('[DEBUG] openTherapistModuleReport called with:', moduloClave, moduloNombre, targetPatientId);
+async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatientId, targetPatientName) {
+    console.log('[DEBUG] openTherapistModuleReport called with:', moduloClave, moduloNombre, targetPatientId, targetPatientName);
     
     // Normalizar clave del módulo
     const claveMap = {
@@ -18582,7 +18583,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     const namesMap = {
         'sueno': 'Higiene del Sueño',
         'ansiedad': 'Diario de Ansiedad',
-        'sobriedad': 'Registro de Consumo',
+        'sobriedad': 'Control de Sobriedad',
         'adherencia': 'Adherencia al Tratamiento',
         'activacion': 'Activación Conductual',
         'pantalla': 'Tracker de Consumo de Pantalla',
@@ -18592,10 +18593,12 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     };
     const titleText = moduloNombre || namesMap[moduloClave] || moduloClave;
     const titleEl = document.getElementById('ttr-modal-title');
-    if (titleEl) titleEl.innerText = `📊 Reporte e Historial: ${titleText}`;
+    if (titleEl) {
+        titleEl.innerText = targetPatientName ? `📊 Historial: ${titleText} - ${targetPatientName}` : `📊 Reporte e Historial: ${titleText}`;
+    }
     
     const container = document.getElementById('ttr-modal-body-content');
-    if (container) container.innerHTML = '<p class="text-muted text-center py-4">Cargando registros de consultantes...</p>';
+    if (container) container.innerHTML = '<p class="text-muted text-center py-4">Cargando registros del consultante...</p>';
     
     const modalEl = document.getElementById('therapist-tool-report-modal');
     if (modalEl) {
@@ -18605,14 +18608,25 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     }
 
     try {
-        const res = await fetch(`/api/therapist/modules/report/${moduloClave}`);
+        const queryParam = targetPatientId ? `?patient_id=${encodeURIComponent(targetPatientId)}` : '';
+        const res = await fetch(`/api/therapist/modules/report/${moduloClave}${queryParam}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al cargar reporte');
 
         if (!container) return;
 
+        const emptyMsg = targetPatientName ?
+            `<strong>${targetPatientName}</strong> aún no ha registrado datos para la herramienta <strong>${titleText}</strong>.` :
+            `Aún no hay datos reportados para esta herramienta.`;
+
         if (!data || data.length === 0) {
-            container.innerHTML = '<div class="text-muted text-center py-5"><h4>📭 Sin registros</h4><p>Aún no hay datos reportados para esta herramienta.</p></div>';
+            container.innerHTML = `
+                <div class="text-muted text-center py-5">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📭</div>
+                    <h4 style="color: var(--text-dark); font-weight: 700;">Sin registros aún</h4>
+                    <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 480px; margin: 0.5rem auto 0 auto;">${emptyMsg}</p>
+                </div>
+            `;
             return;
         }
 
@@ -18623,7 +18637,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
             if (!patientsMap[pId]) {
                 patientsMap[pId] = {
                     id: pId,
-                    name: `${r.nombres || ''} ${r.apellidos || ''}`.trim() || `Consultante #${pId}`,
+                    name: `${r.nombres || ''} ${r.apellidos || ''}`.trim() || (targetPatientName || `Consultante #${pId}`),
                     cedula: r.cedula || '',
                     records: []
                 };
@@ -18633,16 +18647,19 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
 
         let patientsList = Object.values(patientsMap);
 
-        // Si se especificó un paciente objetivo, filtrar para mostrar su historial
+        // Si se especificó un paciente objetivo, filtrar ESTRICTAMENTE para mostrar ÚNICAMENTE su historial
         if (targetPatientId) {
-            const filtered = patientsList.filter(p => p.id == targetPatientId);
-            if (filtered.length > 0) {
-                patientsList = filtered;
-            }
+            patientsList = patientsList.filter(p => p.id == targetPatientId);
         }
 
         if (patientsList.length === 0) {
-            container.innerHTML = '<div class="text-muted text-center py-5"><h4>📭 Sin registros</h4><p>El consultante seleccionado aún no ha registrado datos para esta herramienta.</p></div>';
+            container.innerHTML = `
+                <div class="text-muted text-center py-5">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📭</div>
+                    <h4 style="color: var(--text-dark); font-weight: 700;">Sin registros aún</h4>
+                    <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 480px; margin: 0.5rem auto 0 auto;">${emptyMsg}</p>
+                </div>
+            `;
             return;
         }
 

@@ -926,6 +926,7 @@ def get_therapist_module_summary(modulo_clave):
 @login_required
 def get_therapist_module_report(modulo_clave):
     user_id = session.get('user_id')
+    patient_id = request.args.get('patient_id')
     db = get_db()
     cursor = db.cursor()
     
@@ -934,85 +935,86 @@ def get_therapist_module_report(modulo_clave):
     elif modulo_clave in ('medicacion', 'adherencia'):
         modulo_clave = 'adherencia'
 
-
+    p_filter = " AND p.id = ?" if patient_id else ""
+    params = (user_id, patient_id) if patient_id else (user_id,)
 
     try:
         if modulo_clave == 'sueno':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT rs.*, p.nombres, p.apellidos, p.cedula
                 FROM registros_sueno rs
                 JOIN pacientes p ON rs.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY rs.fecha DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         elif modulo_clave == 'ansiedad':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT ra.*, p.nombres, p.apellidos, p.cedula
                 FROM registros_ansiedad ra
                 JOIN pacientes p ON ra.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY ra.fecha DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         elif modulo_clave == 'sobriedad':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT rsob.*, p.nombres, p.apellidos, p.cedula
                 FROM registros_sobriedad rsob
                 JOIN pacientes p ON rsob.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY rsob.fecha DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         elif modulo_clave == 'adherencia':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT ar.*, am.nombre_medicamento, am.dosis, am.hora_prescrita, p.nombres, p.apellidos, p.cedula
                 FROM adherencia_registros ar
                 JOIN adherencia_medicamentos am ON ar.medicamento_id = am.id
                 JOIN pacientes p ON ar.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY ar.fecha DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         elif modulo_clave == 'activacion':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT actr.*, aa.categoria, aa.nombre_actividad, p.nombres, p.apellidos, p.cedula
                 FROM activacion_registros actr
                 JOIN activacion_actividades aa ON actr.actividad_id = aa.id
                 JOIN pacientes p ON actr.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY actr.fecha DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         elif modulo_clave == 'ingesta':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT ring.*, p.nombres, p.apellidos, p.cedula
                 FROM registros_ingesta ring
                 JOIN pacientes p ON ring.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY ring.fecha DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         elif modulo_clave == 'cognitivo':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT rcog.*, p.nombres, p.apellidos, p.cedula
                 FROM registros_cognitivos rcog
                 JOIN pacientes p ON rcog.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY rcog.fecha DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         elif modulo_clave == 'pantalla':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT cp.*, p.nombres, p.apellidos, p.cedula
                 FROM registro_consumo_pantalla cp
                 JOIN pacientes p ON cp.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY cp.fecha_registro DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         elif modulo_clave == 'meditacion':
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT rm.*, cm.titulo as nombre_meditacion, p.nombres, p.apellidos, p.cedula
                 FROM registro_meditaciones rm
                 JOIN paciente_meditaciones pm ON rm.asignacion_id = pm.id
                 JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
                 JOIN pacientes p ON rm.paciente_id = p.id
-                WHERE p.psicologo_id = ?
+                WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY rm.fecha DESC LIMIT 100
-            """, (user_id,))
+            """, params)
         else:
             return jsonify({'error': 'Módulo desconocido'}), 400
 
