@@ -1003,6 +1003,16 @@ def get_therapist_module_report(modulo_clave):
                 WHERE p.psicologo_id = ?
                 ORDER BY cp.fecha_registro DESC LIMIT 100
             """, (user_id,))
+        elif modulo_clave == 'meditacion':
+            cursor.execute("""
+                SELECT rm.*, cm.titulo as nombre_meditacion, p.nombres, p.apellidos, p.cedula
+                FROM registro_meditaciones rm
+                JOIN paciente_meditaciones pm ON rm.asignacion_id = pm.id
+                JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
+                JOIN pacientes p ON rm.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                ORDER BY rm.fecha DESC LIMIT 100
+            """, (user_id,))
         else:
             return jsonify({'error': 'Módulo desconocido'}), 400
 

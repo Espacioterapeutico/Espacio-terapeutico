@@ -2431,11 +2431,13 @@ body.is-patient .main-content {
     }
 }
 
-/* ── Modales Ampliados en Móvil: Evolución, Registro Rápido y Ficha Clínica (98% ancho y 96% alto) ── */
+/* ── Modales Ampliados en Móvil: Evolución, Registro Rápido, Ficha Clínica, Previsualización y Reportes (98% ancho y 96% alto) ── */
 @media (max-width: 850px) {
     #session-modal,
     #patient-modal,
-    #quick-add-patient-modal {
+    #quick-add-patient-modal,
+    #modal-tool-patient-preview,
+    #therapist-tool-report-modal {
         padding: 0.25rem !important;
         align-items: center !important;
         justify-content: center !important;
@@ -2443,7 +2445,9 @@ body.is-patient .main-content {
     #session-modal .modal-content,
     .modal-session-content,
     #patient-modal .modal-content,
-    #quick-add-patient-modal .modal-content {
+    #quick-add-patient-modal .modal-content,
+    #modal-tool-patient-preview .modal-content,
+    #therapist-tool-report-modal .modal-content {
         width: 98% !important;
         max-width: 98% !important;
         margin: 0.25rem auto !important;
@@ -2456,7 +2460,9 @@ body.is-patient .main-content {
     }
     #session-modal .modal-body,
     #patient-modal .modal-body,
-    #quick-add-patient-modal .modal-body {
+    #quick-add-patient-modal .modal-body,
+    #modal-tool-patient-preview .modal-body,
+    #therapist-tool-report-modal .modal-body {
         padding: 0.65rem 0.5rem !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch;
@@ -2464,16 +2470,60 @@ body.is-patient .main-content {
     }
     #session-modal .modal-header,
     #patient-modal .modal-header,
-    #quick-add-patient-modal .modal-header {
+    #quick-add-patient-modal .modal-header,
+    #modal-tool-patient-preview .modal-header,
+    #therapist-tool-report-modal .modal-header {
         padding: 0.75rem 0.85rem !important;
         flex-shrink: 0 !important;
     }
     #session-modal .modal-footer,
     #patient-modal .modal-footer,
-    #quick-add-patient-modal .modal-footer {
+    #quick-add-patient-modal .modal-footer,
+    #modal-tool-patient-preview .modal-footer,
+    #therapist-tool-report-modal .modal-footer {
         padding: 0.6rem 0.75rem !important;
         flex-shrink: 0 !important;
     }
+}
+
+/* ── Estilos de Cuadrícula 3x3 para Catálogo de Herramientas Terapéuticas (Estilo Tests) ── */
+.therapist-tools-grid-3x3 {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1rem !important;
+    align-items: stretch;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+    .therapist-tools-grid-3x3 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .therapist-tools-grid-3x3 {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.therapist-tool-card {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    box-sizing: border-box;
+}
+
+.therapist-tool-card:hover {
+    border-color: #702e5e;
+    box-shadow: 0 8px 20px rgba(112, 46, 94, 0.12);
 }
 
 /* ── Botones Selector de Modo Horarios (Item 5) ── */

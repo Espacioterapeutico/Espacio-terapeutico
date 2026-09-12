@@ -16976,7 +16976,16 @@ function switchTherapistToolsTab(tab) {
 
     if (tab === 'asignar') {
         const searchInput = document.getElementById('tt-patient-search');
-        if (searchInput) searchInput.focus();
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
+        const dropdown = document.getElementById('tt-patient-dropdown');
+        if (dropdown) {
+            dropdown.classList.add('hide');
+            dropdown.style.display = 'none';
+            dropdown.innerHTML = '';
+        }
     } else if (tab === 'catalogo') {
         loadTherapistToolsCatalog();
     } else if (tab === 'activas') {
@@ -17375,11 +17384,48 @@ const therapistPreviewTemplates = [
                 </div>
             </div>
         `
+    },
+    {
+        clave: 'meditacion',
+        titulo: '🧘‍♀️ Sesión de Relajación & Mindfulness (Vista del Consultante)',
+        descripcion: 'Reproductor guiado de audios y videos de relajación, registro de estado anímico y confirmación de práctica.',
+        html: `
+            <div style="background: white; border: 1.5px solid #d8b4fe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #6b21a8; font-size: 1.05rem;">
+                        🧘‍♀️ Sesión de Mindfulness Guiada (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #faf5ff; color: #7e22ce; font-weight: 700; border: 1px solid #d8b4fe; padding: 0.25rem 0.6rem;">
+                        Reproductor Paciente
+                    </span>
+                </div>
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff; box-sizing: border-box;">
+                    <div style="background: white; border: 1px solid #e9d5ff; border-radius: 8px; padding: 1rem; text-align: center;">
+                        <span style="font-size: 2.2rem; display: block; margin-bottom: 0.4rem;">🎧</span>
+                        <strong style="color: #4a154b; font-size: 0.98rem; display: block;">Respiración Consciente y Relajación Corporal (10 min)</strong>
+                        <p style="color: #64748b; font-size: 0.82rem; margin: 0.35rem 0 0.75rem 0;">Audio relajante con guía vocal para serenar la mente y regular la activación autonómica.</p>
+                        <div style="background: #f1f5f9; border-radius: 20px; height: 8px; width: 80%; margin: 0 auto 0.75rem auto; overflow: hidden;">
+                            <div style="background: #9333ea; width: 45%; height: 100%;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: center; gap: 0.75rem; align-items: center;">
+                            <button type="button" disabled class="btn btn-sm btn-secondary" style="border-radius: 50%; width: 34px; height: 34px; padding: 0;">⏮️</button>
+                            <button type="button" disabled class="btn btn-sm btn-primary" style="border-radius: 50%; width: 40px; height: 40px; padding: 0; background: #7e22ce; border: none; font-size: 1.05rem;">▶️</button>
+                            <button type="button" disabled class="btn btn-sm btn-secondary" style="border-radius: 50%; width: 34px; height: 34px; padding: 0;">⏭️</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark);">Estado Emocional Posterior (Calma percibida):</label>
+                        <input type="text" value="8 / 10 (Sensación de serenidad y distensión muscular)" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1.5px solid #10b981; background: white; font-weight: 700; color: #047857;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-block" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #7e22ce; border-color: #6b21a8; margin-top: 0.25rem;">✓ Confirmar Práctica Completada (Simulación)</button>
+                </div>
+            </div>
+        `
     }
 ];
 
 function openToolPreviewModal(clave, nombre) {
-    console.log('[PREVIEW] openToolPreviewModal called with clave:', clave);
+    console.log('[PREVIEW] openToolPreviewModal called with clave:', clave, nombre);
     
     const claveMap = {
         'sueno': 'sueno',
@@ -17391,35 +17437,17 @@ function openToolPreviewModal(clave, nombre) {
         'activacion': 'activacion',
         'ingesta': 'ingesta',
         'cognitivo': 'cognitivo',
-        'pantalla': 'pantalla'
+        'pantalla': 'pantalla',
+        'meditacion': 'meditacion'
     };
     const normClave = claveMap[clave] || clave;
     const tmplObj = therapistPreviewTemplates.find(t => t.clave === normClave || t.clave === clave);
 
     const displayName = nombre || tmplObj?.titulo || 'Herramienta Terapéutica';
 
-    // A. Despliegue Inline en la Tarjeta del Módulo
-    const inlineContainer = document.getElementById(`inline-tool-preview-${normClave}`) || document.getElementById(`inline-tool-preview-${clave}`);
-    if (inlineContainer) {
-        const isHidden = inlineContainer.classList.contains('hide') || inlineContainer.style.display === 'none';
-        if (isHidden) {
-            if (tmplObj && tmplObj.html) {
-                inlineContainer.innerHTML = tmplObj.html;
-            } else {
-                inlineContainer.innerHTML = `<div class="text-center py-3 text-muted"><h4>📱 Vista Previa</h4><p>Formulario para <strong>${displayName}</strong>.</p></div>`;
-            }
-            inlineContainer.classList.remove('hide');
-            inlineContainer.style.display = 'block';
-        } else {
-            inlineContainer.classList.add('hide');
-            inlineContainer.style.display = 'none';
-        }
-    }
-
-    // B. Ventana Modal Flotante Sobrepuesta
-    const modalEl = document.getElementById('modal-tool-patient-preview') || document.getElementById('therapist-tool-preview-modal');
-    const titleEl = document.getElementById('tpp-modal-title') || document.getElementById('ttp-modal-title');
-    const bodyEl = document.getElementById('tpp-modal-body') || document.getElementById('ttp-modal-body');
+    const modalEl = document.getElementById('modal-tool-patient-preview');
+    const titleEl = document.getElementById('tpp-modal-title');
+    const bodyEl = document.getElementById('tpp-modal-body');
 
     if (titleEl) {
         titleEl.innerHTML = `👁️ Previsualización: ${displayName}`;
@@ -17434,26 +17462,15 @@ function openToolPreviewModal(clave, nombre) {
     }
 
     if (modalEl) {
-        if (typeof openModal === 'function') {
-            openModal(modalEl.id);
-        } else {
-            modalEl.classList.remove('hide');
-        }
-        modalEl.style.display = 'flex';
-        modalEl.style.setProperty('display', 'flex', 'important');
-        modalEl.style.setProperty('z-index', '99999', 'important');
+        openModal('modal-tool-patient-preview');
+        modalEl.style.setProperty('z-index', '10006', 'important');
         document.body.style.overflow = 'hidden';
     }
 }
 
 function closeToolPreviewModal() {
     closeModal('modal-tool-patient-preview');
-    closeModal('therapist-tool-preview-modal');
 }
-
-window.openToolPreviewModal = openToolPreviewModal;
-window.toggleToolPreview = openToolPreviewModal;
-window.closeToolPreviewModal = closeToolPreviewModal;
 
 window.openToolPreviewModal = openToolPreviewModal;
 window.toggleToolPreview = openToolPreviewModal;
@@ -17532,12 +17549,12 @@ let therapistToolsPatientsCatalog = [];
 
 let currentToolsCatalogList = [];
 let currentToolsCatalogPage = 1;
-const TOOLS_CATALOG_PER_PAGE = 3;
+const TOOLS_CATALOG_PER_PAGE = 9;
 
 async function loadTherapistToolsCatalog() {
     const container = document.getElementById('tt-modules-accordion') || document.getElementById('tt-modules-grid');
     if (!container) return;
-    container.innerHTML = '<p class="text-muted">Cargando catálogo de herramientas y consultantes activos...</p>';
+    container.innerHTML = '<p class="text-muted text-center py-4" style="grid-column: 1 / -1;">Cargando catálogo de herramientas y consultantes activos...</p>';
     try {
         const res = await fetch('/api/therapist/modules/catalog');
         const data = await res.json();
@@ -17546,7 +17563,7 @@ async function loadTherapistToolsCatalog() {
         currentToolsCatalogList = data;
         renderTherapistToolsCatalog();
     } catch (err) {
-        container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        container.innerHTML = `<p class="text-danger text-center py-4" style="grid-column: 1 / -1;">Error: ${err.message}</p>`;
     }
 }
 
@@ -17555,7 +17572,7 @@ function renderTherapistToolsCatalog() {
     if (!container) return;
 
     if (currentToolsCatalogList.length === 0) {
-        container.innerHTML = '<p class="text-muted text-center py-3">No hay herramientas terapéuticas disponibles.</p>';
+        container.innerHTML = '<p class="text-muted text-center py-3" style="grid-column: 1 / -1;">No hay herramientas terapéuticas disponibles.</p>';
         renderToolsCatalogPaginationControls(0, 1);
         return;
     }
@@ -17569,34 +17586,38 @@ function renderTherapistToolsCatalog() {
 
     container.innerHTML = pageRecords.map(m => {
         const activeCount = m.activos || 0;
+        const safeNombre = (m.nombre || '').replace(/'/g, "\\'");
 
         return `
-        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 0.85rem; box-shadow: var(--shadow-sm);">
-            <div style="padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #f3f4f6;">
-                <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 220px;">
-                    <span style="font-size: 1.8rem; line-height: 1;">${m.icono}</span>
-                    <div>
-                        <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: var(--text-dark); font-size: 1.05rem; line-height: 1.2;">${m.nombre}</h4>
-                        <div style="margin-top: 0.35rem;">
-                            <span class="badge" style="background: rgba(126, 34, 206, 0.1); color: #7e22ce; font-weight: 700; border: 1px solid rgba(126, 34, 206, 0.25); font-size: 0.78rem; padding: 0.2rem 0.55rem; border-radius: 12px;">
-                                👥 ${activeCount} consultante${activeCount === 1 ? '' : 's'} activo${activeCount === 1 ? '' : 's'}
-                            </span>
-                        </div>
+        <div class="therapist-tool-card">
+            <div>
+                <!-- CABECERA: Ícono + Título + Conteo de Pacientes Activos -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="font-size: 1.8rem; line-height: 1;">${m.icono || '🛠️'}</span>
+                        <h4 style="margin: 0; font-family: var(--font-title); font-weight: 800; color: #1e293b; font-size: 1.02rem; line-height: 1.25;">${m.nombre}</h4>
                     </div>
+                    <span class="badge" style="background: ${activeCount > 0 ? '#fdf4ff' : '#f8fafc'}; color: ${activeCount > 0 ? '#702e5e' : '#64748b'}; font-weight: 800; border: 1px solid ${activeCount > 0 ? '#f5d0fe' : '#e2e8f0'}; font-size: 0.76rem; padding: 0.25rem 0.55rem; border-radius: 12px; white-space: nowrap; flex-shrink: 0;">
+                        👥 ${activeCount} activo${activeCount === 1 ? '' : 's'}
+                    </span>
                 </div>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    ${m.clave === 'meditacion' ? `
-                        <button type="button" class="btn btn-sm" onclick="openModal('modal-meditaciones-library'); loadMeditacionesLibrary();" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #984b80); color: white; border: none; box-shadow: 0 2px 5px rgba(112,46,94,0.25); cursor: pointer;">
-                            📚 Biblioteca de Meditaciones
-                        </button>
-                    ` : ''}
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openToolPreviewModal('${m.clave}')" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; cursor: pointer;">
-                        👁️ Previsualizar Formulario
-                    </button>
-                </div>
+
+                <!-- DESCRIPCIÓN CLÍNICA -->
+                <p style="margin: 0; font-size: 0.85rem; color: #475569; line-height: 1.45;">
+                    ${m.descripcion}
+                </p>
             </div>
-            <div style="padding: 0.85rem 1.25rem; background: #fafafa; font-size: 0.88rem; color: var(--text-dark); line-height: 1.5;">
-                <p style="margin: 0;">ℹ️ <strong>Descripción Clínica:</strong> ${m.descripcion}</p>
+
+            <!-- BOTONES DE ACCIÓN (PREVISUALIZACIÓN Y BIBLIOTECA) -->
+            <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #f1f5f9; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                ${m.clave === 'meditacion' ? `
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openModal('modal-meditaciones-library'); loadMeditacionesLibrary();" style="flex: 1; min-width: 105px; font-size: 0.8rem; font-weight: 700; border-radius: 8px; padding: 0.45rem 0.6rem; border: 1.5px solid var(--border-color); background: #f8fafc; color: #334155; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; cursor: pointer;">
+                        📚 Biblioteca
+                    </button>
+                ` : ''}
+                <button type="button" class="btn btn-sm btn-primary" onclick="openToolPreviewModal('${m.clave}', '${safeNombre}')" style="flex: 1; min-width: 135px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; padding: 0.45rem 0.75rem; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.2); display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; cursor: pointer;">
+                    👁️ Previsualizar
+                </button>
             </div>
         </div>
         `;
@@ -18108,7 +18129,7 @@ function renderActiveToolsPatients(patients) {
                 <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📭</div>
                 <h4 style="margin: 0 0 0.5rem 0; color: var(--text-dark); font-weight: 700;">No hay consultantes con herramientas activas</h4>
                 <p class="text-secondary" style="margin: 0 0 1.25rem 0; font-size: 0.9rem; max-width: 450px; margin-inline: auto;">
-                    Puedes ir a la pestaña <strong>"Asignación de Herramientas"</strong> para buscar un paciente y asignarle higiene del sueño, diario de ansiedad u otros módulos.
+                    Puedes ir a la pestaña <strong>"Asignación de Herramientas"</strong> para buscar un paciente y activarle módulos con interruptores On/Off.
                 </p>
                 <button type="button" class="btn btn-sm btn-primary" onclick="switchTherapistToolsTab('asignar')" style="font-weight: 700; padding: 0.5rem 1.25rem;">
                     📋 Ir a Asignación
@@ -18123,45 +18144,52 @@ function renderActiveToolsPatients(patients) {
         const safeCedula = (p.cedula || '').replace(/'/g, "\\'");
         const tools = p.tools || [];
 
-        const toolsBadges = tools.map(t => `
-            <span class="badge" style="background: #faf5ff; color: #6b21a8; border: 1px solid #d8b4fe; font-size: 0.8rem; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem;">
-                <span>${t.icono}</span> ${t.nombre}
-            </span>
-        `).join('');
+        const toolsRows = tools.map(t => {
+            const safeToolName = (t.nombre || '').replace(/'/g, "\\'");
+            return `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.85rem; background: #fdfafc; border: 1.5px solid #f3e8ff; border-radius: 8px; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.25rem; line-height: 1;">${t.icono || '🛠️'}</span>
+                    <strong style="font-size: 0.92rem; color: #4a154b;">${t.nombre}</strong>
+                </div>
+                <div style="display: flex; gap: 0.45rem; align-items: center;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistModuleReport('${t.clave}', '${safeToolName}', ${p.id})" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; border: 1.5px solid var(--border-color); background: white;">
+                        📊 Historial
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.2);">
+                        ⚙️ Configurar
+                    </button>
+                </div>
+            </div>
+            `;
+        }).join('');
 
         return `
-        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.15rem 1.35rem; box-shadow: var(--shadow-sm); transition: transform 0.15s, box-shadow 0.15s;">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-                <div style="display: flex; align-items: center; gap: 0.9rem; flex: 1; min-width: 250px;">
-                    <div style="width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); color: #7e22ce; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; flex-shrink: 0; border: 1.5px solid #d8b4fe;">
+        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.15rem 1.25rem; box-shadow: var(--shadow-sm); transition: transform 0.15s, box-shadow 0.15s;">
+            <!-- CABECERA CONSULTANTE -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.85rem;">
+                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); color: #7e22ce; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.15rem; flex-shrink: 0; border: 1.5px solid #d8b4fe;">
                         ${(p.nombres || 'P').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b;">${p.nombre_completo}</h4>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: #64748b; margin-top: 3px; flex-wrap: wrap;">
+                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1e293b; font-family: var(--font-title);">${p.nombre_completo}</h4>
+                        <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; color: #64748b; margin-top: 2px; flex-wrap: wrap;">
                             <span>🪪 ${p.cedula ? p.cedula : 'Sin cédula'}</span>
                             ${p.telefono ? `<span>· 📱 ${p.telefono}</span>` : ''}
                         </div>
                     </div>
                 </div>
-
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="openSummaryModal(${p.id})" style="font-weight: 700; padding: 0.45rem 0.9rem; border-radius: 6px; border: 1.5px solid var(--border-color); background: white; color: var(--text-dark); display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                        👁️ Ver Ficha
-                    </button>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="font-weight: 700; padding: 0.45rem 0.95rem; border-radius: 6px; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.25); display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                        ⚙️ Gestionar
-                    </button>
+                <div>
+                    <span class="badge" style="background: #faf5ff; color: #702e5e; border: 1px solid #e9d5ff; font-size: 0.8rem; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: 20px;">
+                        ⚡ ${tools.length} herramienta${tools.length === 1 ? '' : 's'} activa${tools.length === 1 ? '' : 's'}
+                    </span>
                 </div>
             </div>
 
-            <div style="margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid #f1f5f9;">
-                <div style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.45rem;">
-                    Herramientas en Curso (${tools.length}):
-                </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center;">
-                    ${toolsBadges}
-                </div>
+            <!-- LISTA DE HERRAMIENTAS ACTIVAS CON HISTORIAL Y CONFIGURAR -->
+            <div style="display: flex; flex-direction: column; gap: 0.55rem;">
+                ${toolsRows}
             </div>
         </div>
         `;
@@ -18175,6 +18203,13 @@ async function onTherapistToolPatientSearch(query) {
 
     if (!dropdown) return;
 
+    if (!q || q.length < 1) {
+        dropdown.classList.add('hide');
+        dropdown.style.display = 'none';
+        dropdown.innerHTML = '';
+        return;
+    }
+
     try {
         if (!cachedTherapistPatients) {
             const res = await fetch('/api/patients');
@@ -18182,18 +18217,16 @@ async function onTherapistToolPatientSearch(query) {
         }
         const patients = cachedTherapistPatients || [];
         
-        const filtered = q.length === 0 
-            ? patients.slice(0, 15) 
-            : patients.filter(p => {
-                const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
-                const cedula = (p.cedula || '').toLowerCase();
-                return fullName.includes(q) || cedula.includes(q);
-            });
+        const filtered = patients.filter(p => {
+            const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
+            const cedula = (p.cedula || '').toLowerCase();
+            return fullName.includes(q) || cedula.includes(q);
+        });
 
         if (filtered.length === 0) {
             dropdown.innerHTML = '<div style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text-muted); background: white;">No se encontraron consultantes.</div>';
         } else {
-            dropdown.innerHTML = filtered.map(p => {
+            dropdown.innerHTML = filtered.slice(0, 15).map(p => {
                 const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.trim();
                 const safeFullName = fullName.replace(/'/g, "\\'");
                 const cedula = p.cedula || '';
@@ -18494,7 +18527,10 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
         'sobriedad': 'Registro de Consumo',
         'adherencia': 'Adherencia al Tratamiento',
         'activacion': 'Activación Conductual',
-        'pantalla': 'Tracker de Consumo de Pantalla'
+        'pantalla': 'Tracker de Consumo de Pantalla',
+        'ingesta': 'Ingesta de Alimentos',
+        'cognitivo': 'Registro Cognitivo',
+        'meditacion': 'Meditaciones Guiadas & Relajación'
     };
     const titleText = moduloNombre || namesMap[moduloClave] || moduloClave;
     const titleEl = document.getElementById('ttr-modal-title');
@@ -18630,6 +18666,13 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                     <span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700; padding:0.4rem 0.6rem;">⚠️ Uso Elevado (&gt;3h): ${highUsage}</span>
                     <span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:700; padding:0.4rem 0.6rem;">😰 Malestar Posterior: ${ansiosos}</span>
                 `;
+            } else if (moduloClave === 'meditacion') {
+                const totalSes = recs.length;
+                const compl = recs.filter(r => r.completada == 1).length;
+                summaryBadgesHtml = `
+                    <span class="badge" style="background:#fdf4ff; color:#702e5e; font-weight:800; padding:0.4rem 0.6rem;">🧘‍♀️ Sesiones Registradas: ${totalSes}</span>
+                    <span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700; padding:0.4rem 0.6rem;">🟢 Completadas: ${compl}</span>
+                `;
             }
 
             let detailHeaders = '';
@@ -18704,6 +18747,17 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         </tr>
                     `;
                 }).join('');
+            } else if (moduloClave === 'meditacion') {
+                detailHeaders = `<th>📅 Fecha</th><th>Meditación</th><th>Estado</th><th>Ánimo Antes / Después</th><th>Notas</th>`;
+                detailTableRows = recs.map(r => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                        <td style="padding: 0.6rem;">🧘 ${r.nombre_meditacion || 'Meditación'}</td>
+                        <td style="padding: 0.6rem;">${r.completada ? '<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700;">🟢 Completada</span>' : '<span class="badge" style="background:#fef2f2; color:#b91c1c; font-weight:700;">⚪ Pendiente</span>'}</td>
+                        <td style="padding: 0.6rem;">${r.animo_antes || '-'} ➔ ${r.animo_despues || '-'}</td>
+                        <td style="padding: 0.6rem;">${r.notas || '-'}</td>
+                    </tr>
+                `).join('');
             }
 
             // Desplegar siempre abierto el historial por consultante
