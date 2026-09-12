@@ -1000,16 +1000,25 @@ def send_queue_item_now(item_id):
             except Exception:
                 fecha_fmt = str(today_str)
 
+            hora_prog = q_row.get('hora_programada') or '20:00'
+            try:
+                h_val, m_val = map(int, str(hora_prog).split(':')[:2])
+                ampm_val = "PM" if h_val >= 12 else "AM"
+                h_12 = h_val - 12 if h_val > 12 else (12 if h_val == 0 else h_val)
+                hora_fmt = f"{str(h_12).zfill(2)}:{str(m_val).zfill(2)} {ampm_val}"
+            except Exception:
+                hora_fmt = str(hora_prog or '08:00 PM')
+
             default_tmpl = (
                 "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
-                "Te recuerdo completar tu *{herramienta}* del día {fecha}. "
+                "Te recuerdo completar tu *{herramienta}* programada para las *{hora}*. "
                 "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
                 "👉 {link}\n\n"
                 "¡Gracias por tu constancia!"
             )
             raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
-            msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link).replace('{fecha}', fecha_fmt)
-            msg_wa = msg_wa.replace('del día de hoy', f'del día {fecha_fmt}')
+            msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link).replace('{fecha}', fecha_fmt).replace('{hora}', hora_fmt)
+            msg_wa = msg_wa.replace('del día de hoy', f'del día {fecha_fmt} a las {hora_fmt}')
 
             from routes_herramientas import clean_phone_number
             clean_phone = clean_phone_number(phone)

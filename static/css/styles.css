@@ -2807,5 +2807,183 @@ body.is-patient .main-content {
     margin-bottom: -2px;
 }
 
+/* ==============================================================
+   ADAPTACIÓN MÓVIL: PORTAL DE PACIENTES - PAGOS Y BALANCES
+   ============================================================== */
+#view-patient-payments {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+#view-patient-payments .pat-balances-grid {
+    width: 100%;
+    max-width: 650px;
+    box-sizing: border-box;
+}
+
+#view-patient-payments .balance-card {
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+#view-patient-payments .pat-nav-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#view-patient-payments .pat-nav-tabs .btn {
+    flex: 1 1 auto;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+#view-patient-payments .pat-split-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+#view-patient-payments .card {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#view-patient-payments .card-body {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#pat-pay-instructions {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+    #view-patient-payments .pat-split-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #view-patient-payments {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    #view-patient-payments .pat-balances-grid {
+        grid-template-columns: 1fr !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        gap: 0.75rem !important;
+    }
+
+    #view-patient-payments .pat-nav-tabs {
+        flex-direction: column !important;
+        gap: 0.4rem !important;
+    }
+
+    #view-patient-payments .pat-nav-tabs .btn {
+        width: 100% !important;
+        font-size: 0.85rem !important;
+        padding: 0.6rem 0.8rem !important;
+    }
+
+    #view-patient-payments .pat-split-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        width: 100% !important;
+    }
+
+    #view-patient-payments .form-row {
+        flex-direction: column !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+    }
+
+    #view-patient-payments .form-group.col-6,
+    #view-patient-payments .form-group.col-4,
+    #view-patient-payments .form-group.col-8,
+    #view-patient-payments .form-group.col-12 {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    #view-patient-payments input,
+    #view-patient-payments select,
+    #view-patient-payments textarea {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        font-size: 0.9rem !important;
+    }
+
+    #pat-card-reportados .table-container,
+    #pat-card-citas .table-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+    }
+
+    #pat-card-reportados .data-table,
+    #pat-card-citas .data-table {
+        min-width: 480px;
+    }
+
+    /* Modal de Registrar Pago Rápido y Verificación de Pagos en Móvil */
+    #quick-pay-modal .modal-content,
+    #verify-payment-modal .modal-content {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        margin: 0.5rem auto !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+    }
+
+    #quick-pay-modal .form-row,
+    #verify-payment-modal .form-row {
+        flex-direction: column !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+    }
+
+    #quick-pay-modal .form-group.col-6,
+    #verify-payment-modal .form-group.col-6 {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+}
+
 
 

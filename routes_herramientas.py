@@ -1180,13 +1180,34 @@ def generar_link_directo_herramienta():
     nombre_tool = TOOL_NAMES.get(herramienta_tipo, 'Herramienta Terapéutica')
     fecha_fmt = now.strftime("%d/%m/%Y")
     
-    mensaje_wa = (
-        f"Hola *{paciente['nombres']}* 👋 Espero te encuentres muy bien.\n\n"
-        f"Te recuerdo completar tu *{nombre_tool}* del día {fecha_fmt}. "
-        f"Puedes llenarlo directamente haciendo clic aquí (sin iniciar sesión):\n"
-        f"👉 {link_directo}\n\n"
-        f"¡Gracias por tu compromiso con el proceso terapéutico!"
+    cursor.execute("SELECT hora_programada FROM cola_recordatorios_herramientas WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?", (patient_id, herramienta_tipo, today_str))
+    h_row = cursor.fetchone()
+    hora_prog = h_row['hora_programada'] if h_row and h_row['hora_programada'] else '20:00'
+    try:
+        h_val, m_val = map(int, str(hora_prog).split(':')[:2])
+        ampm_val = "PM" if h_val >= 12 else "AM"
+        h_12 = h_val - 12 if h_val > 12 else (12 if h_val == 0 else h_val)
+        hora_fmt = f"{str(h_12).zfill(2)}:{str(m_val).zfill(2)} {ampm_val}"
+    except Exception:
+        hora_fmt = str(hora_prog or '08:00 PM')
+
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_herramientas_{user_id}",))
+    tmpl_row = cursor.fetchone()
+    if not tmpl_row or not tmpl_row['valor']:
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_herramientas'")
+        tmpl_row = cursor.fetchone()
+
+    default_tmpl = (
+        "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
+        "Te recuerdo completar tu *{herramienta}* programada para las *{hora}*. "
+        "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
+        "👉 {link}\n\n"
+        "¡Gracias por tu constancia!"
     )
+    raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
+    first_name = (paciente['nombres'] or '').strip().split()[0] if paciente['nombres'] else 'Consultante'
+    mensaje_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', nombre_tool).replace('{link}', link_directo).replace('{fecha}', fecha_fmt).replace('{hora}', hora_fmt)
+    mensaje_wa = mensaje_wa.replace('del día de hoy', f'del día {fecha_fmt} a las {hora_fmt}')
     
     clean_phone = clean_phone_number(paciente['telefono'])
     wa_url = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(mensaje_wa)}" if clean_phone else ""
