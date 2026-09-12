@@ -22566,26 +22566,6 @@ function clearTestPatientSelection() {
 }
 
 function selectTestForApplication(testCode) {
-    if (selectedTestCodeForApplication === testCode) {
-        selectedTestCodeForApplication = null;
-        const panel = document.getElementById('panel-apply-selected-test');
-        if (panel) {
-            panel.classList.add('hide');
-            panel.style.display = 'none';
-        }
-        
-        const testInfoContainer = document.getElementById('container-selected-test-info');
-        if (testInfoContainer) testInfoContainer.innerHTML = '';
-
-        document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
-            card.style.border = '2.5px solid #e2e8f0';
-            card.style.background = '#ffffff';
-            const checkSpan = card.querySelector('.test-card-check');
-            if (checkSpan) checkSpan.style.display = 'none';
-        });
-        return;
-    }
-
     selectedTestCodeForApplication = testCode;
 
     document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
@@ -22601,12 +22581,6 @@ function selectTestForApplication(testCode) {
             if (checkSpan) checkSpan.style.display = 'none';
         }
     });
-
-    const panel = document.getElementById('panel-apply-selected-test');
-    if (panel) {
-        panel.classList.remove('hide');
-        panel.style.display = 'block';
-    }
 
     const testNamesMap = {
         'AQ': 'AQ — Cociente de Espectro Autista (50 ítems - Baron-Cohen)',
@@ -22629,22 +22603,41 @@ function selectTestForApplication(testCode) {
         'BSSC': 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales (4 ítems)'
     };
 
-    const testDataFound = testsCatalogDatabase.find(t => t.code === testCode);
+    const testDataFound = (typeof testsCatalogDatabase !== 'undefined' && Array.isArray(testsCatalogDatabase))
+        ? testsCatalogDatabase.find(t => t.code === testCode)
+        : null;
+
     const labelTest = document.getElementById('label-selected-test-name');
     if (labelTest) labelTest.textContent = testDataFound ? testDataFound.name : (testNamesMap[testCode] || testCode);
 
+    const catBadge = document.getElementById('modal-test-category-badge');
+    if (catBadge) {
+        catBadge.textContent = testDataFound ? testDataFound.cat : 'EVALUACIÓN PSICOLÓGICA';
+    }
+
     const testInfoContainer = document.getElementById('container-selected-test-info');
     if (testInfoContainer) {
-        const testData = testsCatalogDatabase.find(t => t.code === testCode);
-        if (testData) {
+        if (testDataFound) {
             testInfoContainer.innerHTML = `
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; font-size: 0.9rem;">
-                    <div style="font-weight: 600; color: #334155; margin-bottom: 0.25rem;">${testData.name}</div>
-                    <div style="color: #64748b; margin-bottom: 0.5rem;">${testData.desc}</div>
-                    <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: #475569;">
-                        <span><i class="fas fa-users"></i> ${testData.poblacion}</span>
-                        <span><i class="fas fa-list-ol"></i> ${testData.itemsCount} ítems</span>
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1rem 1.15rem;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 2px 8px; border-radius: 8px;">${testDataFound.cat}</span>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 8px;">${testDataFound.itemsCount} ítems</span>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: ${testDataFound.isPhysical ? '#d97706' : '#16a34a'}; background: ${testDataFound.isPhysical ? '#fef3c7' : '#dcfce7'}; padding: 2px 8px; border-radius: 8px;">${testDataFound.isPhysical ? '📄 Material Físico' : '⚡ Digital'}</span>
                     </div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">📋 Descripción</h4>
+                    <p style="margin: 0 0 10px 0; font-size: 0.84rem; color: #334155; line-height: 1.45;">${testDataFound.desc}</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; margin-bottom: 8px;">
+                        <div style="font-size: 0.8rem; color: #475569;"><strong>👨‍⚕️ Autor:</strong> ${testDataFound.autor}</div>
+                        <div style="font-size: 0.8rem; color: #475569;"><strong>👥 Población:</strong> ${testDataFound.poblacion}</div>
+                        <div style="font-size: 0.8rem; color: #475569;"><strong>📊 Validez:</strong> ${testDataFound.validez}</div>
+                    </div>
+                    ${testDataFound.instrucciones ? `
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.7rem 0.85rem; margin-top: 6px;">
+                            <h5 style="margin: 0 0 4px 0; font-size: 0.82rem; font-weight: 800; color: #92400e;">📝 Instrucciones de Aplicación</h5>
+                            <p style="margin: 0; font-size: 0.78rem; color: #78350f; line-height: 1.4; white-space: pre-line;">${testDataFound.instrucciones}</p>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         } else {
@@ -22652,10 +22645,25 @@ function selectTestForApplication(testCode) {
         }
     }
 
+    const successPanel = document.getElementById('panel-apply-success-result');
+    if (successPanel) {
+        successPanel.classList.add('hide');
+        successPanel.style.display = 'none';
+    }
+
+    if (typeof populateMainViewPatientSelect === 'function') {
+        populateMainViewPatientSelect();
+    }
     updateSelectedPatientLabel();
 
-    if (panel) {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (typeof openModal === 'function') {
+        openModal('modal-apply-test');
+    } else {
+        const modal = document.getElementById('modal-apply-test');
+        if (modal) {
+            modal.classList.remove('hide');
+            modal.style.setProperty('display', 'flex', 'important');
+        }
     }
 }
 
@@ -22727,8 +22735,10 @@ async function executeMainApplyTest(modoParam) {
 
     const select = document.getElementById('select-test-main-patient');
     if (!select || !select.value) {
-        alert("Por favor busque o seleccione un paciente primero en la barra superior.");
-        if (select) select.focus();
+        alert("Por favor busque o seleccione un consultante primero en el Paso 1 de esta ventana.");
+        const searchInput = document.getElementById('input-search-test-patient');
+        if (searchInput) searchInput.focus();
+        else if (select) select.focus();
         return;
     }
 
@@ -22743,7 +22753,7 @@ async function executeMainApplyTest(modoParam) {
 
     // Deshabilitar botones para prevenir doble clic
     window.isApplyingTestInFlight = true;
-    const applyButtons = document.querySelectorAll("#panel-apply-selected-test button");
+    const applyButtons = document.querySelectorAll("#modal-apply-test button, #panel-apply-selected-test button");
     applyButtons.forEach(btn => {
         btn.disabled = true;
         btn.style.opacity = '0.6';

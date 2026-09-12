@@ -771,22 +771,6 @@ function clearTestPatientSelection() {
 }
 
 function selectTestForApplication(testCode) {
-    if (selectedTestCodeForApplication === testCode) {
-        selectedTestCodeForApplication = null;
-        const panel = document.getElementById('panel-apply-selected-test');
-        if (panel) {
-            panel.classList.add('hide');
-            panel.style.display = 'none';
-        }
-        document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
-            card.style.border = '2.5px solid #e2e8f0';
-            card.style.background = '#ffffff';
-            const checkSpan = card.querySelector('.test-card-check');
-            if (checkSpan) checkSpan.style.display = 'none';
-        });
-        return;
-    }
-
     selectedTestCodeForApplication = testCode;
 
     document.querySelectorAll('[id^="card-test-choice-"]').forEach(card => {
@@ -803,12 +787,6 @@ function selectTestForApplication(testCode) {
         }
     });
 
-    const panel = document.getElementById('panel-apply-selected-test');
-    if (panel) {
-        panel.classList.remove('hide');
-        panel.style.display = 'block';
-    }
-
     const testNamesMap = {
         'AQ': 'AQ — Cociente de Espectro Autista (50 ítems - Baron-Cohen)',
         'RAADS-R': 'RAADS-R — Escala Revisada para Diagnóstico de Autismo y Asperger (80 ítems)',
@@ -820,35 +798,52 @@ function selectTestForApplication(testCode) {
         'BDI-II': 'BDI-II — Inventario de Depresión de Beck (21 ítems)',
         'BAI': 'BAI — Inventario de Ansiedad de Beck (21 ítems)',
         'TCS': 'TCS — Escala de Congruencia Transgénero (12 ítems)',
-        'UGDS-GS': 'UGDS-GS — Escala de Disforia de Utrecht (18 ítems)'
+        'UGDS-GS': 'UGDS-GS — Escala de Disforia de Utrecht (18 ítems)',
+        'SWLS': 'SWLS — Escala de Satisfacción con la Vida (Diener - 5 ítems)',
+        'SHIM': 'SHIM / IIEF-5 — Inventario de Salud Sexual para Hombres',
+        'NSSS-S': 'NSSS-S — Nueva Escala de Satisfacción Sexual (12 ítems)',
+        'FSFI': 'FSFI — Índice de Función Sexual Femenina (19 ítems)',
+        'MMSE': 'MMSE — Mini-Mental State Examination (30 ítems)',
+        'AtAS': 'AtAS — Escala de Adaptación al Envejecimiento (10 ítems)',
+        'BSSC': 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales (4 ítems)'
     };
 
-    const labelTest = document.getElementById('label-selected-test-name');
-    if (labelTest) labelTest.textContent = testNamesMap[testCode] || testCode;
+    const testObj = (typeof testsCatalogDatabase !== 'undefined' && Array.isArray(testsCatalogDatabase))
+        ? testsCatalogDatabase.find(t => t.code === testCode)
+        : null;
 
-    // Show full test details
+    const labelTest = document.getElementById('label-selected-test-name');
+    if (labelTest) {
+        labelTest.textContent = testObj ? testObj.name : (testNamesMap[testCode] || testCode);
+    }
+
+    const catBadge = document.getElementById('modal-test-category-badge');
+    if (catBadge) {
+        catBadge.textContent = testObj ? testObj.cat : 'EVALUACIÓN PSICOLÓGICA';
+    }
+
+    // Show full test details inside modal
     const infoContainer = document.getElementById('container-selected-test-info');
     if (infoContainer) {
-        const testObj = testsCatalogDatabase.find(t => t.code === testCode);
         if (testObj) {
             infoContainer.innerHTML = `
-                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem;">
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1rem 1.15rem;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
                         <span style="font-size: 0.72rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 2px 8px; border-radius: 8px;">${testObj.cat}</span>
                         <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 8px;">${testObj.itemsCount} ítems</span>
                         <span style="font-size: 0.72rem; font-weight: 800; color: ${testObj.isPhysical ? '#d97706' : '#16a34a'}; background: ${testObj.isPhysical ? '#fef3c7' : '#dcfce7'}; padding: 2px 8px; border-radius: 8px;">${testObj.isPhysical ? '📄 Material Físico' : '⚡ Digital'}</span>
                     </div>
-                    <h4 style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: #0f172a;">📋 Descripción Completa</h4>
-                    <p style="margin: 0 0 12px 0; font-size: 0.88rem; color: #334155; line-height: 1.5;">${testObj.desc}</p>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                        <div style="font-size: 0.82rem; color: #475569;"><strong>👨⚕️ Autor:</strong> ${testObj.autor}</div>
-                        <div style="font-size: 0.82rem; color: #475569;"><strong>👥 Población:</strong> ${testObj.poblacion}</div>
-                        <div style="font-size: 0.82rem; color: #475569;"><strong>📊 Validez:</strong> ${testObj.validez}</div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">📋 Descripción</h4>
+                    <p style="margin: 0 0 10px 0; font-size: 0.84rem; color: #334155; line-height: 1.45;">${testObj.desc}</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; margin-bottom: 8px;">
+                        <div style="font-size: 0.8rem; color: #475569;"><strong>👨‍⚕️ Autor:</strong> ${testObj.autor}</div>
+                        <div style="font-size: 0.8rem; color: #475569;"><strong>👥 Población:</strong> ${testObj.poblacion}</div>
+                        <div style="font-size: 0.8rem; color: #475569;"><strong>📊 Validez:</strong> ${testObj.validez}</div>
                     </div>
                     ${testObj.instrucciones ? `
-                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 0.85rem; margin-top: 8px;">
-                            <h5 style="margin: 0 0 6px 0; font-size: 0.9rem; font-weight: 800; color: #92400e;">📝 Instrucciones de Aplicación</h5>
-                            <p style="margin: 0; font-size: 0.82rem; color: #78350f; line-height: 1.5; white-space: pre-line;">${testObj.instrucciones}</p>
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.7rem 0.85rem; margin-top: 6px;">
+                            <h5 style="margin: 0 0 4px 0; font-size: 0.82rem; font-weight: 800; color: #92400e;">📝 Instrucciones de Aplicación</h5>
+                            <p style="margin: 0; font-size: 0.78rem; color: #78350f; line-height: 1.4; white-space: pre-line;">${testObj.instrucciones}</p>
                         </div>
                     ` : ''}
                 </div>
@@ -858,10 +853,28 @@ function selectTestForApplication(testCode) {
         }
     }
 
+    // Reset previous success result
+    const successPanel = document.getElementById('panel-apply-success-result');
+    if (successPanel) {
+        successPanel.classList.add('hide');
+        successPanel.style.display = 'none';
+    }
+
+    // Ensure patients dropdown has options and updates status
+    if (typeof populateMainViewPatientSelect === 'function') {
+        populateMainViewPatientSelect();
+    }
     updateSelectedPatientLabel();
 
-    if (panel) {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Open modal
+    if (typeof openModal === 'function') {
+        openModal('modal-apply-test');
+    } else {
+        const modal = document.getElementById('modal-apply-test');
+        if (modal) {
+            modal.classList.remove('hide');
+            modal.style.setProperty('display', 'flex', 'important');
+        }
     }
 }
 
@@ -933,8 +946,10 @@ async function executeMainApplyTest(modoParam) {
 
     const select = document.getElementById('select-test-main-patient');
     if (!select || !select.value) {
-        alert("Por favor busque o seleccione un paciente primero en la barra superior.");
-        if (select) select.focus();
+        alert("Por favor busque o seleccione un consultante primero en el Paso 1 de esta ventana.");
+        const searchInput = document.getElementById('input-search-test-patient');
+        if (searchInput) searchInput.focus();
+        else if (select) select.focus();
         return;
     }
 
@@ -949,7 +964,7 @@ async function executeMainApplyTest(modoParam) {
 
     // Deshabilitar botones para prevenir doble clic
     window.isApplyingTestInFlight = true;
-    const applyButtons = document.querySelectorAll("#panel-apply-selected-test button");
+    const applyButtons = document.querySelectorAll("#modal-apply-test button, #panel-apply-selected-test button");
     applyButtons.forEach(btn => {
         btn.disabled = true;
         btn.style.opacity = '0.6';
@@ -1046,11 +1061,24 @@ async function executeMainApplyTest(modoParam) {
     }
 }
 
+function closeTestSuccessPanel() {
+    const panel = document.getElementById('panel-apply-success-result');
+    if (panel) {
+        panel.classList.add('hide');
+        panel.style.display = 'none';
+    }
+}
+window.closeTestSuccessPanel = closeTestSuccessPanel;
+
 function resetTestApplicationModule() {
     selectedTestCodeForApplication = null;
 
     if (typeof loadAllAppliedTestsHistory === 'function') {
         loadAllAppliedTestsHistory();
+    }
+
+    if (typeof closeModal === 'function') {
+        closeModal('modal-apply-test');
     }
 
     const panelApply = document.getElementById('panel-apply-selected-test');
@@ -1077,13 +1105,8 @@ function resetTestApplicationModule() {
     if (successDetails) successDetails.innerHTML = '';
     if (successActions) successActions.innerHTML = '';
 
-    const topContainer = document.getElementById('container-tests-catalog') || document.getElementById('select-test-main-patient');
-    if (topContainer) {
-        topContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
     if (typeof showToast === 'function') {
-        showToast('✅ Evaluación guardada en el historial. Listo para iniciar nueva solicitud.', 'success');
+        showToast('✅ Evaluación guardada en el historial.', 'success');
     }
 }
 window.resetTestApplicationModule = resetTestApplicationModule;

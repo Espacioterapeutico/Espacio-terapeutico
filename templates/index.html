@@ -3252,42 +3252,11 @@
 
                     <!-- CONTENIDO PESTAÑA 1: APLICAR TEST -->
                     <div id="tests-tab-content-apply">
-                        <!-- BUSCADOR RÁPIDO Y SELECTOR NATIVO DESPLEGABLE DE PACIENTE -->
-                        <div style="background: white; border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
-                                <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: #0f172a;">👤 Seleccionar Consultante</h4>
-                                <span id="badge-patient-selected-status" style="font-size: 0.82rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 5px 14px; border-radius: 20px;">
-                                    ⚠️ Ningún consultante seleccionado
-                                </span>
-                            </div>
-                            <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 0.85rem;">Escriba para filtrar por nombre, apellido o cédula, o elija directamente de la lista desplegable.</p>
-                            
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-                                <div style="position: relative; flex: 1; min-width: 260px;">
-                                    <input type="text" id="input-search-test-patient" 
-                                           onfocus="onTestPatientInputFocus()" 
-                                           oninput="filterTestPatientSelect()" 
-                                           onkeyup="filterTestPatientSelect()"
-                                           placeholder="🔍 Filtrar por nombre, apellido o cédula..." 
-                                           autocomplete="off" 
-                                           style="width: 100%; padding: 0.75rem 2.5rem 0.75rem 1rem; border: 2px solid #702e5e; border-radius: 10px; font-size: 0.92rem; font-weight: 700; outline: none; transition: border-color 0.2s, box-shadow 0.2s;">
-                                    
-                                    <button type="button" id="btn-clear-test-patient" onclick="clearTestPatientSelection()" title="Limpiar selección" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #f1f5f9; border: none; border-radius: 50%; width: 26px; height: 26px; font-size: 0.9rem; cursor: pointer; color: #64748b; display: none; align-items: center; justify-content: center; font-weight: 800;">✕</button>
-                                </div>
-                                
-                                <div style="flex: 1; min-width: 260px;">
-                                    <select id="select-test-main-patient" onfocus="populateMainViewPatientSelect()" onchange="onSelectMainPatientChange()" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #702e5e; border-radius: 10px; font-size: 0.92rem; background: #ffffff; color: #0f172a; font-weight: 700; outline: none; cursor: pointer;">
-                                        <option value="">-- Seleccionar Consultante de la lista --</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- ENCABEZADO DEL CATÁLOGO -->
                         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 1rem;">
                             <div>
-                                <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">Seleccionar la Prueba a Aplicar</h3>
-                                <p style="font-size: 0.83rem; color: #64748b; margin: 2px 0 0 0;">Haga clic en la tarjeta de la evaluación psicológica que desea aplicar al paciente seleccionado.</p>
+                                <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">Catálogo de Evaluaciones Psicológicas</h3>
+                                <p style="font-size: 0.83rem; color: #64748b; margin: 2px 0 0 0;">Haz clic en cualquier prueba psicológica para abrir sus opciones y aplicarla a un consultante.</p>
                             </div>
                         </div>
 
@@ -3345,71 +3314,111 @@
                         <div id="catalog-pagination-bottom-controls" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 1.25rem;">
                             <!-- Controles de paginación -->
                         </div>
+                    </div>
 
-                        <!-- PANEL ACCIÓN DE APLICAR TEST (SE DESPLIEGA AL SELECCIONAR TARJETA) -->
-                        <div id="panel-apply-selected-test" class="hide mt-4" style="background: #ffffff; border: 2.5px solid #702e5e; border-radius: 18px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(112,46,94,0.08);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                    <!-- MODAL PARA ASIGNAR / APLICAR TEST PSICOLÓGICO -->
+                    <div id="modal-apply-test" class="modal hide" onclick="if(event.target === this) closeModal('modal-apply-test')">
+                        <div class="modal-content modal-lg" style="max-width: 680px; border-radius: var(--radius-lg); padding: 0; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                            <div class="modal-header" style="background: linear-gradient(135deg, #702e5e 0%, #4a1d3e 100%); color: white; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <span style="font-size: 0.75rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 10px; border-radius: 12px;">EVALUACIÓN SELECCIONADA</span>
-                                    <h3 id="label-selected-test-name" style="margin: 0.25rem 0 0 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">-- Ninguna --</h3>
+                                    <span id="modal-test-category-badge" style="font-size: 0.72rem; font-weight: 800; color: #fdf4ff; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 12px; text-transform: uppercase;">EVALUACIÓN PSICOLÓGICA</span>
+                                    <h3 id="label-selected-test-name" style="margin: 0.35rem 0 0 0; font-size: 1.2rem; font-weight: 800; color: white;">-- Nombre del Test --</h3>
                                 </div>
-                                <div style="text-align: right;">
-                                    <span style="font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase;">PACIENTE DESTINO</span>
-                                    <div id="label-selected-patient-name" style="font-size: 1rem; font-weight: 800; color: #702e5e;">-- Seleccionar Paciente arriba --</div>
+                                <button type="button" class="btn-close-modal white-close" onclick="closeModal('modal-apply-test')" style="background: transparent; border: none; font-size: 1.4rem; cursor: pointer; color: white; opacity: 0.85; line-height: 1;" title="Cerrar y volver al catálogo">✕</button>
+                            </div>
+                            <div class="modal-body" style="padding: 1.35rem 1.5rem; max-height: 78vh; overflow-y: auto;">
+                                <!-- INFORMACIÓN DETALLADA DEL TEST -->
+                                <div id="container-selected-test-info" style="margin-bottom: 1.25rem;"></div>
+
+                                <!-- PASO 1: SELECCIONAR CONSULTANTE -->
+                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.15rem; margin-bottom: 1.35rem;">
+                                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 0.4rem;">
+                                        <label style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">1. Seleccionar Consultante *</label>
+                                        <span id="badge-patient-selected-status" style="font-size: 0.78rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f5d0fe; padding: 3px 12px; border-radius: 20px;">
+                                            ⚠️ Ningún consultante seleccionado
+                                        </span>
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.75rem;">Escriba para filtrar o elija de la lista desplegable:</p>
+                                    
+                                    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                                        <div style="position: relative; flex: 1; min-width: 240px;">
+                                            <input type="text" id="input-search-test-patient" 
+                                                   onfocus="onTestPatientInputFocus()" 
+                                                   oninput="filterTestPatientSelect()" 
+                                                   onkeyup="filterTestPatientSelect()"
+                                                   placeholder="🔍 Filtrar por nombre, apellido o cédula..." 
+                                                   autocomplete="off" 
+                                                   style="width: 100%; padding: 0.65rem 2.2rem 0.65rem 0.85rem; border: 2px solid #702e5e; border-radius: 8px; font-size: 0.88rem; font-weight: 700; outline: none;">
+                                            <button type="button" id="btn-clear-test-patient" onclick="clearTestPatientSelection()" title="Limpiar selección" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #f1f5f9; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 0.8rem; cursor: pointer; color: #64748b; display: none; align-items: center; justify-content: center; font-weight: 800;">✕</button>
+                                        </div>
+                                        
+                                        <div style="flex: 1; min-width: 240px;">
+                                            <select id="select-test-main-patient" onfocus="populateMainViewPatientSelect()" onchange="onSelectMainPatientChange()" style="width: 100%; padding: 0.65rem 0.85rem; border: 2px solid #702e5e; border-radius: 8px; font-size: 0.88rem; background: #ffffff; color: #0f172a; font-weight: 700; outline: none; cursor: pointer;">
+                                                <option value="">-- Seleccionar Consultante de la lista --</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="label-selected-patient-name" style="display: none;"></div>
+                                </div>
+
+                                <!-- PASO 2: MODALIDADES DE APLICACIÓN -->
+                                <div style="margin-bottom: 1.25rem;">
+                                    <label style="margin: 0 0 0.35rem 0; font-size: 0.95rem; font-weight: 800; color: #0f172a; display: block;">2. Modalidad de Aplicación</label>
+                                    <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.85rem;">Seleccione la modalidad deseada para aplicar o entregar la prueba:</p>
+
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem;">
+                                        <!-- Opción 1: Presencial -->
+                                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                            <div>
+                                                <div style="font-size: 1.25rem; margin-bottom: 0.25rem;">💻</div>
+                                                <h4 style="margin: 0 0 0.25rem 0; font-size: 0.92rem; font-weight: 800; color: #0f172a;">Presencial</h4>
+                                                <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.85rem;">Abre la evaluación inmediatamente en una ventana para que el consultante responda en el consultorio.</p>
+                                            </div>
+                                            <button type="button" onclick="executeMainApplyTest('presencial')" class="btn" style="background: #702e5e; color: white; font-weight: 800; border-radius: 8px; width: 100%; padding: 0.55rem; border: none; cursor: pointer; font-size: 0.82rem;">
+                                                💻 Iniciar Presencial
+                                            </button>
+                                        </div>
+
+                                        <!-- Opción 2: Online PWA -->
+                                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                            <div>
+                                                <div style="font-size: 1.25rem; margin-bottom: 0.25rem;">📱</div>
+                                                <h4 style="margin: 0 0 0.25rem 0; font-size: 0.92rem; font-weight: 800; color: #0f172a;">Portal Paciente</h4>
+                                                <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.85rem;">Activa la prueba directamente en la app / portal web del paciente para responder al iniciar sesión.</p>
+                                            </div>
+                                            <button type="button" onclick="executeMainApplyTest('online')" class="btn" style="background: #0284c7; color: white; font-weight: 800; border-radius: 8px; width: 100%; padding: 0.55rem; border: none; cursor: pointer; font-size: 0.82rem;">
+                                                📱 Asignar a Portal
+                                            </button>
+                                        </div>
+
+                                        <!-- Opción 3: Enlace Directo (WhatsApp / Email) -->
+                                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                            <div>
+                                                <div style="font-size: 1.25rem; margin-bottom: 0.25rem;">🔗</div>
+                                                <h4 style="margin: 0 0 0.25rem 0; font-size: 0.92rem; font-weight: 800; color: #0f172a;">Enlace / WhatsApp</h4>
+                                                <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.85rem;">Genera un enlace directo público accesible sin iniciar sesión para compartir por WhatsApp o email.</p>
+                                            </div>
+                                            <button type="button" onclick="executeMainApplyTest('link')" class="btn" style="background: #15803d; color: white; font-weight: 800; border-radius: 8px; width: 100%; padding: 0.55rem; border: none; cursor: pointer; font-size: 0.82rem;">
+                                                🔗 Generar Enlace
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- TARJETA DE ÉXITO RESULTADO GENERADO -->
+                                <div id="panel-apply-success-result" class="hide" style="background: #ffffff; border: 2px solid #86efac; border-radius: 14px; padding: 1.15rem 1.25rem; margin-top: 1.25rem; box-shadow: 0 4px 15px rgba(22, 101, 52, 0.08); position: relative;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.5rem;">
+                                        <div style="color: #15803d; font-weight: 800; font-size: 1rem;">✅ ¡Evaluación creada exitosamente!</div>
+                                        <button type="button" onclick="closeTestSuccessPanel()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; color: #475569; cursor: pointer;" title="Cerrar">&times;</button>
+                                    </div>
+                                    <div id="text-apply-success-details" style="font-size: 0.88rem; color: #334155; margin-bottom: 0.85rem;"></div>
+                                    <div id="container-apply-success-actions" style="display: flex; gap: 0.65rem; flex-wrap: wrap;"></div>
                                 </div>
                             </div>
-
-                            <!-- INFORMACIÓN DETALLADA E INSTRUCCIONES DEL TEST SELECCIONADO -->
-                            <div id="container-selected-test-info" style="margin-bottom: 1.25rem;"></div>
-
-                            <p style="font-size: 0.88rem; color: #475569; margin-bottom: 1.25rem;">Seleccione la modalidad de aplicación deseada para enviar o iniciar la prueba:</p>
-
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-                                <!-- Opción 1: Presencial -->
-                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
-                                    <div>
-                                        <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">💻</div>
-                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">1. Aplicación Presencial</h4>
-                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Abre la evaluación inmediatamente en una ventana aislada para que el consultante responda en la tablet o PC del consultorio.</p>
-                                    </div>
-                                    <button type="button" onclick="executeMainApplyTest('presencial')" class="btn" style="background: #702e5e; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
-                                        💻 Iniciar Presencial Ahora
-                                    </button>
-                                </div>
-
-                                <!-- Opción 2: Online PWA -->
-                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
-                                    <div>
-                                        <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">📱</div>
-                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">2. Asignar a Perfil Online</h4>
-                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Envía la notificación y activa la prueba directamente dentro de la app / portal web del consultante para cuando inicie sesión.</p>
-                                    </div>
-                                    <button type="button" onclick="executeMainApplyTest('online')" class="btn" style="background: #0284c7; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
-                                        📱 Asignar a Perfil Paciente
-                                    </button>
-                                </div>
-
-                                <!-- Opción 3: Enlace Directo (WhatsApp / Email) -->
-                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
-                                    <div>
-                                        <div style="font-size: 1.3rem; margin-bottom: 0.35rem;">🔗</div>
-                                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1rem; font-weight: 800; color: #0f172a;">3. Enlace Directo / WhatsApp</h4>
-                                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">Genera un enlace público directo accesible sin iniciar sesión para compartir por WhatsApp o correo electrónico.</p>
-                                    </div>
-                                    <button type="button" onclick="executeMainApplyTest('link')" class="btn" style="background: #15803d; color: white; font-weight: 800; border-radius: 10px; width: 100%; padding: 0.65rem; border: none; cursor: pointer;">
-                                        🔗 Generar Enlace Directo
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- TARJETA DE ÉXITO RESULTADO GENERADO -->
-                            <div id="panel-apply-success-result" class="hide" style="background: #ffffff; border: 2px solid #86efac; border-radius: 14px; padding: 1.25rem 1.5rem; margin-top: 2rem !important; box-shadow: 0 4px 15px rgba(22, 101, 52, 0.08); position: relative;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.65rem;">
-                                    <div style="color: #15803d; font-weight: 800; font-size: 1.05rem;">✅ ¡Evaluación creada exitosamente!</div>
-                                    <button type="button" onclick="closeTestSuccessPanel()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 800; color: #475569; cursor: pointer; transition: all 0.2s;" title="Cerrar información de la solicitud">&times;</button>
-                                </div>
-                                <div id="text-apply-success-details" style="font-size: 0.9rem; color: #334155; margin-bottom: 1rem;"></div>
-                                <div id="container-apply-success-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;"></div>
+                            <div class="modal-footer" style="padding: 0.75rem 1.5rem; background: #f8fafc; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-apply-test')" style="font-size: 0.85rem; padding: 0.45rem 1.25rem; font-weight: 700;">
+                                    Volver al Catálogo
+                                </button>
                             </div>
                         </div>
                     </div>
