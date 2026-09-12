@@ -3136,37 +3136,37 @@
 
                 <!-- 4c. VISTA EXAMEN MENTAL ESTRUCTURADO (MSE) -->
                 <section id="view-examen-mental" class="app-view hide">
-                    <div class="view-header-row mb-3">
+                    <div class="view-header-row mb-2">
                         <div>
-                            <h2>🧠 Examen Mental del Estado Psíquico (MSE)</h2>
-                            <p class="text-secondary text-sm" style="margin-top: 4px;">Realiza evaluaciones estandarizadas del estado mental, consulta el historial clínico por consultante y exporta informes membretados en PDF o Word.</p>
+                            <h2 style="margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700;">🧠 Examen Mental del Estado Psíquico (MSE)</h2>
+                            <p class="text-secondary text-sm" style="margin-top: 2px; font-size: 0.82rem; line-height: 1.3;">Evaluación estandarizada del estado mental, historial clínico y exportación a PDF o Word.</p>
                         </div>
                     </div>
 
                     <!-- PESTAÑAS DE NAVEGACIÓN SUB-MENÚ (PILL STYLE MODERNO) -->
-                    <div class="sub-nav-pills mb-4" style="display: flex; gap: 0.75rem; background: rgba(0,0,0,0.03); padding: 6px; border-radius: 16px; width: fit-content; max-width: 100%;">
-                        <button type="button" id="mse-tab-btn-new" onclick="switchExamenMentalTab('new')" class="btn-pill-sub active" style="padding: 0.65rem 1.6rem; font-weight: 700; border-radius: 12px; border: none; background: var(--primary-color); color: #ffffff; cursor: pointer; transition: all 0.25s ease; box-shadow: 0 4px 12px rgba(169, 89, 147, 0.25);">
-                            📝 Nuevo Examen Mental
+                    <div class="sub-nav-pills mb-3" style="display: flex; gap: 0.4rem; background: rgba(0,0,0,0.03); padding: 4px; border-radius: 10px; width: 100%; max-width: 480px; box-sizing: border-box;">
+                        <button type="button" id="mse-tab-btn-new" onclick="switchExamenMentalTab('new')" class="btn-pill-sub active" style="flex: 1 1 0%; min-width: 0; padding: 0.45rem 0.5rem; font-weight: 700; font-size: 0.78rem; border-radius: 8px; border: none; background: var(--primary-color); color: #ffffff; cursor: pointer; transition: all 0.25s ease; box-shadow: 0 4px 12px rgba(169, 89, 147, 0.25); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            📝 Nuevo Examen
                         </button>
-                        <button type="button" id="mse-tab-btn-history" onclick="switchExamenMentalTab('history')" class="btn-pill-sub" style="padding: 0.65rem 1.6rem; font-weight: 600; border-radius: 12px; border: 1.5px solid var(--border-color); background: #ffffff; color: var(--text-dark); cursor: pointer; transition: all 0.25s ease;">
-                            📚 Historial de Exámenes Mentales
+                        <button type="button" id="mse-tab-btn-history" onclick="switchExamenMentalTab('history')" class="btn-pill-sub" style="flex: 1 1 0%; min-width: 0; padding: 0.45rem 0.5rem; font-weight: 600; font-size: 0.78rem; border-radius: 8px; border: 1.5px solid var(--border-color); background: #ffffff; color: var(--text-dark); cursor: pointer; transition: all 0.25s ease; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            📚 Historial
                         </button>
                     </div>
 
                     <!-- SUB-VISTA 1: NUEVO EXAMEN MENTAL -->
                     <div id="mse-subview-new">
                         <!-- TARJETA 1: PASO INICIAL - SELECCIÓN DE PACIENTE -->
-                        <div class="card mb-4" style="background: #ffffff; border-radius: var(--radius-md); border: 1.5px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                            <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
-                                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0;">1. Selección de Consultante y Datos de Sesión</h3>
+                        <div class="card mb-3" style="background: #ffffff; border-radius: 12px; border: 1.5px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                            <div class="card-header" style="background: var(--bg-light); border-bottom: 1px solid var(--border-color); padding: 0.6rem 0.85rem;">
+                                <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin: 0;">1. Selección de Consultante y Datos de Sesión</h3>
                             </div>
-                            <div class="card-body" style="padding: 1.25rem;">
-                                <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem; align-items: end;">
-                                    <div style="position: relative; display: flex; flex-direction: column; justify-content: flex-end;">
-                                        <label for="mse-patient-search" style="font-weight: 700; color: var(--text-dark); display: flex; align-items: flex-end; min-height: 2.6rem; margin-bottom: 0.35rem;">Buscar Consultante (Cédula, Nombre o Apellido) *</label>
+                            <div class="card-body" style="padding: 0.75rem 0.85rem;">
+                                <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.55rem; margin-bottom: 0.5rem; align-items: end;">
+                                    <div style="position: relative; display: flex; flex-direction: column;">
+                                        <label for="mse-patient-search" style="font-weight: 700; font-size: 0.8rem; color: var(--text-dark); margin-bottom: 0.25rem; display: block;">Buscar Consultante (Cédula o Nombre) *</label>
                                         <div style="position: relative;">
-                                            <input type="text" id="mse-patient-search" placeholder="🔍 Escribe cédula o nombre del consultante..." autocomplete="off" oninput="onMseSearchInput()" onfocus="onMseSearchInput()" style="width: 100%; padding: 0.65rem 2.2rem 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; outline: none; background: #ffffff;">
-                                            <span id="mse-clear-patient-btn" onclick="clearMseSelectedPatient()" class="hide" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 1.1rem; font-weight: 700; padding: 2px 6px;">✕</span>
+                                            <input type="text" id="mse-patient-search" placeholder="🔍 Cédula, nombre o apellido..." autocomplete="off" oninput="onMseSearchInput()" onfocus="onMseSearchInput()" style="width: 100%; padding: 0.45rem 2rem 0.45rem 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem; outline: none; background: #ffffff;">
+                                            <span id="mse-clear-patient-btn" onclick="clearMseSelectedPatient()" class="hide" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 1rem; font-weight: 700; padding: 2px 4px;">✕</span>
                                         </div>
                                         <input type="hidden" id="mse-patient-id-hidden" value="">
                                         
@@ -3174,20 +3174,20 @@
                                         <div id="mse-patient-dropdown-list" class="hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: #ffffff; border: 1.5px solid var(--primary-color); border-radius: 10px; margin-top: 4px; max-height: 240px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
                                         </div>
                                     </div>
-                                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
-                                        <label for="mse-eval-date" style="font-weight: 700; color: var(--text-dark); display: flex; align-items: flex-end; min-height: 2.6rem; margin-bottom: 0.35rem;">Fecha de Evaluación *</label>
-                                        <input type="date" id="mse-eval-date" style="width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;">
+                                    <div style="display: flex; flex-direction: column;">
+                                        <label for="mse-eval-date" style="font-weight: 700; font-size: 0.8rem; color: var(--text-dark); margin-bottom: 0.25rem; display: block;">Fecha de Evaluación *</label>
+                                        <input type="date" id="mse-eval-date" style="width: 100%; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem;">
                                     </div>
-                                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
-                                        <label for="mse-eval-medio" style="font-weight: 700; color: var(--text-dark); display: flex; align-items: flex-end; min-height: 2.6rem; margin-bottom: 0.35rem;">Medio de Evaluación *</label>
-                                        <select id="mse-eval-medio" style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; cursor: pointer;">
+                                    <div style="display: flex; flex-direction: column;">
+                                        <label for="mse-eval-medio" style="font-weight: 700; font-size: 0.8rem; color: var(--text-dark); margin-bottom: 0.25rem; display: block;">Medio de Evaluación *</label>
+                                        <select id="mse-eval-medio" style="width: 100%; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem; cursor: pointer;">
                                             <option value="Presencial">Presencial (Consultorio)</option>
                                             <option value="Online">Online (Teleconsulta)</option>
                                         </select>
                                     </div>
                                 </div>
 
-                                <div id="mse-selected-patient-info" class="hide mt-2" style="background: #fcf4f9; border: 1.5px solid rgba(169, 89, 147, 0.25); border-radius: 10px; padding: 0.85rem 1.1rem; font-size: 0.92rem; color: #3D1E3F; box-shadow: inset 0 2px 4px rgba(169, 89, 147, 0.05);">
+                                <div id="mse-selected-patient-info" class="hide mt-2" style="background: #fcf4f9; border: 1.5px solid rgba(169, 89, 147, 0.25); border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.85rem; color: #3D1E3F; box-shadow: inset 0 2px 4px rgba(169, 89, 147, 0.05);">
                                     <strong>Consultante:</strong> <span id="mse-badge-name"></span> | 
                                     <strong>Cédula:</strong> <span id="mse-badge-cedula"></span> | 
                                     <strong>Edad:</strong> <span id="mse-badge-edad"></span> | 
@@ -3197,10 +3197,10 @@
                         </div>
 
                         <!-- ALERTA CUANDO NO HAY PACIENTE SELECCIONADO -->
-                        <div id="mse-no-patient-alert" style="background: #ffffff; border: 2px dashed var(--border-color); border-radius: 16px; padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
-                            <div style="font-size: 3rem; margin-bottom: 0.75rem;">👤</div>
-                            <h4 style="font-weight: 700; color: var(--text-dark); margin: 0 0 0.4rem 0; font-size: 1.15rem;">Selecciona un Consultante arriba</h4>
-                            <p style="margin: 0; font-size: 0.92rem; max-width: 480px; margin: 0 auto; color: #64748b;">Elige un paciente en el buscador para desbloquear el formulario estandarizado del Examen Mental.</p>
+                        <div id="mse-no-patient-alert" style="background: #ffffff; border: 1.5px dashed var(--border-color); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; color: var(--text-muted); margin-bottom: 1rem;">
+                            <div style="font-size: 1.8rem; margin-bottom: 0.35rem;">👤</div>
+                            <h4 style="font-weight: 700; color: var(--text-dark); margin: 0 0 0.25rem 0; font-size: 0.95rem;">Selecciona un Consultante arriba</h4>
+                            <p style="margin: 0; font-size: 0.82rem; max-width: 420px; margin: 0 auto; color: #64748b; line-height: 1.35;">Elige un paciente en el buscador para desbloquear el formulario estandarizado del Examen Mental.</p>
                         </div>
 
                         <!-- SECCIÓN COMPLETA DE EVALUACIÓN (OCULTA HASTA ELEGIR PACIENTE) -->
@@ -3489,33 +3489,33 @@
                     </div>
 
                     <!-- PESTAÑAS SUB-NAVEGADORAS DE HERRAMIENTAS TERAPÉUTICAS -->
-                    <div class="sub-nav-tabs mb-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; flex-wrap: wrap;">
-                        <button type="button" id="tt-tab-asignar" class="btn btn-sm btn-primary" onclick="switchTherapistToolsTab('asignar')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">
-                            📋 Asignación de Herramientas
+                    <div class="sub-nav-tabs mb-3" style="display: flex; gap: 0.35rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
+                        <button type="button" id="tt-tab-asignar" class="btn btn-sm btn-primary" onclick="switchTherapistToolsTab('asignar')" style="font-weight: 700; border-radius: var(--radius-sm); border: none; cursor: pointer;" title="Asignación de Herramientas por Consultante">
+                            Asignar
                         </button>
-                        <button type="button" id="tt-tab-catalogo" class="btn btn-sm btn-secondary" onclick="switchTherapistToolsTab('catalogo')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">
-                            📚 Catálogo de Herramientas
+                        <button type="button" id="tt-tab-catalogo" class="btn btn-sm btn-secondary" onclick="switchTherapistToolsTab('catalogo')" style="font-weight: 700; border-radius: var(--radius-sm); border: none; cursor: pointer;" title="Catálogo de Herramientas Terapéuticas">
+                            Catálogo
                         </button>
-                        <button type="button" id="tt-tab-activas" class="btn btn-sm btn-secondary" onclick="switchTherapistToolsTab('activas')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">
-                            ⚡ Herramientas Activas
+                        <button type="button" id="tt-tab-activas" class="btn btn-sm btn-secondary" onclick="switchTherapistToolsTab('activas')" style="font-weight: 700; border-radius: var(--radius-sm); border: none; cursor: pointer;" title="Registros y Pacientes Activos">
+                            Registros
                         </button>
                     </div>
 
                     <!-- SUB-VISTA 1: ASIGNACIÓN DE HERRAMIENTAS -->
                     <div id="tt-sub-view-asignar">
                         <!-- BUSCADOR RÁPIDO Y PANEL DE ASIGNACIÓN AL PACIENTE -->
-                        <div class="card mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%); border: 1.5px solid #e9d5ff;">
-                            <div class="card-header" style="border-bottom: 1.5px solid #f3e8ff;">
-                                <h3 style="color: #6b21a8; display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.15rem;">
+                        <div class="card mb-3" style="background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%); border: 1.5px solid #e9d5ff; border-radius: 12px;">
+                            <div class="card-header" style="border-bottom: 1.5px solid #f3e8ff; padding: 0.65rem 0.85rem;">
+                                <h3 style="color: #6b21a8; display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 0.95rem; font-weight: 700;">
                                     🔍 Asignación Rápida por Consultante
                                 </h3>
                             </div>
-                            <div class="card-body">
-                                <p class="text-secondary mb-3" style="font-size: 0.88rem;">Busca un paciente para abrir la ventana de configuración y activar o desactivar herramientas con interruptores On/Off:</p>
+                            <div class="card-body" style="padding: 0.75rem 0.85rem;">
+                                <p class="text-secondary mb-2" style="font-size: 0.82rem; line-height: 1.35;">Busca un paciente para abrir la configuración y activar o desactivar herramientas con interruptores On/Off:</p>
                                 
                                 <div class="form-group mb-0" style="position: relative;">
-                                    <label for="tt-patient-search" style="font-weight: 700;">Buscar Consultante:</label>
-                                    <input type="text" id="tt-patient-search" placeholder="Escribe Nombre, Apellido o Cédula..." oninput="onTherapistToolPatientSearch(this.value)" autocomplete="off" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.95rem;">
+                                    <label for="tt-patient-search" style="font-weight: 700; font-size: 0.82rem; margin-bottom: 0.25rem; display: block;">Buscar Consultante:</label>
+                                    <input type="text" id="tt-patient-search" placeholder="Escribe nombre, apellido o cédula..." oninput="onTherapistToolPatientSearch(this.value)" autocomplete="off" style="width: 100%; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.88rem;">
                                     <div id="tt-patient-dropdown" class="search-results-dropdown hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 100;"></div>
                                 </div>
                             </div>
