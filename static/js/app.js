@@ -11535,10 +11535,12 @@ function switchFinanceTab(tabId) {
         if (card && tabBtn) {
             if (id === tabId) {
                 card.classList.remove('hide');
-                tabBtn.className = 'btn btn-sm btn-primary';
+                tabBtn.classList.remove('btn-secondary');
+                tabBtn.classList.add('btn-primary');
             } else {
                 card.classList.add('hide');
-                tabBtn.className = 'btn btn-sm btn-secondary';
+                tabBtn.classList.remove('btn-primary');
+                tabBtn.classList.add('btn-secondary');
             }
         }
     });

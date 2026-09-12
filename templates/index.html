@@ -1885,20 +1885,13 @@
 
                 <!-- 4. VISTA CONTROL DE FINANZAS -->
                 <section id="view-finance" class="app-view hide">
-                    <div class="view-header-row">
-                        <h2>Control de Finanzas</h2>
-                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="exportFinanceCSV()" style="font-weight: 600; padding: 0.4rem 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem;">
-                                📥 Exportar CSV
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="openQuickPayModal()">
-                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                Registrar Pago
-                            </button>
-                            <div class="date-filters">
-                                <select id="finance-filter-year" onchange="loadFinanceData()"></select>
-                                <select id="finance-filter-month" onchange="loadFinanceData()"></select>
-                            </div>
+                    <div class="view-header-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <div>
+                            <h2 style="margin: 0; font-family: var(--font-title); font-weight: 700;">Control de Finanzas</h2>
+                        </div>
+                        <div class="date-filters" style="display: flex; gap: 0.4rem; align-items: center;">
+                            <select id="finance-filter-year" onchange="loadFinanceData()" style="padding: 0.4rem 0.6rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;"></select>
+                            <select id="finance-filter-month" onchange="loadFinanceData()" style="padding: 0.4rem 0.6rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600;"></select>
                         </div>
                     </div>
 
@@ -1911,15 +1904,34 @@
                         </div>
                     </div>
 
-                    <!-- Menú de Sub-módulos (Pestañas de Finanzas) -->
-                    <div class="sub-nav-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; margin-top: 1.5rem; flex-wrap: wrap;">
-                        <button type="button" id="fin-tab-ingresos" class="btn btn-sm btn-primary" onclick="switchFinanceTab('ingresos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Resumen de Ingresos</button>
-                        <button type="button" id="fin-tab-verificaciones" class="btn btn-sm btn-secondary" onclick="switchFinanceTab('verificaciones')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
-                            <span>Pagos por Verificar</span>
+                    <!-- Menú de Acciones y Sub-módulos (2 funciones por línea) -->
+                    <div class="finance-nav-grid">
+                        <!-- Fila 1: Resumen de Ingresos / Honorarios -->
+                        <button type="button" id="fin-tab-ingresos" class="btn btn-sm btn-primary fin-grid-btn" onclick="switchFinanceTab('ingresos')">
+                            Resumen de Ingresos
+                        </button>
+                        <button type="button" id="fin-tab-honorarios" class="btn btn-sm btn-secondary fin-grid-btn" onclick="switchFinanceTab('honorarios')">
+                            Honorarios
+                        </button>
+
+                        <!-- Fila 2: Registrar Pagos / Verificar Pagos -->
+                        <button type="button" id="fin-btn-registrar-pago" class="btn btn-sm fin-grid-btn fin-btn-action-pay" onclick="openQuickPayModal()">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Registrar Pagos
+                        </button>
+                        <button type="button" id="fin-tab-verificaciones" class="btn btn-sm btn-secondary fin-grid-btn" onclick="switchFinanceTab('verificaciones')">
+                            <span>Verificar Pagos</span>
                             <span id="fin-verificaciones-badge" class="badge bg-danger hide" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; color: white; border-radius: 50%; font-weight: bold;">0</span>
                         </button>
-                        <button type="button" id="fin-tab-cobros" class="btn btn-sm btn-secondary" onclick="switchFinanceTab('cobros')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Cuentas por Cobrar</button>
-                        <button type="button" id="fin-tab-honorarios" class="btn btn-sm btn-secondary" onclick="switchFinanceTab('honorarios')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Honorarios y Tarifas</button>
+
+                        <!-- Fila 3: Cuentas por Cobrar / Exportar CSV -->
+                        <button type="button" id="fin-tab-cobros" class="btn btn-sm btn-secondary fin-grid-btn" onclick="switchFinanceTab('cobros')">
+                            Cuentas por Cobrar
+                        </button>
+                        <button type="button" id="fin-btn-exportar-csv" class="btn btn-sm fin-grid-btn fin-btn-action-export" onclick="exportFinanceCSV()">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Exportar CSV
+                        </button>
                     </div>
 
                     <!-- Contenedores de cada Pestaña -->

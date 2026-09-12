@@ -890,6 +890,55 @@ h1, h2, h3, h4, h5, h6 {
     transition: all 0.2s ease;
 }
 
+/* Cuadrícula 2x3 de navegación y acciones de Finanzas */
+.finance-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.finance-nav-grid .fin-grid-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 0.55rem 0.5rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fin-btn-action-pay {
+    background: #fdf4ff !important;
+    color: #86198f !important;
+    border: 1.5px solid #e879f9 !important;
+}
+.fin-btn-action-pay:hover {
+    background: #fae8ff !important;
+}
+
+.fin-btn-action-export {
+    background: #f0fdf4 !important;
+    color: #166534 !important;
+    border: 1.5px solid #bbf7d0 !important;
+}
+.fin-btn-action-export:hover {
+    background: #dcfce7 !important;
+}
+
 /* ==========================================
    2. VISTA: TABLAS (Historias Clínicas)
    ========================================== */
@@ -1655,6 +1704,21 @@ h1, h2, h3, h4, h5, h6 {
         align-items: center !important;
         justify-content: center !important;
         border-radius: var(--radius-sm) !important;
+    }
+
+    /* ── Cuadrícula 2x3 de Finanzas en Móvil (2 por línea) ── */
+    .finance-nav-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        width: 100% !important;
+        gap: 0.4rem !important;
+        margin-top: 0.65rem !important;
+        margin-bottom: 0.85rem !important;
+    }
+    .finance-nav-grid .fin-grid-btn {
+        padding: 0.45rem 0.35rem !important;
+        font-size: 0.76rem !important;
+        font-weight: 700 !important;
     }
 
     /* ── View Header: botones en fila scrollable, no ancho completo ── */
