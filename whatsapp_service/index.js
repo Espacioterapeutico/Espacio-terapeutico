@@ -195,10 +195,20 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             keepAliveIntervalMs: 25000,     // Mantener WebSocket vivo y prevenir socket zombie
             retryRequestDelayMs: 250,       // Reintento rápido (default de Baileys, estable en v2.2.2)
             maxMsgRetryCount: 5,
-            markOnlineOnConnect: true,
-            syncFullHistory: false,
+            markOnlineOnConnect: false,     // AHORRO GB: No emitir presencia "en línea" global a toda la libreta
+            syncFullHistory: false,         // AHORRO GB: No sincronizar historial pasado
+            shouldSyncHistoryMessage: () => false, // AHORRO GB: Rechazar paquetes de mensajes históricos
+            fireInitQueries: false,         // AHORRO GB: No descargar configuraciones de privacidad ni contactos
+            generateHighQualityLinkPreview: false, // AHORRO GB: No descargar previsualizaciones de imágenes
             shouldIgnoreJid: (jid) => {
-                return !jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid.includes('newsletter');
+                // AHORRO GB ESTRICTO: Solo leer chats individuales de pacientes (@s.whatsapp.net)
+                if (!jid) return true;
+                if (jid.endsWith('@g.us')) return true;          // Grupos
+                if (jid.includes('broadcast')) return true;      // Estados / Historias
+                if (jid.includes('newsletter')) return true;     // Canales
+                if (jid.endsWith('@call')) return true;          // Llamadas
+                if (jid.endsWith('@lid')) return true;           // Identificadores secundarios
+                return !jid.endsWith('@s.whatsapp.net');         // Ignorar cualquier otra cosa que no sea chat directo
             },
             msgRetryCounterCache,
             getMessage: async (key) => {
@@ -261,9 +271,11 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             }
         });
 
-        // Escuchar mensajes entrantes de pacientes para este psicólogo específico
+        // Escuchar mensajes entrantes de pacientes para este psicólogo específico (SOLO chats directos)
         session.sock.ev.on('messages.upsert', async (m) => {
             for (const msg of (m.messages || [])) {
+                const rJid = msg.key?.remoteJid;
+                if (!rJid || !rJid.endsWith('@s.whatsapp.net')) continue;
                 if (msg.key && msg.key.id && msg.message) {
                     storeMessage(msg.key.id, msg.message);
                 }

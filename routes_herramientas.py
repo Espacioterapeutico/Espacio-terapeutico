@@ -1402,10 +1402,10 @@ def save_public_tool_submission():
         db.commit()
         
         try:
-            from routes_notificaciones import send_webpush_notification
+            from app import send_webpush_notification
             send_webpush_notification(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools")
-        except Exception:
-            pass
+        except Exception as err_wp:
+            print("Error enviando push en envio publico de herramienta:", err_wp)
     except Exception as _ne:
         print("Error en notificación de envío público:", _ne)
 

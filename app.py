@@ -1189,7 +1189,7 @@ def init_db():
 
     # Pre-cargar configuracion por defecto de Firebase FCM
     _def_cfg = json.dumps({
-        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQqUuYZDIhejeJ81zM",
+        "apiKey": "AIzaSyDRQlUEv1SToy5ZdQQyUuYZDIhejeJ81zM",
         "authDomain": "espacio-terapeutico.firebaseapp.com",
         "databaseURL": "https://espacio-terapeutico-default-rtdb.firebaseio.com",
         "projectId": "espacio-terapeutico",
@@ -3322,49 +3322,7 @@ def index(slug=None):
 def serve_manifest():
     return send_file(get_resource_path('static/manifest.json'), mimetype='application/manifest+json')
 
-@app.route('/disabled-firebase-messaging-sw.js')
-def serve_firebase_sw():
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_config'")
-    row = cursor.fetchone()
-    
-    if not row or not row[0]:
-        return Response("console.log('FCM no configurado');", mimetype='application/javascript')
-        
-    config_dict_str = row[0]
-    firebase_sw_code = f"""
-// === FIREBASE CLOUD MESSAGING SERVICE WORKER ===
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
-
-try {{
-  firebase.initializeApp({config_dict_str});
-  const messaging = firebase.messaging();
-  
-  messaging.onBackgroundMessage((payload) => {{
-    console.log('[FCM] Mensaje en segundo plano recibido:', payload);
-    const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'Espacio Terapéutico';
-    const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || 'Tienes una nueva notificación.';
-    const url = (payload.data && payload.data.url) || (payload.data && payload.data.link) || '/';
-    
-    self.registration.showNotification(title, {{
-      body: body,
-      icon: '/static/logo.png',
-      badge: '/static/badge.png',
-      sound: '/static/notification.wav',
-      vibrate: [200, 100, 200, 100, 200],
-      data: {{ url: url }}
-    }});
-  }});
-}} catch(err) {{
-  console.error("Fallo al inicializar Firebase en el Service Worker:", err);
-}}
-"""
-    response = Response(firebase_sw_code, mimetype='application/javascript')
-    response.headers['Service-Worker-Allowed'] = '/'
-    return response
-
+@app.route('/firebase-messaging-sw.js')
 @app.route('/sw.js')
 def serve_sw():
     try:
