@@ -192,6 +192,12 @@ def format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data):
         p_apellidos = psicologo_data.get('apellidos', '') or ''
         psic_name = f"{p_nombres} {p_apellidos}".strip()
 
+    tareas = ''
+    if cita_dict:
+        tareas = (cita_dict.get('tareas') or cita_dict.get('tareas_asignadas') or '').strip()
+    if not tareas:
+        tareas = 'Continuar reflexionando sobre lo abordado en sesión.'
+
     msg = template
     msg = msg.replace('{nombre}', first_name)
     msg = msg.replace('{nombre_completo}', full_name)
@@ -200,6 +206,9 @@ def format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data):
     msg = msg.replace('{modalidad}', modalidad)
     msg = msg.replace('{psicologo}', psic_name)
     msg = msg.replace('{terapeuta}', psic_name)
+    msg = msg.replace('{tareas}', tareas)
+    msg = msg.replace('{tareas_asignadas}', tareas)
+    msg = msg.replace('{compromisos}', tareas)
 
     if cita_dict and 'link_confirmacion' in cita_dict:
         msg = msg.replace('{link_confirmacion}', cita_dict['link_confirmacion'])
@@ -449,7 +458,7 @@ def admin_message_templates_render():
     cursor = db.cursor()
     try:
         cursor.execute("""
-            SELECT a.id, a.fecha, a.hora, a.tipo_consulta, p.nombres, p.apellidos, p.telefono
+            SELECT a.id, a.paciente_id, a.fecha, a.hora, a.tipo_consulta, p.nombres, p.apellidos, p.telefono
             FROM agenda_finanzas a
             JOIN pacientes p ON a.paciente_id = p.id
             WHERE a.id = ?
@@ -488,12 +497,32 @@ def admin_message_templates_render():
             hora_amigable = hora
             
         link_conexion = "https://meet.google.com/abc-defg-hij"
+
+        # Buscar tareas de evolución si existen
+        cursor.execute("""
+            SELECT tareas_asignadas FROM sesiones 
+            WHERE agenda_id = ? OR (paciente_id = ? AND fecha = ?) 
+            ORDER BY id DESC LIMIT 1
+        """, (appt_id, appt['paciente_id'], fecha))
+        ses_row = cursor.fetchone()
+        tareas = (ses_row['tareas_asignadas'] if ses_row and ses_row['tareas_asignadas'] else '').strip()
+        if not tareas:
+            tareas = "Continuar reflexionando sobre lo abordado en sesión."
+
+        cursor.execute("SELECT nombres, apellidos FROM usuarios WHERE id = ?", (user_id,))
+        usr = cursor.fetchone()
+        psic_name = f"{usr['nombres']} {usr['apellidos']}".strip() if usr else ""
         
         rendered_message = template.replace("{nombre}", nombre)\
                                    .replace("{fecha}", fecha_amigable)\
                                    .replace("{hora}", hora_amigable)\
                                    .replace("{modalidad}", modalidad)\
-                                   .replace("{link_conexion}", link_conexion)
+                                   .replace("{link_conexion}", link_conexion)\
+                                   .replace("{tareas}", tareas)\
+                                   .replace("{tareas_asignadas}", tareas)\
+                                   .replace("{compromisos}", tareas)
+        if psic_name:
+            rendered_message = rendered_message.replace("{psicologo}", psic_name).replace("{terapeuta}", psic_name)
                                    
         phone_cleaned = "".join([c for c in appt['telefono'] or "" if c.isdigit()])
         if phone_cleaned and not phone_cleaned.startswith("58") and len(phone_cleaned) == 10:
@@ -840,10 +869,16 @@ def cron_send_whatsapp_reminders():
                     pass
 
         # B) Cierre de Sesión (Citas de Hoy finalizadas para invitar a volver a agendar)
-        tmpl_cierre_default = cfg_rows.get('msg_cierre') or "Hola {nombre}, gracias por compartir el espacio terapéutico hoy. Recuerda realizar las tareas asignadas. Si deseas agendar o reprogramar tu próxima sesión, puedes hacerlo desde tu portal."
+        tmpl_cierre_default = cfg_rows.get('msg_cierre') or (
+            "Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿\n\n"
+            "📌 *Tus compromisos y tareas para esta semana:*\n{tareas}\n\n"
+            "Si deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:\n"
+            "https://www.espacioterapeutico.net/agendar/psic.paulomora"
+        )
 
         cursor.execute("""
             SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+                   s.tareas_asignadas,
                    COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
@@ -866,15 +901,17 @@ def cron_send_whatsapp_reminders():
                 'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
                 'fecha': cita['fecha'],
                 'hora': cita['hora'],
-                'modalidad': cita['tipo_consulta'] or 'Presencial'
+                'modalidad': cita['tipo_consulta'] or 'Presencial',
+                'tareas': (cita.get('tareas_asignadas') or '').strip()
             }
             patient_dict = {
                 'nombres': cita['pat_nombres'],
                 'apellidos': cita['pat_apellidos'],
                 'pais': cita['pat_pais'] or ''
             }
-            mensaje_texto = format_whatsapp_message(tmpl_cierre_default, patient_dict, cita_dict, psicologo_data)
             psych_id = cita['psicologo_id'] or 1
+            tmpl_cierre = cfg_rows.get(f'msg_cierre_{psych_id}') or tmpl_cierre_default
+            mensaje_texto = format_whatsapp_message(tmpl_cierre, patient_dict, cita_dict, psicologo_data)
 
             # Marcar inmediatamente para prevenir re-envíos duplicados
             cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (cita['id'],))
@@ -1075,9 +1112,25 @@ def send_queue_item_now(item_id):
                 'pais': cita['pat_pais'] or ''
             }
 
-            cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_confirmacion_ok', 'msg_recordatorio', 'msg_reagendamiento')")
+            # Buscar tareas de evolución si existen
+            cursor.execute("""
+                SELECT tareas_asignadas FROM sesiones 
+                WHERE agenda_id = ? OR (paciente_id = ? AND fecha = ?) 
+                ORDER BY id DESC LIMIT 1
+            """, (appt_id, cita['paciente_id'], cita['fecha']))
+            ses_row = cursor.fetchone()
+            tareas_val = (ses_row['tareas_asignadas'] if ses_row and ses_row['tareas_asignadas'] else '').strip()
+            cita_dict['tareas'] = tareas_val
+
+            cursor.execute("""
+                SELECT clave, valor FROM configuracion 
+                WHERE clave IN (
+                    'msg_confirmacion', 'msg_confirmacion_ok', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre',
+                    ?, ?, ?, ?, ?
+                )
+            """, (f'msg_confirmacion_{psych_id}', f'msg_confirmacion_ok_{psych_id}', f'msg_recordatorio_{psych_id}', f'msg_reagendamiento_{psych_id}', f'msg_cierre_{psych_id}'))
             cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
-            
+            get_tmpl = lambda k: cfg_rows.get(f"{k}_{psych_id}") or cfg_rows.get(k)
             
             req_type = request.args.get('type')
             import secrets
@@ -1097,24 +1150,27 @@ def send_queue_item_now(item_id):
             patient_dict['link_confirmacion'] = link_confirmacion
             cita_dict['link_confirmacion'] = link_confirmacion
             
-
-            
             # Determinar plantilla y tipo de mensaje según la fecha de la cita y su estado
             if req_type == 'confirmacion':
-                tmpl_msg = cfg_rows.get('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
+                tmpl_msg = get_tmpl('msg_confirmacion') or "Hola {nombre}, te escribimos para confirmar tu próxima sesión agendada para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*.\n\nPor favor responde:\n✅ *SI* para confirmar tu asistencia\n❌ *NO* para cancelar\n\n¡Gracias!"
                 msg_stage = 'confirmacion'
             elif req_type == 'confirmacion_ok':
-                tmpl_msg = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+                tmpl_msg = get_tmpl('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
                 msg_stage = 'confirmacion_ok'
             elif req_type == 'recordatorio':
-                tmpl_msg = cfg_rows.get('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
+                tmpl_msg = get_tmpl('msg_recordatorio') or "Hola {nombre}, te recordamos que HOY tienes tu cita agendada a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
                 msg_stage = 'recordatorio'
             elif req_type == 'cierre':
                 if cita['confirmada'] == 1:
-                    tmpl_msg = cfg_rows.get('msg_cierre') or "Hola {nombre}, esperamos que tu sesión de hoy haya sido provechosa. ¡Que tengas un excelente día!"
+                    tmpl_msg = get_tmpl('msg_cierre') or (
+                        "Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿\n\n"
+                        "📌 *Tus compromisos y tareas para esta semana:*\n{tareas}\n\n"
+                        "Si deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:\n"
+                        "https://www.espacioterapeutico.net/agendar/psic.paulomora"
+                    )
                     msg_stage = 'cierre'
                 else:
-                    tmpl_msg = cfg_rows.get('msg_reagendamiento') or "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio."
+                    tmpl_msg = get_tmpl('msg_reagendamiento') or "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio."
                     msg_stage = 'reagendamiento'
             else:
                 # Auto-detect fallback
@@ -1949,6 +2005,113 @@ def whatsapp_broadcast():
     t.start()
     
     return jsonify({'success': f'Difusión iniciada. El mensaje se enviará progresivamente a {len(patients)} pacientes en segundo plano.'})
+
+@notificaciones_bp.route('/api/sessions/<int:session_id>/whatsapp-cierre', methods=['GET', 'POST'])
+@login_required
+def send_session_cierre_whatsapp(session_id):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        # 1. Obtener la sesión y datos del paciente
+        cursor.execute("""
+            SELECT s.*, p.nombres, p.apellidos, p.telefono, p.pais, p.psicologo_id,
+                   COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
+            FROM sesiones s
+            JOIN pacientes p ON s.paciente_id = p.id
+            LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = ?))
+            WHERE s.id = ?
+        """, (user_id or 1, session_id))
+        ses = cursor.fetchone()
+        if not ses:
+            return jsonify({'error': 'Evolución / Sesión no encontrada'}), 404
+
+        ses = dict(ses)
+        phone = ses.get('telefono')
+        if not phone or not str(phone).strip():
+            return jsonify({'error': 'El consultante no tiene teléfono registrado para enviar WhatsApp.'}), 400
+
+        psych_id = ses.get('psicologo_id') or user_id or 1
+        psicologo_data = {'nombres': ses.get('psic_nombres'), 'apellidos': ses.get('psic_apellidos')}
+
+        # 2. Obtener hora desde agenda si existe
+        hora_sesion = ''
+        if ses.get('agenda_id'):
+            cursor.execute("SELECT hora FROM agenda_finanzas WHERE id = ?", (ses['agenda_id'],))
+            ag_row = cursor.fetchone()
+            if ag_row and ag_row['hora']:
+                hora_sesion = ag_row['hora']
+
+        cita_dict = {
+            'nombre': f"{ses.get('nombres', '')} {ses.get('apellidos', '')}".strip(),
+            'fecha': ses.get('fecha', ''),
+            'hora': hora_sesion,
+            'modalidad': ses.get('modalidad') or 'Presencial',
+            'tareas': (ses.get('tareas_asignadas') or '').strip()
+        }
+        patient_dict = {
+            'nombres': ses.get('nombres', ''),
+            'apellidos': ses.get('apellidos', ''),
+            'pais': ses.get('pais', '') or ''
+        }
+
+        # 3. Obtener plantilla de cierre
+        cursor.execute("""
+            SELECT clave, valor FROM configuracion 
+            WHERE clave IN ('msg_cierre', ?)
+        """, (f'msg_cierre_{psych_id}',))
+        cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
+        tmpl_cierre = cfg_rows.get(f'msg_cierre_{psych_id}') or cfg_rows.get('msg_cierre') or (
+            "Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿\n\n"
+            "📌 *Tus compromisos y tareas para esta semana:*\n{tareas}\n\n"
+            "Si deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:\n"
+            "https://www.espacioterapeutico.net/agendar/psic.paulomora"
+        )
+
+        mensaje_texto = format_whatsapp_message(tmpl_cierre, patient_dict, cita_dict, psicologo_data)
+
+        from routes_herramientas import clean_phone_number
+        clean_phone = clean_phone_number(phone)
+        import urllib.parse
+        wa_url = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(mensaje_texto)}"
+
+        action = request.args.get('action') or (request.json.get('action') if request.is_json and request.json else 'send')
+        if request.method == 'GET' or action == 'preview':
+            return jsonify({
+                'success': True,
+                'phone': clean_phone,
+                'message': mensaje_texto,
+                'wa_url': wa_url
+            })
+
+        # Enviar vía microservicio
+        res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+        if res_wa and res_wa.status_code == 200:
+            if ses.get('agenda_id'):
+                try:
+                    cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (ses['agenda_id'],))
+                    db.commit()
+                except:
+                    pass
+            return jsonify({
+                'success': True,
+                'message': f'Nota post-sesión enviada con éxito a {ses.get("nombres")}',
+                'wa_url': wa_url
+            })
+        else:
+            err_text = 'No se pudo enviar automáticamente mediante el microservicio WhatsApp.'
+            try:
+                err_text = res_wa.json().get('error', res_wa.text)
+            except:
+                pass
+            return jsonify({
+                'success': False,
+                'error': err_text,
+                'wa_url': wa_url
+            }), 200
+    except Exception as e:
+        return jsonify({'error': f'Error procesando nota post-sesión: {str(e)}'}), 500
+
 
 # --- SCHEDULER DE WHATSAPP EN SEGUNDO PLANO (AUTOMÁTICO) ---
 _wa_cron_thread_started = False

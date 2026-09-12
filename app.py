@@ -1140,9 +1140,13 @@ def init_db():
                        ("Hola {nombre}, te recuerdo que hoy tenemos nuestra sesión programada a las {hora} ({modalidad}). ¡Te espero!",))
                        
     cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cierre'")
-    if not cursor.fetchone():
+    row_cierre = cursor.fetchone()
+    if not row_cierre:
         cursor.execute("INSERT INTO configuracion (clave, valor) VALUES ('msg_cierre', ?)",
-                       ("Hola {nombre}, gracias por compartir el espacio terapéutico hoy. Recuerda realizar las tareas asignadas. Si deseas agendar o reprogramar tu próxima sesión, puedes hacerlo desde tu portal.",))
+                       ("Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿\n\n📌 *Tus compromisos y tareas para esta semana:*\n{tareas}\n\nSi deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:\nhttps://www.espacioterapeutico.net/agendar/psic.paulomora",))
+    elif '{tareas}' not in row_cierre['valor']:
+        cursor.execute("UPDATE configuracion SET valor = ? WHERE clave = 'msg_cierre'",
+                       ("Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿\n\n📌 *Tus compromisos y tareas para esta semana:*\n{tareas}\n\nSi deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:\nhttps://www.espacioterapeutico.net/agendar/psic.paulomora",))
     
     # Asegurar existencia de la tabla historial_reprogramaciones
     cursor.execute("""

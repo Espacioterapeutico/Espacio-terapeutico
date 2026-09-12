@@ -2683,7 +2683,8 @@
                                         </div>
                                         <div class="form-group mb-3">
                                             <label for="template-cierre" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #64748b;">Mensaje de Cierre / Nota Post-sesión</label>
-                                            <textarea id="template-cierre" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+                                            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.35rem;">Variables disponibles: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{tareas}</code> (compromisos acordados en la evolución), <code>{psicologo}</code>.</p>
+                                            <textarea id="template-cierre" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿&#10;&#10;📌 *Tus compromisos y tareas para esta semana:*&#10;{tareas}&#10;&#10;Si deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:&#10;https://www.espacioterapeutico.net/agendar/psic.paulomora" required></textarea>
                                         </div>
                                         <div class="form-group mb-4" style="background: rgba(16, 185, 129, 0.05); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(16, 185, 129, 0.2);">
                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
@@ -5742,7 +5743,10 @@
                         </div>
                     </div>
                     
-                    <div class="modal-footer flex-end" style="width: 100%; display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+                    <div class="modal-footer flex-end" style="width: 100%; display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                        <button type="button" id="session-whatsapp-cierre-btn" class="btn btn-sm" style="display: none; background: #25D366; color: white; border: none; font-weight: 600; align-items: center; gap: 5px; cursor: pointer; padding: 0.35rem 0.75rem; border-radius: 6px;" onclick="handleModalSendSessionCierre()" title="Enviar nota post-sesión y tareas al consultante por WhatsApp">
+                            <i class="fab fa-whatsapp"></i> Enviar Tareas (WhatsApp)
+                        </button>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('session-modal')">Cancelar</button>
                         <button type="submit" id="session-submit-btn" class="btn btn-primary btn-sm">Registrar Evolución</button>
                     </div>

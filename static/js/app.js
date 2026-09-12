@@ -5275,7 +5275,10 @@ function applySessionsFilters(resetPage = false) {
                         <p><em>${s.compromisos_psicologo}</em></p>
                     ` : ''}
                 </div>
-                <div class="timeline-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                <div class="timeline-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    <button class="btn btn-sm" style="background: #25D366; color: white; border: none; padding: 0.35rem 0.7rem; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;" onclick="sendSessionCierreWhatsApp(${s.id}, '${escapeJsQuotes(s.nombres || '')}')" title="Enviar Nota Post-sesión con tareas al consultante por WhatsApp">
+                        <i class="fab fa-whatsapp"></i> Enviar Tareas (WhatsApp)
+                    </button>
                     <button class="btn btn-secondary btn-sm" onclick="openEditSessionModal(${s.id})">Editar</button>
                     <button class="btn btn-secondary btn-sm text-danger" onclick="deleteSession(${s.id})">Eliminar</button>
                 </div>
@@ -5323,6 +5326,8 @@ async function openNewSessionModal() {
     document.getElementById('s-agenda-id').value = '';
     document.getElementById('session-modal-title').textContent = "Registrar Evolución de Consulta";
     document.getElementById('session-submit-btn').textContent = "Registrar Evolución";
+    const waBtn = document.getElementById('session-whatsapp-cierre-btn');
+    if (waBtn) waBtn.style.display = 'none';
     
     // Limpiar buscador en modal y campos adjuntos
     const searchInput = document.getElementById('s-paciente-search');
@@ -5514,6 +5519,11 @@ async function handleSessionSubmit(e) {
         
         if (res.ok) {
             alert(data.success || "Evolución clínica registrada exitosamente.");
+            const newSessionId = data.session_id;
+            const pacSelect = document.getElementById('s-paciente');
+            const pacName = pacSelect && pacSelect.selectedIndex >= 0 ? pacSelect.options[pacSelect.selectedIndex].text : '';
+            const hadTasks = !!(payload.tareas_asignadas && payload.tareas_asignadas.trim());
+
             closeModal('session-modal');
             
             // Recargar datos en las distintas vistas
@@ -5522,6 +5532,15 @@ async function handleSessionSubmit(e) {
             loadDashboardStats();
             loadFinanceData();
             if (activeView === 'dashboard') loadAgendaCompact();
+
+            if (!id && newSessionId && hadTasks) {
+                setTimeout(() => {
+                    const sendWaNow = confirm(`¿Deseas enviar la Nota Post-sesión con las tareas acordadas por WhatsApp a ${pacName || 'el consultante'}?`);
+                    if (sendWaNow) {
+                        sendSessionCierreWhatsApp(newSessionId, pacName);
+                    }
+                }, 350);
+            }
         } else {
             alert(data.error || "Ocurrió un error al guardar la evolución clínica.");
         }
@@ -5542,6 +5561,8 @@ async function openEditSessionModal(sessionId) {
         document.getElementById('s-agenda-id').value = s.agenda_id || '';
         document.getElementById('session-modal-title').textContent = "Editar Evolución Clínica";
         document.getElementById('session-submit-btn').textContent = "Guardar Cambios";
+        const waBtn = document.getElementById('session-whatsapp-cierre-btn');
+        if (waBtn) waBtn.style.display = 'inline-flex';
         
         const searchInput = document.getElementById('s-paciente-search');
         if (searchInput) searchInput.value = '';
@@ -5650,6 +5671,52 @@ async function deleteSession(sessionId) {
         alert("Error de conexión al eliminar evolución.");
     }
 }
+
+async function sendSessionCierreWhatsApp(sessionId, patientName) {
+    if (!sessionId) return;
+    
+    const confirmSend = confirm(`¿Deseas enviar la Nota Post-sesión con las tareas acordadas a ${patientName || 'el consultante'} por WhatsApp?`);
+    if (!confirmSend) return;
+
+    try {
+        const res = await fetch(`/api/sessions/${sessionId}/whatsapp-cierre`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'send' })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+            alert(data.message || 'Nota post-sesión enviada con éxito.');
+        } else {
+            const errMsg = data.error || 'El microservicio no pudo enviar el mensaje directamente.';
+            if (data.wa_url) {
+                const openWeb = confirm(`${errMsg}\n\n¿Deseas abrir WhatsApp Web / App para enviarlo manualmente con las tareas y texto ya formateado?`);
+                if (openWeb) {
+                    window.open(data.wa_url, '_blank');
+                }
+            } else {
+                alert(`Error: ${errMsg}`);
+            }
+        }
+    } catch (err) {
+        console.error('Error al enviar mensaje de cierre:', err);
+        alert('Error de conexión al enviar la nota por WhatsApp.');
+    }
+}
+window.sendSessionCierreWhatsApp = sendSessionCierreWhatsApp;
+
+function handleModalSendSessionCierre() {
+    const sessionId = document.getElementById('session-form-id').value;
+    const pacSelect = document.getElementById('s-paciente');
+    const pacName = pacSelect && pacSelect.selectedIndex >= 0 ? pacSelect.options[pacSelect.selectedIndex].text : '';
+    if (sessionId) {
+        sendSessionCierreWhatsApp(sessionId, pacName);
+    } else {
+        alert('Debes registrar o guardar la evolución clínica antes de enviar las tareas por WhatsApp.');
+    }
+}
+window.handleModalSendSessionCierre = handleModalSendSessionCierre;
 
 // ==========================================
 // DASHBOARD STATS & EVENTS
@@ -10972,7 +11039,7 @@ async function loadMessageTemplates() {
         if (caok) caok.value = data.msg_cancelacion_ok || "Entendido, *{nombre}*. Hemos registrado la cancelación de tu sesión del *{fecha}* a las *{hora}*.\n\nSi deseas reprogramar en otro momento, no dudes en escribirnos o agendar desde tu portal.";
         if (r) r.value = data.msg_recordatorio || "";
         if (rg) rg.value = data.msg_reagendamiento || "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!";
-        if (ci) ci.value = data.msg_cierre || "";
+        if (ci) ci.value = data.msg_cierre || "Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿\n\n📌 *Tus compromisos y tareas para esta semana:*\n{tareas}\n\nSi deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:\nhttps://www.espacioterapeutico.net/agendar/psic.paulomora";
         if (cum) cum.value = data.msg_cumpleanos || "¡Feliz cumpleaños, *{nombre}*! 🎉🎂\n\nDesde Espacio Terapéutico te deseamos un excelente día lleno de bienestar, paz y alegría. ¡Gracias por confiar en nosotros en tu proceso!";
         if (her) her.value = data.msg_herramientas || "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\nTe recuerdo completar tu *{herramienta}* programada para las *{hora}*. Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n👉 {link}\n\n¡Gracias por tu constancia!";
         if (swReag) swReag.checked = (data.auto_reagendamiento_activo === '1');
