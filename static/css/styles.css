@@ -845,6 +845,22 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--text-muted);
 }
 
+.expedientes-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.exp-btn-action {
+    font-weight: 700;
+    padding: 0.55rem 1.1rem;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* ==========================================
    2. VISTA: TABLAS (Historias Clínicas)
    ========================================== */
@@ -1525,25 +1541,28 @@ h1, h2, h3, h4, h5, h6 {
         padding: 0.3rem 0.6rem;
     }
 
-    /* ── Sub-Nav Tabs: 3 pestañas en 1 sola fila en Móvil ── */
+    /* ── Sub-Nav Tabs: distribución en 1 sola fila en Móvil adaptable a cualquier número de pestañas ── */
     .sub-nav-tabs {
-        display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 0.3rem !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+        gap: 0.35rem !important;
         padding-bottom: 0.4rem;
         border-bottom: 1.5px solid var(--border-color);
         margin-bottom: 0.75rem !important;
     }
     .sub-nav-tabs .btn,
     .sub-nav-tabs button {
-        width: 100% !important;
+        flex: 1 1 0% !important;
+        width: auto !important;
         min-width: 0 !important;
         text-align: center;
         white-space: nowrap !important;
         overflow: hidden;
         text-overflow: ellipsis;
-        padding: 0.4rem 0.2rem !important;
-        font-size: 0.76rem !important;
+        padding: 0.42rem 0.25rem !important;
+        font-size: 0.78rem !important;
         font-weight: 600 !important;
         line-height: 1.2;
         display: inline-flex;
@@ -1551,6 +1570,33 @@ h1, h2, h3, h4, h5, h6 {
         justify-content: center;
         border-radius: var(--radius-sm);
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* ── Botones de acción en Expedientes Clínicos (Móvil en 1 sola fila con separación) ── */
+    .expedientes-action-buttons {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+        gap: 0.3rem !important;
+        margin-top: 0.65rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    .exp-btn-action {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        width: auto !important;
+        padding: 0.45rem 0.2rem !important;
+        font-size: 0.74rem !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: var(--radius-sm) !important;
     }
 
     /* ── View Header: botones en fila scrollable, no ancho completo ── */
