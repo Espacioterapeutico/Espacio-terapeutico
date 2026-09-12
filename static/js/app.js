@@ -5744,8 +5744,10 @@ async function loadDashboardStats() {
             Object.keys(mods).forEach(modName => {
                 const count = mods[modName] || 0;
                 totalMonth += count;
-                const cleanName = modName.replace(/^Horario\s+/i, '');
-                detailParts.push(`${cleanName}: ${count}`);
+                const cleanName = modName.replace(/^Horario\s+/i, '').trim();
+                const shortLabel = cleanName.toLowerCase().startsWith('on') ? 'online' 
+                    : (cleanName.toLowerCase().startsWith('pres') ? 'pres.' : cleanName.toLowerCase());
+                detailParts.push(`${count} ${shortLabel}`);
             });
             
             const totalEl = document.getElementById('stat-month-total');
@@ -5756,7 +5758,7 @@ async function loadDashboardStats() {
             } else {
                 container.innerHTML = `
                     <h3 id="stat-month-total" class="stat-number">${totalMonth}</h3>
-                    <span id="stat-month-modalities-sub" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; line-height: 1.1; margin-top: 0.15rem; white-space: nowrap;">${detailParts.join(' · ') || '0 citas'}</span>
+                    <span id="stat-month-modalities-sub" style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; line-height: 1.1; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${detailParts.join(' · ') || '0 citas'}</span>
                 `;
             }
         }

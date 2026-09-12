@@ -679,6 +679,8 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (min-width: 992px) {
@@ -696,6 +698,8 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     align-items: center;
     gap: 1.25rem;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .stat-icon-wrapper {
@@ -1368,9 +1372,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================
-   RESPONSIVE: MOBILE (max 640px)
+   RESPONSIVE: MOBILE (max 768px)
    ============================================ */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .form-group.col-4,
     .form-group.col-6,
     .form-group.col-8 {
@@ -1440,49 +1444,71 @@ h1, h2, h3, h4, h5, h6 {
         gap: 0.6rem;
     }
     
-    /* Stats grid: 2 columnas en mobile con espaciado optimizado */
+    /* Stats grid: 2 columnas en mobile estrictamente contenidas */
     .stats-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-        margin-bottom: 0.75rem;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        gap: 0.45rem !important;
+        margin-bottom: 0.75rem !important;
     }
 
     /* Cards de estadísticas compactas en mobile */
     .stat-card {
-        padding: 0.55rem 0.65rem;
-        gap: 0.5rem;
-        align-items: center;
-        min-height: 60px;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0.5rem 0.55rem !important;
+        gap: 0.45rem !important;
+        align-items: center !important;
+        min-height: 56px !important;
+        overflow: hidden !important;
     }
 
     .stat-icon-wrapper {
-        width: 32px;
-        height: 32px;
-        flex-shrink: 0;
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        border-radius: 6px !important;
+        flex-shrink: 0 !important;
     }
 
     .stat-icon-wrapper svg {
-        width: 1rem;
-        height: 1rem;
+        width: 0.95rem !important;
+        height: 0.95rem !important;
     }
 
     .stat-content {
-        min-width: 0;
-        overflow: hidden;
+        min-width: 0 !important;
+        width: 100% !important;
+        flex: 1 1 0% !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
     }
 
     .stat-label {
-        font-size: 0.68rem;
-        line-height: 1.15;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 0.68rem !important;
+        line-height: 1.15 !important;
+        color: var(--text-muted) !important;
+        font-weight: 600 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
 
     .stat-number {
-        font-size: 1.25rem;
-        line-height: 1.1;
-        margin: 0.1rem 0 0 0;
+        font-size: 1.25rem !important;
+        line-height: 1.1 !important;
+        margin: 0.1rem 0 0 0 !important;
     }
 
     /* Botones de acción en fila con scroll horizontal */
