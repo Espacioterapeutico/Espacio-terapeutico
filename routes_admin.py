@@ -128,10 +128,16 @@ def login():
 
             # Auto-vincular token FCM del dispositivo al usuario recién autenticado
             fcm_tok = (data.get('fcm_token') or '').strip()
+            dev_id = (data.get('device_id') or '').strip()
             if fcm_tok and len(fcm_tok) > 10:
                 try:
                     cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (fcm_tok,))
-                    cursor.execute("INSERT INTO fcm_subscriptions (user_id, patient_id, token) VALUES (?, NULL, ?)", (user['id'], fcm_tok))
+                    if dev_id:
+                        cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ? AND device_id = ?", (user['id'], dev_id))
+                    cursor.execute("""
+                        INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                        VALUES (?, NULL, ?, ?, ?, ?)
+                    """, (user['id'], fcm_tok, dev_id or None, (request.headers.get('User-Agent') or '')[:150], datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     db.commit()
                 except Exception as _ex_fcm:
                     print("Error auto-vinculando FCM en login:", _ex_fcm)
@@ -2531,35 +2537,46 @@ def subscribe_firebase():
     if not token:
         return jsonify({'error': 'Token FCM requerido.'}), 400
 
+    device_id = (data.get('device_id') or '').strip()
+    dispositivo_info = (data.get('dispositivo_info') or request.headers.get('User-Agent') or '')[:150]
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     user_id = session.get('user_id')
     patient_id = session.get('patient_id')
 
     db = get_db()
     cursor = db.cursor()
 
-    # 1. Eliminar únicamente cualquier mapeo previo de este MISMO token (ej: si cambió de cuenta en el mismo dispositivo)
+    # 1. Eliminar cualquier registro que ya tuviera este MISMO token exacto
     cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
 
+    # 2. Si se provee device_id, eliminar tokens viejos en ESTE MISMO equipo para este usuario.
+    # Esto evita duplicar notificaciones si el mismo teléfono tiene Chrome y la PWA instalada abierta al tiempo.
+    if device_id:
+        if user_id:
+            cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ? AND device_id = ?", (user_id, device_id))
+        elif patient_id:
+            cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ? AND device_id = ?", (patient_id, device_id))
+
     if user_id:
-        # Permitir múltiples dispositivos para el mismo usuario (PC, laptop, celular)
         cursor.execute("""
-            INSERT INTO fcm_subscriptions (user_id, patient_id, token)
-            VALUES (?, NULL, ?)
-        """, (user_id, token))
+            INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+            VALUES (?, NULL, ?, ?, ?, ?)
+        """, (user_id, token, device_id or None, dispositivo_info, now_str))
     elif patient_id:
         cursor.execute("""
-            INSERT INTO fcm_subscriptions (user_id, patient_id, token)
-            VALUES (NULL, ?, ?)
-        """, (patient_id, token))
+            INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+            VALUES (NULL, ?, ?, ?, ?, ?)
+        """, (patient_id, token, device_id or None, dispositivo_info, now_str))
     else:
-        # Sin sesión activa: guardar como anónimo (se actualizará al hacer login)
+        # Sin sesión activa: guardar como anónimo (se vinculará al hacer login)
         cursor.execute("""
-            INSERT INTO fcm_subscriptions (user_id, patient_id, token)
-            VALUES (NULL, NULL, ?)
-        """, (token,))
+            INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+            VALUES (NULL, NULL, ?, ?, ?, ?)
+        """, (token, device_id or None, dispositivo_info, now_str))
 
     db.commit()
-    return jsonify({'success': 'Suscrito a notificaciones FCM con éxito.'})
+    return jsonify({'success': 'Suscrito a notificaciones FCM con éxito.', 'device_id': device_id})
 
 
 

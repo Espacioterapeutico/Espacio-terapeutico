@@ -681,10 +681,16 @@ def patient_login():
 
     # Auto-vincular token FCM del dispositivo al paciente recién autenticado
     fcm_tok = (data.get('fcm_token') or '').strip()
+    dev_id = (data.get('device_id') or '').strip()
     if fcm_tok and len(fcm_tok) > 10:
         try:
             cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (fcm_tok,))
-            cursor.execute("INSERT INTO fcm_subscriptions (user_id, patient_id, token) VALUES (NULL, ?, ?)", (patient['id'], fcm_tok))
+            if dev_id:
+                cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ? AND device_id = ?", (patient['id'], dev_id))
+            cursor.execute("""
+                INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                VALUES (NULL, ?, ?, ?, ?, ?)
+            """, (patient['id'], fcm_tok, dev_id or None, (request.headers.get('User-Agent') or '')[:150], datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             db.commit()
         except Exception as _ex_fcm:
             print("Error auto-vinculando FCM en login paciente:", _ex_fcm)

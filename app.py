@@ -514,17 +514,21 @@ def send_vapid_notification(user_id=None, patient_id=None, title="Mi Consultorio
         print("Error general en send_vapid_notification:", err)
 
 def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
-    # 1. FCM (Firebase Cloud Messaging)
+    fcm_success = False
+    # 1. FCM (Firebase Cloud Messaging) - Principal y multidispositivo
     try:
-        send_fcm_notification(user_id=user_id, patient_id=patient_id, title=title, body=body, url=url)
+        res = send_fcm_notification(user_id=user_id, patient_id=patient_id, title=title, body=body, url=url)
+        if res and res.get('success') and res.get('tokens_count', 0) > 0:
+            fcm_success = True
     except Exception as fcm_err:
         print("Error al disparar FCM en send_webpush_notification:", fcm_err)
 
-    # 2. VAPID Web Push
-    try:
-        send_vapid_notification(user_id=user_id, patient_id=patient_id, title=title, body=body, url=url)
-    except Exception as vapid_err:
-        print("Error al disparar VAPID en send_webpush_notification:", vapid_err)
+    # 2. VAPID Web Push - Respaldo SOLO si el usuario no tiene dispositivos FCM activos (evita doble notificación)
+    if not fcm_success:
+        try:
+            send_vapid_notification(user_id=user_id, patient_id=patient_id, title=title, body=body, url=url)
+        except Exception as vapid_err:
+            print("Error al disparar VAPID en send_webpush_notification:", vapid_err)
 
 def clean_digits_only(s):
     if not s:
@@ -799,6 +803,20 @@ def init_db():
             token TEXT UNIQUE
         )
     """)
+    db.commit()
+
+    # Migración de columnas en fcm_subscriptions para soporte de dispositivo único y multidispositivo
+    cursor.execute("PRAGMA table_info(fcm_subscriptions)")
+    cols_fcm = [row[1] for row in cursor.fetchall()]
+    if 'device_id' not in cols_fcm:
+        try: cursor.execute("ALTER TABLE fcm_subscriptions ADD COLUMN device_id TEXT")
+        except: pass
+    if 'dispositivo_info' not in cols_fcm:
+        try: cursor.execute("ALTER TABLE fcm_subscriptions ADD COLUMN dispositivo_info TEXT")
+        except: pass
+    if 'actualizado_en' not in cols_fcm:
+        try: cursor.execute("ALTER TABLE fcm_subscriptions ADD COLUMN actualizado_en TEXT")
+        except: pass
     db.commit()
         
     # Migración de columnas en pacientes
@@ -3391,19 +3409,9 @@ try {{
   firebase.initializeApp({config_dict_str});
   const messaging = firebase.messaging();
   messaging.onBackgroundMessage((payload) => {{
-    console.log('[FCM] Mensaje en segundo plano (FCM SDK):', payload);
-    const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'Espacio Terapéutico';
-    const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || 'Tienes una nueva notificación.';
-    const url = (payload.data && payload.data.url) || (payload.data && payload.data.link) || '/';
-    
-    self.registration.showNotification(title, {{
-      body: body,
-      icon: '/static/logo.png',
-      badge: '/static/badge.png',
-      sound: '/static/notification.wav',
-      vibrate: [200, 100, 200, 100, 200],
-      data: {{ url: url }}
-    }});
+    // Registrado para telemetría. La visualización de la alerta se delega exclusivamente
+    // al listener 'push' nativo de sw.js para garantizar tag determinista y evitar notificaciones duplicadas.
+    console.log('[FCM] Mensaje en segundo plano recibido por SDK:', payload);
   }});
 }} catch(err) {{
   console.error("Fallo al inicializar Firebase SDK en el SW:", err);

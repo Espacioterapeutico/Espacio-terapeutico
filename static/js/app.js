@@ -1532,12 +1532,13 @@ async function handleAuthSubmit(e) {
             let networkError = false;
 
             const cachedFcmToken = localStorage.getItem('et_fcm_token') || window.__current_fcm_token || '';
+            const currentDeviceId = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : (localStorage.getItem('et_device_id') || '');
 
             try {
                 const resAdmin = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, fcm_token: cachedFcmToken })
+                    body: JSON.stringify({ username, password, fcm_token: cachedFcmToken, device_id: currentDeviceId })
                 });
                 try { dataAdmin = await resAdmin.json(); } catch(exJ) {}
                 if (resAdmin.ok && dataAdmin) {
@@ -1556,7 +1557,7 @@ async function handleAuthSubmit(e) {
                 const resPatient = await fetch('/api/patient/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, fcm_token: cachedFcmToken })
+                    body: JSON.stringify({ username, password, fcm_token: cachedFcmToken, device_id: currentDeviceId })
                 });
                 try { dataPatient = await resPatient.json(); } catch(exP) {}
                 
@@ -11926,6 +11927,16 @@ function copyToClipboard(inputId) {
     }
 }
 
+function getOrCreateDeviceId() {
+    let devId = localStorage.getItem('et_device_id');
+    if (!devId) {
+        devId = 'dev_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now().toString(36);
+        localStorage.setItem('et_device_id', devId);
+    }
+    return devId;
+}
+window.getOrCreateDeviceId = getOrCreateDeviceId;
+
 async function initFirebaseMessagingFlow(registration) {
     try {
         const res = await fetch('/api/firebase/config');
@@ -12006,11 +12017,12 @@ async function initFirebaseMessagingFlow(registration) {
             localStorage.setItem('et_fcm_token', token);
             window.__current_fcm_token = token;
             window.__fcm_status = { status: 'registered', token: token };
-            // Enviar token al backend
+            const devId = getOrCreateDeviceId();
+            // Enviar token y device_id al backend
             await fetch('/api/firebase/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: token })
+                body: JSON.stringify({ token: token, device_id: devId })
             });
             console.log("Suscripción FCM registrada en BD.");
             if (typeof updateFcmDiagnosticUI === 'function') updateFcmDiagnosticUI();
