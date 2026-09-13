@@ -124,6 +124,166 @@ def ensure_tests_tables(db):
     ensure_new_latin_tests_definitions(db)
     ensure_new_sexology_and_cognitive_tests_definitions(db)
     ensure_violence_and_psychotic_tests_definitions(db)
+    sync_existing_completed_tests_to_evoluciones(db)
+
+def create_session_evolution_from_test(db, assignment_id):
+    """
+    Crea o actualiza automáticamente una nota de evolución clínica en la tabla `sesiones`
+    a partir de una evaluación psicológica completada.
+    """
+    try:
+        try:
+            from app import encrypt_clinical_text, sync_patient_to_firebase
+        except Exception:
+            encrypt_clinical_text = lambda t: t or ""
+            sync_patient_to_firebase = lambda pid: None
+
+        cursor = db.cursor()
+
+        # Asegurar columna test_asignacion_id en sesiones
+        cursor.execute("PRAGMA table_info(sesiones)")
+        s_cols = [r[1] for r in cursor.fetchall()]
+        if s_cols and 'test_asignacion_id' not in s_cols:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN test_asignacion_id INTEGER")
+            db.commit()
+
+        cursor.execute("""
+            SELECT a.*, p.id as patient_id, p.nombres, p.apellidos,
+                   COALESCE(td.nombre, a.test_code) as test_nombre,
+                   COALESCE(td.siglas, a.test_code) as test_siglas
+            FROM test_asignaciones a
+            JOIN pacientes p ON a.patient_id = p.id
+            LEFT JOIN tests_definiciones td ON a.test_code = td.code
+            WHERE a.id = ?
+        """, (assignment_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        data = dict(row)
+        paciente_id = data['patient_id']
+        test_nombre = data.get('test_nombre') or data.get('test_code')
+        test_siglas = data.get('test_siglas') or data.get('test_code')
+        puntaje = data.get('puntaje_total')
+        clasificacion = data.get('clasificacion_resultado') or 'Completado'
+        interpretacion = data.get('interpretacion_clinica') or ''
+        fecha_comp = data.get('fecha_completado') or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        fecha = str(fecha_comp)[:10]
+
+        # Desglose de subescalas si existen
+        subescalas_str = ""
+        if data.get('subescalas_json'):
+            try:
+                sub = json.loads(data['subescalas_json']) if isinstance(data['subescalas_json'], str) else data['subescalas_json']
+                if isinstance(sub, dict) and sub:
+                    sub_lines = []
+                    for k, v in sub.items():
+                        sub_lines.append(f"• {k}: {v}")
+                    if sub_lines:
+                        subescalas_str = "\n\nDimensiones y Subescalas:\n" + "\n".join(sub_lines)
+            except Exception:
+                pass
+
+        resumen_text = (
+            f"🧪 EVALUACIÓN PSICOMÉTRICA: {test_nombre} ({test_siglas})\n\n"
+            f"• Modalidad: {data.get('modo_aplicacion', 'Online')}\n"
+            f"• Puntuación Global: {puntaje if puntaje is not None else 'N/A'} pts\n"
+            f"• Clasificación: {clasificacion}\n\n"
+            f"Interpretación Clínica:\n{interpretacion}"
+            f"{subescalas_str}"
+        )
+
+        test_aplicados_text = f"{test_nombre} ({test_siglas}) | Puntuación: {puntaje if puntaje is not None else 'N/A'} pts | Nivel: {clasificacion}"
+        diagnostico_text = f"{test_siglas}: {clasificacion}"
+        resumen_paciente_text = f"Completaste la prueba '{test_nombre}'. Tu especialista revisará e integrará estos resultados en tu proceso terapéutico."
+        anotaciones_text = f"Revisar y profundizar en sesión clínica los resultados e índices obtenidos en {test_siglas}."
+        compromiso_text = f"Analizar e integrar el perfil psicométrico de {test_siglas} en la formulación clínica del caso."
+
+        # Verificar si ya existe una evolución vinculada a esta asignación
+        cursor.execute("SELECT id FROM sesiones WHERE test_asignacion_id = ?", (assignment_id,))
+        existing_session = cursor.fetchone()
+
+        if existing_session:
+            session_id = existing_session['id']
+            cursor.execute("""
+                UPDATE sesiones
+                SET fecha = ?,
+                    modalidad = 'Evaluación Psicométrica',
+                    estado = 'Realizada',
+                    resumen = ?,
+                    resumen_paciente = ?,
+                    diagnostico = ?,
+                    test_aplicados = ?,
+                    anotaciones_proxima = ?,
+                    compromisos_psicologo = ?
+                WHERE id = ?
+            """, (
+                fecha,
+                encrypt_clinical_text(resumen_text),
+                encrypt_clinical_text(resumen_paciente_text),
+                encrypt_clinical_text(diagnostico_text),
+                encrypt_clinical_text(test_aplicados_text),
+                encrypt_clinical_text(anotaciones_text),
+                encrypt_clinical_text(compromiso_text),
+                session_id
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO sesiones (
+                    paciente_id, agenda_id, test_asignacion_id, fecha, modalidad, estado,
+                    resumen, resumen_paciente, tareas_asignadas, recursos_entregados,
+                    anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto
+                ) VALUES (?, NULL, ?, ?, 'Evaluación Psicométrica', 'Realizada', ?, ?, '', '', ?, ?, ?, ?, '')
+            """, (
+                paciente_id,
+                assignment_id,
+                fecha,
+                encrypt_clinical_text(resumen_text),
+                encrypt_clinical_text(resumen_paciente_text),
+                encrypt_clinical_text(anotaciones_text),
+                encrypt_clinical_text(compromiso_text),
+                encrypt_clinical_text(diagnostico_text),
+                encrypt_clinical_text(test_aplicados_text)
+            ))
+            session_id = cursor.lastrowid
+
+        db.commit()
+
+        try:
+            sync_patient_to_firebase(paciente_id)
+        except Exception:
+            pass
+
+        return session_id
+    except Exception as err:
+        import traceback
+        print("Error al crear nota de evolución desde test:", traceback.format_exc())
+        return None
+
+def sync_existing_completed_tests_to_evoluciones(db):
+    """Sincroniza las evaluaciones completadas existentes que aún no tengan nota en sesiones."""
+    try:
+        cursor = db.cursor()
+        cursor.execute("PRAGMA table_info(sesiones)")
+        cols = [r[1] for r in cursor.fetchall()]
+        if not cols:
+            return
+        if 'test_asignacion_id' not in cols:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN test_asignacion_id INTEGER")
+            db.commit()
+
+        cursor.execute("""
+            SELECT id FROM test_asignaciones
+            WHERE estado = 'completado'
+              AND id NOT IN (SELECT test_asignacion_id FROM sesiones WHERE test_asignacion_id IS NOT NULL)
+        """)
+        missing = [r[0] for r in cursor.fetchall()]
+        for asg_id in missing:
+            create_session_evolution_from_test(db, asg_id)
+        if missing:
+            db.commit()
+    except Exception as e:
+        print("Aviso al sincronizar tests previos a evoluciones:", e)
 
 def ensure_zung_sds_definition(db):
     cursor = db.cursor()
@@ -2200,6 +2360,9 @@ def api_post_public_evaluacion(token):
             'tests-psicologicos'
         ))
 
+        # Crear automáticamente una nota de evolución clínica en `sesiones`
+        create_session_evolution_from_test(db, assignment['id'])
+
         db.commit()
 
         try:
@@ -2360,6 +2523,7 @@ def api_eliminar_test_asignacion(assignment_id):
     cursor = db.cursor()
 
     try:
+        cursor.execute("DELETE FROM sesiones WHERE test_asignacion_id = ?", (assignment_id,))
         cursor.execute("DELETE FROM test_asignaciones WHERE id = ? AND user_id = ?", (assignment_id, user_id))
         db.commit()
         return jsonify({'success': 'Asignación eliminada correctamente.'})
@@ -2444,6 +2608,9 @@ def api_guardar_resultado_manual_test(assignment_id):
             notas,
             assignment_id
         ))
+
+        # Crear o actualizar nota de evolución clínica en `sesiones`
+        create_session_evolution_from_test(db, assignment_id)
 
         db.commit()
         return jsonify({'success': 'Resultado manual registrado e incorporado al historial con éxito.'})

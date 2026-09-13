@@ -5264,7 +5264,7 @@ function applySessionsFilters(resetPage = false) {
                 <div class="timeline-header">
                     <div class="timeline-title-row">
                         ${pacName}
-                        <span class="badge badge-info">${s.modalidad}</span>
+                        ${(s.modalidad === 'Evaluación Psicométrica' || s.test_asignacion_id) ? '<span class="badge" style="background: #702e5e; color: white; font-weight: 700;">🧪 Evaluación Psicométrica</span>' : `<span class="badge badge-info">${s.modalidad}</span>`}
                         <span class="badge ${statusClass}">${s.estado || 'Realizada'}</span>
                     </div>
                     <span class="timeline-date">${s.fecha}</span>
@@ -5306,6 +5306,11 @@ function applySessionsFilters(resetPage = false) {
                     ` : ''}
                 </div>
                 <div class="timeline-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    ${s.test_asignacion_id ? `
+                        <button type="button" class="btn btn-sm" style="background: #fdf4ff; color: #702e5e; border: 1.5px solid #f0abfc; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" onclick="window.open('/api/tests/asignacion/${s.test_asignacion_id}/export/pdf', '_blank')" title="Ver e imprimir Informe de Evaluación en PDF">
+                            📄 Ver Informe PDF
+                        </button>
+                    ` : ''}
                     <button class="btn btn-sm" style="background: #25D366; color: white; border: none; padding: 0.35rem 0.7rem; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;" onclick="sendSessionCierreWhatsApp(${s.id}, '${escapeJsQuotes(s.nombres || '')}')" title="Enviar Nota Post-sesión con tareas al consultante por WhatsApp">
                         <i class="fab fa-whatsapp"></i> Enviar Tareas (WhatsApp)
                     </button>
