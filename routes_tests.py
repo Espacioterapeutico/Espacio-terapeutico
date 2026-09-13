@@ -118,6 +118,7 @@ def ensure_tests_tables(db):
     ensure_hamilton_d_definition(db)
     ensure_idare_stai_definition(db)
     ensure_scl90r_definition(db)
+    ensure_bsi_definition(db)
     ensure_beck_bhs_definition(db)
     ensure_mmpi2_definition(db)
     ensure_new_latin_tests_definitions(db)
@@ -571,14 +572,143 @@ def process_idare_stai_scoring(answers):
 
     return float(total_score), subscales, classification, interpretation
 
+# ==============================================================================
+# BAREMOS E INTERPRETACIÓN SCL-90-R (CASULLO & PÉREZ, UBA/CONICET)
+# ==============================================================================
+SCL90_CASULLO_NORMS = {
+    'adol_fem': {
+        'T': [30, 35, 40, 45, 50, 55, 60, 63, 65, 70, 75, 80],
+        'SOM': [0.00, 0.08, 0.25, 0.42, 0.75, 1.18, 1.58, 1.89, 2.08, 2.84, 3.34, 3.42],
+        'OBS': [0.10, 0.20, 0.50, 0.80, 1.20, 1.66, 2.10, 2.40, 2.60, 3.20, 3.30, 3.30],
+        'SI':  [0.11, 0.22, 0.44, 0.78, 1.11, 1.56, 2.00, 2.33, 2.44, 3.11, 3.57, 3.78],
+        'DEP': [0.08, 0.15, 0.38, 0.70, 1.00, 1.54, 1.92, 2.31, 2.46, 3.23, 3.65, 5.25],
+        'ANS': [0.00, 0.10, 0.30, 0.50, 0.90, 1.40, 1.90, 2.20, 2.40, 3.15, 4.02, 4.38],
+        'HOS': [0.00, 0.17, 0.29, 0.50, 0.83, 1.33, 2.00, 2.50, 2.81, 3.55, 4.00, 4.00],
+        'FOB': [0.00, 0.00, 0.00, 0.14, 0.29, 0.57, 1.00, 1.29, 1.57, 2.57, 2.89, 3.43],
+        'PAR': [0.00, 0.00, 0.17, 0.50, 0.83, 1.50, 2.05, 2.50, 2.67, 3.26, 3.35, 3.67],
+        'PSIC': [0.00, 0.00, 0.10, 0.20, 0.60, 0.90, 1.40, 1.60, 1.80, 2.50, 3.01, 3.20],
+        'IGS': [0.07, 0.19, 0.37, 0.56, 0.84, 1.17, 1.53, 1.71, 1.86, 2.33, 2.78, 3.12],
+        'TSP': [7.0, 13.0, 22.0, 32.13, 43.0, 52.0, 63.0, 69.7, 72.39, 80.62, 88.06, 89.0],
+        'IMSP': [1.00, 1.10, 1.30, 1.50, 1.76, 2.02, 2.40, 2.54, 2.66, 3.10, 3.36, 3.37]
+    },
+    'adol_masc': {
+        'T': [30, 35, 40, 45, 50, 55, 60, 63, 65, 70, 75, 80],
+        'SOM': [0.00, 0.00, 0.02, 0.17, 0.33, 0.58, 0.92, 1.08, 1.31, 1.75, 2.23, 3.08],
+        'OBS': [0.00, 0.10, 0.30, 0.50, 0.90, 1.30, 1.80, 2.01, 2.20, 2.72, 3.48, 3.89],
+        'SI':  [0.00, 0.11, 0.22, 0.36, 0.67, 1.00, 1.33, 1.56, 1.67, 2.24, 2.84, 3.00],
+        'DEP': [0.00, 0.00, 0.15, 0.35, 0.54, 0.77, 1.23, 1.46, 1.62, 2.11, 2.83, 3.00],
+        'ANS': [0.00, 0.00, 0.10, 0.20, 0.40, 0.70, 1.00, 1.31, 1.43, 2.07, 2.89, 3.70],
+        'HOS': [0.00, 0.00, 0.17, 0.33, 0.67, 1.17, 1.67, 2.02, 2.33, 3.21, 3.62, 3.67],
+        'FOB': [0.00, 0.00, 0.00, 0.00, 0.14, 0.29, 0.57, 0.71, 0.86, 1.32, 3.37, 4.00],
+        'PAR': [0.00, 0.00, 0.00, 0.33, 0.67, 1.00, 1.50, 1.83, 2.00, 2.71, 3.49, 4.83],
+        'PSIC': [0.00, 0.00, 0.00, 0.10, 0.30, 0.50, 0.80, 1.01, 1.28, 1.92, 2.43, 2.50],
+        'IGS': [0.06, 0.12, 0.19, 0.33, 0.52, 0.71, 0.97, 1.10, 1.27, 1.60, 2.26, 2.39],
+        'TSP': [3.56, 8.0, 13.0, 20.0, 30.0, 39.0, 47.0, 52.1, 56.0, 71.0, 74.53, 76.0],
+        'IMSP': [0.90, 1.00, 1.17, 1.33, 1.54, 1.80, 2.14, 2.29, 2.47, 2.81, 3.72, 4.00]
+    },
+    'adult_fem': {
+        'T': [30, 35, 40, 45, 50, 55, 60, 63, 65, 70, 75, 80],
+        'SOM': [0.00, 0.17, 0.25, 0.42, 0.75, 1.00, 1.49, 1.83, 2.00, 2.36, 2.87, 3.00],
+        'OBS': [0.00, 0.20, 0.40, 0.70, 1.00, 1.40, 1.80, 2.10, 2.20, 2.90, 3.41, 3.50],
+        'SI':  [0.00, 0.11, 0.22, 0.44, 0.67, 1.11, 1.44, 1.67, 1.89, 2.60, 3.00, 3.00],
+        'DEP': [0.05, 0.23, 0.38, 0.62, 0.85, 1.23, 1.77, 2.00, 2.23, 2.80, 3.31, 3.69],
+        'ANS': [0.00, 0.20, 0.30, 0.60, 0.80, 1.20, 1.60, 1.80, 2.13, 2.50, 3.04, 3.10],
+        'HOS': [0.00, 0.00, 0.17, 0.33, 0.67, 1.00, 1.50, 1.67, 1.83, 2.56, 3.17, 3.33],
+        'FOB': [0.00, 0.00, 0.00, 0.00, 0.29, 0.57, 0.86, 1.14, 1.29, 2.00, 2.63, 3.14],
+        'PAR': [0.00, 0.00, 0.17, 0.33, 0.67, 1.17, 1.67, 2.00, 2.17, 3.00, 3.78, 4.00],
+        'PSIC': [0.00, 0.00, 0.10, 0.20, 0.40, 0.70, 1.00, 1.10, 1.30, 1.97, 2.57, 2.70],
+        'IGS': [0.15, 0.28, 0.37, 0.52, 0.73, 1.04, 1.36, 1.62, 1.74, 2.18, 2.46, 2.54],
+        'TSP': [9.0, 15.0, 21.12, 29.0, 37.0, 47.0, 57.0, 62.0, 66.0, 74.0, 77.71, 82.0],
+        'IMSP': [1.12, 1.25, 1.43, 1.59, 1.85, 2.12, 2.41, 2.53, 2.67, 2.99, 3.15, 3.27]
+    },
+    'adult_masc': {
+        'T': [30, 35, 40, 45, 50, 55, 60, 63, 65, 70, 75, 80],
+        'SOM': [0.00, 0.00, 0.08, 0.25, 0.42, 0.75, 1.08, 1.25, 1.42, 1.75, 2.31, 2.50],
+        'OBS': [0.00, 0.20, 0.30, 0.50, 0.80, 1.30, 1.70, 1.90, 2.20, 2.60, 3.40, 3.60],
+        'SI':  [0.00, 0.00, 0.11, 0.33, 0.56, 0.89, 1.33, 1.56, 1.67, 2.38, 3.00, 3.22],
+        'DEP': [0.00, 0.08, 0.23, 0.38, 0.69, 1.02, 1.38, 1.62, 1.77, 2.42, 2.88, 3.15],
+        'ANS': [0.00, 0.10, 0.20, 0.40, 0.60, 0.90, 1.30, 1.60, 1.70, 2.28, 2.67, 2.70],
+        'HOS': [0.00, 0.00, 0.17, 0.33, 0.67, 1.00, 1.33, 1.67, 1.83, 2.57, 3.17, 3.83],
+        'FOB': [0.00, 0.00, 0.00, 0.00, 0.14, 0.29, 0.57, 0.86, 1.00, 1.43, 1.88, 2.71],
+        'PAR': [0.00, 0.00, 0.17, 0.33, 0.67, 1.17, 1.50, 1.83, 2.07, 2.67, 2.95, 3.17],
+        'PSIC': [0.00, 0.00, 0.00, 0.20, 0.30, 0.50, 0.90, 1.20, 1.40, 1.74, 2.17, 2.30],
+        'IGS': [0.11, 0.17, 0.29, 0.41, 0.61, 0.88, 1.10, 1.32, 1.49, 1.84, 2.17, 2.22],
+        'TSP': [5.6, 10.0, 16.0, 23.8, 32.0, 41.2, 52.0, 57.0, 61.0, 75.0, 79.72, 85.0],
+        'IMSP': [1.05, 1.22, 1.36, 1.56, 1.75, 2.00, 2.25, 2.40, 2.53, 2.91, 3.30, 3.65]
+    }
+}
+
+def interpolate_casullo_t(raw_val, t_list, val_list):
+    """Interpola puntuación T normalizada a partir de los baremos UBA-CONICET."""
+    try:
+        raw_val = float(raw_val)
+    except (ValueError, TypeError):
+        return 50
+    if raw_val <= val_list[0]:
+        return t_list[0]
+    if raw_val >= val_list[-1]:
+        return t_list[-1]
+    for i in range(len(val_list) - 1):
+        v1, v2 = val_list[i], val_list[i+1]
+        t1, t2 = t_list[i], t_list[i+1]
+        if v1 <= raw_val <= v2:
+            if v2 == v1:
+                return t1
+            t = t1 + (raw_val - v1) / float(v2 - v1) * (t2 - t1)
+            return int(round(t))
+    return 50
+
+# ==============================================================================
+# BAREMOS BSI (DEROGATIS 1993 / RUIPÉREZ ET AL. 2001)
+# ==============================================================================
+BSI_DEROGATIS_NORMS = {
+    'adult_fem': {
+        'SOM': (0.35, 0.48), 'OBS': (0.55, 0.58), 'SI': (0.42, 0.54),
+        'DEP': (0.41, 0.55), 'ANS': (0.43, 0.53), 'HOS': (0.38, 0.48),
+        'FOB': (0.23, 0.42), 'PAR': (0.45, 0.56), 'PSI': (0.21, 0.38),
+        'GSI': (0.35, 0.34), 'PST': (14.5, 11.2), 'PSDI': (1.23, 0.38)
+    },
+    'adult_masc': {
+        'SOM': (0.26, 0.40), 'OBS': (0.47, 0.55), 'SI': (0.33, 0.49),
+        'DEP': (0.31, 0.48), 'ANS': (0.30, 0.43), 'HOS': (0.37, 0.51),
+        'FOB': (0.13, 0.32), 'PAR': (0.40, 0.52), 'PSI': (0.17, 0.35),
+        'GSI': (0.28, 0.31), 'PST': (12.1, 10.5), 'PSDI': (1.17, 0.35)
+    },
+    'adol_fem': {
+        'SOM': (0.52, 0.55), 'OBS': (0.92, 0.72), 'SI': (0.75, 0.68),
+        'DEP': (0.73, 0.69), 'ANS': (0.68, 0.64), 'HOS': (0.78, 0.68),
+        'FOB': (0.35, 0.52), 'PAR': (0.75, 0.67), 'PSI': (0.42, 0.50),
+        'GSI': (0.64, 0.48), 'PST': (20.8, 12.5), 'PSDI': (1.52, 0.45)
+    },
+    'adol_masc': {
+        'SOM': (0.38, 0.48), 'OBS': (0.78, 0.65), 'SI': (0.58, 0.61),
+        'DEP': (0.52, 0.58), 'ANS': (0.49, 0.53), 'HOS': (0.68, 0.63),
+        'FOB': (0.24, 0.42), 'PAR': (0.65, 0.62), 'PSI': (0.35, 0.45),
+        'GSI': (0.50, 0.42), 'PST': (17.2, 11.8), 'PSDI': (1.44, 0.42)
+    }
+}
+
+def calc_bsi_t_score(raw_val, mean_val, sd_val):
+    """Calcula puntuación T para BSI a partir de la media y desvío de la muestra."""
+    try:
+        raw_val = float(raw_val)
+        sd_val = float(sd_val)
+        mean_val = float(mean_val)
+    except (ValueError, TypeError):
+        return 50
+    if sd_val <= 0:
+        return 50
+    t = 50.0 + 10.0 * ((raw_val - mean_val) / sd_val)
+    return int(round(max(30, min(80, t))))
+
 def ensure_scl90r_definition(db):
     cursor = db.cursor()
     escala = [
-        {"val": 0, "text": "Nada en absoluto"},
-        {"val": 1, "text": "Un poco"},
-        {"val": 2, "text": "Moderadamente"},
-        {"val": 3, "text": "Bastante"},
-        {"val": 4, "text": "Mucho / Extremadamente"}
+        {"val": 0, "text": "0 - Nada en absoluto"},
+        {"val": 1, "text": "1 - Muy poco / Un poco"},
+        {"val": 2, "text": "2 - Moderadamente"},
+        {"val": 3, "text": "3 - Bastante"},
+        {"val": 4, "text": "4 - Mucho / Extremadamente"}
     ]
     
     textos = [
@@ -587,16 +717,16 @@ def ensure_scl90r_definition(db):
         "Sentir que otras personas pueden controlar sus pensamientos", "Sentir que otros son culpables de la mayoría de sus problemas",
         "Dificultad para recordar las cosas", "Preocupación por el desaliño o descuido", "Sentirse fácilmente irritado o enojado",
         "Dolores en el pecho o en el corazón", "Temor a las plazas o lugares abiertos", "Sensación de falta de energía o lentitud",
-        "Pensamientos de acabar con su vida", "Oír voces que otras personas no oyen", "Temblores",
+        "Pensamientos de acabar con su vida", "Oír voces que otras personas no oyen", "Temblores en el cuerpo",
         "Sentir que no se puede confiar en la mayoría de la gente", "Poco apetito", "Llorar fácilmente",
-        "Sentirse tímido o vergonzoso con personas del sexo opuesto", "Sentación de estar atrapado o atrapada",
-        "Repentina asustadizo sin razón aparente", "Arrebatos de ira que no podía controlar", "Temor a salir solo o sola de casa",
+        "Sentirse tímido o vergonzoso con personas del sexo opuesto", "Sensación de estar atrapado o atrapada",
+        "Repentino asustadizo sin razón aparente", "Arrebatos de ira que no podía controlar", "Temor a salir solo o sola de casa",
         "Culparse a sí mismo por las cosas", "Dolores en la parte baja de la espalda", "Sentirse bloqueado o con dificultad para hacer las cosas",
         "Sentirse solo o sola", "Sentirse triste o melancólico", "Preocuparse demasiado por las cosas", "Ningún interés por las cosas",
         "Sentimiento de temor o miedo", "Sentimientos heridos con facilidad", "Que los demás sepan lo que usted piensa",
         "Sentir que las personas no son comprensivas o amigables", "Sentirse inferior a los demás",
         "Tener que hacer las cosas muy despacio para asegurar la perfección", "Palpitaciones o taquicardia",
-        "Náuseas o malestar en el estómago", "Sentirse inferior a los demás en comparación", "Dolores musculares",
+        "Náuseas o malestar en el estómago", "Sentirse inferior a los demás en comparación", "Dolores o calambres musculares",
         "Sentir que le observan o hablan de usted", "Dificultad para dormirse", "Tener que comprobar una y otra vez lo que hace",
         "Dificultad para tomar decisiones", "Temor a viajar en autobuses, metros o trenes", "Sensación de falta de aire o ahogo",
         "Accesos de calor o frío", "Evitar ciertas cosas, lugares o actividades por temor", "Mente en blanco",
@@ -620,35 +750,47 @@ def ensure_scl90r_definition(db):
 
     items = [{"id": i+1, "texto": f"{i+1}. {txt}"} for i, txt in enumerate(textos)]
 
-    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'SCL-90-R'")
-    if not cursor.fetchone():
-        cursor.execute("""
-            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            'SCL-90-R',
-            'SCL-90-R — Cuestionario de 90 Síntomas Revisado',
-            'SCL-90-R',
-            'Personalidad y Psicopatología',
-            'Evaluación autoadministrada de 90 ítems en escala Likert que explora 9 dimensiones sintomáticas de malestar psicológico.',
-            'Por favor lea cada problema y seleccione qué tanto le ha molestado durante los últimos 7 días (incluyendo el día de hoy).',
-            json.dumps(escala, ensure_ascii=False),
-            json.dumps(items, ensure_ascii=False)
-        ))
-        db.commit()
+    cursor.execute("""
+        INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(code) DO UPDATE SET
+            nombre = excluded.nombre,
+            siglas = excluded.siglas,
+            categoria = excluded.categoria,
+            descripcion = excluded.descripcion,
+            instrucciones = excluded.instrucciones,
+            escala_opciones_json = excluded.escala_opciones_json,
+            items_json = excluded.items_json
+    """, (
+        'SCL-90-R',
+        'SCL-90-R — Cuestionario de 90 Síntomas Revisado',
+        'SCL-90-R',
+        'Inventarios de Síntomas',
+        'Evaluación multidimensional autoadministrada de 90 ítems (Derogatis / Casullo UBA-CONICET) que explora 9 dimensiones sintomáticas y 3 índices globales con baremos por edad y género.',
+        'Por favor lea cada problema y seleccione qué tanto le ha molestado durante los últimos 7 días (incluyendo el día de hoy).',
+        json.dumps(escala, ensure_ascii=False),
+        json.dumps(items, ensure_ascii=False)
+    ))
+    db.commit()
 
-def process_scl90r_scoring(answers):
+def process_scl90r_scoring(answers, patient_info=None):
+    """
+    Algoritmo de corrección del SCL-90-R con baremos de Casullo & Pérez (UBA / CONICET).
+    Evalúa 9 dimensiones primarias, 7 ítems adicionales y 3 índices globales (IGS, TSP, IMSP).
+    Punto de corte clínico: Puntuación T >= 63 indica persona en riesgo.
+    """
     dims = {
-        "SOM (Somatización)": [1, 4, 12, 27, 40, 42, 48, 49, 52, 53, 56, 58],
-        "OBS (Obsesiones y Compulsiones)": [3, 9, 10, 28, 38, 45, 46, 51, 55, 65],
-        "SI (Sensibilidad Interpersonal)": [6, 21, 34, 36, 37, 41, 61, 69, 73],
-        "DEP (Depresión)": [5, 14, 15, 20, 22, 26, 29, 30, 31, 32, 54, 79],
-        "ANS (Ansiedad)": [2, 17, 23, 33, 39, 57, 72, 78, 80, 86],
-        "HOS (Hostilidad)": [11, 24, 63, 67, 74, 81],
-        "FOB (Ansiedad Fóbica)": [13, 25, 47, 50, 70, 75, 82],
-        "PAR (Ideación Paranoide)": [8, 18, 43, 68, 76, 83],
-        "PSI (Psicoticismo)": [7, 16, 35, 62, 77, 84, 85, 87, 88, 90]
+        "SOM": ("Somatización", [1, 4, 12, 27, 40, 42, 48, 49, 52, 53, 56, 58]),
+        "OBS": ("Obsesiones-Compulsiones", [3, 9, 10, 28, 38, 45, 46, 51, 55, 65]),
+        "SI":  ("Sensibilidad Interpersonal", [6, 21, 34, 36, 37, 41, 61, 69, 73]),
+        "DEP": ("Depresión", [5, 14, 15, 20, 22, 26, 29, 30, 31, 32, 54, 71, 79]),
+        "ANS": ("Ansiedad", [2, 17, 23, 33, 39, 57, 72, 78, 80, 86]),
+        "HOS": ("Hostilidad", [11, 24, 63, 67, 74, 81]),
+        "FOB": ("Ansiedad Fóbica", [13, 25, 47, 50, 70, 75, 82]),
+        "PAR": ("Ideación Paranoide", [8, 18, 43, 68, 76, 83]),
+        "PSIC": ("Psicoticismo", [7, 16, 35, 62, 77, 84, 85, 87, 88, 90])
     }
+    adicionales = [19, 44, 59, 60, 64, 66, 89]
 
     total_sum = 0
     pst = 0
@@ -658,7 +800,7 @@ def process_scl90r_scoring(answers):
         val = answers.get(key) if answers.get(key) is not None else answers.get(f"item_{item_id}")
         if val is not None:
             try:
-                v = int(val)
+                v = int(float(val))
                 total_sum += v
                 if v > 0:
                     pst += 1
@@ -668,19 +810,40 @@ def process_scl90r_scoring(answers):
     gsi = round(total_sum / 90.0, 2)
     psdi = round(total_sum / float(pst), 2) if pst > 0 else 0.0
 
-    if gsi < 0.50:
-        classification = "Normal / Malestar Sintomático Mínimo"
-    elif 0.50 <= gsi < 1.00:
-        classification = "Malestar Sintomático Leve"
-    elif 1.00 <= gsi < 1.50:
-        classification = "Malestar Sintomático Moderado"
-    elif 1.50 <= gsi < 2.00:
-        classification = "Malestar Sintomático Elevado"
+    # Determinación del grupo de baremo (Adolescentes 12-19 vs Adultos 20-65 | Sexo)
+    edad = None
+    genero_str = ''
+    if patient_info and isinstance(patient_info, dict):
+        try:
+            if patient_info.get('edad') is not None:
+                edad = int(patient_info['edad'])
+        except (ValueError, TypeError):
+            pass
+        genero_str = (patient_info.get('genero') or '').strip().lower()
+
+    is_male = (
+        genero_str in ['m', 'masculino', 'hombre', 'varon', 'varón']
+        or any(genero_str.startswith(g) for g in ['masc', 'homb', 'var'])
+    )
+    is_adol = (edad is not None and 12 <= edad <= 19)
+
+    if is_adol:
+        group_key = 'adol_masc' if is_male else 'adol_fem'
+        group_label = f"Adolescentes ({'Varones' if is_male else 'Mujeres'}, 12-19 años)"
     else:
-        classification = "Malestar Sintomático Severo / Psicopatología Intensa"
+        group_key = 'adult_masc' if is_male else 'adult_fem'
+        group_label = f"Adultos ({'Varones' if is_male else 'Mujeres'}, 20-65 años)"
+
+    norm_table = SCL90_CASULLO_NORMS.get(group_key, SCL90_CASULLO_NORMS['adult_fem'])
+
+    t_igs = interpolate_casullo_t(gsi, norm_table['T'], norm_table['IGS'])
+    t_tsp = interpolate_casullo_t(pst, norm_table['T'], norm_table['TSP'])
+    t_imsp = interpolate_casullo_t(psdi, norm_table['T'], norm_table['IMSP'])
 
     dim_scores = {}
-    for dname, item_list in dims.items():
+    elevated_dims = []
+
+    for dcode, (dtitle, item_list) in dims.items():
         dsum = 0
         dcount = 0
         for it in item_list:
@@ -688,27 +851,265 @@ def process_scl90r_scoring(answers):
             val = answers.get(key) if answers.get(key) is not None else answers.get(f"item_{it}")
             if val is not None:
                 try:
-                    dsum += int(val)
+                    dsum += int(float(val))
                     dcount += 1
                 except (ValueError, TypeError):
                     pass
-        prom = round(dsum / float(dcount), 2) if dcount > 0 else 0.0
-        dim_scores[dname] = f"Media: {prom} (Suma: {dsum}/{len(item_list)*4})"
+        prom = round(dsum / float(len(item_list)), 2)
+        dt = interpolate_casullo_t(prom, norm_table['T'], norm_table[dcode])
+        is_elevated = (dt >= 63)
+        if is_elevated:
+            elevated_dims.append(dtitle)
+        alert_tag = " ⚠️ [RIESGO]" if is_elevated else ""
+        dim_scores[f"{dtitle} ({dcode})"] = f"Media: {prom} (Suma: {dsum}/{len(item_list)*4}) | T={dt}{alert_tag}"
+
+    # Criterio clínico de Casullo / Derogatis: T >= 63 en IGS o >= 2 dimensiones primarias T >= 63
+    is_clinical_case = (t_igs >= 63) or (len(elevated_dims) >= 2)
+
+    if is_clinical_case:
+        classification = f"⚠️ EN RIESGO CLÍNICO (T={t_igs} ≥ 63 / {len(elevated_dims)} dimensiones elevadas)"
+    elif len(elevated_dims) == 1:
+        classification = f"Sintomatología Elevada en Dimensión Específica ({elevated_dims[0]}, T≥63)"
+    elif t_igs >= 55:
+        classification = f"Malestar Sintomático Subclínico / Moderado (T={t_igs})"
+    else:
+        classification = f"Normal / Sin Riesgo Clínico Significativo (T={t_igs})"
 
     subscales = {
-        "GSI (Índice Severidad Global)": f"{gsi} ({classification})",
-        "PST (Síntomas Positivos)": f"{pst} / 90 ítems",
-        "PSDI (Malestar Sintomático)": f"{psdi}",
+        "Índice de Severidad Global (IGS / GSI)": f"{gsi} | T={t_igs} ({'⚠️ En Riesgo' if t_igs >= 63 else 'Normal'})",
+        "Total de Síntomas Positivos (TSP / PST)": f"{pst}/90 ítems | T={t_tsp}",
+        "Índice de Malestar Positivo (IMSP / PSDI)": f"{psdi} | T={t_imsp}",
+        "Baremo Aplicado": f"{group_label} (UBA - CONICET / Casullo)",
         **dim_scores
     }
 
+    elevated_str = f" Dimensiones en riesgo (T≥63): {', '.join(elevated_dims)}." if elevated_dims else " Ninguna dimensión primaria supera el umbral de riesgo clínico (T<63)."
     interpretation = (
-        f"Índice de Severidad Global (GSI): {gsi} — {classification}. "
-        f"Total de Síntomas Positivos (PST): {pst}/90 ítems. "
-        f"Índice PSDI: {psdi}."
+        f"Evaluación SCL-90-R ({group_label}): "
+        f"Índice de Severidad Global (IGS): {gsi} (T={t_igs}). "
+        f"Total de Síntomas Positivos (TSP): {pst}/90 ítems (T={t_tsp}). "
+        f"Índice de Malestar Positivo (IMSP): {psdi} (T={t_imsp}). "
+        f"{classification}.{elevated_str}"
     )
 
-    return gsi, subscales, classification, interpretation
+    return float(gsi), subscales, classification, interpretation
+
+def ensure_bsi_definition(db):
+    """Inicializa o actualiza la definición del BSI (53 ítems) en tests_definiciones."""
+    cursor = db.cursor()
+    escala = [
+        {"val": 0, "text": "0 - Nada en absoluto"},
+        {"val": 1, "text": "1 - Muy poco / Un poco"},
+        {"val": 2, "text": "2 - Moderadamente"},
+        {"val": 3, "text": "3 - Bastante"},
+        {"val": 4, "text": "4 - Mucho / Extremadamente"}
+    ]
+    
+    textos = [
+        "Nerviosismo o temblor interior",
+        "Sensación de mareo, debilidad o desmayo",
+        "La idea de que alguien puede controlar sus pensamientos",
+        "Sentir que otros tienen la culpa de la mayoría de sus problemas",
+        "Dificultad para recordar las cosas",
+        "Sentirse fácilmente molesto o irritable",
+        "Dolores en el pecho o en el corazón",
+        "Sentirse temeroso en los espacios abiertos",
+        "Pensamientos de acabar con su vida",
+        "Sentimiento de que no se puede confiar en la mayoría de la gente",
+        "Poco apetito",
+        "Susto o pavor repentino sin razón aparente",
+        "Arrebatos de cólera o ira que no puede controlar",
+        "Sentimientos de soledad aunque se encuentre con otras personas",
+        "Sensación de bloqueo o dificultad para hacer las cosas",
+        "Sentimientos de soledad",
+        "Sentimientos de tristeza o melancolía",
+        "Sensación de desinterés por las cosas",
+        "Sentimientos de temor o miedo",
+        "Sus sentimientos se pueden herir fácilmente",
+        "Sentir que las personas no son amables ni comprensivas",
+        "Sentimientos de inferioridad frente a los demás",
+        "Náuseas o malestar en el estómago",
+        "Sentir que otros le observan o hablan de usted",
+        "Dificultad para conciliar el sueño",
+        "Tener que verificar una y otra vez las cosas que hace",
+        "Dificultades para tomar decisiones",
+        "Temor a viajar en autobús, metro o trenes",
+        "Dificultad para respirar o sensación de falta de aire",
+        "Episodios o accesos de frío o calor",
+        "Evitar ciertas cosas, lugares o actividades porque le asustan",
+        "Sentir que la mente se le queda en blanco",
+        "Adormecimiento, entumecimiento o calambres en partes del cuerpo",
+        "La idea de que usted debe ser castigado por sus pecados",
+        "Sentimientos de desesperanza sobre el futuro",
+        "Dificultades para concentrarse",
+        "Sensación de debilidad en partes de su cuerpo",
+        "Sentimientos de tensión o agarrotamiento",
+        "Pensamientos sobre la muerte o sobre morir",
+        "Impulsos de golpear, herir o hacer daño a alguien",
+        "Impulsos de romper o destrozar cosas",
+        "Sentimientos de timidez, vergüenza o cohibición con los demás",
+        "Sensación de inquietud o incomodidad en lugares con mucha gente",
+        "Dificultad para sentirse cercano a otras personas",
+        "Crisis o ataques de terror o pánico",
+        "Meterse en discusiones o querellas frecuentemente",
+        "Sentirse nervioso o con miedo cuando está solo",
+        "Sentir que los demás no le dan suficiente crédito por sus logros",
+        "Sentirse tan inquieto que no puede estar sentado",
+        "Sentimientos de desvalorización o falta de valor",
+        "Sensación de que la gente se aprovechará de usted si la deja",
+        "Sentimientos de culpa por cosas del pasado",
+        "La idea de que algo anda mal en su mente"
+    ]
+
+    items = [{"id": i+1, "texto": f"{i+1}. {txt}"} for i, txt in enumerate(textos)]
+
+    cursor.execute("""
+        INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(code) DO UPDATE SET
+            nombre = excluded.nombre,
+            siglas = excluded.siglas,
+            categoria = excluded.categoria,
+            descripcion = excluded.descripcion,
+            instrucciones = excluded.instrucciones,
+            escala_opciones_json = excluded.escala_opciones_json,
+            items_json = excluded.items_json
+    """, (
+        'BSI',
+        'BSI — Inventario Breve de Síntomas (53 Ítems)',
+        'BSI',
+        'Inventarios de Síntomas',
+        'Versión breve de 53 ítems (Derogatis & Melisaratos / Ruipérez et al.) que evalúa 9 dimensiones de malestar sintomático y 3 índices globales (GSI, PST, PSDI) con baremos normativos.',
+        'Por favor lea cada problema y seleccione la opción que mejor describa cuánto le ha molestado o preocupado durante los últimos 7 días (incluyendo hoy).',
+        json.dumps(escala, ensure_ascii=False),
+        json.dumps(items, ensure_ascii=False)
+    ))
+    db.commit()
+
+def process_bsi_scoring(answers, patient_info=None):
+    """
+    Algoritmo de puntuación e interpretación del BSI (53 ítems de Derogatis & Melisaratos).
+    9 dimensiones primarias, 4 ítems adicionales y 3 índices globales (GSI, PST, PSDI).
+    Criterio de caso clínico (Derogatis, 1993): GSI T >= 63 o al menos 2 dimensiones con T >= 63.
+    """
+    dims = {
+        "SOM": ("Somatización", [2, 7, 23, 29, 30, 33, 37]),
+        "OBS": ("Obsesión-Compulsión", [5, 15, 26, 27, 32, 36]),
+        "SI":  ("Sensibilidad Interpersonal", [20, 21, 22, 42]),
+        "DEP": ("Depresión", [9, 16, 17, 18, 35, 50]),
+        "ANS": ("Ansiedad", [1, 12, 19, 38, 45, 49]),
+        "HOS": ("Hostilidad", [6, 13, 40, 41, 46]),
+        "FOB": ("Ansiedad Fóbica", [8, 28, 31, 43, 47]),
+        "PAR": ("Ideación Paranoide", [4, 10, 24, 48, 51]),
+        "PSI": ("Psicoticismo", [3, 14, 34, 44, 53])
+    }
+    adicionales = [11, 25, 39, 52]
+
+    total_sum = 0
+    pst = 0
+
+    for item_id in range(1, 54):
+        key = str(item_id)
+        val = answers.get(key) if answers.get(key) is not None else answers.get(f"item_{item_id}")
+        if val is not None:
+            try:
+                v = int(float(val))
+                total_sum += v
+                if v > 0:
+                    pst += 1
+            except (ValueError, TypeError):
+                pass
+
+    gsi = round(total_sum / 53.0, 2)
+    psdi = round(total_sum / float(pst), 2) if pst > 0 else 0.0
+
+    # Determinación del grupo de baremo (Adolescentes 13-19 vs Adultos 20+ | Género)
+    edad = None
+    genero_str = ''
+    if patient_info and isinstance(patient_info, dict):
+        try:
+            if patient_info.get('edad') is not None:
+                edad = int(patient_info['edad'])
+        except (ValueError, TypeError):
+            pass
+        genero_str = (patient_info.get('genero') or '').strip().lower()
+
+    is_male = (
+        genero_str in ['m', 'masculino', 'hombre', 'varon', 'varón']
+        or any(genero_str.startswith(g) for g in ['masc', 'homb', 'var'])
+    )
+    is_adol = (edad is not None and 13 <= edad <= 19)
+
+    if is_adol:
+        group_key = 'adol_masc' if is_male else 'adol_fem'
+        group_label = f"Adolescentes ({'Varones' if is_male else 'Mujeres'}, 13-19 años)"
+    else:
+        group_key = 'adult_masc' if is_male else 'adult_fem'
+        group_label = f"Adultos ({'Varones' if is_male else 'Mujeres'}, Población General)"
+
+    norm_table = BSI_DEROGATIS_NORMS.get(group_key, BSI_DEROGATIS_NORMS['adult_fem'])
+
+    gsi_m, gsi_s = norm_table['GSI']
+    pst_m, pst_s = norm_table['PST']
+    psdi_m, psdi_s = norm_table['PSDI']
+
+    t_gsi = calc_bsi_t_score(gsi, gsi_m, gsi_s)
+    t_pst = calc_bsi_t_score(pst, pst_m, pst_s)
+    t_psdi = calc_bsi_t_score(psdi, psdi_m, psdi_s)
+
+    dim_scores = {}
+    elevated_dims = []
+
+    for dcode, (dtitle, item_list) in dims.items():
+        dsum = 0
+        for it in item_list:
+            key = str(it)
+            val = answers.get(key) if answers.get(key) is not None else answers.get(f"item_{it}")
+            if val is not None:
+                try:
+                    dsum += int(float(val))
+                except (ValueError, TypeError):
+                    pass
+        prom = round(dsum / float(len(item_list)), 2)
+        dm, ds = norm_table.get(dcode, (0.4, 0.5))
+        dt = calc_bsi_t_score(prom, dm, ds)
+        is_elevated = (dt >= 63)
+        if is_elevated:
+            elevated_dims.append(dtitle)
+        alert_tag = " ⚠️ [RIESGO]" if is_elevated else ""
+        dim_scores[f"{dtitle} ({dcode})"] = f"Media: {prom} (Suma: {dsum}/{len(item_list)*4}) | T={dt}{alert_tag}"
+
+    # Criterio clínico de Derogatis: GSI T >= 63 o >= 2 dimensiones primarias T >= 63
+    is_clinical_case = (t_gsi >= 63) or (len(elevated_dims) >= 2)
+
+    if is_clinical_case:
+        classification = f"⚠️ CASO CLÍNICO / EN RIESGO (Criterio Derogatis: GSI T={t_gsi} o {len(elevated_dims)} dimensiones ≥ 63)"
+    elif len(elevated_dims) == 1:
+        classification = f"Sintomatología Elevada en Dimensión Aislada ({elevated_dims[0]}, T≥63)"
+    elif t_gsi >= 55:
+        classification = f"Malestar Sintomático Subclínico / Moderado (T={t_gsi})"
+    else:
+        classification = f"Normal / Sin Riesgo Clínico Significativo (T={t_gsi})"
+
+    subscales = {
+        "Índice de Severidad Global (GSI)": f"{gsi} | T={t_gsi} ({'⚠️ En Riesgo' if t_gsi >= 63 else 'Normal'})",
+        "Total de Síntomas Positivos (PST)": f"{pst}/53 ítems | T={t_pst}",
+        "Índice de Malestar Positivo (PSDI)": f"{psdi} | T={t_psdi}",
+        "Baremo Aplicado": f"{group_label} (Derogatis 1993 / Ruipérez et al. 2001)",
+        **dim_scores
+    }
+
+    elevated_str = f" Dimensiones en riesgo (T≥63): {', '.join(elevated_dims)}." if elevated_dims else " Ninguna dimensión primaria supera el umbral clínico (T<63)."
+    interpretation = (
+        f"Evaluación BSI ({group_label}): "
+        f"Índice de Severidad Global (GSI): {gsi} (T={t_gsi}). "
+        f"Total de Síntomas Positivos (PST): {pst}/53 ítems (T={t_pst}). "
+        f"Índice de Malestar Positivo (PSDI): {psdi} (T={t_psdi}). "
+        f"{classification}.{elevated_str}"
+    )
+
+    return float(gsi), subscales, classification, interpretation
+
 
 def ensure_beck_bhs_definition(db):
     cursor = db.cursor()
@@ -1684,7 +2085,8 @@ def api_post_public_evaluacion(token):
         clean_token = raw_token.replace('-', '').lower()
 
         cursor.execute("""
-            SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos
+            SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
+                   p.edad as patient_edad, p.genero as patient_genero
             FROM test_asignaciones a
             JOIN pacientes p ON a.patient_id = p.id
             WHERE LOWER(REPLACE(a.uuid_token, '-', '')) = ?
@@ -1703,6 +2105,11 @@ def api_post_public_evaluacion(token):
         if not answers:
             return jsonify({'error': 'Por favor responde todas las preguntas requeridas.'}), 400
 
+        patient_info = {
+            'edad': assignment.get('patient_edad'),
+            'genero': assignment.get('patient_genero')
+        }
+
         if assignment['test_code'] == 'ZUNG-SDS':
             total_score, subscales_dict, classification, interpretation = process_zung_sds_scoring(answers)
         elif assignment['test_code'] == 'HAMILTON-D':
@@ -1710,7 +2117,9 @@ def api_post_public_evaluacion(token):
         elif assignment['test_code'] in ('IDARE-STAI', 'IDARE'):
             total_score, subscales_dict, classification, interpretation = process_idare_stai_scoring(answers)
         elif assignment['test_code'] == 'SCL-90-R':
-            total_score, subscales_dict, classification, interpretation = process_scl90r_scoring(answers)
+            total_score, subscales_dict, classification, interpretation = process_scl90r_scoring(answers, patient_info=patient_info)
+        elif assignment['test_code'] in ('BSI', 'BSI-53'):
+            total_score, subscales_dict, classification, interpretation = process_bsi_scoring(answers, patient_info=patient_info)
         elif assignment['test_code'] in ('BECK-BHS', 'BHS'):
             total_score, subscales_dict, classification, interpretation = process_beck_bhs_scoring(answers)
         elif assignment['test_code'] in ('MMPI-2', 'MMPI2', 'MMPI'):

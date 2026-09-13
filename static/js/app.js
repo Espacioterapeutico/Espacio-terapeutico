@@ -150,19 +150,32 @@ var testsCatalogDatabase = [
         downloadUrl: '/static/test_materials/beck_desesperanza.pdf'
     },
 
-    // 3. PSICOPATOLOGÍA Y SÍNTOMAS GENERALES
+    // 3. INVENTARIOS DE SÍNTOMAS Y PSICOPATOLOGÍA
     {
         code: 'SCL-90-R',
         name: 'SCL-90-R — Cuestionario de 90 Síntomas Revisado',
         siglas: 'SCL-90-R',
-        cat: 'Personalidad y Psicopatología',
-        desc: 'Evaluación autoadministrada de 90 ítems en escala Likert que explora 9 dimensiones sintomáticas de malestar psicológico.',
-        autor: 'Leonard R. Derogatis',
-        poblacion: 'Adolescentes y Adultos (13+ años)',
-        validez: 'α = 0.95 | Perfil Sintomático 9 Dimensiones',
+        cat: 'Inventarios de Síntomas',
+        desc: 'Evaluación autoadministrada de 90 ítems que explora 9 dimensiones de malestar psicológico y 3 índices globales (GSI, PST, PSDI) con baremos normativos por edad y sexo (Casullo & Pérez / Derogatis).',
+        autor: 'Leonard R. Derogatis / Adaptación Casullo & Pérez (UBA-CONICET)',
+        poblacion: 'Adolescentes y Adultos (12 a 65 años)',
+        validez: '9 Dimensiones + 3 Índices Globales | Baremos por edad/sexo | Riesgo T ≥ 63',
         itemsCount: 90,
         isPhysical: false,
         downloadUrl: '/static/test_materials/scl90r_cuestionario.pdf'
+    },
+    {
+        code: 'BSI',
+        name: 'BSI — Inventario Breve de Síntomas (53 Ítems)',
+        siglas: 'BSI',
+        cat: 'Inventarios de Síntomas',
+        desc: 'Versión breve de 53 ítems (Derogatis & Melisaratos / Ruipérez et al.) que evalúa 9 dimensiones de malestar sintomático e índices globales (GSI, PST, PSDI) con baremos normativos.',
+        autor: 'Leonard R. Derogatis & N. Melisaratos / Adaptación Ruipérez et al.',
+        poblacion: 'Adolescentes y Adultos (13+ años)',
+        validez: '9 Dimensiones + 3 Índices Globales | Punto de corte clínico: T ≥ 63',
+        itemsCount: 53,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/bsi_cuestionario_es.pdf'
     },
     { 
         code: 'MCMI-II', 
@@ -23035,7 +23048,9 @@ function openTestDetailModal(testData) {
                     <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">TB ${tbVal}${tag}</span>
                 </li>`;
             } else {
-                subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
+                const sValStr = String(sVal || '');
+                const hasCustomUnit = typeof sVal !== 'number' && (sValStr.includes('pts') || sValStr.includes('T=') || sValStr.includes('Adolescentes') || sValStr.includes('Adultos') || sValStr.includes('Media:') || sValStr.includes('ítems'));
+                subscalesHtml += `<li><strong>${sName}:</strong> ${hasCustomUnit ? sValStr : `${sValStr} pts`}</li>`;
             }
         }
         subscalesHtml += `</ul></div>`;
@@ -23166,7 +23181,9 @@ async function loadAllAppliedTestsHistory() {
                     <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">TB ${tbVal}${tag}</span>
                 </li>`;
             } else {
-                subscalesHtml += `<li><strong>${sName}:</strong> ${sVal} pts</li>`;
+                const sValStr = String(sVal || '');
+                const hasCustomUnit = typeof sVal !== 'number' && (sValStr.includes('pts') || sValStr.includes('T=') || sValStr.includes('Adolescentes') || sValStr.includes('Adultos') || sValStr.includes('Media:') || sValStr.includes('ítems'));
+                subscalesHtml += `<li><strong>${sName}:</strong> ${hasCustomUnit ? sValStr : `${sValStr} pts`}</li>`;
             }
         }
                 subscalesHtml += `</ul></div>`;
@@ -23807,6 +23824,12 @@ function renderCatalogViewWithFiltersAndPagination() {
             const tCode = (t.code || '').toLowerCase();
             const tName = (t.name || '').toLowerCase();
             const tDesc = (t.desc || '').toLowerCase();
+            if (catNorm.includes('síntomas') || catNorm.includes('sintomas')) {
+                return tCode === 'SCL-90-R' || tCode === 'BSI' || tCat.includes('síntomas') || tCat.includes('sintomas');
+            }
+            if (catNorm.includes('personalidad') || catNorm.includes('psicopatología') || catNorm.includes('psicopatologia')) {
+                return tCat.includes('personalidad') || tCat.includes('psicopatología') || tCat.includes('psicopatologia') || tCode === 'SCL-90-R' || tCode === 'BSI';
+            }
             return tCat.includes(catNorm) || catNorm.includes(tCat) || tCode.includes(catNorm) || tName.includes(catNorm) || tDesc.includes(catNorm);
         });
     }
