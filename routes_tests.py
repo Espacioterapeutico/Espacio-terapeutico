@@ -2537,10 +2537,15 @@ def api_guardar_resultado_manual_test(assignment_id):
         notas = data.get('notas_terapeuta', '')
         subescalas = data.get('subescalas_json', {})
 
-        cursor.execute("SELECT id, user_id FROM test_asignaciones WHERE id = ?", (assignment_id,))
+        cursor.execute("""
+            SELECT a.id, a.user_id, p.psicologo_id
+            FROM test_asignaciones a
+            JOIN pacientes p ON a.patient_id = p.id
+            WHERE a.id = ? AND (a.user_id = ? OR p.psicologo_id = ?)
+        """, (assignment_id, user_id, user_id))
         row = cursor.fetchone()
         if not row:
-            return jsonify({'error': 'Asignación de test no encontrada.'}), 404
+            return jsonify({'error': 'Acceso denegado: No tienes autorización para calificar la evaluación de este paciente.'}), 403
 
         fecha_completado = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
