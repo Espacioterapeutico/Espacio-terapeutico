@@ -2401,9 +2401,9 @@ def api_get_tests_historial():
             FROM test_asignaciones a
             JOIN pacientes p ON a.patient_id = p.id
             LEFT JOIN tests_definiciones td ON a.test_code = td.code
-            WHERE a.patient_id = ? AND (a.user_id = ? OR p.psicologo_id = ?)
+            WHERE a.patient_id = ? AND p.psicologo_id = ?
             ORDER BY a.fecha_asignacion DESC
-        """, (patient_id, user_id, user_id))
+        """, (patient_id, user_id))
     else:
         cursor.execute("""
             SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
@@ -2413,9 +2413,9 @@ def api_get_tests_historial():
             FROM test_asignaciones a
             JOIN pacientes p ON a.patient_id = p.id
             LEFT JOIN tests_definiciones td ON a.test_code = td.code
-            WHERE (a.user_id = ? OR p.psicologo_id = ?)
+            WHERE p.psicologo_id = ?
             ORDER BY a.fecha_asignacion DESC LIMIT 100
-        """, (user_id, user_id))
+        """, (user_id,))
 
     rows = cursor.fetchall()
     data_list = []
@@ -2449,9 +2449,9 @@ def api_get_tests_paciente(patient_id):
         FROM test_asignaciones a
         JOIN pacientes p ON a.patient_id = p.id
         LEFT JOIN tests_definiciones td ON a.test_code = td.code
-        WHERE a.patient_id = ? AND (a.user_id = ? OR p.psicologo_id = ?)
+        WHERE a.patient_id = ? AND p.psicologo_id = ?
         ORDER BY a.fecha_asignacion DESC
-    """, (patient_id, user_id, user_id))
+    """, (patient_id, user_id))
 
     rows = cursor.fetchall()
     data_list = []
@@ -2611,8 +2611,8 @@ def api_export_test_pdf(assignment_id):
                 LEFT JOIN pacientes p ON a.patient_id = p.id
                 LEFT JOIN tests_definiciones td ON a.test_code = td.code
                 LEFT JOIN usuarios u ON a.user_id = u.id
-                WHERE a.id = ? AND (a.user_id = ? OR p.psicologo_id = ?)
-            """, (assignment_id, user_id, user_id))
+                WHERE a.id = ? AND p.psicologo_id = ?
+            """, (assignment_id, user_id))
         else:
             patient_id = session.get('patient_id')
             cursor.execute("""
