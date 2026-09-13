@@ -11944,7 +11944,7 @@ function getOrCreateDeviceId() {
 }
 window.getOrCreateDeviceId = getOrCreateDeviceId;
 
-async function initFirebaseMessagingFlow(registration) {
+async function initFirebaseMessagingFlow(registration, forceRefresh = false) {
     try {
         const res = await fetch('/api/firebase/config');
         const data = await res.json();
@@ -11995,6 +11995,19 @@ async function initFirebaseMessagingFlow(registration) {
             fcmReg = await navigator.serviceWorker.ready;
         }
         
+        if (forceRefresh) {
+            try {
+                if (typeof messaging.deleteToken === 'function') {
+                    await messaging.deleteToken();
+                    console.log("Token FCM previo borrado forzosamente de IndexedDB.");
+                }
+            } catch (delErr) {
+                console.warn("No se pudo eliminar token anterior:", delErr);
+            }
+            localStorage.removeItem('et_fcm_token');
+            window.__current_fcm_token = null;
+        }
+
         // Obtener el token de registro de FCM
         let token = null;
         try {
@@ -12215,10 +12228,15 @@ async function handleRelinkPush() {
             await updateFcmDiagnosticUI();
             return;
         }
-        await initFirebaseMessagingFlow();
+        // Forzar renovación de token: borra el token anterior de IndexedDB y obtiene uno nuevo de Google
+        await initFirebaseMessagingFlow(null, true);
         await updateFcmDiagnosticUI();
         hideLoadingScreen();
-        alert("✅ Dispositivo vinculado con éxito para notificaciones en segundo plano.");
+        if (typeof showCustomToast === 'function') {
+            showCustomToast('✅ Dispositivo Re-vinculado', 'Nuevo token generado y registrado con éxito.');
+        } else {
+            alert("✅ Dispositivo vinculado con éxito para notificaciones en segundo plano.");
+        }
     } catch (e) {
         hideLoadingScreen();
         alert("Error al vincular dispositivo: " + (e.message || String(e)));
@@ -12253,13 +12271,55 @@ async function handleTestPushNotification() {
                 showCustomToast('✅ Notificación Push Enviada', data.message);
             }
         } else {
-            if (msgEl) {
-                msgEl.className = 'status-msg error-msg';
-                msgEl.textContent = `❌ ${data.error || 'Fallo al enviar notificación de prueba'}`;
-                msgEl.classList.remove('hide');
-            }
-            if (typeof showCustomToast === 'function') {
-                showCustomToast('❌ Error al Enviar', data.error || 'Respuesta no exitosa');
+            // Si el token estaba caducado o se requiere re-vinculación automática:
+            if (data.needs_relink) {
+                if (msgEl) {
+                    msgEl.className = 'status-msg warning-msg';
+                    msgEl.textContent = '⚠️ El token de tu teléfono había expirado en Google. Renovando conexión automáticamente...';
+                    msgEl.classList.remove('hide');
+                }
+                try {
+                    await initFirebaseMessagingFlow(null, true);
+                    const newTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token || '';
+                    // Reintentar envío con el token nuevo recién emitido por Google
+                    const retryRes = await fetch('/api/firebase/test-push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: currentUid, token: newTok, device_id: currentDevId })
+                    });
+                    const retryData = await retryRes.json();
+                    if (retryRes.ok && retryData.success) {
+                        if (msgEl) {
+                            msgEl.className = 'status-msg success-msg';
+                            msgEl.textContent = `✅ Conexión renovada y notificación entregada a tu teléfono con éxito.`;
+                            msgEl.classList.remove('hide');
+                        }
+                        if (typeof showCustomToast === 'function') {
+                            showCustomToast('✅ Conexión Renovada', 'Notificación push entregada con éxito a tu teléfono.');
+                        }
+                    } else {
+                        if (msgEl) {
+                            msgEl.className = 'status-msg info-msg';
+                            msgEl.textContent = '✅ Dispositivo re-vinculado con un token nuevo activo. Pulsa "Enviar Notificación Push de Prueba".';
+                            msgEl.classList.remove('hide');
+                        }
+                    }
+                } catch(relinkErr) {
+                    if (msgEl) {
+                        msgEl.className = 'status-msg error-msg';
+                        msgEl.textContent = `❌ Error al renovar token: ${relinkErr.message}`;
+                        msgEl.classList.remove('hide');
+                    }
+                }
+            } else {
+                if (msgEl) {
+                    msgEl.className = 'status-msg error-msg';
+                    msgEl.textContent = `❌ ${data.error || 'Fallo al enviar notificación de prueba'}`;
+                    msgEl.classList.remove('hide');
+                }
+                if (typeof showCustomToast === 'function') {
+                    showCustomToast('❌ Error al Enviar', data.error || 'Respuesta no exitosa');
+                }
             }
         }
         await updateFcmDiagnosticUI();

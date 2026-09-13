@@ -2710,10 +2710,29 @@ def test_firebase_push():
             url="/#settings"
         )
 
+        results = (res and res.get('results')) or []
+        successful_tokens = [r for r in results if r.get('status') == 200]
+        unregistered_tokens = [r for r in results if r.get('status') in [400, 401, 403, 404, 410]]
+
+        if not successful_tokens:
+            if unregistered_tokens:
+                return jsonify({
+                    'success': False,
+                    'error': 'El token de este dispositivo expiró en los servidores de Google FCM y fue limpiado. Renovando conexión...',
+                    'needs_relink': True,
+                    'details': res
+                }), 400
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'No se pudo entregar la notificación push: {(res and res.get("error")) or "Error en servidor FCM"}',
+                    'details': res
+                }), 400
+
         return jsonify({
             'success': True,
-            'tokens_count': len(tokens),
-            'message': f'Notificación enviada a {len(tokens)} dispositivo(s).',
+            'tokens_count': len(successful_tokens),
+            'message': f'Notificación entregada a {len(successful_tokens)} dispositivo(s).',
             'details': res
         })
     except Exception as e:
