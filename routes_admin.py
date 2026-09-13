@@ -2553,39 +2553,70 @@ def subscribe_firebase():
     user_id = session.get('user_id')
     patient_id = session.get('patient_id')
 
+    # Fallback si la cookie de sesión no viajó o está particionada
+    req_user_id = data.get('user_id')
+    req_patient_id = data.get('patient_id')
+
     db = get_db()
     cursor = db.cursor()
 
-    # 1. Eliminar cualquier registro que ya tuviera este MISMO token exacto
-    cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
+    try:
+        from app import ensure_fcm_table_and_columns
+        ensure_fcm_table_and_columns(cursor)
 
-    # 2. Si se provee device_id, eliminar tokens viejos en ESTE MISMO equipo para este usuario.
-    # Esto evita duplicar notificaciones si el mismo teléfono tiene Chrome y la PWA instalada abierta al tiempo.
-    if device_id:
+        if not user_id and req_user_id:
+            try:
+                cursor.execute("SELECT id FROM usuarios WHERE id = ?", (req_user_id,))
+                if cursor.fetchone():
+                    user_id = req_user_id
+            except:
+                pass
+        if not patient_id and req_patient_id:
+            try:
+                cursor.execute("SELECT id FROM pacientes WHERE id = ?", (req_patient_id,))
+                if cursor.fetchone():
+                    patient_id = req_patient_id
+            except:
+                pass
+
+        # 1. Eliminar cualquier registro que ya tuviera este MISMO token exacto
+        cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
+
+        # 2. Si se provee device_id, eliminar tokens viejos en ESTE MISMO equipo para este usuario.
+        if device_id:
+            if user_id:
+                cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ? AND device_id = ?", (user_id, device_id))
+            elif patient_id:
+                cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ? AND device_id = ?", (patient_id, device_id))
+
         if user_id:
-            cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ? AND device_id = ?", (user_id, device_id))
+            cursor.execute("""
+                INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                VALUES (?, NULL, ?, ?, ?, ?)
+            """, (user_id, token, device_id or None, dispositivo_info, now_str))
         elif patient_id:
-            cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ? AND device_id = ?", (patient_id, device_id))
+            cursor.execute("""
+                INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                VALUES (NULL, ?, ?, ?, ?, ?)
+            """, (patient_id, token, device_id or None, dispositivo_info, now_str))
+        else:
+            cursor.execute("""
+                INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                VALUES (NULL, NULL, ?, ?, ?, ?)
+            """, (token, device_id or None, dispositivo_info, now_str))
 
-    if user_id:
-        cursor.execute("""
-            INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
-            VALUES (?, NULL, ?, ?, ?, ?)
-        """, (user_id, token, device_id or None, dispositivo_info, now_str))
-    elif patient_id:
-        cursor.execute("""
-            INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
-            VALUES (NULL, ?, ?, ?, ?, ?)
-        """, (patient_id, token, device_id or None, dispositivo_info, now_str))
-    else:
-        # Sin sesión activa: guardar como anónimo (se vinculará al hacer login)
-        cursor.execute("""
-            INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
-            VALUES (NULL, NULL, ?, ?, ?, ?)
-        """, (token, device_id or None, dispositivo_info, now_str))
-
-    db.commit()
-    return jsonify({'success': 'Suscrito a notificaciones FCM con éxito.', 'device_id': device_id})
+        db.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Suscrito a notificaciones FCM con éxito.',
+            'device_id': device_id,
+            'user_id': user_id,
+            'patient_id': patient_id
+        })
+    except Exception as e:
+        db.rollback()
+        print("Error en subscribe_firebase:", e)
+        return jsonify({'success': False, 'error': f'Error en BD al guardar suscripción: {str(e)}'}), 500
 
 
 
@@ -2595,8 +2626,14 @@ def get_firebase_device_status():
     try:
         user_id = session.get('user_id')
         patient_id = session.get('patient_id')
+        req_user_id = request.args.get('user_id')
+        if not user_id and req_user_id:
+            user_id = req_user_id
+
         db = get_db()
         cursor = db.cursor()
+        from app import ensure_fcm_table_and_columns
+        ensure_fcm_table_and_columns(cursor)
 
         tokens = []
         if user_id:
@@ -2626,10 +2663,13 @@ def get_firebase_device_status():
 @login_required
 def test_firebase_push():
     try:
-        user_id = session.get('user_id')
-        patient_id = session.get('patient_id')
+        data = request.json or {}
+        user_id = session.get('user_id') or data.get('user_id')
+        patient_id = session.get('patient_id') or data.get('patient_id')
         db = get_db()
         cursor = db.cursor()
+        from app import ensure_fcm_table_and_columns
+        ensure_fcm_table_and_columns(cursor)
 
         tokens = []
         if user_id:
@@ -2638,6 +2678,20 @@ def test_firebase_push():
         elif patient_id:
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
             tokens = [r['token'] for r in cursor.fetchall()]
+
+        # Si no había token guardado para este usuario pero el navegador envía su token activo:
+        client_tok = (data.get('token') or '').strip()
+        if not tokens and client_tok and len(client_tok) > 10:
+            dev_id = (data.get('device_id') or '').strip()
+            now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (client_tok,))
+            if user_id:
+                cursor.execute("""
+                    INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                    VALUES (?, NULL, ?, ?, ?, ?)
+                """, (user_id, client_tok, dev_id or None, (request.headers.get('User-Agent') or '')[:150], now_str))
+                db.commit()
+                tokens = [client_tok]
 
         if not tokens:
             return jsonify({

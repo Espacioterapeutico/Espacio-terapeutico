@@ -12025,13 +12025,22 @@ async function initFirebaseMessagingFlow(registration) {
             window.__current_fcm_token = token;
             window.__fcm_status = { status: 'registered', token: token };
             const devId = getOrCreateDeviceId();
-            // Enviar token y device_id al backend
-            await fetch('/api/firebase/subscribe', {
+            const currentUid = (typeof getAuthItem === 'function' ? getAuthItem('user_id') : localStorage.getItem('user_id')) || null;
+            // Enviar token, device_id y user_id al backend
+            const subRes = await fetch('/api/firebase/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: token, device_id: devId })
+                body: JSON.stringify({ token: token, device_id: devId, user_id: currentUid })
             });
-            console.log("Suscripción FCM registrada en BD.");
+            let subData = null;
+            try { subData = await subRes.json(); } catch(e) {}
+            if (!subRes.ok || !subData || !subData.success) {
+                const errDetail = (subData && subData.error) || `Error del servidor (${subRes.status})`;
+                console.error("Error al registrar suscripción FCM en backend:", errDetail);
+                window.__fcm_status = { status: 'error', error: errDetail };
+                throw new Error(errDetail);
+            }
+            console.log("Suscripción FCM registrada en BD:", subData);
             if (typeof updateFcmDiagnosticUI === 'function') updateFcmDiagnosticUI();
         } else {
             console.warn("No se obtuvo token de FCM.");
@@ -12158,7 +12167,8 @@ async function updateFcmDiagnosticUI() {
     }
 
     try {
-        const res = await fetch('/api/firebase/device-status');
+        const currentUid = (typeof getAuthItem === 'function' ? getAuthItem('user_id') : localStorage.getItem('user_id')) || '';
+        const res = await fetch('/api/firebase/device-status' + (currentUid ? `?user_id=${encodeURIComponent(currentUid)}` : ''));
         if (res.ok) {
             const data = await res.json();
             if (devBadge && data.registered_devices_count !== undefined) {
@@ -12204,9 +12214,13 @@ async function handleTestPushNotification() {
         msgEl.classList.remove('hide');
     }
     try {
+        const currentUid = (typeof getAuthItem === 'function' ? getAuthItem('user_id') : localStorage.getItem('user_id')) || '';
+        const currentTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token || '';
+        const currentDevId = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : '';
         const res = await fetch('/api/firebase/test-push', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUid, token: currentTok, device_id: currentDevId })
         });
         const data = await res.json();
         if (res.ok && data.success) {

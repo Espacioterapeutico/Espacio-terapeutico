@@ -593,6 +593,36 @@ def close_connection(exception):
 
 CURRENT_SCHEMA_VER = "15"
 
+def ensure_fcm_table_and_columns(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fcm_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            patient_id INTEGER,
+            token TEXT UNIQUE
+        )
+    """)
+    cursor.execute("PRAGMA table_info(fcm_subscriptions)")
+    cols_fcm = [row[1] for row in cursor.fetchall()]
+    if 'device_id' not in cols_fcm:
+        try: cursor.execute("ALTER TABLE fcm_subscriptions ADD COLUMN device_id TEXT")
+        except: pass
+    if 'dispositivo_info' not in cols_fcm:
+        try: cursor.execute("ALTER TABLE fcm_subscriptions ADD COLUMN dispositivo_info TEXT")
+        except: pass
+    if 'actualizado_en' not in cols_fcm:
+        try: cursor.execute("ALTER TABLE fcm_subscriptions ADD COLUMN actualizado_en TEXT")
+        except: pass
+
+# Ejecutar migración al inicio para servidores WSGI (PythonAnywhere, Gunicorn)
+try:
+    with sqlite3.connect(DATABASE, timeout=30.0) as _db_init:
+        _cur_init = _db_init.cursor()
+        ensure_fcm_table_and_columns(_cur_init)
+        _db_init.commit()
+except Exception as _e_init:
+    print("Aviso al asegurar fcm_subscriptions en startup:", _e_init)
+
 def init_db():
     db = sqlite3.connect(DATABASE, timeout=30.0)
     cursor = db.cursor()
