@@ -825,13 +825,17 @@ function triggerNativeNotification(title, body, key, link) {
 
     playNotificationSound();
 
+    const notifTag = key || ('notif-' + (title || '') + '-' + (body || '')).replace(/\s+/g, '_').substring(0, 40);
+
     try {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.ready.then(reg => {
                 reg.showNotification(title, {
                     body: body,
                     icon: '/static/logo.png',
-                    badge: '/static/logo.png',
+                    badge: '/static/badge.png',
+                    tag: notifTag,
+                    renotify: false,
                     vibrate: [200, 100, 200],
                     data: { url: link || '/' }
                 });
@@ -840,6 +844,8 @@ function triggerNativeNotification(title, body, key, link) {
             new Notification(title, {
                 body: body,
                 icon: '/static/logo.png',
+                tag: notifTag,
+                renotify: false,
                 data: { url: link || '/' }
             });
         }
@@ -10648,9 +10654,10 @@ async function loadNotifications() {
         list.innerHTML = '';
         if (data.notifications && data.notifications.length > 0) {
             data.notifications.forEach(n => {
-                // NO volver a disparar notificación del sistema aquí.
-                // El push de FCM/VAPID ya la mostró en segundo plano.
-                // Mostrar el badge visual es suficiente aviso en-app.
+                // Mostrar notificación en barra del sistema si no ha sido mostrada aún
+                if (!n.leida && typeof triggerNativeNotification === 'function') {
+                    triggerNativeNotification(n.titulo, n.mensaje, `admin_${n.id}`, n.link);
+                }
 
                 const item = document.createElement('div');
                 item.style.padding = '0.75rem 1rem';

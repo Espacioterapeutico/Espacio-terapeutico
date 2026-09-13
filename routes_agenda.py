@@ -719,6 +719,31 @@ def add_agenda_event():
     ))
     db.commit()
     event_id = cursor.lastrowid
+
+    # Notificar al consultante vía WebPush y Firebase si está disponible
+    if paciente_id:
+        try:
+            from app import send_webpush_notification, FIREBASE_DB_URL
+            import requests
+            from datetime import datetime
+            send_webpush_notification(
+                patient_id=paciente_id,
+                title="📅 Nueva Cita Agendada",
+                body=f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora}.",
+                url="/?view=citas"
+            )
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            fb_payload = {
+                "id": int(datetime.now().timestamp() * 1000),
+                "tipo": "cita",
+                "titulo": "📅 Nueva Cita Agendada",
+                "mensaje": f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora}.",
+                "fecha": now_str,
+                "leida": False
+            }
+            requests.post(f"{FIREBASE_DB_URL}/pacientes/{paciente_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+        except Exception as _ex_pac:
+            print("Error notificando al paciente sobre cita creada:", _ex_pac)
     
     return jsonify({
         'success': 'Cita agendada exitosamente.',

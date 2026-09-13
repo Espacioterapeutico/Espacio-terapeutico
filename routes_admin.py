@@ -141,6 +141,16 @@ def login():
                     db.commit()
                 except Exception as _ex_fcm:
                     print("Error auto-vinculando FCM en login:", _ex_fcm)
+            elif dev_id:
+                try:
+                    cursor.execute("""
+                        UPDATE fcm_subscriptions 
+                        SET user_id = ?, patient_id = NULL, actualizado_en = ?
+                        WHERE device_id = ? AND user_id IS NULL
+                    """, (user['id'], datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dev_id))
+                    db.commit()
+                except Exception as _ex_fcm2:
+                    print("Error vinculando device_id anonimo en login:", _ex_fcm2)
 
             u_dict = dict(user)
             return jsonify({
@@ -2394,7 +2404,6 @@ def get_firebase_config():
         cursor.execute("SELECT valor FROM configuracion WHERE clave = 'firebase_vapid_key'")
         row_vapid = cursor.fetchone()
         if row_cfg and row_cfg[0]:
-            import json
             try:
                 saved = json.loads(row_cfg[0])
                 saved["apiKey"] = "AIzaSyDRQlUEv1SToy5ZdQQyUuYZDIhejeJ81zM"

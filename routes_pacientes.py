@@ -694,6 +694,16 @@ def patient_login():
             db.commit()
         except Exception as _ex_fcm:
             print("Error auto-vinculando FCM en login paciente:", _ex_fcm)
+    elif dev_id:
+        try:
+            cursor.execute("""
+                UPDATE fcm_subscriptions 
+                SET user_id = NULL, patient_id = ?, actualizado_en = ?
+                WHERE device_id = ? AND patient_id IS NULL
+            """, (patient['id'], datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dev_id))
+            db.commit()
+        except Exception as _ex_fcm2:
+            print("Error vinculando device_id anonimo en login paciente:", _ex_fcm2)
     
     if needs_setup:
         return jsonify({
