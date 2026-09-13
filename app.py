@@ -367,6 +367,7 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         import hashlib
         tag_id = f"notif-{hashlib.md5((title + body).encode('utf-8')).hexdigest()[:10]}"
 
+        results = []
         for token in tokens:
             payload = {
                 "message": {
@@ -381,6 +382,9 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                         "click_action": url
                     },
                     "webpush": {
+                        "headers": {
+                            "Urgency": "high"
+                        },
                         "notification": {
                             "title": title,
                             "body": body,
@@ -395,6 +399,7 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                         }
                     },
                     "android": {
+                        "priority": "high",
                         "notification": {
                             "sound": "default",
                             "tag": tag_id
@@ -417,9 +422,12 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
             )
             try:
                 with urllib.request.urlopen(req) as response:
-                    response.read()
+                    resp_str = response.read().decode('utf-8')
+                    results.append({"token": token[:15] + "...", "status": 200, "response": resp_str})
             except Exception as fcm_ex:
                 print("Error de envío a token FCM individual:", fcm_ex)
+                status_code = getattr(fcm_ex, 'code', None) or 500
+                results.append({"token": token[:15] + "...", "status": status_code, "error": str(fcm_ex)})
                 if hasattr(fcm_ex, 'code') and fcm_ex.code in [400, 401, 403, 404, 410]:
                     try:
                         cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
@@ -427,8 +435,10 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                         print(f"Token FCM obsoleto ({fcm_ex.code}) eliminado de la base de datos.")
                     except Exception as db_ex:
                         print("Error eliminando token FCM inválido:", db_ex)
+        return {"success": True, "tokens_count": len(tokens), "results": results}
     except Exception as e:
         print("Error global en send_fcm_notification:", e)
+        return {"success": False, "error": str(e)}
 
 def send_vapid_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
     try:

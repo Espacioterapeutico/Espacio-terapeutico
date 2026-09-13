@@ -678,6 +678,16 @@ def patient_login():
     session['patient_id'] = patient['id']
     session['patient_username'] = patient['username'] or patient['cedula']
     session['role'] = 'paciente'
+
+    # Auto-vincular token FCM del dispositivo al paciente recién autenticado
+    fcm_tok = (data.get('fcm_token') or '').strip()
+    if fcm_tok and len(fcm_tok) > 10:
+        try:
+            cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (fcm_tok,))
+            cursor.execute("INSERT INTO fcm_subscriptions (user_id, patient_id, token) VALUES (NULL, ?, ?)", (patient['id'], fcm_tok))
+            db.commit()
+        except Exception as _ex_fcm:
+            print("Error auto-vinculando FCM en login paciente:", _ex_fcm)
     
     if needs_setup:
         return jsonify({

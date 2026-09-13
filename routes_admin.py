@@ -125,6 +125,17 @@ def login():
             session['username'] = user['username']
             session['role'] = user['role']
             session['activo'] = user['activo']
+
+            # Auto-vincular token FCM del dispositivo al usuario recién autenticado
+            fcm_tok = (data.get('fcm_token') or '').strip()
+            if fcm_tok and len(fcm_tok) > 10:
+                try:
+                    cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (fcm_tok,))
+                    cursor.execute("INSERT INTO fcm_subscriptions (user_id, patient_id, token) VALUES (?, NULL, ?)", (user['id'], fcm_tok))
+                    db.commit()
+                except Exception as _ex_fcm:
+                    print("Error auto-vinculando FCM en login:", _ex_fcm)
+
             u_dict = dict(user)
             return jsonify({
                 'success': 'Inicio de sesión correcto.',
@@ -2550,6 +2561,82 @@ def subscribe_firebase():
     db.commit()
     return jsonify({'success': 'Suscrito a notificaciones FCM con éxito.'})
 
+
+
+@admin_bp.route('/api/firebase/device-status', methods=['GET'])
+@login_required
+def get_firebase_device_status():
+    try:
+        user_id = session.get('user_id')
+        patient_id = session.get('patient_id')
+        db = get_db()
+        cursor = db.cursor()
+
+        tokens = []
+        if user_id:
+            cursor.execute("SELECT id, substr(token, 1, 16) as prefix FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+            tokens = cursor.fetchall()
+        elif patient_id:
+            cursor.execute("SELECT id, substr(token, 1, 16) as prefix FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+            tokens = cursor.fetchall()
+
+        from app import get_firebase_sa_file
+        sa_file = get_firebase_sa_file()
+        has_sa = bool(sa_file and os.path.exists(sa_file))
+
+        return jsonify({
+            'success': True,
+            'user_id': user_id,
+            'patient_id': patient_id,
+            'registered_devices_count': len(tokens),
+            'devices': [dict(t) for t in tokens],
+            'has_service_account': has_sa
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/firebase/test-push', methods=['POST'])
+@login_required
+def test_firebase_push():
+    try:
+        user_id = session.get('user_id')
+        patient_id = session.get('patient_id')
+        db = get_db()
+        cursor = db.cursor()
+
+        tokens = []
+        if user_id:
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+            tokens = [r['token'] for r in cursor.fetchall()]
+        elif patient_id:
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+            tokens = [r['token'] for r in cursor.fetchall()]
+
+        if not tokens:
+            return jsonify({
+                'success': False,
+                'error': 'No hay ningún dispositivo registrado en la base de datos para este usuario. Haz clic en "Re-vincular este Navegador" para registrar este equipo.',
+                'tokens_count': 0
+            }), 400
+
+        from app import send_fcm_notification
+        res = send_fcm_notification(
+            user_id=user_id,
+            patient_id=patient_id,
+            title="🔔 Notificación de Prueba",
+            body="¡Excelente! Las notificaciones en segundo plano están funcionando correctamente.",
+            url="/#settings"
+        )
+
+        return jsonify({
+            'success': True,
+            'tokens_count': len(tokens),
+            'message': f'Notificación enviada a {len(tokens)} dispositivo(s).',
+            'details': res
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Error al disparar prueba push: {str(e)}'}), 500
 
 
 @admin_bp.route('/api/google/authorize')

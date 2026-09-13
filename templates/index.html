@@ -3023,6 +3023,41 @@
                                 <p class="text-secondary mb-4" style="font-size: 0.85rem; line-height: 1.4;">
                                     Configura las notificaciones push en segundo plano para que los terapeutas y consultantes reciban alertas en tiempo real, incluso cuando la aplicación está totalmente cerrada.
                                 </p>
+
+                                <!-- Diagnóstico y Prueba en Vivo -->
+                                <div class="card p-3 mb-4" style="background: var(--bg-hover, #f8fafc); border-radius: 10px; border: 1.5px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                                        <h4 style="font-size: 0.95rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span>🔍 Estado y Prueba de Notificaciones Push</span>
+                                        </h4>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="updateFcmDiagnosticUI()" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">
+                                            🔄 Actualizar Estado
+                                        </button>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; font-size: 0.85rem;">
+                                        <div style="background: var(--card-bg, #fff); padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                                            <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 0.2rem;">Permiso en este Navegador</div>
+                                            <span id="fcm-browser-perm-badge" class="badge">Consultando...</span>
+                                        </div>
+                                        <div style="background: var(--card-bg, #fff); padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                                            <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 0.2rem;">Dispositivos Vinculados (BD)</div>
+                                            <span id="fcm-user-devices-count" class="badge badge-info">Consultando...</span>
+                                        </div>
+                                        <div style="background: var(--card-bg, #fff); padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                                            <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 0.2rem;">Token en este Equipo</div>
+                                            <span id="fcm-local-token-status" class="badge">Consultando...</span>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                                        <button type="button" class="btn btn-primary" onclick="handleTestPushNotification()" style="flex: 2; font-weight: 700; min-width: 180px;">
+                                            🧪 Enviar Notificación Push de Prueba
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="handleRelinkPush()" style="flex: 1; font-weight: 700; min-width: 160px;">
+                                            📲 Re-vincular este Navegador
+                                        </button>
+                                    </div>
+                                    <div id="fcm-test-push-msg" class="status-msg hide mt-3"></div>
+                                </div>
                                 
                                 <form id="settings-firebase-form" onsubmit="handleSaveFirebaseConfig(event)">
                                     <!-- 1. Firebase API Key and general fields (Web Config JSON) -->

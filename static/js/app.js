@@ -1531,11 +1531,13 @@ async function handleAuthSubmit(e) {
             let dataPatient = null;
             let networkError = false;
 
+            const cachedFcmToken = localStorage.getItem('et_fcm_token') || window.__current_fcm_token || '';
+
             try {
                 const resAdmin = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, fcm_token: cachedFcmToken })
                 });
                 try { dataAdmin = await resAdmin.json(); } catch(exJ) {}
                 if (resAdmin.ok && dataAdmin) {
@@ -1554,7 +1556,7 @@ async function handleAuthSubmit(e) {
                 const resPatient = await fetch('/api/patient/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, fcm_token: cachedFcmToken })
                 });
                 try { dataPatient = await resPatient.json(); } catch(exP) {}
                 
@@ -11984,6 +11986,7 @@ async function initFirebaseMessagingFlow(registration) {
             });
         } catch (tokErr) {
             console.warn("FCM getToken falló, reintentando tras deleteToken:", tokErr);
+            window.__fcm_status = { status: 'retry', error: tokErr.message || String(tokErr) };
             try {
                 if (typeof messaging.deleteToken === 'function') {
                     await messaging.deleteToken();
@@ -11994,11 +11997,15 @@ async function initFirebaseMessagingFlow(registration) {
                 });
             } catch (retryErr) {
                 console.error("Error definitivo obteniendo token FCM:", retryErr);
+                window.__fcm_status = { status: 'error', error: retryErr.message || String(retryErr) };
             }
         }
         
         if (token) {
             console.log("FCM Token generado con éxito:", token);
+            localStorage.setItem('et_fcm_token', token);
+            window.__current_fcm_token = token;
+            window.__fcm_status = { status: 'registered', token: token };
             // Enviar token al backend
             await fetch('/api/firebase/subscribe', {
                 method: 'POST',
@@ -12006,8 +12013,13 @@ async function initFirebaseMessagingFlow(registration) {
                 body: JSON.stringify({ token: token })
             });
             console.log("Suscripción FCM registrada en BD.");
+            if (typeof updateFcmDiagnosticUI === 'function') updateFcmDiagnosticUI();
         } else {
             console.warn("No se obtuvo token de FCM.");
+            if (!window.__fcm_status) {
+                window.__fcm_status = { status: 'no_token', error: 'No se obtuvo token del navegador.' };
+            }
+            if (typeof updateFcmDiagnosticUI === 'function') updateFcmDiagnosticUI();
         }
         
         // Interceptación en primer plano (Foreground)
@@ -12029,6 +12041,8 @@ async function initFirebaseMessagingFlow(registration) {
         });
     } catch (err) {
         console.error("Error al inicializar FCM Flow:", err);
+        window.__fcm_status = { status: 'error_init', error: err.message || String(err) };
+        if (typeof updateFcmDiagnosticUI === 'function') updateFcmDiagnosticUI();
     }
 }
 window.initFirebaseMessagingFlow = initFirebaseMessagingFlow;
@@ -12083,8 +12097,125 @@ async function loadFirebaseSettings() {
             badge.className = "badge badge-danger";
         }
     }
+
+    try {
+        await updateFcmDiagnosticUI();
+    } catch(e) {}
 }
 window.loadFirebaseSettings = loadFirebaseSettings;
+
+async function updateFcmDiagnosticUI() {
+    const permBadge = document.getElementById('fcm-browser-perm-badge');
+    const devBadge = document.getElementById('fcm-user-devices-count');
+    const tokBadge = document.getElementById('fcm-local-token-status');
+
+    if (permBadge) {
+        const p = ('Notification' in window) ? Notification.permission : 'no-support';
+        if (p === 'granted') {
+            permBadge.textContent = 'Permitido ✅';
+            permBadge.className = 'badge badge-success';
+        } else if (p === 'denied') {
+            permBadge.textContent = 'Bloqueado ❌';
+            permBadge.className = 'badge badge-danger';
+        } else {
+            permBadge.textContent = 'No solicitado / Predeterminado ⚠️';
+            permBadge.className = 'badge badge-warning';
+        }
+    }
+
+    if (tokBadge) {
+        const tok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token;
+        if (tok) {
+            tokBadge.textContent = `Activo (${tok.substring(0, 12)}...)`;
+            tokBadge.className = 'badge badge-success';
+        } else if (window.__fcm_status && window.__fcm_status.error) {
+            tokBadge.textContent = `Error: ${window.__fcm_status.error.substring(0, 20)}...`;
+            tokBadge.className = 'badge badge-danger';
+            tokBadge.title = window.__fcm_status.error;
+        } else {
+            tokBadge.textContent = 'No generado aún';
+            tokBadge.className = 'badge badge-secondary';
+        }
+    }
+
+    try {
+        const res = await fetch('/api/firebase/device-status');
+        if (res.ok) {
+            const data = await res.json();
+            if (devBadge && data.registered_devices_count !== undefined) {
+                devBadge.textContent = `${data.registered_devices_count} dispositivo(s)`;
+                devBadge.className = data.registered_devices_count > 0 ? 'badge badge-success' : 'badge badge-warning';
+            }
+        }
+    } catch(e) {}
+}
+window.updateFcmDiagnosticUI = updateFcmDiagnosticUI;
+
+async function handleRelinkPush() {
+    showLoadingScreen();
+    try {
+        if (!('Notification' in window)) {
+            alert("Tu navegador no soporta notificaciones push.");
+            hideLoadingScreen();
+            return;
+        }
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+            alert("⚠️ Permiso de notificación no otorgado. Por favor haz clic en el candado al lado de la barra de direcciones y selecciona 'Permitir notificaciones'.");
+            hideLoadingScreen();
+            await updateFcmDiagnosticUI();
+            return;
+        }
+        await initFirebaseMessagingFlow();
+        await updateFcmDiagnosticUI();
+        hideLoadingScreen();
+        alert("✅ Dispositivo vinculado con éxito para notificaciones en segundo plano.");
+    } catch (e) {
+        hideLoadingScreen();
+        alert("Error al vincular dispositivo: " + (e.message || String(e)));
+    }
+}
+window.handleRelinkPush = handleRelinkPush;
+
+async function handleTestPushNotification() {
+    const msgEl = document.getElementById('fcm-test-push-msg');
+    if (msgEl) {
+        msgEl.className = 'status-msg info-msg';
+        msgEl.textContent = 'Enviando notificación push de prueba a tus dispositivos...';
+        msgEl.classList.remove('hide');
+    }
+    try {
+        const res = await fetch('/api/firebase/test-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (msgEl) {
+                msgEl.className = 'status-msg success-msg';
+                msgEl.textContent = `✅ ${data.message} Si minimizas el navegador, verás la alerta emergente.`;
+                msgEl.classList.remove('hide');
+            }
+            alert(`✅ ¡Notificación de prueba enviada!\n\n${data.message}\nRevisa tu barra de tareas / centro de notificaciones.`);
+        } else {
+            if (msgEl) {
+                msgEl.className = 'status-msg error-msg';
+                msgEl.textContent = `❌ ${data.error || 'Fallo al enviar notificación de prueba'}`;
+                msgEl.classList.remove('hide');
+            }
+            alert(`❌ Error al enviar prueba: ${data.error || 'Respuesta no exitosa'}`);
+        }
+        await updateFcmDiagnosticUI();
+    } catch (err) {
+        if (msgEl) {
+            msgEl.className = 'status-msg error-msg';
+            msgEl.textContent = `❌ Error de conexión: ${err.message}`;
+            msgEl.classList.remove('hide');
+        }
+        alert(`❌ Error de conexión: ${err.message}`);
+    }
+}
+window.handleTestPushNotification = handleTestPushNotification;
 
 function cleanAndParseFirebaseConfig(str) {
     if (!str || !str.trim()) return null;
