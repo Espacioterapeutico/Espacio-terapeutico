@@ -2086,10 +2086,7 @@ def api_asignar_test():
         if not patient_id or not test_code:
             return jsonify({'error': 'Faltan datos obligatorios.'}), 400
 
-        if is_admin:
-            cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ?", (patient_id,))
-        else:
-            cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (patient_id, user_id))
+        cursor.execute("SELECT id, nombres, apellidos, telefono FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (patient_id, user_id))
         pac = cursor.fetchone()
         if not pac:
             return jsonify({'error': 'Acceso denegado: El consultante no pertenece a tu consulta activa.'}), 404
@@ -2393,60 +2390,32 @@ def api_get_tests_historial():
     ensure_tests_tables(db)
     cursor = db.cursor()
 
-    role = session.get('role', '')
-    is_admin = role in ['admin', 'superadmin'] or user_id == 1
-
     patient_id = request.args.get('patient_id')
 
     if patient_id:
-        if is_admin:
-            cursor.execute("""
-                SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
-                       COALESCE(td.nombre, a.test_code) as test_nombre,
-                       COALESCE(td.siglas, a.test_code) as test_siglas,
-                       COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
-                FROM test_asignaciones a
-                LEFT JOIN pacientes p ON a.patient_id = p.id
-                LEFT JOIN tests_definiciones td ON a.test_code = td.code
-                WHERE a.patient_id = ?
-                ORDER BY a.fecha_asignacion DESC
-            """, (patient_id,))
-        else:
-            cursor.execute("""
-                SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
-                       COALESCE(td.nombre, a.test_code) as test_nombre,
-                       COALESCE(td.siglas, a.test_code) as test_siglas,
-                       COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
-                FROM test_asignaciones a
-                LEFT JOIN pacientes p ON a.patient_id = p.id
-                LEFT JOIN tests_definiciones td ON a.test_code = td.code
-                WHERE a.patient_id = ? AND a.user_id = ?
-                ORDER BY a.fecha_asignacion DESC
-            """, (patient_id, user_id))
+        cursor.execute("""
+            SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
+                   COALESCE(td.nombre, a.test_code) as test_nombre,
+                   COALESCE(td.siglas, a.test_code) as test_siglas,
+                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
+            FROM test_asignaciones a
+            JOIN pacientes p ON a.patient_id = p.id
+            LEFT JOIN tests_definiciones td ON a.test_code = td.code
+            WHERE a.patient_id = ? AND (a.user_id = ? OR p.psicologo_id = ?)
+            ORDER BY a.fecha_asignacion DESC
+        """, (patient_id, user_id, user_id))
     else:
-        if is_admin:
-            cursor.execute("""
-                SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
-                       COALESCE(td.nombre, a.test_code) as test_nombre,
-                       COALESCE(td.siglas, a.test_code) as test_siglas,
-                       COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
-                FROM test_asignaciones a
-                LEFT JOIN pacientes p ON a.patient_id = p.id
-                LEFT JOIN tests_definiciones td ON a.test_code = td.code
-                ORDER BY a.fecha_asignacion DESC LIMIT 100
-            """)
-        else:
-            cursor.execute("""
-                SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
-                       COALESCE(td.nombre, a.test_code) as test_nombre,
-                       COALESCE(td.siglas, a.test_code) as test_siglas,
-                       COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
-                FROM test_asignaciones a
-                LEFT JOIN pacientes p ON a.patient_id = p.id
-                LEFT JOIN tests_definiciones td ON a.test_code = td.code
-                WHERE a.user_id = ?
-                ORDER BY a.fecha_asignacion DESC LIMIT 100
-            """, (user_id,))
+        cursor.execute("""
+            SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
+                   COALESCE(td.nombre, a.test_code) as test_nombre,
+                   COALESCE(td.siglas, a.test_code) as test_siglas,
+                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
+            FROM test_asignaciones a
+            JOIN pacientes p ON a.patient_id = p.id
+            LEFT JOIN tests_definiciones td ON a.test_code = td.code
+            WHERE (a.user_id = ? OR p.psicologo_id = ?)
+            ORDER BY a.fecha_asignacion DESC LIMIT 100
+        """, (user_id, user_id))
 
     rows = cursor.fetchall()
     data_list = []
@@ -2472,31 +2441,17 @@ def api_get_tests_paciente(patient_id):
     ensure_tests_tables(db)
     cursor = db.cursor()
 
-    role = session.get('role', '')
-    is_admin = role in ['admin', 'superadmin'] or user_id == 1
-
-    if is_admin:
-        cursor.execute("""
-            SELECT a.*,
-                   COALESCE(td.nombre, a.test_code) as test_nombre,
-                   COALESCE(td.siglas, a.test_code) as test_siglas,
-                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
-            FROM test_asignaciones a
-            LEFT JOIN tests_definiciones td ON a.test_code = td.code
-            WHERE a.patient_id = ?
-            ORDER BY a.fecha_asignacion DESC
-        """, (patient_id,))
-    else:
-        cursor.execute("""
-            SELECT a.*,
-                   COALESCE(td.nombre, a.test_code) as test_nombre,
-                   COALESCE(td.siglas, a.test_code) as test_siglas,
-                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
-            FROM test_asignaciones a
-            LEFT JOIN tests_definiciones td ON a.test_code = td.code
-            WHERE a.patient_id = ? AND a.user_id = ?
-            ORDER BY a.fecha_asignacion DESC
-        """, (patient_id, user_id))
+    cursor.execute("""
+        SELECT a.*,
+               COALESCE(td.nombre, a.test_code) as test_nombre,
+               COALESCE(td.siglas, a.test_code) as test_siglas,
+               COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
+        FROM test_asignaciones a
+        JOIN pacientes p ON a.patient_id = p.id
+        LEFT JOIN tests_definiciones td ON a.test_code = td.code
+        WHERE a.patient_id = ? AND (a.user_id = ? OR p.psicologo_id = ?)
+        ORDER BY a.fecha_asignacion DESC
+    """, (patient_id, user_id, user_id))
 
     rows = cursor.fetchall()
     data_list = []
@@ -2641,16 +2596,30 @@ def api_export_test_pdf(assignment_id):
         ensure_tests_tables(db)
         cursor = db.cursor()
 
-        cursor.execute("""
-            SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
-                   td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
-                   u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.estudios as psicologo_titulo
-            FROM test_asignaciones a
-            LEFT JOIN pacientes p ON a.patient_id = p.id
-            LEFT JOIN tests_definiciones td ON a.test_code = td.code
-            LEFT JOIN usuarios u ON a.user_id = u.id
-            WHERE a.id = ?
-        """, (assignment_id,))
+        if 'user_id' in session:
+            user_id = session['user_id']
+            cursor.execute("""
+                SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
+                       td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
+                       u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.estudios as psicologo_titulo
+                FROM test_asignaciones a
+                LEFT JOIN pacientes p ON a.patient_id = p.id
+                LEFT JOIN tests_definiciones td ON a.test_code = td.code
+                LEFT JOIN usuarios u ON a.user_id = u.id
+                WHERE a.id = ? AND (a.user_id = ? OR p.psicologo_id = ?)
+            """, (assignment_id, user_id, user_id))
+        else:
+            patient_id = session.get('patient_id')
+            cursor.execute("""
+                SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
+                       td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
+                       u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.estudios as psicologo_titulo
+                FROM test_asignaciones a
+                LEFT JOIN pacientes p ON a.patient_id = p.id
+                LEFT JOIN tests_definiciones td ON a.test_code = td.code
+                LEFT JOIN usuarios u ON a.user_id = u.id
+                WHERE a.id = ? AND a.patient_id = ?
+            """, (assignment_id, patient_id))
 
         row = cursor.fetchone()
         if not row:
