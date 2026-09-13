@@ -2679,19 +2679,20 @@ def test_firebase_push():
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
             tokens = [r['token'] for r in cursor.fetchall()]
 
-        # Si no había token guardado para este usuario pero el navegador envía su token activo:
+        # Si el navegador envía su token activo actual y no está en la lista:
         client_tok = (data.get('token') or '').strip()
-        if not tokens and client_tok and len(client_tok) > 10:
-            dev_id = (data.get('device_id') or '').strip()
-            now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (client_tok,))
-            if user_id:
-                cursor.execute("""
-                    INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
-                    VALUES (?, NULL, ?, ?, ?, ?)
-                """, (user_id, client_tok, dev_id or None, (request.headers.get('User-Agent') or '')[:150], now_str))
-                db.commit()
-                tokens = [client_tok]
+        if client_tok and len(client_tok) > 10:
+            if client_tok not in tokens:
+                dev_id = (data.get('device_id') or '').strip()
+                now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (client_tok,))
+                if user_id:
+                    cursor.execute("""
+                        INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                        VALUES (?, NULL, ?, ?, ?, ?)
+                    """, (user_id, client_tok, dev_id or None, (request.headers.get('User-Agent') or '')[:150], now_str))
+                    db.commit()
+                    tokens.append(client_tok)
 
         if not tokens:
             return jsonify({

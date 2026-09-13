@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-consultorio-v114';
+const CACHE_NAME = 'mi-consultorio-v115';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/logo.png',
@@ -106,7 +106,7 @@ self.addEventListener('push', (event) => {
     icon: data.icon,
     badge: '/static/badge.png',
     tag: notifTag,
-    renotify: false,
+    renotify: true,
     vibrate: [100, 50, 100],
     data: { url: data.url }
   };

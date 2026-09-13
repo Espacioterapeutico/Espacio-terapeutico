@@ -12053,17 +12053,37 @@ async function initFirebaseMessagingFlow(registration) {
         // Interceptación en primer plano (Foreground)
         messaging.onMessage((payload) => {
             console.log("Mensaje FCM recibido en primer plano:", payload);
-            const title = payload.notification?.title || payload.data?.title || 'Mi Consultorio';
-            const body = payload.notification?.body || payload.data?.body || 'Tienes una nueva notificación.';
-            
+            const title = payload.notification?.title || payload.data?.title || 'Espacio Terapéutico';
+            const body = payload.notification?.body || payload.data?.body || payload.data?.mensaje || 'Tienes una nueva notificación.';
+            const url = payload.data?.url || payload.data?.link || payload.data?.click_action || '/';
+            const icon = payload.notification?.icon || payload.data?.icon || '/static/logo.png';
+            const tag = payload.data?.tag || payload.notification?.tag || ('fg-' + Date.now());
+
+            // 1. Mostrar toast visual dentro de la aplicación
             if (typeof showCustomToast === 'function') {
                 showCustomToast(title, body);
-            } else {
-                new Notification(title, {
-                    body: body,
-                    icon: '/static/logo.png',
-                    badge: '/static/logo.png',
-                    data: { url: payload.data?.url || '/' }
+            }
+
+            // 2. Reproducir sonido de notificación
+            try {
+                const audio = new Audio('/static/notification.wav');
+                audio.play().catch(() => {});
+            } catch(e) {}
+
+            // 3. Mostrar notificación nativa en la barra del sistema (Android / Windows / PWA)
+            if ('serviceWorker' in navigator && ('Notification' in window) && Notification.permission === 'granted') {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, {
+                        body: body,
+                        icon: icon,
+                        badge: '/static/badge.png',
+                        tag: tag,
+                        renotify: true,
+                        vibrate: [200, 100, 200],
+                        data: { url: url }
+                    });
+                }).catch(err => {
+                    console.warn("No se pudo mostrar notificación nativa en primer plano:", err);
                 });
             }
         });
@@ -12226,17 +12246,21 @@ async function handleTestPushNotification() {
         if (res.ok && data.success) {
             if (msgEl) {
                 msgEl.className = 'status-msg success-msg';
-                msgEl.textContent = `✅ ${data.message} Si minimizas el navegador, verás la alerta emergente.`;
+                msgEl.textContent = `✅ ${data.message} ¡Revisa la barra de notificaciones de tu teléfono!`;
                 msgEl.classList.remove('hide');
             }
-            alert(`✅ ¡Notificación de prueba enviada!\n\n${data.message}\nRevisa tu barra de tareas / centro de notificaciones.`);
+            if (typeof showCustomToast === 'function') {
+                showCustomToast('✅ Notificación Push Enviada', data.message);
+            }
         } else {
             if (msgEl) {
                 msgEl.className = 'status-msg error-msg';
                 msgEl.textContent = `❌ ${data.error || 'Fallo al enviar notificación de prueba'}`;
                 msgEl.classList.remove('hide');
             }
-            alert(`❌ Error al enviar prueba: ${data.error || 'Respuesta no exitosa'}`);
+            if (typeof showCustomToast === 'function') {
+                showCustomToast('❌ Error al Enviar', data.error || 'Respuesta no exitosa');
+            }
         }
         await updateFcmDiagnosticUI();
     } catch (err) {
@@ -12245,7 +12269,9 @@ async function handleTestPushNotification() {
             msgEl.textContent = `❌ Error de conexión: ${err.message}`;
             msgEl.classList.remove('hide');
         }
-        alert(`❌ Error de conexión: ${err.message}`);
+        if (typeof showCustomToast === 'function') {
+            showCustomToast('❌ Error de conexión', err.message);
+        }
     }
 }
 window.handleTestPushNotification = handleTestPushNotification;

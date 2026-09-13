@@ -372,6 +372,10 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
             payload = {
                 "message": {
                     "token": token,
+                    "notification": {
+                        "title": title,
+                        "body": body
+                    },
                     "data": {
                         "url": url,
                         "title": title,
@@ -391,7 +395,7 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                             "icon": icon_url,
                             "badge": badge_url,
                             "tag": tag_id,
-                            "renotify": False,
+                            "renotify": True,
                             "vibrate": [200, 100, 200]
                         },
                         "fcm_options": {
@@ -401,6 +405,8 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                     "android": {
                         "priority": "high",
                         "notification": {
+                            "title": title,
+                            "body": body,
                             "sound": "default",
                             "tag": tag_id
                         }
@@ -408,6 +414,10 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                     "apns": {
                         "payload": {
                             "aps": {
+                                "alert": {
+                                    "title": title,
+                                    "body": body
+                                },
                                 "sound": "default"
                             }
                         }
@@ -425,9 +435,15 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                     resp_str = response.read().decode('utf-8')
                     results.append({"token": token[:15] + "...", "status": 200, "response": resp_str})
             except Exception as fcm_ex:
-                print("Error de envío a token FCM individual:", fcm_ex)
+                resp_err = ""
+                if hasattr(fcm_ex, 'read'):
+                    try:
+                        resp_err = fcm_ex.read().decode('utf-8')
+                    except Exception:
+                        pass
+                print("Error de envío a token FCM individual:", fcm_ex, resp_err)
                 status_code = getattr(fcm_ex, 'code', None) or 500
-                results.append({"token": token[:15] + "...", "status": status_code, "error": str(fcm_ex)})
+                results.append({"token": token[:15] + "...", "status": status_code, "error": str(fcm_ex), "detail": resp_err})
                 if hasattr(fcm_ex, 'code') and fcm_ex.code in [400, 401, 403, 404, 410]:
                     try:
                         cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
@@ -3439,9 +3455,22 @@ try {{
   firebase.initializeApp({config_dict_str});
   const messaging = firebase.messaging();
   messaging.onBackgroundMessage((payload) => {{
-    // Registrado para telemetría. La visualización de la alerta se delega exclusivamente
-    // al listener 'push' nativo de sw.js para garantizar tag determinista y evitar notificaciones duplicadas.
     console.log('[FCM] Mensaje en segundo plano recibido por SDK:', payload);
+    const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'Espacio Terapéutico';
+    const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || (payload.data && payload.data.mensaje) || 'Tienes una nueva notificación.';
+    const url = (payload.data && payload.data.url) || (payload.data && payload.data.link) || (payload.data && payload.data.click_action) || '/';
+    const icon = (payload.notification && payload.notification.icon) || (payload.data && payload.data.icon) || '/static/logo.png';
+    const tag = (payload.notification && payload.notification.tag) || (payload.data && payload.data.tag) || ('notif-' + title).replace(/\\s+/g, '_').substring(0, 40);
+
+    return self.registration.showNotification(title, {{
+      body: body,
+      icon: icon,
+      badge: '/static/badge.png',
+      tag: tag,
+      renotify: true,
+      vibrate: [200, 100, 200],
+      data: {{ url: url }}
+    }});
   }});
 }} catch(err) {{
   console.error("Fallo al inicializar Firebase SDK en el SW:", err);
