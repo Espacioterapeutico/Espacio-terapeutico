@@ -850,6 +850,104 @@ def patient_change_password():
         return jsonify({'error': f'Error al actualizar contraseña: {str(e)}'}), 500
 
 
+@pacientes_bp.route('/api/patient/delete-account', methods=['POST'])
+@patient_login_required
+def patient_delete_account():
+    """
+    Permite al consultante dar de baja su cuenta de usuario.
+    Conforme a las normativas de salud y ética psicológica, genera y archiva
+    un respaldo completo de su expediente clínico (.docx) para custodia legal del terapeuta,
+    anula el acceso del paciente y desvincula sus tokens de notificación.
+    """
+    data = request.json or {}
+    password = (data.get('password') or '').strip()
+    motivo = (data.get('motivo') or '').strip()
+
+    if not password:
+        return jsonify({'error': 'Debes ingresar tu contraseña actual para confirmar la baja.'}), 400
+
+    patient_id = session['patient_id']
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
+    patient = cursor.fetchone()
+    if not patient:
+        return jsonify({'error': 'Consultante no encontrado.'}), 404
+
+    # Validar contraseña
+    pwd_ok = False
+    if patient['password_hash']:
+        pwd_ok = check_password_hash(patient['password_hash'], password)
+    else:
+        pwd_ok = (password == patient['cedula'] or password == patient['username'])
+
+    if not pwd_ok:
+        return jsonify({'error': 'La contraseña ingresada es incorrecta.'}), 401
+
+    # 1. Generar expediente consolidado de respaldo legal
+    backup_filename = None
+    try:
+        from routes_admin import generate_patient_docx
+        doc = generate_patient_docx(cursor, patient_id)
+        if doc:
+            backup_folder = os.path.join(os.getcwd(), 'expedientes_archivados')
+            os.makedirs(backup_folder, exist_ok=True)
+            now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_cedula = (patient['cedula'] or str(patient_id)).replace(' ', '_').replace('/', '_').replace('\\', '_')
+            backup_filename = f"Expediente_Baja_{safe_cedula}_{now_str}.docx"
+            backup_path = os.path.join(backup_folder, backup_filename)
+            doc.save(backup_path)
+    except Exception as ex_doc:
+        print(f"Error generando respaldo clínico en baja de paciente {patient_id}: {ex_doc}")
+
+    # 2. Desactivar credenciales de acceso del paciente
+    import secrets
+    pseudo_username = f"inactivo_{patient_id}_{secrets.token_hex(4)}"
+    fecha_baja = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    nota = f"Baja voluntaria de cuenta solicitada por el consultante el {fecha_baja}."
+    if motivo:
+        nota += f" Motivo indicado: {motivo}."
+    if backup_filename:
+        nota += f" Expediente respaldado en: {backup_filename}."
+
+    cursor.execute("""
+        UPDATE pacientes 
+        SET password_hash = NULL,
+            username = ?,
+            notas_baja = ?,
+            fecha_baja = ?,
+            archivo_respaldo_baja = ?
+        WHERE id = ?
+    """, (pseudo_username, nota, fecha_baja, backup_filename, patient_id))
+
+    # 3. Eliminar suscripciones FCM y WebPush
+    cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+    cursor.execute("DELETE FROM web_push_subscriptions WHERE patient_id = ?", (patient_id,))
+
+    # 4. Notificar internamente al psicólogo asignado sobre el respaldo legal
+    psych_id = patient['psicologo_id'] or 1
+    cursor.execute("""
+        INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+        VALUES (?, 'paciente', '⚠️ Baja de Consultante con Respaldo Legal', ?, ?, 0, ?)
+    """, (
+        psych_id,
+        f"El consultante {patient['nombres']} {patient['apellidos']} ha solicitado la baja de su cuenta. Se ha generado y archivado su expediente clínico completo para tu custodia legal obligatoria.",
+        fecha_baja,
+        f"/api/export/word/{patient_id}"
+    ))
+
+    db.commit()
+
+    # 5. Cerrar sesión
+    session.clear()
+
+    return jsonify({
+        'success': True,
+        'message': 'Tu cuenta ha sido dada de baja exitosamente. Tu acceso ha sido revocado y tu expediente clínico ha quedado resguardado en custodia legal de tu terapeuta conforme a la ley.'
+    })
+
+
 
 @pacientes_bp.route('/api/patient/appointments', methods=['GET'])
 @patient_login_required

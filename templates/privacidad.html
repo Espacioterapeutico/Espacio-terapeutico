@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidad | Espacio Terapéutico</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/logo.ico">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#702e5e">
+    <style>
+        :root {
+            --primary: #702e5e;
+            --primary-dark: #4b1d3e;
+            --primary-light: #9c4b84;
+            --accent: #fce7f3;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: var(--bg-page); color: var(--text-main); line-height: 1.7; padding-bottom: 3rem; }
+        header.nav-header { background: linear-gradient(135deg, #3d1e3f 0%, #1a0b1c 100%); color: white; padding: 1.25rem 1.5rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .header-content { max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .brand-link { display: flex; align-items: center; gap: 0.85rem; text-decoration: none; color: white; }
+        .brand-logo { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); object-fit: cover; }
+        .brand-title { font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+        .btn-back { background: rgba(255,255,255,0.15); color: white; padding: 0.45rem 0.95rem; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.2); transition: all 0.2s ease; }
+        .btn-back:hover { background: rgba(255,255,255,0.25); }
+        .hero-banner { background: linear-gradient(180deg, rgba(112, 46, 94, 0.08) 0%, rgba(248, 250, 252, 0) 100%); padding: 3rem 1.5rem 1.5rem 1.5rem; text-align: center; }
+        .hero-container { max-width: 800px; margin: 0 auto; }
+        .hero-title { font-family: 'Outfit', sans-serif; font-size: 2.2rem; color: var(--primary-dark); margin-bottom: 0.75rem; font-weight: 800; }
+        .hero-subtitle { font-size: 1rem; color: var(--text-muted); }
+        .last-update { display: inline-block; margin-top: 0.8rem; padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--border-color); border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: var(--primary); }
+        .content-container { max-width: 860px; margin: 1.5rem auto; padding: 0 1.25rem; }
+        .policy-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 2.25rem; box-shadow: var(--shadow-sm); margin-bottom: 2rem; }
+        .section-title { font-family: 'Outfit', sans-serif; color: var(--primary-dark); font-size: 1.35rem; margin: 2rem 0 1rem 0; display: flex; align-items: center; gap: 0.6rem; font-weight: 700; border-bottom: 1.5px solid rgba(112, 46, 94, 0.12); padding-bottom: 0.5rem; }
+        .section-title:first-of-type { margin-top: 0; }
+        p { margin-bottom: 1.1rem; color: #334155; font-size: 0.98rem; }
+        ul { margin-bottom: 1.2rem; padding-left: 1.4rem; }
+        li { margin-bottom: 0.5rem; color: #334155; font-size: 0.95rem; }
+        .alert-box { background: #fdf2f8; border-left: 4px solid var(--primary); padding: 1.1rem 1.25rem; border-radius: 8px; margin: 1.5rem 0; font-size: 0.92rem; color: #4a1d3b; }
+        .alert-box strong { display: block; margin-bottom: 0.35rem; font-size: 0.98rem; }
+        .contact-box { background: #f8fafc; border: 1.5px dashed var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-top: 2rem; text-align: center; }
+        .contact-box strong { color: var(--primary-dark); font-size: 1.1rem; }
+        footer.page-footer { text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 3rem; }
+        @media (max-width: 640px) { .hero-title { font-size: 1.7rem; } .policy-card { padding: 1.5rem; } .section-title { font-size: 1.15rem; } }
+    </style>
+</head>
+<body>
+    <header class="nav-header">
+        <div class="header-content">
+            <a href="/" class="brand-link">
+                <img src="/static/logo.png" alt="Espacio Terapéutico" class="brand-logo">
+                <span class="brand-title">Espacio Terapéutico</span>
+            </a>
+            <a href="/" class="btn-back">← Ir al Consultorio</a>
+        </div>
+    </header>
+
+    <div class="hero-banner">
+        <div class="hero-container">
+            <h1 class="hero-title">Política de Privacidad y Confidencialidad</h1>
+            <p class="hero-subtitle">Compromiso ético, protección de datos sensibles de salud mental y cumplimiento normativo internacional.</p>
+            <div class="last-update">Última actualización: Septiembre 2026</div>
+        </div>
+    </div>
+
+    <main class="content-container">
+        <article class="policy-card">
+            <h2 class="section-title">1. Responsable del Tratamiento</h2>
+            <p>
+                La plataforma digital <strong>Espacio Terapéutico</strong> (accesible vía web y aplicación móvil en <a href="https://www.espacioterapeutico.net" style="color: var(--primary); font-weight: 600;">www.espacioterapeutico.net</a>) es un ecosistema digital de gestión clínica y acompañamiento terapéutico operado por profesionales de la salud mental debidamente acreditados.
+            </p>
+            <p>
+                Para cualquier duda, solicitud o ejercicio de derechos vinculados a su privacidad, puede comunicarse con el equipo responsable a través de <strong>soporte@espacioterapeutico.net</strong>.
+            </p>
+
+            <h2 class="section-title">2. Secreto Profesional y Confidencialidad Terapéutica</h2>
+            <p>
+                Toda información compartida por el consultante durante el proceso terapéutico se encuentra protegida bajo el <strong>secreto profesional deontológico de la psicología</strong>. Los datos clínicos nunca son compartidos con terceros, comercializados ni utilizados con propósitos publicitarios.
+            </p>
+
+            <h2 class="section-title">3. Datos Personales y Clínicos Recabados</h2>
+            <p>Para brindar el servicio de consulta psicológica y seguimiento clínico, recopilamos:</p>
+            <ul>
+                <li><strong>Datos de Identificación y Contacto:</strong> Nombre completo, documento de identidad, correo electrónico, número telefónico (para recordatorios y confirmación de citas vía WhatsApp o SMS), país, ciudad y zona horaria.</li>
+                <li><strong>Datos de Salud Mental (Sensibles):</strong> Motivo de consulta, antecedentes médicos y psicológicos, impresiones diagnósticas, notas de evolución de sesiones terapéuticas, autorregistros de estado de ánimo y respuestas a pruebas/tests psicométricos asignados por su terapeuta.</li>
+                <li><strong>Datos Técnicos y Notificaciones:</strong> Tokens de suscripción a notificaciones Web Push / Firebase Cloud Messaging (FCM) para avisos de citas y herramientas, previa autorización del usuario en su dispositivo.</li>
+            </ul>
+
+            <div class="alert-box">
+                <strong>🔐 Cifrado de Información Clínica</strong>
+                Las notas clínicas de evolución, reflexiones de sesiones y respuestas diagnósticas se almacenan en nuestros servidores bajo protocolos de encriptación criptográfica para garantizar que únicamente el terapeuta a cargo y el consultante autorizado tengan acceso a las mismas.
+            </div>
+
+            <h2 class="section-title">4. Finalidad del Tratamiento</h2>
+            <p>La recolección de los datos antes descritos tiene como fines exclusivos:</p>
+            <ul>
+                <li>Gestión de la agenda de consultas, disponibilidad de horarios y reserva de citas (presenciales y online).</li>
+                <li>Envío de confirmaciones y recordatorios automáticos de consultas programadas vía WhatsApp y notificaciones push.</li>
+                <li>Seguimiento clínico longitudinal, registro de evolución terapéutica y aplicación de instrumentos de evaluación psicológica.</li>
+                <li>Emisión de comprobantes y control de finanzas y pagos por honorarios profesionales.</li>
+            </ul>
+
+            <h2 class="section-title">5. Custodia Legal y Retención de Expedientes Clínicos</h2>
+            <p>
+                De acuerdo con la legislación sanitaria y los códigos de ética profesional de la psicología vigentes en la mayoría de las jurisdicciones, <strong>los expedientes clínicos e historias terapéuticas deben ser preservados en custodia confidencial por un período mínimo legal</strong> (generalmente entre 5 y 10 años).
+            </p>
+            <p>
+                Esta retención es indispensable para la seguridad del consultante, fines médico-legales y el respaldo ético de la práctica profesional de los psicólogos.
+            </p>
+
+            <h2 class="section-title">6. Derechos del Usuario (ARCO) y Eliminación de Cuenta</h2>
+            <p>
+                En todo momento, cualquier usuario (consultante o profesional) puede ejercer sus derechos de <strong>Acceso, Rectificación, Cancelación y Oposición (ARCO)</strong> respecto a sus datos personales:
+            </p>
+            <ul>
+                <li><strong>Rectificación:</strong> Puede corregir sus datos de perfil o solicitar a su terapeuta la actualización de sus datos de filiación.</li>
+                <li><strong>Eliminación de Cuenta por parte del Consultante:</strong> Cualquier paciente puede solicitar la baja definitiva de su cuenta desde la sección <em>Ajustes / Perfil &gt; Eliminar mi cuenta</em> en la aplicación.</li>
+                <li><strong>Procedimiento de Baja y Respaldo:</strong> Al confirmarse la eliminación, el acceso del consultante al sistema (credenciales, contraseña y tokens de notificación) se cancela de forma inmediata. Paralelamente, en cumplimiento con la normativa legal de salud, el sistema genera y archiva de manera segura un expediente de respaldo para uso exclusivo del terapeuta tratante, garantizando el soporte legal requerido.</li>
+            </ul>
+
+            <h2 class="section-title">7. Notificaciones Push y Mensajería</h2>
+            <p>
+                La aplicación utiliza el servicio de notificaciones Push (vía Web Push API y Google Firebase Cloud Messaging) exclusivamente para enviar alertas sobre el estado de citas agendadas, tareas pendientes o confirmaciones requeridas. El usuario puede desvincular o revocar el permiso de notificaciones en cualquier momento desde los ajustes de su navegador o dispositivo móvil.
+            </p>
+
+            <h2 class="section-title">8. Modificaciones a esta Política</h2>
+            <p>
+                Nos reservamos el derecho de actualizar periódicamente esta Política de Privacidad para reflejar cambios legales o mejoras técnicas en la plataforma. Las modificaciones sustanciales serán notificadas a través de la aplicación.
+            </p>
+
+            <div class="contact-box">
+                <strong>¿Deseas solicitar la eliminación de tu cuenta o tienes dudas sobre tus datos?</strong>
+                <p style="margin-top: 0.5rem; margin-bottom: 0;">
+                    Puedes hacerlo directamente desde tu perfil en la app o escribiendo a:<br>
+                    <a href="mailto:soporte@espacioterapeutico.net" style="color: var(--primary); font-weight: 700; text-decoration: underline;">soporte@espacioterapeutico.net</a>
+                </p>
+            </div>
+        </article>
+
+        <footer class="page-footer">
+            <p>&copy; 2026 Espacio Terapéutico. Todos los derechos reservados.</p>
+        </footer>
+    </main>
+</body>
+</html>

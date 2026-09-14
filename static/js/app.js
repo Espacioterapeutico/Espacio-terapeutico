@@ -4245,6 +4245,71 @@ async function handlePatientChangePwSubmit(e) {
     }
 }
 
+async function handlePatientDeleteAccountSubmit(e) {
+    e.preventDefault();
+    const statusMsg = document.getElementById('pat-del-status-msg');
+    const passwordInput = document.getElementById('pat-del-password');
+    const motivoInput = document.getElementById('pat-del-motivo');
+    const btnConfirm = document.getElementById('btn-confirm-pat-delete');
+
+    const password = passwordInput ? passwordInput.value.trim() : '';
+    const motivo = motivoInput ? motivoInput.value.trim() : '';
+
+    if (!password) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Por favor ingresa tu contraseña para confirmar la baja.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        return;
+    }
+
+    if (!confirm('¿Estás completamente seguro de que deseas eliminar tu cuenta? Esta acción cancelará tu acceso a la aplicación.')) {
+        return;
+    }
+
+    if (btnConfirm) {
+        btnConfirm.disabled = true;
+        btnConfirm.textContent = 'Procesando baja y respaldo...';
+    }
+
+    try {
+        const res = await fetch('/api/patient/delete-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, motivo })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            alert(data.message || 'Tu cuenta ha sido eliminada con éxito. Tu expediente ha quedado archivado bajo custodia de tu terapeuta.');
+            try { sessionStorage.clear(); localStorage.clear(); } catch(e) {}
+            window.location.href = '/';
+        } else {
+            if (statusMsg) {
+                statusMsg.textContent = '❌ ' + (data.error || 'Error al procesar la baja de la cuenta.');
+                statusMsg.className = 'status-msg error-msg';
+                statusMsg.classList.remove('hide');
+            }
+            if (btnConfirm) {
+                btnConfirm.disabled = false;
+                btnConfirm.textContent = 'Confirmar Eliminación';
+            }
+        }
+    } catch (err) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Error de comunicación con el servidor.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        if (btnConfirm) {
+            btnConfirm.disabled = false;
+            btnConfirm.textContent = 'Confirmar Eliminación';
+        }
+    }
+}
+window.handlePatientDeleteAccountSubmit = handlePatientDeleteAccountSubmit;
+
 // ==========================================
 // GESTIÓN DE PACIENTES
 // ==========================================
@@ -9643,22 +9708,43 @@ async function handleRestoreSubmit(e) {
 // ==========================================
 // INTERACCIONES CON ELEMENTOS MODALES
 // ==========================================
+window._activeModalStack = window._activeModalStack || [];
+
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('hide');
         modal.style.setProperty('display', 'flex', 'important');
+        
+        // Registrar en pila y empujar estado en historial para soporte de botón Atrás en Android
+        if (!window._activeModalStack.includes(modalId)) {
+            window._activeModalStack.push(modalId);
+            try {
+                history.pushState({ type: 'modal', modalId: modalId }, '');
+            } catch (e) {}
+        }
     }
 }
 window.openModal = openModal;
 
-function closeModal(modalId) {
+function closeModal(modalId, triggeredByBack = false) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('hide');
         modal.style.removeProperty('display');
         modal.style.display = 'none';
         document.body.style.overflow = '';
+        
+        // Quitar de la pila
+        window._activeModalStack = (window._activeModalStack || []).filter(id => id !== modalId);
+        
+        // Si se cerró por botón de UI y el último estado era este modal, sincronizar historial
+        if (!triggeredByBack && history.state && history.state.type === 'modal' && history.state.modalId === modalId) {
+            try {
+                window._ignoreNextPopstate = true;
+                history.back();
+            } catch (e) {}
+        }
     }
 }
 window.closeModal = closeModal;
@@ -10084,6 +10170,90 @@ function downloadBackup() {
         window.location.href = '/api/backup';
     }
 }
+
+function downloadPatientsWordZip() {
+    window.location.href = '/api/user/export-all-patients-zip';
+}
+window.downloadPatientsWordZip = downloadPatientsWordZip;
+
+function openTherapistDeleteAccountModal() {
+    openModal('modal-therapist-delete-account');
+}
+window.openTherapistDeleteAccountModal = openTherapistDeleteAccountModal;
+
+async function handleTherapistDeleteAccountSubmit(e) {
+    e.preventDefault();
+    const statusMsg = document.getElementById('therapist-del-status-msg');
+    const pwInput = document.getElementById('therapist-del-pw');
+    const confirmInput = document.getElementById('therapist-del-confirm');
+    const btn = document.getElementById('btn-confirm-therapist-delete');
+
+    const password = pwInput ? pwInput.value.trim() : '';
+    const confirm_text = confirmInput ? confirmInput.value.trim() : '';
+
+    if (!password) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Ingresa tu contraseña profesional.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        return;
+    }
+
+    if (confirm_text.toUpperCase() !== 'ELIMINAR MI CUENTA') {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Debes escribir exactamente "ELIMINAR MI CUENTA" en mayúsculas.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        return;
+    }
+
+    if (!confirm('⚠️ ÚLTIMA ADVERTENCIA: ¿Confirmas la eliminación definitiva de tu cuenta profesional?')) {
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Procesando baja...';
+    }
+
+    try {
+        const res = await fetch('/api/user/delete-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, confirm_text })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            alert(data.message || 'Tu cuenta profesional ha sido dada de baja correctamente.');
+            try { sessionStorage.clear(); localStorage.clear(); } catch(e) {}
+            window.location.href = '/';
+        } else {
+            if (statusMsg) {
+                statusMsg.textContent = '❌ ' + (data.error || 'Error al procesar la baja.');
+                statusMsg.className = 'status-msg error-msg';
+                statusMsg.classList.remove('hide');
+            }
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Confirmar Baja Definitiva';
+            }
+        }
+    } catch (err) {
+        if (statusMsg) {
+            statusMsg.textContent = '❌ Error de comunicación con el servidor.';
+            statusMsg.className = 'status-msg error-msg';
+            statusMsg.classList.remove('hide');
+        }
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Baja Definitiva';
+        }
+    }
+}
+window.handleTherapistDeleteAccountSubmit = handleTherapistDeleteAccountSubmit;
 
 async function uploadSessionFile(input) {
     const file = input.files[0];
@@ -21858,7 +22028,98 @@ function closeFastBookingScreen(e) {
     }
 }
 
-window.addEventListener('popstate', () => {
+function showAndroidToast(message) {
+    let toast = document.getElementById('android-pwa-back-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'android-pwa-back-toast';
+        toast.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(30,41,59,0.92);color:#fff;padding:10px 22px;border-radius:24px;font-size:0.85rem;font-weight:600;z-index:99999;box-shadow:0 6px 18px rgba(0,0,0,0.25);pointer-events:none;transition:opacity 0.3s ease;opacity:0;';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    clearTimeout(window._backToastTimer);
+    window._backToastTimer = setTimeout(() => {
+        if (toast) toast.style.opacity = '0';
+    }, 2000);
+}
+window.showAndroidToast = showAndroidToast;
+
+window.addEventListener('popstate', (event) => {
+    if (window._ignoreNextPopstate) {
+        window._ignoreNextPopstate = false;
+        return;
+    }
+
+    // 1. Si hay modales abiertos en la pila, cerrar el más reciente
+    if (window._activeModalStack && window._activeModalStack.length > 0) {
+        const lastModalId = window._activeModalStack.pop();
+        if (lastModalId) {
+            const m = document.getElementById(lastModalId);
+            if (m) {
+                m.classList.add('hide');
+                m.style.removeProperty('display');
+                m.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            return;
+        }
+    }
+
+    // Comprobación de seguridad: cerrar cualquier modal que siga visible en el DOM
+    const visibleModals = document.querySelectorAll('.modal:not(.hide)');
+    if (visibleModals && visibleModals.length > 0) {
+        const topModal = visibleModals[visibleModals.length - 1];
+        if (topModal && topModal.id) {
+            closeModal(topModal.id, true);
+            return;
+        }
+    }
+
+    // 2. Si el menú drawer de pacientes está abierto, cerrarlo
+    const patientMenu = document.getElementById('patient-menu');
+    if (patientMenu && patientMenu.classList.contains('open')) {
+        patientMenu.classList.remove('open');
+        const overlay = document.getElementById('patient-menu-overlay');
+        if (overlay) overlay.classList.add('hide');
+        return;
+    }
+
+    // 3. Manejo de subvistas secundarias hacia el inicio
+    const isPatientSession = sessionStorage.getItem('patient_id') || (window.currentUser && window.currentUser.is_patient);
+    if (isPatientSession) {
+        const activePatView = document.querySelector('.pat-menu-item.active');
+        const patViewName = activePatView ? activePatView.getAttribute('data-pat-view') : '';
+        if (patViewName && patViewName !== 'patient-home') {
+            if (typeof switchPatientView === 'function') {
+                switchPatientView('patient-home');
+                try { history.pushState({ root: true }, ''); } catch(e) {}
+                return;
+            }
+        }
+    } else {
+        // Sesión de Terapeuta / Admin
+        if (typeof activeView !== 'undefined' && activeView && activeView !== 'dashboard') {
+            if (typeof switchView === 'function') {
+                switchView('dashboard');
+                try { history.pushState({ root: true }, ''); } catch(e) {}
+                return;
+            }
+        }
+    }
+
+    // 4. Si ya estamos en la vista raíz, mostrar confirmación de salida con doble toque
+    const now = Date.now();
+    if (!window._lastBackPressTime || (now - window._lastBackPressTime > 2200)) {
+        window._lastBackPressTime = now;
+        showAndroidToast("Presiona atrás nuevamente para salir");
+        try {
+            history.pushState({ root: true }, '');
+        } catch (e) {}
+        return;
+    }
+
+    // 5. Manejo de landing / rutas públicas
     initLandingRouteHandling();
 });
 

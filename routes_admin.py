@@ -10,7 +10,9 @@ import json
 import sqlite3
 import datetime
 from functools import wraps
-from flask import Blueprint, request, jsonify, session, g, redirect
+import io
+import zipfile
+from flask import Blueprint, request, jsonify, session, g, redirect, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
 admin_bp = Blueprint('admin', __name__)
@@ -3007,32 +3009,50 @@ def sync_google_calendar():
 
 
 # ==========================================
-# EXPORTACIÓN A WORD (.DOCX)
+# EXPORTACIÓN A WORD (.DOCX) Y RESPALDOS
 # ==========================================
 
+def generate_patient_docx(cursor, patient_id):
+    """
+    Genera y retorna un objeto docx.Document() con el expediente clínico completo del paciente:
+    - Datos personales y filiación
+    - Antecedentes e impresión diagnóstica (descifrados)
+    - Evolución cronológica de todas las sesiones
+    - Tests psicológicos aplicados y resultados
+    - Historial de citas y balance financiero
+    """
+    import docx
+    from docx.shared import Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from app import decrypt_clinical_text
 
-
-@admin_bp.route('/api/export/word/<int:patient_id>', methods=['GET'])
-@login_required
-def export_word(patient_id):
-    db = get_db()
-    cursor = db.cursor()
-    
-    # 1. Obtener datos del paciente
     cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
     pac = cursor.fetchone()
     if not pac:
-        return jsonify({'error': 'Paciente no encontrado'}), 404
-        
-    # 2. Obtener sesiones
+        return None
+
+    # Obtener datos del terapeuta
+    psych_id = pac['psicologo_id'] or 1
+    cursor.execute("SELECT nombres, apellidos, estudios, federacion FROM usuarios WHERE id = ?", (psych_id,))
+    psych = cursor.fetchone()
+    psych_nombre = f"Psic. {psych['nombres']} {psych['apellidos']}".strip() if psych else "Psicólogo Tratante"
+
     cursor.execute("SELECT * FROM sesiones WHERE paciente_id = ? ORDER BY fecha ASC", (patient_id,))
     sessions = cursor.fetchall()
-    
-    # 3. Obtener balance financiero
+
     cursor.execute("SELECT * FROM agenda_finanzas WHERE paciente_id = ? ORDER BY fecha ASC", (patient_id,))
     finance_events = cursor.fetchall()
-    
-    # Decodificar datos cifrados del paciente
+
+    cursor.execute("""
+        SELECT a.*, td.nombre as test_nombre, td.siglas as test_siglas
+        FROM test_asignaciones a
+        LEFT JOIN tests_definiciones td ON a.test_code = td.code
+        WHERE a.patient_id = ?
+        ORDER BY a.fecha_asignacion ASC
+    """, (patient_id,))
+    tests = cursor.fetchall()
+
+    # Descifrar campos sensibles
     pac_dict = dict(pac)
     for field in ['antecedentes_medicos_personales', 'antecedentes_medicos_familiares', 
                   'antecedentes_psicologicos_personales', 'antecedentes_psicologicos_familiares',
@@ -3040,87 +3060,87 @@ def export_word(patient_id):
                   'farmacologia', 'diagnostico']:
         if pac_dict.get(field):
             pac_dict[field] = decrypt_clinical_text(pac_dict[field])
-            
-    # Crear documento Word
+
     doc = docx.Document()
-    
-    # Estilo y Título Principal
+
+    # Título Principal y Encabezado Institucional
     title = doc.add_paragraph()
     title_run = title.add_run("HISTORIA CLÍNICA Y EXPEDIENTE PSICOLÓGICO")
     title_run.bold = True
     title_run.font.size = Pt(18)
-    title_run.font.color.rgb = docx.shared.RGBColor(0x3D, 0x1E, 0x3F) # Berenjena Oscuro
+    title_run.font.color.rgb = RGBColor(0x3D, 0x1E, 0x3F)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
+
     subtitle = doc.add_paragraph()
-    sub_run = subtitle.add_run(f"Consultante: {pac_dict['nombres']} {pac_dict['apellidos']} | Cédula: {pac_dict['cedula']}")
+    sub_run = subtitle.add_run(f"Consultante: {pac_dict['nombres']} {pac_dict['apellidos']} | Cédula: {pac_dict['cedula']} | Terapeuta: {psych_nombre}")
     sub_run.italic = True
-    sub_run.font.size = Pt(12)
+    sub_run.font.size = Pt(11)
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
-    # Margen horizontal
+
     doc.add_paragraph("__________________________________________________________________")
-    
-    # Sección 1: Datos Personales
+
+    # 1. Datos Personales y Filiación
     h1 = doc.add_heading(level=1)
     h1_run = h1.add_run("1. Datos Personales y Filiación")
-    h1_run.font.color.rgb = docx.shared.RGBColor(0x3D, 0x1E, 0x3F)
-    
+    h1_run.font.color.rgb = RGBColor(0x3D, 0x1E, 0x3F)
+
     table_data = [
         ("Nombres y Apellidos", f"{pac_dict['nombres']} {pac_dict['apellidos']}"),
         ("Cédula de Identidad", pac_dict['cedula']),
-        ("Pronombre / Género", f"{pac_dict['pronombre'] or 'N/A'} / {pac_dict['genero'] or 'N/A'}"),
-        ("Edad", str(pac_dict['edad']) if pac_dict['edad'] else "N/A"),
-        ("Lugar y Fecha de Nacimiento", f"{pac_dict['lugar_nacimiento'] or 'N/A'} ({pac_dict['fecha_nacimiento'] or 'N/A'})"),
-        ("Residencia Actual", ", ".join(filter(None, [pac_dict['residencia_actual'] if 'residencia_actual' in pac_dict.keys() else (pac_dict['ciudad'] if 'ciudad' in pac_dict.keys() else None), pac_dict['pais'] if 'pais' in pac_dict.keys() else None])) or "N/A"),
-        ("Reside con", pac_dict['con_quien_reside'] or "N/A"),
-        ("Nivel Académico / Ocupación", f"{pac_dict['nivel_academico'] or 'N/A'} / {pac_dict['ocupacion'] or 'N/A'}"),
-        ("Estado Civil / Relacional", pac_dict['estado_civil'] or "N/A"),
+        ("Pronombre / Género", f"{pac_dict.get('pronombre') or 'N/A'} / {pac_dict.get('genero') or 'N/A'}"),
+        ("Edad", str(pac_dict.get('edad')) if pac_dict.get('edad') else "N/A"),
+        ("Lugar y Fecha de Nacimiento", f"{pac_dict.get('lugar_nacimiento') or 'N/A'} ({pac_dict.get('fecha_nacimiento') or 'N/A'})"),
+        ("Residencia Actual", f"{pac_dict.get('ciudad') or ''}, {pac_dict.get('pais') or ''}".strip(', ') or "N/A"),
+        ("Reside con", pac_dict.get('con_quien_reside') or "N/A"),
+        ("Nivel Académico / Ocupación", f"{pac_dict.get('nivel_academico') or 'N/A'} / {pac_dict.get('ocupacion') or 'N/A'}"),
+        ("Estado Civil", pac_dict.get('estado_civil') or "N/A"),
+        ("Teléfono", pac_dict.get('telefono') or "N/A"),
+        ("Zona Horaria", pac_dict.get('zona_horaria') or "America/Caracas")
     ]
-    
+
     table = doc.add_table(rows=0, cols=2)
     table.style = 'Light Shading Accent 1'
     for label, val in table_data:
         row_cells = table.add_row().cells
         row_cells[0].text = label
-        row_cells[1].text = val
-        
-    doc.add_paragraph() # Espacio
-    
-    # Sección 2: Antecedentes e Impresión Diagnóstica
+        row_cells[1].text = str(val)
+
+    doc.add_paragraph()
+
+    # 2. Antecedentes e Impresión Diagnóstica
     h2 = doc.add_heading(level=1)
     h2_run = h2.add_run("2. Antecedentes e Impresión Diagnóstica")
-    h2_run.font.color.rgb = docx.shared.RGBColor(0x3D, 0x1E, 0x3F)
-    
+    h2_run.font.color.rgb = RGBColor(0x3D, 0x1E, 0x3F)
+
     doc.add_paragraph().add_run("Antecedentes Médicos:").bold = True
-    doc.add_paragraph(f"- Personales: {pac_dict['antecedentes_medicos_personales'] or 'Sin registrar'}")
-    doc.add_paragraph(f"- Familiares: {pac_dict['antecedentes_medicos_familiares'] or 'Sin registrar'}")
-    
+    doc.add_paragraph(f"- Personales: {pac_dict.get('antecedentes_medicos_personales') or 'Sin registrar'}")
+    doc.add_paragraph(f"- Familiares: {pac_dict.get('antecedentes_medicos_familiares') or 'Sin registrar'}")
+
     doc.add_paragraph().add_run("Antecedentes Psicológicos y Psiquiátricos:").bold = True
-    doc.add_paragraph(f"- Personales: {pac_dict['antecedentes_psicologicos_personales'] or 'Sin registrar'}")
-    doc.add_paragraph(f"- Familiares: {pac_dict['antecedentes_psicologicos_familiares'] or 'Sin registrar'}")
-    
+    doc.add_paragraph(f"- Personales: {pac_dict.get('antecedentes_psicologicos_personales') or 'Sin registrar'}")
+    doc.add_paragraph(f"- Familiares: {pac_dict.get('antecedentes_psicologicos_familiares') or 'Sin registrar'}")
+
     doc.add_paragraph().add_run("Motivo de Consulta y Expectativas:").bold = True
-    doc.add_paragraph(f"- Asistencia previa al psicólogo: {pac_dict['asistencia_previa_psicologo'] or 'Sin registrar'}")
-    doc.add_paragraph(f"- Motivo de consulta actual: {pac_dict['motivo_consulta'] or 'Sin registrar'}")
-    doc.add_paragraph(f"- Expectativas del proceso: {pac_dict['expectativas'] or 'Sin registrar'}")
-    
-    doc.add_paragraph().add_run("Tratamiento Farmacológico Activo:").bold = True
-    doc.add_paragraph(pac_dict['farmacologia'] or "Ninguno")
-    
+    doc.add_paragraph(f"- Asistencia previa al psicólogo: {pac_dict.get('asistencia_previa_psicologo') or 'Sin registrar'}")
+    doc.add_paragraph(f"- Motivo de consulta actual: {pac_dict.get('motivo_consulta') or 'Sin registrar'}")
+    doc.add_paragraph(f"- Expectativas del proceso: {pac_dict.get('expectativas') or 'Sin registrar'}")
+
+    doc.add_paragraph().add_run("Tratamiento Farmacológico:").bold = True
+    doc.add_paragraph(pac_dict.get('farmacologia') or "Ninguno")
+
     doc.add_paragraph().add_run("Contacto de Emergencia:").bold = True
-    doc.add_paragraph(f"{pac_dict['contacto_emergencia_nombre'] or 'N/A'} ({pac_dict['contacto_emergencia_parentesco'] or 'N/A'})")
-    
+    doc.add_paragraph(f"{pac_dict.get('contacto_emergencia_nombre') or 'N/A'} ({pac_dict.get('contacto_emergencia_parentesco') or 'N/A'})")
+
     doc.add_paragraph().add_run("Impresión Diagnóstica Evolutiva:").bold = True
-    doc.add_paragraph(pac_dict['diagnostico'] or "Sin impresión diagnóstica anotada.")
-    
+    doc.add_paragraph(pac_dict.get('diagnostico') or "Sin impresión diagnóstica anotada.")
+
     doc.add_page_break()
-    
-    # Sección 3: Evolución Cronológica (Sesiones)
+
+    # 3. Evolución Cronológica (Sesiones)
     h3 = doc.add_heading(level=1)
-    h3_run = h3.add_run("3. Registro de Sesiones (Evolución)")
-    h3_run.font.color.rgb = docx.shared.RGBColor(0x3D, 0x1E, 0x3F)
-    
+    h3_run = h3.add_run("3. Registro de Sesiones (Evolución Terapéutica)")
+    h3_run.font.color.rgb = RGBColor(0x3D, 0x1E, 0x3F)
+
     if not sessions:
         doc.add_paragraph("No hay sesiones de evolución registradas para este consultante.")
     else:
@@ -3130,9 +3150,9 @@ def export_word(patient_id):
             s_recursos = decrypt_clinical_text(s['recursos_entregados']) or "Ninguno."
             s_anotaciones = decrypt_clinical_text(s['anotaciones_proxima']) or "Ninguna."
             s_compromisos = decrypt_clinical_text(s['compromisos_psicologo']) or "Ninguno."
-            
+
             p_ses = doc.add_paragraph()
-            p_ses.add_run(f"Sesión N° {idx} — Fecha: {s['fecha']} | Modalidad: {s['modalidad']}").bold = True
+            p_ses.add_run(f"Sesión N° {idx} — Fecha: {s['fecha']} | Modalidad: {s['modalidad']} | Estado: {s['estado']}").bold = True
             doc.add_paragraph().add_run("Resumen abordado:").bold = True
             doc.add_paragraph(s_resumen)
             doc.add_paragraph().add_run("Tareas asignadas al consultante:").bold = True
@@ -3141,17 +3161,43 @@ def export_word(patient_id):
             doc.add_paragraph(s_recursos)
             doc.add_paragraph().add_run("Anotaciones próxima consulta:").bold = True
             doc.add_paragraph(s_anotaciones)
-            doc.add_paragraph().add_run("Compromisos del psicólogo:").bold = True
+            doc.add_paragraph().add_run("Compromisos del terapeuta:").bold = True
             doc.add_paragraph(s_compromisos)
             doc.add_paragraph("____________________________________________________")
-            
+
+    # 4. Instrumentos y Evaluaciones Psicológicas
     doc.add_page_break()
-    
-    # Sección 4: Historial de Citas y Finanzas
     h4 = doc.add_heading(level=1)
-    h4_run = h4.add_run("4. Historial de Citas y Estado de Cuentas")
-    h4_run.font.color.rgb = docx.shared.RGBColor(0x3D, 0x1E, 0x3F)
-    
+    h4_run = h4.add_run("4. Instrumentos y Evaluaciones Psicológicas Aplicadas")
+    h4_run.font.color.rgb = RGBColor(0x3D, 0x1E, 0x3F)
+
+    if not tests:
+        doc.add_paragraph("No se registran tests psicométricos asignados a este consultante.")
+    else:
+        table_t = doc.add_table(rows=1, cols=5)
+        table_t.style = 'Light Shading Accent 1'
+        hdr_t = table_t.rows[0].cells
+        hdr_t[0].text = 'Test'
+        hdr_t[1].text = 'Fecha'
+        hdr_t[2].text = 'Estado'
+        hdr_t[3].text = 'Puntaje'
+        hdr_t[4].text = 'Clasificación'
+
+        for t in tests:
+            row_t = table_t.add_row().cells
+            row_t[0].text = f"{t['test_nombre'] or t['test_code']} ({t.get('test_siglas') or ''})".strip()
+            row_t[1].text = str(t['fecha_asignacion'] or 'N/A')
+            row_t[2].text = str(t['estado'] or 'Pendiente')
+            row_t[3].text = str(t['puntaje_total']) if t['puntaje_total'] is not None else 'N/A'
+            row_t[4].text = str(t['clasificacion_resultado'] or 'Sin clasificar')
+
+    doc.add_paragraph()
+
+    # 5. Historial de Citas y Finanzas
+    h5 = doc.add_heading(level=1)
+    h5_run = h5.add_run("5. Historial de Citas y Control de Finanzas")
+    h5_run.font.color.rgb = RGBColor(0x3D, 0x1E, 0x3F)
+
     if not finance_events:
         doc.add_paragraph("No hay registro de citas o transacciones financieras asociadas.")
     else:
@@ -3164,23 +3210,154 @@ def export_word(patient_id):
         hdr_cells[3].text = 'Monto'
         hdr_cells[4].text = 'Estado Pago'
         hdr_cells[5].text = 'Control Uso'
-        
+
         for fe in finance_events:
             row_cells = table_f.add_row().cells
-            row_cells[0].text = fe['fecha']
-            row_cells[1].text = fe['hora']
-            row_cells[2].text = fe['tipo_consulta']
+            row_cells[0].text = fe['fecha'] or ''
+            row_cells[1].text = fe['hora'] or ''
+            row_cells[2].text = fe['tipo_consulta'] or ''
             row_cells[3].text = f"{fe['monto']} {fe['moneda']}"
-            row_cells[4].text = fe['estado_pago']
-            row_cells[5].text = fe['control_uso']
-            
-    # Guardar en archivo temporal
-    filename = f"expediente_{pac['cedula']}.docx"
-    filepath = os.path.join(os.getcwd(), filename)
-    doc.save(filepath)
-    
-    # Enviar archivo
-    return send_file(filepath, as_attachment=True, download_name=filename)
+            row_cells[4].text = fe['estado_pago'] or ''
+            row_cells[5].text = fe['control_uso'] or ''
+
+    # Pie institucional
+    doc.add_paragraph()
+    doc.add_paragraph("__________________________________________________________________")
+    footer_p = doc.add_paragraph()
+    footer_p.add_run("Expediente clínico confidencial emitido por Espacio Terapéutico. Documento legal protegido por secreto profesional y custodia de registros sanitarios.").italic = True
+
+    return doc
+
+
+@admin_bp.route('/api/export/word/<int:patient_id>', methods=['GET'])
+@login_required
+def export_word(patient_id):
+    db = get_db()
+    cursor = db.cursor()
+
+    doc = generate_patient_docx(cursor, patient_id)
+    if not doc:
+        return jsonify({'error': 'Paciente no encontrado o sin datos.'}), 404
+
+    cursor.execute("SELECT cedula FROM pacientes WHERE id = ?", (patient_id,))
+    row = cursor.fetchone()
+    cedula = row['cedula'] if row else str(patient_id)
+
+    doc_io = io.BytesIO()
+    doc.save(doc_io)
+    doc_io.seek(0)
+
+    filename = f"expediente_{cedula}.docx"
+    return send_file(doc_io, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+
+@admin_bp.route('/api/user/export-all-patients-zip', methods=['GET'])
+@login_required
+def export_all_patients_zip():
+    """
+    Genera y descarga un archivo .ZIP con el expediente individual en formato Word (.docx)
+    de cada uno de los pacientes asignados al psicólogo actual.
+    Garantiza el respaldo legal completo antes de cualquier baja o auditoría.
+    """
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+
+    # Obtener terapeuta
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    if not user:
+        return jsonify({'error': 'Usuario no encontrado.'}), 404
+
+    # Obtener pacientes del terapeuta (o todos si es superadmin)
+    is_superadmin = (session.get('role') in ['admin', 'superadmin']) and (user['username'].lower() == 'pamoraro' or user_id == 1)
+    if is_superadmin:
+        cursor.execute("SELECT id, nombres, apellidos, cedula FROM pacientes ORDER BY apellidos, nombres")
+    else:
+        cursor.execute("SELECT id, nombres, apellidos, cedula FROM pacientes WHERE psicologo_id = ? ORDER BY apellidos, nombres", (user_id,))
+
+    patients = cursor.fetchall()
+    if not patients:
+        return jsonify({'error': 'No se encontraron pacientes asignados para respaldar.'}), 400
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for p in patients:
+            try:
+                doc = generate_patient_docx(cursor, p['id'])
+                if doc:
+                    doc_io = io.BytesIO()
+                    doc.save(doc_io)
+                    doc_io.seek(0)
+                    safe_name = f"Expediente_{p['cedula']}_{p['nombres']}_{p['apellidos']}.docx".replace(' ', '_').replace('/', '_').replace('\\', '_')
+                    zip_file.writestr(safe_name, doc_io.read())
+            except Exception as e_doc:
+                print(f"Error generando docx para paciente {p['id']}: {e_doc}")
+
+    zip_buffer.seek(0)
+    now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    zip_filename = f"Respaldos_Clinicos_{user['username']}_{now_str}.zip"
+
+    return send_file(
+        zip_buffer,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=zip_filename
+    )
+
+
+@admin_bp.route('/api/user/delete-account', methods=['POST'])
+@login_required
+def delete_user_account():
+    """
+    Permite a un psicólogo solicitar la baja y desactivación de su cuenta,
+    verificando su contraseña y confirmación explícita.
+    """
+    user_id = session.get('user_id')
+    if user_id == 1:
+        return jsonify({'error': 'La cuenta principal de Superadministrador del sistema no puede ser eliminada.'}), 403
+
+    data = request.json or {}
+    password = data.get('password', '').strip()
+    confirm_text = data.get('confirm_text', '').strip()
+
+    if not password:
+        return jsonify({'error': 'Debes ingresar tu contraseña para confirmar la baja.'}), 400
+
+    if confirm_text.upper() != 'ELIMINAR MI CUENTA':
+        return jsonify({'error': 'Debes escribir exactamente "ELIMINAR MI CUENTA" para confirmar.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    if not user:
+        return jsonify({'error': 'Usuario no encontrado.'}), 404
+
+    if not check_password_hash(user['password_hash'], password):
+        return jsonify({'error': 'Contraseña incorrecta.'}), 400
+
+    # Desactivar credenciales
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        UPDATE usuarios 
+        SET password_hash = 'DELETED_' || id,
+            cuenta_aprobada = 0
+        WHERE id = ?
+    """, (user_id,))
+
+    # Eliminar suscripciones de notificación
+    cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
+    cursor.execute("DELETE FROM web_push_subscriptions WHERE user_id = ?", (user_id,))
+    db.commit()
+
+    session.clear()
+
+    return jsonify({
+        'success': True,
+        'message': 'Tu cuenta de profesional ha sido dada de baja y tus accesos desactivados correctamente.'
+    })
 
 
 # ==========================================

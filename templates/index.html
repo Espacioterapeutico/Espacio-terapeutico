@@ -988,6 +988,9 @@
                     <a href="javascript:void(0);" onclick="closeAuthModal(event)" style="font-size: 0.85rem; color: var(--primary-color); font-weight: 700; text-decoration: none; margin-top: 0.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
                         ← Volver a la Portada Principal
                     </a>
+                    <div style="margin-top: 0.5rem; font-size: 0.72rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                        Al continuar aceptas nuestra <a href="/privacidad" target="_blank" style="color: var(--primary-color); font-weight: 600; text-decoration: underline;">Política de Privacidad</a>
+                    </div>
                 </div>
             </form>
 
@@ -1245,7 +1248,7 @@
 
             <div class="sidebar-footer">
                 <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.6rem; font-weight: 500;">
-                    Versión 2.2.0
+                    Versión 2.2.0 &bull; <a href="/privacidad" target="_blank" style="color: inherit; text-decoration: underline;">Privacidad</a>
                 </div>
                 <a href="/logout" class="btn btn-secondary btn-block logout-btn" onclick="handleLogout(); return false;" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none;">
                     <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -1330,7 +1333,10 @@
                     <span id="pat-menu-terms-badge" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 12px; background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);">⚠️ Pendiente</span>
                 </a>
             </nav>
-            <div class="patient-menu-footer" style="padding: 1rem 0.5rem 1.25rem 0.5rem; border-top: 1.5px solid var(--border-color); background-color: var(--card-bg);">
+            <div class="patient-menu-footer" style="padding: 1rem 0.5rem 1.25rem 0.5rem; border-top: 1.5px solid var(--border-color); background-color: var(--card-bg); display: flex; flex-direction: column; gap: 0.5rem;">
+                <a href="/privacidad" target="_blank" style="display: flex; align-items: center; justify-content: center; font-size: 0.78rem; color: var(--text-muted); text-decoration: underline; padding: 0.25rem 0;">
+                    🔒 Política de Privacidad
+                </a>
                 <a href="/logout" class="pat-menu-item logout-btn" onclick="handleLogout(); return false;" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: #dc2626 !important; text-decoration: none; font-weight: 600; border: 1.5px solid rgba(220, 38, 38, 0.25); background: #fef2f2; transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #dc2626;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     <span>Cerrar Sesión</span>
@@ -2515,9 +2521,17 @@
                                 <div class="danger-zone-section mt-6" style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 2px dashed rgba(239, 68, 68, 0.4);">
                                     <h4 class="mb-2" style="color: #dc2626; font-weight: 700;">⚠️ Zona de Peligro: Reiniciar / Borrar Todos los Datos</h4>
                                     <p class="text-secondary mb-3" style="font-size: 0.88rem;">Esta opción eliminará de forma permanente todas tus historias clínicas, citas agendadas, evoluciones y registros financieros. Esta acción no se puede deshacer.</p>
-                                    <button type="button" onclick="openClearDataModal()" class="btn btn-secondary btn-block text-danger" style="width:100%; border: 1.5px solid #ef4444; background: rgba(239, 68, 68, 0.05); font-weight: 700;">
+                                    <button type="button" onclick="openClearDataModal()" class="btn btn-secondary btn-block text-danger mb-4" style="width:100%; border: 1.5px solid #ef4444; background: rgba(239, 68, 68, 0.05); font-weight: 700; cursor: pointer; padding: 0.6rem 1rem; border-radius: 8px;">
                                         🗑️ Borrar Todos los Datos de la Base de Datos
                                     </button>
+
+                                    <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed rgba(220, 38, 38, 0.3);">
+                                        <h5 style="color: #dc2626; font-weight: 700; margin-bottom: 0.35rem; font-size: 0.95rem;">Baja de Cuenta Profesional (Psicólogo)</h5>
+                                        <p class="text-secondary mb-3" style="font-size: 0.83rem;">En cumplimiento con las directrices de Google Play, puedes solicitar la desactivación definitiva de tu cuenta profesional. Por responsabilidad legal y deontológica, se exige primero la descarga del archivo ZIP con los respaldos clínicos de tus consultantes.</p>
+                                        <button type="button" onclick="openTherapistDeleteAccountModal()" class="btn btn-secondary btn-block text-danger" style="width:100%; border: 1.5px solid #dc2626; background: rgba(220, 38, 38, 0.06); font-weight: 700; cursor: pointer; padding: 0.6rem 1rem; border-radius: 8px;">
+                                            ⚠️ Solicitar Eliminación de mi Cuenta Profesional
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4983,6 +4997,26 @@
                             <div class="card-body">
                                 <p class="text-secondary mb-4">Tu cuenta está asociada a tu ficha clínica. Si deseas corregir tu nombre, cédula o teléfono, por favor solicítalo directamente a tu terapeuta en la próxima sesión.</p>
                                 <a href="/logout" onclick="handleLogout(); return false;" class="btn btn-secondary btn-block" style="width: 100%; text-decoration: none; text-align: center; display: block;">Cerrar Sesión</a>
+                            </div>
+                        </div>
+
+                        <!-- ZONA DE PRIVACIDAD Y BAJA DE CUENTA (PACIENTE) -->
+                        <div class="card" style="border: 1.5px solid rgba(220, 38, 38, 0.25); background: #fffcfc;">
+                            <div class="card-header" style="background: rgba(220, 38, 38, 0.05); border-bottom: 1px solid rgba(220, 38, 38, 0.15);">
+                                <h3 style="color: #dc2626; display: flex; align-items: center; gap: 0.4rem; font-size: 1.05rem;">
+                                    ⚠️ Privacidad y Eliminación de Cuenta
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-secondary" style="font-size: 0.88rem; margin-bottom: 0.8rem;">
+                                    En cumplimiento con la normativa de privacidad y las políticas de Google Play, puedes solicitar la baja definitiva de tu cuenta de acceso en cualquier momento.
+                                </p>
+                                <div style="background: rgba(245, 158, 11, 0.08); border-left: 3px solid #d97706; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.8rem; color: #92400e; margin-bottom: 1rem;">
+                                    <strong>Custodia legal médica:</strong> Al confirmar la baja, tu acceso a la plataforma quedará revocado. De acuerdo con la legislación sanitaria y deontológica, tu terapeuta conservará un respaldo confidencial de tu expediente clínico para fines legales obligatorios.
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-block" onclick="openModal('modal-patient-delete-account')" style="width: 100%; color: #dc2626; border: 1.5px solid #dc2626; background: white; font-weight: 700; cursor: pointer; padding: 0.6rem 1rem; border-radius: 8px;">
+                                    🗑️ Solicitar Eliminación de mi Cuenta
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -7579,6 +7613,92 @@
                 <button type="button" class="btn" onclick="closeLogoutModal()" style="background: transparent; color: #64748b; font-weight: 600; border: none; margin-top: 0.25rem;">
                     Cancelar
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ELIMINACIÓN DE CUENTA DE PACIENTE -->
+    <div id="modal-patient-delete-account" class="modal hide" role="dialog" aria-modal="true" style="z-index: 3700;">
+        <div class="modal-content" style="max-width: 480px; border-radius: 18px; padding: 2rem; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+                <h3 style="margin: 0; font-family: var(--font-title, 'Outfit', sans-serif); color: #dc2626; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    ⚠️ Eliminar mi Cuenta
+                </h3>
+                <button type="button" class="close-btn" onclick="closeModal('modal-patient-delete-account')" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+            
+            <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1rem;">
+                Al confirmar, se dará de baja tu usuario y se anularán todas tus credenciales de acceso a la aplicación.
+            </p>
+
+            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.25rem; font-size: 0.82rem; color: #991b1b; line-height: 1.4;">
+                <strong>Aviso de custodia sanitaria:</strong> Por requerimiento de las leyes de salud mental y el código ético de la psicología, tu expediente clínico será respaldado de forma segura y archivado bajo custodia legal de tu psicólogo tratante.
+            </div>
+
+            <form id="patient-delete-account-form" onsubmit="handlePatientDeleteAccountSubmit(event)">
+                <div class="form-group mb-3" style="text-align: left;">
+                    <label for="pat-del-password" style="font-weight: 600; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">Ingresa tu contraseña actual para confirmar *</label>
+                    <input type="password" id="pat-del-password" required placeholder="Tu contraseña actual" style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
+                </div>
+
+                <div class="form-group mb-4" style="text-align: left;">
+                    <label for="pat-del-motivo" style="font-weight: 600; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">Motivo de la baja (Opcional)</label>
+                    <textarea id="pat-del-motivo" rows="2" placeholder="Cuéntanos brevemente la razón de tu baja..." style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; resize: none;"></textarea>
+                </div>
+
+                <div id="pat-del-status-msg" class="status-msg hide mb-3" style="font-size: 0.85rem; padding: 0.6rem;"></div>
+
+                <div style="display: flex; gap: 0.65rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-patient-delete-account')" style="border-radius: 8px; padding: 0.6rem 1rem; font-weight: 600;">Cancelar</button>
+                    <button type="submit" id="btn-confirm-pat-delete" class="btn btn-danger" style="background: #dc2626; color: white; border: none; border-radius: 8px; padding: 0.6rem 1.25rem; font-weight: 700; cursor: pointer;">Confirmar Eliminación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE ELIMINACIÓN DE CUENTA DE PSICÓLOGO -->
+    <div id="modal-therapist-delete-account" class="modal hide" role="dialog" aria-modal="true" style="z-index: 3700;">
+        <div class="modal-content" style="max-width: 520px; border-radius: 18px; padding: 2rem; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+                <h3 style="margin: 0; font-family: var(--font-title, 'Outfit', sans-serif); color: #dc2626; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    ⚠️ Baja de Cuenta Profesional
+                </h3>
+                <button type="button" class="close-btn" onclick="closeModal('modal-therapist-delete-account')" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+            
+            <p style="color: #475569; font-size: 0.88rem; line-height: 1.5; margin-bottom: 1rem;">
+                Como profesional de la salud mental, tienes el deber legal de custodiar los expedientes clínicos de tus consultantes por un mínimo de 5 años. Por este motivo, antes de procesar la baja de tu cuenta debes descargar el archivo de respaldo completo.
+            </p>
+
+            <!-- PASO 1: DESCARGA DE RESPALDO EN ZIP -->
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem; text-align: center;">
+                <div style="font-size: 0.9rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">Paso 1: Descargar Expedientes Clínicos (.ZIP)</div>
+                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.75rem;">Se generará un archivo comprimido con 1 documento Word (.docx) por cada uno de tus pacientes.</p>
+                <button type="button" onclick="downloadPatientsWordZip(); document.getElementById('therapist-del-step2').classList.remove('hide');" class="btn btn-primary" style="background: linear-gradient(135deg, #702e5e 0%, #a95993 100%); border: none; padding: 0.65rem 1.25rem; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    📦 Descargar Respaldo ZIP de Pacientes
+                </button>
+            </div>
+
+            <!-- PASO 2: CONFIRMACIÓN FINAL -->
+            <div id="therapist-del-step2" class="hide">
+                <form id="therapist-delete-account-form" onsubmit="handleTherapistDeleteAccountSubmit(event)">
+                    <div class="form-group mb-3" style="text-align: left;">
+                        <label for="therapist-del-pw" style="font-weight: 600; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">Paso 2: Ingresa tu contraseña profesional *</label>
+                        <input type="password" id="therapist-del-pw" required placeholder="Tu contraseña" style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
+                    </div>
+
+                    <div class="form-group mb-3" style="text-align: left;">
+                        <label for="therapist-del-confirm" style="font-weight: 600; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">Escribe exactamente "ELIMINAR MI CUENTA" *</label>
+                        <input type="text" id="therapist-del-confirm" required placeholder="ELIMINAR MI CUENTA" style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; text-transform: uppercase;">
+                    </div>
+
+                    <div id="therapist-del-status-msg" class="status-msg hide mb-3" style="font-size: 0.85rem; padding: 0.6rem;"></div>
+
+                    <div style="display: flex; gap: 0.65rem; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-therapist-delete-account')" style="border-radius: 8px; padding: 0.6rem 1rem; font-weight: 600;">Cancelar</button>
+                        <button type="submit" id="btn-confirm-therapist-delete" class="btn btn-danger" style="background: #dc2626; color: white; border: none; border-radius: 8px; padding: 0.6rem 1.25rem; font-weight: 700; cursor: pointer;">Confirmar Baja Definitiva</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

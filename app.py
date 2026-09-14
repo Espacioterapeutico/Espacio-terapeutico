@@ -630,14 +630,40 @@ def ensure_fcm_table_and_columns(cursor):
         try: cursor.execute("ALTER TABLE fcm_subscriptions ADD COLUMN actualizado_en TEXT")
         except: pass
 
+def ensure_critical_migrations(cursor):
+    """Garantiza la existencia de columnas críticas en startup para WSGI (PythonAnywhere) y escritorio."""
+    try:
+        cursor.execute("PRAGMA table_info(agenda_finanzas)")
+        cols_af = [r[1] for r in cursor.fetchall()]
+        if 'hora_paciente' not in cols_af:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN hora_paciente TEXT")
+    except Exception as _ex1:
+        pass
+
+    try:
+        cursor.execute("PRAGMA table_info(pacientes)")
+        cols_p = [r[1] for r in cursor.fetchall()]
+        for col_name, col_type in [
+            ('notas_baja', 'TEXT'),
+            ('fecha_baja', 'TEXT'),
+            ('archivo_respaldo_baja', 'TEXT'),
+            ('zona_horaria', "TEXT DEFAULT 'America/Caracas'"),
+            ('utc_offset', 'INTEGER DEFAULT 240')
+        ]:
+            if col_name not in cols_p:
+                cursor.execute(f"ALTER TABLE pacientes ADD COLUMN {col_name} {col_type}")
+    except Exception as _ex2:
+        pass
+
 # Ejecutar migración al inicio para servidores WSGI (PythonAnywhere, Gunicorn)
 try:
     with sqlite3.connect(DATABASE, timeout=30.0) as _db_init:
         _cur_init = _db_init.cursor()
         ensure_fcm_table_and_columns(_cur_init)
+        ensure_critical_migrations(_cur_init)
         _db_init.commit()
 except Exception as _e_init:
-    print("Aviso al asegurar fcm_subscriptions en startup:", _e_init)
+    print("Aviso al asegurar migraciones críticas en startup:", _e_init)
 
 def init_db():
     db = sqlite3.connect(DATABASE, timeout=30.0)
@@ -941,6 +967,12 @@ def init_db():
             cursor.execute("ALTER TABLE pacientes ADD COLUMN zona_horaria TEXT DEFAULT 'America/Caracas'")
         if 'utc_offset' not in cols_pac:
             cursor.execute("ALTER TABLE pacientes ADD COLUMN utc_offset INTEGER DEFAULT 240")
+        if 'notas_baja' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN notas_baja TEXT")
+        if 'fecha_baja' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN fecha_baja TEXT")
+        if 'archivo_respaldo_baja' not in cols_pac:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN archivo_respaldo_baja TEXT")
         
         # Asegurar que todos los consultantes antiguos tengan terminos_aceptados = 0 y psicologo_id por defecto si son NULL
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
@@ -3406,6 +3438,33 @@ def index(slug=None):
                            og_description=og_description, 
                            og_image=og_image, 
                            og_url=og_url)
+
+@app.route('/.well-known/assetlinks.json')
+def serve_assetlinks():
+    """Digital Asset Links declaration for Google Play Trusted Web Activity (TWA)."""
+    pkg = os.environ.get("ANDROID_PACKAGE_NAME", "net.espacioterapeutico.app")
+    fingerprints = os.environ.get(
+        "ANDROID_SHA256_FINGERPRINTS",
+        '["14:6D:E9:78:E2:3E:04:D9:6A:B9:94:05:A4:F0:4B:9B:F3:11:36:9C:CE:BD:86:EC:4A:26:A6:6F:E8:4A:8D:70"]'
+    )
+    try:
+        fp_list = json.loads(fingerprints) if isinstance(fingerprints, str) else fingerprints
+    except Exception:
+        fp_list = [fingerprints]
+    data = [{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": pkg,
+            "sha256_cert_fingerprints": fp_list
+        }
+    }]
+    return jsonify(data)
+
+@app.route('/privacidad')
+@app.route('/politica-de-privacidad')
+def serve_privacidad():
+    return render_template('privacidad.html')
 
 @app.route('/manifest.json')
 def serve_manifest():
