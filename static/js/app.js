@@ -1688,7 +1688,7 @@ async function checkSession() {
             if (data.role === 'paciente' || data.user_type === 'patient') {
                 showPatientLayout(data.username, data.patient_id);
             } else {
-                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos);
+                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
             }
         } else {
             showAuthScreen();
@@ -1791,7 +1791,7 @@ async function handleAuthSubmit(e) {
                 });
                 try { dataAdmin = await resAdmin.json(); } catch(exJ) {}
                 if (resAdmin.ok && dataAdmin) {
-                    showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago, dataAdmin.primer_inicio, dataAdmin.suscripcion_paga, dataAdmin.fecha_expiracion_prueba, dataAdmin.nombres, dataAdmin.apellidos);
+                    showAppLayout(dataAdmin.username, dataAdmin.role, dataAdmin.activo, dataAdmin.bloqueos, dataAdmin.user_id, dataAdmin.aviso_pago, dataAdmin.primer_inicio, dataAdmin.suscripcion_paga, dataAdmin.fecha_expiracion_prueba, dataAdmin.nombres, dataAdmin.apellidos, dataAdmin.suscripcion_expirada);
                     
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
@@ -1914,9 +1914,13 @@ window.execLogout = execLogout;
 function isFeatureBlocked(feature) {
     const role = (window.currentUser && window.currentUser.role) || sessionStorage.getItem('user_role') || sessionStorage.getItem('role') || '';
     const cleanRole = (role || '').toString().toLowerCase();
-    // Admin always gets access, psicologo depends on blocks
-    if (cleanRole === 'admin') {
+    // Admin always gets access
+    if (cleanRole === 'admin' || cleanRole === 'superadmin') {
         return false;
+    }
+    const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
+    if (isSubExpired && (feature === 'registro' || feature === 'registro_rapido' || feature === 'agenda' || feature === 'evoluciones' || feature === 'tests')) {
+        return true;
     }
     const blocksStr = sessionStorage.getItem('bloqueos');
     if (!blocksStr) return false;
@@ -1929,6 +1933,8 @@ function isFeatureBlocked(feature) {
 }
 
 function isNoSolvente() {
+    const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
+    if (isSubExpired) return true;
     return sessionStorage.getItem('aviso_pago') === '1';
 }
 
@@ -1986,7 +1992,8 @@ function purgeClientCacheOnLogin() {
 }
 
 function applyUserBlocks(bloqueos) {
-    if (!bloqueos) return;
+    if (!bloqueos) bloqueos = {};
+    const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
 
     // Registro Detallado (Historia Clínica)
     const btnHistoria = document.querySelector('button[onclick*="openNewPatientModal()"]');
@@ -1997,9 +2004,9 @@ function applyUserBlocks(bloqueos) {
     // El modal de historial/evoluciones de un paciente en particular (patient-details-modal)
     const detTabHistorial = document.querySelector('button[onclick*="switchPatientDetailsTab(\'historial\')"]');
 
-    if (bloqueos.registro === 1) {
+    if (bloqueos.registro === 1 || isSubExpired) {
         if (btnHistoria) btnHistoria.classList.add('hide');
-        if (pModalTabClinical) pModalTabClinical.classList.add('hide');
+        if (pModalTabClinical && !isSubExpired) pModalTabClinical.classList.add('hide');
     } else {
         if (btnHistoria) btnHistoria.classList.remove('hide');
         if (pModalTabClinical) pModalTabClinical.classList.remove('hide');
@@ -2007,7 +2014,7 @@ function applyUserBlocks(bloqueos) {
 
     // Registro Rápido
     const btnRegistroRapido = document.querySelector('button[onclick*="openQuickAddPatientModal()"]');
-    if (bloqueos.registro_rapido === 1) {
+    if (bloqueos.registro_rapido === 1 || isSubExpired) {
         if (btnRegistroRapido) btnRegistroRapido.classList.add('hide');
     } else {
         if (btnRegistroRapido) btnRegistroRapido.classList.remove('hide');
@@ -2018,30 +2025,46 @@ function applyUserBlocks(bloqueos) {
     const tabContentEvoluciones = document.getElementById('exp-content-evoluciones');
     const btnNuevaEvolucion = document.querySelector('button[onclick*="openNewSessionModal()"]');
     
-    // Si Registro (historial entero) y Evoluciones están bloqueados, ocultar pestaña historial en detalles
-    if (bloqueos.registro === 1 && bloqueos.evoluciones === 1) {
-        if (detTabHistorial) detTabHistorial.classList.add('hide');
-    } else {
+    if (isSubExpired) {
+        // En modo solo lectura por suscripción vencida, SE DEBEN poder consultar evoluciones e historiales
+        if (tabEvoluciones) tabEvoluciones.classList.remove('hide');
+        if (tabContentEvoluciones) tabContentEvoluciones.classList.remove('hide');
         if (detTabHistorial) detTabHistorial.classList.remove('hide');
+        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.add('hide');
+    } else {
+        // Si Registro (historial entero) y Evoluciones están bloqueados por superadmin
+        if (bloqueos.registro === 1 && bloqueos.evoluciones === 1) {
+            if (detTabHistorial) detTabHistorial.classList.add('hide');
+        } else {
+            if (detTabHistorial) detTabHistorial.classList.remove('hide');
+        }
+
+        if (bloqueos.evoluciones === 1) {
+            if (tabEvoluciones) tabEvoluciones.classList.add('hide');
+            if (tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
+            if (btnNuevaEvolucion) btnNuevaEvolucion.classList.add('hide');
+            if (tabHistorias) {
+                tabHistorias.classList.remove('btn-secondary');
+                tabHistorias.classList.add('btn-primary');
+            }
+            if (tabContentHistorias) {
+                tabContentHistorias.classList.remove('hide');
+            }
+            if (typeof loadPatients === 'function') {
+                loadPatients();
+            }
+        } else {
+            if (tabEvoluciones) tabEvoluciones.classList.remove('hide');
+            if (btnNuevaEvolucion) btnNuevaEvolucion.classList.remove('hide');
+        }
     }
 
-    if (bloqueos.evoluciones === 1) {
-        if (tabEvoluciones) tabEvoluciones.classList.add('hide');
-        if (tabContentEvoluciones) tabContentEvoluciones.classList.add('hide');
-        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.add('hide');
-        if (tabHistorias) {
-            tabHistorias.classList.remove('btn-secondary');
-            tabHistorias.classList.add('btn-primary');
-        }
-        if (tabContentHistorias) {
-            tabContentHistorias.classList.remove('hide');
-        }
-        if (typeof loadPatients === 'function') {
-            loadPatients();
-        }
+    // Botones de Agendar Cita en Dashboard y Agenda (ocultar en modo solo lectura)
+    const btnsAgendarCita = document.querySelectorAll('button[onclick*="openNewEventModal()"]');
+    if (isSubExpired) {
+        btnsAgendarCita.forEach(btn => btn.classList.add('hide'));
     } else {
-        if (tabEvoluciones) tabEvoluciones.classList.remove('hide');
-        if (btnNuevaEvolucion) btnNuevaEvolucion.classList.remove('hide');
+        btnsAgendarCita.forEach(btn => btn.classList.remove('hide'));
     }
 
     // Herramientas
@@ -2105,7 +2128,7 @@ function applyUserBlocks(bloqueos) {
 }
 window.applyUserBlocks = applyUserBlocks;
 
-function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba, nombres, apellidos) {
+function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba, nombres, apellidos, suscripcionExpirada) {
     if (window.location.pathname.startsWith('/evaluacion/')) {
         const appLayout = document.getElementById('app-layout');
         const sidebar = document.getElementById('sidebar');
@@ -2157,11 +2180,38 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     const initials = getInitials(nombres, apellidos, username);
     if (avatarEl) avatarEl.textContent = initials;
 
-    // Manejar Badge de Prueba Gratis de 3 días en la barra superior
+    // Determinar si la suscripción está expirada (Modo Solo Lectura)
+    let isSubExpired = (suscripcionExpirada === true || suscripcionExpirada === 1);
+    if (!isSubExpired && role === 'psicologo') {
+        if (suscripcionPaga !== 1 && fechaExpiracionPrueba) {
+            try {
+                const expDate = new Date(fechaExpiracionPrueba);
+                if (!isNaN(expDate) && new Date() > expDate) {
+                    isSubExpired = true;
+                }
+            } catch(e) {}
+        } else if (suscripcionPaga === 1 && fechaExpiracionPrueba) {
+            try {
+                const expDate = new Date(fechaExpiracionPrueba);
+                if (!isNaN(expDate) && new Date() > expDate) {
+                    isSubExpired = true;
+                }
+            } catch(e) {}
+        }
+    }
+
+    sessionStorage.setItem('suscripcion_expirada', isSubExpired ? 'true' : 'false');
+
+    // Manejar Badge de Prueba Gratis / Modo Solo Lectura en la barra superior
     const trialBadge = document.getElementById('header-trial-badge');
     const trialText = document.getElementById('trial-badge-text');
     if (trialBadge && role === 'psicologo') {
-        if (suscripcionPaga === 1) {
+        if (isSubExpired) {
+            if (trialText) trialText.textContent = `🔒 Modo Solo Lectura (Vencida)`;
+            trialBadge.style.background = '#2563eb';
+            trialBadge.style.color = '#ffffff';
+            trialBadge.classList.remove('hide');
+        } else if (suscripcionPaga === 1) {
             trialBadge.classList.add('hide');
         } else if (fechaExpiracionPrueba) {
             const expDate = new Date(fechaExpiracionPrueba);
@@ -2169,6 +2219,8 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
             if (diffHours > 0) {
                 const daysLeft = Math.ceil(diffHours / 24);
                 if (trialText) trialText.textContent = `⏳ Prueba Gratis: Quedan ${daysLeft} día${daysLeft > 1 ? 's' : ''}`;
+                trialBadge.style.removeProperty('background');
+                trialBadge.style.removeProperty('color');
                 trialBadge.classList.remove('hide');
             } else {
                 trialBadge.classList.add('hide');
@@ -2201,8 +2253,26 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
             avisoPagoBanner.classList.add('hide');
         }
     }
+
+    // Controlar aviso de Modo Solo Lectura por suscripción finalizada
+    const avisoSoloLectura = document.getElementById('dashboard-aviso-solo-lectura');
+    if (avisoSoloLectura) {
+        if (isSubExpired) {
+            avisoSoloLectura.classList.remove('hide');
+        } else {
+            avisoSoloLectura.classList.add('hide');
+        }
+    }
     
-    window.currentUser = { username, role, id: userId, bloqueos: bloqueos || {} };
+    window.currentUser = { 
+        username, 
+        role, 
+        id: userId, 
+        bloqueos: bloqueos || {}, 
+        suscripcion_expirada: isSubExpired,
+        suscripcion_paga: suscripcionPaga,
+        fecha_expiracion_prueba: fechaExpiracionPrueba
+    };
     applyUserBlocks(window.currentUser.bloqueos);
     if (role) {
         setAuthItem('user_role', role);
@@ -4755,6 +4825,11 @@ async function checkCedulaAutoFill() {
 }
 
 function openNewPatientModal() {
+    const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
+    if (isSubExpired) {
+        alert("Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga de datos).\n\nPuedes consultar y descargar las historias clínicas de todos tus consultantes existentes, pero para agregar nuevos pacientes reactiva tu suscripción.");
+        return;
+    }
     if (typeof isFeatureBlocked === 'function' && isFeatureBlocked('registro')) {
         alert("La función de Registro de Pacientes está suspendida por administración.");
         return;
@@ -4998,6 +5073,11 @@ async function handlePatientSubmit(e) {
 }
 
 function openQuickAddPatientModal() {
+    const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
+    if (isSubExpired) {
+        alert("Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga de datos).\n\nPara registrar nuevos consultantes, por favor reactiva tu suscripción.");
+        return;
+    }
     if (typeof isFeatureBlocked === 'function' && isFeatureBlocked('registro')) {
         alert("La función de Registro de Pacientes está suspendida por administración.");
         return;
@@ -5712,6 +5792,11 @@ function changeSessionsPage(newPage) {
 window.changeSessionsPage = changeSessionsPage;
 
 async function openNewSessionModal() {
+    const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
+    if (isSubExpired) {
+        alert("Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga de datos).\n\nPuedes consultar todas las notas y evoluciones previas, pero para redactar nuevas evoluciones reactiva tu suscripción.");
+        return;
+    }
     document.getElementById('session-form').reset();
     document.getElementById('session-form-id').value = '';
     document.getElementById('s-agenda-id').value = '';
@@ -7287,7 +7372,12 @@ async function loadAgenda() {
 
 async function openNewEventModal(defaultPaid = false, initialType = 'consulta') {
     if (isNoSolvente()) {
-        alert("⚠️ Cuenta No Solvente 🔒\n\nEl agendamiento de citas y servicios de la agenda se encuentra suspendido. Por favor regulariza tu suscripción con la administración.");
+        const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
+        if (isSubExpired) {
+            alert("⚠️ Modo Solo Lectura (Suscripción Finalizada) 🔒\n\nTu cuenta se encuentra en modo de consulta y descarga de datos. Para volver a agendar citas en tu calendario, por favor reactiva tu suscripción.");
+        } else {
+            alert("⚠️ Cuenta No Solvente 🔒\n\nEl agendamiento de citas y servicios de la agenda se encuentra suspendido. Por favor regulariza tu suscripción con la administración.");
+        }
         return;
     }
     document.getElementById('event-form').reset();

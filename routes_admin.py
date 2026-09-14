@@ -56,6 +56,45 @@ def sync_patient_to_firebase(patient_id):
 def check_is_superadmin():
     return session.get('role') in ['superadmin', 'admin']
 
+def is_user_subscription_expired(cursor, user_id):
+    """
+    Verifica si la suscripción o período de prueba de un psicólogo ha finalizado.
+    Los administradores y superadministradores nunca expiran.
+    Retorna True si está en modo solo lectura (vencido), False si está activo/vigente.
+    """
+    if not user_id:
+        return False
+    try:
+        cursor.execute("SELECT id, role, suscripcion_paga, fecha_expiracion_prueba FROM usuarios WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return False
+        u = dict(row)
+        if u.get('role') in ('admin', 'superadmin'):
+            return False
+        if u.get('role') != 'psicologo':
+            return False
+
+        expiry_str = u.get('fecha_expiracion_prueba')
+        if not expiry_str:
+            # Sin fecha de expiración registrada: si no es suscripción paga, está expirado
+            return int(u.get('suscripcion_paga') or 0) != 1
+
+        try:
+            if 'T' in expiry_str:
+                exp_dt = datetime.datetime.fromisoformat(expiry_str)
+            elif len(expiry_str) == 10:
+                exp_dt = datetime.datetime.strptime(expiry_str, "%Y-%m-%d")
+            else:
+                exp_dt = datetime.datetime.strptime(expiry_str[:19], "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return False
+
+        return datetime.datetime.now() > exp_dt
+    except Exception as e:
+        print(f"Error checking subscription expiration for user {user_id}: {e}")
+        return False
+
 # --- AUTENTICACIÓN Y SESIONES ---
 
 @admin_bp.route('/api/register-admin', methods=['POST'])
@@ -110,17 +149,11 @@ def login():
         if user and check_password_hash(user['password_hash'], password):
             u_dict = dict(user)
             
-            # Verificar vencimiento de prueba gratis de 3 días para psicólogos no pagados
-            if user['role'] == 'psicologo' and u_dict.get('suscripcion_paga', 0) != 1:
-                expiry_str = u_dict.get('fecha_expiracion_prueba')
-                if expiry_str:
-                    try:
-                        expiry_dt = datetime.datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
-                        if datetime.datetime.now() > expiry_dt:
-                            cursor.execute("UPDATE usuarios SET activo = 0 WHERE id = ?", (user['id'],))
-                            db.commit()
-                            return jsonify({'error': 'Tu periodo de prueba gratis ha vencido. Contacta al administrador para activar tu suscripción.'}), 403
-                    except Exception: pass
+            # Verificar si la suscripción o prueba ha expirado para psicólogos
+            # NO bloqueamos el login ni desactivamos la cuenta (activo=0); permitimos acceso en modo solo lectura
+            is_sub_expired = False
+            if user['role'] == 'psicologo':
+                is_sub_expired = is_user_subscription_expired(cursor, user['id'])
                         
             session.permanent = True
             session['user_id'] = user['id']
@@ -167,6 +200,7 @@ def login():
                 'primer_inicio': u_dict.get('primer_inicio', 1) if u_dict.get('primer_inicio') is not None else 1,
                 'suscripcion_paga': u_dict.get('suscripcion_paga', 0),
                 'fecha_expiracion_prueba': u_dict.get('fecha_expiracion_prueba', ''),
+                'suscripcion_expirada': is_sub_expired,
                 'bloqueos': {
                     'registro': 0 if user['role'] == 'admin' else u_dict.get('bloqueo_registro', 0),
                     'registro_rapido': 0 if user['role'] == 'admin' else u_dict.get('bloqueo_registro_rapido', 0),
@@ -223,6 +257,10 @@ def check_session():
         row = cursor.fetchone()
         r_dict = dict(row) if row else {}
 
+        is_sub_expired = False
+        if r_dict.get('role') == 'psicologo':
+            is_sub_expired = is_user_subscription_expired(cursor, session['user_id'])
+
         return jsonify({
             'authenticated': True,
             'logged_in': True,
@@ -237,6 +275,7 @@ def check_session():
             'primer_inicio': r_dict.get('primer_inicio', 1) if r_dict.get('primer_inicio') is not None else 1,
             'suscripcion_paga': r_dict.get('suscripcion_paga', 0),
             'fecha_expiracion_prueba': r_dict.get('fecha_expiracion_prueba', ''),
+            'suscripcion_expirada': is_sub_expired,
             'bloqueos': {
                 'registro': 0 if r_dict.get('role') == 'admin' else r_dict.get('bloqueo_registro', 0),
                 'registro_rapido': 0 if r_dict.get('role') == 'admin' else r_dict.get('bloqueo_registro_rapido', 0),

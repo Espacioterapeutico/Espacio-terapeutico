@@ -1725,6 +1725,24 @@
                         </div>
                     </div>
 
+                    <!-- Banner de Modo Solo Lectura por Suscripción Vencida -->
+                    <div id="dashboard-aviso-solo-lectura" class="hide mb-4" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 5px solid #3b82f6; padding: 1.25rem 1.5rem; border-radius: var(--radius-md); border: 1.5px solid rgba(59, 130, 246, 0.25); display: flex; align-items: center; justify-content: space-between; gap: 1rem; box-shadow: var(--shadow-sm); flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 260px;">
+                            <span style="font-size: 2rem; flex-shrink: 0; line-height: 1;">📂🔓</span>
+                            <div>
+                                <h4 style="margin: 0; color: #1e40af; font-weight: 700; font-size: 0.95rem;">Modo de Consulta y Descarga Activo (Suscripción Finalizada)</h4>
+                                <p style="margin: 0.25rem 0 0 0; color: #1e3a8a; font-size: 0.85rem; font-weight: 500; line-height: 1.4;">
+                                    Tu período o suscripción ha finalizado. <strong>Tu información y la de tus pacientes está segura y disponible</strong>: puedes consultar todas las historias clínicas, sesiones anteriores, notas y descargar/imprimir tus reportes en cualquier momento. Las funciones para agendar nuevas citas, registrar evoluciones y añadir nuevos pacientes se encuentran pausadas.
+                                </p>
+                            </div>
+                        </div>
+                        <div style="flex-shrink: 0;">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="alert('Para renovar tu suscripción y habilitar la creación de citas y evoluciones, comunícate con la administración a través de soporte o WhatsApp.');" style="padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.82rem; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                                💳 Reactivar Suscripción
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Banner de Cuenta Pendiente de Aprobación -->
                     <div id="dashboard-pending-approval-banner" class="hide mb-4" style="background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%); border: 2px solid #f59e0b; padding: 1.25rem 1.5rem; border-radius: var(--radius-md); display: flex; align-items: center; gap: 1rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);">
                         <span style="font-size: 2.2rem; flex-shrink: 0; line-height: 1;">⌛🔒</span>

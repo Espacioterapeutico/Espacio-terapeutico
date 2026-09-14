@@ -2068,6 +2068,10 @@ def api_asignar_test():
             if usr_dict.get('bloqueo_tests') == 1 and not is_admin:
                 return jsonify({'error': 'El módulo de Tests Psicológicos se encuentra restringido para tu usuario.'}), 403
 
+        from routes_admin import is_user_subscription_expired
+        if is_user_subscription_expired(cursor, user_id) and not is_admin:
+            return jsonify({'error': 'Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga). No es posible asignar nuevos tests.'}), 403
+
         data = request.json or {}
         patient_id = data.get('patient_id')
         test_code = data.get('test_code')

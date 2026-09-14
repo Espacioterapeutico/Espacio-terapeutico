@@ -389,6 +389,11 @@ def manage_sessions():
         return jsonify(sessions)
 
     # --- CREAR NUEVA EVOLUCIÓN CLÍNICA (POST) ---
+    acting_user_id = session.get('user_id')
+    from routes_admin import is_user_subscription_expired
+    if is_user_subscription_expired(cursor, acting_user_id):
+        return jsonify({'error': 'Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga). No es posible crear nuevas evoluciones.'}), 403
+
     data = request.json or {}
     try:
         paciente_id = data.get('paciente_id')

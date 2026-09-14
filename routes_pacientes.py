@@ -456,6 +456,10 @@ def create_patient():
         return jsonify({'error': 'Nombres y Apellidos son campos obligatorios.'}), 400
         
     psic_id = session.get('user_id', 1)
+    from routes_admin import is_user_subscription_expired
+    if is_user_subscription_expired(cursor, psic_id):
+        return jsonify({'error': 'Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga). Para registrar nuevos pacientes, reactiva tu suscripción.'}), 403
+
     if cedula:
         cursor.execute("SELECT id FROM pacientes WHERE cedula = ? AND psicologo_id = ?", (cedula, psic_id))
         if cursor.fetchone() is not None:
@@ -1258,6 +1262,10 @@ def patient_add_appointment():
         cursor.execute("SELECT nombres, apellidos, cedula, email, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
         paciente = cursor.fetchone()
         psicologo_id = paciente['psicologo_id'] if paciente else 1
+
+        from routes_admin import is_user_subscription_expired
+        if is_user_subscription_expired(cursor, psicologo_id):
+            return jsonify({'error': 'El especialista no está disponible para recibir nuevas citas en este momento.'}), 400
 
         # Verificar si el horario ya está reservado o colisiona por solapamiento de intervalos
         from routes_agenda import check_appointment_interval_collision

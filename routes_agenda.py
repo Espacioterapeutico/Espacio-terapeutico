@@ -601,6 +601,19 @@ def get_agenda_disponibilidad():
         cursor.execute("SELECT id FROM usuarios WHERE role != 'superadmin' AND activo = 1 ORDER BY id ASC LIMIT 1")
         first_u = cursor.fetchone()
         psicologo_id = first_u[0] if first_u else 1
+
+    from routes_admin import is_user_subscription_expired
+    if is_user_subscription_expired(cursor, psicologo_id):
+        # Si la consulta viene de un paciente o usuario no logueado como este psicólogo:
+        if 'user_id' not in session or session.get('user_id') != psicologo_id:
+            return jsonify({
+                "modalidades": [],
+                "horas_disponibles": [],
+                "slots": [],
+                "psicologo_timezone": "America/Caracas",
+                "expirado": True,
+                "error": "El especialista no tiene disponibilidad para agendar citas en este momento."
+            })
         
     cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
     u_row = cursor.fetchone()
@@ -793,6 +806,12 @@ def add_agenda_event():
     cursor.execute("SELECT psicologo_id FROM pacientes WHERE id = ?", (paciente_id,))
     pac_row = cursor.fetchone()
     target_psic_id = (pac_row['psicologo_id'] if pac_row and pac_row['psicologo_id'] else None) or creado_por_user_id or session.get('user_id') or 1
+
+    from routes_admin import is_user_subscription_expired
+    if is_user_subscription_expired(cursor, target_psic_id) or is_user_subscription_expired(cursor, session.get('user_id')):
+        return jsonify({
+            'error': 'Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga). No es posible agendar nuevas citas.'
+        }), 403
 
     if check_appointment_interval_collision(cursor, target_psic_id, fecha, hora, tipo_consulta):
         return jsonify({
@@ -1336,6 +1355,10 @@ def fast_booking_book():
     psych = get_psychologist_by_id_or_slug(cursor, psicologo_id)
     if psych:
         psicologo_id = psych['id']
+
+    from routes_admin import is_user_subscription_expired
+    if is_user_subscription_expired(cursor, psicologo_id):
+        return jsonify({'error': 'El especialista no está disponible para recibir nuevas citas en este momento.'}), 400
 
     fecha_norm = normalize_date_str(fecha)
     hora_norm = normalize_time_str(hora)
