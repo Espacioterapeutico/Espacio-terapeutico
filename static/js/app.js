@@ -1024,7 +1024,7 @@ function removeAuthItem(key) {
 // ==========================================
 // CONTROL DE NAVEGACIÓN Y MENÚ
 // ==========================================
-function switchView(viewId) {
+function switchView(viewId, fromPopState = false) {
     const role = (window.currentUser && window.currentUser.role) || getAuthItem('user_role') || getAuthItem('role') || '';
     const username = (window.currentUser && window.currentUser.username) || getAuthItem('username') || '';
     const userId = parseInt((window.currentUser && window.currentUser.id) || getAuthItem('user_id') || 0);
@@ -1126,12 +1126,24 @@ function switchView(viewId) {
     }
 
     activeView = viewId;
+
+    if (!fromPopState) {
+        try {
+            if (history.state && (history.state.type === 'menu' || history.state.type === 'sidebar')) {
+                history.replaceState({ type: 'view', view: viewId, root: viewId === 'dashboard' }, '');
+            } else if (window._appInitialized) {
+                history.pushState({ type: 'view', view: viewId, root: viewId === 'dashboard' }, '');
+            } else {
+                history.replaceState({ type: 'view', view: viewId, root: viewId === 'dashboard' }, '');
+            }
+        } catch (e) {}
+    }
     
     // Cerrar sidebar en móvil al cambiar vista
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
-    sidebar.classList.remove('open');
-    overlay.classList.add('hide');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.add('hide');
 
     // Restablecer scroll al inicio para ver cabecera y pestañas superiores
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -1417,8 +1429,22 @@ function loadDashHistoryData() {
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
+    if (!sidebar || !overlay) return;
+    const willOpen = !sidebar.classList.contains('open');
     sidebar.classList.toggle('open');
     overlay.classList.toggle('hide');
+    if (willOpen) {
+        try {
+            history.pushState({ type: 'menu', menu: 'sidebar' }, '');
+        } catch (e) {}
+    } else {
+        if (history.state && history.state.type === 'menu' && history.state.menu === 'sidebar') {
+            try {
+                window._ignoreNextPopstate = true;
+                history.back();
+            } catch (e) {}
+        }
+    }
 }
 
 function initializeDateFilters() {
@@ -2251,6 +2277,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         setTimeout(loadPublicProfileSettings, 300);
     }
     hideLoadingScreen();
+    window._appInitialized = true;
 }
 
 function showPatientLayout(username, patientId) {
@@ -2325,6 +2352,7 @@ function showPatientLayout(username, patientId) {
     } catch(e) {}
 
     hideLoadingScreen();
+    window._appInitialized = true;
 }
 
 async function showPatientWizard(patientId, username, patientData = null) {
@@ -2848,15 +2876,30 @@ async function handlePatientAppointmentRequest(e) {
 function togglePatientMenu() {
     const menu = document.getElementById('patient-menu');
     const overlay = document.getElementById('patient-menu-overlay');
-    
+    if (!menu || !overlay) return;
+    const willOpen = !menu.classList.contains('open');
     menu.classList.toggle('open');
     overlay.classList.toggle('hide');
+    if (willOpen) {
+        try {
+            history.pushState({ type: 'patient-menu' }, '');
+        } catch (e) {}
+    } else {
+        if (history.state && history.state.type === 'patient-menu') {
+            try {
+                window._ignoreNextPopstate = true;
+                history.back();
+            } catch (e) {}
+        }
+    }
 }
 
 function selectPatientMenuItem(viewName) {
     // Cerrar el menú lateral
-    document.getElementById('patient-menu').classList.remove('open');
-    document.getElementById('patient-menu-overlay').classList.add('hide');
+    const menu = document.getElementById('patient-menu');
+    const overlay = document.getElementById('patient-menu-overlay');
+    if (menu) menu.classList.remove('open');
+    if (overlay) overlay.classList.add('hide');
     
     // Cambiar la vista
     switchPatientView(viewName);
@@ -2884,7 +2927,7 @@ function setDefaultToolDates() {
 }
 window.setDefaultToolDates = setDefaultToolDates;
 
-function switchPatientView(viewName) {
+function switchPatientView(viewName, fromPopState = false) {
     // Ocultar todas las secciones
     document.querySelectorAll('.app-view').forEach(view => view.classList.add('hide'));
     
@@ -2900,6 +2943,18 @@ function switchPatientView(viewName) {
             item.classList.remove('active');
         }
     });
+
+    if (!fromPopState) {
+        try {
+            if (history.state && history.state.type === 'patient-menu') {
+                history.replaceState({ type: 'patient-view', view: viewName, root: viewName === 'patient-home' }, '');
+            } else if (window._appInitialized) {
+                history.pushState({ type: 'patient-view', view: viewName, root: viewName === 'patient-home' }, '');
+            } else {
+                history.replaceState({ type: 'patient-view', view: viewName, root: viewName === 'patient-home' }, '');
+            }
+        } catch (e) {}
+    }
     
     // Asegurar fechas por defecto en las herramientas
     setDefaultToolDates();
@@ -22187,7 +22242,16 @@ window.addEventListener('popstate', (event) => {
         }
     }
 
-    // 2. Si el menú drawer de pacientes está abierto, cerrarlo
+    // 2. Si el sidebar de terapeuta está abierto, cerrarlo
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (overlay) overlay.classList.add('hide');
+        return;
+    }
+
+    // 3. Si el menú drawer de pacientes está abierto, cerrarlo
     const patientMenu = document.getElementById('patient-menu');
     if (patientMenu && patientMenu.classList.contains('open')) {
         patientMenu.classList.remove('open');
@@ -22196,14 +22260,28 @@ window.addEventListener('popstate', (event) => {
         return;
     }
 
-    // 3. Manejo de subvistas secundarias hacia el inicio
+    // 4. Si el evento popstate contiene un estado de vista específico
+    if (event.state && event.state.type === 'view' && event.state.view) {
+        if (typeof switchView === 'function') {
+            switchView(event.state.view, true);
+            return;
+        }
+    }
+    if (event.state && event.state.type === 'patient-view' && event.state.view) {
+        if (typeof switchPatientView === 'function') {
+            switchPatientView(event.state.view, true);
+            return;
+        }
+    }
+
+    // 5. Manejo de subvistas secundarias hacia el inicio si no hay estado específico
     const isPatientSession = sessionStorage.getItem('patient_id') || (window.currentUser && window.currentUser.is_patient);
     if (isPatientSession) {
         const activePatView = document.querySelector('.pat-menu-item.active');
         const patViewName = activePatView ? activePatView.getAttribute('data-pat-view') : '';
         if (patViewName && patViewName !== 'patient-home') {
             if (typeof switchPatientView === 'function') {
-                switchPatientView('patient-home');
+                switchPatientView('patient-home', true);
                 try { history.pushState({ root: true }, ''); } catch(e) {}
                 return;
             }
@@ -22212,14 +22290,14 @@ window.addEventListener('popstate', (event) => {
         // Sesión de Terapeuta / Admin
         if (typeof activeView !== 'undefined' && activeView && activeView !== 'dashboard') {
             if (typeof switchView === 'function') {
-                switchView('dashboard');
+                switchView('dashboard', true);
                 try { history.pushState({ root: true }, ''); } catch(e) {}
                 return;
             }
         }
     }
 
-    // 4. Si ya estamos en la vista raíz, mostrar confirmación de salida con doble toque
+    // 6. Si ya estamos en la vista raíz, mostrar confirmación de salida con doble toque
     const now = Date.now();
     if (!window._lastBackPressTime || (now - window._lastBackPressTime > 2200)) {
         window._lastBackPressTime = now;
@@ -22230,7 +22308,7 @@ window.addEventListener('popstate', (event) => {
         return;
     }
 
-    // 5. Manejo de landing / rutas públicas
+    // 7. Manejo de landing / rutas públicas
     initLandingRouteHandling();
 });
 
