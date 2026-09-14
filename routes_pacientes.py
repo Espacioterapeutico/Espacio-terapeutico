@@ -9,9 +9,11 @@ import os
 import re
 import sqlite3
 import json
+import io
+import zipfile
 from datetime import datetime
 from functools import wraps
-from flask import Blueprint, request, jsonify, session, g
+from flask import Blueprint, request, jsonify, session, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from routes_finanzas import auto_settle_patient_debts
@@ -243,7 +245,7 @@ def get_patients():
                 SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
                 FROM pacientes p
                 LEFT JOIN organizaciones o ON p.organizacion_id = o.id
-                WHERE (p.psicologo_id = ? OR p.psicologo_id IS NULL) AND (p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)
+                WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '') AND (p.psicologo_id = ? OR p.psicologo_id IS NULL) AND (p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)
                 ORDER BY p.nombres ASC, p.apellidos ASC
             """, (psic_id, query, query, query))
         else:
@@ -251,7 +253,7 @@ def get_patients():
                 SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
                 FROM pacientes p
                 LEFT JOIN organizaciones o ON p.organizacion_id = o.id
-                WHERE p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?
+                WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '') AND (p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)
                 ORDER BY p.nombres ASC, p.apellidos ASC
             """, (query, query, query))
     else:
@@ -260,7 +262,7 @@ def get_patients():
                 SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
                 FROM pacientes p
                 LEFT JOIN organizaciones o ON p.organizacion_id = o.id
-                WHERE (p.psicologo_id = ? OR p.psicologo_id IS NULL) 
+                WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '') AND (p.psicologo_id = ? OR p.psicologo_id IS NULL) 
                 ORDER BY p.nombres ASC, p.apellidos ASC
             """, (psic_id,))
         else:
@@ -268,11 +270,144 @@ def get_patients():
                 SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
                 FROM pacientes p
                 LEFT JOIN organizaciones o ON p.organizacion_id = o.id
+                WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '')
                 ORDER BY p.nombres ASC, p.apellidos ASC
             """)
         
     patients = [dict(row) for row in cursor.fetchall()]
     return jsonify(patients)
+
+
+@pacientes_bp.route('/api/patients/archived', methods=['GET'])
+@login_required
+def get_archived_patients():
+    """
+    Retorna la lista de pacientes que han solicitado la baja de su cuenta.
+    Permite al terapeuta acceder a sus expedientes resguardados legalmente.
+    """
+    db = get_db()
+    cursor = db.cursor()
+    
+    role = session.get('role', '')
+    user_id = session.get('user_id')
+    psic_id = get_psicologo_id_filter()
+    
+    if psic_id == -1 or psic_id is None:
+        if role in ['admin', 'superadmin']:
+            psic_id = None
+        else:
+            psic_id = user_id if user_id else 1
+
+    if psic_id is not None:
+        cursor.execute("""
+            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.telefono, p.email,
+                   p.fecha_baja, p.notas_baja, p.archivo_respaldo_baja, o.nombre as organizacion_nombre
+            FROM pacientes p
+            LEFT JOIN organizaciones o ON p.organizacion_id = o.id
+            WHERE p.fecha_baja IS NOT NULL AND p.fecha_baja != ''
+              AND (p.psicologo_id = ? OR p.psicologo_id IS NULL)
+            ORDER BY p.fecha_baja DESC
+        """, (psic_id,))
+    else:
+        cursor.execute("""
+            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.telefono, p.email,
+                   p.fecha_baja, p.notas_baja, p.archivo_respaldo_baja, o.nombre as organizacion_nombre
+            FROM pacientes p
+            LEFT JOIN organizaciones o ON p.organizacion_id = o.id
+            WHERE p.fecha_baja IS NOT NULL AND p.fecha_baja != ''
+            ORDER BY p.fecha_baja DESC
+        """)
+        
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
+
+
+@pacientes_bp.route('/api/patients/archived/download/<int:patient_id>', methods=['GET'])
+@login_required
+def download_archived_patient_docx(patient_id):
+    """
+    Descarga el archivo .docx de respaldo clínico del paciente dado de baja.
+    """
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
+    patient = cursor.fetchone()
+    if not patient:
+        return jsonify({'error': 'Consultante no encontrado.'}), 404
+        
+    filename = patient['archivo_respaldo_baja']
+    backup_folder = os.path.join(os.getcwd(), 'expedientes_archivados')
+    
+    if filename:
+        file_path = os.path.join(backup_folder, filename)
+        if os.path.exists(file_path):
+            return send_file(file_path, as_attachment=True, download_name=filename,
+                             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            
+    # Si el archivo físico no se encuentra, generarlo al vuelo
+    from routes_admin import generate_patient_docx
+    doc = generate_patient_docx(cursor, patient_id)
+    if not doc:
+        return jsonify({'error': 'No se pudo generar el expediente.'}), 500
+        
+    target_stream = io.BytesIO()
+    doc.save(target_stream)
+    target_stream.seek(0)
+    safe_cedula = (patient['cedula'] or str(patient_id)).replace(' ', '_').replace('/', '_')
+    dl_name = f"Expediente_Baja_{safe_cedula}.docx"
+    return send_file(target_stream, as_attachment=True, download_name=dl_name,
+                     mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+
+@pacientes_bp.route('/api/patients/archived/download-all-zip', methods=['GET'])
+@login_required
+def download_all_archived_zip():
+    """
+    Descarga un archivo .ZIP con todos los expedientes Word de pacientes dados de baja.
+    """
+    db = get_db()
+    cursor = db.cursor()
+    role = session.get('role', '')
+    user_id = session.get('user_id')
+    psic_id = get_psicologo_id_filter()
+    if psic_id == -1 or psic_id is None:
+        if role in ['admin', 'superadmin']:
+            psic_id = None
+        else:
+            psic_id = user_id if user_id else 1
+
+    if psic_id is not None:
+        cursor.execute("SELECT * FROM pacientes WHERE fecha_baja IS NOT NULL AND (psicologo_id = ? OR psicologo_id IS NULL)", (psic_id,))
+    else:
+        cursor.execute("SELECT * FROM pacientes WHERE fecha_baja IS NOT NULL")
+        
+    archived_list = cursor.fetchall()
+    if not archived_list:
+        return jsonify({'error': 'No hay expedientes de baja archivados para descargar.'}), 404
+        
+    zip_buffer = io.BytesIO()
+    backup_folder = os.path.join(os.getcwd(), 'expedientes_archivados')
+    from routes_admin import generate_patient_docx
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for p in archived_list:
+            fname = p['archivo_respaldo_baja']
+            fpath = os.path.join(backup_folder, fname) if fname else None
+            if fpath and os.path.exists(fpath):
+                zip_file.write(fpath, arcname=fname)
+            else:
+                doc = generate_patient_docx(cursor, p['id'])
+                if doc:
+                    doc_io = io.BytesIO()
+                    doc.save(doc_io)
+                    doc_io.seek(0)
+                    safe_name = f"Expediente_Baja_{(p['cedula'] or str(p['id'])).replace(' ', '_')}.docx"
+                    zip_file.writestr(safe_name, doc_io.getvalue())
+                    
+    zip_buffer.seek(0)
+    zip_name = f"Expedientes_Archivados_Bajas_{datetime.now().strftime('%Y%m%d')}.zip"
+    return send_file(zip_buffer, as_attachment=True, download_name=zip_name, mimetype="application/zip")
+
 
 @pacientes_bp.route('/api/patients/<int:patient_id>', methods=['GET'])
 @login_required

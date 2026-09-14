@@ -1826,9 +1826,12 @@
                     </div>
 
                     <!-- Menú de Sub-pestañas Horizontales (Pills estilo Agenda) -->
-                    <div class="sub-nav-tabs mt-2 mb-3" style="display: flex; gap: 0.4rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.85rem;">
+                    <div class="sub-nav-tabs mt-2 mb-3" style="display: flex; gap: 0.4rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
                         <button type="button" id="exp-tab-evoluciones" class="btn btn-sm btn-primary" onclick="switchExpedientesTab('evoluciones')" style="font-weight: 600; padding: 0.45rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;" title="Evoluciones & Notas Clínicas">Evoluciones</button>
                         <button type="button" id="exp-tab-historias" class="btn btn-sm btn-secondary" onclick="switchExpedientesTab('historias')" style="font-weight: 600; padding: 0.45rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;" title="Historias Clínicas">Historias</button>
+                        <button type="button" id="exp-tab-archivados" class="btn btn-sm btn-secondary hide" onclick="switchExpedientesTab('archivados')" style="display: none; font-weight: 600; padding: 0.45rem 1rem; border-radius: var(--radius-sm); border: 1px solid #fca5a5; background: #fff1f2; color: #991b1b; cursor: pointer;" title="Expedientes de consultantes que dieron de baja su cuenta">
+                            📂 Archivados (Bajas) <span id="exp-badge-archivados-count" style="margin-left: 5px; background: #dc2626; color: #fff; padding: 1px 7px; border-radius: 12px; font-size: 0.72rem; font-weight: 700;">0</span>
+                        </button>
                     </div>
 
                     <!-- Pestaña 1: Evoluciones & Notas Clínicas -->
@@ -1886,6 +1889,44 @@
                             </div>
                         </div>
                         <div id="patients-pagination-controls" class="mt-3"></div>
+                    </div>
+
+                    <!-- Pestaña 3: Expedientes Archivados (Bajas de Consultantes) -->
+                    <div id="exp-content-archivados" class="exp-tab-content hide">
+                        <div class="card mb-3" style="padding: 1rem 1.25rem; background: linear-gradient(135deg, #fff1f2 0%, #ffffff 100%); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1.5px solid #fecdd3;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                                <div>
+                                    <h4 style="margin: 0; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+                                        <span>⚖️</span> Expedientes Clínicos en Custodia Legal (Bajas de Consultantes)
+                                    </h4>
+                                    <p class="text-secondary mb-0 mt-1" style="font-size: 0.84rem; color: #64748b;">
+                                        Consultantes que solicitaron la baja de su cuenta. Sus expedientes completos (.docx) están archivados como soporte legal obligatorio.
+                                    </p>
+                                </div>
+                                <button type="button" class="btn btn-sm" onclick="downloadAllArchivedZip()" style="background: #991b1b; color: white; border: none; font-weight: 700; padding: 0.5rem 0.9rem; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                    <span>📦</span> Descargar Todos (.ZIP)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Cédula</th>
+                                            <th>Consultante</th>
+                                            <th>Fecha de Baja</th>
+                                            <th>Motivo Declarado</th>
+                                            <th class="actions-col" style="text-align: center;">Respaldo Legal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="archived-patients-table-body">
+                                        <!-- Dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -2505,6 +2546,16 @@
                                     <p class="text-secondary mb-3" style="font-size: 0.88rem; line-height: 1.4;">Descarga un paquete comprimido conteniendo un documento Word (.docx) individual para cada paciente con toda su información personal, historias clínicas, evoluciones y registros completos de herramientas terapéuticas.</p>
                                     <button type="button" onclick="downloadPatientsWordZip()" class="btn btn-primary btn-block" style="width:100%; background: linear-gradient(135deg, #7c3aed, #5b21b6); font-weight: 700; padding: 0.75rem; border: none; cursor: pointer; border-radius: var(--radius-sm);">
                                         📑 Exportar Expedientes Completos en Word (.ZIP)
+                                    </button>
+                                </div>
+
+                                <div id="set-card-archived-section" class="archived-export-section mt-4 mb-4 hide" style="display: none; background: #fff1f2; padding: 1.25rem; border-radius: var(--radius-md); border: 1.5px solid #fca5a5;">
+                                    <h4 style="font-weight: 700; color: #991b1b; margin-bottom: 0.5rem;">📂 Expedientes de Consultantes en Custodia Legal (Bajas)</h4>
+                                    <p class="text-secondary mb-3" style="font-size: 0.88rem; line-height: 1.4; color: #475569;">
+                                        Descarga un paquete comprimido (.ZIP) con los expedientes consolidados (.docx) de todos los consultantes que han solicitado la baja de su cuenta.
+                                    </p>
+                                    <button type="button" onclick="downloadAllArchivedZip()" class="btn btn-block" style="width:100%; background: #991b1b; color: white; font-weight: 700; padding: 0.75rem; border: none; cursor: pointer; border-radius: var(--radius-sm);">
+                                        📦 Descargar Archivo Completo de Bajas (.ZIP)
                                     </button>
                                 </div>
                                 

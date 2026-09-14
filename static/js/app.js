@@ -1239,7 +1239,7 @@ function switchExpedientesTab(tabKey) {
     if (tabKey === 'evoluciones' && typeof isFeatureBlocked === 'function' && isFeatureBlocked('evoluciones')) {
         tabKey = 'historias';
     }
-    const tabs = ['evoluciones', 'historias'];
+    const tabs = ['evoluciones', 'historias', 'archivados'];
     tabs.forEach(t => {
         const btn = document.getElementById(`exp-tab-${t}`);
         const content = document.getElementById(`exp-content-${t}`);
@@ -1266,8 +1266,99 @@ function switchExpedientesTab(tabKey) {
         if (typeof loadSessions === 'function') loadSessions();
     } else if (tabKey === 'historias') {
         if (typeof loadPatients === 'function') loadPatients();
+    } else if (tabKey === 'archivados') {
+        if (typeof loadArchivedPatients === 'function') loadArchivedPatients();
     }
 }
+
+let archivedPatientsList = [];
+
+async function loadArchivedPatients() {
+    try {
+        const res = await fetch('/api/patients/archived');
+        if (!res.ok) return;
+        archivedPatientsList = await res.json();
+        
+        const tabBtn = document.getElementById('exp-tab-archivados');
+        const badgeCount = document.getElementById('exp-badge-archivados-count');
+        const settingsSection = document.getElementById('set-card-archived-section');
+        
+        if (archivedPatientsList && archivedPatientsList.length > 0) {
+            if (tabBtn) {
+                tabBtn.classList.remove('hide');
+                tabBtn.style.display = 'inline-flex';
+                tabBtn.style.alignItems = 'center';
+            }
+            if (badgeCount) {
+                badgeCount.textContent = archivedPatientsList.length;
+            }
+            if (settingsSection) {
+                settingsSection.classList.remove('hide');
+                settingsSection.style.display = 'block';
+            }
+            renderArchivedPatientsTable(archivedPatientsList);
+        } else {
+            if (tabBtn) {
+                tabBtn.classList.add('hide');
+                tabBtn.style.display = 'none';
+            }
+            if (settingsSection) {
+                settingsSection.classList.add('hide');
+                settingsSection.style.display = 'none';
+            }
+        }
+    } catch (err) {
+        console.error("Error al cargar consultantes archivados:", err);
+    }
+}
+
+function renderArchivedPatientsTable(list) {
+    const tbody = document.getElementById('archived-patients-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-secondary">No hay consultantes dados de baja en custodia legal.</td></tr>';
+        return;
+    }
+    
+    list.forEach(p => {
+        const tr = document.createElement('tr');
+        const motivo = p.notas_baja || 'Baja voluntaria de cuenta';
+        const fecha = p.fecha_baja ? new Date(p.fecha_baja.replace(/-/g, '/')).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }) : 'Fecha no registrada';
+        
+        tr.innerHTML = `
+            <td><strong style="color: #475569;">${p.cedula || 'N/A'}</strong></td>
+            <td>
+                <strong>${p.nombres || ''} ${p.apellidos || ''}</strong>
+                <div style="font-size: 0.76rem; color: #94a3b8;">${p.telefono ? '📞 ' + p.telefono : ''} ${p.email ? '✉️ ' + p.email : ''}</div>
+            </td>
+            <td><span style="font-size: 0.84rem; color: #475569; font-weight: 500;">📅 ${fecha}</span></td>
+            <td><span style="font-size: 0.82rem; color: #64748b; font-style: italic;">${motivo}</span></td>
+            <td class="actions-cell" style="text-align: center;">
+                <button type="button" class="btn btn-sm" onclick="downloadArchivedPatientDocx(${p.id}, '${(p.nombres || '').replace(/'/g, "\\'")} ${(p.apellidos || '').replace(/'/g, "\\'")}')" style="background: #fff1f2; color: #991b1b; border: 1.5px solid #fca5a5; font-weight: 700; border-radius: 6px; padding: 0.35rem 0.65rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                    <span>📥</span> Respaldo .docx
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function downloadArchivedPatientDocx(patientId, patientName) {
+    if (typeof showToast === 'function') {
+        showToast(`Descargando expediente legal de ${patientName || 'consultante'}...`, 'info');
+    }
+    window.location.href = `/api/patients/archived/download/${patientId}`;
+}
+
+function downloadAllArchivedZip() {
+    if (typeof showToast === 'function') {
+        showToast('Generando paquete ZIP de expedientes archivados...', 'info');
+    }
+    window.location.href = '/api/patients/archived/download-all-zip';
+}
+
 
 function loadDashHistoryData() {
     const picker = document.getElementById('dash-history-month-picker');
@@ -4320,6 +4411,9 @@ async function loadPatients() {
         renderPatientsTable(patients);
     } catch (err) {
         console.error("Error al cargar pacientes:", err);
+    }
+    if (typeof loadArchivedPatients === 'function') {
+        loadArchivedPatients();
     }
 }
 
@@ -17457,6 +17551,10 @@ function switchSettingsTab(tabName) {
     if (tabName !== 'whatsapp' && typeof waPollInterval !== 'undefined' && waPollInterval) {
         clearInterval(waPollInterval);
         waPollInterval = null;
+    }
+
+    if (tabName === 'backup' && typeof loadArchivedPatients === 'function') {
+        loadArchivedPatients();
     }
 
     if (tabName === 'equipo') {
