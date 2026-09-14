@@ -3417,24 +3417,32 @@
                             </div>
                         </div>
 
-                        <!-- FILTRO POR CATEGORÍAS (ÚNICO DESPLEGABLE) -->
-                        <div style="margin-bottom: 1.25rem;">
-                            <!-- Selector Desplegable -->
-                            <div>
-                                <label for="select-test-category-dropdown" style="font-size: 0.8rem; font-weight: 800; color: #475569; margin-bottom: 4px; display: block;">📂 Filtrar por Categoría de Evaluación:</label>
-                                <select id="select-test-category-dropdown" onchange="filterTestsByCategory(this.value)" style="width: 100%; padding: 0.7rem 1rem; border-radius: 12px; border: 2px solid #702e5e; background: #ffffff; color: #702e5e; font-weight: 800; font-size: 0.88rem; outline: none; cursor: pointer; box-shadow: 0 2px 8px rgba(112,46,94,0.06);">
-                                    <option value="TODAS">📚 Todas las Categorías</option>
-                                    <option value="Inventarios de Síntomas">📋 Inventarios de Síntomas (SCL-90-R, BSI)</option>
-                                    <option value="Test Infanto-Juvenil">👶 Test Infanto-Juvenil</option>
-                                    <option value="Adulto Mayor">👵 Adulto Mayor / Psicogerontología</option>
-                                    <option value="Sexología y Salud Sexual">👩‍❤️‍👨 Sexología y Salud Sexual</option>
-                                    <option value="Neurodesarrollo y Neuropsicología">🧠 Neurodesarrollo y Neuropsicología</option>
-                                    <option value="Personalidad y Psicopatología">🎭 Personalidad y Psicopatología</option>
-                                    <option value="Pruebas Proyectivas">🎨 Pruebas Proyectivas (Material Físico / Gráficos)</option>
-                                    <option value="Cognición y Capacidad Intelectual">💡 Cognición y Capacidad Intelectual</option>
-                                    <option value="Afectividad, Depresión y Ansiedad">💓 Afectividad, Depresión y Ansiedad</option>
-                                </select>
+                        <!-- BARRA DE BÚSQUEDA INTELIGENTE POR PALABRAS CLAVE Y CATEGORÍAS -->
+                        <div style="margin-bottom: 1.25rem; background: #ffffff; padding: 0.9rem 1.1rem; border-radius: 14px; border: 1.5px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                                <!-- Buscador por Palabras Clave (Tiempo Real) -->
+                                <div style="flex: 3; min-width: 260px; position: relative;">
+                                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; color: #702e5e;">🔍</span>
+                                    <input type="text" id="input-search-tests-catalog" placeholder="Buscar por palabra clave (ej. inteligencia, síntomas, depresión, autismo, barsit, siglas...)" oninput="onSearchTestsCatalogInput(this.value)" style="width: 100%; padding: 0.65rem 2.2rem 0.65rem 2.5rem; border-radius: 10px; border: 2px solid #e2e8f0; font-size: 0.92rem; outline: none; transition: border-color 0.2s; font-weight: 500;" onfocus="this.style.borderColor='#702e5e'" onblur="this.style.borderColor='#e2e8f0'">
+                                    <button type="button" id="btn-clear-test-search" onclick="clearTestsCatalogSearch()" title="Limpiar búsqueda" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #f1f5f9; border: none; font-size: 0.85rem; color: #64748b; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; line-height: 1;">✕</button>
+                                </div>
+                                <!-- Selector Desplegable de Categorías -->
+                                <div style="flex: 2; min-width: 220px;">
+                                    <select id="select-test-category-dropdown" onchange="filterTestsByCategory(this.value)" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 10px; border: 2px solid #702e5e; background: #ffffff; color: #702e5e; font-weight: 800; font-size: 0.88rem; outline: none; cursor: pointer; box-shadow: 0 2px 6px rgba(112,46,94,0.06);">
+                                        <option value="TODAS">📚 Todas las Categorías</option>
+                                        <option value="Inventarios de Síntomas">📋 Inventarios de Síntomas (SCL-90-R, BSI)</option>
+                                        <option value="Cognición y Capacidad Intelectual">💡 Cognición y Capacidad Intelectual (BARSIT, RAVEN, MoCA...)</option>
+                                        <option value="Afectividad, Depresión y Ansiedad">💓 Afectividad, Depresión y Ansiedad</option>
+                                        <option value="Neurodesarrollo y Neuropsicología">🧠 Neurodesarrollo y Neuropsicología</option>
+                                        <option value="Personalidad y Psicopatología">🎭 Personalidad y Psicopatología</option>
+                                        <option value="Sexología y Salud Sexual">👩‍❤️‍👨 Sexología y Salud Sexual</option>
+                                        <option value="Test Infanto-Juvenil">👶 Test Infanto-Juvenil</option>
+                                        <option value="Adulto Mayor">👵 Adulto Mayor / Psicogerontología</option>
+                                        <option value="Pruebas Proyectivas">🎨 Pruebas Proyectivas (Material Físico / Gráficos)</option>
+                                    </select>
+                                </div>
                             </div>
+                            <div id="tests-catalog-counter-badge" style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700; color: #64748b;"></div>
                         </div>
 
                         <!-- UNICO CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 EXACTA -->

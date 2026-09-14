@@ -14,6 +14,7 @@ import sqlite3
 from datetime import datetime
 from functools import wraps
 from flask import Blueprint, request, jsonify, session, g, render_template, render_template_string, make_response, send_file
+from barsit_test_data import ensure_barsit_definition, process_barsit_scoring
 
 tests_bp = Blueprint('tests', __name__)
 
@@ -124,6 +125,7 @@ def ensure_tests_tables(db):
     ensure_new_latin_tests_definitions(db)
     ensure_new_sexology_and_cognitive_tests_definitions(db)
     ensure_violence_and_psychotic_tests_definitions(db)
+    ensure_barsit_definition(db)
     sync_existing_completed_tests_to_evoluciones(db)
 
 def create_session_evolution_from_test(db, assignment_id):
@@ -2307,6 +2309,8 @@ def api_post_public_evaluacion(token):
             total_score, subscales_dict, classification, interpretation = process_juicio_scoring(answers)
         elif assignment['test_code'] == 'BSSC':
             total_score, subscales_dict, classification, interpretation = process_bssc_scoring(answers)
+        elif assignment['test_code'] == 'BARSIT':
+            total_score, subscales_dict, classification, interpretation = process_barsit_scoring(answers, patient_info=patient_info)
         elif assignment['test_code'] == 'RAADS-R':
             total_score = sum(int(float(v)) for v in answers.values() if str(v).replace('.', '', 1).isdigit())
             classification = "Compatible con TEA (RAADS-R >= 65)" if total_score >= 65 else "Por Debajo del Umbral Clínico (< 65)"

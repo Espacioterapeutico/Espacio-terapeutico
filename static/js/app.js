@@ -204,6 +204,19 @@ var testsCatalogDatabase = [
     },
 
     // 4. CAPACIDAD INTELECTUAL Y NEUROPSICOLOGÍA
+    {
+        code: 'BARSIT',
+        name: 'BARSIT — Test Rápido de Barranquilla (Habilidad Mental)',
+        siglas: 'BARSIT',
+        cat: 'Cognición y Capacidad Intelectual',
+        desc: 'Evaluación rápida de 60 reactivos desarrollada por Francisco del Olmo. Determina con agilidad el índice de inteligencia general, aprendizaje, razonamiento verbal y numérico en escolares (3er grado+) y adultos.',
+        autor: 'Francisco del Olmo',
+        poblacion: 'Escolares (3er grado+) y Adultos',
+        validez: '60 Ítems | 5 Áreas Cognitivas | Baremos Escolares y Adultos (10 min)',
+        itemsCount: 60,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/barranquilla_barsit.pdf'
+    },
     { 
         code: 'RAVEN', 
         name: 'RAVEN — Test de Matrices Progresivas de Raven', 
@@ -24405,8 +24418,38 @@ function switchTestsTab(tab) {
     }
 }
 
-// 2. FILTRADO Y PAGINACIÓN DEL CATÁLOGO DE TESTS (TARJETAS COLAPSABLES Y SELECTOR DESPLEGABLE)
+// 2. FILTRADO Y PAGINACIÓN DEL CATÁLOGO DE TESTS (TARJETAS COLAPSABLES, BUSCADOR Y CATEGORÍAS)
 let expandedTestDetailsMap = {};
+let currentCatalogKeyword = '';
+
+function normalizeTestSearchStr(str) {
+    if (!str) return '';
+    return str.toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+}
+
+function onSearchTestsCatalogInput(val) {
+    currentCatalogKeyword = val || '';
+    currentCatalogPage = 1;
+    const clearBtn = document.getElementById('btn-clear-test-search');
+    if (clearBtn) {
+        clearBtn.style.display = currentCatalogKeyword.trim() ? 'block' : 'none';
+    }
+    renderCatalogViewWithFiltersAndPagination();
+}
+
+function clearTestsCatalogSearch() {
+    const input = document.getElementById('input-search-tests-catalog');
+    if (input) input.value = '';
+    currentCatalogKeyword = '';
+    const clearBtn = document.getElementById('btn-clear-test-search');
+    if (clearBtn) clearBtn.style.display = 'none';
+    currentCatalogPage = 1;
+    renderCatalogViewWithFiltersAndPagination();
+}
 
 function toggleTestDetails(testCode, event) {
     if (event) {
@@ -24427,7 +24470,7 @@ function filterTestsByCategory(catName) {
         selectCat.value = currentCatalogCategory;
     }
 
-    // Sincronizar botones rápidos
+    // Sincronizar botones rápidos si existen
     document.querySelectorAll('#container-tests-category-filters button').forEach(btn => {
         const btnTxt = btn.textContent.trim();
         if (btnTxt.toLowerCase() === catName.toLowerCase() || (catName === 'TODAS' && btnTxt === 'Todas')) {
@@ -24455,21 +24498,59 @@ function renderCatalogViewWithFiltersAndPagination() {
     if (!container) return;
 
     let filtered = testsCatalogDatabase;
+
+    // A. Filtrado por categoría si no es TODAS
     if (currentCatalogCategory && currentCatalogCategory !== 'TODAS' && currentCatalogCategory !== 'todas') {
-        const catNorm = currentCatalogCategory.toLowerCase();
-        filtered = testsCatalogDatabase.filter(t => {
-            const tCat = (t.cat || '').toLowerCase();
-            const tCode = (t.code || '').toLowerCase();
-            const tName = (t.name || '').toLowerCase();
-            const tDesc = (t.desc || '').toLowerCase();
-            if (catNorm.includes('síntomas') || catNorm.includes('sintomas')) {
-                return tCode === 'SCL-90-R' || tCode === 'BSI' || tCat.includes('síntomas') || tCat.includes('sintomas');
+        const catNorm = normalizeTestSearchStr(currentCatalogCategory);
+        filtered = filtered.filter(t => {
+            const tCat = normalizeTestSearchStr(t.cat);
+            const tCode = normalizeTestSearchStr(t.code);
+            const tName = normalizeTestSearchStr(t.name);
+            const tDesc = normalizeTestSearchStr(t.desc);
+
+            if (catNorm.includes('sintoma')) {
+                return tCode === 'scl-90-r' || tCode === 'bsi' || tCat.includes('sintoma');
             }
-            if (catNorm.includes('personalidad') || catNorm.includes('psicopatología') || catNorm.includes('psicopatologia')) {
-                return tCat.includes('personalidad') || tCat.includes('psicopatología') || tCat.includes('psicopatologia') || tCode === 'SCL-90-R' || tCode === 'BSI';
+            if (catNorm.includes('cognicion') || catNorm.includes('intelectual')) {
+                return tCat.includes('cognicion') || tCat.includes('intelectual') || tCode === 'barsit' || tCode === 'raven' || tCode === 'mmse' || tCode === 'moca-test';
             }
-            return tCat.includes(catNorm) || catNorm.includes(tCat) || tCode.includes(catNorm) || tName.includes(catNorm) || tDesc.includes(catNorm);
+            if (catNorm.includes('personalidad') || catNorm.includes('psicopatologia')) {
+                return tCat.includes('personalidad') || tCat.includes('psicopatologia') || tCode === 'mcmi-ii' || tCode === 'mmpi-2';
+            }
+            return tCat.includes(catNorm) || catNorm.includes(tCat) || tName.includes(catNorm) || tDesc.includes(catNorm);
         });
+    }
+
+    // B. Filtrado inteligente por palabras clave (buscador global en tiempo real)
+    if (currentCatalogKeyword && currentCatalogKeyword.trim()) {
+        const words = normalizeTestSearchStr(currentCatalogKeyword).split(/\s+/).filter(Boolean);
+        filtered = filtered.filter(t => {
+            const fullBlob = normalizeTestSearchStr(
+                `${t.code || ''} ${t.siglas || ''} ${t.name || ''} ${t.cat || ''} ${t.desc || ''} ${t.autor || ''} ${t.poblacion || ''} ${t.validez || ''}`
+            );
+            return words.every(w => {
+                if (w === 'sintoma' || w === 'sintomas') {
+                    return fullBlob.includes('sintoma') || fullBlob.includes('scl-90-r') || fullBlob.includes('bsi');
+                }
+                if (w === 'inteligencia') {
+                    return fullBlob.includes('inteligencia') || fullBlob.includes('intelectual') || fullBlob.includes('barsit') || fullBlob.includes('raven');
+                }
+                return fullBlob.includes(w);
+            });
+        });
+    }
+
+    // Actualizar badge contador de resultados encontrados
+    const counterBadge = document.getElementById('tests-catalog-counter-badge');
+    if (counterBadge) {
+        const hasFilter = currentCatalogKeyword.trim() || (currentCatalogCategory && currentCatalogCategory !== 'TODAS');
+        if (hasFilter) {
+            counterBadge.innerHTML = `Mostrando <strong>${filtered.length}</strong> de ${testsCatalogDatabase.length} evaluaciones disponibles`;
+            counterBadge.style.color = filtered.length > 0 ? '#059669' : '#dc2626';
+        } else {
+            counterBadge.innerHTML = `Total: <strong>${testsCatalogDatabase.length}</strong> evaluaciones en catálogo`;
+            counterBadge.style.color = '#64748b';
+        }
     }
 
     const totalPages = Math.ceil(filtered.length / CATALOG_PER_PAGE) || 1;
