@@ -7416,6 +7416,30 @@ async function handleEventSubmit(e) {
         referencia: document.getElementById('e-referencia').value,
         confirmada: document.getElementById('e-confirmada').checked ? 1 : 0
     };
+
+    // Calcular hora_paciente en formato HH:MM 24h usando el convertidor de zona horaria
+    try {
+        const fecha = payload.fecha;
+        const hora = payload.hora;
+        const paTzSelect = document.getElementById('e-tz-patient');
+        const thTzSelect = document.getElementById('e-tz-therapist');
+        const paTz = paTzSelect ? paTzSelect.value : null;
+        const thTz = thTzSelect ? thTzSelect.value : 'America/Caracas';
+        if (fecha && hora && paTz && paTz !== thTz) {
+            // Crear fecha como si fuera en la zona del terapeuta
+            const dtStr = `${fecha}T${hora}:00`;
+            const localDate = new Date(dtStr);
+            const formatter24 = new Intl.DateTimeFormat('en-GB', {
+                timeZone: paTz,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            payload.hora_paciente = formatter24.format(localDate); // Resultado: "HH:MM"
+        }
+    } catch (eTz) {
+        // Si falla, no se envía hora_paciente y el backend usará la hora del terapeuta
+    }
     
     const method = id ? 'PUT' : 'POST';
     const endpoint = id ? `/api/finance/transactions/${id}` : '/api/agenda';

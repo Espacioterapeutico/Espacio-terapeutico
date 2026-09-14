@@ -677,6 +677,7 @@ def add_agenda_event():
     metodo_pago = data.get('metodo_pago')
     fecha_pago = data.get('fecha_pago')
     confirmada = int(data.get('confirmada', 0) or 0)
+    hora_paciente = (data.get('hora_paciente') or '').strip() or None  # Hora en zona horaria del paciente (calculada en frontend)
 
     google_event_id = None
     try:
@@ -710,12 +711,14 @@ def add_agenda_event():
         INSERT INTO agenda_finanzas (
             paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
             estado_pago, control_uso, google_event_id, cantidad_sesiones,
-            referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id,
+            hora_paciente
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         paciente_id, fecha, hora, tipo_consulta, monto, moneda,
         estado_pago, control_uso, google_event_id, cantidad_sesiones,
-        referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id
+        referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id,
+        hora_paciente
     ))
     db.commit()
     event_id = cursor.lastrowid
@@ -726,10 +729,11 @@ def add_agenda_event():
             from app import send_webpush_notification, FIREBASE_DB_URL
             import requests
             from datetime import datetime
+            hora_display = hora_paciente or hora  # Mostrar la hora en la zona horaria del paciente
             send_webpush_notification(
                 patient_id=paciente_id,
                 title="📅 Nueva Cita Agendada",
-                body=f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora}.",
+                body=f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora_display}.",
                 url="/?view=citas"
             )
             now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -737,7 +741,7 @@ def add_agenda_event():
                 "id": int(datetime.now().timestamp() * 1000),
                 "tipo": "cita",
                 "titulo": "📅 Nueva Cita Agendada",
-                "mensaje": f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora}.",
+                "mensaje": f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora_display}.",
                 "fecha": now_str,
                 "leida": False
             }

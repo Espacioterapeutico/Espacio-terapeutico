@@ -705,7 +705,7 @@ def cron_send_whatsapp_reminders():
         cita_dict = {
             'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
             'fecha': cita['fecha'],
-            'hora': cita['hora'],
+            'hora': cita.get('hora_paciente') or cita['hora'],  # Usar hora en zona horaria del paciente
             'modalidad': cita['tipo_consulta'] or 'Presencial'
         }
         patient_dict = {
@@ -778,7 +778,7 @@ def cron_send_whatsapp_reminders():
         cita_dict = {
             'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
             'fecha': cita['fecha'],
-            'hora': cita['hora'],
+            'hora': cita.get('hora_paciente') or cita['hora'],  # Usar hora en zona horaria del paciente
             'modalidad': cita['tipo_consulta'] or 'Presencial'
         }
         patient_dict = {

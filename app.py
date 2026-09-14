@@ -994,6 +994,8 @@ def init_db():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN token_confirmacion TEXT")
         if 'consultorio_nombre' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN consultorio_nombre TEXT")
+        if 'hora_paciente' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN hora_paciente TEXT")
         db.commit()
         
     # Crear tabla de tarifas por país
@@ -1943,7 +1945,7 @@ def auto_send_appointment_reminders(db):
         
         # Buscar citas agendadas para el día de hoy no canceladas
         cursor.execute("""
-            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, p.nombres, p.apellidos, p.psicologo_id
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, p.nombres, p.apellidos, p.psicologo_id
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.fecha = ?
@@ -1964,6 +1966,7 @@ def auto_send_appointment_reminders(db):
             patient_id = appt['paciente_id']
             pac_nombre = f"{appt['nombres']} {appt['apellidos']}"
             hora_cita = appt['hora']
+            hora_cita_paciente = appt['hora_paciente'] if appt['hora_paciente'] else hora_cita  # Hora en zona horaria del paciente
             notif_link = f"remind_{appt_id}_{today_str}"
             target_psic = appt['psicologo_id'] or 1
             
@@ -2002,7 +2005,7 @@ def auto_send_appointment_reminders(db):
                         "id": int(now_dt.timestamp() * 1000),
                         "tipo": "cita",
                         "titulo": "⏰ Recordatorio de Consulta Hoy",
-                        "mensaje": f"Hola {appt['nombres']}, te recordamos tu consulta programada para hoy a las {hora_cita}.",
+                        "mensaje": f"Hola {appt['nombres']}, te recordamos tu consulta programada para hoy a las {hora_cita_paciente}.",
                         "fecha": now_str,
                         "leida": False
                     }
@@ -2015,7 +2018,7 @@ def auto_send_appointment_reminders(db):
                     send_webpush_notification(
                         patient_id=patient_id,
                         title="⏰ Recordatorio de Consulta Hoy",
-                        body=f"Hola {appt['nombres']}, tienes consulta hoy a las {hora_cita}.",
+                        body=f"Hola {appt['nombres']}, tienes consulta hoy a las {hora_cita_paciente}.",
                         url="/"
                     )
                 except Exception as wp_pac_ex:
