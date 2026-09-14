@@ -1259,17 +1259,10 @@ def patient_add_appointment():
         paciente = cursor.fetchone()
         psicologo_id = paciente['psicologo_id'] if paciente else 1
 
-        # Verificar si el horario ya está reservado por otro consultante
-        cursor.execute("""
-            SELECT af.id FROM agenda_finanzas af
-            LEFT JOIN pacientes p ON af.paciente_id = p.id
-            WHERE (af.fecha = ? OR af.fecha = ?) 
-              AND (af.hora = ? OR af.hora LIKE ?)
-              AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
-              AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
-        """, (fecha_norm, alt_fecha, hora_norm, f"{hora_norm}%", psicologo_id, psicologo_id))
-        if cursor.fetchone():
-            return jsonify({'error': 'El horario seleccionado ya ha sido reservado. Por favor elige otro horario.'}), 400
+        # Verificar si el horario ya está reservado o colisiona por solapamiento de intervalos
+        from routes_agenda import check_appointment_interval_collision
+        if check_appointment_interval_collision(cursor, psicologo_id, fecha_norm, hora_norm, tipo_consulta):
+            return jsonify({'error': 'El horario seleccionado ya ha sido reservado o coincide con otra consulta programada. Por favor elige otro horario.'}), 400
 
         google_event_id = None
         service = None
@@ -1716,14 +1709,9 @@ def patient_reschedule_appointment():
         if not user_id and diff_hours <= limite_cancelacion:
             return jsonify({'error': f'No puedes reprogramar esta cita. Has superado el límite de {limite_cancelacion} horas antes de la sesión.'}), 400
             
-        cursor.execute("""
-            SELECT af.id FROM agenda_finanzas af
-            JOIN pacientes p ON af.paciente_id = p.id
-            WHERE af.fecha = ? AND af.hora = ? AND p.psicologo_id = ?
-              AND af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'
-        """, (new_date, new_hour, psicologo_id))
-        if cursor.fetchone():
-            return jsonify({'error': 'El horario seleccionado ya está reservado.'}), 400
+        from routes_agenda import check_appointment_interval_collision
+        if check_appointment_interval_collision(cursor, psicologo_id, new_date, new_hour, None, exclude_appt_id=appointment_id):
+            return jsonify({'error': 'El horario seleccionado ya está reservado o coincide con otra consulta programada.'}), 400
             
         if google_event_id:
             service = None

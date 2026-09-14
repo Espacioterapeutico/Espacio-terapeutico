@@ -1485,10 +1485,11 @@
                     </div>
                     
                     <!-- Menú de Sub-módulos Superadmin -->
-                    <div class="sub-nav-tabs mt-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+                    <div class="sub-nav-tabs mt-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
                         <button type="button" id="sa-tab-therapists" class="btn btn-sm btn-primary" onclick="switchSuperadminTab('therapists')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Psicólogos y Suscripciones</button>
                         <button type="button" id="sa-tab-support" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('support')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Mensajes de Soporte</button>
                         <button type="button" id="sa-tab-landing" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('landing')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">🌐 Editar Portada Web</button>
+                        <button type="button" id="sa-tab-tests" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('tests')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">📑 Gestión de Tests</button>
                     </div>
 
                     <!-- Contenedor: Terapeutas -->
@@ -1616,6 +1617,60 @@
                                 </div>
                                 <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
                                     <button class="btn btn-primary" onclick="saveLandingPageContent()" style="font-weight: 700; padding: 0.75rem 2rem;">💾 Guardar Cambios de Portada Web</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor: Gestión de Tests Psicológicos -->
+                    <div id="sa-card-tests" class="superadmin-tab-content hide">
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                                <div>
+                                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>📋 Catálogo y Definición de Tests Psicológicos</span>
+                                    </h3>
+                                    <p class="text-secondary text-sm" style="margin: 0.25rem 0 0 0;">Modifica los nombres visibles, siglas, categorías psicométricas, descripciones e instrucciones de las pruebas del sistema.</p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <span id="sa-tests-count-badge" class="badge" style="background: rgba(126, 34, 206, 0.12); color: var(--primary-color); font-weight: 700; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">0 tests</span>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadSuperadminTests()" style="font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 8px;">🔄 Actualizar</button>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 1.25rem;">
+                                <!-- Barra de búsqueda y filtros -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                    <div style="flex: 1; min-width: 260px; max-width: 480px; position: relative;">
+                                        <input type="text" id="sa-search-tests" class="form-control" placeholder="🔍 Buscar por código, nombre, sigla, categoría o palabras clave..." oninput="filterSuperadminTests()" style="padding: 0.55rem 0.85rem; font-size: 0.88rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 100%;">
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; font-size: 0.85rem; color: #475569; font-weight: 600;">
+                                        <label for="sa-filter-test-categoria" style="margin: 0;">Categoría:</label>
+                                        <select id="sa-filter-test-categoria" onchange="filterSuperadminTests()" style="padding: 0.45rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 600; background: white; cursor: pointer; max-width: 260px;">
+                                            <option value="">Todas las categorías</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Tabla de Tests -->
+                                <div class="table-responsive" style="border-radius: 12px; border: 1px solid #e2e8f0; overflow-x: auto;">
+                                    <table class="table" style="width: 100%; border-collapse: collapse; margin: 0; min-width: 780px;">
+                                        <thead>
+                                            <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left; font-size: 0.85rem; color: #0f172a;">
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; width: 110px;">Código</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Nombre del Test</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; width: 90px;">Siglas</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; width: 180px;">Categoría</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Descripción</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center; width: 110px;">Asignados</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center; width: 100px;">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="sa-tests-table-body">
+                                            <tr>
+                                                <td colspan="7" class="text-center text-muted" style="padding: 2.5rem;">Cargando catálogo de tests...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -3417,32 +3472,17 @@
                             </div>
                         </div>
 
-                        <!-- BARRA DE BÚSQUEDA INTELIGENTE POR PALABRAS CLAVE Y CATEGORÍAS -->
+                        <!-- BUSCADOR INTELIGENTE DE TESTS -->
                         <div style="margin-bottom: 1.25rem; background: #ffffff; padding: 0.9rem 1.1rem; border-radius: 14px; border: 1.5px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 0.75rem; align-items: center;">
                                 <!-- Buscador por Palabras Clave (Tiempo Real) -->
-                                <div style="flex: 3; min-width: 260px; position: relative;">
-                                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; color: #702e5e;">🔍</span>
-                                    <input type="text" id="input-search-tests-catalog" placeholder="Buscar por palabra clave (ej. inteligencia, síntomas, depresión, autismo, barsit, siglas...)" oninput="onSearchTestsCatalogInput(this.value)" style="width: 100%; padding: 0.65rem 2.2rem 0.65rem 2.5rem; border-radius: 10px; border: 2px solid #e2e8f0; font-size: 0.92rem; outline: none; transition: border-color 0.2s; font-weight: 500;" onfocus="this.style.borderColor='#702e5e'" onblur="this.style.borderColor='#e2e8f0'">
-                                    <button type="button" id="btn-clear-test-search" onclick="clearTestsCatalogSearch()" title="Limpiar búsqueda" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #f1f5f9; border: none; font-size: 0.85rem; color: #64748b; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; line-height: 1;">✕</button>
-                                </div>
-                                <!-- Selector Desplegable de Categorías -->
-                                <div style="flex: 2; min-width: 220px;">
-                                    <select id="select-test-category-dropdown" onchange="filterTestsByCategory(this.value)" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 10px; border: 2px solid #702e5e; background: #ffffff; color: #702e5e; font-weight: 800; font-size: 0.88rem; outline: none; cursor: pointer; box-shadow: 0 2px 6px rgba(112,46,94,0.06);">
-                                        <option value="TODAS">📚 Todas las Categorías</option>
-                                        <option value="Inventarios de Síntomas">📋 Inventarios de Síntomas (SCL-90-R, BSI)</option>
-                                        <option value="Cognición y Capacidad Intelectual">💡 Cognición y Capacidad Intelectual (BARSIT, RAVEN, MoCA...)</option>
-                                        <option value="Afectividad, Depresión y Ansiedad">💓 Afectividad, Depresión y Ansiedad</option>
-                                        <option value="Neurodesarrollo y Neuropsicología">🧠 Neurodesarrollo y Neuropsicología</option>
-                                        <option value="Personalidad y Psicopatología">🎭 Personalidad y Psicopatología</option>
-                                        <option value="Sexología y Salud Sexual">👩‍❤️‍👨 Sexología y Salud Sexual</option>
-                                        <option value="Test Infanto-Juvenil">👶 Test Infanto-Juvenil</option>
-                                        <option value="Adulto Mayor">👵 Adulto Mayor / Psicogerontología</option>
-                                        <option value="Pruebas Proyectivas">🎨 Pruebas Proyectivas (Material Físico / Gráficos)</option>
-                                    </select>
+                                <div style="flex: 1; position: relative;">
+                                    <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 1.15rem; color: #702e5e;">🔍</span>
+                                    <input type="text" id="input-search-tests-catalog" placeholder="Buscar test por nombre, siglas, síntoma, categoría o palabra clave (ej. BARSIT, inteligencia, depresión, autismo, ansiedad, síntomas...)" oninput="onSearchTestsCatalogInput(this.value)" style="width: 100%; padding: 0.7rem 2.4rem 0.7rem 2.8rem; border-radius: 10px; border: 2px solid #e2e8f0; font-size: 0.95rem; outline: none; transition: border-color 0.2s; font-weight: 500;" onfocus="this.style.borderColor='#702e5e'" onblur="this.style.borderColor='#e2e8f0'">
+                                    <button type="button" id="btn-clear-test-search" onclick="clearTestsCatalogSearch()" title="Limpiar búsqueda" style="display: none; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: #f1f5f9; border: none; font-size: 0.9rem; color: #64748b; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; line-height: 1;">✕</button>
                                 </div>
                             </div>
-                            <div id="tests-catalog-counter-badge" style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700; color: #64748b;"></div>
+                            <div id="tests-catalog-counter-badge" style="margin-top: 0.5rem; font-size: 0.82rem; font-weight: 700; color: #64748b;"></div>
                         </div>
 
                         <!-- UNICO CONTENEDOR DE TARJETAS EN CUADRÍCULA 5x2 EXACTA -->
@@ -8614,6 +8654,77 @@ async function handleQuickAddPatientSubmit(e) {
                 <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-profile-desc')">Cancelar</button>
                 <button type="button" class="btn btn-primary" onclick="saveEditProfileDescModal()" style="font-weight: 700;">💾 Guardar Cambios</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA EDITAR DEFINICIÓN DE TEST PSICOLÓGICO (SUPERADMIN) -->
+    <div id="modal-edit-test" class="modal hide" role="dialog" style="z-index: 3900;" onclick="if(event.target === this) closeModal('modal-edit-test')">
+        <div class="modal-content" style="max-width: 650px; width: 95%; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #2c152e 0%, #7e22ce 100%); color: white; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.4rem;">📝</span>
+                    <div>
+                        <h3 id="modal-edit-test-title" style="margin: 0; font-size: 1.15rem; color: white;">Editar Test Psicológico</h3>
+                        <span id="modal-edit-test-subtitle" style="font-size: 0.8rem; color: rgba(255,255,255,0.8);">Código interno del test</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modal-edit-test')" style="background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;">✕</button>
+            </div>
+            <form id="form-edit-test" onsubmit="saveTestDefinition(event)" style="margin: 0;">
+                <input type="hidden" id="edit-test-code">
+                <div class="modal-body" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; max-height: 70vh; overflow-y: auto;">
+                    
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 140px;">
+                            <label style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block; color: #334155;">
+                                🔒 Código Único (Inmutable)
+                            </label>
+                            <input type="text" id="edit-test-code-display" class="form-control" disabled style="background: #f1f5f9; font-weight: 800; color: #475569; letter-spacing: 0.5px;">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 140px;">
+                            <label for="edit-test-siglas" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block; color: #334155;">
+                                🏷️ Siglas / Abreviatura
+                            </label>
+                            <input type="text" id="edit-test-siglas" class="form-control" placeholder="Ej: BARSIT, BDI-II..." style="font-weight: 700;">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-test-nombre" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block; color: #334155;">
+                            📌 Nombre Completo Visible <span style="color: #ef4444;">*</span>
+                        </label>
+                        <input type="text" id="edit-test-nombre" class="form-control" required placeholder="Nombre descriptivo que verán los terapeutas" style="font-weight: 600;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-test-categoria" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block; color: #334155;">
+                            📁 Categoría Psicométrica
+                        </label>
+                        <input type="text" id="edit-test-categoria" class="form-control" list="sa-categories-datalist" placeholder="Selecciona o escribe una nueva categoría...">
+                        <datalist id="sa-categories-datalist"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-test-descripcion" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block; color: #334155;">
+                            📄 Descripción Clínica
+                        </label>
+                        <textarea id="edit-test-descripcion" class="form-control" rows="3" placeholder="Breve descripción del objetivo, dimensiones evaluadas y baremación..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-test-instrucciones" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block; color: #334155;">
+                            📋 Instrucciones para el Evaluado
+                        </label>
+                        <textarea id="edit-test-instrucciones" class="form-control" rows="3" placeholder="Instrucciones que leerá el consultante antes de responder..."></textarea>
+                    </div>
+
+                    <div id="edit-test-status" class="status-msg hide" style="margin-top: 0.25rem;"></div>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-test')" style="font-weight: 600;">Cancelar</button>
+                    <button type="submit" id="btn-save-edit-test" class="btn btn-primary" style="font-weight: 700; background: #0d9488; border: none; padding: 0.6rem 1.5rem;">💾 Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 

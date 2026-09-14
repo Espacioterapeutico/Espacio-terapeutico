@@ -257,6 +257,19 @@ var testsCatalogDatabase = [
         downloadUrl: '/static/test_materials/scl90r_cuestionario.pdf',
         instrucciones: 'Responder en base al malestar sentido en los últimos 7 días. Escala de 0 (nada) a 4 (mucho). Tiempo estimado: 15-20 minutos.'
     },
+    {
+        code: 'BSI',
+        name: 'BSI — Inventario Breve de Síntomas (53 Ítems)',
+        siglas: 'BSI',
+        cat: 'Inventarios de Síntomas',
+        desc: 'Versión breve de 53 ítems (Derogatis) que evalúa 9 dimensiones de malestar sintomático y 3 índices globales (GSI, PST, PSDI) con baremos normativos.',
+        autor: 'Leonard R. Derogatis',
+        poblacion: 'Adolescentes y Adultos (13+ años)',
+        validez: 'Validez psicométrica estándar | Malestar Sintomático',
+        itemsCount: 53,
+        isPhysical: false,
+        instrucciones: 'Por favor lea cada problema y seleccione la opción que mejor describa cuánto le ha molestado o preocupado durante los últimos 7 días (incluyendo hoy).'
+    },
     { 
         code: 'MCMI-II', 
         name: 'MCMI-II — Inventario Multiaxial Clínico de Millon', 
@@ -286,6 +299,19 @@ var testsCatalogDatabase = [
     },
 
     // 4. CAPACIDAD INTELECTUAL Y NEUROPSICOLOGÍA
+    { 
+        code: 'BARSIT', 
+        name: 'BARSIT — Test Rápido de Barranquilla (Habilidad Mental)', 
+        siglas: 'BARSIT', 
+        cat: 'Cognición y Capacidad Intelectual', 
+        desc: 'Test rápido de 60 preguntas (Francisco del Olmo) que evalúa factor g de inteligencia, vocabulario, conocimientos generales, razonamiento y series numéricas.', 
+        autor: 'Francisco del Olmo', 
+        poblacion: 'Escolares y Adultos (a partir de 3er grado de primaria)', 
+        validez: 'Baremos Escolares y Adultos | Habilidad Mental', 
+        itemsCount: 60,
+        isPhysical: false,
+        instrucciones: 'Lea atentamente cada pregunta y elija la respuesta correcta. La prueba evalúa habilidad mental general a través de 60 ítems con tiempo límite de 10 minutos.'
+    },
     { 
         code: 'RAVEN', 
         name: 'RAVEN — Test de Matrices Progresivas de Raven', 
@@ -1146,6 +1172,37 @@ function switchTestsTab(tab) {
 }
 
 // 2. FILTRADO Y PAGINACIÓN 5x2 DEL CATÁLOGO DE TESTS
+var currentCatalogKeyword = '';
+
+function normalizeTestSearchStr(str) {
+    if (!str) return '';
+    return str.toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+}
+
+function onSearchTestsCatalogInput(val) {
+    currentCatalogKeyword = val || '';
+    currentCatalogPage = 1;
+    const clearBtn = document.getElementById('btn-clear-test-search');
+    if (clearBtn) {
+        clearBtn.style.display = currentCatalogKeyword.trim() ? 'block' : 'none';
+    }
+    renderCatalogViewWithFiltersAndPagination();
+}
+
+function clearTestsCatalogSearch() {
+    const input = document.getElementById('input-search-tests-catalog');
+    if (input) input.value = '';
+    currentCatalogKeyword = '';
+    const clearBtn = document.getElementById('btn-clear-test-search');
+    if (clearBtn) clearBtn.style.display = 'none';
+    currentCatalogPage = 1;
+    renderCatalogViewWithFiltersAndPagination();
+}
+
 function filterTestsByCategory(catName) {
     currentCatalogCategory = catName || 'TODAS';
     currentCatalogPage = 1;
@@ -1177,13 +1234,74 @@ function renderCatalogViewWithFiltersAndPagination() {
     if (!container) return;
 
     let filtered = testsCatalogDatabase;
+
+    // A. Filtrado por categoría si no es TODAS
     if (currentCatalogCategory && currentCatalogCategory !== 'TODAS' && currentCatalogCategory !== 'todas') {
-        const catNorm = currentCatalogCategory.toLowerCase();
+        const catNorm = normalizeTestSearchStr(currentCatalogCategory);
         filtered = testsCatalogDatabase.filter(t => {
-            const tCat = (t.cat || '').toLowerCase();
-            const tCode = (t.code || '').toLowerCase();
-            return tCat.includes(catNorm) || catNorm.includes(tCat) || tCode.includes(catNorm);
+            const tCat = normalizeTestSearchStr(t.cat);
+            const tCode = normalizeTestSearchStr(t.code);
+            const tName = normalizeTestSearchStr(t.name);
+            const tDesc = normalizeTestSearchStr(t.desc);
+
+            if (catNorm.includes('sintoma')) {
+                return tCode === 'scl-90-r' || tCode === 'bsi' || tCat.includes('sintoma');
+            }
+            if (catNorm.includes('cognicion') || catNorm.includes('intelectual')) {
+                return tCat.includes('cognicion') || tCat.includes('intelectual') || tCode === 'barsit' || tCode === 'raven' || tCode === 'mmse' || tCode === 'moca-test';
+            }
+            if (catNorm.includes('personalidad') || catNorm.includes('psicopatologia')) {
+                return tCat.includes('personalidad') || tCat.includes('psicopatologia') || tCode === 'mcmi-ii' || tCode === 'mmpi-2';
+            }
+            return tCat.includes(catNorm) || catNorm.includes(tCat) || tName.includes(catNorm) || tDesc.includes(catNorm);
         });
+    }
+
+    // B. Filtrado inteligente por palabras clave (buscador global en tiempo real)
+    if (currentCatalogKeyword && currentCatalogKeyword.trim()) {
+        const words = normalizeTestSearchStr(currentCatalogKeyword).split(/\s+/).filter(Boolean);
+        filtered = filtered.filter(t => {
+            const fullBlob = normalizeTestSearchStr(
+                `${t.code || ''} ${t.siglas || ''} ${t.name || ''} ${t.cat || ''} ${t.desc || ''} ${t.autor || ''} ${t.poblacion || ''} ${t.validez || ''}`
+            );
+            return words.every(w => {
+                if (w === 'sintoma' || w === 'sintomas') {
+                    return fullBlob.includes('sintoma') || fullBlob.includes('scl-90-r') || fullBlob.includes('bsi');
+                }
+                if (w === 'inteligencia') {
+                    return fullBlob.includes('inteligencia') || fullBlob.includes('intelectual') || fullBlob.includes('barsit') || fullBlob.includes('raven');
+                }
+                if (w === 'depresion' || w === 'depresivo') {
+                    return fullBlob.includes('depresion') || fullBlob.includes('bdi-ii') || fullBlob.includes('hamilton') || fullBlob.includes('zung');
+                }
+                if (w === 'ansiedad') {
+                    return fullBlob.includes('ansiedad') || fullBlob.includes('bai') || fullBlob.includes('stai') || fullBlob.includes('rcmas');
+                }
+                if (w === 'autismo' || w === 'asperger') {
+                    return fullBlob.includes('autis') || fullBlob.includes('asperger') || fullBlob.includes('tea') || fullBlob.includes('aq') || fullBlob.includes('raads');
+                }
+                if (w === 'sexual' || w === 'sexualidad') {
+                    return fullBlob.includes('sexual') || fullBlob.includes('fsfi') || fullBlob.includes('shim') || fullBlob.includes('nsss') || fullBlob.includes('bssc');
+                }
+                if (w === 'violencia') {
+                    return fullBlob.includes('violencia') || fullBlob.includes('cuvino') || fullBlob.includes('abuso') || fullBlob.includes('coercitivo');
+                }
+                return fullBlob.includes(w);
+            });
+        });
+    }
+
+    // Actualizar badge contador de resultados encontrados
+    const counterBadge = document.getElementById('tests-catalog-counter-badge');
+    if (counterBadge) {
+        const hasFilter = currentCatalogKeyword.trim() || (currentCatalogCategory && currentCatalogCategory !== 'TODAS');
+        if (hasFilter) {
+            counterBadge.innerHTML = `Mostrando <strong>${filtered.length}</strong> de ${testsCatalogDatabase.length} evaluaciones disponibles`;
+            counterBadge.style.color = filtered.length > 0 ? '#059669' : '#dc2626';
+        } else {
+            counterBadge.innerHTML = `Total: <strong>${testsCatalogDatabase.length}</strong> evaluaciones en catálogo`;
+            counterBadge.style.color = '#64748b';
+        }
     }
 
     const totalPages = Math.ceil(filtered.length / CATALOG_PER_PAGE) || 1;
@@ -1416,6 +1534,9 @@ window.switchTestsTab = switchTestsTab;
 window.filterTestsByCategory = filterTestsByCategory;
 window.filterTestsCatalogByCategory = filterTestsCatalogByCategory;
 window.renderCatalogViewWithFiltersAndPagination = renderCatalogViewWithFiltersAndPagination;
+window.normalizeTestSearchStr = normalizeTestSearchStr;
+window.onSearchTestsCatalogInput = onSearchTestsCatalogInput;
+window.clearTestsCatalogSearch = clearTestsCatalogSearch;
 window.changeCatalogPage = changeCatalogPage;
 window.loadTestsCatalogCards = loadTestsCatalogCards;
 window.loadAllAppliedTestsHistory = loadAllAppliedTestsHistory;

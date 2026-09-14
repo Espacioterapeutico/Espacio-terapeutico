@@ -3817,4 +3817,78 @@ def superadmin_delete_therapist(user_id):
         return jsonify({'error': f'Error al eliminar psicólogo: {str(e)}'}), 500
 
 
+# =========================================================================
+# GESTIÓN DE TESTS PSICOLÓGICOS (SUPERADMIN)
+# =========================================================================
+
+@admin_bp.route('/api/admin/tests', methods=['GET'])
+@login_required
+def get_admin_tests():
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT td.code, td.nombre, td.siglas, td.categoria, td.descripcion, td.instrucciones,
+               (SELECT COUNT(*) FROM test_asignaciones ta WHERE ta.test_code = td.code) as total_asignaciones
+        FROM tests_definiciones td
+        ORDER BY td.categoria ASC, td.nombre ASC
+    """)
+    rows = cursor.fetchall()
+    tests = [dict(r) for r in rows]
+
+    cursor.execute("SELECT DISTINCT categoria FROM tests_definiciones WHERE categoria IS NOT NULL AND categoria != '' ORDER BY categoria ASC")
+    categorias = [r[0] for r in cursor.fetchall()]
+
+    return jsonify({'tests': tests, 'categorias': categorias})
+
+
+@admin_bp.route('/api/admin/tests/<string:code>', methods=['PUT', 'POST'])
+@login_required
+def update_admin_test(code):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+
+    data = request.json or {}
+    nombre = (data.get('nombre') or '').strip()
+    siglas = (data.get('siglas') or '').strip()
+    categoria = (data.get('categoria') or '').strip()
+    descripcion = (data.get('descripcion') or '').strip()
+    instrucciones = (data.get('instrucciones') or '').strip()
+
+    if not nombre:
+        return jsonify({'error': 'El nombre del test no puede estar vacío.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = ?", (code,))
+    if not cursor.fetchone():
+        return jsonify({'error': f"Test con código '{code}' no encontrado."}), 404
+
+    try:
+        cursor.execute("""
+            UPDATE tests_definiciones
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?
+            WHERE code = ?
+        """, (nombre, siglas, categoria, descripcion, instrucciones, code))
+        db.commit()
+
+        cursor.execute("""
+            SELECT code, nombre, siglas, categoria, descripcion, instrucciones,
+                   (SELECT COUNT(*) FROM test_asignaciones ta WHERE ta.test_code = tests_definiciones.code) as total_asignaciones
+            FROM tests_definiciones
+            WHERE code = ?
+        """, (code,))
+        updated_row = dict(cursor.fetchone())
+
+        return jsonify({
+            'success': f"Test '{code}' actualizado con éxito.",
+            'test': updated_row
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al actualizar el test: {str(e)}'}), 500
+
+
 

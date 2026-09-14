@@ -912,27 +912,21 @@ def ensure_scl90r_definition(db):
 
     items = [{"id": i+1, "texto": f"{i+1}. {txt}"} for i, txt in enumerate(textos)]
 
-    cursor.execute("""
-        INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(code) DO UPDATE SET
-            nombre = excluded.nombre,
-            siglas = excluded.siglas,
-            categoria = excluded.categoria,
-            descripcion = excluded.descripcion,
-            instrucciones = excluded.instrucciones,
-            escala_opciones_json = excluded.escala_opciones_json,
-            items_json = excluded.items_json
-    """, (
-        'SCL-90-R',
-        'SCL-90-R — Cuestionario de 90 Síntomas Revisado',
-        'SCL-90-R',
-        'Inventarios de Síntomas',
-        'Evaluación multidimensional autoadministrada de 90 ítems (Derogatis / Casullo UBA-CONICET) que explora 9 dimensiones sintomáticas y 3 índices globales con baremos por edad y género.',
-        'Por favor lea cada problema y seleccione qué tanto le ha molestado durante los últimos 7 días (incluyendo el día de hoy).',
-        json.dumps(escala, ensure_ascii=False),
-        json.dumps(items, ensure_ascii=False)
-    ))
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'SCL-90-R'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'SCL-90-R',
+            'SCL-90-R — Cuestionario de 90 Síntomas Revisado',
+            'SCL-90-R',
+            'Inventarios de Síntomas',
+            'Evaluación multidimensional autoadministrada de 90 ítems (Derogatis / Casullo UBA-CONICET) que explora 9 dimensiones sintomáticas y 3 índices globales con baremos por edad y género.',
+            'Por favor lea cada problema y seleccione qué tanto le ha molestado durante los últimos 7 días (incluyendo el día de hoy).',
+            json.dumps(escala, ensure_ascii=False),
+            json.dumps(items, ensure_ascii=False)
+        ))
     db.commit()
 
 def process_scl90r_scoring(answers, patient_info=None):
@@ -1125,27 +1119,21 @@ def ensure_bsi_definition(db):
 
     items = [{"id": i+1, "texto": f"{i+1}. {txt}"} for i, txt in enumerate(textos)]
 
-    cursor.execute("""
-        INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(code) DO UPDATE SET
-            nombre = excluded.nombre,
-            siglas = excluded.siglas,
-            categoria = excluded.categoria,
-            descripcion = excluded.descripcion,
-            instrucciones = excluded.instrucciones,
-            escala_opciones_json = excluded.escala_opciones_json,
-            items_json = excluded.items_json
-    """, (
-        'BSI',
-        'BSI — Inventario Breve de Síntomas (53 Ítems)',
-        'BSI',
-        'Inventarios de Síntomas',
-        'Versión breve de 53 ítems (Derogatis & Melisaratos / Ruipérez et al.) que evalúa 9 dimensiones de malestar sintomático y 3 índices globales (GSI, PST, PSDI) con baremos normativos.',
-        'Por favor lea cada problema y seleccione la opción que mejor describa cuánto le ha molestado o preocupado durante los últimos 7 días (incluyendo hoy).',
-        json.dumps(escala, ensure_ascii=False),
-        json.dumps(items, ensure_ascii=False)
-    ))
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'BSI'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'BSI',
+            'BSI — Inventario Breve de Síntomas (53 Ítems)',
+            'BSI',
+            'Inventarios de Síntomas',
+            'Versión breve de 53 ítems (Derogatis & Melisaratos / Ruipérez et al.) que evalúa 9 dimensiones de malestar sintomático y 3 índices globales (GSI, PST, PSDI) con baremos normativos.',
+            'Por favor lea cada problema y seleccione la opción que mejor describa cuánto le ha molestado o preocupado durante los últimos 7 días (incluyendo hoy).',
+            json.dumps(escala, ensure_ascii=False),
+            json.dumps(items, ensure_ascii=False)
+        ))
     db.commit()
 
 def process_bsi_scoring(answers, patient_info=None):

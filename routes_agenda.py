@@ -176,6 +176,102 @@ def get_psicologo_id_filter():
         
     return user_id if user_id else 1
 
+def get_appointment_duration_and_recess(tipo_consulta, perfiles, default_duracion=60, default_receso=0):
+    tipo_clean = (tipo_consulta or '').strip().lower()
+    for p in perfiles:
+        p_name = (p.get('nombre') or p.get('modalidad') or '').strip().lower()
+        p_mod = (p.get('modalidad') or p.get('nombre') or '').strip().lower()
+        if tipo_clean and (tipo_clean in p_name or p_name in tipo_clean or tipo_clean in p_mod or p_mod in tipo_clean):
+            try:
+                dur = int(p.get('duracion')) if p.get('duracion') is not None and str(p.get('duracion')).strip() != '' else default_duracion
+            except: dur = default_duracion
+            try:
+                rec = int(p.get('receso')) if p.get('receso') is not None and str(p.get('receso')).strip() != '' else default_receso
+            except: rec = default_receso
+            return dur, rec
+    return default_duracion, default_receso
+
+def check_appointment_interval_collision(cursor, psicologo_id, fecha, hora, tipo_consulta, exclude_appt_id=None, duracion_override=None):
+    """
+    Verifica si una consulta a programarse colisiona en horario (por coincidencia exacta o solapamiento de intervalos)
+    con cualquier otra consulta activa del psicólogo.
+    Retorna True si hay colisión, False si el espacio está libre.
+    """
+    if not fecha or not hora:
+        return False
+    hora_clean = str(hora).strip()[:5]
+    if hora_clean == '00:00':
+        return False
+
+    try:
+        req_start = datetime.strptime(hora_clean, "%H:%M")
+    except:
+        return False
+
+    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+    u_row = cursor.fetchone()
+    cfg_perfiles = []
+    cfg_dur = 60
+    cfg_rec = 0
+    if u_row and u_row[0]:
+        try:
+            cfg = json.loads(u_row[0])
+            cfg_dur = int(cfg.get('duracion', 60))
+            cfg_rec = int(cfg.get('receso', 0))
+            raw_p = cfg.get('perfiles', [])
+            if isinstance(raw_p, dict):
+                cfg_perfiles = list(raw_p.values())
+            elif isinstance(raw_p, list):
+                cfg_perfiles = raw_p
+        except: pass
+
+    if duracion_override:
+        req_dur = int(duracion_override)
+    else:
+        req_dur, _ = get_appointment_duration_and_recess(tipo_consulta, cfg_perfiles, cfg_dur, cfg_rec)
+    req_end = req_start + timedelta(minutes=req_dur)
+
+    f_norm = str(fecha).strip()
+    alt_f = f_norm
+    try:
+        dt_t = datetime.strptime(f_norm, "%Y-%m-%d")
+        alt_f = dt_t.strftime("%d/%m/%Y")
+    except:
+        try:
+            dt_t = datetime.strptime(f_norm, "%d/%m/%Y")
+            alt_f = dt_t.strftime("%Y-%m-%d")
+        except: pass
+
+    query = """
+        SELECT af.id, af.hora, af.tipo_consulta, af.cantidad_sesiones
+        FROM agenda_finanzas af
+        LEFT JOIN pacientes p ON af.paciente_id = p.id
+        WHERE (af.fecha = ? OR af.fecha = ?)
+          AND (p.psicologo_id = ? OR af.creado_por_user_id = ? OR (p.psicologo_id IS NULL AND af.creado_por_user_id IS NULL) OR ? IS NULL)
+          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+    """
+    cursor.execute(query, (f_norm, alt_f, psicologo_id, psicologo_id, psicologo_id))
+    existing = cursor.fetchall()
+
+    for ea in existing:
+        if exclude_appt_id and ea['id'] == exclude_appt_id:
+            continue
+        ea_h = (ea['hora'] or '').strip()[:5]
+        if not ea_h or ea_h == '00:00':
+            continue
+        try:
+            ea_start = datetime.strptime(ea_h, "%H:%M")
+            ea_dur, ea_rec = get_appointment_duration_and_recess(ea['tipo_consulta'], cfg_perfiles, cfg_dur, cfg_rec)
+            ea_cant = int(ea['cantidad_sesiones'] or 1)
+            ea_end = ea_start + timedelta(minutes=ea_dur * ea_cant)
+
+            # Colisión directa de sesión: dos consultantes citados durante el mismo intervalo de tiempo
+            if req_start < ea_end and req_end > ea_start:
+                return True
+        except: pass
+
+    return False
+
 def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_modality='all', exclude_appt_id=None):
     """
     Genera dinámicamente los slots de disponibilidad a partir de configuracion_horarios_visual.
@@ -288,44 +384,65 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
 
                         while curr + duration_td <= end_time:
                             h_str = curr.strftime("%H:%M")
+                            h_fin_str = (curr + duration_td).strftime("%H:%M")
                             mod_label = perf_nombre or perf_modalidad or 'Online'
                             if h_str not in seen_hours:
                                 seen_hours.add(h_str)
                                 candidate_slots.append({
                                     'hora_literal': h_str,
                                     'hora_inicio': h_str,
-                                    'hora_fin': (curr + duration_td).strftime("%H:%M"),
+                                    'hora_fin': h_fin_str,
                                     'modalidad': mod_label,
                                     'perfil': perf_nombre,
                                     'antelacion': perf_antelacion,
-                                    'duracion': perf_duracion
+                                    'duracion': perf_duracion,
+                                    'receso': perf_receso
                                 })
                             curr = curr + duration_td + recess_td
                     except Exception as _re:
                         print("Error calculando rango horario:", _re)
 
-    # Filtrar horas ocupadas en la base de datos
+    # Filtrar horas ocupadas en la base de datos (con cálculo exacto de solapamiento de intervalos)
     alt_date_str = target_date_str
     try:
         alt_date_str = target_dt.strftime("%d/%m/%Y")
     except: pass
 
     query_busy = """
-        SELECT af.hora, af.id FROM agenda_finanzas af
+        SELECT af.hora, af.id, af.tipo_consulta, af.cantidad_sesiones FROM agenda_finanzas af
         LEFT JOIN pacientes p ON af.paciente_id = p.id
         WHERE (af.fecha = ? OR af.fecha = ?)
-          AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
+          AND (p.psicologo_id = ? OR af.creado_por_user_id = ? OR (p.psicologo_id IS NULL AND af.creado_por_user_id IS NULL) OR ? IS NULL)
           AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
     """
-    cursor.execute(query_busy, (target_date_str, alt_date_str, psicologo_id, psicologo_id))
+    cursor.execute(query_busy, (target_date_str, alt_date_str, psicologo_id, psicologo_id, psicologo_id))
     busy_rows = cursor.fetchall()
+    
     busy_hours = set()
+    busy_intervals = []
     for br in busy_rows:
         if exclude_appt_id and br['id'] == exclude_appt_id:
             continue
         h_val = (br['hora'] or '').strip()
-        if h_val:
-            busy_hours.add(h_val[:5])
+        if not h_val or h_val == '00:00':
+            continue
+        h_short = h_val[:5]
+        busy_hours.add(h_short)
+        try:
+            b_start = datetime.strptime(h_short, "%H:%M")
+            b_dur, b_rec = get_appointment_duration_and_recess(br['tipo_consulta'], perfiles, duracion, receso)
+            b_cant = int(br['cantidad_sesiones'] or 1)
+            b_total_dur = b_dur * b_cant
+            b_end = b_start + timedelta(minutes=b_total_dur)
+            b_busy_until = b_end + timedelta(minutes=b_rec)
+            busy_intervals.append({
+                'start': b_start,
+                'end': b_end,
+                'busy_until': b_busy_until,
+                'hora': h_short
+            })
+        except Exception as _e_time:
+            pass
 
     # Bloqueos personales y de espacios del psicólogo (soporta modalidad específica y rangos de fecha)
     try:
@@ -381,6 +498,25 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
         if h_lit in busy_hours:
             continue
             
+        # Comprobar si el intervalo del slot colisiona con alguna cita existente
+        try:
+            s_start = datetime.strptime(slot['hora_inicio'], "%H:%M")
+            s_end = datetime.strptime(slot['hora_fin'], "%H:%M")
+            has_overlap = False
+            for bi in busy_intervals:
+                # 1. Solapamiento directo de sesión
+                if s_start < bi['end'] and s_end > bi['start']:
+                    has_overlap = True
+                    break
+                # 2. Inicia durante el receso/descanso de la cita previa
+                if s_start >= bi['start'] and s_start < bi['busy_until']:
+                    has_overlap = True
+                    break
+            if has_overlap:
+                continue
+        except Exception:
+            pass
+
         slot_dt = datetime.strptime(f"{target_date_str} {h_lit}", "%Y-%m-%d %H:%M")
         slot_antelacion = slot.get('antelacion', antelacion)
         min_allowed_dt = now_dt + timedelta(hours=slot_antelacion)
@@ -653,6 +789,15 @@ def add_agenda_event():
     
     if not paciente_id or not fecha or not hora or not tipo_consulta:
         return jsonify({'error': 'Paciente, Fecha, Hora y Tipo de consulta son obligatorios.'}), 400
+
+    cursor.execute("SELECT psicologo_id FROM pacientes WHERE id = ?", (paciente_id,))
+    pac_row = cursor.fetchone()
+    target_psic_id = (pac_row['psicologo_id'] if pac_row and pac_row['psicologo_id'] else None) or creado_por_user_id or session.get('user_id') or 1
+
+    if check_appointment_interval_collision(cursor, target_psic_id, fecha, hora, tipo_consulta):
+        return jsonify({
+            'error': f'🚫 El psicólogo ya tiene otra consulta programada que coincide o se solapa con el horario {hora} el día {fecha}.'
+        }), 400
 
     if consultorio_nombre and str(consultorio_nombre).strip():
         cursor.execute("""
@@ -1201,17 +1346,9 @@ def fast_booking_book():
     except:
         pass
 
-    # 0. Verificar si el horario seleccionado ya está reservado por cualquier consultante en ese psicólogo
-    cursor.execute("""
-        SELECT af.id FROM agenda_finanzas af
-        LEFT JOIN pacientes p ON af.paciente_id = p.id
-        WHERE (af.fecha = ? OR af.fecha = ?) 
-          AND (af.hora = ? OR af.hora LIKE ?)
-          AND (p.psicologo_id = ? OR p.psicologo_id IS NULL OR ? IS NULL)
-          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
-    """, (fecha_norm, alt_fecha, hora_norm, f"{hora_norm}%", psicologo_id, psicologo_id))
-    if cursor.fetchone():
-        return jsonify({'error': 'El horario seleccionado ya fue reservado. Por favor elige otro horario.'}), 400
+    # 0. Verificar si el horario seleccionado ya está reservado o colisiona con otra cita en ese psicólogo
+    if check_appointment_interval_collision(cursor, psicologo_id, fecha_norm, hora_norm, modalidad):
+        return jsonify({'error': 'El horario seleccionado ya fue reservado o coincide con otra consulta programada del psicólogo. Por favor elige otro horario.'}), 400
     
     # 1. Verificar si el paciente existe por cédula limpia (dígitos), usuario o teléfono
     clean_cedula = cedula.strip()

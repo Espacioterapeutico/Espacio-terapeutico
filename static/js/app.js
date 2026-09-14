@@ -9,6 +9,86 @@ var currentCatalogPage = 1;
 var CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
 
 var testsCatalogDatabase = [
+    // --- NUEVAS EVALUACIONES DE VIOLENCIA Y PSICOSIS ---
+    { 
+        code: 'CUVINO', 
+        name: 'CUVINO — Cuestionario de Violencia entre Novios', 
+        siglas: 'CUVINO', 
+        cat: 'Violencia y Abuso', 
+        desc: 'Evalúa de forma multidimensional la violencia recibida en la relación (castigo emocional, desapego, humillación, coerción).', 
+        autor: 'Plantilla Estándar', 
+        poblacion: 'Adolescentes y Adultos', 
+        validez: 'Uso Clínico', 
+        itemsCount: 15,
+        isPhysical: false,
+        instrucciones: 'Lea cada afirmación y seleccione con qué frecuencia ha experimentado esto en su relación.'
+    },
+    { 
+        code: 'ABUSO-COERCITIVO', 
+        name: 'EAPC — Escala de Abuso Psicológico y Control Coercitivo', 
+        siglas: 'EAPC', 
+        cat: 'Violencia y Abuso', 
+        desc: 'Instrumento basado en la Rueda de Poder y Control. Identifica tácticas de aislamiento, control de rutinas y limitación de la movilidad.', 
+        autor: 'Plantilla Estándar', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clínico', 
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'Indique con qué frecuencia su pareja ha realizado las siguientes acciones.'
+    },
+    { 
+        code: 'VIOLENCIA-ECON', 
+        name: 'IVEP — Inventario de Violencia Económica y Patrimonial', 
+        siglas: 'IVEP', 
+        cat: 'Violencia y Abuso', 
+        desc: 'Mide la restricción de acceso al dinero, prohibición de trabajar/estudiar y dependencia financiera forzada.', 
+        autor: 'Plantilla Estándar', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clínico', 
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'Responda con qué frecuencia ocurren las siguientes situaciones en su entorno financiero/patrimonial.'
+    },
+    { 
+        code: 'BPRS', 
+        name: 'BPRS — Escala Breve de Psiquiatría', 
+        siglas: 'BPRS', 
+        cat: 'Psicopatología y Clínica', 
+        desc: 'Evalúa la gravedad de síntomas psicopatológicos generales (aislamiento, suspicacia, alteración del pensamiento). APLICACIÓN POR EL CLÍNICO.', 
+        autor: 'Overall & Gorham', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clínico Evaluador', 
+        itemsCount: 18,
+        isPhysical: false,
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Evalúe del 1 al 7 la gravedad del síntoma observado durante la consulta.'
+    },
+    { 
+        code: 'PANSS-POS', 
+        name: 'PANSS — Subescala Positiva', 
+        siglas: 'PANSS-P', 
+        cat: 'Psicopatología y Clínica', 
+        desc: 'Valora la presencia focalizada de ideas delirantes, suspicacia o distorsiones severas de la realidad. APLICACIÓN POR EL CLÍNICO.', 
+        autor: 'Kay et al.', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clínico Evaluador', 
+        itemsCount: 7,
+        isPhysical: false,
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Evalúe del 1 al 7 la gravedad de los síntomas positivos.'
+    },
+    { 
+        code: 'JUICIO-REALIDAD', 
+        name: 'IPRJC — Inventario de Percepción de Realidad y Juicio Clínico', 
+        siglas: 'IPRJC', 
+        cat: 'Psicopatología y Clínica', 
+        desc: 'Explora la congruencia entre los hechos percibidos y el entorno observable a través de comprobación de realidad. APLICACIÓN POR EL CLÍNICO.', 
+        autor: 'Plantilla Clínica', 
+        poblacion: 'Adultos', 
+        validez: 'Uso Clínico Evaluador', 
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'EXCLUSIVO DEL TERAPEUTA: Valore la percepción de la realidad del consultante.'
+    },
+
     // 1. NEURODIVERGENCIA Y AUTISMO
     { 
         code: 'AQ', 
@@ -20,7 +100,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (16+ años)', 
         validez: 'α = 0.82 | Punto de corte: ≥ 32', 
         itemsCount: 50,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'El consultante debe leer cada afirmación y seleccionar el grado de acuerdo. Tiempo estimado: 10-15 minutos.'
     },
     { 
         code: 'RAADS-R', 
@@ -32,7 +113,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adultos (18+ años)', 
         validez: 'α = 0.92 | Umbral diagnóstico: ≥ 65', 
         itemsCount: 80,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Cuestionario autoaplicado. Seleccionar la frecuencia con la que se presenta cada comportamiento a lo largo de su vida. Tiempo estimado: 20-30 minutos.'
     },
     { 
         code: 'CAT-Q', 
@@ -44,7 +126,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (16+ años)', 
         validez: 'α = 0.90 | Medición de Camuflaje', 
         itemsCount: 25,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder considerando cómo se comporta en situaciones sociales. Marcar la opción que mejor describa sus acciones. Tiempo estimado: 10 minutos.'
     },
     { 
         code: 'ASRS-ADHD', 
@@ -56,7 +139,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adultos (18+ años)', 
         validez: 'α = 0.87 | Criterios DSM / OMS', 
         itemsCount: 18,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Evaluar la frecuencia de cada síntoma en los últimos 6 meses. Útil para screening. Tiempo estimado: 5-10 minutos.'
     },
     {
         code: 'ADOS-2',
@@ -69,7 +153,8 @@ var testsCatalogDatabase = [
         validez: 'Sensibilidad 91% | Estándar de Oro Diagnóstico TEA',
         itemsCount: 14,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/ados2_protocolo_observacion.pdf'
+        downloadUrl: '/static/test_materials/ados2_protocolo_observacion.pdf',
+        instrucciones: 'Aplicación estructurada presencial por profesional clínico. Requiere materiales específicos según el módulo. Grabar sesión si es posible.'
     },
 
     // 2. DEPRESIÓN Y ANSIEDAD
@@ -83,7 +168,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (13+ años)', 
         validez: 'α = 0.92 | Validez Clínica Estandarizada', 
         itemsCount: 21,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Se entrega al consultante el cuestionario de 21 ítems. Se le pide que lea cada grupo de afirmaciones y seleccione la que mejor describe cómo se ha sentido durante las últimas dos semanas. No hay respuestas correctas ni incorrectas. Tiempo estimado: 5-10 minutos.'
     },
     { 
         code: 'BAI', 
@@ -95,7 +181,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (13+ años)', 
         validez: 'α = 0.92 | Alta Especificidad Ansiosa', 
         itemsCount: 21,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Pedir al consultante que indique cuánto le ha molestado cada síntoma durante la última semana en una escala de 0 a 3. Tiempo estimado: 5-10 minutos.'
     },
     {
         code: 'ZUNG-SDS',
@@ -108,7 +195,8 @@ var testsCatalogDatabase = [
         validez: 'α = 0.88 | Índice de Depresión',
         itemsCount: 20,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/zung_depresion_escala.pdf'
+        downloadUrl: '/static/test_materials/zung_depresion_escala.pdf',
+        instrucciones: 'Responder según cómo se ha sentido en los últimos días marcando una de las cuatro opciones. Tiempo estimado: 10 minutos.'
     },
     {
         code: 'HAMILTON-D',
@@ -121,7 +209,8 @@ var testsCatalogDatabase = [
         validez: 'α = 0.90 | Estándar Clínico Heteroaplicado',
         itemsCount: 17,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/hamilton_depresion_cuestionario.pdf'
+        downloadUrl: '/static/test_materials/hamilton_depresion_cuestionario.pdf',
+        instrucciones: 'Aplicado mediante entrevista estructurada por un profesional clínico. Evaluar síntomas en la última semana.'
     },
     {
         code: 'IDARE-STAI',
@@ -134,7 +223,8 @@ var testsCatalogDatabase = [
         validez: 'α = 0.91 | Evaluación Rasgo / Estado',
         itemsCount: 40,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/idare_stai_instrumento.pdf'
+        downloadUrl: '/static/test_materials/idare_stai_instrumento.pdf',
+        instrucciones: 'Contiene dos partes (Estado y Rasgo). Leer instrucciones previas a cada sección. Tiempo estimado: 15-20 minutos.'
     },
     {
         code: 'BECK-BHS',
@@ -147,35 +237,37 @@ var testsCatalogDatabase = [
         validez: 'α = 0.93 | Factor de Riesgo Clínico',
         itemsCount: 20,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/beck_desesperanza.pdf'
+        downloadUrl: '/static/test_materials/beck_desesperanza.pdf',
+        instrucciones: 'Indicar verdadero o falso para cada afirmación pensando en la última semana. Evaluar riesgo suicida según puntaje.'
     },
 
-    // 3. INVENTARIOS DE SÍNTOMAS Y PSICOPATOLOGÍA
+    // 3. PSICOPATOLOGÍA Y SÍNTOMAS GENERALES
     {
         code: 'SCL-90-R',
         name: 'SCL-90-R — Cuestionario de 90 Síntomas Revisado',
         siglas: 'SCL-90-R',
-        cat: 'Inventarios de Síntomas',
-        desc: 'Evaluación autoadministrada de 90 ítems que explora 9 dimensiones de malestar psicológico y 3 índices globales (GSI, PST, PSDI) con baremos normativos por edad y sexo (Casullo & Pérez / Derogatis).',
-        autor: 'Leonard R. Derogatis / Adaptación Casullo & Pérez (UBA-CONICET)',
-        poblacion: 'Adolescentes y Adultos (12 a 65 años)',
-        validez: '9 Dimensiones + 3 Índices Globales | Baremos por edad/sexo | Riesgo T ≥ 63',
+        cat: 'Personalidad y Psicopatología',
+        desc: 'Evaluación autoadministrada de 90 ítems en escala Likert que explora 9 dimensiones sintomáticas de malestar psicológico.',
+        autor: 'Leonard R. Derogatis',
+        poblacion: 'Adolescentes y Adultos (13+ años)',
+        validez: 'α = 0.95 | Perfil Sintomático 9 Dimensiones',
         itemsCount: 90,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/scl90r_cuestionario.pdf'
+        downloadUrl: '/static/test_materials/scl90r_cuestionario.pdf',
+        instrucciones: 'Responder en base al malestar sentido en los últimos 7 días. Escala de 0 (nada) a 4 (mucho). Tiempo estimado: 15-20 minutos.'
     },
     {
         code: 'BSI',
         name: 'BSI — Inventario Breve de Síntomas (53 Ítems)',
         siglas: 'BSI',
         cat: 'Inventarios de Síntomas',
-        desc: 'Versión breve de 53 ítems (Derogatis & Melisaratos / Ruipérez et al.) que evalúa 9 dimensiones de malestar sintomático e índices globales (GSI, PST, PSDI) con baremos normativos.',
-        autor: 'Leonard R. Derogatis & N. Melisaratos / Adaptación Ruipérez et al.',
+        desc: 'Versión breve de 53 ítems (Derogatis) que evalúa 9 dimensiones de malestar sintomático y 3 índices globales (GSI, PST, PSDI) con baremos normativos.',
+        autor: 'Leonard R. Derogatis',
         poblacion: 'Adolescentes y Adultos (13+ años)',
-        validez: '9 Dimensiones + 3 Índices Globales | Punto de corte clínico: T ≥ 63',
+        validez: 'Validez psicométrica estándar | Malestar Sintomático',
         itemsCount: 53,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/bsi_cuestionario_es.pdf'
+        instrucciones: 'Por favor lea cada problema y seleccione la opción que mejor describa cuánto le ha molestado o preocupado durante los últimos 7 días (incluyendo hoy).'
     },
     { 
         code: 'MCMI-II', 
@@ -187,7 +279,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adultos (18+ años)', 
         validez: 'Estandarizado TB | 24 Escalones Clínicos', 
         itemsCount: 175,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder verdadero o falso a las afirmaciones. Requiere alta comprensión lectora. Tiempo estimado: 45-60 minutos.'
     },
     {
         code: 'MMPI-2',
@@ -200,22 +293,23 @@ var testsCatalogDatabase = [
         validez: '10 Escalas Clínicas | L, F, K',
         itemsCount: 567,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/mmpi-2_cuadernillo.pdf'
+        downloadUrl: '/static/test_materials/mmpi-2_cuadernillo.pdf',
+        instrucciones: 'Cuestionario extenso de verdadero o falso. Aplicar en ambiente tranquilo sin interrupciones. Imprimir hojas de respuesta o cuadernillo. Tiempo estimado: 60-90 minutos.'
     },
 
     // 4. CAPACIDAD INTELECTUAL Y NEUROPSICOLOGÍA
-    {
-        code: 'BARSIT',
-        name: 'BARSIT — Test Rápido de Barranquilla (Habilidad Mental)',
-        siglas: 'BARSIT',
-        cat: 'Cognición y Capacidad Intelectual',
-        desc: 'Evaluación rápida de 60 reactivos desarrollada por Francisco del Olmo. Determina con agilidad el índice de inteligencia general, aprendizaje, razonamiento verbal y numérico en escolares (3er grado+) y adultos.',
-        autor: 'Francisco del Olmo',
-        poblacion: 'Escolares (3er grado+) y Adultos',
-        validez: '60 Ítems | 5 Áreas Cognitivas | Baremos Escolares y Adultos (10 min)',
+    { 
+        code: 'BARSIT', 
+        name: 'BARSIT — Test Rápido de Barranquilla (Habilidad Mental)', 
+        siglas: 'BARSIT', 
+        cat: 'Cognición y Capacidad Intelectual', 
+        desc: 'Test rápido de 60 preguntas (Francisco del Olmo) que evalúa factor g de inteligencia, vocabulario, conocimientos generales, razonamiento y series numéricas.', 
+        autor: 'Francisco del Olmo', 
+        poblacion: 'Escolares y Adultos (a partir de 3er grado de primaria)', 
+        validez: 'Baremos Escolares y Adultos | Habilidad Mental', 
         itemsCount: 60,
         isPhysical: false,
-        downloadUrl: '/static/test_materials/barranquilla_barsit.pdf'
+        instrucciones: 'Lea atentamente cada pregunta y elija la respuesta correcta. La prueba evalúa habilidad mental general a través de 60 ítems con tiempo límite de 10 minutos.'
     },
     { 
         code: 'RAVEN', 
@@ -227,7 +321,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (12+ años)', 
         validez: 'α = 0.90 | Razonamiento No Verbal', 
         itemsCount: 60,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Presentar las matrices progresivas una a una. El consultante debe identificar la pieza que completa cada patrón. No hay límite de tiempo estricto. Tiempo promedio: 30-45 minutos.'
     },
     {
         code: 'MMSE',
@@ -240,7 +335,8 @@ var testsCatalogDatabase = [
         validez: 'Sensibilidad 87% | Tamizaje Cognitivo',
         itemsCount: 30,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/minimental_hoja_respuesta.pdf'
+        downloadUrl: '/static/test_materials/minimental_hoja_respuesta.pdf',
+        instrucciones: 'Administración individual presencial. Seguir estrictamente las consignas verbales y mostrar materiales gráficos cuando corresponda.'
     },
     {
         code: 'MOCA-TEST',
@@ -253,7 +349,8 @@ var testsCatalogDatabase = [
         validez: 'Sensibilidad 90% para DCL',
         itemsCount: 30,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/moca_test_espanol.pdf'
+        downloadUrl: '/static/test_materials/moca_test_espanol.pdf',
+        instrucciones: 'Administración guiada presencial. Usar la hoja impresa y seguir las pautas de puntuación estandarizadas.'
     },
     {
         code: 'INECO-IFS',
@@ -266,7 +363,8 @@ var testsCatalogDatabase = [
         validez: 'Baremos Venezuela | Funciones Ejecutivas',
         itemsCount: 8,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/ineco_venezuela_protocolo.pdf'
+        downloadUrl: '/static/test_materials/ineco_venezuela_protocolo.pdf',
+        instrucciones: 'Administración presencial por un clínico entrenado. Entregar consignas paso a paso. Requiere cronómetro y láminas impresas.'
     },
     {
         code: 'TMT-AB',
@@ -279,7 +377,8 @@ var testsCatalogDatabase = [
         validez: 'Estandarizado | Funciones Ejecutivas',
         itemsCount: 2,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/trail_making_test_tmt.pdf'
+        downloadUrl: '/static/test_materials/trail_making_test_tmt.pdf',
+        instrucciones: 'El consultante debe unir los puntos lo más rápido posible sin levantar el lápiz. Medir tiempo de ejecución con cronómetro. Requiere hoja impresa.'
     },
 
     // 5. MATERIALES PROYECTIVOS Y GRÁFICOS (DESCARGABLES / IMPRIMIBLES)
@@ -294,7 +393,8 @@ var testsCatalogDatabase = [
         validez: 'Técnica Proyectiva Cualitativa',
         itemsCount: 3,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/htp_manual_protocolo.pdf'
+        downloadUrl: '/static/test_materials/htp_manual_protocolo.pdf',
+        instrucciones: 'Entregar hojas en blanco y lápiz. Solicitar dibujo de casa, árbol y persona. Observar secuencia, borraduras y comentarios espontáneos.'
     },
     {
         code: 'WARTEGG-TEST',
@@ -307,7 +407,8 @@ var testsCatalogDatabase = [
         validez: 'Técnica Proyectiva Estructurada',
         itemsCount: 8,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/wartegg_protocolo.pdf'
+        downloadUrl: '/static/test_materials/wartegg_protocolo.pdf',
+        instrucciones: 'Entregar la hoja de 8/16 campos impresa. Pedir que complete cada dibujo y luego asigne un título y orden. Observar ejecución.'
     },
     {
         code: 'SACKS-TEST',
@@ -320,7 +421,8 @@ var testsCatalogDatabase = [
         validez: 'Análisis Cualitativo de Actitudes',
         itemsCount: 60,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/sacks_adultos_protocolo.doc'
+        downloadUrl: '/static/test_materials/sacks_adultos_protocolo.doc',
+        instrucciones: 'Pedir que complete cada frase con lo primero que se le venga a la mente. Se puede aplicar por escrito u oral. Entregar impreso.'
     },
     {
         code: 'TAT-TEST',
@@ -333,7 +435,8 @@ var testsCatalogDatabase = [
         validez: 'Análisis Dinámico de la Personalidad',
         itemsCount: 20,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/tat_manual_protocolo.doc'
+        downloadUrl: '/static/test_materials/tat_manual_protocolo.doc',
+        instrucciones: 'Mostrar las láminas impresas una a una. Pedir que narre una historia con pasado, presente y futuro para cada una. Registrar verbatim.'
     },
     {
         code: 'REY-OSTERRIETH',
@@ -346,7 +449,8 @@ var testsCatalogDatabase = [
         validez: 'Estandarizada | Evaluación Neuropsicológica',
         itemsCount: 18,
         isPhysical: true,
-        downloadUrl: '/static/test_materials/figura_rey_osterrieth.pdf'
+        downloadUrl: '/static/test_materials/figura_rey_osterrieth.pdf',
+        instrucciones: 'Fase 1: Copia de la figura impresa. Fase 2: Reproducción de memoria. Entregar colores distintos para medir proceso de copia.'
     },
 
     // 6. ORIENTACIÓN VOCACIONAL E IDENTIDAD DE GÉNERO
@@ -360,7 +464,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (14+ años)', 
         validez: 'α = 0.86 | Perfil Tipológico RIASEC', 
         itemsCount: 60,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'El consultante debe seleccionar las actividades y ocupaciones de su interés. Tiempo estimado: 20 minutos.'
     },
     { 
         code: 'TCS', 
@@ -372,7 +477,8 @@ var testsCatalogDatabase = [
         poblacion: 'Jóvenes y Adultos (16+ años)', 
         validez: 'α = 0.89 | Afirmación e Identidad', 
         itemsCount: 12,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder según su grado de acuerdo con las afirmaciones. Tiempo estimado: 5-10 minutos.'
     },
     { 
         code: 'UGDS-GS', 
@@ -384,7 +490,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (12+ años)', 
         validez: 'α = 0.91 | Medición de Disforia', 
         itemsCount: 18,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder la frecuencia de sentimientos relacionados al género. Tiempo estimado: 10 minutos.'
     },
 
     // 7. PRUEBAS CLÍNICAS, SALUD SEXUAL Y AFRONTAMIENTO (VALIDADAS EN POBLACIÓN HISPANA)
@@ -398,7 +505,8 @@ var testsCatalogDatabase = [
         poblacion: 'Niños y Adolescentes (6 a 19 años)',
         validez: 'Validez Clínica Estandarizada Hispana (Baremos T)',
         itemsCount: 49,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Cuestionario infantil. Responder "Sí" o "No". Si hay dificultad lectora, el clínico puede leer los ítems en voz alta.'
     },
     {
         code: 'CDS-CTI',
@@ -410,7 +518,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (14+ años)',
         validez: 'Terapia Cognitivo-Conductual (TCC)',
         itemsCount: 20,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder considerando los pensamientos más frecuentes en situaciones estresantes recientes. Tiempo estimado: 10 minutos.'
     },
     {
         code: 'CSI',
@@ -422,7 +531,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (15+ años)',
         validez: 'α = 0.89 | Adaptación Iberoamericana',
         itemsCount: 40,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder cada ítem basándose en una situación estresante reciente y cómo se afrontó. Tiempo estimado: 15-20 minutos.'
     },
     {
         code: 'DVQ-R',
@@ -434,7 +544,8 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Jóvenes (14 a 30 años)',
         validez: 'Validado en Población Hispana y Latina',
         itemsCount: 20,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder la frecuencia de las situaciones experimentadas en la relación actual o más reciente. Confidencialidad es clave.'
     },
     {
         code: 'EAQ',
@@ -446,7 +557,8 @@ var testsCatalogDatabase = [
         poblacion: 'Niños y Adolescentes (8 a 16 años)',
         validez: 'Evaluación de Inteligencia Emocional y Auto-conciencia',
         itemsCount: 30,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Cuestionario autoaplicado para niños/adolescentes. Explicar claramente que no hay respuestas incorrectas.'
     },
     {
         code: 'CUSES-SAS',
@@ -458,8 +570,11 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (15+ años)',
         validez: 'Validación en Psicología de la Salud y Sexología',
         itemsCount: 20,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder de forma honesta basándose en experiencias pasadas o hipotéticas de relaciones íntimas. Tiempo estimado: 10 minutos.'
     },
+
+    // 8. BIENESTAR Y SATISFACCIÓN
     {
         code: 'SWLS',
         name: 'SwLS — Escala de Satisfacción con la Vida (Diener)',
@@ -470,19 +585,23 @@ var testsCatalogDatabase = [
         poblacion: 'Adolescentes y Adultos (12+ años)',
         validez: 'α = 0.78 | Estándar Internacional de Bienestar Subjetivo',
         itemsCount: 5,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Leer cada afirmación e indicar el grado de acuerdo en escala de 1 a 7. No hay respuestas correctas ni incorrectas. Tiempo estimado: 2-3 minutos.'
     },
+
+    // 9. SEXOLOGÍA Y SALUD SEXUAL (ADICIONALES)
     {
         code: 'SHIM',
         name: 'SHIM / IIEF-5 — Inventario de Salud Sexual para Hombres (Disfunción Eréctil)',
         siglas: 'SHIM',
         cat: 'Sexología y Salud Sexual',
-        desc: 'Herramienta clínica abreviada de 5 reactivos para la evaluación y estadificación de la función eréctil y salud sexual masculina.',
+        desc: 'Herramienta clínica abreviada de 5 reactivos para la evaluación y estadificación de la función eréctil y salud sexual masculina. Clasifica severidad: grave, moderada, leve o sin disfunción.',
         autor: 'Rosen et al. (IIEF-5)',
         poblacion: 'Hombres Adultos (18+ años)',
         validez: 'Validación Clínica Internacional',
         itemsCount: 5,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder las 5 preguntas sobre función sexual de los últimos 6 meses. Garantizar privacidad y confidencialidad. Tiempo estimado: 3-5 minutos.'
     },
     {
         code: 'NSSS-S',
@@ -494,55 +613,49 @@ var testsCatalogDatabase = [
         poblacion: 'Adultos (18+ años)',
         validez: 'α = 0.94 | Subescalas Egocéntrica y Pareja',
         itemsCount: 12,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder cada ítem indicando el nivel de satisfacción en la vida sexual reciente. Asegurar ambiente privado y confidencial. Tiempo estimado: 5-8 minutos.'
     },
     {
         code: 'FSFI',
         name: 'FSFI — Índice de Función Sexual Femenina (Disfunción Sexual)',
         siglas: 'FSFI',
         cat: 'Sexología y Salud Sexual',
-        desc: 'Cuestionario clínico multidimensional de 19 ítems para evaluar deseo, excitación, lubricación, orgasmo, satisfacción y dolor femenino.',
+        desc: 'Cuestionario clínico multidimensional de 19 ítems estándar de oro que evalúa 6 dominios: deseo, excitación, lubricación, orgasmo, satisfacción y dolor femenino.',
         autor: 'Rosen et al. / Blümel et al.',
         poblacion: 'Mujeres Adultas (18+ años)',
         validez: 'Estándar de Oro en Sexología Femenina',
         itemsCount: 19,
-        isPhysical: false
-    },
-    {
-        code: 'MMSE',
-        name: 'MMSE — Mini-Mental State Examination (Folstein)',
-        siglas: 'MMSE',
-        cat: 'Cognición y Capacidad Intelectual',
-        desc: 'Evaluación neuropsicológica cuantitativa de 30 puntos para el cribado y seguimiento del deterioro cognitivo y memoria.',
-        autor: 'Folstein, Folstein & McHugh / Lobo et al.',
-        poblacion: 'Adultos Mayores (18+ años)',
-        validez: 'Sensibilidad 87% | Tamizaje Cognitivo Estandarizado',
-        itemsCount: 30,
-        isPhysical: false
-    },
-    {
-        code: 'AtAS',
-        name: 'AtAS — Escala de Adaptación al Envejecimiento',
-        siglas: 'AtAS',
-        cat: 'Adulto Mayor',
-        desc: 'Evaluación psicométrica de reactivos Likert para medir propósito, adaptación emocional, salud y apoyo social en adultos mayores.',
-        autor: 'dos Santos et al.',
-        poblacion: 'Adultos Mayores (50+ años)',
-        validez: 'α = 0.891 | Adaptación al Envejecimiento Activo',
-        itemsCount: 10,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder considerando la actividad sexual de las últimas 4 semanas. Explicar que incluye actividad con o sin pareja. Ambiente privado. Tiempo estimado: 10-15 minutos.'
     },
     {
         code: 'BSSC',
         name: 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales',
         siglas: 'BSSC',
         cat: 'Sexología y Salud Sexual',
-        desc: 'Herramienta de cribado clínico rápido de 4 ítems para la identificación temprana de inquietudes o síntomas sexuales.',
+        desc: 'Herramienta de cribado clínico ultra-rápido de 4 preguntas para la identificación temprana de inquietudes o síntomas sexuales.',
         autor: 'Hatzichristou et al. / Medicina Sexual',
         poblacion: 'Adultos (18+ años)',
         validez: 'Tamizaje Rápido de 4 Preguntas',
         itemsCount: 4,
-        isPhysical: false
+        isPhysical: false,
+        instrucciones: 'Responder las 4 preguntas de forma breve. Ideal como cribado inicial en consulta. Tiempo estimado: 1-2 minutos.'
+    },
+
+    // 10. ADULTO MAYOR / PSICOGERONTOLOGÍA
+    {
+        code: 'AtAS',
+        name: 'AtAS — Escala de Adaptación al Envejecimiento',
+        siglas: 'AtAS',
+        cat: 'Adulto Mayor',
+        desc: 'Evaluación psicométrica de 10 reactivos Likert para medir propósito, adaptación emocional, salud y apoyo social en adultos mayores.',
+        autor: 'dos Santos et al.',
+        poblacion: 'Adultos Mayores (50+ años)',
+        validez: 'α = 0.891 | Adaptación al Envejecimiento Activo',
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'Responder cada afirmación indicando el grado de acuerdo. Puede leerse en voz alta si hay dificultad de lectura. Tiempo estimado: 5-8 minutos.'
     }
 ];
 
@@ -15344,10 +15457,12 @@ function switchSuperadminTab(tabId) {
     const tabTherapists = document.getElementById('sa-tab-therapists');
     const tabSupport = document.getElementById('sa-tab-support');
     const tabLanding = document.getElementById('sa-tab-landing');
+    const tabTests = document.getElementById('sa-tab-tests');
     
     if (tabTherapists) tabTherapists.className = (tabId === 'therapists') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     if (tabSupport) tabSupport.className = (tabId === 'support') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     if (tabLanding) tabLanding.className = (tabId === 'landing') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (tabTests) tabTests.className = (tabId === 'tests') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     
     if (tabId === 'therapists') {
         loadSuperadminData();
@@ -15355,8 +15470,286 @@ function switchSuperadminTab(tabId) {
         loadSupportTickets();
     } else if (tabId === 'landing') {
         loadLandingPageContentForAdmin();
+    } else if (tabId === 'tests') {
+        loadSuperadminTests();
     }
 }
+
+// ==========================================
+// GESTIÓN DE TESTS PSICOLÓGICOS (SUPERADMIN)
+// ==========================================
+window._saTestsCache = [];
+window._saCategoriesCache = [];
+
+function safeEscapeTestHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+async function loadSuperadminTests() {
+    const tbody = document.getElementById('sa-tests-table-body');
+    const badge = document.getElementById('sa-tests-count-badge');
+    const catSelect = document.getElementById('sa-filter-test-categoria');
+    const dataList = document.getElementById('sa-categories-datalist');
+    
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding: 2.5rem;">Cargando catálogo de tests...</td></tr>`;
+    }
+
+    try {
+        const res = await fetch('/api/admin/tests');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al cargar tests');
+
+        window._saTestsCache = data.tests || [];
+        window._saCategoriesCache = data.categorias || [];
+
+        if (badge) {
+            badge.textContent = `${window._saTestsCache.length} tests`;
+        }
+
+        // Rellenar selector de categorías
+        if (catSelect) {
+            const currentCat = catSelect.value;
+            catSelect.innerHTML = `<option value="">Todas las categorías (${window._saCategoriesCache.length})</option>`;
+            window._saCategoriesCache.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                if (cat === currentCat) opt.selected = true;
+                catSelect.appendChild(opt);
+            });
+        }
+
+        // Rellenar datalist del modal
+        if (dataList) {
+            dataList.innerHTML = '';
+            window._saCategoriesCache.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                dataList.appendChild(opt);
+            });
+        }
+
+        filterSuperadminTests();
+    } catch (err) {
+        console.error("Error al cargar tests:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 2rem; color: #ef4444;">Error al cargar catálogo de tests: ${err.message}</td></tr>`;
+        }
+    }
+}
+window.loadSuperadminTests = loadSuperadminTests;
+
+function filterSuperadminTests() {
+    const tbody = document.getElementById('sa-tests-table-body');
+    const searchInput = document.getElementById('sa-search-tests');
+    const catSelect = document.getElementById('sa-filter-test-categoria');
+    if (!tbody) return;
+
+    const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+    const selectedCat = (catSelect ? catSelect.value : '').trim();
+
+    let filtered = window._saTestsCache || [];
+
+    if (selectedCat) {
+        filtered = filtered.filter(t => (t.categoria || '') === selectedCat);
+    }
+
+    if (query) {
+        filtered = filtered.filter(t => {
+            const code = (t.code || '').toLowerCase();
+            const nombre = (t.nombre || '').toLowerCase();
+            const siglas = (t.siglas || '').toLowerCase();
+            const cat = (t.categoria || '').toLowerCase();
+            const desc = (t.descripcion || '').toLowerCase();
+            return code.includes(query) || nombre.includes(query) || siglas.includes(query) || cat.includes(query) || desc.includes(query);
+        });
+    }
+
+    renderSuperadminTests(filtered);
+}
+window.filterSuperadminTests = filterSuperadminTests;
+
+function renderSuperadminTests(tests) {
+    const tbody = document.getElementById('sa-tests-table-body');
+    if (!tbody) return;
+
+    if (!tests || tests.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted" style="padding: 2.5rem;">
+                    No se encontraron tests que coincidan con la búsqueda.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = tests.map(t => {
+        const safeCode = (t.code || '').replace(/'/g, "\\'");
+        const asignacionesBadge = (t.total_asignaciones > 0)
+            ? `<span class="badge" style="background: rgba(13, 148, 136, 0.12); color: #0d9488; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.8rem;">${t.total_asignaciones}</span>`
+            : `<span class="text-muted" style="font-size: 0.82rem;">0</span>`;
+
+        return `
+            <tr style="border-bottom: 1px solid #e2e8f0; transition: background-color 0.15s ease;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
+                <td style="padding: 0.85rem 1rem; vertical-align: middle;">
+                    <span style="display: inline-block; font-family: monospace; font-weight: 800; font-size: 0.82rem; background: #e0e7ff; color: #3730a3; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid #c7d2fe;">${safeEscapeTestHtml(t.code)}</span>
+                </td>
+                <td style="padding: 0.85rem 1rem; vertical-align: middle;">
+                    <div style="font-weight: 700; color: #0f172a; font-size: 0.92rem;">${safeEscapeTestHtml(t.nombre || '')}</div>
+                </td>
+                <td style="padding: 0.85rem 1rem; vertical-align: middle;">
+                    <span style="font-weight: 600; font-size: 0.85rem; color: #475569;">${safeEscapeTestHtml(t.siglas || '—')}</span>
+                </td>
+                <td style="padding: 0.85rem 1rem; vertical-align: middle;">
+                    <span style="display: inline-block; font-size: 0.78rem; font-weight: 700; background: rgba(126, 34, 206, 0.1); color: #7e22ce; padding: 0.25rem 0.6rem; border-radius: 12px; border: 1px solid rgba(126, 34, 206, 0.25); white-space: nowrap;">
+                        ${safeEscapeTestHtml(t.categoria || 'General')}
+                    </span>
+                </td>
+                <td style="padding: 0.85rem 1rem; vertical-align: middle; max-width: 280px;">
+                    <div style="font-size: 0.82rem; color: #64748b; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;" title="${safeEscapeTestHtml(t.descripcion || '')}">
+                        ${safeEscapeTestHtml(t.descripcion || 'Sin descripción registrada')}
+                    </div>
+                </td>
+                <td style="padding: 0.85rem 1rem; vertical-align: middle; text-align: center;">
+                    ${asignacionesBadge}
+                </td>
+                <td style="padding: 0.85rem 1rem; vertical-align: middle; text-align: center;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openEditTestModal('${safeCode}')" style="font-weight: 700; font-size: 0.82rem; padding: 0.35rem 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
+                        ✏️ Editar
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+window.renderSuperadminTests = renderSuperadminTests;
+
+function openEditTestModal(code) {
+    const test = (window._saTestsCache || []).find(t => t.code === code);
+    if (!test) {
+        alert("Test no encontrado en la memoria.");
+        return;
+    }
+
+    document.getElementById('edit-test-code').value = test.code;
+    document.getElementById('edit-test-code-display').value = test.code;
+    document.getElementById('edit-test-nombre').value = test.nombre || '';
+    document.getElementById('edit-test-siglas').value = test.siglas || '';
+    document.getElementById('edit-test-categoria').value = test.categoria || '';
+    document.getElementById('edit-test-descripcion').value = test.descripcion || '';
+    document.getElementById('edit-test-instrucciones').value = test.instrucciones || '';
+
+    const titleEl = document.getElementById('modal-edit-test-title');
+    if (titleEl) titleEl.textContent = `Editar Test: ${test.siglas || test.code}`;
+    const subtitleEl = document.getElementById('modal-edit-test-subtitle');
+    if (subtitleEl) subtitleEl.textContent = `Código interno: ${test.code}`;
+
+    const statusEl = document.getElementById('edit-test-status');
+    if (statusEl) {
+        statusEl.className = 'status-msg hide';
+        statusEl.textContent = '';
+    }
+
+    const btnSave = document.getElementById('btn-save-edit-test');
+    if (btnSave) {
+        btnSave.disabled = false;
+        btnSave.textContent = '💾 Guardar Cambios';
+    }
+
+    openModal('modal-edit-test');
+}
+window.openEditTestModal = openEditTestModal;
+
+async function saveTestDefinition(event) {
+    event.preventDefault();
+    const code = document.getElementById('edit-test-code').value;
+    const nombre = document.getElementById('edit-test-nombre').value.trim();
+    const siglas = document.getElementById('edit-test-siglas').value.trim();
+    const categoria = document.getElementById('edit-test-categoria').value.trim();
+    const descripcion = document.getElementById('edit-test-descripcion').value.trim();
+    const instrucciones = document.getElementById('edit-test-instrucciones').value.trim();
+
+    const statusEl = document.getElementById('edit-test-status');
+    const btnSave = document.getElementById('btn-save-edit-test');
+
+    if (!nombre) {
+        if (statusEl) {
+            statusEl.className = 'status-msg error-msg';
+            statusEl.textContent = 'El nombre completo del test es obligatorio.';
+            statusEl.classList.remove('hide');
+        }
+        return;
+    }
+
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.textContent = 'Guardando...';
+    }
+
+    try {
+        const res = await fetch(`/api/admin/tests/${encodeURIComponent(code)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, siglas, categoria, descripcion, instrucciones })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar test');
+
+        // Actualizar en el cache local
+        const idx = (window._saTestsCache || []).findIndex(t => t.code === code);
+        if (idx !== -1 && data.test) {
+            window._saTestsCache[idx] = data.test;
+        }
+
+        // Si la categoría es nueva, añadirla al cache de categorías
+        if (categoria && !window._saCategoriesCache.includes(categoria)) {
+            window._saCategoriesCache.push(categoria);
+            window._saCategoriesCache.sort();
+            const catSelect = document.getElementById('sa-filter-test-categoria');
+            if (catSelect) {
+                const opt = document.createElement('option');
+                opt.value = categoria;
+                opt.textContent = categoria;
+                catSelect.appendChild(opt);
+            }
+        }
+
+        filterSuperadminTests();
+        closeModal('modal-edit-test');
+
+        if (typeof showAndroidToast === 'function') {
+            showAndroidToast(`Test '${code}' actualizado correctamente.`);
+        } else {
+            alert(`Test '${code}' actualizado correctamente.`);
+        }
+
+        // Si el catálogo de psicólogos ya estaba cargado, refrescarlo para sincronizar
+        if (typeof loadTestsCatalog === 'function') {
+            try { loadTestsCatalog(); } catch(e) {}
+        }
+    } catch (err) {
+        console.error("Error al guardar definición de test:", err);
+        if (statusEl) {
+            statusEl.className = 'status-msg error-msg';
+            statusEl.textContent = err.message || 'Error al guardar los cambios.';
+            statusEl.classList.remove('hide');
+        }
+    } finally {
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.textContent = '💾 Guardar Cambios';
+        }
+    }
+}
+window.saveTestDefinition = saveTestDefinition;
 
 async function submitSupportTicket(event) {
     event.preventDefault();
