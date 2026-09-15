@@ -2092,7 +2092,10 @@ def api_asignar_test():
         """, (token, patient_id, user_id, test_code, modo))
         db.commit()
 
-        url_test = f"{request.host_url.rstrip('/')}/evaluacion/{token}"
+        base_h = request.host_url.rstrip('/') if (request and request.host_url and 'localhost' not in request.host_url and '127.0.0.1' not in request.host_url) else 'https://www.espacioterapeutico.net'
+        if base_h.startswith('http://'):
+            base_h = 'https://' + base_h[7:]
+        url_test = f"{base_h}/evaluacion/{token}"
         clean_phone = (pac['telefono'] or '').replace(' ', '').replace('-', '').replace('+', '')
 
         try:

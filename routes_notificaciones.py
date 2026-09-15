@@ -48,6 +48,20 @@ def get_psicologo_id_filter():
         return -1
     return user_id if user_id else 1
 
+def get_public_base_url():
+    """Retorna siempre la URL pública oficial HTTPS para enlaces enviados por WhatsApp."""
+    try:
+        from flask import has_request_context
+        if has_request_context() and request and request.host_url:
+            h = request.host_url.rstrip('/')
+            if 'localhost' not in h and '127.0.0.1' not in h and '0.0.0.0' not in h:
+                if h.startswith('http://'):
+                    h = 'https://' + h[7:]
+                return h
+    except Exception:
+        pass
+    return os.environ.get('APP_URL', 'https://www.espacioterapeutico.net').rstrip('/')
+
 # --- RUTAS DE API DE NOTIFICACIONES Y WEBPUSH ---
 
 @notificaciones_bp.route('/api/push/public-key', methods=['GET'])
@@ -726,7 +740,7 @@ def cron_send_whatsapp_reminders():
                 except:
                     pass
             
-            domain_host = request.host_url.rstrip('/') if request else 'https://www.espacioterapeutico.net'
+            domain_host = get_public_base_url()
             link_confirmacion = f"{domain_host}/cita/confirmar/{token_conf}"
             cita_dict['link_confirmacion'] = link_confirmacion
             patient_dict['link_confirmacion'] = link_confirmacion
@@ -1029,7 +1043,7 @@ def send_queue_item_now(item_id):
             else:
                 token_id = q_row['token_id']
 
-            domain_host = request.host_url.rstrip('/') if request else 'https://www.espacioterapeutico.net'
+            domain_host = get_public_base_url()
             direct_link = f"{domain_host}/herramienta/directa?token={token}"
             first_name = (q_row['nombres'] or '').strip().split()[0] if q_row['nombres'] else 'Consultante'
 
@@ -1166,7 +1180,7 @@ def send_queue_item_now(item_id):
                 except:
                     pass
             
-            domain_host = request.host_url.rstrip('/') if request else 'https://www.espacioterapeutico.net'
+            domain_host = get_public_base_url()
             link_confirmacion = f"{domain_host}/cita/confirmar/{token_conf}"
             patient_dict['link_confirmacion'] = link_confirmacion
             cita_dict['link_confirmacion'] = link_confirmacion
@@ -1611,7 +1625,7 @@ def get_whatsapp_queue_status():
                 
             tool_rows = cursor.fetchall()
 
-            host_url = request.host_url.rstrip('/') if request else ""
+            host_url = get_public_base_url()
             tool_names_map = {
                 'sueno': 'Higiene del Sueño',
                 'ansiedad': 'Diario de Ansiedad',

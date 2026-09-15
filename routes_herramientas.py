@@ -41,6 +41,20 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def get_public_base_url():
+    """Retorna siempre la URL pública oficial HTTPS para enlaces enviados a pacientes."""
+    try:
+        from flask import has_request_context
+        if has_request_context() and request and request.host_url:
+            h = request.host_url.rstrip('/')
+            if 'localhost' not in h and '127.0.0.1' not in h and '0.0.0.0' not in h:
+                if h.startswith('http://'):
+                    h = 'https://' + h[7:]
+                return h
+    except Exception:
+        pass
+    return os.environ.get('APP_URL', 'https://www.espacioterapeutico.net').rstrip('/')
+
 def patient_login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -72,7 +86,7 @@ def get_patient_modules(patient_id):
     rows = cursor.fetchall()
     active_map = {r['modulo_clave']: r['activo'] for r in rows}
     
-    host_url = request.host_url.rstrip('/')
+    host_url = get_public_base_url()
     now = datetime.now()
     today_str = now.strftime("%Y-%m-%d")
 
@@ -1173,7 +1187,7 @@ def generar_link_directo_herramienta():
     db.commit()
     
     # Construir enlace absoluto
-    host_url = request.host_url.rstrip('/')
+    host_url = get_public_base_url()
     link_directo = f"{host_url}/herramienta/directa?token={token}"
     
     pac_nombre = f"{paciente['nombres']} {paciente['apellidos']}".strip()
