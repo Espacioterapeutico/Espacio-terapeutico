@@ -1241,16 +1241,15 @@ def send_queue_item_now(item_id):
 
             if res_wa and res_wa.status_code == 200:
                 if msg_stage == 'confirmacion':
-                    cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada = 1, confirmacion_enviada_wa = 1 WHERE id = ?", (appt_id,))
+                    cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (appt_id,))
                 elif msg_stage == 'confirmacion_ok':
                     # Only mark as acknowledged, not strictly necessary but helpful if they want an 'enviado' status
                     pass
                 elif msg_stage == 'recordatorio':
-                    cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado = 1, recordatorio_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                    cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (appt_id,))
                 elif msg_stage == 'reagendamiento':
-                    cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado = 1, reagendamiento_enviado_wa = 1 WHERE id = ?", (appt_id,))
+                    cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado_wa = 1 WHERE id = ?", (appt_id,))
                 elif msg_stage == 'cierre':
-                    # Try setting cierre_enviado if column exists
                     try:
                         cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (appt_id,))
                     except:
@@ -1382,6 +1381,8 @@ def get_whatsapp_queue_status():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN confirmacion_enviada_wa INTEGER DEFAULT 0")
         if 'recordatorio_enviado_wa' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN recordatorio_enviado_wa INTEGER DEFAULT 0")
+        if 'cierre_enviado_wa' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN cierre_enviado_wa INTEGER DEFAULT 0")
         db.commit()
     except Exception as ex_col:
         print("Aviso al migrar columnas de cola de WhatsApp en agenda_finanzas:", ex_col)
@@ -1554,6 +1555,9 @@ def get_whatsapp_queue_status():
             elif r['reagendamiento_enviado'] == 1:
                 lbl = 'Enviado 🔄 (Reagendamiento)'
                 status = 'reagendar_enviado'
+            elif r.get('cierre_enviado_wa') == -1 or r['reagendamiento_enviado'] == -1:
+                lbl = '🛑 Detenido Manualmente'
+                status = 'detenido_manual'
             elif is_cancelada:
                 lbl = '❌ Cancelada (No aplica)'
                 status = 'cancelado'
@@ -1568,7 +1572,7 @@ def get_whatsapp_queue_status():
                 lbl = '⏳ Programado (Fin de día)'
                 status = 'esperando_fecha'
             
-            if not is_past or r.get('cierre_enviado_wa') == 1 or r['reagendamiento_enviado'] == 1:
+            if not is_past or r.get('cierre_enviado_wa') in (1, -1) or r['reagendamiento_enviado'] in (1, -1):
                 if is_past and fecha_cita < (now_local - timedelta(days=2)).strftime('%Y-%m-%d') and r.get('cierre_enviado_wa') == 0 and r['reagendamiento_enviado'] == 0:
                     pass
                 else:
@@ -1735,19 +1739,29 @@ def cancel_whatsapp_queue_item():
             token_type = data.get('token_type')
             
             if token_type == 'confirmacion':
-                cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada = -1, confirmacion_enviada_wa = -1 WHERE id = ?", (cid,))
+                cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = -1 WHERE id = ?", (cid,))
             elif token_type == 'recordatorio':
-                cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado = -1, recordatorio_enviado_wa = -1 WHERE id = ?", (cid,))
+                cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = -1 WHERE id = ?", (cid,))
             elif token_type == 'cierre':
-                cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado = -1, reagendamiento_enviado_wa = -1 WHERE id = ?", (cid,))
-                try: cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = -1 WHERE id = ?", (cid,))
-                except: pass
+                cursor.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = -1, reagendamiento_enviado_wa = -1 WHERE id = ?", (cid,))
+            elif token_type == 'reagendamiento':
+                cursor.execute("UPDATE agenda_finanzas SET reagendamiento_enviado_wa = -1 WHERE id = ?", (cid,))
             else:
                 cursor.execute("""
                     UPDATE agenda_finanzas
-                    SET confirmacion_enviada_wa = -1, recordatorio_enviado_wa = -1, reagendamiento_enviado_wa = -1
+                    SET confirmacion_enviada_wa = -1, recordatorio_enviado_wa = -1, reagendamiento_enviado_wa = -1, cierre_enviado_wa = -1
                     WHERE id = ?
                 """, (cid,))
+
+            try:
+                if token_type == 'confirmacion':
+                    cursor.execute("UPDATE citas SET confirmacion_enviada_wa = -1 WHERE id = ?", (cid,))
+                elif token_type == 'recordatorio':
+                    cursor.execute("UPDATE citas SET recordatorio_enviado_wa = -1 WHERE id = ?", (cid,))
+                elif token_type in ('cierre', 'reagendamiento'):
+                    cursor.execute("UPDATE citas SET reagendamiento_enviado_wa = -1 WHERE id = ?", (cid,))
+            except:
+                pass
             
             cursor.execute("SELECT paciente_id, fecha FROM agenda_finanzas WHERE id = ?", (cid,))
             row = cursor.fetchone()
