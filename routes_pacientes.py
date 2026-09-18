@@ -1286,7 +1286,8 @@ def patient_add_appointment():
             end_datetime = f"{fecha_norm}T{end_hour}:{hora_norm.split(':')[1]}:00-04:00"
             
             event_body = {
-                'summary': f"Consulta Auto-agendada: {paciente['nombres']} {paciente['apellidos']}",
+                'summary': f"🟠 [Pendiente] Consulta Auto-agendada: {paciente['nombres']} {paciente['apellidos']}",
+                'colorId': '6',
                 'description': f"Modalidad: {tipo_consulta}\nPaciente: {paciente['nombres']} {paciente['apellidos']}\nCédula: {paciente['cedula']}\nNota: {nota}",
                 'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
                 'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
@@ -1424,15 +1425,20 @@ def patient_cancel_appointment():
         if google_event_id:
             service = None
             try:
-                from routes_admin import get_calendar_service
+                from routes_admin import get_calendar_service, update_calendar_event_status
                 service = get_calendar_service(psicologo_id)
             except Exception:
                 service = None
             if service:
                 try:
-                    service.events().delete(calendarId='primary', eventId=google_event_id).execute()
+                    update_calendar_event_status(
+                        service, google_event_id, 'cancelada',
+                        paciente_nombre=f"{paciente['nombres']} {paciente['apellidos']}",
+                        tipo_consulta=appt_dict['tipo_consulta'],
+                        motivo=f"Cancelada por el consultante desde el portal. Motivo: {motivo or 'No especificado'}"
+                    )
                 except Exception as ge:
-                    print("Error al borrar evento de Google Calendar al cancelar paciente:", ge)
+                    print("Error al actualizar evento de Google Calendar al cancelar paciente:", ge)
                     
         if es_late_charge:
             # Cancelación tardía cobrada: Se cobra o se descuenta de prepago si existe

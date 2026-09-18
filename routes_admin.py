@@ -710,6 +710,81 @@ def get_calendar_service(user_id=None):
         print("Error al inicializar servicio de Google Calendar:", e)
         return None
 
+def update_calendar_event_status(service, google_event_id, status, paciente_nombre="", tipo_consulta=None, motivo=None):
+    """
+    Actualiza el estado de un evento en Google Calendar usando prefijos visuales y colores nativos.
+    status: 'pendiente' (o 'esperando'), 'confirmada', 'cancelada'
+    - 'pendiente' / 'esperando': colorId '6' (Mandarina/Naranja), prefijo '🟠 [Pendiente]'
+    - 'confirmada': colorId '10' (Albahaca/Verde), prefijo '🟢 [Confirmada]'
+    - 'cancelada': colorId '11' (Tomate/Rojo), prefijo '🔴 [Cancelada]'
+    NUNCA borra el evento de Google Calendar.
+    """
+    import sys, os
+    if sys.platform == 'win32' and not os.environ.get('ENABLE_LOCAL_GOOGLE_SYNC'):
+        print(f"[GOOGLE CALENDAR DEV] Sincronización omitida en desarrollo local Windows (status={status}, id={google_event_id}) para proteger el calendario real.")
+        return True
+
+    if not service or not google_event_id:
+        return False
+
+    status_map = {
+        'pendiente': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
+        'esperando': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
+        'confirmada': {'colorId': '10', 'prefix': '🟢 [Confirmada]'},
+        'cancelada': {'colorId': '11', 'prefix': '🔴 [Cancelada]'}
+    }
+
+    norm_status = (status or 'pendiente').lower().strip()
+    st_info = status_map.get(norm_status, status_map['pendiente'])
+
+    try:
+        current_event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
+        current_summary = current_event.get('summary', '')
+
+        # Limpiar cualquier prefijo o emoji previo del resumen
+        clean_summary = current_summary
+        prefixes_to_clean = [
+            '🟠 [Pendiente] ', '🟢 [Confirmada] ', '🔴 [Cancelada] ',
+            '[Pendiente] ', '[Confirmada] ', '[Cancelada] ',
+            '🟠 [Pendiente]', '🟢 [Confirmada]', '🔴 [Cancelada]',
+            '[Pendiente]', '[Confirmada]', '[Cancelada]',
+            '🟠 ', '🟢 ', '🔴 ', '✅ ', '⛔ '
+        ]
+        for pfx in prefixes_to_clean:
+            clean_summary = clean_summary.replace(pfx, '')
+        clean_summary = clean_summary.strip()
+
+        if not clean_summary and paciente_nombre:
+            clean_summary = f"Consulta Psicológica - {paciente_nombre}"
+        elif not clean_summary:
+            clean_summary = "Consulta Psicológica"
+
+        new_summary = f"{st_info['prefix']} {clean_summary}"
+
+        patch_body = {
+            'summary': new_summary,
+            'colorId': st_info['colorId']
+        }
+
+        # Si estaba cancelado en Google y ahora se confirma o reactiva, restaurar status
+        if current_event.get('status') == 'cancelled':
+            patch_body['status'] = 'confirmed'
+
+        if norm_status == 'cancelada' or motivo:
+            desc = current_event.get('description', '') or ''
+            from datetime import datetime
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+            motivo_txt = motivo or 'Cancelada por el usuario o sistema'
+            reason_line = f"\n\n[ESTADO: CANCELADA el {now_str}] Motivo: {motivo_txt}"
+            if "[ESTADO: CANCELADA" not in desc:
+                patch_body['description'] = desc + reason_line
+
+        service.events().patch(calendarId='primary', eventId=google_event_id, body=patch_body).execute()
+        return True
+    except Exception as e:
+        print(f"Error al actualizar estado en Google Calendar (ID: {google_event_id}, Status: {status}):", e)
+        return False
+
 @admin_bp.route('/api/google/status', methods=['GET'])
 @login_required
 def google_status():
@@ -3014,8 +3089,21 @@ def sync_google_calendar():
                 end_h = str(int(lp['hora'].split(':')[0]) + 1).zfill(2)
                 end_dt = f"{lp['fecha']}T{end_h}:{lp['hora'].split(':')[1]}:00-04:00"
                 
+                is_conf = bool(lp.get('confirmada'))
+                is_canc = lp.get('estado_pago') in ['Cancelada con aviso', 'Cancelada sin aviso']
+                if is_canc:
+                    prefix = "🔴 [Cancelada] "
+                    c_id = '11'
+                elif is_conf:
+                    prefix = "🟢 [Confirmada] "
+                    c_id = '10'
+                else:
+                    prefix = "🟠 [Pendiente] "
+                    c_id = '6'
+
                 event_b = {
-                    'summary': f"Consulta Psicológica - {pac_nombre}",
+                    'summary': f"{prefix}Consulta Psicológica - {pac_nombre}",
+                    'colorId': c_id,
                     'description': f"Modalidad: {lp['tipo_consulta']}",
                     'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},
                     'end': {'dateTime': end_dt, 'timeZone': 'America/Caracas'}

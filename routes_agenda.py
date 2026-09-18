@@ -12,15 +12,16 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
-def _update_google_calendar_status_bg(event_id, status):
+def _update_google_calendar_status_bg(event_id, status, motivo=None):
     """
-    Actualiza el estado de la cita en Google Calendar en background.
-    status: 'esperando', 'confirmada', 'cancelada'
+    Actualiza el estado de la cita en Google Calendar en background con colores y prefijos visuales.
+    status: 'esperando'/'pendiente', 'confirmada', 'cancelada'
+    NUNCA borra el evento de Google Calendar.
     """
-    import os
+    import os, sys
     import sqlite3
     import threading
-    from routes_admin import get_calendar_service
+    from routes_admin import get_calendar_service, update_calendar_event_status
 
     def run():
         try:
@@ -31,7 +32,7 @@ def _update_google_calendar_status_bg(event_id, status):
             cursor = db.cursor()
             
             cursor.execute("""
-                SELECT af.google_event_id, p.psicologo_id, af.creado_por_user_id 
+                SELECT af.google_event_id, af.tipo_consulta, p.psicologo_id, af.creado_por_user_id, p.nombres, p.apellidos 
                 FROM agenda_finanzas af
                 LEFT JOIN pacientes p ON af.paciente_id = p.id
                 WHERE af.id = ?
@@ -43,35 +44,16 @@ def _update_google_calendar_status_bg(event_id, status):
 
             google_event_id = cita['google_event_id']
             psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or 1
+            pac_nombre = f"{cita['nombres'] or ''} {cita['apellidos'] or ''}".strip()
             
             service = get_calendar_service(psych_id)
-            if not service:
-                db.close()
-                return
-
-            if status == 'cancelada':
-                try:
-                    service.events().delete(calendarId='primary', eventId=google_event_id).execute()
-                    cursor.execute("UPDATE agenda_finanzas SET google_event_id = NULL WHERE id = ?", (event_id,))
-                    db.commit()
-                except Exception as e:
-                    print("Error eliminando cita en GC por cancelacion:", e)
-            else:
-                try:
-                    g_event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
-                    summary = g_event.get('summary', '')
-                    
-                    # Limpiar emojis previos
-                    clean_summary = summary.replace('🟠', '').replace('✅', '').strip()
-                    
-                    if status == 'esperando':
-                        g_event['summary'] = f"🟠 {clean_summary}"
-                    elif status == 'confirmada':
-                        g_event['summary'] = f"✅ {clean_summary}"
-                        
-                    service.events().update(calendarId='primary', eventId=google_event_id, body=g_event).execute()
-                except Exception as e:
-                    print("Error actualizando emoji en GC:", e)
+            if service:
+                update_calendar_event_status(
+                    service, google_event_id, status,
+                    paciente_nombre=pac_nombre,
+                    tipo_consulta=cita['tipo_consulta'],
+                    motivo=motivo
+                )
                     
             db.close()
         except Exception as e:
@@ -857,8 +839,13 @@ def add_agenda_event():
                 end_h = str(h_int).zfill(2) if h_int < 24 else "23"
                 end_dt = f"{fecha}T{end_h}:{hora.split(':')[1]}:00-04:00"
                 
+                is_conf = bool(confirmada)
+                prefix = "🟢 [Confirmada] " if is_conf else "🟠 [Pendiente] "
+                c_id = '10' if is_conf else '6'
+
                 event_body = {
-                    'summary': f"Consulta Psicológica - {pac_nombre}",
+                    'summary': f"{prefix}Consulta Psicológica - {pac_nombre}",
+                    'colorId': c_id,
                     'description': f"Modalidad: {tipo_consulta}",
                     'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},
                     'end': {'dateTime': end_dt, 'timeZone': 'America/Caracas'}
@@ -1112,12 +1099,15 @@ def delete_agenda_event(event_id):
     if cita and cita['google_event_id']:
         psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or user_id or 1
         try:
-            from routes_admin import get_calendar_service
+            from routes_admin import get_calendar_service, update_calendar_event_status
             service = get_calendar_service(psych_id)
             if service:
-                service.events().delete(calendarId='primary', eventId=cita['google_event_id']).execute()
+                update_calendar_event_status(
+                    service, cita['google_event_id'], 'cancelada',
+                    motivo="Eliminada de la agenda de la clínica"
+                )
         except Exception as ge:
-            print("Error al eliminar evento en Google Calendar al borrar cita:", ge)
+            print("Error al actualizar evento en Google Calendar al borrar cita:", ge)
 
     cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
     cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
@@ -1420,7 +1410,8 @@ def fast_booking_book():
             therapist_name = u_row['nombres'] if u_row else "Paulo Mora"
             
             event_body = {
-                'summary': f"Consulta Psicológica - {pac_nombre}",
+                'summary': f"🟠 [Pendiente] Consulta Psicológica - {pac_nombre}",
+                'colorId': '6',
                 'description': f"Modalidad: {modalidad}\nPsicólogo: Psic. {therapist_name}",
                 'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
                 'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
@@ -1568,13 +1559,16 @@ def delete_admin_consultation_history_event(event_id):
         paciente_id = row['paciente_id']
 
         if google_event_id:
-            from routes_admin import get_calendar_service
+            from routes_admin import get_calendar_service, update_calendar_event_status
             service = get_calendar_service(user_id)
             if service:
                 try:
-                    service.events().delete(calendarId='primary', eventId=google_event_id).execute()
+                    update_calendar_event_status(
+                        service, google_event_id, 'cancelada',
+                        motivo="Eliminada por el psicólogo desde panel"
+                    )
                 except Exception as ge:
-                    print("Error al eliminar evento en Google Calendar:", ge)
+                    print("Error al actualizar evento en Google Calendar:", ge)
 
         cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
         cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))

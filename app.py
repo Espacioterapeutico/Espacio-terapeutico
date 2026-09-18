@@ -1830,6 +1830,11 @@ def create_auto_cancellation_session(db, paciente_id, agenda_id, fecha, modalida
         print("Error al crear evolución automática de cancelación:", e)
 
 def auto_cancel_unconfirmed_sessions(db):
+    import sys, os
+    # En desarrollo local (Windows), no auto-cancelar citas contra Google Calendar ni alterar base con datos locales
+    if sys.platform == 'win32' and not os.environ.get('ENABLE_LOCAL_GOOGLE_SYNC'):
+        return
+
     cursor = db.cursor()
     try:
         from datetime import datetime
@@ -1896,20 +1901,25 @@ def auto_cancel_unconfirmed_sessions(db):
             google_event_id = appt['google_event_id']
             target_psic = appt['psicologo_id'] or 1
             
-            # 1. Eliminar de Google Calendar
+            # 1. Actualizar estado en Google Calendar a Cancelada (NUNCA borrar el evento)
             if google_event_id:
                 try:
-                    from routes_admin import get_calendar_service
+                    from routes_admin import get_calendar_service, update_calendar_event_status
                     service = get_calendar_service(target_psic)
                     if service:
-                        service.events().delete(calendarId='primary', eventId=google_event_id).execute()
+                        update_calendar_event_status(
+                            service, google_event_id, 'cancelada',
+                            paciente_nombre=pac_nombre,
+                            tipo_consulta=appt['tipo_consulta'],
+                            motivo=f"Cancelada automáticamente por el sistema al no confirmarse a tiempo ({fecha_cita} a las {hora_cita})"
+                        )
                 except Exception as ge:
-                    print("Error al borrar evento de Google Calendar al auto-cancelar:", ge)
+                    print("Error al actualizar evento de Google Calendar al auto-cancelar:", ge)
             
-            # 2. Cancelar la cita en SQLite
+            # 2. Cancelar la cita en SQLite (preservando google_event_id para trazabilidad)
             cursor.execute("""
                 UPDATE agenda_finanzas
-                SET estado_pago = 'Cancelada con aviso', monto = 0.0, google_event_id = NULL
+                SET estado_pago = 'Cancelada con aviso', monto = 0.0
                 WHERE id = ?
             """, (appt_id,))
             
