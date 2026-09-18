@@ -24537,7 +24537,6 @@ async function loadAllAppliedTestsHistory() {
             const patCi = t.patient_cedula ? ` (CI: ${t.patient_cedula})` : '';
 
             const clasifDisplay = t.clasificacion_resultado || t.clasificacion || 'Completado';
-            const answers = t.respuestas || {};
             const sub = t.subescalas || {};
 
             let subscalesHtml = '';
