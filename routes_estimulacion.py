@@ -387,10 +387,118 @@ def api_historial_estimulacion(patient_id):
         JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
         JOIN cat_carpetas_cognitivas c ON e.carpeta_id = c.id
         WHERE r.paciente_id = ?
-        ORDER BY r.id DESC
     """, (patient_id,))
     rows = [dict(r) for r in cursor.fetchall()]
     return jsonify({'historial': rows})
+
+@estimulacion_bp.route('/api/patient/estimulacion', methods=['GET'])
+def api_patient_current_estimulacion():
+    patient_id = session.get('patient_id')
+    if not patient_id:
+        return jsonify({'error': 'No autenticado'}), 401
+        
+    db = get_db()
+    cursor = db.cursor()
+    ensure_estimulacion_tables(db)
+
+    cursor.execute("""
+        SELECT p.*, c.titulo as carpeta_titulo, c.descripcion as carpeta_descripcion, c.color as carpeta_color, c.icono as carpeta_icono
+        FROM paciente_estimulacion_cognitiva p
+        JOIN cat_carpetas_cognitivas c ON p.carpeta_id = c.id
+        WHERE p.paciente_id = ? AND p.activa = 1
+        ORDER BY p.id DESC LIMIT 1
+    """, (patient_id,))
+    asig = cursor.fetchone()
+    if not asig:
+        return jsonify({'activa': False, 'mensaje': 'No tienes un programa de estimulación cognitiva activo en este momento.'})
+
+    # Obtener última entrega registrada
+    cursor.execute("""
+        SELECT r.*, e.titulo as ejercicio_titulo, e.instrucciones, e.tipo_archivo, e.archivo_url, e.enlace_externo
+        FROM registro_estimulacion_cognitiva r
+        JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
+        WHERE r.asignacion_id = ?
+        ORDER BY r.id DESC LIMIT 1
+    """, (asig['id'],))
+    ultima_entrega = cursor.fetchone()
+
+    # Historial completo del paciente
+    cursor.execute("""
+        SELECT r.*, e.titulo as ejercicio_titulo
+        FROM registro_estimulacion_cognitiva r
+        JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
+        WHERE r.paciente_id = ?
+        ORDER BY r.id DESC
+    """, (patient_id,))
+    historial = [dict(r) for r in cursor.fetchall()]
+
+    return jsonify({
+        'activa': True,
+        'asignacion': dict(asig),
+        'ultima_entrega': dict(ultima_entrega) if ultima_entrega else None,
+        'historial': historial
+    })
+
+@estimulacion_bp.route('/api/patient/estimulacion/completar', methods=['POST'])
+def api_patient_estimulacion_completar():
+    patient_id = session.get('patient_id')
+    if not patient_id:
+        return jsonify({'error': 'No autenticado'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+    ensure_estimulacion_tables(db)
+
+    if request.is_json:
+        data = request.get_json() or {}
+        registro_id = data.get('registro_id')
+        dificultad = data.get('dificultad', 'normal')
+        tiempo_minutos = data.get('tiempo_minutos')
+        observaciones = (data.get('observaciones') or '').strip()
+    else:
+        registro_id = request.form.get('registro_id')
+        dificultad = request.form.get('dificultad', 'normal')
+        tiempo = request.form.get('tiempo_minutos', '')
+        tiempo_minutos = int(tiempo) if tiempo and tiempo.isdigit() else None
+        observaciones = (request.form.get('observaciones') or '').strip()
+
+    if not registro_id:
+        return jsonify({'error': 'ID de registro no especificado.'}), 400
+
+    cursor.execute("""
+        SELECT r.id, r.paciente_id, r.ejercicio_id, e.titulo as ejercicio_titulo, p.nombres, p.apellidos, p.psicologo_id
+        FROM registro_estimulacion_cognitiva r
+        JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
+        JOIN pacientes p ON r.paciente_id = p.id
+        WHERE r.id = ? AND r.paciente_id = ?
+    """, (registro_id, patient_id))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Registro no encontrado o no pertenece a este consultante.'}), 404
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        UPDATE registro_estimulacion_cognitiva
+        SET completado = 1,
+            descargado = 1,
+            dificultad = ?,
+            tiempo_minutos = ?,
+            observaciones = ?,
+            fecha_completado = ?
+        WHERE id = ?
+    """, (dificultad, tiempo_minutos, observaciones, now_str, row['id']))
+    db.commit()
+
+    psic_id = row['psicologo_id'] or 1
+    pac_nombre = f"{row['nombres']} {row['apellidos']}"
+    notif_msg = f"El consultante {pac_nombre} ha completado el ejercicio: '{row['ejercicio_titulo']}' (Dificultad: {dificultad})."
+    cursor.execute("""
+        INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+        VALUES (?, 'herramienta_terapeutica', '🧠 Ejercicio Cognitivo Realizado', ?, ?, 0, '/#pacientes')
+    """, (psic_id, notif_msg, now_str))
+    db.commit()
+
+    return jsonify({'success': 'Ejercicio marcado como realizado con éxito.'})
 
 # =======================================================
 # PORTAL DEL CONSULTANTE (ACCESO POR TOKEN)

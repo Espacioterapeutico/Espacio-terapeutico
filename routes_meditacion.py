@@ -57,11 +57,20 @@ def ensure_meditaciones_tables(db=None):
             psicologo_id INTEGER,
             meditacion_id INTEGER NOT NULL,
             hora_recordatorio TEXT,
+            dias_semana_json TEXT DEFAULT '[1,2,3,4,5,6,7]',
             activa INTEGER DEFAULT 1,
             token_acceso TEXT UNIQUE,
             fecha_asignacion DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    try:
+        cursor.execute("PRAGMA table_info(paciente_meditaciones)")
+        cols = [r[1] for r in cursor.fetchall()]
+        if 'dias_semana_json' not in cols:
+            cursor.execute("ALTER TABLE paciente_meditaciones ADD COLUMN dias_semana_json TEXT DEFAULT '[1,2,3,4,5,6,7]'")
+            db.commit()
+    except Exception:
+        pass
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS registro_meditaciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -192,7 +201,7 @@ def get_paciente_meditaciones(paciente_id):
     cursor = db.cursor()
     
     cursor.execute("""
-        SELECT pm.id as asignacion_id, pm.hora_recordatorio, pm.activa, pm.token_acceso,
+        SELECT pm.id as asignacion_id, pm.hora_recordatorio, pm.activa, pm.token_acceso, pm.dias_semana_json,
                cm.id as meditacion_id, cm.titulo, cm.tipo_contenido, cm.url_contenido
         FROM paciente_meditaciones pm
         JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
@@ -248,6 +257,7 @@ def assign_meditacion(paciente_id):
     data = request.json
     meditacion_id = data.get('meditacion_id')
     hora = data.get('hora_recordatorio')
+    dias = data.get('dias_semana', [1, 2, 3, 4, 5, 6, 7])
     
     if not meditacion_id or not hora:
         return jsonify({'error': 'Debe seleccionar una meditación y una hora'}), 400
@@ -256,11 +266,12 @@ def assign_meditacion(paciente_id):
         hora = ','.join(hora)
         
     token = str(uuid.uuid4())
+    dias_json = json.dumps(dias) if isinstance(dias, list) else str(dias)
     
     cursor.execute("""
-        INSERT INTO paciente_meditaciones (paciente_id, psicologo_id, meditacion_id, hora_recordatorio, token_acceso)
-        VALUES (?, ?, ?, ?, ?)
-    """, (paciente_id, psic_id, meditacion_id, hora, token))
+        INSERT INTO paciente_meditaciones (paciente_id, psicologo_id, meditacion_id, hora_recordatorio, dias_semana_json, token_acceso)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (paciente_id, psic_id, meditacion_id, hora, dias_json, token))
     cursor.execute("""
         INSERT INTO modulos_terapeuticos_paciente (paciente_id, modulo_clave, activo)
         VALUES (?, 'meditacion', 1)
@@ -280,6 +291,7 @@ def edit_meditacion_assignment(asignacion_id):
     data = request.json
     meditacion_id = data.get('meditacion_id')
     hora = data.get('hora_recordatorio')
+    dias = data.get('dias_semana')
     
     if not meditacion_id or not hora:
         return jsonify({'error': 'Debe seleccionar una meditación y una hora'}), 400
@@ -287,11 +299,13 @@ def edit_meditacion_assignment(asignacion_id):
     if isinstance(hora, list):
         hora = ','.join(hora)
         
+    dias_json = json.dumps(dias) if isinstance(dias, list) else (str(dias) if dias else '[1,2,3,4,5,6,7]')
+
     cursor.execute("""
         UPDATE paciente_meditaciones 
-        SET meditacion_id = ?, hora_recordatorio = ?
+        SET meditacion_id = ?, hora_recordatorio = ?, dias_semana_json = ?
         WHERE id = ? AND psicologo_id = ?
-    """, (meditacion_id, hora, asignacion_id, psic_id))
+    """, (meditacion_id, hora, dias_json, asignacion_id, psic_id))
     db.commit()
     
     if cursor.rowcount == 0:

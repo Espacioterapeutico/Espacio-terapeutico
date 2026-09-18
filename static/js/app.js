@@ -3178,6 +3178,8 @@ function switchPatientView(viewName, fromPopState = false) {
             setDefaultToolDates();
             initChipContainers();
             loadPatientConsumoPantallaHistory();
+        } else if (viewName === 'patient-estimulacion') {
+            loadPatientEstimulacionData();
         }
     }
 }
@@ -10088,6 +10090,7 @@ function openModal(modalId) {
     }
 }
 window.openModal = openModal;
+window.showModal = openModal;
 
 function closeModal(modalId, triggeredByBack = false) {
     const modal = document.getElementById(modalId);
@@ -18896,7 +18899,7 @@ function renderTherapistToolsCatalog() {
                 ` : ''}
                 ${m.clave === 'estimulacion_cognitiva' ? `
                     <button type="button" class="btn btn-sm btn-secondary" onclick="openModal('modal-estimulacion-library'); loadEstimulacionLibrary();" style="flex: 1; min-width: 105px; font-size: 0.8rem; font-weight: 700; border-radius: 8px; padding: 0.45rem 0.6rem; border: 1.5px solid #d8b4fe; background: #fdf4ff; color: #702e5e; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; cursor: pointer;">
-                        📚 Carpetas / Fichas
+                        📚 Biblioteca
                     </button>
                 ` : ''}
                 <button type="button" class="btn btn-sm btn-primary" onclick="openToolPreviewModal('${m.clave}', '${safeNombre}')" style="flex: 1; min-width: 135px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; padding: 0.45rem 0.75rem; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.2); display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; cursor: pointer;">
@@ -19685,10 +19688,19 @@ async function selectPatientForTherapistTools(id, name, code) {
                                 ${medAsigs.map(a => {
                                     const horasList = (a.hora_recordatorio || '').split(',').map(h => h.trim()).filter(Boolean);
                                     const horasBadges = horasList.length > 0 
-                                        ? horasList.map(h => `<span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px;">⏰ ${h}</span>`).join(' ')
+                                        ? horasList.map(h => `<span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 4px;">⏰ ${h}</span>`).join(' ')
                                         : '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sin horarios</span>';
                                     const tipoIcon = a.tipo_contenido === 'youtube' ? '🎥' : '🎵';
                                     
+                                    const daysMap = {1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom'};
+                                    let diasList = [1, 2, 3, 4, 5, 6, 7];
+                                    try {
+                                        diasList = typeof a.dias_semana_json === 'string' ? JSON.parse(a.dias_semana_json) : (a.dias_semana_json || [1, 2, 3, 4, 5, 6, 7]);
+                                    } catch (_) {}
+                                    const diasBadges = (diasList && diasList.length === 7)
+                                        ? '<span class="badge" style="background: #fdf4ff; color: #702e5e; border: 1px solid #f5d0fe; font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 4px;">Todos los días</span>'
+                                        : (diasList || []).map(d => `<span class="badge" style="background: #fdf4ff; color: #702e5e; border: 1px solid #f5d0fe; font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 4px;">${daysMap[d] || d}</span>`).join(' ');
+
                                     return `
                                         <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: white; border-radius: 6px; border: 1px solid #e9d5ff; flex-wrap: wrap; gap: 0.5rem;">
                                             <div style="flex: 1; min-width: 180px;">
@@ -19696,14 +19708,16 @@ async function selectPatientForTherapistTools(id, name, code) {
                                                     <span>${tipoIcon}</span>
                                                     <strong style="font-size: 0.85rem; color: #1e293b;">${a.titulo || 'Meditación'}</strong>
                                                 </div>
-                                                <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.2rem; flex-wrap: wrap;">
-                                                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Recordatorios:</span>
+                                                <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                                                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Días:</span>
+                                                    ${diasBadges}
+                                                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 600; margin-left: 0.25rem;">Horas:</span>
                                                     ${horasBadges}
                                                 </div>
                                             </div>
                                             <div style="display: flex; gap: 0.35rem; align-items: center;">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editMeditacionAssignment(${a.asignacion_id}, ${a.meditacion_id}, '${(a.hora_recordatorio || '').replace(/'/g, "\\'")}', '${safePName}')" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; border-radius: 4px;">
-                                                    ✏️ Horarios
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editMeditacionAssignment(${a.asignacion_id}, ${a.meditacion_id}, '${(a.hora_recordatorio || '').replace(/'/g, "\\'")}', '${safePName}', '${(a.dias_semana_json || '').replace(/'/g, "\\'")}')" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; border-radius: 4px; cursor: pointer;">
+                                                    ✏️ Días &amp; Horas
                                                 </button>
                                                 <button type="button" class="btn btn-sm" onclick="unassignMeditacion(${a.asignacion_id})" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer;">
                                                     🗑️
@@ -28065,6 +28079,14 @@ async function openAssignMeditacionModalForPatient(patientId, patientName) {
     
     const form = document.getElementById('form-meditacion-assign');
     if (form) form.reset();
+
+    // Resetear selector de días (todos activos por defecto)
+    document.querySelectorAll('#med-days-selector .med-day-btn').forEach(btn => {
+        btn.classList.add('active');
+        btn.style.background = '#fdf4ff';
+        btn.style.borderColor = '#702e5e';
+        btn.style.color = '#702e5e';
+    });
     
     const container = document.getElementById('med-times-container');
     if (container) {
@@ -28074,6 +28096,20 @@ async function openAssignMeditacionModalForPatient(patientId, patientName) {
     
     openModal('meditacion-assign-modal');
 }
+
+function toggleMedDay(btn) {
+    btn.classList.toggle('active');
+    if (btn.classList.contains('active')) {
+        btn.style.background = '#fdf4ff';
+        btn.style.borderColor = '#702e5e';
+        btn.style.color = '#702e5e';
+    } else {
+        btn.style.background = 'white';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.color = '#475569';
+    }
+}
+window.toggleMedDay = toggleMedDay;
 
 function addMedTimeInput(val = '', showDelete = true) {
     const container = document.getElementById('med-times-container');
@@ -28089,11 +28125,11 @@ function addMedTimeInput(val = '', showDelete = true) {
     container.appendChild(div);
 }
 
-async function editMeditacionAssignment(asigId, medId, horasStr, patientName) {
+async function editMeditacionAssignment(asigId, medId, horasStr, patientName, diasJson) {
     await openAssignMeditacionModalForPatient(currentMedPatientId, patientName);
     
     const titleEl = document.getElementById('med-assign-modal-title');
-    if (titleEl) titleEl.textContent = 'Modificar Horarios & Meditación';
+    if (titleEl) titleEl.textContent = 'Modificar Horarios, Días & Meditación';
     
     const submitBtn = document.getElementById('med-assign-submit-btn');
     if (submitBtn) submitBtn.textContent = 'Guardar Cambios';
@@ -28103,6 +28139,26 @@ async function editMeditacionAssignment(asigId, medId, horasStr, patientName) {
     
     const select = document.getElementById('med-assign-id');
     if (select) select.value = medId;
+
+    // Configurar días guardados
+    let activeDays = [1, 2, 3, 4, 5, 6, 7];
+    try {
+        if (diasJson) activeDays = typeof diasJson === 'string' ? JSON.parse(diasJson) : diasJson;
+    } catch (_) {}
+    document.querySelectorAll('#med-days-selector .med-day-btn').forEach(btn => {
+        const dayNum = parseInt(btn.getAttribute('data-day'), 10);
+        if (activeDays.includes(dayNum)) {
+            btn.classList.add('active');
+            btn.style.background = '#fdf4ff';
+            btn.style.borderColor = '#702e5e';
+            btn.style.color = '#702e5e';
+        } else {
+            btn.classList.remove('active');
+            btn.style.background = 'white';
+            btn.style.borderColor = '#cbd5e1';
+            btn.style.color = '#475569';
+        }
+    });
     
     const container = document.getElementById('med-times-container');
     if (container) {
@@ -28134,6 +28190,14 @@ async function submitMeditacionAssign(e) {
         btn.disabled = true;
         btn.innerHTML = 'Guardando...';
     }
+
+    const activeDayBtns = document.querySelectorAll('#med-days-selector .med-day-btn.active');
+    const selectedDays = Array.from(activeDayBtns).map(b => parseInt(b.getAttribute('data-day'), 10));
+    if (selectedDays.length === 0) {
+        alert("Debes seleccionar al menos un día de envío en la semana.");
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Guardar Asignación & Horarios'; }
+        return;
+    }
     
     const timeInputs = document.querySelectorAll('.med-assign-hora');
     const horas = Array.from(timeInputs).map(inp => inp.value).filter(Boolean);
@@ -28158,13 +28222,13 @@ async function submitMeditacionAssign(e) {
         const res = await fetch(url, {
             method: method,
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ meditacion_id: medId, hora_recordatorio: horas })
+            body: JSON.stringify({ meditacion_id: medId, hora_recordatorio: horas, dias_semana: selectedDays })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al guardar asignación');
         
         closeModal('meditacion-assign-modal');
-        showToast(asigId ? "Horarios actualizados exitosamente" : "Meditación asignada exitosamente con sus horarios");
+        showToast(asigId ? "Horarios y días actualizados exitosamente" : "Meditación asignada exitosamente con sus días y horarios");
         
         const name = document.getElementById('tt-selected-patient-name')?.innerText;
         const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
@@ -28681,4 +28745,279 @@ window.openAssignEstimulacionModal = openAssignEstimulacionModal;
 window.toggleCogDay = toggleCogDay;
 window.submitCogAssign = submitCogAssign;
 window.openEstimulacionHistoryModal = openEstimulacionHistoryModal;
+
+// =======================================================
+// PORTAL DEL CONSULTANTE: ESTIMULACIÓN COGNITIVA
+// =======================================================
+
+async function loadPatientEstimulacionData() {
+    const cardBody = document.getElementById('pat-cog-card-body');
+    const statusBadge = document.getElementById('pat-cog-status-badge');
+    const historyTbody = document.getElementById('pat-cog-history-tbody');
+    
+    if (!cardBody) return;
+    
+    cardBody.innerHTML = '<p class="text-muted text-center py-4">Cargando datos de estimulación cognitiva...</p>';
+    if (statusBadge) {
+        statusBadge.textContent = 'Cargando...';
+        statusBadge.style.background = 'rgba(255,255,255,0.25)';
+    }
+
+    try {
+        const res = await fetch('/api/patient/estimulacion');
+        if (!res.ok) throw new Error('No se pudo obtener la información.');
+        const data = await res.json();
+
+        if (!data.activa) {
+            if (statusBadge) {
+                statusBadge.textContent = 'Sin Programa Activo';
+                statusBadge.style.background = 'rgba(255,255,255,0.2)';
+            }
+            cardBody.innerHTML = `
+                <div style="text-align: center; padding: 2.5rem 1rem;">
+                    <div style="font-size: 3rem; margin-bottom: 0.75rem;">🧩</div>
+                    <h4 style="color: #1e293b; margin-bottom: 0.5rem;">No tienes un programa de ejercicios activo</h4>
+                    <p style="color: #64748b; max-width: 480px; margin: 0 auto; font-size: 0.9rem;">
+                        Tu terapeuta te asignará una carpeta de fichas de estimulación cognitiva personalizada según tus objetivos. Cuando esté activa, verás aquí tus fichas diarias para descargar y realizar.
+                    </p>
+                </div>
+            `;
+            if (historyTbody) {
+                historyTbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No hay fichas anteriores registradas.</td></tr>';
+            }
+            return;
+        }
+
+        const asig = data.asignacion;
+        const entrega = data.ultima_entrega;
+        const historial = data.historial || [];
+
+        // Días de la semana formateados
+        const dayNames = {1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom'};
+        let diasStr = 'Días asignados';
+        try {
+            const dList = typeof asig.dias_semana_json === 'string' ? JSON.parse(asig.dias_semana_json) : (asig.dias_semana_json || []);
+            if (dList.length === 7) diasStr = 'Todos los días';
+            else if (dList.length > 0) diasStr = dList.map(d => dayNames[d] || d).join(', ');
+        } catch (_) {}
+
+        if (statusBadge) {
+            statusBadge.textContent = 'Programa Activo';
+            statusBadge.style.background = '#10b981';
+        }
+
+        // Renderizar tarjeta del ejercicio actual / próxima entrega
+        if (!entrega) {
+            cardBody.innerHTML = `
+                <div style="padding: 1.5rem 1rem; text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">${asig.carpeta_icono || '🧠'}</div>
+                    <h4 style="color: #1e293b; margin-bottom: 0.35rem;">${asig.carpeta_titulo || 'Programa de Estimulación'}</h4>
+                    <p style="color: #64748b; font-size: 0.88rem; max-width: 500px; margin: 0 auto 1.25rem;">
+                        ${asig.carpeta_descripcion || 'Tu terapeuta ha activado este programa para ti.'}
+                    </p>
+                    <div style="display: inline-flex; align-items: center; gap: 1rem; background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 10px; padding: 0.75rem 1.25rem; font-size: 0.85rem; color: #702e5e;">
+                        <span>📅 <strong>${diasStr}</strong></span>
+                        <span>⏰ <strong>${asig.hora_recordatorio || 'Horario programado'}</strong></span>
+                    </div>
+                    <p style="color: #94a3b8; font-size: 0.82rem; margin-top: 1rem;">
+                        Recibirás un recordatorio por WhatsApp con tu próxima ficha en el horario programado.
+                    </p>
+                </div>
+            `;
+        } else {
+            const isCompletado = entrega.completado === 1;
+            const fechaStr = entrega.fecha_envio || '';
+            const downloadUrl = entrega.archivo_url || '#';
+            const hasFile = !!entrega.archivo_url;
+
+            cardBody.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                            <span style="font-size: 1.4rem;">${asig.carpeta_icono || '🧩'}</span>
+                            <h3 style="margin: 0; color: #1e293b; font-size: 1.25rem;">${entrega.ejercicio_titulo || 'Ficha de Ejercicio'}</h3>
+                        </div>
+                        <p style="margin: 0; color: #64748b; font-size: 0.88rem;">
+                            Carpeta: <strong>${asig.carpeta_titulo || 'General'}</strong> &bull; Enviado el ${fechaStr}
+                        </p>
+                    </div>
+                    <div>
+                        ${isCompletado 
+                            ? '<span class="badge" style="background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; font-size: 0.85rem; font-weight: 700; padding: 0.4rem 0.8rem; border-radius: 20px;">✓ Ficha Realizada</span>' 
+                            : '<span class="badge" style="background: #fef3c7; color: #b45309; border: 1.5px solid #fcd34d; font-size: 0.85rem; font-weight: 700; padding: 0.4rem 0.8rem; border-radius: 20px;">⏳ Pendiente por Realizar</span>'}
+                    </div>
+                </div>
+
+                ${entrega.instrucciones ? `
+                    <div style="background: #f8fafc; border-left: 4px solid #702e5e; border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 1.25rem;">
+                        <strong style="color: #334155; font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Instrucciones de tu terapeuta:</strong>
+                        <p style="margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.45; white-space: pre-wrap;">${entrega.instrucciones}</p>
+                    </div>
+                ` : ''}
+
+                <!-- BOTÓN DE DESCARGA DEL ARCHIVO DE LA FICHA -->
+                <div style="background: #faf5ff; border: 1.5px dashed #d8b4fe; border-radius: 10px; padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="background: #f3e8ff; width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                            📄
+                        </div>
+                        <div>
+                            <strong style="display: block; color: #1e293b; font-size: 0.95rem;">Material de la Ficha</strong>
+                            <small style="color: #64748b; font-size: 0.8rem;">Descarga la hoja de trabajo para resolver el ejercicio</small>
+                        </div>
+                    </div>
+                    <div>
+                        ${hasFile ? `
+                            <a href="${downloadUrl}" target="_blank" download class="btn" style="background: #702e5e; color: white; font-weight: 700; padding: 0.6rem 1.25rem; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 4px rgba(112,46,94,0.25);">
+                                📥 Descargar Ficha de Trabajo
+                            </a>
+                        ` : (entrega.enlace_externo ? `
+                            <a href="${entrega.enlace_externo}" target="_blank" class="btn" style="background: #702e5e; color: white; font-weight: 700; padding: 0.6rem 1.25rem; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                🌐 Abrir Ejercicio Interactivo
+                            </a>
+                        ` : '<span style="color: #94a3b8; font-size: 0.85rem;">(Sin archivo adjunto)</span>')}
+                    </div>
+                </div>
+
+                <!-- FORMULARIO PARA COMPLETAR (SI ESTÁ PENDIENTE) O CONFIRMACIÓN -->
+                ${isCompletado ? `
+                    <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.5rem;">🎉</span>
+                        <div>
+                            <strong style="color: #15803d; font-size: 0.95rem; display: block;">¡Ficha completada y registrada!</strong>
+                            <span style="color: #166534; font-size: 0.85rem;">
+                                Marcaste esta ficha como realizada el ${entrega.fecha_completado || fechaStr}.
+                                ${entrega.dificultad ? `&bull; Dificultad: <strong>${entrega.dificultad}</strong>` : ''}
+                                ${entrega.tiempo_minutos ? `&bull; Tiempo: <strong>${entrega.tiempo_minutos} min</strong>` : ''}
+                            </span>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 1.25rem;">
+                        <h4 style="color: #1e293b; font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>✍️</span> ¿Ya realizaste el ejercicio? Márcalo aquí:
+                        </h4>
+                        <form id="form-pat-cog-complete" onsubmit="event.preventDefault(); submitPatientCogComplete(${entrega.id});">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 0.35rem;">
+                                        ¿Qué tal te pareció la dificultad? *
+                                    </label>
+                                    <select id="pat-cog-dificultad" class="form-control" style="width: 100%; border-radius: 8px; border: 1.5px solid #cbd5e1; padding: 0.5rem 0.75rem; font-size: 0.88rem;" required>
+                                        <option value="facil">🟢 Fácil y fluido</option>
+                                        <option value="normal" selected>🟡 Normal / Adecuado</option>
+                                        <option value="dificil">🟠 Desafiante / Difícil</option>
+                                        <option value="muy_dificil">🔴 Muy complejo</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 0.35rem;">
+                                        Tiempo dedicado (minutos)
+                                    </label>
+                                    <input type="number" id="pat-cog-tiempo" class="form-control" placeholder="Ej. 15" min="1" max="180" style="width: 100%; border-radius: 8px; border: 1.5px solid #cbd5e1; padding: 0.5rem 0.75rem; font-size: 0.88rem;">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 1.25rem;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 0.35rem;">
+                                    Observaciones o reflexiones (Opcional)
+                                </label>
+                                <textarea id="pat-cog-obs" class="form-control" rows="2" placeholder="¿Cómo te sentiste? ¿Hubo alguna parte que te costó más?" style="width: 100%; border-radius: 8px; border: 1.5px solid #cbd5e1; padding: 0.5rem 0.75rem; font-size: 0.88rem;"></textarea>
+                            </div>
+                            <button type="submit" id="pat-cog-btn-submit" class="btn" style="background: #16a34a; color: white; font-weight: 700; padding: 0.65rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 4px rgba(22,163,74,0.25);">
+                                ✓ Marcar como Realizado
+                            </button>
+                        </form>
+                    </div>
+                `}
+            `;
+        }
+
+        // Renderizar Historial
+        if (historyTbody) {
+            if (historial.length === 0) {
+                historyTbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Aún no tienes fichas registradas.</td></tr>';
+            } else {
+                const diffMap = {
+                    'facil': '<span style="color: #16a34a; font-weight: 700;">🟢 Fácil</span>',
+                    'normal': '<span style="color: #ca8a04; font-weight: 700;">🟡 Normal</span>',
+                    'dificil': '<span style="color: #ea580c; font-weight: 700;">🟠 Difícil</span>',
+                    'muy_dificil': '<span style="color: #dc2626; font-weight: 700;">🔴 Muy Difícil</span>'
+                };
+
+                historyTbody.innerHTML = historial.map(h => {
+                    const isDone = h.completado === 1;
+                    const estadoBadge = isDone
+                        ? '<span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;">✓ Realizado</span>'
+                        : '<span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;">⏳ Pendiente</span>';
+                    const diffBadge = h.dificultad ? (diffMap[h.dificultad] || h.dificultad) : '<span style="color: #94a3b8;">-</span>';
+                    const tiempoStr = h.tiempo_minutos ? `${h.tiempo_minutos} min` : '<span style="color: #94a3b8;">-</span>';
+                    const dlBtn = h.archivo_url 
+                        ? `<a href="${h.archivo_url}" target="_blank" download style="color: #702e5e; font-weight: 700; text-decoration: underline; font-size: 0.8rem;">📥 Descargar</a>`
+                        : (h.enlace_externo ? `<a href="${h.enlace_externo}" target="_blank" style="color: #702e5e; font-weight: 700; text-decoration: underline; font-size: 0.8rem;">🌐 Abrir</a>` : '-');
+
+                    return `
+                        <tr>
+                            <td style="font-size: 0.82rem; color: #475569; white-space: nowrap;">${h.fecha_envio || 'N/A'}</td>
+                            <td><strong style="color: #1e293b; font-size: 0.88rem;">${h.ejercicio_titulo || 'Ficha'}</strong></td>
+                            <td>${estadoBadge}</td>
+                            <td>${diffBadge}</td>
+                            <td style="font-size: 0.82rem; color: #475569;">${tiempoStr}</td>
+                            <td style="text-align: right;">${dlBtn}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+    } catch (err) {
+        cardBody.innerHTML = `<p class="text-danger text-center py-4">Error cargando estimulación: ${err.message}</p>`;
+    }
+}
+
+async function submitPatientCogComplete(registroId) {
+    const btn = document.getElementById('pat-cog-btn-submit');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Guardando...';
+    }
+
+    const dificultad = document.getElementById('pat-cog-dificultad')?.value || 'normal';
+    const tiempo = document.getElementById('pat-cog-tiempo')?.value;
+    const tiempo_minutos = tiempo ? parseInt(tiempo, 10) : null;
+    const observaciones = document.getElementById('pat-cog-obs')?.value || '';
+
+    try {
+        const res = await fetch('/api/patient/estimulacion/completar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                registro_id: registroId,
+                dificultad: dificultad,
+                tiempo_minutos: tiempo_minutos,
+                observaciones: observaciones
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al registrar.');
+
+        if (typeof showToast === 'function') {
+            showToast('¡Ficha completada exitosamente! Gran trabajo.');
+        } else {
+            alert('¡Ficha completada exitosamente! Gran trabajo.');
+        }
+
+        loadPatientEstimulacionData();
+
+    } catch (err) {
+        alert(err.message);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '✓ Marcar como Realizado';
+        }
+    }
+}
+
+window.loadPatientEstimulacionData = loadPatientEstimulacionData;
+window.submitPatientCogComplete = submitPatientCogComplete;
+
 

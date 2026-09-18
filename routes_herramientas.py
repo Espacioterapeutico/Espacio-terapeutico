@@ -133,7 +133,7 @@ def get_patient_modules(patient_id):
 
         if clave == 'meditacion':
             cursor.execute("""
-                SELECT pm.id as asignacion_id, pm.meditacion_id, pm.hora_recordatorio, pm.token_acceso, cm.titulo, cm.tipo_contenido
+                SELECT pm.id as asignacion_id, pm.meditacion_id, pm.hora_recordatorio, pm.dias_semana_json, pm.token_acceso, cm.titulo, cm.tipo_contenido
                 FROM paciente_meditaciones pm
                 JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
                 WHERE pm.paciente_id = ?

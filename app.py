@@ -2201,6 +2201,7 @@ def auto_send_meditation_reminders(db):
     try:
         cursor.execute("""
             SELECT pm.id as asignacion_id, pm.paciente_id, pm.psicologo_id, pm.hora_recordatorio, pm.token_acceso,
+                   pm.dias_semana_json,
                    p.nombres, p.telefono, cm.titulo
             FROM paciente_meditaciones pm
             JOIN pacientes p ON pm.paciente_id = p.id
@@ -2209,8 +2210,18 @@ def auto_send_meditation_reminders(db):
         """, (f"%{now_time_str}%",))
         
         assignments = cursor.fetchall()
+        current_weekday = now_dt.isoweekday() # 1=Lunes .. 7=Domingo
         
         for asig in assignments:
+            # Check weekday
+            if 'dias_semana_json' in asig.keys() and asig['dias_semana_json']:
+                try:
+                    dias = json.loads(asig['dias_semana_json'])
+                    if isinstance(dias, list) and current_weekday not in dias:
+                        continue
+                except Exception:
+                    pass
+
             # Check if notification was already sent today for this assignment
             cursor.execute("""
                 SELECT id FROM notificaciones 
