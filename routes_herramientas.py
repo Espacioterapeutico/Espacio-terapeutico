@@ -99,7 +99,8 @@ def get_patient_modules(patient_id):
         {'clave': 'activacion', 'nombre': 'Activación Conductual (Tareas Diarias)'},
         {'clave': 'ingesta', 'nombre': 'Ingesta de Alimentos y Apetito'},
         {'clave': 'cognitivo', 'nombre': 'Registro Cognitivo (TCC)'},
-        {'clave': 'meditacion', 'nombre': 'Meditaciones Guiadas & Diarias'}
+        {'clave': 'meditacion', 'nombre': 'Meditaciones Guiadas & Diarias'},
+        {'clave': 'estimulacion_cognitiva', 'nombre': 'Estimulación Cognitiva (Bibliotecas & Ejercicios)'}
     ]
 
     modules = []
@@ -108,6 +109,27 @@ def get_patient_modules(patient_id):
         activo = active_map.get(clave, 0)
         token_str = None
         link_str = None
+
+        if clave == 'estimulacion_cognitiva':
+            cursor.execute("""
+                SELECT pec.*, c.titulo as carpeta_titulo, c.color as carpeta_color, c.icono as carpeta_icono,
+                       (SELECT COUNT(*) FROM cat_ejercicios_cognitivos WHERE carpeta_id = pec.carpeta_id) as total_ejercicios,
+                       (SELECT COUNT(*) FROM registro_estimulacion_cognitiva WHERE asignacion_id = pec.id AND completado = 1) as completados
+                FROM paciente_estimulacion_cognitiva pec
+                JOIN cat_carpetas_cognitivas c ON pec.carpeta_id = c.id
+                WHERE pec.paciente_id = ?
+                ORDER BY pec.id DESC
+            """, (patient_id,))
+            cog_asigs = [dict(r) for r in cursor.fetchall()]
+            if len(cog_asigs) > 0 and cog_asigs[0]['activa'] == 1:
+                activo = 1
+            m_dict = dict(m)
+            m_dict['activo'] = activo
+            m_dict['token'] = cog_asigs[0].get('token_acceso') if cog_asigs else None
+            m_dict['link'] = f"{host_url}/portal/estimulacion/{cog_asigs[0].get('token_acceso')}" if (cog_asigs and cog_asigs[0].get('token_acceso')) else None
+            m_dict['estimulaciones_asignadas'] = cog_asigs
+            modules.append(m_dict)
+            continue
 
         if clave == 'meditacion':
             cursor.execute("""
@@ -180,6 +202,8 @@ def toggle_patient_module(patient_id):
         VALUES (?, ?, ?)
         ON CONFLICT(paciente_id, modulo_clave) DO UPDATE SET activo = excluded.activo
     """, (patient_id, modulo_clave, activo))
+    if modulo_clave == 'estimulacion_cognitiva':
+        cursor.execute("UPDATE paciente_estimulacion_cognitiva SET activa = ? WHERE paciente_id = ?", (activo, patient_id))
     db.commit()
     
     try:
@@ -196,7 +220,8 @@ def toggle_patient_module(patient_id):
                 'ingesta': 'Ingesta y Apetito',
                 'cognitivo': 'Registro Cognitivo',
                 'pantalla': 'Tracker de Pantalla',
-                'meditacion': 'Meditaciones Guiadas & Diarias'
+                'meditacion': 'Meditaciones Guiadas & Diarias',
+                'estimulacion_cognitiva': 'Estimulación Cognitiva'
             }
             mod_nombre = mod_nombres.get(modulo_clave, modulo_clave.capitalize())
             notify_patient_firebase(
@@ -598,6 +623,12 @@ def get_therapist_modules_catalog():
             'nombre': 'Meditaciones Guiadas & Diarias',
             'descripcion': 'Asignación de audios y videos de meditación y mindfulness con recordatorios y métricas de racha y bienestar.',
             'icono': '🧘‍♀️'
+        },
+        {
+            'clave': 'estimulacion_cognitiva',
+            'nombre': 'Estimulación Cognitiva (Bibliotecas & Fichas)',
+            'descripcion': 'Bibliotecas de ejercicios organizados por carpetas con rotación y envío secuencial automatizado por WhatsApp en días programados.',
+            'icono': '🧩'
         }
     ]
     
@@ -612,6 +643,15 @@ def get_therapist_modules_catalog():
                     FROM paciente_meditaciones pm
                     JOIN pacientes p ON pm.paciente_id = p.id
                     WHERE p.psicologo_id = ?
+                    ORDER BY p.apellidos ASC, p.nombres ASC
+                """, (user_id,))
+                patients_rows = cursor.fetchall()
+            elif clave == 'estimulacion_cognitiva':
+                cursor.execute("""
+                    SELECT DISTINCT pec.paciente_id, p.nombres, p.apellidos, p.cedula
+                    FROM paciente_estimulacion_cognitiva pec
+                    JOIN pacientes p ON pec.paciente_id = p.id
+                    WHERE p.psicologo_id = ? AND pec.activa = 1
                     ORDER BY p.apellidos ASC, p.nombres ASC
                 """, (user_id,))
                 patients_rows = cursor.fetchall()

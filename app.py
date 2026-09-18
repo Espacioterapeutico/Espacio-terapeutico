@@ -162,6 +162,18 @@ try:
 except Exception as _e:
     print("Aviso al registrar Blueprint de Meditaciones:", _e)
 
+# Registrar Blueprint de Estimulación Cognitiva (Bibliotecas y Rotación de Ejercicios)
+try:
+    from routes_estimulacion import estimulacion_bp, ensure_estimulacion_tables, auto_send_cognitive_reminders
+    app.register_blueprint(estimulacion_bp)
+    with app.app_context():
+        try:
+            ensure_estimulacion_tables()
+        except Exception as _et:
+            print("Aviso al asegurar tablas de estimulación cognitiva:", _et)
+except Exception as _e:
+    print("Aviso al registrar Blueprint de Estimulación Cognitiva:", _e)
+
 import gzip
 
 @app.after_request
@@ -3042,6 +3054,7 @@ def before_request_cleanup():
         auto_send_confirmation_requests(db)
         auto_check_patient_birthdays(db)
         auto_send_meditation_reminders(db)
+        auto_send_cognitive_reminders(db)
         send_hourly_patient_tool_reminders(db)
         auto_check_subscription_expiration_reminders(db)
     except Exception as e_bg:
@@ -3082,6 +3095,7 @@ def cron_process_notifications():
         ('auto_send_confirmation_requests', auto_send_confirmation_requests),
         ('auto_check_patient_birthdays', auto_check_patient_birthdays),
         ('auto_send_meditation_reminders', auto_send_meditation_reminders),
+        ('auto_send_cognitive_reminders', auto_send_cognitive_reminders),
         ('send_hourly_patient_tool_reminders', send_hourly_patient_tool_reminders),
         ('auto_check_subscription_expiration_reminders', auto_check_subscription_expiration_reminders)
     ]

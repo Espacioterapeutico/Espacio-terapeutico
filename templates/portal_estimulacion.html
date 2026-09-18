@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Estimulación Cognitiva | Espacio Terapéutico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #702e5e;
+            --primary-light: #9e4b85;
+            --purple: #9333ea;
+            --purple-light: #f3e8ff;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-gray: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --success-light: #ecfdf5;
+        }
+        * { box-sizing: border-box; font-family: 'Nunito', sans-serif; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color); color: var(--text-dark);
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            padding-bottom: 2.5rem;
+        }
+        .header {
+            width: 100%; background: linear-gradient(135deg, #702e5e, #9333ea); color: white;
+            padding: 1.6rem 1.2rem; text-align: center;
+            box-shadow: 0 4px 15px rgba(112,46,94,0.18);
+            border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;
+        }
+        .header h1 { font-size: 1.35rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .header p { margin-top: 0.35rem; font-size: 0.92rem; opacity: 0.92; }
+
+        .container {
+            width: 100%; max-width: 520px; padding: 1.2rem; display: flex; flex-direction: column; gap: 1.25rem;
+        }
+
+        .card {
+            background: var(--card-bg); border-radius: 20px; padding: 1.4rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid var(--border);
+        }
+
+        .folder-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: #f3e8ff; color: #7e22ce; font-weight: 700; font-size: 0.8rem;
+            padding: 0.35rem 0.85rem; border-radius: 999px; margin-bottom: 0.85rem;
+        }
+
+        .exercise-title {
+            font-size: 1.28rem; font-weight: 800; color: #1e293b; margin-bottom: 0.6rem; line-height: 1.35;
+        }
+
+        .instructions-box {
+            background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px;
+            padding: 1rem; margin: 1rem 0; font-size: 0.92rem; color: #334155; line-height: 1.5;
+        }
+        .instructions-box strong { color: #0f172a; display: block; margin-bottom: 0.3rem; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            width: 100%; padding: 0.88rem 1.2rem; border-radius: 14px; font-size: 1rem;
+            font-weight: 800; text-decoration: none; border: none; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-download {
+            background: linear-gradient(135deg, #702e5e, #9333ea); color: white;
+            box-shadow: 0 4px 12px rgba(112,46,94,0.25);
+        }
+        .btn-download:hover { opacity: 0.94; transform: translateY(-1px); }
+
+        .btn-done {
+            background: #10b981; color: white; margin-top: 0.75rem;
+            box-shadow: 0 4px 12px rgba(16,185,129,0.25);
+        }
+        .btn-done:hover { opacity: 0.94; transform: translateY(-1px); }
+
+        .completed-card {
+            background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 16px;
+            padding: 1.25rem; text-align: center; color: #065f46;
+        }
+        .completed-card h3 { font-size: 1.15rem; font-weight: 800; margin-bottom: 0.35rem; }
+
+        /* Formulario de completado */
+        .feedback-section {
+            display: none; background: #faf5ff; border: 1.5px solid #e9d5ff;
+            border-radius: 16px; padding: 1.25rem; margin-top: 1rem;
+        }
+        .feedback-section.active { display: block; animation: fadeIn 0.3s ease; }
+
+        .diff-selector {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.75rem 0 1rem;
+        }
+        .diff-opt {
+            border: 2px solid #e2e8f0; border-radius: 12px; padding: 0.65rem 0.4rem;
+            background: white; text-align: center; cursor: pointer; transition: all 0.2s;
+            font-size: 0.86rem; font-weight: 700; color: #475569;
+        }
+        .diff-opt span { display: block; font-size: 1.4rem; margin-bottom: 0.2rem; }
+        .diff-opt.selected {
+            border-color: #9333ea; background: #f3e8ff; color: #7e22ce;
+        }
+
+        .form-group { margin-bottom: 0.85rem; text-align: left; }
+        .form-group label { display: block; font-size: 0.84rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem; }
+        .form-control {
+            width: 100%; padding: 0.65rem 0.8rem; border-radius: 10px; border: 1.5px solid #cbd5e1;
+            font-size: 0.9rem; outline: none; background: white;
+        }
+        .form-control:focus { border-color: #9333ea; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>🧠 Estimulación Cognitiva</h1>
+        <p>Espacio Terapéutico · Entrenamiento Mental</p>
+    </header>
+
+    <main class="container">
+        {% if error %}
+        <div class="card" style="text-align: center; padding: 2rem;">
+            <span style="font-size: 3rem;">⚠️</span>
+            <h2 style="margin: 0.8rem 0 0.5rem; color: #b91c1c;">Enlace no disponible</h2>
+            <p style="color: var(--text-gray); font-size: 0.95rem;">{{ error }}</p>
+        </div>
+        {% else %}
+
+        <div class="card">
+            <div class="folder-badge" style="background: {{ item.carpeta_color }}18; color: {{ item.carpeta_color or '#9333ea' }};">
+                <span>{{ item.carpeta_icono or '🧠' }}</span>
+                <span>{{ item.carpeta_titulo }}</span>
+            </div>
+
+            <h2 class="exercise-title">{{ item.ejercicio_titulo }}</h2>
+            <p style="font-size: 0.88rem; color: var(--text-gray);">
+                Consultante: <strong>{{ item.paciente_nombres }} {{ item.paciente_apellidos }}</strong>
+            </p>
+
+            {% if item.instrucciones %}
+            <div class="instructions-box">
+                <strong>📝 Instrucciones del Terapeuta:</strong>
+                {{ item.instrucciones }}
+            </div>
+            {% endif %}
+
+            <!-- BOTÓN DE DESCARGA -->
+            {% if item.archivo_url %}
+            <a href="/portal/estimulacion/{{ token }}/descargar" class="btn btn-download" onclick="onDownloadClicked()">
+                <span>⬇️</span>
+                <span>Descargar Ejercicio / Ficha</span>
+            </a>
+            {% elif item.enlace_externo %}
+            <a href="{{ item.enlace_externo }}" target="_blank" rel="noopener" class="btn btn-download" onclick="onDownloadClicked()">
+                <span>🔗</span>
+                <span>Abrir Ejercicio Interactivo</span>
+            </a>
+            {% endif %}
+
+            <!-- SECCIÓN DE COMPLETADO -->
+            {% if item.completado %}
+            <div class="completed-card" style="margin-top: 1.25rem;">
+                <span style="font-size: 2.2rem; display: block; margin-bottom: 0.3rem;">🎉</span>
+                <h3>¡Ejercicio Completado!</h3>
+                <p style="font-size: 0.88rem; opacity: 0.9;">
+                    Registrado con éxito el {{ item.fecha_completado or item.fecha_envio }}.<br>
+                    {% if item.dificultad %}Dificultad reportada: <strong>{{ item.dificultad|capitalize }}</strong>{% endif %}
+                </p>
+            </div>
+            {% else %}
+            <div id="action-buttons-wrap">
+                <button type="button" class="btn btn-done" onclick="toggleFeedbackForm()">
+                    <span>✓</span>
+                    <span>Marcar como Realizado</span>
+                </button>
+            </div>
+
+            <!-- FORMULARIO RÁPIDO DE FEEDBACK -->
+            <form id="form-completar" class="feedback-section" onsubmit="submitCompletar(event)">
+                <h4 style="color: #7e22ce; font-size: 0.98rem; font-weight: 800; margin-bottom: 0.6rem;">
+                    🎯 Cuéntanos cómo te fue:
+                </h4>
+
+                <div class="form-group">
+                    <label>¿Qué tan difícil te pareció?</label>
+                    <input type="hidden" id="input-dificultad" name="dificultad" value="normal">
+                    <div class="diff-selector">
+                        <div class="diff-opt" onclick="selectDiff('facil', this)">
+                            <span>😊</span> Fácil
+                        </div>
+                        <div class="diff-opt selected" onclick="selectDiff('normal', this)">
+                            <span>😐</span> Normal
+                        </div>
+                        <div class="diff-opt" onclick="selectDiff('dificil', this)">
+                            <span>😓</span> Difícil
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Tiempo aproximado empleado (minutos):</label>
+                    <input type="number" name="tiempo_minutos" class="form-control" placeholder="Ej: 15" min="1" max="180">
+                </div>
+
+                <div class="form-group">
+                    <label>Comentario u observación (opcional):</label>
+                    <input type="text" name="observaciones" class="form-control" placeholder="¿Alguna duda o sensación?">
+                </div>
+
+                <div class="form-group">
+                    <label>Foto de la tarea resuelta (opcional):</label>
+                    <input type="file" name="foto_respuesta" accept="image/*" class="form-control" capture="environment">
+                    <small style="font-size: 0.76rem; color: var(--text-gray); display: block; margin-top: 0.2rem;">
+                        Puedes tomar una foto directamente con la cámara.
+                    </small>
+                </div>
+
+                <button type="submit" id="btn-submit-completar" class="btn btn-done" style="margin-top: 0.5rem;">
+                    <span>✓</span>
+                    <span>Confirmar y Finalizar</span>
+                </button>
+            </form>
+            {% endif %}
+
+        </div>
+        {% endif %}
+    </main>
+
+    <script>
+        function onDownloadClicked() {
+            // Sugerir marcar como realizado
+            const btnDone = document.querySelector('.btn-done');
+            if (btnDone) {
+                btnDone.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.35)';
+            }
+        }
+
+        function toggleFeedbackForm() {
+            const form = document.getElementById('form-completar');
+            const wrap = document.getElementById('action-buttons-wrap');
+            if (form) {
+                form.classList.add('active');
+                if (wrap) wrap.style.display = 'none';
+                form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function selectDiff(val, elem) {
+            document.getElementById('input-dificultad').value = val;
+            document.querySelectorAll('.diff-opt').forEach(el => el.classList.remove('selected'));
+            elem.classList.add('selected');
+        }
+
+        async function submitCompletar(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-completar');
+            btn.disabled = true;
+            btn.innerHTML = 'Guardando...';
+
+            const form = document.getElementById('form-completar');
+            const formData = new FormData(form);
+
+            try {
+                const res = await fetch(window.location.pathname + '/completar', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Ocurrió un error al guardar.');
+                    btn.disabled = false;
+                    btn.innerHTML = '✓ Confirmar y Finalizar';
+                }
+            } catch (err) {
+                alert('Error de conexión. Inténtalo de nuevo.');
+                btn.disabled = false;
+                btn.innerHTML = '✓ Confirmar y Finalizar';
+            }
+        }
+    </script>
+</body>
+</html>

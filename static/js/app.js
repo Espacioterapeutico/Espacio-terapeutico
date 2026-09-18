@@ -18658,6 +18658,42 @@ const therapistPreviewTemplates = [
                 </div>
             </div>
         `
+    },
+    {
+        clave: 'estimulacion_cognitiva',
+        titulo: '🧩 Estimulación Cognitiva (Portal del Consultante)',
+        descripcion: 'Portal responsivo para descargar la ficha del día y registrar el ejercicio completado con evaluación de dificultad y tiempo.',
+        html: `
+            <div style="background: white; border: 1.5px solid #d8b4fe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #6b21a8; font-size: 1.05rem;">
+                        🧩 Estimulación Cognitiva (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #faf5ff; color: #7e22ce; font-weight: 700; border: 1px solid #d8b4fe; padding: 0.25rem 0.6rem;">
+                        Portal Consultante
+                    </span>
+                </div>
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff; box-sizing: border-box;">
+                    <div style="background: white; border: 1px solid #e9d5ff; border-radius: 8px; padding: 1rem;">
+                        <span class="badge" style="background: #f3e8ff; color: #7e22ce; font-weight: 700; font-size: 0.75rem;">📁 Memoria y Concentración</span>
+                        <h3 style="margin: 0.5rem 0 0.35rem 0; font-size: 1.1rem; color: #1e293b;">Ficha #1: Sopa de Números y Letras</h3>
+                        <p style="margin: 0 0 1rem 0; font-size: 0.82rem; color: #64748b;">Descarga el ejercicio adjunto, resuélvelo a mano o en tu dispositivo, y márcalo como realizado al culminar.</p>
+                        <button type="button" disabled class="btn btn-primary" style="background: linear-gradient(135deg, #702e5e, #9333ea); border: none; font-weight: 700; width: 100%; padding: 0.55rem; font-size: 0.88rem;">
+                            📥 Descargar Ejercicio (PDF / Imagen)
+                        </button>
+                    </div>
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 0.35rem;">Nivel de Dificultad Percibida:</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button type="button" disabled class="btn btn-sm" style="flex: 1; border: 1.5px solid #cbd5e1; background: white;">😊 Fácil</button>
+                            <button type="button" disabled class="btn btn-sm" style="flex: 1; border: 1.5px solid #9333ea; background: #f3e8ff; color: #7e22ce; font-weight: 700;">😐 Normal</button>
+                            <button type="button" disabled class="btn btn-sm" style="flex: 1; border: 1.5px solid #cbd5e1; background: white;">😓 Difícil</button>
+                        </div>
+                    </div>
+                    <button type="button" disabled class="btn btn-block" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: #15803d; color: white; border: none; border-radius: 6px;">✓ Marcar como Realizado (Simulación)</button>
+                </div>
+            </div>
+        `
     }
 ];
 
@@ -18856,6 +18892,11 @@ function renderTherapistToolsCatalog() {
                 ${m.clave === 'meditacion' ? `
                     <button type="button" class="btn btn-sm btn-secondary" onclick="openModal('modal-meditaciones-library'); loadMeditacionesLibrary();" style="flex: 1; min-width: 105px; font-size: 0.8rem; font-weight: 700; border-radius: 8px; padding: 0.45rem 0.6rem; border: 1.5px solid var(--border-color); background: #f8fafc; color: #334155; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; cursor: pointer;">
                         📚 Biblioteca
+                    </button>
+                ` : ''}
+                ${m.clave === 'estimulacion_cognitiva' ? `
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openModal('modal-estimulacion-library'); loadEstimulacionLibrary();" style="flex: 1; min-width: 105px; font-size: 0.8rem; font-weight: 700; border-radius: 8px; padding: 0.45rem 0.6rem; border: 1.5px solid #d8b4fe; background: #fdf4ff; color: #702e5e; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; cursor: pointer;">
+                        📚 Carpetas / Fichas
                     </button>
                 ` : ''}
                 <button type="button" class="btn btn-sm btn-primary" onclick="openToolPreviewModal('${m.clave}', '${safeNombre}')" style="flex: 1; min-width: 135px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; padding: 0.45rem 0.75rem; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.2); display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; cursor: pointer;">
@@ -19601,7 +19642,8 @@ async function selectPatientForTherapistTools(id, name, code) {
             'pantalla': '📱',
             'ingesta': '🥗',
             'cognitivo': '🧠',
-            'meditacion': '🧘‍♀️'
+            'meditacion': '🧘‍♀️',
+            'estimulacion_cognitiva': '🧩'
         };
 
         const toolDescriptions = {
@@ -19613,7 +19655,8 @@ async function selectPatientForTherapistTools(id, name, code) {
             'pantalla': 'Bitácora de tiempo frente a pantallas y autorregulación de consumo digital.',
             'ingesta': 'Diario conductual de comidas, balance de apetito y hábitos alimentarios.',
             'cognitivo': 'Hoja de registro de pensamientos automáticos, distorsiones y reestructuración.',
-            'meditacion': 'Audios y videos de relajación guiada con recordatorios programados por WhatsApp.'
+            'meditacion': 'Audios y videos de relajación guiada con recordatorios programados por WhatsApp.',
+            'estimulacion_cognitiva': 'Fichas y ejercicios secuenciales programados por días con pausa automática al culminar.'
         };
 
         if (matList) {
@@ -19721,6 +19764,89 @@ async function selectPatientForTherapistTools(id, name, code) {
                             ${asigsHtml}
                             ${medLinkBanner}
                         ` : ''}
+                    </div>
+                    `;
+                }
+
+                // Caso especial: Estimulación Cognitiva
+                if (m.clave === 'estimulacion_cognitiva') {
+                    const daysMap = {1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom'};
+                    const diasBadges = (m.dias && m.dias.length > 0)
+                        ? m.dias.map(d => `<span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.4rem; border-radius: 4px;">${daysMap[d] || d}</span>`).join(' ')
+                        : '<span style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">Sin días programados</span>';
+
+                    const cogInfoHtml = isActivo ? `
+                        <div style="margin-top: 0.65rem; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 0.65rem 0.85rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                <div>
+                                    <div style="font-size: 0.85rem; font-weight: 800; color: #581c87;">
+                                        📁 Carpeta: ${m.carpeta || 'Ninguna seleccionada'}
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.35rem; flex-wrap: wrap;">
+                                        <span style="font-size: 0.74rem; color: #6b21a8; font-weight: 700;">Días:</span>
+                                        ${diasBadges}
+                                        <span class="badge" style="background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.4rem; border-radius: 4px;">⏰ ${m.hora || '09:00'}</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openAssignEstimulacionModal(${id}, '${safePName}')" style="font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 5px; cursor: pointer;">
+                                        ⚙️ Días / Carpeta
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEstimulacionHistoryModal(${id}, '${safePName}')" style="font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 5px; cursor: pointer;">
+                                        📄 Historial
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="margin-top: 0.65rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.78rem; color: #64748b;">Selecciona una carpeta y programa los días de entrega por WhatsApp.</span>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="openAssignEstimulacionModal(${id}, '${safePName}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; font-weight: 700; background: linear-gradient(135deg, #702e5e, #9333ea); border: none; border-radius: 5px; cursor: pointer;">
+                                ⚙️ Asignar Carpeta y Días
+                            </button>
+                        </div>
+                    `;
+
+                    const cogLinkBanner = (isActivo && m.link) ? `
+                        <div style="margin-top: 0.5rem; padding: 0.35rem 0.65rem; background: rgba(147, 51, 234, 0.08); border: 1.5px solid rgba(147, 51, 234, 0.25); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.76rem; font-family: monospace; color: #7e22ce; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px;">
+                                🔑 Portal Consultante: ${m.link}
+                            </span>
+                            <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${m.link}')" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #9333ea; color: white; border: none; font-weight: 700; border-radius: 4px; cursor: pointer;">
+                                📋 Copiar Link
+                            </button>
+                        </div>
+                    ` : '';
+
+                    return `
+                    <div class="tool-assign-card" style="background: ${isActivo ? '#fdf4ff' : 'white'}; border: 1.5px solid ${isActivo ? '#d8b4fe' : '#e2e8f0'}; border-radius: 10px; padding: 0.85rem 1rem; transition: all 0.2s;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.65rem; flex: 1; min-width: 200px;">
+                                <span style="font-size: 1.4rem; line-height: 1;">${icon}</span>
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                        <strong style="font-size: 0.95rem; color: #1e293b;">${m.nombre}</strong>
+                                        <span class="badge" style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.45rem; background: ${isActivo ? '#dcfce7' : '#f1f5f9'}; color: ${isActivo ? '#15803d' : '#64748b'}; border: 1px solid ${isActivo ? '#86efac' : '#cbd5e1'}; border-radius: 4px;">
+                                            ${isActivo ? '🟢 ACTIVA' : '⚪ INACTIVA'}
+                                        </span>
+                                    </div>
+                                    <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #64748b; line-height: 1.3;">${desc}</p>
+                                </div>
+                            </div>
+
+                            <!-- INTERRUPTOR ON / OFF -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 0.8rem; font-weight: 800; color: ${isActivo ? '#15803d' : '#94a3b8'};">${isActivo ? 'ON' : 'OFF'}</span>
+                                <label style="position: relative; display: inline-block; width: 48px; height: 26px; margin: 0; cursor: pointer;">
+                                    <input type="checkbox" ${isActivo ? 'checked' : ''} onchange="togglePatientModuleBackend(${id}, 'estimulacion_cognitiva', this.checked ? 1 : 0)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                    <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${isActivo ? '#10b981' : '#cbd5e1'}; transition: .25s ease; border-radius: 26px;">
+                                        <span style="position: absolute; height: 20px; width: 20px; left: ${isActivo ? '25px' : '3px'}; bottom: 3px; background-color: white; transition: .25s ease; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        ${cogInfoHtml}
+                        ${cogLinkBanner}
                     </div>
                     `;
                 }
@@ -28098,3 +28224,461 @@ window.closeAssignMeditacionModal = closeAssignMeditacionModal;
 window.submitMeditacionAssign = submitMeditacionAssign;
 window.unassignMeditacion = unassignMeditacion;
 window.loadMeditacionesLibrary = loadMeditacionesLibrary;
+
+// =========================================================================
+// ESTIMULACIÓN COGNITIVA: BIBLIOTECA, CARPETAS, EJERCICIOS, ASIGNACIÓN Y SEGUIMIENTO
+// =========================================================================
+
+let cogCurrentFolderId = null;
+let cogCurrentPatientId = null;
+let cogFoldersLibrary = [];
+
+async function loadEstimulacionLibrary() {
+    showCogFoldersView();
+    const grid = document.getElementById('cog-folders-grid');
+    if (grid) {
+        grid.innerHTML = '<p class="text-muted text-center py-4" style="grid-column: 1 / -1;">Cargando carpetas de estimulación...</p>';
+    }
+    try {
+        const res = await fetch('/api/estimulacion/carpetas');
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const data = await res.json();
+        cogFoldersLibrary = data.carpetas || [];
+
+        if (!grid) return;
+
+        if (cogFoldersLibrary.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; background: white; border-radius: 12px; border: 1.5px dashed #cbd5e1;">
+                    <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">🧩</span>
+                    <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; color: #1e293b;">No hay carpetas de estimulación todavía</h4>
+                    <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #64748b;">Crea tu primera carpeta (ej: Memoria, Atención, Cálculo) y sube los ejercicios correspondientes.</p>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openEstimulacionFolderModal()" style="background: linear-gradient(135deg, #702e5e, #9333ea); border: none; font-weight: 700; padding: 0.45rem 1rem; border-radius: 8px; cursor: pointer;">
+                        + Crear Primera Carpeta
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = cogFoldersLibrary.map(f => {
+            const safeTitle = (f.titulo || 'Carpeta').replace(/'/g, "\\'");
+            const safeDesc = (f.descripcion || '').replace(/'/g, "\\'");
+            const color = f.color || '#9333ea';
+            const icon = f.icono || '🧠';
+            const count = f.total_ejercicios || 0;
+
+            return `
+                <div style="background: white; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.04);">
+                    <div style="height: 6px; background: ${color};"></div>
+                    <div style="padding: 1.15rem; flex: 1; display: flex; flex-direction: column;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.6rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.6rem; line-height: 1;">${icon}</span>
+                                <h4 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: #1e293b; line-height: 1.25;">${f.titulo}</h4>
+                            </div>
+                            <span class="badge" style="background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.45rem; border-radius: 10px; white-space: nowrap;">
+                                📄 ${count} ficha${count === 1 ? '' : 's'}
+                            </span>
+                        </div>
+                        <p style="margin: 0 0 1rem 0; font-size: 0.82rem; color: #64748b; line-height: 1.4; flex: 1;">
+                            ${f.descripcion || 'Sin descripción.'}
+                        </p>
+                        <div style="display: flex; gap: 0.45rem; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="openFolderExercises(${f.id}, '${safeTitle}', '${safeDesc}')" style="flex: 1; background: linear-gradient(135deg, #702e5e, #9333ea); border: none; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                📂 Ver Fichas
+                            </button>
+                            <button type="button" class="btn btn-sm" onclick="deleteCogFolder(${f.id})" style="background: #fee2e2; color: #dc2626; border: none; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;" title="Eliminar Carpeta">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error cargando carpetas:", err);
+        if (grid) grid.innerHTML = `<p class="text-danger text-center py-4" style="grid-column: 1 / -1;">Error al cargar carpetas: ${err.message}</p>`;
+    }
+}
+
+function openEstimulacionFolderModal() {
+    const form = document.getElementById('form-cog-folder-create');
+    if (form) form.reset();
+    openModal('modal-estimulacion-folder-create');
+}
+
+async function submitCogFolderCreate(e) {
+    e.preventDefault();
+    const titulo = document.getElementById('cog-folder-titulo').value.trim();
+    const descripcion = document.getElementById('cog-folder-descripcion').value.trim();
+    const color = document.getElementById('cog-folder-color').value;
+    const icono = document.getElementById('cog-folder-icono').value;
+
+    if (!titulo) return alert("Ingresa un título para la carpeta.");
+
+    try {
+        const res = await fetch('/api/estimulacion/carpetas', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ titulo, descripcion, color, icono })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al crear carpeta');
+
+        closeModal('modal-estimulacion-folder-create');
+        if (typeof showToast === 'function') showToast("Carpeta creada correctamente");
+        loadEstimulacionLibrary();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function deleteCogFolder(folderId) {
+    if (!confirm("¿Seguro que deseas eliminar esta carpeta? Se eliminarán todas las fichas y ejercicios contenidos en ella.")) return;
+    try {
+        const res = await fetch(`/api/estimulacion/carpetas/${folderId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar');
+
+        if (typeof showToast === 'function') showToast("Carpeta eliminada");
+        loadEstimulacionLibrary();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function showCogFoldersView() {
+    const viewFolders = document.getElementById('cog-view-folders');
+    const viewExercises = document.getElementById('cog-view-exercises');
+    if (viewFolders) viewFolders.style.display = 'block';
+    if (viewExercises) viewExercises.style.display = 'none';
+    cogCurrentFolderId = null;
+}
+
+async function openFolderExercises(folderId, folderTitle, folderDesc) {
+    cogCurrentFolderId = folderId;
+    const viewFolders = document.getElementById('cog-view-folders');
+    const viewExercises = document.getElementById('cog-view-exercises');
+    if (viewFolders) viewFolders.style.display = 'none';
+    if (viewExercises) viewExercises.style.display = 'block';
+
+    const titleEl = document.getElementById('cog-current-folder-title');
+    const descEl = document.getElementById('cog-current-folder-desc');
+    if (titleEl) titleEl.textContent = folderTitle || 'Carpeta';
+    if (descEl) descEl.textContent = folderDesc || '';
+
+    const tbody = document.getElementById('cog-exercises-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Cargando fichas de la carpeta...</td></tr>';
+
+    try {
+        const res = await fetch(`/api/estimulacion/carpetas/${folderId}/ejercicios`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const data = await res.json();
+        const ejercicios = data.ejercicios || [];
+
+        if (!tbody) return;
+
+        if (ejercicios.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No hay fichas en esta carpeta. Haz clic en <strong>"+ Añadir Ficha / Ejercicio"</strong> para subir una.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = ejercicios.map((ex, idx) => {
+            const num = ex.orden || (idx + 1);
+            let fileBadge = '<span style="color: #94a3b8; font-size: 0.78rem;">Sin adjunto</span>';
+            if (ex.archivo_url) {
+                fileBadge = `<a href="${ex.archivo_url}" target="_blank" class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.75rem; text-decoration: none; padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;">📄 Ver Archivo</a>`;
+            } else if (ex.enlace_externo) {
+                fileBadge = `<a href="${ex.enlace_externo}" target="_blank" class="badge" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.75rem; text-decoration: none; padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;">🔗 Enlace</a>`;
+            }
+
+            return `
+                <tr>
+                    <td style="text-align: center; font-weight: 800; color: #702e5e;">${num}</td>
+                    <td><strong style="color: #1e293b; font-size: 0.9rem;">${ex.titulo}</strong></td>
+                    <td style="font-size: 0.82rem; color: #475569; max-width: 250px;">${ex.instrucciones || '-'}</td>
+                    <td>${fileBadge}</td>
+                    <td style="text-align: right;">
+                        <button type="button" class="btn btn-sm" onclick="deleteCogExercise(${ex.id})" style="background: #fee2e2; color: #dc2626; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 700;">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">Error: ${err.message}</td></tr>`;
+    }
+}
+
+function openEstimulacionExerciseModal() {
+    if (!cogCurrentFolderId) return alert("Por favor selecciona una carpeta primero.");
+    const form = document.getElementById('form-cog-exercise-create');
+    if (form) form.reset();
+    openModal('modal-estimulacion-exercise-create');
+}
+
+async function submitCogExerciseCreate(e) {
+    e.preventDefault();
+    if (!cogCurrentFolderId) return alert("Carpeta no identificada.");
+
+    const btn = document.getElementById('btn-submit-cog-ex');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Subiendo...';
+    }
+
+    const formData = new FormData();
+    formData.append('titulo', document.getElementById('cog-ex-titulo').value.trim());
+    formData.append('instrucciones', document.getElementById('cog-ex-instrucciones').value.trim());
+    formData.append('enlace_externo', document.getElementById('cog-ex-enlace').value.trim());
+
+    const fileInput = document.getElementById('cog-ex-archivo');
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        formData.append('archivo', fileInput.files[0]);
+    }
+
+    try {
+        const res = await fetch(`/api/estimulacion/carpetas/${cogCurrentFolderId}/ejercicios`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar ejercicio');
+
+        closeModal('modal-estimulacion-exercise-create');
+        if (typeof showToast === 'function') showToast("Ficha agregada a la carpeta");
+        const title = document.getElementById('cog-current-folder-title')?.textContent || '';
+        const desc = document.getElementById('cog-current-folder-desc')?.textContent || '';
+        openFolderExercises(cogCurrentFolderId, title, desc);
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Subir a la Carpeta';
+        }
+    }
+}
+
+async function deleteCogExercise(exId) {
+    if (!confirm("¿Seguro que deseas eliminar esta ficha?")) return;
+    try {
+        const res = await fetch(`/api/estimulacion/ejercicios/${exId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar');
+
+        if (typeof showToast === 'function') showToast("Ficha eliminada");
+        const title = document.getElementById('cog-current-folder-title')?.textContent || '';
+        const desc = document.getElementById('cog-current-folder-desc')?.textContent || '';
+        openFolderExercises(cogCurrentFolderId, title, desc);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+// ASIGNACIÓN AL PACIENTE
+async function openAssignEstimulacionModal(patientId, patientName) {
+    cogCurrentPatientId = patientId;
+    const nameEl = document.getElementById('cog-assign-patient-name');
+    if (nameEl) nameEl.textContent = patientName || `Consultante #${patientId}`;
+
+    const select = document.getElementById('cog-assign-folder-id');
+    if (select) {
+        select.innerHTML = '<option value="">Cargando carpetas...</option>';
+        try {
+            const res = await fetch('/api/estimulacion/carpetas');
+            const data = await res.json();
+            const carpetas = data.carpetas || [];
+            if (carpetas.length === 0) {
+                select.innerHTML = '<option value="" disabled>(No tienes carpetas creadas. Abre la biblioteca para crear una)</option>';
+            } else {
+                select.innerHTML = '<option value="">Selecciona una carpeta...</option>' + carpetas.map(c => 
+                    `<option value="${c.id}">${c.icono || '📁'} ${c.titulo} (${c.total_ejercicios || 0} fichas)</option>`
+                ).join('');
+            }
+        } catch (e) {
+            select.innerHTML = '<option value="" disabled>Error al cargar carpetas</option>';
+        }
+    }
+
+    // Cargar asignación actual si existe
+    try {
+        const asigRes = await fetch(`/api/pacientes/${patientId}/estimulacion`);
+        if (asigRes.ok) {
+            const asigData = await asigRes.json();
+            const asigs = asigData.asignaciones || [];
+            if (asigs.length > 0) {
+                const current = asigs[0];
+                if (select && current.carpeta_id) select.value = current.carpeta_id;
+                const horaInp = document.getElementById('cog-assign-hora');
+                if (horaInp && current.hora_recordatorio) horaInp.value = current.hora_recordatorio;
+
+                // Días
+                let activeDays = [];
+                try {
+                    activeDays = typeof current.dias_semana_json === 'string' ? JSON.parse(current.dias_semana_json) : (current.dias_semana_json || []);
+                } catch (_) {}
+
+                document.querySelectorAll('#cog-days-selector .cog-day-btn').forEach(btn => {
+                    const dayNum = parseInt(btn.getAttribute('data-day'), 10);
+                    if (activeDays.includes(dayNum)) {
+                        btn.classList.add('active');
+                        btn.style.background = '#f3e8ff';
+                        btn.style.borderColor = '#9333ea';
+                        btn.style.color = '#7e22ce';
+                    } else {
+                        btn.classList.remove('active');
+                        btn.style.background = 'white';
+                        btn.style.borderColor = '#cbd5e1';
+                        btn.style.color = '#475569';
+                    }
+                });
+            }
+        }
+    } catch (_) {}
+
+    openModal('modal-estimulacion-assign');
+}
+
+function toggleCogDay(btn) {
+    btn.classList.toggle('active');
+    if (btn.classList.contains('active')) {
+        btn.style.background = '#f3e8ff';
+        btn.style.borderColor = '#9333ea';
+        btn.style.color = '#7e22ce';
+    } else {
+        btn.style.background = 'white';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.color = '#475569';
+    }
+}
+
+async function submitCogAssign(e) {
+    e.preventDefault();
+    if (!cogCurrentPatientId) return alert("Paciente no seleccionado.");
+
+    const folderId = document.getElementById('cog-assign-folder-id').value;
+    if (!folderId) return alert("Debes seleccionar una carpeta de ejercicios.");
+
+    const activeDayBtns = document.querySelectorAll('#cog-days-selector .cog-day-btn.active');
+    const selectedDays = Array.from(activeDayBtns).map(b => parseInt(b.getAttribute('data-day'), 10));
+
+    if (selectedDays.length === 0) {
+        return alert("Debes seleccionar al menos un día de envío en la semana.");
+    }
+
+    const hora = document.getElementById('cog-assign-hora').value || '09:00';
+    const btn = document.getElementById('btn-submit-cog-assign');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
+    }
+
+    try {
+        const res = await fetch(`/api/pacientes/${cogCurrentPatientId}/estimulacion`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                carpeta_id: folderId,
+                dias_semana: selectedDays,
+                hora_recordatorio: hora
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar asignación');
+
+        closeModal('modal-estimulacion-assign');
+        if (typeof showToast === 'function') showToast("Estimulación Cognitiva asignada exitosamente");
+
+        const name = document.getElementById('tt-selected-patient-name')?.innerText;
+        const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
+        if (name) {
+            await selectPatientForTherapistTools(cogCurrentPatientId, name, code);
+        }
+        loadTherapistToolsCatalog();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Guardar y Activar Asignación';
+        }
+    }
+}
+
+// HISTORIAL DEL PACIENTE
+async function openEstimulacionHistoryModal(patientId, patientName) {
+    openModal('modal-estimulacion-history');
+    const tbody = document.getElementById('cog-history-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Cargando historial de entregas...</td></tr>';
+
+    try {
+        const res = await fetch(`/api/pacientes/${patientId}/estimulacion/historial`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const data = await res.json();
+        const historial = data.historial || [];
+
+        if (!tbody) return;
+
+        if (historial.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Aún no se han enviado fichas a este consultante.</td></tr>';
+            return;
+        }
+
+        const diffMap = {
+            'facil': '<span style="color: #16a34a; font-weight: 700;">😊 Fácil</span>',
+            'normal': '<span style="color: #ca8a04; font-weight: 700;">😐 Normal</span>',
+            'dificil': '<span style="color: #dc2626; font-weight: 700;">😓 Difícil</span>'
+        };
+
+        tbody.innerHTML = historial.map(h => {
+            const fechaEnvio = (h.fecha_envio || '') + (h.hora_envio ? ` ${h.hora_envio}` : '');
+            const isCompletado = h.completado === 1;
+            const estadoBadge = isCompletado
+                ? '<span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;">✓ Realizado</span>'
+                : (h.descargado === 1
+                    ? '<span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;">📥 Descargado</span>'
+                    : '<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;">⏳ Enviado</span>');
+
+            const diffBadge = h.dificultad ? (diffMap[h.dificultad] || h.dificultad) : '<span style="color: #94a3b8;">-</span>';
+            const tiempoStr = h.tiempo_minutos ? `${h.tiempo_minutos} min` : '<span style="color: #94a3b8;">-</span>';
+            const respLink = h.archivo_respuesta_url
+                ? `<a href="${h.archivo_respuesta_url}" target="_blank" style="font-weight: 700; color: #702e5e; text-decoration: underline; font-size: 0.8rem;">📷 Ver Evidencia</a>`
+                : (h.observaciones ? `<span title="${h.observaciones.replace(/"/g, '&quot;')}" style="cursor: pointer; color: #475569; font-size: 0.8rem;">💬 Nota</span>` : '<span style="color: #94a3b8;">-</span>');
+
+            return `
+                <tr>
+                    <td style="font-size: 0.8rem; color: #475569; white-space: nowrap;">${fechaEnvio || 'N/A'}</td>
+                    <td><strong style="color: #1e293b; font-size: 0.88rem;">${h.ejercicio_titulo || 'Ficha'}</strong></td>
+                    <td style="font-size: 0.82rem; color: #64748b;">${h.carpeta_titulo || '-'}</td>
+                    <td style="text-align: center;">${estadoBadge}</td>
+                    <td style="text-align: center; font-size: 0.82rem;">${diffBadge}</td>
+                    <td style="font-size: 0.82rem; color: #475569;">${tiempoStr}</td>
+                    <td style="text-align: right;">${respLink}</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">Error: ${err.message}</td></tr>`;
+    }
+}
+
+window.loadEstimulacionLibrary = loadEstimulacionLibrary;
+window.openEstimulacionFolderModal = openEstimulacionFolderModal;
+window.submitCogFolderCreate = submitCogFolderCreate;
+window.deleteCogFolder = deleteCogFolder;
+window.showCogFoldersView = showCogFoldersView;
+window.openFolderExercises = openFolderExercises;
+window.openEstimulacionExerciseModal = openEstimulacionExerciseModal;
+window.submitCogExerciseCreate = submitCogExerciseCreate;
+window.deleteCogExercise = deleteCogExercise;
+window.openAssignEstimulacionModal = openAssignEstimulacionModal;
+window.toggleCogDay = toggleCogDay;
+window.submitCogAssign = submitCogAssign;
+window.openEstimulacionHistoryModal = openEstimulacionHistoryModal;
+
