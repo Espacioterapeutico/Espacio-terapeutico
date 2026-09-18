@@ -5848,6 +5848,17 @@
                 <button class="btn-close-modal" onclick="closeModal('session-modal')">✕</button>
             </div>
             <div class="modal-body">
+                <!-- BANNER DE BORRADOR AUTOMÁTICO RECUPERADO -->
+                <div id="session-draft-banner" class="hide" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #fefce8; border: 1.5px solid #facc15; border-radius: 8px; font-size: 0.86rem; color: #854d0e; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.1rem;">📝</span>
+                        <span><strong>Borrador recuperado:</strong> Se cargaron notas y tareas previas no guardadas.</span>
+                    </div>
+                    <button type="button" class="btn btn-sm" onclick="discardSessionDraft()" style="background: white; border: 1px solid #ca8a04; color: #854d0e; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                        ✕ Descartar Borrador
+                    </button>
+                </div>
+
                 <form id="session-form" onsubmit="handleSessionSubmit(event)">
                     <input type="hidden" id="session-form-id">
                     <input type="hidden" id="s-agenda-id">

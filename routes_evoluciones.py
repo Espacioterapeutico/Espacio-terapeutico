@@ -427,48 +427,52 @@ def manage_sessions():
             anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto
         ))
         session_id = cursor.lastrowid
-
-        # Liquidación de finanzas
-        tipo_liq = data.get('tipo_liquidacion')
-        if tipo_liq:
-            linked_agenda_id = _apply_session_finance_liquidation(
-                cursor=cursor,
-                agenda_id=agenda_id,
-                paciente_id=paciente_id,
-                fecha=fecha,
-                modalidad=modalidad,
-                tipo_liq=tipo_liq,
-                raw_monto=data.get('monto', 0.0),
-                moneda=data.get('moneda', 'USD'),
-                metodo_pago=data.get('metodo_pago', ''),
-                referencia=data.get('referencia', ''),
-                fecha_pago=data.get('fecha_pago'),
-                user_id=session.get('user_id')
-            )
-            if not agenda_id and linked_agenda_id:
-                cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (linked_agenda_id, session_id))
-        elif agenda_id and estado in ['Cancelada con aviso', 'Reprogramada']:
-            cursor.execute("UPDATE agenda_finanzas SET estado_pago = ? WHERE id = ?", (estado, agenda_id))
-
+        # Comprometer inmediatamente la evolución clínica para blindarla contra cualquier error posterior
         db.commit()
+
+        # Operaciones auxiliares financieras y sincronizaciones (aisladas para no revertir la nota clínica)
+        try:
+            tipo_liq = data.get('tipo_liquidacion')
+            if tipo_liq:
+                linked_agenda_id = _apply_session_finance_liquidation(
+                    cursor=cursor,
+                    agenda_id=agenda_id,
+                    paciente_id=paciente_id,
+                    fecha=fecha,
+                    modalidad=modalidad,
+                    tipo_liq=tipo_liq,
+                    raw_monto=data.get('monto', 0.0),
+                    moneda=data.get('moneda', 'USD'),
+                    metodo_pago=data.get('metodo_pago', ''),
+                    referencia=data.get('referencia', ''),
+                    fecha_pago=data.get('fecha_pago'),
+                    user_id=session.get('user_id')
+                )
+                if not agenda_id and linked_agenda_id:
+                    cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (linked_agenda_id, session_id))
+            elif agenda_id and estado in ['Cancelada con aviso', 'Reprogramada']:
+                cursor.execute("UPDATE agenda_finanzas SET estado_pago = ? WHERE id = ?", (estado, agenda_id))
+            db.commit()
+        except Exception as fin_err:
+            print(f"[AVISO] Error al procesar finanzas de sesión #{session_id}: {fin_err}", flush=True)
 
         try:
             from routes_finanzas import auto_settle_patient_debts
             auto_settle_patient_debts(db, paciente_id)
             db.commit()
-        except Exception:
-            pass
+        except Exception as debt_err:
+            print(f"[AVISO] Error al auto-saldar deudas de paciente #{paciente_id}: {debt_err}", flush=True)
 
         try:
             sync_patient_to_firebase(paciente_id)
         except Exception as _fb_err:
-            print(f"Aviso al sincronizar paciente #{paciente_id} a Firebase: {_fb_err}")
+            print(f"[AVISO] Sincronización a Firebase de paciente #{paciente_id}: {_fb_err}", flush=True)
 
         return jsonify({'success': 'Evolución clínica registrada exitosamente.', 'session_id': session_id}), 201
 
     except Exception as e:
         db.rollback()
-        print(f"Error al guardar evolución clínica: {e}")
+        print(f"Error crítico al guardar evolución clínica: {e}", flush=True)
         return jsonify({'error': f'Error al guardar evolución clínica: {str(e)}'}), 500
 
 @evoluciones_bp.route('/api/sessions/<int:session_id>', methods=['GET', 'PUT'])
@@ -520,31 +524,34 @@ def update_session_detail(session_id):
                 diagnostico = ?, test_aplicados = ?, archivo_adjunto = ?, modalidad = ?, fecha = ?, paciente_id = ?
             WHERE id = ?
         """, (estado, resumen, resumen_paciente, tareas_asignadas, recursos_entregados, anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto, modalidad, fecha, patient_id, session_id))
-
-        # Actualizar finanzas vinculadas si se enviaron datos de liquidación
-        tipo_liq = data.get('tipo_liquidacion')
-        if tipo_liq:
-            target_agenda_id = ses['agenda_id'] or data.get('agenda_id')
-            linked_agenda_id = _apply_session_finance_liquidation(
-                cursor=cursor,
-                agenda_id=target_agenda_id,
-                paciente_id=patient_id,
-                fecha=fecha,
-                modalidad=modalidad,
-                tipo_liq=tipo_liq,
-                raw_monto=data.get('monto', 0.0),
-                moneda=data.get('moneda', 'USD'),
-                metodo_pago=data.get('metodo_pago', ''),
-                referencia=data.get('referencia', ''),
-                fecha_pago=data.get('fecha_pago'),
-                user_id=session.get('user_id')
-            )
-            if not target_agenda_id and linked_agenda_id:
-                cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (linked_agenda_id, session_id))
-        elif ses['agenda_id'] and estado in ['Cancelada con aviso', 'Reprogramada']:
-            cursor.execute("UPDATE agenda_finanzas SET estado_pago = ? WHERE id = ?", (estado, ses['agenda_id']))
-        
         db.commit()
+
+        # Actualizar finanzas vinculadas (aislado para no revertir la edición clínica)
+        try:
+            tipo_liq = data.get('tipo_liquidacion')
+            if tipo_liq:
+                target_agenda_id = ses['agenda_id'] or data.get('agenda_id')
+                linked_agenda_id = _apply_session_finance_liquidation(
+                    cursor=cursor,
+                    agenda_id=target_agenda_id,
+                    paciente_id=patient_id,
+                    fecha=fecha,
+                    modalidad=modalidad,
+                    tipo_liq=tipo_liq,
+                    raw_monto=data.get('monto', 0.0),
+                    moneda=data.get('moneda', 'USD'),
+                    metodo_pago=data.get('metodo_pago', ''),
+                    referencia=data.get('referencia', ''),
+                    fecha_pago=data.get('fecha_pago'),
+                    user_id=session.get('user_id')
+                )
+                if not target_agenda_id and linked_agenda_id:
+                    cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (linked_agenda_id, session_id))
+            elif ses['agenda_id'] and estado in ['Cancelada con aviso', 'Reprogramada']:
+                cursor.execute("UPDATE agenda_finanzas SET estado_pago = ? WHERE id = ?", (estado, ses['agenda_id']))
+            db.commit()
+        except Exception as fin_err:
+            print(f"[AVISO] Error al actualizar finanzas de sesión #{session_id}: {fin_err}", flush=True)
 
         try:
             from routes_finanzas import auto_settle_patient_debts
@@ -556,6 +563,7 @@ def update_session_detail(session_id):
         return jsonify({'success': 'Evolución actualizada con éxito.'})
     except Exception as e:
         db.rollback()
+        print(f"Error crítico al actualizar evolución #{session_id}: {e}", flush=True)
         return jsonify({'error': f'Error al actualizar evolución: {str(e)}'}), 500
 
 @evoluciones_bp.route('/api/sessions/<int:session_id>', methods=['DELETE'])

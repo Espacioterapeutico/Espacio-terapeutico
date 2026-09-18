@@ -1821,9 +1821,18 @@ def create_auto_cancellation_session(db, paciente_id, agenda_id, fecha, modalida
     cursor = db.cursor()
     try:
         if agenda_id:
-            cursor.execute("SELECT id FROM sesiones WHERE agenda_id = ?", (agenda_id,))
+            cursor.execute("SELECT id, estado, resumen, tareas_asignadas FROM sesiones WHERE agenda_id = ?", (agenda_id,))
             existing = cursor.fetchone()
             if existing:
+                # Si la sesión ya fue realizada o contiene notas/tareas reales del psicólogo, ¡NUNCA sobreescribir!
+                is_realizada = existing['estado'] == 'Realizada'
+                has_tasks = bool(existing['tareas_asignadas'] and existing['tareas_asignadas'].strip())
+                res_str = str(existing['resumen'] or '')
+                has_human_notes = bool(res_str and 'cancelada automáticamente' not in res_str.lower())
+                
+                if is_realizada or has_tasks or has_human_notes:
+                    return
+
                 cursor.execute("""
                     UPDATE sesiones 
                     SET fecha = ?, modalidad = ?, resumen = ?, estado = ?

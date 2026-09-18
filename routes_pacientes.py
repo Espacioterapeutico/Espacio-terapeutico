@@ -118,9 +118,17 @@ def create_auto_cancellation_session(db, patient_id, appt_id, fecha, modalidad, 
     """Registra o actualiza el estado de sesión cancelada en la tabla sesiones."""
     try:
         cursor = db.cursor()
-        cursor.execute("SELECT id FROM sesiones WHERE paciente_id = ? AND fecha = ?", (patient_id, fecha))
+        cursor.execute("SELECT id, estado, resumen, tareas_asignadas FROM sesiones WHERE paciente_id = ? AND fecha = ?", (patient_id, fecha))
         s_row = cursor.fetchone()
         if s_row:
+            # Si la sesión ya fue realizada o tiene notas/tareas reales, no sobreescribir
+            is_realizada = s_row['estado'] == 'Realizada'
+            has_tasks = bool(s_row['tareas_asignadas'] and s_row['tareas_asignadas'].strip())
+            res_str = str(s_row['resumen'] or '')
+            has_human_notes = bool(res_str and 'cancelada automáticamente' not in res_str.lower())
+            if is_realizada or has_tasks or has_human_notes:
+                return
+
             cursor.execute("UPDATE sesiones SET estado = ?, resumen_paciente = ? WHERE id = ?", (estado, motivo, s_row['id']))
         else:
             cursor.execute("""

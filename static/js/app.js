@@ -5793,6 +5793,176 @@ function changeSessionsPage(newPage) {
 }
 window.changeSessionsPage = changeSessionsPage;
 
+// ==========================================
+// SISTEMA DE BORRADORES AUTOMÁTICOS (DRAFTS) PARA EVOLUCIONES
+// ==========================================
+let _sessionDraftDebounceTimer = null;
+
+function getSessionDraftKey(patientId, formId = '') {
+    if (formId) return `clinica_draft_session_edit_${formId}`;
+    return `clinica_draft_session_new_${patientId || 'temp'}`;
+}
+
+function saveSessionDraft() {
+    clearTimeout(_sessionDraftDebounceTimer);
+    _sessionDraftDebounceTimer = setTimeout(() => {
+        const formId = document.getElementById('session-form-id')?.value || '';
+        const patientId = document.getElementById('s-paciente')?.value || '';
+        const key = getSessionDraftKey(patientId, formId);
+
+        const resumen = document.getElementById('s-resumen')?.value || '';
+        const resumenPaciente = document.getElementById('s-resumen-paciente')?.value || '';
+        const tareas = document.getElementById('s-tareas')?.value || '';
+        const recursos = document.getElementById('s-recursos')?.value || '';
+        const anotaciones = document.getElementById('s-anotaciones')?.value || '';
+        const compromisos = document.getElementById('s-compromisos')?.value || '';
+        const diagnostico = document.getElementById('s-diagnostico-clinico')?.value || '';
+        const testAplicados = document.getElementById('s-test-aplicados')?.value || '';
+
+        // Solo guardar si hay contenido en al menos un campo clínico
+        const hasContent = !!(resumen.trim() || resumenPaciente.trim() || tareas.trim() || recursos.trim() || anotaciones.trim() || compromisos.trim() || diagnostico.trim() || testAplicados.trim());
+        
+        if (!hasContent) {
+            localStorage.removeItem(key);
+            return;
+        }
+
+        const draftData = {
+            resumen,
+            resumenPaciente,
+            tareas,
+            recursos,
+            anotaciones,
+            compromisos,
+            diagnostico,
+            testAplicados,
+            estado: document.getElementById('s-estado')?.value || 'Realizada',
+            modalidad: document.getElementById('s-modalidad')?.value || 'Online',
+            tipoLiq: document.getElementById('s-tipo-liq')?.value || 'Dejar pendiente',
+            monto: document.getElementById('s-monto')?.value || '',
+            patientId,
+            formId,
+            agendaId: document.getElementById('s-agenda-id')?.value || '',
+            fecha: document.getElementById('s-fecha')?.value || '',
+            updatedAt: Date.now()
+        };
+
+        try {
+            localStorage.setItem(key, JSON.stringify(draftData));
+        } catch (e) {
+            console.warn("No se pudo guardar borrador en localStorage:", e);
+        }
+    }, 300);
+}
+
+function restoreSessionDraft(patientId, formId = '') {
+    const key = getSessionDraftKey(patientId, formId);
+    let raw = localStorage.getItem(key);
+    // Si no hay específico por paciente en nuevo, intentar con temp
+    if (!raw && !formId) {
+        raw = localStorage.getItem('clinica_draft_session_new_temp');
+    }
+    const banner = document.getElementById('session-draft-banner');
+    
+    if (!raw) {
+        if (banner) banner.classList.add('hide');
+        return false;
+    }
+
+    try {
+        const d = JSON.parse(raw);
+        if (!d) return false;
+
+        const setValIfEmpty = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val && !el.value.trim()) {
+                el.value = val;
+            }
+        };
+
+        setValIfEmpty('s-resumen', d.resumen);
+        setValIfEmpty('s-resumen-paciente', d.resumenPaciente);
+        setValIfEmpty('s-tareas', d.tareas);
+        setValIfEmpty('s-recursos', d.recursos);
+        setValIfEmpty('s-anotaciones', d.anotaciones);
+        setValIfEmpty('s-compromisos', d.compromisos);
+        setValIfEmpty('s-diagnostico-clinico', d.diagnostico);
+        setValIfEmpty('s-test-aplicados', d.testAplicados);
+
+        if (d.estado) {
+            const estEl = document.getElementById('s-estado');
+            if (estEl) {
+                estEl.value = d.estado;
+                toggleSessionFinanceFields(d.estado);
+            }
+        }
+        if (d.monto) {
+            const montoEl = document.getElementById('s-monto');
+            if (montoEl && !montoEl.value) montoEl.value = d.monto;
+        }
+
+        if (banner) banner.classList.remove('hide');
+        return true;
+    } catch (e) {
+        console.warn("Error al restaurar borrador:", e);
+        return false;
+    }
+}
+
+function clearSessionDraft(patientId, formId = '') {
+    const key = getSessionDraftKey(patientId, formId);
+    localStorage.removeItem(key);
+    localStorage.removeItem('clinica_draft_session_new_temp');
+    if (patientId) localStorage.removeItem(`clinica_draft_session_new_${patientId}`);
+    const banner = document.getElementById('session-draft-banner');
+    if (banner) banner.classList.add('hide');
+}
+
+function discardSessionDraft() {
+    const formId = document.getElementById('session-form-id')?.value || '';
+    const patientId = document.getElementById('s-paciente')?.value || '';
+    
+    if (confirm("¿Estás seguro de descartar este borrador recuperado? Los campos de notas y tareas se limpiarán.")) {
+        clearSessionDraft(patientId, formId);
+        
+        ['s-resumen', 's-resumen-paciente', 's-tareas', 's-recursos', 's-anotaciones', 's-compromisos', 's-diagnostico-clinico', 's-test-aplicados'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+    }
+}
+window.discardSessionDraft = discardSessionDraft;
+
+function initSessionDraftAutoSave() {
+    const fields = [
+        's-resumen', 's-resumen-paciente', 's-tareas', 's-recursos',
+        's-anotaciones', 's-compromisos', 's-diagnostico-clinico', 's-test-aplicados',
+        's-monto', 's-estado', 's-modalidad', 's-tipo-liq'
+    ];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el._draftBound) {
+            el._draftBound = true;
+            el.addEventListener('input', saveSessionDraft);
+            el.addEventListener('change', saveSessionDraft);
+        }
+    });
+
+    const pacSelect = document.getElementById('s-paciente');
+    if (pacSelect && !pacSelect._draftBound) {
+        pacSelect._draftBound = true;
+        pacSelect.addEventListener('change', () => {
+            const pid = pacSelect.value;
+            restoreSessionDraft(pid);
+        });
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSessionDraftAutoSave);
+} else {
+    initSessionDraftAutoSave();
+}
+
 async function openNewSessionModal() {
     const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
     if (isSubExpired) {
@@ -5865,6 +6035,8 @@ async function openNewSessionModal() {
     document.getElementById('s-tipo-liq').value = 'Dejar pendiente';
     toggleSessionFinanceInputs('Dejar pendiente');
     
+    restoreSessionDraft(currentPatientId);
+    
     openModal('session-modal');
 }
 
@@ -5910,6 +6082,8 @@ async function openRegisterSessionFromEvent(eventId) {
         }
         document.getElementById('s-tipo-liq').value = 'Dejar pendiente';
         toggleSessionFinanceInputs('Dejar pendiente');
+        
+        restoreSessionDraft(e.paciente_id);
         
         openModal('session-modal');
     } catch (err) {
@@ -5996,6 +6170,7 @@ async function handleSessionSubmit(e) {
         const data = await res.json();
         
         if (res.ok) {
+            clearSessionDraft(payload.paciente_id, id);
             alert(data.success || "Evolución clínica registrada exitosamente.");
             const newSessionId = data.session_id;
             const pacSelect = document.getElementById('s-paciente');
@@ -6117,6 +6292,8 @@ async function openEditSessionModal(sessionId) {
             document.getElementById('s-finance-section').style.display = 'none';
         }
         
+        restoreSessionDraft(s.paciente_id, s.id);
+        
         openModal('session-modal');
     } catch (err) {
         alert(err.message);
@@ -6188,7 +6365,12 @@ function handleModalSendSessionCierre() {
     if (sessionId) {
         sendSessionCierreWhatsApp(sessionId, pacName);
     } else {
-        alert('Debes registrar o guardar la evolución clínica antes de enviar las tareas por WhatsApp.');
+        if (confirm('La evolución aún no ha sido guardada en el sistema. ¿Deseas guardarla ahora para registrarla y enviar el resumen de tareas por WhatsApp?')) {
+            const form = document.getElementById('session-form');
+            if (form) {
+                form.requestSubmit();
+            }
+        }
     }
 }
 window.handleModalSendSessionCierre = handleModalSendSessionCierre;
