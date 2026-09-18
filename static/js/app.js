@@ -6011,10 +6011,7 @@ async function handleSessionSubmit(e) {
 
             if (!id && newSessionId && hadTasks) {
                 setTimeout(() => {
-                    const sendWaNow = confirm(`¿Deseas enviar la Nota Post-sesión con las tareas acordadas por WhatsApp a ${pacName || 'el consultante'}?`);
-                    if (sendWaNow) {
-                        sendSessionCierreWhatsApp(newSessionId, pacName);
-                    }
+                    sendSessionCierreWhatsApp(newSessionId, pacName);
                 }, 350);
             }
         } else {
