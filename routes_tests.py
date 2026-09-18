@@ -15,6 +15,7 @@ from datetime import datetime
 from functools import wraps
 from flask import Blueprint, request, jsonify, session, g, render_template, render_template_string, make_response, send_file
 from barsit_test_data import ensure_barsit_definition, process_barsit_scoring
+from mcmi2_scoring import process_mcmi2_scoring
 
 tests_bp = Blueprint('tests', __name__)
 
@@ -1871,163 +1872,15 @@ def process_bssc_scoring(answers):
         interp = "Tamizaje BSSC: El consultante no reporta inquietudes ni síntomas sexuales en este momento."
     return yes_count, {'Inquietudes_Detectadas': yes_count}, cls, interp
 
-def process_mmpi2_scoring(answers):
-    # Standard MMPI-2 Item Keys for Validity & 10 Clinical Scales
-    # Validity
-    val_L_false = {15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225}
-    val_F_true = {14, 23, 31, 38, 48, 65, 73, 84, 91, 96, 114, 122, 127, 139, 147, 156, 162, 168, 182, 190, 197, 206, 215, 221, 227, 233, 240, 252, 256, 268, 282, 291, 294, 313, 317, 322, 329, 334, 339, 344, 348, 354, 360, 366}
-    val_F_false = {17, 20, 33, 46, 58, 81, 102, 110, 117, 152, 164, 177, 187, 200, 224, 250}
-    val_K_true = {96}
-    val_K_false = {29, 37, 58, 76, 110, 116, 122, 127, 130, 140, 148, 157, 158, 167, 171, 196, 213, 243, 267, 290, 338, 339, 341, 365, 368, 477, 484, 520, 546}
+def process_mmpi2_scoring(answers, patient_info=None):
+    """
+    Delega el procesamiento al motor psicométrico oficial MMPI-2 (mmpi2_scoring.py),
+    calculando puntuaciones directas, corrección K, puntuaciones T normadas por sexo,
+    subescalas diagnósticas, codetypes e informe narrativo.
+    """
+    from mmpi2_scoring import process_mmpi2_scoring as _proc
+    return _proc(answers, patient_info=patient_info)
 
-    # Clinical Scales
-    # 1. Hs (Hipocondriasis - 32 ítems)
-    hs_t = {18, 28, 39, 53, 59, 97, 101, 111, 142, 175, 247, 293}
-    hs_f = {2, 3, 8, 10, 20, 47, 57, 68, 117, 141, 143, 152, 163, 173, 176, 189, 208, 224, 241, 243}
-
-    # 2. D (Depresión - 57 ítems)
-    d_t = {5, 15, 18, 38, 46, 56, 92, 117, 127, 130, 146, 147, 170, 175, 215, 233, 251, 288, 299, 341, 350}
-    d_f = {2, 8, 9, 10, 20, 29, 33, 37, 43, 45, 49, 55, 68, 75, 76, 95, 109, 118, 123, 140, 141, 142, 143, 148, 160, 165, 178, 188, 189, 212, 221, 223, 241, 248, 260, 267}
-
-    # 3. Hy (Histeria - 60 ítems)
-    hy_t = {11, 18, 28, 39, 40, 44, 59, 76, 97, 101, 115, 135, 142, 175, 179, 218, 230, 249, 253, 265, 269, 293}
-    hy_f = {2, 3, 6, 7, 8, 9, 10, 12, 14, 26, 29, 33, 47, 50, 52, 57, 58, 71, 81, 95, 98, 110, 116, 124, 125, 141, 161, 166, 177, 186, 211, 224, 239, 241, 251, 263, 267, 274}
-
-    # 4. Pd (Desviación Psicopática - 50 ítems)
-    pd_t = {17, 21, 22, 31, 32, 35, 42, 52, 54, 56, 71, 82, 89, 94, 99, 105, 113, 160, 172, 180, 214, 239, 259, 266, 271}
-    pd_f = {9, 12, 34, 70, 79, 83, 95, 125, 129, 137, 157, 161, 170, 185, 193, 235, 240, 243, 248, 267, 284, 294, 296, 311, 345}
-
-    # 5. Mf (Masculinidad-Feminidad - 56 ítems)
-    mf_t = {4, 25, 62, 64, 67, 74, 80, 112, 119, 121, 128, 137, 166, 177, 187, 191, 196, 205, 219, 256, 260, 268, 272, 282, 297}
-    mf_f = {1, 19, 26, 27, 63, 68, 69, 76, 86, 103, 104, 107, 120, 132, 133, 134, 144, 163, 184, 193, 204, 217, 231, 235, 243, 257, 270, 274, 281, 294, 300}
-
-    # 6. Pa (Paranoia - 40 ítems)
-    pa_t = {16, 17, 22, 23, 24, 42, 99, 113, 138, 144, 145, 162, 234, 259, 271, 277, 285, 305, 307, 314, 315, 333, 334, 336, 355, 361}
-    pa_f = {93, 107, 109, 111, 123, 128, 137, 160, 183, 268, 279, 283, 286, 310}
-
-    # 7. Pt (Psicastenia - 48 ítems)
-    pt_t = {11, 16, 23, 31, 38, 56, 67, 73, 87, 92, 114, 138, 147, 160, 170, 215, 223, 242, 299, 301, 304, 308, 313, 317, 321, 327, 332, 337, 338, 342, 346, 350, 356, 357, 358, 360}
-    pt_f = {3, 9, 33, 109, 140, 165, 174, 202, 225, 329, 341, 344}
-
-    # 8. Sc (Esquizofrenia - 78 ítems)
-    sc_t = {16, 17, 21, 23, 31, 32, 38, 42, 44, 46, 48, 65, 85, 92, 138, 145, 147, 168, 170, 180, 182, 190, 215, 221, 229, 233, 234, 252, 256, 268, 273, 277, 279, 281, 287, 291, 292, 296, 298, 303, 307, 311, 316, 319, 322, 323, 324, 325, 328, 329, 331, 333, 335, 340, 343, 347, 352, 355, 364}
-    sc_f = {9, 33, 63, 104, 109, 140, 165, 174, 201, 220, 276, 280, 290, 309, 320, 341, 345, 350}
-
-    # 9. Ma (Hipomanía - 46 ítems)
-    ma_t = {11, 13, 15, 21, 23, 50, 55, 61, 85, 87, 98, 113, 122, 145, 155, 168, 169, 182, 190, 200, 206, 211, 212, 220, 227, 229, 238, 242, 244, 248, 250, 253, 269, 284, 291}
-    ma_f = {100, 106, 107, 136, 154, 158, 167, 243, 263, 278, 318}
-
-    # 0. Si (Introversión Social - 69 ítems)
-    si_t = {32, 67, 82, 111, 117, 124, 138, 147, 171, 172, 180, 181, 201, 236, 256, 267, 278, 287, 292, 304, 316, 321, 326, 336, 337, 338, 342, 347, 349, 351, 357, 358, 360, 362}
-    si_f = {6, 25, 34, 49, 70, 79, 86, 104, 106, 110, 112, 129, 137, 143, 157, 161, 170, 185, 189, 209, 226, 235, 243, 248, 262, 275, 284, 296, 302, 306, 309, 311, 318, 330, 340}
-
-    # Accumulators
-    answered_count = 0
-    true_count = 0
-    false_count = 0
-
-    l_score = 0
-    f_score = 0
-    k_score = 0
-
-    hs_score = 0
-    d_score = 0
-    hy_score = 0
-    pd_score = 0
-    mf_score = 0
-    pa_score = 0
-    pt_score = 0
-    sc_score = 0
-    ma_score = 0
-    si_score = 0
-
-    for item_id in range(1, 568):
-        key = str(item_id)
-        val = answers.get(key) if answers.get(key) is not None else answers.get(f"item_{item_id}")
-        if val is not None:
-            v_str = str(val).strip().upper()
-            is_true = v_str in ('V', 'VERDADERO', '1', 'TRUE')
-            is_false = v_str in ('F', 'FALSO', '0', '2', 'FALSE')
-
-            if is_true or is_false:
-                answered_count += 1
-                if is_true:
-                    true_count += 1
-                else:
-                    false_count += 1
-
-                # Validity scoring
-                if item_id in val_L_false and is_false: l_score += 1
-                if item_id in val_F_true and is_true: f_score += 1
-                if item_id in val_F_false and is_false: f_score += 1
-                if item_id in val_K_true and is_true: k_score += 1
-                if item_id in val_K_false and is_false: k_score += 1
-
-                # Clinical scoring
-                if item_id in hs_t and is_true: hs_score += 1
-                if item_id in hs_f and is_false: hs_score += 1
-
-                if item_id in d_t and is_true: d_score += 1
-                if item_id in d_f and is_false: d_score += 1
-
-                if item_id in hy_t and is_true: hy_score += 1
-                if item_id in hy_f and is_false: hy_score += 1
-
-                if item_id in pd_t and is_true: pd_score += 1
-                if item_id in pd_f and is_false: pd_score += 1
-
-                if item_id in mf_t and is_true: mf_score += 1
-                if item_id in mf_f and is_false: mf_score += 1
-
-                if item_id in pa_t and is_true: pa_score += 1
-                if item_id in pa_f and is_false: pa_score += 1
-
-                if item_id in pt_t and is_true: pt_score += 1
-                if item_id in pt_f and is_false: pt_score += 1
-
-                if item_id in sc_t and is_true: sc_score += 1
-                if item_id in sc_f and is_false: sc_score += 1
-
-                if item_id in ma_t and is_true: ma_score += 1
-                if item_id in ma_f and is_false: ma_score += 1
-
-                if item_id in si_t and is_true: si_score += 1
-                if item_id in si_f and is_false: si_score += 1
-
-    pct_complete = round((answered_count / 567.0) * 100, 1)
-
-    if pct_complete >= 90:
-        classification = "Protocolo MMPI-2 Válido / Perfil Clínico Generado"
-    else:
-        classification = f"Protocolo Incompleto ({pct_complete}%)"
-
-    subscales = {
-        "Validez L (Mentira)": f"{l_score} / 15 pts",
-        "Validez F (Incoherencia)": f"{f_score} / 60 pts",
-        "Validez K (Corrección/Defensa)": f"{k_score} / 30 pts",
-        "1. Hs (Hipocondriasis)": f"{hs_score} / 32 pts",
-        "2. D (Depresión)": f"{d_score} / 57 pts",
-        "3. Hy (Histeria)": f"{hy_score} / 60 pts",
-        "4. Pd (Desviación Psicopática)": f"{pd_score} / 50 pts",
-        "5. Mf (Masculinidad-Feminidad)": f"{mf_score} / 56 pts",
-        "6. Pa (Paranoia)": f"{pa_score} / 40 pts",
-        "7. Pt (Psicastenia)": f"{pt_score} / 48 pts",
-        "8. Sc (Esquizofrenia)": f"{sc_score} / 78 pts",
-        "9. Ma (Hipomanía)": f"{ma_score} / 46 pts",
-        "0. Si (Introversión Social)": f"{si_score} / 69 pts",
-        "Reactivos Respondidos": f"{answered_count} / 567 ({pct_complete}%)"
-    }
-
-    interpretation = (
-        f"Perfil MMPI-2 ({classification}): "
-        f"Escalas Validez: L={l_score}, F={f_score}, K={k_score}. "
-        f"Escalas Clínicas (Puntuaciones Brutas): "
-        f"Hs={hs_score}, D={d_score}, Hy={hy_score}, Pd={pd_score}, Mf={mf_score}, "
-        f"Pa={pa_score}, Pt={pt_score}, Sc={sc_score}, Ma={ma_score}, Si={si_score}. "
-        f"Total ítems respondidos: {answered_count}/567 ({true_count} Verdadero / {false_count} Falso)."
-    )
-
-    return float(answered_count), subscales, classification, interpretation
 
 # --- ALGORITMOS DE EVALUACIÓN Y PUNTUACIÓN Y RUTAS DEL DECORADOR TESTS_BP ---
 
@@ -2183,6 +2036,13 @@ def api_get_public_evaluacion(token):
         patient_nombre = f"{data.get('patient_nombres') or ''} {data.get('patient_apellidos') or ''}".strip()
         psicologo_nombre = f"Psic. {data.get('psicologo_username') or 'Clínico'}".strip()
 
+        respuestas_guardadas = {}
+        if data.get('respuestas_json'):
+            try:
+                respuestas_guardadas = json.loads(data['respuestas_json']) if isinstance(data['respuestas_json'], str) else data['respuestas_json']
+            except Exception:
+                respuestas_guardadas = {}
+
         assignment = {
             'id': data['id'],
             'assignment_id': data['id'],
@@ -2195,7 +2055,9 @@ def api_get_public_evaluacion(token):
             'psicologo_foto': data.get('psicologo_foto') or '/static/logo.png',
             'psicologo_titulo': data.get('psicologo_titulo') or 'Consulta',
             'fecha_asignacion': data['fecha_asignacion'],
-            'fecha_completado': data['fecha_completado']
+            'fecha_completado': data['fecha_completado'],
+            'respuestas': respuestas_guardadas,
+            'respuestas_guardadas': respuestas_guardadas
         }
         test_definition = {
             'code': data['test_code'],
@@ -2223,10 +2085,74 @@ def api_get_public_evaluacion(token):
             'items': json.loads(data['items_json']) if data.get('items_json') else [],
             'patient_nombre': patient_nombre,
             'fecha_asignacion': data['fecha_asignacion'],
-            'fecha_completado': data['fecha_completado']
+            'fecha_completado': data['fecha_completado'],
+            'respuestas': respuestas_guardadas,
+            'respuestas_guardadas': respuestas_guardadas
         })
     except Exception as e:
         return jsonify({'error': f'Error al cargar evaluación: {str(e)}'}), 500
+
+@tests_bp.route('/api/public/evaluacion/<token>/guardar-progreso', methods=['POST'])
+def api_post_public_evaluacion_progreso(token):
+    """
+    Guarda de forma continua y asíncrona las respuestas parciales del consultante
+    sin marcar el test como completado ni generar notificaciones/evoluciones prematuras.
+    """
+    try:
+        db = get_db()
+        ensure_tests_tables(db)
+        cursor = db.cursor()
+
+        raw_token = (token or '').strip()
+        clean_token = raw_token.replace('-', '').lower()
+
+        cursor.execute("""
+            SELECT id, test_code, estado, respuestas_json
+            FROM test_asignaciones
+            WHERE LOWER(REPLACE(uuid_token, '-', '')) = ?
+        """, (clean_token,))
+
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'error': 'Evaluación no encontrada.'}), 404
+
+        assignment = dict(row)
+        if assignment['estado'] == 'completado':
+            return jsonify({'info': 'Esta evaluación ya fue completada.', 'completado': True}), 200
+
+        data = request.json or {}
+        answers = data.get('respuestas')
+        if answers is None or not isinstance(answers, dict):
+            return jsonify({'error': 'Formato de respuestas inválido.'}), 400
+
+        # Fusionar con respuestas previas si existen para no sobrescribir nada por omisión accidental
+        current_answers = {}
+        if assignment.get('respuestas_json'):
+            try:
+                current_answers = json.loads(assignment['respuestas_json']) if isinstance(assignment['respuestas_json'], str) else assignment['respuestas_json']
+                if not isinstance(current_answers, dict):
+                    current_answers = {}
+            except Exception:
+                current_answers = {}
+
+        current_answers.update(answers)
+
+        cursor.execute("""
+            UPDATE test_asignaciones
+            SET respuestas_json = ?
+            WHERE id = ?
+        """, (json.dumps(current_answers), assignment['id']))
+        db.commit()
+
+        return jsonify({
+            'success': True,
+            'guardadas': len(current_answers),
+            'estado': assignment['estado'],
+            'mensaje': 'Progreso guardado automáticamente.'
+        })
+    except Exception as e:
+        return jsonify({'error': f'Error al guardar progreso: {str(e)}'}), 500
+
 
 @tests_bp.route('/api/public/evaluacion/<token>/responder', methods=['POST'])
 def api_post_public_evaluacion(token):
@@ -2277,7 +2203,9 @@ def api_post_public_evaluacion(token):
         elif assignment['test_code'] in ('BECK-BHS', 'BHS'):
             total_score, subscales_dict, classification, interpretation = process_beck_bhs_scoring(answers)
         elif assignment['test_code'] in ('MMPI-2', 'MMPI2', 'MMPI'):
-            total_score, subscales_dict, classification, interpretation = process_mmpi2_scoring(answers)
+            total_score, subscales_dict, classification, interpretation = process_mmpi2_scoring(answers, patient_info=patient_info)
+        elif assignment['test_code'] in ('MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II'):
+            total_score, subscales_dict, classification, interpretation = process_mcmi2_scoring(answers, patient_info=patient_info)
         elif assignment['test_code'] == 'SWLS':
             total_score, subscales_dict, classification, interpretation = process_swls_scoring(answers)
         elif assignment['test_code'] in ('SHIM', 'IIEF-5'):
@@ -2604,18 +2532,20 @@ def api_export_test_pdf(assignment_id):
             user_id = session['user_id']
             cursor.execute("""
                 SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
+                       p.genero as patient_genero, p.edad as patient_edad,
                        td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
                        u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.estudios as psicologo_titulo
                 FROM test_asignaciones a
                 LEFT JOIN pacientes p ON a.patient_id = p.id
                 LEFT JOIN tests_definiciones td ON a.test_code = td.code
                 LEFT JOIN usuarios u ON a.user_id = u.id
-                WHERE a.id = ? AND p.psicologo_id = ?
-            """, (assignment_id, user_id))
+                WHERE a.id = ? AND (p.psicologo_id = ? OR a.user_id = ?)
+            """, (assignment_id, user_id, user_id))
         else:
             patient_id = session.get('patient_id')
             cursor.execute("""
                 SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
+                       p.genero as patient_genero, p.edad as patient_edad,
                        td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
                        u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.estudios as psicologo_titulo
                 FROM test_asignaciones a
@@ -2636,16 +2566,131 @@ def api_export_test_pdf(assignment_id):
         subescalas = {}
         if data.get('subescalas_json'):
             try:
-                subescalas = json.loads(data['subescalas_json'])
+                subescalas = json.loads(data['subescalas_json']) if isinstance(data['subescalas_json'], str) else data['subescalas_json']
             except Exception:
                 subescalas = {}
 
+        # Auto-recalificación al vuelo si las respuestas existen pero no tienen baremos completos (MCMI-II / MMPI-2)
+        test_code = (data.get('test_code') or '').strip().upper()
+        raw_resp = data.get('respuestas_json')
+        respuestas = {}
+        if raw_resp:
+            try:
+                respuestas = json.loads(raw_resp) if isinstance(raw_resp, str) else raw_resp
+            except Exception:
+                respuestas = {}
+
+        patient_info = {
+            'genero': data.get('patient_genero'),
+            'edad': data.get('patient_edad')
+        }
+
+        should_recalc = False
+        if respuestas and test_code in ('MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II'):
+            if not subescalas or 'Puntuación Total' in subescalas or not any(isinstance(v, dict) and 'tb' in v for v in subescalas.values()):
+                should_recalc = True
+        elif respuestas and test_code in ('MMPI-2', 'MMPI2', 'MMPI'):
+            if not subescalas or 'Puntuación Total' in subescalas or not any(isinstance(v, dict) and ('t' in v or 'tb' in v) for v in subescalas.values()):
+                should_recalc = True
+
+        if should_recalc:
+            try:
+                if test_code in ('MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II'):
+                    from mcmi2_scoring import process_mcmi2_scoring
+                    tot, sub, clas, interp = process_mcmi2_scoring(respuestas, patient_info=patient_info)
+                else:
+                    from mmpi2_scoring import process_mmpi2_scoring
+                    tot, sub, clas, interp = process_mmpi2_scoring(respuestas, patient_info=patient_info)
+
+                cursor.execute("""
+                    UPDATE test_asignaciones
+                    SET puntaje_total = ?,
+                        subescalas_json = ?,
+                        clasificacion_resultado = ?,
+                        interpretacion_clinica = ?
+                    WHERE id = ?
+                """, (tot, json.dumps(sub), clas, interp, data['id']))
+                db.commit()
+
+                data['puntaje_total'] = tot
+                data['subescalas_json'] = json.dumps(sub)
+                data['clasificacion_resultado'] = clas
+                data['interpretacion_clinica'] = interp
+                subescalas = sub
+            except Exception:
+                pass
+
         sub_html = ""
+        has_tb = isinstance(subescalas, dict) and any(isinstance(v, dict) and 'tb' in v for v in subescalas.values())
+        has_t = isinstance(subescalas, dict) and any(isinstance(v, dict) and 't' in v for v in subescalas.values())
+
         if isinstance(subescalas, dict) and subescalas:
-            sub_html = "<h3 style='color:#334155; margin-top:20px;'>Subescalas y Dimensiones</h3><table style='width:100%; border-collapse:collapse; margin-top:10px;'><tr style='background:#f1f5f9;'><th style='padding:8px; border:1px solid #cbd5e1; text-align:left;'>Escala / Dimensión</th><th style='padding:8px; border:1px solid #cbd5e1; text-align:center;'>Puntaje</th></tr>"
-            for k, v in subescalas.items():
-                sub_html += f"<tr><td style='padding:8px; border:1px solid #cbd5e1;'>{k}</td><td style='padding:8px; border:1px solid #cbd5e1; text-align:center; font-weight:bold;'>{v}</td></tr>"
-            sub_html += "</table>"
+            if has_tb or has_t:
+                is_t_test = has_t and not has_tb
+                score_col_name = "Puntaje T" if is_t_test else "Tasa Base (TB)"
+                sub_html = f"""
+                <div class="section">
+                    <div class="section-title">Perfil Psicométrico de Escalas y Dimensiones Clínicas</div>
+                    <table style="width:100%; border-collapse:collapse; margin-top:10px; font-size:13px;">
+                        <thead>
+                            <tr style="background:#f1f5f9; color:#334155;">
+                                <th style="padding:9px 12px; border:1px solid #cbd5e1; text-align:left;">Escala / Dimensión</th>
+                                <th style="padding:9px 12px; border:1px solid #cbd5e1; text-align:center; width:100px;">PD Directa</th>
+                                <th style="padding:9px 12px; border:1px solid #cbd5e1; text-align:center; width:120px;">{score_col_name}</th>
+                                <th style="padding:9px 12px; border:1px solid #cbd5e1; text-align:center; width:160px;">Significación Clínica</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                """
+                for s_key, s_val in subescalas.items():
+                    if isinstance(s_val, dict):
+                        nom = s_val.get('nombre') or s_key
+                        pd_val = s_val.get('pd', '-')
+                        k_val = s_val.get('k_corr')
+                        pd_display = f"{pd_val} (+{k_val}K)" if k_val else str(pd_val)
+                        
+                        score_num = s_val.get('tb') if s_val.get('tb') is not None else s_val.get('t', '-')
+                        sev_thresh = 75 if is_t_test else 85
+                        sug_thresh = 65 if is_t_test else 75
+                        
+                        try:
+                            num_val = float(score_num)
+                        except (ValueError, TypeError):
+                            num_val = 0
+                            
+                        if num_val >= sev_thresh:
+                            badge = '<span style="background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:12px; font-weight:bold; font-size:11px; border:1px solid #fca5a5;">⚠️ Patrón Severo</span>'
+                        elif num_val >= sug_thresh:
+                            badge = '<span style="background:#ffedd5; color:#c2410c; padding:3px 10px; border-radius:12px; font-weight:bold; font-size:11px; border:1px solid #fdba74;">🔸 Significativo</span>'
+                        else:
+                            badge = '<span style="color:#64748b; font-size:12px;">Dentro de límites</span>'
+                            
+                        sub_html += f"""
+                            <tr>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1;"><strong>{nom}</strong></td>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1; text-align:center; color:#475569;">{pd_display}</td>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:bold; font-size:14px; color:#702e5e;">{score_num}</td>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1; text-align:center;">{badge}</td>
+                            </tr>
+                        """
+                sub_html += "</tbody></table></div>"
+            else:
+                sub_html = "<div class='section'><div class='section-title'>Subescalas y Dimensiones</div><table style='width:100%; border-collapse:collapse; margin-top:10px; font-size:13px;'><tr style='background:#f1f5f9;'><th style='padding:8px 12px; border:1px solid #cbd5e1; text-align:left;'>Escala / Dimensión</th><th style='padding:8px 12px; border:1px solid #cbd5e1; text-align:center; width:120px;'>Puntaje</th></tr>"
+                for k, v in subescalas.items():
+                    sub_html += f"<tr><td style='padding:8px 12px; border:1px solid #cbd5e1;'>{k}</td><td style='padding:8px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:bold;'>{v}</td></tr>"
+                sub_html += "</table></div>"
+
+        # Bloque de resultado destacado
+        if has_tb or has_t:
+            titulo_res = "Diagnóstico Multiaxial / Perfil Principal"
+            score_display = data.get('clasificacion_resultado') or 'Completado'
+            score_html = f'<div style="font-size: 20px; font-weight: 800; color: #702e5e; padding: 6px 0;">{score_display}</div>'
+            badge_html = '<div class="badge" style="background:#15803d; border:1px solid #86efac;">✓ Corrección Psicométrica Oficial Aplicada</div>'
+        else:
+            titulo_res = "Puntaje Global Obtenido"
+            score_display = f"{data.get('puntaje_total')} pts" if data.get('puntaje_total') is not None else 'N/A'
+            score_html = f'<div class="score">{score_display}</div>'
+            badge_html = f'<div class="badge">{data.get("clasificacion_resultado") or "Completado"}</div>'
 
         html_content = f"""
         <!DOCTYPE html>
@@ -2660,8 +2705,8 @@ def api_export_test_pdf(assignment_id):
                 .subtitle {{ font-size: 13px; color: #64748b; margin-top: 4px; }}
                 .info-box {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; }}
                 .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
-                .result-box {{ background: #fdf4ff; border: 2px solid #f0abfc; border-radius: 10px; padding: 20px; margin: 20px 0; text-align: center; }}
-                .score {{ font-size: 32px; font-weight: bold; color: #702e5e; }}
+                .result-box {{ background: #fdf4ff; border: 2px solid #f0abfc; border-radius: 10px; padding: 18px; margin: 20px 0; text-align: center; }}
+                .score {{ font-size: 30px; font-weight: bold; color: #702e5e; }}
                 .badge {{ display: inline-block; background: #702e5e; color: white; padding: 4px 14px; border-radius: 20px; font-weight: bold; font-size: 13px; margin-top: 5px; }}
                 .section {{ margin-top: 25px; }}
                 .section-title {{ font-size: 16px; font-weight: bold; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }}
@@ -2695,16 +2740,16 @@ def api_export_test_pdf(assignment_id):
             </div>
 
             <div class="result-box">
-                <div style="font-size: 13px; font-weight: bold; color: #702e5e; text-transform: uppercase;">Puntaje Global Obtenido</div>
-                <div class="score">{data.get('puntaje_total') if data.get('puntaje_total') is not None else 'N/A'} pts</div>
-                <div class="badge">{data.get('clasificacion_resultado') or 'Completado'}</div>
+                <div style="font-size: 13px; font-weight: bold; color: #702e5e; text-transform: uppercase;">{titulo_res}</div>
+                {score_html}
+                {badge_html}
             </div>
 
             {sub_html}
 
             <div class="section">
                 <div class="section-title">Interpretación Clínica / Juicio Profesional</div>
-                <div style="background: white; padding: 12px; border-left: 4px solid #702e5e; background: #fafafa;">
+                <div style="background: white; padding: 16px; border-left: 4px solid #702e5e; background: #fafafa; border-radius: 6px; white-space: pre-wrap; font-size: 13.5px; line-height: 1.7; color: #1e293b;">
                     {data.get('interpretacion_clinica') or 'Respuestas evaluadas satisfactoriamente.'}
                 </div>
             </div>

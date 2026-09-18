@@ -23422,6 +23422,91 @@ function getPublicTestDisplayTitle(testDef) {
     return (testDef.siglas || testDef.code || testDef.nombre || 'Evaluación Clínica').trim();
 }
 
+let publicTestAutoSaveTimer = null;
+
+function showPublicTestSaveStatus(status) {
+    let el = document.getElementById('pub-test-autosave-badge');
+    if (!el) return;
+    if (status === 'saving') {
+        el.style.background = '#f1f5f9';
+        el.style.borderColor = '#cbd5e1';
+        el.style.color = '#475569';
+        el.innerHTML = '<span>💾 Guardando progreso...</span>';
+    } else if (status === 'saved') {
+        el.style.background = '#ecfdf5';
+        el.style.borderColor = '#a7f3d0';
+        el.style.color = '#065f46';
+        el.innerHTML = '<span>✓ Progreso guardado automáticamente</span>';
+        setTimeout(() => {
+            if (el && el.innerHTML.includes('guardado')) {
+                el.innerHTML = '<span>☁️ Progreso sincronizado</span>';
+            }
+        }, 3000);
+    } else if (status === 'error') {
+        el.style.background = '#fef2f2';
+        el.style.borderColor = '#fecaca';
+        el.style.color = '#991b1b';
+        el.innerHTML = '<span>⚠️ Guardado en navegador (reintentando...)</span>';
+    }
+}
+
+function autoSavePublicTestProgress(immediate = false) {
+    if (!currentPublicTestToken) return;
+
+    try {
+        localStorage.setItem(`test_progreso_${currentPublicTestToken}`, JSON.stringify(currentPublicTestAnswers));
+    } catch(e) {}
+
+    const doSave = async () => {
+        showPublicTestSaveStatus('saving');
+        try {
+            const resp = await fetch(`/api/public/evaluacion/${currentPublicTestToken}/guardar-progreso`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    respuestas: currentPublicTestAnswers,
+                    raven_current_index: window.ravenCurrentIndex || 0,
+                    duration_seconds: (window.ravenStartTime ? Math.round((Date.now() - window.ravenStartTime) / 1000) : 0)
+                }),
+                keepalive: true
+            });
+            if (resp.ok) {
+                showPublicTestSaveStatus('saved');
+            } else {
+                showPublicTestSaveStatus('error');
+            }
+        } catch (err) {
+            console.warn("Auto-guardado falló en red, conservado en local storage:", err);
+            showPublicTestSaveStatus('error');
+        }
+    };
+
+    if (immediate) {
+        if (publicTestAutoSaveTimer) clearTimeout(publicTestAutoSaveTimer);
+        doSave();
+    } else {
+        showPublicTestSaveStatus('saving');
+        if (publicTestAutoSaveTimer) clearTimeout(publicTestAutoSaveTimer);
+        publicTestAutoSaveTimer = setTimeout(doSave, 600);
+    }
+}
+
+// Respaldo de seguridad al cerrar o recargar ventana
+window.addEventListener('beforeunload', () => {
+    if (currentPublicTestToken && typeof currentPublicTestAnswers === 'object' && Object.keys(currentPublicTestAnswers).length > 0) {
+        try {
+            const payload = JSON.stringify({
+                respuestas: currentPublicTestAnswers,
+                raven_current_index: window.ravenCurrentIndex || 0
+            });
+            if (navigator.sendBeacon) {
+                const blob = new Blob([payload], { type: 'application/json' });
+                navigator.sendBeacon(`/api/public/evaluacion/${currentPublicTestToken}/guardar-progreso`, blob);
+            }
+        } catch(e) {}
+    }
+});
+
 async function loadAndRenderPublicTest(token) {
     document.documentElement.classList.add('is-public-eval-page');
     currentPublicTestToken = token;
@@ -23486,8 +23571,12 @@ async function loadAndRenderPublicTest(token) {
                     <span>👤 Consultante: <strong>${assign.paciente_nombre || 'Consultante'}</strong></span>
                 </div>
 
+                <div id="pub-test-autosave-badge" style="display: flex; align-items: center; gap: 6px; background: #ecfdf5; border: 1.5px solid #a7f3d0; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; color: #065f46; transition: all 0.3s ease;">
+                    <span>☁️ Autoguardado activo</span>
+                </div>
+
                 <div style="display: flex; align-items: center; gap: 6px; background: #f1f5f9; border: 1.5px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; color: #475569;" title="Token de asignación: ${displayToken}">
-                    <span>🆔 ID Aplicación: <code style="font-family: monospace; font-size: 0.85rem; color: #0f172a; font-weight: 700;">${shortToken}</code></span>
+                    <span>🆔 ID: <code style="font-family: monospace; font-size: 0.85rem; color: #0f172a; font-weight: 700;">${shortToken}</code></span>
                 </div>
             `;
         }
@@ -23511,6 +23600,58 @@ async function loadAndRenderPublicTest(token) {
                 `;
             }
             return;
+        }
+
+        // Rehidratar respuestas previas desde el servidor y localStorage
+        const serverAnswers = data.respuestas_guardadas || assign.respuestas || data.respuestas || {};
+        let localAnswers = {};
+        try {
+            const rawLocal = localStorage.getItem(`test_progreso_${token}`);
+            if (rawLocal) {
+                localAnswers = JSON.parse(rawLocal);
+            }
+        } catch(e) {}
+
+        currentPublicTestAnswers = Object.assign({}, serverAnswers, localAnswers);
+
+        // Si es Raven, reanudar en la matriz pendiente
+        if (testDef.code === 'RAVEN') {
+            const ravenItems = testDef.items || [];
+            const answeredCount = Object.keys(currentPublicTestAnswers).length;
+            if (answeredCount >= 60) {
+                window.ravenCurrentIndex = 61; // Pantalla final lista para enviar
+            } else if (answeredCount > 0) {
+                let firstUnanswered = 0;
+                for (let i = 0; i < ravenItems.length; i++) {
+                    const mCode = ravenItems[i].code || `A${i + 1}`;
+                    if (currentPublicTestAnswers[mCode] === undefined) {
+                        firstUnanswered = i;
+                        break;
+                    }
+                }
+                window.ravenCurrentIndex = firstUnanswered + 1;
+            } else {
+                window.ravenCurrentIndex = 0;
+            }
+            window.ravenStartTime = Date.now();
+        } else {
+            // Si es cuestionario paginado, posicionar en la página de la primera pregunta pendiente
+            const qItems = testDef.items || [];
+            const isPaginated = qItems.length > 15;
+            currentPublicTestPageSize = isPaginated ? 20 : qItems.length;
+            if (isPaginated && Object.keys(currentPublicTestAnswers).length > 0) {
+                let firstUnansweredIdx = 0;
+                for (let i = 0; i < qItems.length; i++) {
+                    const itNum = qItems[i].num || (i + 1);
+                    if (currentPublicTestAnswers[String(itNum)] === undefined && currentPublicTestAnswers[itNum] === undefined) {
+                        firstUnansweredIdx = i;
+                        break;
+                    }
+                }
+                currentPublicTestPageIndex = Math.floor(firstUnansweredIdx / currentPublicTestPageSize);
+            } else {
+                currentPublicTestPageIndex = 0;
+            }
         }
 
         const badgeCat = document.getElementById('pub-test-badge-categoria');
@@ -23544,6 +23685,7 @@ window.ravenCurrentIndex = 0; // 0 = Instrucciones, 1..60 = Matrices, 61 = Resum
 window.ravenStartTime = null;
 window.ravenBreakSeries = null;
 
+
 function startRavenTest() {
     window.ravenCurrentIndex = 1;
     window.ravenStartTime = Date.now();
@@ -23565,6 +23707,7 @@ function continueRavenSeries() {
 
 function selectRavenAnswer(matCode, val) {
     currentPublicTestAnswers[matCode] = val;
+    autoSavePublicTestProgress(false);
     
     // Check if inter-series break is needed (matrices 12, 24, 36, 48)
     const curIdx = window.ravenCurrentIndex;
@@ -23945,6 +24088,7 @@ function changePublicTestPage(delta) {
     if (currentPublicTestPageIndex >= totalPages) currentPublicTestPageIndex = totalPages - 1;
     if (currentPublicTestPageIndex < 0) currentPublicTestPageIndex = 0;
 
+    autoSavePublicTestProgress(true);
     renderPublicTestItems(currentPublicTestDefinition);
 
     // Scroll suave hacia arriba de la evaluación
@@ -23964,6 +24108,7 @@ function selectPublicTestAnswer(itemNum, value) {
     }
 
     updatePublicTestProgressBar();
+    autoSavePublicTestProgress(false);
 }
 
 function updatePublicTestProgressBar() {
@@ -24012,6 +24157,10 @@ async function submitPublicTestResponse() {
             }
             return;
         }
+
+        try {
+            localStorage.removeItem(`test_progreso_${currentPublicTestToken}`);
+        } catch(e) {}
 
         document.getElementById('pub-test-form-card').style.display = 'none';
         const successCard = document.getElementById('pub-test-success-card');
@@ -24079,9 +24228,16 @@ async function loadPatientTestsHistory(patientId) {
         let html = '';
         tests.forEach(t => {
             const isCompleted = t.estado === 'completado';
-            const statusBadge = isCompleted 
-                ? '<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">🟢 Completado</span>'
-                : '<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">⏳ Pendiente</span>';
+            const answers = t.respuestas || {};
+            const answeredCount = (typeof answers === 'object' && answers !== null) ? Object.keys(answers).length : 0;
+            let statusBadge = '';
+            if (isCompleted) {
+                statusBadge = '<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">🟢 Completado</span>';
+            } else if (answeredCount > 0) {
+                statusBadge = `<span style="background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">⏳ En progreso (${answeredCount} resp.)</span>`;
+            } else {
+                statusBadge = '<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 12px;">⏳ Pendiente</span>';
+            }
 
             html += `
                 <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
@@ -24239,22 +24395,28 @@ function openTestDetailModal(testData) {
             <strong style="color: #334155; display: block; margin-bottom: 0.5rem;">Puntuaciones por Subescalas:</strong>
             <ul style="margin: 0; padding-left: 1.25rem; color: #475569;">`;
         for (let [sName, sVal] of Object.entries(sub)) {
-            if (typeof sVal === 'object' && sVal !== null && sVal.tb !== undefined) {
-                const tbVal = sVal.tb;
+            if (typeof sVal === 'object' && sVal !== null && (sVal.tb !== undefined || sVal.t !== undefined)) {
+                const isT = (sVal.t !== undefined && sVal.tb === undefined) || (testData.test_siglas || testData.test_code || '').includes('MMPI');
+                const scoreVal = (sVal.t !== undefined && isT) ? sVal.t : (sVal.tb !== undefined ? sVal.tb : sVal.t);
                 const pdVal = sVal.pd !== undefined ? sVal.pd : '-';
                 const label = sVal.nombre || sName;
+                const scorePrefix = isT ? 'T' : 'TB';
                 let badgeStyle = 'background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;';
                 let tag = '';
-                if (tbVal >= 85) {
+                const severeThreshold = isT ? 75 : 85;
+                const suggestiveThreshold = isT ? 65 : 75;
+                if (scoreVal >= severeThreshold) {
                     badgeStyle = 'background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;';
                     tag = ' [SEVERO]';
-                } else if (tbVal >= 75) {
+                } else if (scoreVal >= suggestiveThreshold) {
                     badgeStyle = 'background:#ffedd5; color:#c2410c; border:1px solid #fdba74;';
                     tag = ' [SUGESTIVO]';
                 }
+                const kInfo = sVal.k_corr ? ` + ${sVal.k_corr}K` : '';
+                const nameDisplay = label.includes(sName) ? label : `${sName} - ${label}`;
                 subscalesHtml += `<li style="margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                    <span><strong>${sName} - ${label}:</strong> (PD: ${pdVal})</span>
-                    <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">TB ${tbVal}${tag}</span>
+                    <span><strong>${nameDisplay}:</strong> (PD: ${pdVal}${kInfo})</span>
+                    <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">${scorePrefix} ${scoreVal}${tag}</span>
                 </li>`;
             } else {
                 const sValStr = String(sVal || '');
@@ -24356,8 +24518,20 @@ async function loadAllAppliedTestsHistory() {
         let html = '';
         tests.forEach(t => {
             const isCompleted = t.estado === 'completado';
-            const badgeClass = isCompleted ? 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;' : 'background: #fef9c3; color: #a16207; border: 1px solid #fef08a;';
-            const badgeText = isCompleted ? '🟢 Completado' : '⏳ Pendiente';
+            const answers = t.respuestas || {};
+            const answeredCount = (typeof answers === 'object' && answers !== null) ? Object.keys(answers).length : 0;
+            let badgeClass = '';
+            let badgeText = '';
+            if (isCompleted) {
+                badgeClass = 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;';
+                badgeText = '🟢 Completado';
+            } else if (answeredCount > 0) {
+                badgeClass = 'background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc;';
+                badgeText = `⏳ En progreso (${answeredCount} resp.)`;
+            } else {
+                badgeClass = 'background: #fef9c3; color: #a16207; border: 1px solid #fef08a;';
+                badgeText = '⏳ Pendiente';
+            }
 
             const patName = `${t.patient_nombres || ''} ${t.patient_apellidos || ''}`.trim() || 'Consultante';
             const patCi = t.patient_cedula ? ` (CI: ${t.patient_cedula})` : '';
