@@ -117,7 +117,7 @@ def get_patient_modules(patient_id):
                        (SELECT COUNT(*) FROM cat_ejercicios_cognitivos WHERE carpeta_id = pec.carpeta_id) as total_ejercicios,
                        (SELECT COUNT(*) FROM registro_estimulacion_cognitiva WHERE asignacion_id = pec.id AND completado = 1) as completados
                 FROM paciente_estimulacion_cognitiva pec
-                JOIN cat_carpetas_cognitivas c ON pec.carpeta_id = c.id
+                LEFT JOIN cat_carpetas_cognitivas c ON pec.carpeta_id = c.id
                 WHERE pec.paciente_id = ?
                 ORDER BY pec.id DESC
             """, (patient_id,))
@@ -129,6 +129,19 @@ def get_patient_modules(patient_id):
             m_dict['token'] = cog_asigs[0].get('token_acceso') if cog_asigs else None
             m_dict['link'] = f"{host_url}/portal/estimulacion/{cog_asigs[0].get('token_acceso')}" if (cog_asigs and cog_asigs[0].get('token_acceso')) else None
             m_dict['estimulaciones_asignadas'] = cog_asigs
+            if cog_asigs:
+                asig0 = cog_asigs[0]
+                m_dict['carpeta'] = asig0.get('carpeta_titulo')
+                m_dict['hora'] = asig0.get('hora_recordatorio') or '09:00'
+                dias_raw = asig0.get('dias_semana_json')
+                try:
+                    m_dict['dias'] = json.loads(dias_raw) if isinstance(dias_raw, str) else (dias_raw or [])
+                except Exception:
+                    m_dict['dias'] = []
+            else:
+                m_dict['carpeta'] = None
+                m_dict['hora'] = '09:00'
+                m_dict['dias'] = []
             modules.append(m_dict)
             continue
 
@@ -505,7 +518,9 @@ def get_therapist_patients_active_tools():
         'ingesta': {'nombre': 'Ingesta y Apetito', 'icono': '🥗'},
         'cognitivo': {'nombre': 'Registro Cognitivo', 'icono': '🧠'},
         'pantalla': {'nombre': 'Consumo de Pantallas', 'icono': '📱'},
-        'meditacion': {'nombre': 'Meditaciones Guiadas', 'icono': '🧘‍♀️'}
+        'meditacion': {'nombre': 'Meditaciones Guiadas', 'icono': '🧘‍♀️'},
+        'estimulacion_cognitiva': {'nombre': 'Estimulación Cognitiva', 'icono': '🧩'},
+        'estimulacion': {'nombre': 'Estimulación Cognitiva', 'icono': '🧩'}
     }
 
     cursor.execute("""
@@ -525,6 +540,15 @@ def get_therapist_patients_active_tools():
         GROUP BY pm.paciente_id
     """, (user_id,))
     med_rows = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT pec.paciente_id, COUNT(pec.id) as total_cog, p.nombres, p.apellidos, p.cedula, p.telefono, p.email
+        FROM paciente_estimulacion_cognitiva pec
+        JOIN pacientes p ON pec.paciente_id = p.id
+        WHERE p.psicologo_id = ? AND pec.activa = 1
+        GROUP BY pec.paciente_id
+    """, (user_id,))
+    cog_rows = cursor.fetchall()
 
     patients_map = {}
 
@@ -568,6 +592,26 @@ def get_therapist_patients_active_tools():
                 'clave': 'meditacion',
                 'nombre': f"Meditaciones ({total_meds})",
                 'icono': '🧘‍♀️'
+            })
+
+    for r in cog_rows:
+        pid = r['paciente_id']
+        if pid not in patients_map:
+            patients_map[pid] = {
+                'id': pid,
+                'nombres': r['nombres'] or '',
+                'apellidos': r['apellidos'] or '',
+                'nombre_completo': f"{r['nombres'] or ''} {r['apellidos'] or ''}".strip() or f"Consultante #{pid}",
+                'cedula': r['cedula'] or '',
+                'telefono': r['telefono'] or '',
+                'email': r['email'] or '',
+                'tools': []
+            }
+        if not any(t['clave'] in ('estimulacion_cognitiva', 'estimulacion') for t in patients_map[pid]['tools']):
+            patients_map[pid]['tools'].append({
+                'clave': 'estimulacion_cognitiva',
+                'nombre': 'Estimulación Cognitiva',
+                'icono': '🧩'
             })
 
     patients_list = list(patients_map.values())
@@ -1001,6 +1045,8 @@ def get_therapist_module_report(modulo_clave):
         modulo_clave = 'sobriedad'
     elif modulo_clave in ('medicacion', 'adherencia'):
         modulo_clave = 'adherencia'
+    elif modulo_clave in ('estimulacion_cognitiva', 'estimulacion'):
+        modulo_clave = 'estimulacion_cognitiva'
 
     p_filter = " AND p.id = ?" if patient_id else ""
     params = (user_id, patient_id) if patient_id else (user_id,)
@@ -1081,6 +1127,18 @@ def get_therapist_module_report(modulo_clave):
                 JOIN pacientes p ON rm.paciente_id = p.id
                 WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY rm.fecha DESC LIMIT 100
+            """, params)
+        elif modulo_clave == 'estimulacion_cognitiva':
+            cursor.execute(f"""
+                SELECT r.*, e.titulo as ejercicio_titulo, c.titulo as carpeta_titulo,
+                       p.nombres, p.apellidos, p.cedula,
+                       r.fecha_envio as fecha
+                FROM registro_estimulacion_cognitiva r
+                LEFT JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
+                LEFT JOIN cat_carpetas_cognitivas c ON r.carpeta_id = c.id
+                JOIN pacientes p ON r.paciente_id = p.id
+                WHERE p.psicologo_id = ?{p_filter}
+                ORDER BY r.id DESC LIMIT 100
             """, params)
         else:
             return jsonify({'error': 'Módulo desconocido'}), 400

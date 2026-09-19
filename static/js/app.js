@@ -19672,6 +19672,11 @@ function changePatientHistoryPage(stateKey, newPage) {
 }
 
 function openPatientToolHistoryModal(patientId, toolType, patientName = '') {
+    if (toolType === 'estimulacion_cognitiva' || toolType === 'estimulacion') {
+        if (typeof openEstimulacionHistoryModal === 'function') {
+            return openEstimulacionHistoryModal(patientId, patientName);
+        }
+    }
     const inlineId = `inline-history-acc-${patientId}-${toolType}`;
     const el = document.getElementById(inlineId);
     if (el) {
@@ -20126,8 +20131,18 @@ async function selectPatientForTherapistTools(id, name, code) {
                 // Caso especial: Estimulación Cognitiva
                 if (m.clave === 'estimulacion_cognitiva') {
                     const daysMap = {1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom'};
-                    const diasBadges = (m.dias && m.dias.length > 0)
-                        ? m.dias.map(d => `<span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.4rem; border-radius: 4px;">${daysMap[d] || d}</span>`).join(' ')
+                    const firstAsig = (m.estimulaciones_asignadas && m.estimulaciones_asignadas.length > 0) ? m.estimulaciones_asignadas[0] : null;
+                    const folderName = m.carpeta || (firstAsig ? firstAsig.carpeta_titulo : null);
+                    let daysList = (m.dias && m.dias.length > 0) ? m.dias : [];
+                    if (daysList.length === 0 && firstAsig && firstAsig.dias_semana_json) {
+                        try {
+                            daysList = typeof firstAsig.dias_semana_json === 'string' ? JSON.parse(firstAsig.dias_semana_json) : firstAsig.dias_semana_json;
+                        } catch(_) {}
+                    }
+                    const horaProg = m.hora || (firstAsig ? firstAsig.hora_recordatorio : '09:00') || '09:00';
+
+                    const diasBadges = (daysList && daysList.length > 0)
+                        ? daysList.map(d => `<span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.4rem; border-radius: 4px;">${daysMap[d] || d}</span>`).join(' ')
                         : '<span style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">Sin días programados</span>';
 
                     const cogInfoHtml = isActivo ? `
@@ -20135,12 +20150,12 @@ async function selectPatientForTherapistTools(id, name, code) {
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                                 <div>
                                     <div style="font-size: 0.85rem; font-weight: 800; color: #581c87;">
-                                        📁 Carpeta: ${m.carpeta || 'Ninguna seleccionada'}
+                                        📁 Carpeta: ${folderName || 'Ninguna seleccionada'}
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.35rem; flex-wrap: wrap;">
                                         <span style="font-size: 0.74rem; color: #6b21a8; font-weight: 700;">Días:</span>
                                         ${diasBadges}
-                                        <span class="badge" style="background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.4rem; border-radius: 4px;">⏰ ${m.hora || '09:00'}</span>
+                                        <span class="badge" style="background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.4rem; border-radius: 4px;">⏰ ${horaProg}</span>
                                     </div>
                                 </div>
                                 <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
@@ -20349,6 +20364,12 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
 
 async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatientId, targetPatientName) {
     console.log('[DEBUG] openTherapistModuleReport called with:', moduloClave, moduloNombre, targetPatientId, targetPatientName);
+
+    if (moduloClave === 'estimulacion_cognitiva' || moduloClave === 'estimulacion') {
+        if (typeof openEstimulacionHistoryModal === 'function') {
+            return openEstimulacionHistoryModal(targetPatientId, targetPatientName);
+        }
+    }
     
     // Normalizar clave del módulo
     const claveMap = {
@@ -20358,7 +20379,9 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
         'consumo': 'sobriedad',
         'adherencia': 'adherencia',
         'medicacion': 'adherencia',
-        'activacion': 'activacion'
+        'activacion': 'activacion',
+        'estimulacion_cognitiva': 'estimulacion_cognitiva',
+        'estimulacion': 'estimulacion_cognitiva'
     };
     moduloClave = claveMap[moduloClave] || moduloClave;
 
@@ -28581,9 +28604,9 @@ function deleteMeditacion(id) {
         .then(res => res.json())
         .then(() => {
             loadMeditacionesLibrary();
-            const name = document.getElementById('tt-selected-patient-name')?.innerText;
-            const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
-            if (currentMedPatientId && name) {
+            const name = document.getElementById('mat-patient-name')?.innerText || document.getElementById('tt-selected-patient-name')?.innerText || currentMedPatientName || '';
+            const code = (document.getElementById('mat-patient-cedula')?.innerText || document.getElementById('tt-selected-patient-code')?.innerText || '').replace('Cédula: ', '').trim() || currentMedPatientCode || '';
+            if (currentMedPatientId) {
                 selectPatientForTherapistTools(currentMedPatientId, name, code);
             }
             loadTherapistToolsCatalog();
@@ -28784,9 +28807,9 @@ async function submitMeditacionAssign(e) {
         closeModal('meditacion-assign-modal');
         showToast(asigId ? "Horarios y días actualizados exitosamente" : "Meditación asignada exitosamente con sus días y horarios");
         
-        const name = document.getElementById('tt-selected-patient-name')?.innerText;
-        const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
-        if (name) {
+        const name = document.getElementById('mat-patient-name')?.innerText || document.getElementById('tt-selected-patient-name')?.innerText || currentMedPatientName || '';
+        const code = (document.getElementById('mat-patient-cedula')?.innerText || document.getElementById('tt-selected-patient-code')?.innerText || '').replace('Cédula: ', '').trim() || currentMedPatientCode || '';
+        if (currentMedPatientId) {
             await selectPatientForTherapistTools(currentMedPatientId, name, code);
         }
         await loadTherapistToolsCatalog();
@@ -28810,9 +28833,9 @@ async function unassignMeditacion(asignacionId) {
         }
         showToast("Meditación desasignada exitosamente");
         
-        const name = document.getElementById('tt-selected-patient-name')?.innerText;
-        const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
-        if (currentMedPatientId && name) {
+        const name = document.getElementById('mat-patient-name')?.innerText || document.getElementById('tt-selected-patient-name')?.innerText || currentMedPatientName || '';
+        const code = (document.getElementById('mat-patient-cedula')?.innerText || document.getElementById('tt-selected-patient-code')?.innerText || '').replace('Cédula: ', '').trim() || currentMedPatientCode || '';
+        if (currentMedPatientId) {
             await selectPatientForTherapistTools(currentMedPatientId, name, code);
         }
         await loadTherapistToolsCatalog();
@@ -29346,10 +29369,13 @@ async function submitCogAssign(e) {
         closeModal('modal-estimulacion-assign');
         if (typeof showToast === 'function') showToast("Estimulación Cognitiva asignada exitosamente");
 
-        const name = document.getElementById('tt-selected-patient-name')?.innerText;
-        const code = document.getElementById('tt-selected-patient-code')?.innerText.replace('Cédula: ', '');
-        if (name) {
+        const name = document.getElementById('mat-patient-name')?.innerText || document.getElementById('tt-selected-patient-name')?.innerText || currentMedPatientName || '';
+        const code = (document.getElementById('mat-patient-cedula')?.innerText || document.getElementById('tt-selected-patient-code')?.innerText || '').replace('Cédula: ', '').trim() || currentMedPatientCode || '';
+        if (cogCurrentPatientId) {
             await selectPatientForTherapistTools(cogCurrentPatientId, name, code);
+        }
+        if (typeof loadActiveToolsPatients === 'function') {
+            loadActiveToolsPatients();
         }
         loadTherapistToolsCatalog();
     } catch (err) {
@@ -29365,6 +29391,12 @@ async function submitCogAssign(e) {
 // HISTORIAL DEL PACIENTE
 async function openEstimulacionHistoryModal(patientId, patientName) {
     openModal('modal-estimulacion-history');
+    const headerTitle = document.querySelector('#modal-estimulacion-history .modal-header h3');
+    if (headerTitle) {
+        headerTitle.innerHTML = patientName
+            ? `📊 Historial: Estimulación Cognitiva - <span style="color: #702e5e;">${patientName}</span>`
+            : `📊 Historial de Estimulación Cognitiva`;
+    }
     const tbody = document.getElementById('cog-history-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Cargando historial de entregas...</td></tr>';
 

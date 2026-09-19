@@ -358,7 +358,7 @@ def api_paciente_estimulacion(patient_id):
                    (SELECT COUNT(*) FROM cat_ejercicios_cognitivos WHERE carpeta_id = pec.carpeta_id) as total_ejercicios,
                    (SELECT COUNT(*) FROM registro_estimulacion_cognitiva WHERE asignacion_id = pec.id AND completado = 1) as completados
             FROM paciente_estimulacion_cognitiva pec
-            JOIN cat_carpetas_cognitivas c ON pec.carpeta_id = c.id
+            LEFT JOIN cat_carpetas_cognitivas c ON pec.carpeta_id = c.id
             WHERE pec.paciente_id = ?
             ORDER BY pec.id DESC
         """, (patient_id,))
@@ -377,16 +377,28 @@ def api_paciente_estimulacion(patient_id):
         modo_rotacion = 'secuencial'
         al_terminar = 'pausar'
 
-        token_acceso = secrets.token_urlsafe(24)
+        cursor.execute("SELECT id, token_acceso FROM paciente_estimulacion_cognitiva WHERE paciente_id = ?", (patient_id,))
+        existing = cursor.fetchone()
 
-        cursor.execute("""
-            INSERT INTO paciente_estimulacion_cognitiva (
-                paciente_id, psicologo_id, carpeta_id, frecuencia, dias_semana_json,
-                hora_recordatorio, modo_rotacion, al_terminar, token_acceso, activa
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-        """, (patient_id, user_id, carpeta_id, frecuencia, json.dumps(dias_semana), hora, modo_rotacion, al_terminar, token_acceso))
+        if existing:
+            token_acceso = existing['token_acceso'] or secrets.token_urlsafe(24)
+            cursor.execute("""
+                UPDATE paciente_estimulacion_cognitiva
+                SET psicologo_id = ?, carpeta_id = ?, frecuencia = ?, dias_semana_json = ?,
+                    hora_recordatorio = ?, modo_rotacion = ?, al_terminar = ?, token_acceso = ?, activa = 1
+                WHERE id = ?
+            """, (user_id, carpeta_id, frecuencia, json.dumps(dias_semana), hora, modo_rotacion, al_terminar, token_acceso, existing['id']))
+            asig_id = existing['id']
+        else:
+            token_acceso = secrets.token_urlsafe(24)
+            cursor.execute("""
+                INSERT INTO paciente_estimulacion_cognitiva (
+                    paciente_id, psicologo_id, carpeta_id, frecuencia, dias_semana_json,
+                    hora_recordatorio, modo_rotacion, al_terminar, token_acceso, activa
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """, (patient_id, user_id, carpeta_id, frecuencia, json.dumps(dias_semana), hora, modo_rotacion, al_terminar, token_acceso))
+            asig_id = cursor.lastrowid
         db.commit()
-        asig_id = cursor.lastrowid
 
         # También registrar en modulos_terapeuticos_paciente
         cursor.execute("""
@@ -420,9 +432,10 @@ def api_historial_estimulacion(patient_id):
     cursor.execute("""
         SELECT r.*, e.titulo as ejercicio_titulo, e.tipo_archivo, e.archivo_url, c.titulo as carpeta_titulo
         FROM registro_estimulacion_cognitiva r
-        JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
-        JOIN cat_carpetas_cognitivas c ON e.carpeta_id = c.id
+        LEFT JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
+        LEFT JOIN cat_carpetas_cognitivas c ON (r.carpeta_id = c.id OR e.carpeta_id = c.id)
         WHERE r.paciente_id = ?
+        ORDER BY r.id DESC
     """, (patient_id,))
     rows = [dict(r) for r in cursor.fetchall()]
     return jsonify({'historial': rows})
