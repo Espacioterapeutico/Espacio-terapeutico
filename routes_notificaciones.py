@@ -431,7 +431,7 @@ def admin_message_templates():
     cursor = db.cursor()
     user_id = session.get('user_id')
     
-    keys = ['msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo', 'msg_herramientas']
+    keys = ['msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo', 'hora_cumpleanos', 'msg_herramientas']
     
     if request.method == 'GET':
         templates = {}

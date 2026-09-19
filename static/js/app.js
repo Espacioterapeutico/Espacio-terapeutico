@@ -2453,6 +2453,18 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     if (typeof checkAndInitClinicaNav === 'function') checkAndInitClinicaNav();
     loadNotifications();
     notificationIntervalId = setInterval(loadNotifications, 30000);
+    if (!window._visibilityNotifListenerAttached) {
+        window._visibilityNotifListenerAttached = true;
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                if (typeof loadNotifications === 'function') loadNotifications();
+                if (typeof loadDashboardStats === 'function' && typeof activeView !== 'undefined' && activeView === 'dashboard') loadDashboardStats();
+            }
+        });
+        window.addEventListener('focus', () => {
+            if (typeof loadNotifications === 'function') loadNotifications();
+        });
+    }
     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1000);
     loadMessageTemplates();
     loadSMTPSettings();
@@ -6318,9 +6330,12 @@ async function deleteSession(sessionId) {
             alert(data.success);
             loadDashboardStats();
             loadFinanceData();
-            if (activeView === 'sessions') loadSessions('');
-            if (activeView === 'agenda') loadAgenda();
-            if (activeView === 'dashboard') loadAgendaCompact();
+            if (typeof loadSessions === 'function') loadSessions('');
+            if (typeof loadAgenda === 'function') loadAgenda();
+            if (typeof renderFullCalendar === 'function') renderFullCalendar();
+            if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+            if (typeof loadNotifications === 'function') loadNotifications();
+            if (typeof loadTherapistConsultationHistory === 'function') loadTherapistConsultationHistory();
         } else {
             alert(data.error);
         }
@@ -6767,12 +6782,15 @@ async function handleCancelAppointmentSubmit(event) {
                 }
             }
 
-            // Recargar datos en las distintas vistas
+            // Recargar datos en todas las vistas inmediatamente
             if (typeof loadDashboardStats === 'function') loadDashboardStats();
-            if (typeof loadAgenda === 'function' && typeof activeView !== 'undefined' && activeView === 'agenda') loadAgenda();
-            if (typeof loadFinanceData === 'function' && typeof activeView !== 'undefined' && activeView === 'finanzas') loadFinanceData();
+            if (typeof loadAgenda === 'function') loadAgenda();
+            if (typeof renderFullCalendar === 'function') renderFullCalendar();
+            if (typeof loadFinanceData === 'function') loadFinanceData();
             if (typeof renderManualConfirmationsView === 'function') renderManualConfirmationsView();
             if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+            if (typeof loadTherapistConsultationHistory === 'function') loadTherapistConsultationHistory();
+            if (typeof loadNotifications === 'function') loadNotifications();
         } else {
             alert("Error al cancelar la cita: " + (data.error || "Ocurrió un error inesperado."));
         }
@@ -6821,9 +6839,16 @@ async function deleteAgendaEventFromDashboard(citaId) {
                 }
                 renderUpcomingConsultationPage(_upcomingCurrentIndex);
             }
-            if (typeof loadDashboardStats === 'function') {
-                loadDashboardStats();
-            }
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
+            if (typeof loadAgenda === 'function') loadAgenda();
+            if (typeof renderFullCalendar === 'function') renderFullCalendar();
+            if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+            if (typeof loadFinanceData === 'function') loadFinanceData();
+            if (typeof loadTherapistConsultationHistory === 'function') loadTherapistConsultationHistory();
+            if (typeof renderManualConfirmationsView === 'function') renderManualConfirmationsView();
+            if (typeof loadNotifications === 'function') loadNotifications();
+            const curPid = sessionStorage.getItem('patient_id');
+            if (curPid && typeof loadPatientPortalData === 'function') loadPatientPortalData(curPid);
         } else {
             const data = await res.json();
             alert('Error: ' + (data.error || 'No se pudo eliminar la cita.'));
@@ -7181,7 +7206,18 @@ async function deleteConsultationFromHistory(eventId) {
             try {
                 if (typeof loadTherapistConsultationHistory === 'function') loadTherapistConsultationHistory();
                 if (typeof loadAgenda === 'function') loadAgenda();
+                if (typeof renderFullCalendar === 'function') renderFullCalendar();
+                if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+                if (typeof loadDashboardStats === 'function') loadDashboardStats();
                 if (typeof loadFinanceData === 'function') loadFinanceData();
+                if (typeof renderManualConfirmationsView === 'function') renderManualConfirmationsView();
+                if (typeof loadNotifications === 'function') loadNotifications();
+                if (typeof _upcomingEventsCache !== 'undefined' && Array.isArray(_upcomingEventsCache)) {
+                    _upcomingEventsCache = _upcomingEventsCache.filter(e => e.id !== eventId);
+                    if (typeof renderUpcomingConsultationPage === 'function') {
+                        renderUpcomingConsultationPage(_upcomingCurrentIndex);
+                    }
+                }
             } catch (refreshErr) {
                 console.warn("Error actualizando interfaz tras eliminar:", refreshErr);
             }
@@ -10664,8 +10700,10 @@ async function deleteFinancePayment(eventId) {
             alert("Registro de pago/transacción eliminado con éxito.");
             loadDashboardStats();
             loadFinanceData();
-            if (activeView === 'agenda') loadAgenda();
-            if (activeView === 'dashboard') loadAgendaCompact();
+            if (typeof loadAgenda === 'function') loadAgenda();
+            if (typeof renderFullCalendar === 'function') renderFullCalendar();
+            if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+            if (typeof loadNotifications === 'function') loadNotifications();
         } else {
             alert(data.error);
         }
@@ -11899,6 +11937,7 @@ async function loadMessageTemplates() {
         const her = document.getElementById('template-herramientas');
         const swReag = document.getElementById('auto-reagendamiento-switch');
         const swCum = document.getElementById('auto-cumpleanos-switch');
+        const horaCum = document.getElementById('template-hora-cumpleanos');
         
         if (c) c.value = data.msg_confirmacion || "";
         if (cok) cok.value = data.msg_confirmacion_ok || "¡Gracias por confirmar tu sesión, *{nombre}*! 🌿\n\n📅 *Fecha:* {fecha}\n⏰ *Hora:* {hora}\n\nRecuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo.";
@@ -11907,6 +11946,7 @@ async function loadMessageTemplates() {
         if (rg) rg.value = data.msg_reagendamiento || "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!";
         if (ci) ci.value = data.msg_cierre || "Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿\n\n📌 *Tus compromisos y tareas para esta semana:*\n{tareas}\n\nSi deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:\nhttps://www.espacioterapeutico.net/agendar/psic.paulomora";
         if (cum) cum.value = data.msg_cumpleanos || "¡Feliz cumpleaños, *{nombre}*! 🎉🎂\n\nDesde Espacio Terapéutico te deseamos un excelente día lleno de bienestar, paz y alegría. ¡Gracias por confiar en nosotros en tu proceso!";
+        if (horaCum) horaCum.value = data.hora_cumpleanos || "09:00";
         if (her) her.value = data.msg_herramientas || "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\nTe recuerdo completar tu *{herramienta}* programada para las *{hora}*. Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n👉 {link}\n\n¡Gracias por tu constancia!";
         if (swReag) swReag.checked = (data.auto_reagendamiento_activo === '1');
         if (swCum) swCum.checked = (data.auto_cumpleanos_activo === '1');
@@ -11950,6 +11990,7 @@ async function handleSaveMessageTemplates(e) {
     const msgReagendamiento = document.getElementById('template-reagendamiento')?.value || '';
     const msgCierre = document.getElementById('template-cierre').value;
     const msgCumpleanos = document.getElementById('template-cumpleanos')?.value || '';
+    const horaCumpleanos = document.getElementById('template-hora-cumpleanos')?.value || '09:00';
     const msgHerramientas = document.getElementById('template-herramientas')?.value || '';
     const autoReagActivo = document.getElementById('auto-reagendamiento-switch')?.checked ? '1' : '0';
     const autoCumActivo = document.getElementById('auto-cumpleanos-switch')?.checked ? '1' : '0';
@@ -11966,6 +12007,7 @@ async function handleSaveMessageTemplates(e) {
                 msg_reagendamiento: msgReagendamiento,
                 msg_cierre: msgCierre,
                 msg_cumpleanos: msgCumpleanos,
+                hora_cumpleanos: horaCumpleanos,
                 msg_herramientas: msgHerramientas,
                 auto_reagendamiento_activo: autoReagActivo,
                 auto_cumpleanos_activo: autoCumActivo
@@ -20096,9 +20138,8 @@ async function selectPatientForTherapistTools(id, name, code) {
                 const mPausado = mCfg.recordatorio_activo === false;
                 const horaLabel = (typeof formatHoraAmPm === 'function') ? formatHoraAmPm(mHora) : mHora;
                 const diasLabel = mDias.length === 7 ? 'Todos los días' : `${mDias.length} días/sem`;
-                const safeDiasJson = JSON.stringify(mDias).replace(/"/g, '&quot;');
                 const progBtn = isActivo 
-                    ? `<button type="button" class="btn btn-sm" onclick="openToolScheduleModal(${id}, '${m.clave}', '${safePName}', '${m.nombre}', '${mHora}', ${safeDiasJson}, ${mPausado})" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 700; color: ${mPausado ? '#b45309' : '#1e40af'}; background: ${mPausado ? '#fef3c7' : '#eff6ff'}; border: 1px solid ${mPausado ? '#fde68a' : '#bfdbfe'}; border-radius: 5px; cursor: pointer;" title="Configurar hora y días del recordatorio">⏰ ${horaLabel} (${diasLabel})${mPausado ? ' ⏸️' : ''}</button>` 
+                    ? `<button type="button" id="tool-prog-btn-${id}-${m.clave}" class="btn btn-sm" onclick="toggleInlineToolSchedule(${id}, '${m.clave}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 700; color: ${mPausado ? '#b45309' : '#1e40af'}; background: ${mPausado ? '#fef3c7' : '#eff6ff'}; border: 1px solid ${mPausado ? '#fde68a' : '#bfdbfe'}; border-radius: 5px; cursor: pointer;" title="Configurar hora y días del recordatorio">⏰ ${horaLabel} (${diasLabel})${mPausado ? ' ⏸️' : ''}</button>` 
                     : '';
                 const histBtn = `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="openPatientToolHistoryModal(${id}, '${m.clave}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; border-radius: 5px; cursor: pointer;">📄 Historial</button>`;
 
@@ -20110,6 +20151,52 @@ async function selectPatientForTherapistTools(id, name, code) {
                         <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${m.link}')" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #1e40af; color: white; border: none; font-weight: 700; border-radius: 4px; cursor: pointer;">
                             📋 Copiar Link Directo
                         </button>
+                    </div>
+                ` : '';
+
+                const inlineSchedHtml = isActivo ? `
+                    <div id="inline-tool-sched-${id}-${m.clave}" class="inline-tool-schedule hide" style="margin-top: 0.65rem; padding: 0.75rem 0.85rem; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.35rem;">
+                            <span style="font-size: 0.82rem; font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 0.35rem;">
+                                ⚙️ Horario de Recordatorio: <strong>${m.nombre}</strong>
+                            </span>
+                            <label style="font-size: 0.78rem; font-weight: 700; color: #b45309; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="inline-ts-pausado-${id}-${m.clave}" ${mPausado ? 'checked' : ''}> ⏸️ Pausar Recordatorios
+                            </label>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.6rem; flex-wrap: wrap;">
+                            <label for="inline-ts-hora-${id}-${m.clave}" style="font-size: 0.8rem; font-weight: 600; color: #475569; margin: 0;">
+                                Hora de envío:
+                            </label>
+                            <input type="time" id="inline-ts-hora-${id}-${m.clave}" value="${mHora}" style="padding: 0.2rem 0.45rem; border: 1.5px solid #94a3b8; border-radius: 5px; font-weight: 700; font-size: 0.85rem; color: #1e293b; background: #ffffff;">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAllInlineToolDays(${id}, '${m.clave}')" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; border-radius: 4px;">
+                                Todos los días
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 0.35rem; margin-bottom: 0.7rem; flex-wrap: wrap;">
+                            ${[
+                                {d: 1, l: 'Lun'},
+                                {d: 2, l: 'Mar'},
+                                {d: 3, l: 'Mié'},
+                                {d: 4, l: 'Jue'},
+                                {d: 5, l: 'Vie'},
+                                {d: 6, l: 'Sáb'},
+                                {d: 7, l: 'Dom'}
+                            ].map(day => `
+                                <label style="font-size: 0.76rem; font-weight: 600; padding: 0.2rem 0.45rem; background: white; border: 1px solid #cbd5e1; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                                    <input type="checkbox" class="inline-ts-day-cb-${id}-${m.clave}" value="${day.d}" ${mDias.includes(day.d) ? 'checked' : ''}>
+                                    ${day.l}
+                                </label>
+                            `).join('')}
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 0.45rem;">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleInlineToolSchedule(${id}, '${m.clave}')" style="padding: 0.22rem 0.6rem; font-size: 0.76rem; border-radius: 5px;">
+                                Cerrar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="saveInlineToolSchedule(${id}, '${m.clave}')" style="padding: 0.22rem 0.75rem; font-size: 0.76rem; font-weight: 700; background: #2563eb; border: none; border-radius: 5px; cursor: pointer;">
+                                💾 Guardar Horario
+                            </button>
+                        </div>
                     </div>
                 ` : '';
 
@@ -20149,6 +20236,7 @@ async function selectPatientForTherapistTools(id, name, code) {
                             ${histBtn}
                         </div>
                         ${linkBanner}
+                        ${inlineSchedHtml}
                     ` : ''}
                 </div>
                 `;
@@ -22066,9 +22154,13 @@ async function quickMarkApptStatus(apptId, newStatus) {
             body: JSON.stringify(payload)
         });
         if (res.ok) {
-            if (typeof renderManualConfirmationsView === 'function') {
-                renderManualConfirmationsView();
-            }
+            if (typeof renderManualConfirmationsView === 'function') renderManualConfirmationsView();
+            if (typeof loadAgenda === 'function') loadAgenda();
+            if (typeof renderFullCalendar === 'function') renderFullCalendar();
+            if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
+            if (typeof loadFinanceData === 'function') loadFinanceData();
+            if (typeof loadNotifications === 'function') loadNotifications();
             return true;
         } else {
             const errData = await res.json().catch(() => ({}));
@@ -28066,6 +28158,71 @@ async function saveToolSchedule() {
     }
 }
 window.saveToolSchedule = saveToolSchedule;
+
+function toggleInlineToolSchedule(patientId, toolKey) {
+    const el = document.getElementById(`inline-tool-sched-${patientId}-${toolKey}`);
+    if (!el) return;
+    el.classList.toggle('hide');
+}
+window.toggleInlineToolSchedule = toggleInlineToolSchedule;
+
+function toggleAllInlineToolDays(patientId, toolKey) {
+    const cbs = document.querySelectorAll(`.inline-ts-day-cb-${patientId}-${toolKey}`);
+    const allChecked = Array.from(cbs).every(cb => cb.checked);
+    cbs.forEach(cb => cb.checked = !allChecked);
+}
+window.toggleAllInlineToolDays = toggleAllInlineToolDays;
+
+async function saveInlineToolSchedule(patientId, toolKey) {
+    const horaEl = document.getElementById(`inline-ts-hora-${patientId}-${toolKey}`);
+    const pausadoEl = document.getElementById(`inline-ts-pausado-${patientId}-${toolKey}`);
+    const hora = (horaEl ? horaEl.value : '') || (toolKey === 'sueno' ? '08:00' : '20:00');
+    const pausado = (pausadoEl && pausadoEl.checked) ? 1 : 0;
+    
+    const selectedDays = [];
+    document.querySelectorAll(`.inline-ts-day-cb-${patientId}-${toolKey}:checked`).forEach(cb => {
+        selectedDays.push(parseInt(cb.value, 10));
+    });
+    
+    if (selectedDays.length === 0 && !pausado) {
+        alert('Por favor selecciona al menos un día de la semana o marca pausar recordatorios.');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/herramientas/programar-recordatorio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: patientId,
+                herramienta_tipo: toolKey,
+                hora_programada: hora,
+                dias_semana: selectedDays,
+                pausado: pausado
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const btnEl = document.getElementById(`tool-prog-btn-${patientId}-${toolKey}`);
+            if (btnEl) {
+                const horaLabel = (typeof formatHoraAmPm === 'function') ? formatHoraAmPm(hora) : hora;
+                const diasLabel = selectedDays.length === 7 ? 'Todos los días' : `${selectedDays.length} días/sem`;
+                btnEl.innerHTML = `⏰ ${horaLabel} (${diasLabel})${pausado ? ' ⏸️' : ''}`;
+                btnEl.style.color = pausado ? '#b45309' : '#1e40af';
+                btnEl.style.background = pausado ? '#fef3c7' : '#eff6ff';
+                btnEl.style.borderColor = pausado ? '#fde68a' : '#bfdbfe';
+            }
+            toggleInlineToolSchedule(patientId, toolKey);
+            alert('✅ Horario de recordatorio guardado exitosamente.');
+        } else {
+            alert('❌ ' + (data.error || 'Error al guardar horario.'));
+        }
+    } catch (err) {
+        console.error('Error al guardar horario inline:', err);
+        alert('❌ Error de conexión al guardar horario.');
+    }
+}
+window.saveInlineToolSchedule = saveInlineToolSchedule;
 
 async function copyToolDirectLink(link) {
     if (!link) return;

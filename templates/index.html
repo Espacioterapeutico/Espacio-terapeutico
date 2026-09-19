@@ -1400,9 +1400,6 @@
                     📱 Instalar App
                 </button>
 
-                <button id="sync-firebase-btn" class="btn btn-secondary btn-sm" onclick="forceSyncWithFirebase()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; padding: 0.35rem 0.65rem; flex-shrink: 0; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25); margin-right: 0.5rem;" title="Forzar guardado y respaldo completo de consultantes, citas y evoluciones en la nube de Firebase">
-                    💾 Guardar en Nube
-                </button>
                 
                 <div id="header-trial-badge" class="badge hide" style="margin-right: 0.75rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 5px 12px; border-radius: 999px; font-weight: 700; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3);">
                     <span id="trial-badge-text">⏳ Prueba Gratis (3 días)</span>
@@ -2844,11 +2841,18 @@
                                             <textarea id="template-cierre" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿&#10;&#10;📌 *Tus compromisos y tareas para esta semana:*&#10;{tareas}&#10;&#10;Si deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:&#10;https://www.espacioterapeutico.net/agendar/psic.paulomora" required></textarea>
                                         </div>
                                         <div class="form-group mb-4" style="background: rgba(16, 185, 129, 0.05); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(16, 185, 129, 0.2);">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
                                                 <label for="template-cumpleanos" style="font-weight: 700; color: #10b981; margin: 0;">Fase 4: Cumpleaños de Consultante (Día de Cumpleaños)</label>
                                                 <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; font-weight: 700; color: var(--text-dark);">
                                                     <input type="checkbox" id="auto-cumpleanos-switch"> 🎂 Enviar Saludo de Cumpleaños Automático por WhatsApp
                                                 </label>
+                                            </div>
+                                            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.55rem; flex-wrap: wrap; background: rgba(255, 255, 255, 0.85); padding: 0.35rem 0.65rem; border-radius: 6px; border: 1px dashed rgba(16, 185, 129, 0.4);">
+                                                <label for="template-hora-cumpleanos" style="font-size: 0.82rem; font-weight: 700; color: #047857; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                                    ⏰ Hora de envío de saludo:
+                                                </label>
+                                                <input type="time" id="template-hora-cumpleanos" value="09:00" style="padding: 0.2rem 0.45rem; border: 1.5px solid #10b981; border-radius: 5px; font-size: 0.85rem; font-weight: 700; color: #065f46; background: #fff;">
+                                                <span style="font-size: 0.74rem; color: #64748b;">(Evita enviar a la medianoche. Por defecto: 09:00 AM)</span>
                                             </div>
                                             <textarea id="template-cumpleanos" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="¡Feliz cumpleaños, *{nombre}*! 🎉🎂"></textarea>
                                         </div>

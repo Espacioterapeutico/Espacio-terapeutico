@@ -2308,10 +2308,11 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
                 """, (f"{today_str}%",))
             db.commit()
 
-        cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_cumpleanos', 'auto_cumpleanos_activo')")
+        cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_cumpleanos', 'auto_cumpleanos_activo', 'hora_cumpleanos')")
         cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
         auto_cumple_activo = cfg_rows.get('auto_cumpleanos_activo', '1') == '1'
         tmpl_cumple_default = cfg_rows.get('msg_cumpleanos') or "¡Feliz cumpleaños, *{nombre}*! 🎉 🎂\n\nTe deseo un excelente día lleno de bienestar, paz y alegría."
+        default_hora_cumple = cfg_rows.get('hora_cumpleanos') or '09:00'
 
         cursor.execute("""
             SELECT id, nombres, apellidos, fecha_nacimiento, telefono, psicologo_id
@@ -2326,6 +2327,20 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
             dob_norm = normalize_date_str(dob_str)
             if len(dob_norm) >= 10 and dob_norm[5:10] == today_md:
                 psic_id = p['psicologo_id'] or 1
+
+                # Validar hora configurada para este psicólogo o global (ej. 09:00 AM)
+                if not force:
+                    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"hora_cumpleanos_{psic_id}",))
+                    psic_hora_row = cursor.fetchone()
+                    hora_target = (psic_hora_row['valor'] if psic_hora_row and psic_hora_row['valor'] else default_hora_cumple) or '09:00'
+                    try:
+                        h_parts = [int(x) for x in hora_target.split(':')]
+                        target_mins = h_parts[0] * 60 + (h_parts[1] if len(h_parts) > 1 else 0)
+                        curr_mins = now_dt.hour * 60 + now_dt.minute
+                        if curr_mins < target_mins:
+                            continue  # Aún no es la hora programada para este psicólogo
+                    except Exception:
+                        pass
                 pac_id = p['id']
                 pac_nombre = f"{p['nombres']} {p['apellidos']}".strip()
                 first_name = p['nombres'].strip().split()[0] if p['nombres'] else 'Consultante'
