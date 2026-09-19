@@ -2339,6 +2339,23 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
             }
         }
     });
+
+    // Controlar visibilidad de la pestaña Notificaciones FCM en Ajustes (Solo para Superadministrador)
+    const fcmTabBtn = document.getElementById('set-tab-firebase');
+    const fcmCard = document.getElementById('set-card-firebase');
+    if (fcmTabBtn) {
+        if (isSuperadminUser) {
+            fcmTabBtn.classList.remove('hide');
+            fcmTabBtn.style.removeProperty('display');
+        } else {
+            fcmTabBtn.classList.add('hide');
+            fcmTabBtn.style.setProperty('display', 'none', 'important');
+        }
+    }
+    if (fcmCard && !isSuperadminUser) {
+        fcmCard.classList.add('hide');
+        fcmCard.style.setProperty('display', 'none', 'important');
+    }
     
     if (isPureSuperadmin && typeof switchView === 'function') {
         switchView('superadmin-dashboard');
@@ -18409,15 +18426,26 @@ function initAppTheme() {
 }
 
 function switchSettingsTab(tabName) {
-    const isPsicologo = (window.currentUser && window.currentUser.rol === 'psicologo') || (sessionStorage.getItem('userRole') === 'psicologo');
+    const cleanRole = ((window.currentUser && (window.currentUser.role || window.currentUser.rol)) || sessionStorage.getItem('user_role') || sessionStorage.getItem('role') || '').toLowerCase();
+    const cleanUser = ((window.currentUser && window.currentUser.username) || sessionStorage.getItem('username') || '').toLowerCase();
+    const cleanId = parseInt((window.currentUser && window.currentUser.id) || sessionStorage.getItem('user_id') || 0);
+    const isSuperadmin = (cleanRole === 'superadmin') || (cleanUser === 'pamoraro') || (cleanId === 1);
+
     const fcmBtn = document.getElementById('set-tab-firebase');
     const fcmCard = document.getElementById('set-card-firebase');
-    if (isPsicologo) {
-        if (fcmBtn) fcmBtn.style.setProperty('display', 'none', 'important');
-        if (fcmCard) fcmCard.style.setProperty('display', 'none', 'important');
-        if (tabName === 'firebase') tabName = 'backup';
+    if (!isSuperadmin) {
+        if (fcmBtn) {
+            fcmBtn.classList.add('hide');
+            fcmBtn.style.setProperty('display', 'none', 'important');
+        }
+        if (fcmCard) {
+            fcmCard.classList.add('hide');
+            fcmCard.style.setProperty('display', 'none', 'important');
+        }
+        if (tabName === 'firebase') tabName = 'perfil';
     } else if (fcmBtn) {
-        fcmBtn.style.display = '';
+        fcmBtn.classList.remove('hide');
+        fcmBtn.style.removeProperty('display');
     }
 
     if (tabName === 'contrasena') tabName = 'password';
@@ -18427,7 +18455,8 @@ function switchSettingsTab(tabName) {
         const card = document.getElementById(`set-card-${t}`);
         if (btn) btn.className = (t === tabName) ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
         if (card) {
-            if (t === 'firebase' && isPsicologo) {
+            if (t === 'firebase' && !isSuperadmin) {
+                card.classList.add('hide');
                 card.style.setProperty('display', 'none', 'important');
             } else {
                 card.classList.toggle('hide', t !== tabName);
