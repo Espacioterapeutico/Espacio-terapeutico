@@ -9,6 +9,7 @@ import os
 import json
 import sqlite3
 import datetime
+import math
 from functools import wraps
 import io
 import zipfile
@@ -637,6 +638,163 @@ def admin_payment_methods():
         cursor.execute("UPDATE usuarios SET metodos_pago = ? WHERE id = ?", (metodos, user_id))
         db.commit()
         return jsonify({'success': 'Métodos de pago actualizados con éxito.'})
+
+DEFAULT_SUBSCRIPTION_PAYMENT_METHODS = """🏦 Pago Móvil / Transferencia Bancaria (Venezuela):
+• Banco: Banesco Banco Universal
+• Titular: Espacio Terapéutico
+• C.I. / RIF: J-504938210
+• Teléfono Pago Móvil: 0414-0000000
+
+💵 Pagos Internacionales / Divisas:
+• Zelle: pagos@espacioterapeutico.net
+• Binance Pay: ID 987654321
+• PayPal: pagos@espacioterapeutico.net
+
+📌 Instrucciones de Notificación:
+Una vez realizada tu transferencia o pago, presiona el botón "Notificar Pago por WhatsApp" o envía tu comprobante a soporte@espacioterapeutico.net indicando tu nombre de usuario para registrar la renovación de inmediato."""
+
+@admin_bp.route('/api/subscription/my-info', methods=['GET'])
+@login_required
+def api_subscription_my_info():
+    """Retorna el estado de suscripción detallado del usuario en sesión."""
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT id, username, role, nombres, apellidos, activo,
+               suscripcion_paga, fecha_expiracion_prueba, fecha_registro, aviso_pago
+        FROM usuarios WHERE id = ?
+    """, (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Usuario no encontrado.'}), 404
+
+    u = dict(row)
+    role = (u.get('role') or '').lower()
+    username = (u.get('username') or '').lower()
+    clean_id = int(u.get('id') or 0)
+    is_superadmin = (role in ('superadmin', 'admin')) or (username == 'pamoraro') or (clean_id == 1)
+
+    suscripcion_paga = int(u.get('suscripcion_paga') or 0)
+    expiry_str = (u.get('fecha_expiracion_prueba') or '').strip()
+    registro_str = (u.get('fecha_registro') or '').strip()
+    aviso_pago = int(u.get('aviso_pago') or 0)
+
+    # Métodos de pago de la plataforma configurados por el superadmin
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'metodos_pago_suscripcion'")
+    cfg_row = cursor.fetchone()
+    metodos_pago_plataforma = cfg_row['valor'] if (cfg_row and cfg_row['valor']) else DEFAULT_SUBSCRIPTION_PAYMENT_METHODS
+
+    MESES_ES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+    if is_superadmin:
+        return jsonify({
+            'es_superadmin': True,
+            'plan_nombre': 'Plan Superadministrador',
+            'plan_subtitulo': 'Licencia Maestra Institucional',
+            'plan_tipo': 'superadmin',
+            'estado': 'ilimitado',
+            'estado_badge': '🟢 Acceso Ilimitado',
+            'dias_disponibles': 'Ilimitados',
+            'dias_numero': 9999,
+            'porcentaje_tiempo': 100,
+            'fecha_corte': 'Sin fecha de corte (Acceso Permanente)',
+            'fecha_corte_raw': '',
+            'fecha_registro': registro_str,
+            'suscripcion_expirada': False,
+            'aviso_pago': 0,
+            'metodos_pago_plataforma': metodos_pago_plataforma
+        })
+
+    # Terapeuta: calcular días y fecha de corte
+    plan_nombre = 'Plan Profesional' if suscripcion_paga == 1 else 'Período de Prueba Gratis'
+    plan_subtitulo = 'Membresía Activa de Consultorio' if suscripcion_paga == 1 else 'Acceso Completo de Evaluación'
+    plan_tipo = 'profesional' if suscripcion_paga == 1 else 'prueba'
+
+    days_left = 0
+    fecha_corte_formateada = 'No definida'
+    exp_dt = None
+
+    if expiry_str:
+        try:
+            if 'T' in expiry_str:
+                exp_dt = datetime.datetime.fromisoformat(expiry_str)
+            elif len(expiry_str) == 10:
+                exp_dt = datetime.datetime.strptime(expiry_str, "%Y-%m-%d")
+            else:
+                exp_dt = datetime.datetime.strptime(expiry_str[:19], "%Y-%m-%d %H:%M:%S")
+            
+            fecha_corte_formateada = f"{exp_dt.day} de {MESES_ES[exp_dt.month]} de {exp_dt.year}"
+            
+            diff = exp_dt - datetime.datetime.now()
+            diff_hours = diff.total_seconds() / 3600.0
+            if diff_hours > 0:
+                days_left = int(math.ceil(diff_hours / 24.0))
+            else:
+                days_left = 0
+        except Exception as e:
+            fecha_corte_formateada = expiry_str
+
+    if days_left == 0:
+        estado = 'vencido'
+        estado_badge = '🔴 Suscripción Vencida (Modo Solo Lectura)'
+    elif days_left <= 5:
+        estado = 'por_vencer'
+        estado_badge = f'🟡 Por Vencer ({days_left} día{"s" if days_left != 1 else ""} restante{"s" if days_left != 1 else ""})'
+    else:
+        estado = 'activo'
+        estado_badge = f'🟢 Activo ({days_left} días disponibles)'
+
+    pct = min(100, max(0, int((days_left / 30.0) * 100)))
+
+    return jsonify({
+        'es_superadmin': False,
+        'plan_nombre': plan_nombre,
+        'plan_subtitulo': plan_subtitulo,
+        'plan_tipo': plan_tipo,
+        'estado': estado,
+        'estado_badge': estado_badge,
+        'dias_disponibles': f"{days_left} día{'s' if days_left != 1 else ''}",
+        'dias_numero': days_left,
+        'porcentaje_tiempo': pct,
+        'fecha_corte': fecha_corte_formateada,
+        'fecha_corte_raw': expiry_str,
+        'fecha_registro': registro_str,
+        'suscripcion_expirada': (days_left == 0),
+        'aviso_pago': aviso_pago,
+        'metodos_pago_plataforma': metodos_pago_plataforma
+    })
+
+@admin_bp.route('/api/superadmin/subscription-payment-methods', methods=['GET', 'POST'])
+@login_required
+def api_superadmin_subscription_payment_methods():
+    """Permite consultar y guardar los métodos de pago de suscripción de la plataforma."""
+    db = get_db()
+    cursor = db.cursor()
+
+    if request.method == 'GET':
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'metodos_pago_suscripcion'")
+        row = cursor.fetchone()
+        val = row['valor'] if (row and row['valor']) else DEFAULT_SUBSCRIPTION_PAYMENT_METHODS
+        return jsonify({'metodos_pago_suscripcion': val})
+
+    # POST: Sólo Superadministrador
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso no autorizado. Se requieren privilegios de Superadministrador.'}), 403
+
+    data = request.json or {}
+    nuevos_metodos = (data.get('metodos_pago_suscripcion') or '').strip()
+    if not nuevos_metodos:
+        return jsonify({'error': 'Los métodos de pago no pueden estar vacíos.'}), 400
+
+    cursor.execute("""
+        INSERT INTO configuracion (clave, valor) VALUES ('metodos_pago_suscripcion', ?)
+        ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor
+    """, (nuevos_metodos,))
+    db.commit()
+
+    return jsonify({'success': 'Métodos de pago de suscripción actualizados exitosamente.'})
 
 @admin_bp.route('/api/admin/terms', methods=['GET', 'POST'])
 @login_required

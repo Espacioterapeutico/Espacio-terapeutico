@@ -18455,7 +18455,7 @@ function switchSettingsTab(tabName) {
     }
 
     if (tabName === 'contrasena') tabName = 'password';
-    const tabs = ['perfil', 'apariencia', 'equipo', 'backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
+    const tabs = ['perfil', 'apariencia', 'equipo', 'suscripcion', 'backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
     tabs.forEach(t => {
         const btn = document.getElementById(`set-tab-${t}`);
         const card = document.getElementById(`set-card-${t}`);
@@ -18490,7 +18490,9 @@ function switchSettingsTab(tabName) {
         loadArchivedPatients();
     }
 
-    if (tabName === 'equipo') {
+    if (tabName === 'suscripcion') {
+        loadSubscriptionInfo();
+    } else if (tabName === 'equipo') {
         if (typeof loadEquipoSettings === 'function') {
             loadEquipoSettings();
         }
@@ -18524,6 +18526,266 @@ function switchSettingsTab(tabName) {
     }
 }
 window.switchSettingsTab = switchSettingsTab;
+
+// ==========================================
+// MÓDULO DE SUSCRIPCIÓN Y PAGOS DE LA PLATAFORMA
+// ==========================================
+
+async function loadSubscriptionInfo() {
+    const planNameEl = document.getElementById('sub-info-plan-name');
+    const planSubEl = document.getElementById('sub-info-plan-sub');
+    const daysLeftEl = document.getElementById('sub-info-days-left');
+    const daysBarEl = document.getElementById('sub-info-days-bar');
+    const cutoffDateEl = document.getElementById('sub-info-cutoff-date');
+    const statusPill = document.getElementById('sub-info-status-pill');
+    const solvencyStatusEl = document.getElementById('sub-info-solvency-status');
+    const solvencySubEl = document.getElementById('sub-info-solvency-sub');
+    const paymentMethodsTextEl = document.getElementById('sub-info-payment-methods-text');
+    const superadminEditorCard = document.getElementById('sub-superadmin-editor-card');
+    const superadminTextarea = document.getElementById('sub-superadmin-methods-textarea');
+
+    if (statusPill) {
+        statusPill.textContent = 'Cargando...';
+        statusPill.style.background = '#f1f5f9';
+        statusPill.style.color = '#64748b';
+        statusPill.style.border = '1px solid #cbd5e1';
+    }
+
+    try {
+        const res = await fetch('/api/subscription/my-info?_t=' + Date.now());
+        if (!res.ok) {
+            console.error("Error al obtener información de suscripción:", res.status);
+            return;
+        }
+        const data = await res.json();
+        window._currentSubscriptionPaymentMethods = data.metodos_pago_plataforma || '';
+
+        if (planNameEl) planNameEl.textContent = data.plan_nombre || '--';
+        if (planSubEl) planSubEl.textContent = data.plan_subtitulo || '';
+
+        if (daysLeftEl) daysLeftEl.textContent = data.dias_disponibles || '--';
+        if (cutoffDateEl) cutoffDateEl.textContent = data.fecha_corte || '--';
+
+        if (paymentMethodsTextEl) {
+            paymentMethodsTextEl.textContent = data.metodos_pago_plataforma || 'No hay métodos de pago configurados.';
+        }
+
+        // Barra de progreso y colores según días
+        if (daysBarEl) {
+            const pct = data.porcentaje_tiempo !== undefined ? data.porcentaje_tiempo : 100;
+            daysBarEl.style.width = `${pct}%`;
+            if (data.dias_numero === 0) {
+                daysBarEl.style.background = '#ef4444';
+                if (daysLeftEl) daysLeftEl.style.color = '#ef4444';
+            } else if (data.dias_numero <= 5) {
+                daysBarEl.style.background = '#f59e0b';
+                if (daysLeftEl) daysLeftEl.style.color = '#f59e0b';
+            } else {
+                daysBarEl.style.background = '#10b981';
+                if (daysLeftEl) daysLeftEl.style.color = '#10b981';
+            }
+        }
+
+        // Estado general en badge
+        if (statusPill) {
+            statusPill.textContent = data.estado_badge || 'Activo';
+            if (data.estado === 'vencido') {
+                statusPill.style.background = '#fef2f2';
+                statusPill.style.color = '#ef4444';
+                statusPill.style.border = '1.5px solid #fecaca';
+            } else if (data.estado === 'por_vencer') {
+                statusPill.style.background = '#fffbeb';
+                statusPill.style.color = '#d97706';
+                statusPill.style.border = '1.5px solid #fde68a';
+            } else if (data.estado === 'ilimitado') {
+                statusPill.style.background = '#fdf4ff';
+                statusPill.style.color = '#702e5e';
+                statusPill.style.border = '1.5px solid #f0abfc';
+            } else {
+                statusPill.style.background = '#ecfdf5';
+                statusPill.style.color = '#059669';
+                statusPill.style.border = '1.5px solid #a7f3d0';
+            }
+        }
+
+        // Estado de Solvencia
+        if (solvencyStatusEl && solvencySubEl) {
+            if (data.aviso_pago === 1) {
+                solvencyStatusEl.textContent = 'Pago Pendiente';
+                solvencyStatusEl.style.color = '#ef4444';
+                solvencySubEl.textContent = 'Regularizar mensualidad';
+            } else if (data.suscripcion_expirada) {
+                solvencyStatusEl.textContent = 'Modo Solo Lectura';
+                solvencyStatusEl.style.color = '#ef4444';
+                solvencySubEl.textContent = 'Suscripción finalizada';
+            } else {
+                solvencyStatusEl.textContent = 'Al Día';
+                solvencyStatusEl.style.color = '#10b981';
+                solvencySubEl.textContent = 'Servicios 100% operativos';
+            }
+        }
+
+        // Editor para Superadmin
+        if (superadminEditorCard) {
+            if (data.es_superadmin) {
+                superadminEditorCard.classList.remove('hide');
+                if (superadminTextarea) {
+                    superadminTextarea.value = data.metodos_pago_plataforma || '';
+                }
+            } else {
+                superadminEditorCard.classList.add('hide');
+            }
+        }
+    } catch(err) {
+        console.error("Error en loadSubscriptionInfo:", err);
+    }
+}
+
+function copySubscriptionPaymentMethods() {
+    const text = window._currentSubscriptionPaymentMethods || (document.getElementById('sub-info-payment-methods-text') ? document.getElementById('sub-info-payment-methods-text').textContent : '') || '';
+    if (!text) return;
+    
+    const showCopiedUI = () => {
+        const btnText = document.getElementById('copy-sub-btn-text');
+        if (btnText) {
+            const old = btnText.textContent;
+            btnText.textContent = '¡Copiado! ✅';
+            setTimeout(() => { btnText.textContent = old; }, 2500);
+        }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showCopiedUI).catch(() => {
+            fallbackCopy(text);
+            showCopiedUI();
+        });
+    } else {
+        fallbackCopy(text);
+        showCopiedUI();
+    }
+
+    function fallbackCopy(str) {
+        const ta = document.createElement('textarea');
+        ta.value = str;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch(e) {}
+        document.body.removeChild(ta);
+    }
+}
+
+function notifySubscriptionPaymentWhatsApp() {
+    const user = (window.currentUser && window.currentUser.username) || sessionStorage.getItem('username') || '';
+    const name = (window.currentUser && (window.currentUser.nombres || window.currentUser.username)) || '';
+    const text = window._currentSubscriptionPaymentMethods || '';
+    let phone = '';
+    const match = text.match(/(?:04\d{2}[-\s]?\d{7}|58\d{10})/);
+    if (match) {
+        phone = match[0].replace(/\D/g, '');
+        if (phone.startsWith('0')) phone = '58' + phone.substring(1);
+    }
+    const msg = encodeURIComponent(`Hola Espacio Terapéutico, he realizado el pago de mi suscripción para el usuario: ${user} (${name}). Adjunto el comprobante.`);
+    const url = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+    window.open(url, '_blank');
+}
+
+async function saveSuperadminSubscriptionMethodsFromSettings() {
+    const textarea = document.getElementById('sub-superadmin-methods-textarea');
+    const msgEl = document.getElementById('sub-superadmin-save-msg');
+    if (!textarea) return;
+    const metodos = textarea.value.trim();
+    if (!metodos) {
+        alert("Los métodos de pago no pueden estar vacíos.");
+        return;
+    }
+    try {
+        const res = await fetch('/api/superadmin/subscription-payment-methods', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ metodos_pago_suscripcion: metodos })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || "Error al guardar métodos de pago.");
+            return;
+        }
+        if (msgEl) {
+            msgEl.className = 'status-msg success mt-3';
+            msgEl.textContent = '✅ Métodos de pago de suscripción actualizados con éxito.';
+            msgEl.classList.remove('hide');
+            setTimeout(() => msgEl.classList.add('hide'), 4000);
+        }
+        loadSubscriptionInfo();
+    } catch(e) {
+        alert("Error de conexión al guardar métodos de pago.");
+    }
+}
+
+async function openSuperadminPaymentModal() {
+    const modal = document.getElementById('superadmin-payment-modal');
+    const textarea = document.getElementById('modal-superadmin-payment-methods-text');
+    const msgEl = document.getElementById('modal-superadmin-payment-status');
+    if (msgEl) msgEl.classList.add('hide');
+    if (modal) modal.classList.remove('hide');
+    if (textarea) textarea.value = "Cargando métodos...";
+    try {
+        const res = await fetch('/api/superadmin/subscription-payment-methods?_t=' + Date.now());
+        const data = await res.json();
+        if (textarea) {
+            textarea.value = data.metodos_pago_suscripcion || '';
+        }
+    } catch(e) {
+        if (textarea) textarea.value = '';
+    }
+}
+
+async function saveSuperadminPaymentMethodsFromModal() {
+    const textarea = document.getElementById('modal-superadmin-payment-methods-text');
+    const msgEl = document.getElementById('modal-superadmin-payment-status');
+    if (!textarea) return;
+    const metodos = textarea.value.trim();
+    if (!metodos) {
+        alert("Los métodos de pago no pueden estar vacíos.");
+        return;
+    }
+    try {
+        const res = await fetch('/api/superadmin/subscription-payment-methods', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ metodos_pago_suscripcion: metodos })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || "Error al guardar métodos.");
+            return;
+        }
+        if (msgEl) {
+            msgEl.className = 'status-msg success mb-3';
+            msgEl.textContent = '✅ Métodos de pago guardados exitosamente.';
+            msgEl.classList.remove('hide');
+            setTimeout(() => {
+                msgEl.classList.add('hide');
+                closeModal('superadmin-payment-modal');
+            }, 1200);
+        } else {
+            closeModal('superadmin-payment-modal');
+        }
+        if (typeof loadSubscriptionInfo === 'function') {
+            loadSubscriptionInfo();
+        }
+    } catch(e) {
+        alert("Error al guardar métodos de pago.");
+    }
+}
+
+window.loadSubscriptionInfo = loadSubscriptionInfo;
+window.copySubscriptionPaymentMethods = copySubscriptionPaymentMethods;
+window.notifySubscriptionPaymentWhatsApp = notifySubscriptionPaymentWhatsApp;
+window.saveSuperadminSubscriptionMethodsFromSettings = saveSuperadminSubscriptionMethodsFromSettings;
+window.openSuperadminPaymentModal = openSuperadminPaymentModal;
+window.saveSuperadminPaymentMethodsFromModal = saveSuperadminPaymentMethodsFromModal;
 
 async function sendManualWhatsAppReminder(citaId) {
     if (!confirm('¿Deseas enviar el recordatorio de WhatsApp a este consultante ahora mismo?')) return;

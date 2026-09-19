@@ -1516,6 +1516,7 @@
                                     <span id="superadmin-therapists-count" style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;">Cargando psicólogos...</span>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="openSuperadminPaymentModal()" style="font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 0.45rem 0.9rem; border-radius: 8px;">💳 Métodos de Pago Suscripción</button>
                                     <button type="button" class="btn btn-primary btn-sm" onclick="openCreatePsychologistModal()" style="font-weight: 700; background: #0d9488; border: none; padding: 0.45rem 0.9rem; border-radius: 8px;">➕ Registrar Psicólogo</button>
                                     <button type="button" class="btn btn-secondary btn-sm" onclick="loadSuperadminData()" style="font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 8px;">🔄 Actualizar Lista</button>
                                 </div>
@@ -1732,11 +1733,18 @@
                             </button>
                         </div>
                     </div>
-                    <div id="dashboard-aviso-pago" class="hide mb-4" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 5px solid var(--danger-color); padding: 1.25rem 1.5rem; border-radius: var(--radius-md); border: 1.5px solid rgba(239, 68, 68, 0.15); display: flex; align-items: center; gap: 0.85rem; box-shadow: var(--shadow-sm);">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width: 28px; height: 28px; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <div>
-                            <h4 style="margin: 0; color: #991b1b; font-weight: 700; font-size: 0.95rem;">Notificación de Administración: Pago de Suscripción Pendiente</h4>
-                            <p style="margin: 0.25rem 0 0 0; color: #7f1d1d; font-size: 0.85rem; font-weight: 500;">Estimado/a profesional, tu cuenta presenta una mensualidad pendiente de cobro. Por favor ponte en contacto con soporte técnico para regularizar tu suscripción y evitar la suspensión de tus servicios.</p>
+                    <div id="dashboard-aviso-pago" class="hide mb-4" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 5px solid var(--danger-color); padding: 1.25rem 1.5rem; border-radius: var(--radius-md); border: 1.5px solid rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: space-between; gap: 1rem; box-shadow: var(--shadow-sm); flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 250px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width: 28px; height: 28px; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <div>
+                                <h4 style="margin: 0; color: #991b1b; font-weight: 700; font-size: 0.95rem;">Notificación de Administración: Pago de Suscripción Pendiente</h4>
+                                <p style="margin: 0.25rem 0 0 0; color: #7f1d1d; font-size: 0.85rem; font-weight: 500;">Estimado/a profesional, tu cuenta presenta una mensualidad pendiente de cobro. Por favor regulariza tu suscripción para mantener activos todos tus servicios clínicos.</p>
+                            </div>
+                        </div>
+                        <div style="flex-shrink: 0;">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="switchView('settings'); switchSettingsTab('suscripcion');" style="padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.82rem; white-space: nowrap; background: #dc2626; border: none; box-shadow: 0 2px 6px rgba(220,38,38,0.25);">
+                                💳 Ver Métodos de Pago
+                            </button>
                         </div>
                     </div>
 
@@ -1752,7 +1760,7 @@
                             </div>
                         </div>
                         <div style="flex-shrink: 0;">
-                            <button type="button" class="btn btn-sm btn-primary" onclick="alert('Para renovar tu suscripción y habilitar la creación de citas y evoluciones, comunícate con la administración a través de soporte o WhatsApp.');" style="padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.82rem; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="switchView('settings'); switchSettingsTab('suscripcion');" style="padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.82rem; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
                                 💳 Reactivar Suscripción
                             </button>
                         </div>
@@ -2403,6 +2411,7 @@
                         <button type="button" id="set-tab-perfil" class="btn btn-sm btn-primary" onclick="switchSettingsTab('perfil')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">👤 Perfil Público & Modalidades</button>
                         <button type="button" id="set-tab-apariencia" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('apariencia')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; background: var(--primary-light, #fdf4ff); color: var(--primary-brand, #702e5e); border: 1.5px solid var(--primary-border, #f0abfc);">🎨 Apariencia & Colores</button>
                         <button type="button" id="set-tab-equipo" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('equipo')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; background: #fdf4ff; color: #702e5e; border: 1.5px solid #f0abfc;">👥 Equipo de Trabajo</button>
+                        <button type="button" id="set-tab-suscripcion" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('suscripcion')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">💳 Mi Suscripción & Plan</button>
                         <button type="button" id="set-tab-backup" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('backup')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Copia de Seguridad</button>
                         <button type="button" id="set-tab-google" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('google')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Google Calendar</button>
                         <button type="button" id="set-tab-whatsapp" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('whatsapp')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Whatsapp</button>
@@ -2413,6 +2422,156 @@
                         <button type="button" id="set-tab-terminos" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('terminos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">📜 Términos y Condiciones</button>
                         <button type="button" id="set-tab-password" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('password')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">🔑 Cambiar Contraseña</button>
                         <button type="button" id="set-tab-soporte" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('soporte')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Soporte Técnico</button>
+                    </div>
+
+                    <!-- Contenedor: Mi Suscripción & Plan -->
+                    <div id="set-card-suscripcion" class="settings-tab-content hide">
+                        <!-- Cabecera y Resumen de Estado -->
+                        <div class="card" style="border-radius: 16px; border: 1.5px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 1.5rem;">
+                            <div class="card-header" style="background: var(--card-bg); border-bottom: 1.5px solid var(--border-color); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--primary-brand, #702e5e); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                        💳 Estado de Suscripción & Membresía
+                                    </h3>
+                                    <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">
+                                        Detalles de tu plan activo, días disponibles, fecha de corte y métodos oficiales de pago para renovación.
+                                    </p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                    <span id="sub-info-status-pill" class="badge" style="background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; font-size: 0.85rem; padding: 0.45rem 0.9rem; font-weight: 800; border-radius: 20px;">
+                                        Cargando...
+                                    </span>
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="loadSubscriptionInfo()" title="Recargar Información" style="border-radius: 8px; font-weight: 600; padding: 0.45rem 0.75rem;">
+                                        🔄 Actualizar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <!-- Grid de 4 Métricas de Suscripción -->
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1rem;">
+                                    
+                                    <!-- 1. Plan Activo -->
+                                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                            <span style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Plan Activo</span>
+                                            <span style="font-size: 1.3rem;">🌟</span>
+                                        </div>
+                                        <div>
+                                            <h4 id="sub-info-plan-name" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--primary-brand, #702e5e);">--</h4>
+                                            <p id="sub-info-plan-sub" style="margin: 3px 0 0 0; font-size: 0.78rem; color: #64748b; font-weight: 500;">--</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. Días Disponibles -->
+                                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                            <span style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Días Disponibles</span>
+                                            <span style="font-size: 1.3rem;">⏳</span>
+                                        </div>
+                                        <div>
+                                            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                                                <h4 id="sub-info-days-left" style="margin: 0; font-size: 1.4rem; font-weight: 900; color: #10b981;">--</h4>
+                                            </div>
+                                            <!-- Barra de Progreso de Tiempo -->
+                                            <div style="background: #e2e8f0; border-radius: 6px; height: 6px; width: 100%; margin-top: 0.5rem; overflow: hidden;">
+                                                <div id="sub-info-days-bar" style="background: #10b981; height: 100%; width: 100%; transition: width 0.4s ease;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 3. Fecha de Corte -->
+                                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                            <span style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Fecha de Corte</span>
+                                            <span style="font-size: 1.3rem;">📅</span>
+                                        </div>
+                                        <div>
+                                            <h4 id="sub-info-cutoff-date" style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1e293b;">--</h4>
+                                            <p style="margin: 3px 0 0 0; font-size: 0.78rem; color: #64748b; font-weight: 500;">Próxima renovación de servicio</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. Estado de Solvencia -->
+                                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                            <span style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Solvencia</span>
+                                            <span style="font-size: 1.3rem;">🛡️</span>
+                                        </div>
+                                        <div>
+                                            <h4 id="sub-info-solvency-status" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #10b981;">Al Día</h4>
+                                            <p id="sub-info-solvency-sub" style="margin: 3px 0 0 0; font-size: 0.78rem; color: #64748b; font-weight: 500;">Acceso clínico total</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta Métodos de Pago Oficiales de la Plataforma -->
+                        <div class="card" style="border-radius: 16px; border: 1.5px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 1.5rem;">
+                            <div class="card-header" style="background: var(--card-bg); border-bottom: 1.5px solid var(--border-color); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--primary-brand, #702e5e); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                        🏦 Métodos de Pago Oficiales para Renovación
+                                    </h3>
+                                    <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">
+                                        Cuentas bancarias y medios de pago certificados de <strong>Espacio Terapéutico</strong> para el abono de tu membresía.
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="copySubscriptionPaymentMethods()" style="font-weight: 700; border-radius: 8px; padding: 0.45rem 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                        📋 <span id="copy-sub-btn-text">Copiar Datos</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <!-- Caja con texto formateado de los métodos -->
+                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem;">
+                                    <pre id="sub-info-payment-methods-text" style="margin: 0; font-family: var(--font-body, 'Inter', sans-serif); font-size: 0.9rem; color: #1e293b; line-height: 1.6; white-space: pre-wrap; word-break: break-word;"></pre>
+                                </div>
+
+                                <!-- Botones de Acción de Pago -->
+                                <div style="display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center;">
+                                    <button type="button" class="btn btn-primary" onclick="notifySubscriptionPaymentWhatsApp()" style="background: #16a34a; border: none; font-weight: 700; border-radius: 10px; padding: 0.7rem 1.4rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 10px rgba(22,163,74,0.2);">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                                        Notificar Pago por WhatsApp
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" onclick="switchSettingsTab('soporte')" style="font-weight: 700; border-radius: 10px; padding: 0.7rem 1.25rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                        ✉️ Enviar a Soporte Técnico
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sección de Administración de Métodos de Pago (Visible Únicamente para Superadministrador) -->
+                        <div id="sub-superadmin-editor-card" class="card hide" style="border-radius: 16px; border: 1.5px dashed #f59e0b; background: #fffdf5; box-shadow: 0 4px 15px rgba(245,158,11,0.06); margin-bottom: 1.5rem;">
+                            <div class="card-header" style="background: rgba(245,158,11,0.08); border-bottom: 1.5px solid rgba(245,158,11,0.2); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+                                <div>
+                                    <h3 style="font-size: 1.15rem; font-weight: 800; color: #92400e; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                        ⚙️ Editar Métodos de Pago de la Plataforma (Superadministrador)
+                                    </h3>
+                                    <p style="margin: 3px 0 0 0; font-size: 0.82rem; color: #b45309;">
+                                        Modifica aquí los números de cuenta, Pago Móvil, Zelle o transferencias oficiales. Se actualizarán inmediatamente para todos los psicólogos.
+                                    </p>
+                                </div>
+                                <span class="badge" style="background: #f59e0b; color: white; font-weight: 800; padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.78rem;">
+                                    Control Maestro
+                                </span>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="form-group mb-3">
+                                    <label for="sub-superadmin-methods-textarea" style="font-weight: 700; font-size: 0.88rem; color: #78350f;">
+                                        Texto e Instrucciones de Pago de Suscripción:
+                                    </label>
+                                    <textarea id="sub-superadmin-methods-textarea" rows="8" class="form-control" style="font-family: monospace, inherit; font-size: 0.88rem; border: 1.5px solid #cbd5e1; border-radius: 8px; width: 100%; padding: 0.75rem;"></textarea>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                                    <button type="button" class="btn btn-primary" onclick="saveSuperadminSubscriptionMethodsFromSettings()" style="font-weight: 800; background: #702e5e; border: none; padding: 0.65rem 1.4rem; border-radius: 10px;">
+                                        💾 Guardar Métodos de Pago
+                                    </button>
+                                </div>
+                                <div id="sub-superadmin-save-msg" class="status-msg hide mt-3"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Contenedor: Apariencia & Colores de la App -->
@@ -8615,6 +8774,34 @@
 
     <script src="/static/js/app.js?v={{ asset_v or '1789838000' }}"></script>
     <script src="/static/js/tests_module.js?v={{ asset_v or '1789838000' }}"></script>
+    <!-- Modal Superadmin: Configurar Métodos de Pago de Suscripción -->
+    <div id="superadmin-payment-modal" class="modal hide">
+        <div class="modal-content" style="max-width: 650px; border-radius: 14px; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #702e5e, #984b80); color: white; border-radius: 14px 14px 0 0; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-family: var(--font-title); font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    💳 Métodos de Pago de Suscripción (Plataforma)
+                </h3>
+                <button class="btn-close-modal" onclick="closeModal('superadmin-payment-modal')" style="color: white; opacity: 0.85; background: none; border: none; font-size: 1.3rem; cursor: pointer;">✕</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 1.25rem; line-height: 1.5;">
+                    Configura aquí los datos de pago (Bancos, Pago Móvil, Zelle, Binance, etc.) que todos los terapeutas verán en su pestaña de <strong>Ajustes > Mi Suscripción & Plan</strong> para abonar sus mensualidades.
+                </p>
+                <div class="form-group mb-3">
+                    <label for="modal-superadmin-payment-methods-text" style="font-weight: 700; font-size: 0.9rem; color: #1e293b; display: block; margin-bottom: 0.4rem;">
+                        Instrucciones y Cuentas Bancarias / Pago Móvil / Zelle:
+                    </label>
+                    <textarea id="modal-superadmin-payment-methods-text" class="form-control" rows="10" style="font-family: monospace, inherit; font-size: 0.88rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 100%; padding: 0.75rem; line-height: 1.4;"></textarea>
+                </div>
+                <div id="modal-superadmin-payment-status" class="status-msg hide mb-3"></div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid #e2e8f0; padding: 1rem 1.5rem; background: #f8fafc; border-radius: 0 0 14px 14px;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('superadmin-payment-modal')" style="border-radius: 8px; font-weight: 600;">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveSuperadminPaymentMethodsFromModal()" style="border-radius: 8px; font-weight: 700; background: #702e5e; border: none; padding: 0.6rem 1.25rem;">💾 Guardar Métodos</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Registro Rápido -->
     <div id="quick-add-patient-modal" class="modal hide">
         <div class="modal-content" style="max-width: 500px; border-radius: 12px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
