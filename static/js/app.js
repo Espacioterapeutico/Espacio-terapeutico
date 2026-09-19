@@ -2341,6 +2341,12 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     });
 
     // Controlar visibilidad de la pestaña Notificaciones FCM en Ajustes (Solo para Superadministrador)
+    if (isSuperadminUser) {
+        document.body.classList.add('is-superadmin');
+    } else {
+        document.body.classList.remove('is-superadmin');
+    }
+
     const fcmTabBtn = document.getElementById('set-tab-firebase');
     const fcmCard = document.getElementById('set-card-firebase');
     if (fcmTabBtn) {
@@ -18453,7 +18459,13 @@ function switchSettingsTab(tabName) {
     tabs.forEach(t => {
         const btn = document.getElementById(`set-tab-${t}`);
         const card = document.getElementById(`set-card-${t}`);
-        if (btn) btn.className = (t === tabName) ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+        if (btn) {
+            btn.className = (t === tabName) ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+            if (t === 'firebase' && !isSuperadmin) {
+                btn.classList.add('hide');
+                btn.style.setProperty('display', 'none', 'important');
+            }
+        }
         if (card) {
             if (t === 'firebase' && !isSuperadmin) {
                 card.classList.add('hide');

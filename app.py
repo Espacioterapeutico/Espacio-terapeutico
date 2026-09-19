@@ -3,6 +3,7 @@ import sys
 import re
 import sqlite3
 import datetime
+import time
 import shutil
 import json
 import threading
@@ -3556,7 +3557,8 @@ def index(slug=None):
                            og_title=og_title, 
                            og_description=og_description, 
                            og_image=og_image, 
-                           og_url=og_url)
+                           og_url=og_url,
+                           asset_v=int(time.time()))
 
 @app.route('/.well-known/assetlinks.json')
 def serve_assetlinks():
