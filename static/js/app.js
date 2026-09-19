@@ -13947,6 +13947,7 @@ async function loadSuperadminData() {
         if (countEl) countEl.textContent = `${_superadminTherapistsList.length} Psicólogo(s) Registrado(s)`;
         
         renderSuperadminTherapistsTable();
+        loadSuperadminSubscriptionPaymentMethods();
     } catch (err) {
         console.error("Error en loadSuperadminData:", err);
         tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger" style="padding: 1.5rem;">⚠️ Error al renderizar la tabla: ${err.message || 'Error desconocido'}.</td></tr>`;
@@ -18786,6 +18787,57 @@ window.notifySubscriptionPaymentWhatsApp = notifySubscriptionPaymentWhatsApp;
 window.saveSuperadminSubscriptionMethodsFromSettings = saveSuperadminSubscriptionMethodsFromSettings;
 window.openSuperadminPaymentModal = openSuperadminPaymentModal;
 window.saveSuperadminPaymentMethodsFromModal = saveSuperadminPaymentMethodsFromModal;
+
+async function loadSuperadminSubscriptionPaymentMethods() {
+    const textarea = document.getElementById('sa-embedded-sub-payment-methods');
+    if (!textarea) return;
+    try {
+        const res = await fetch('/api/superadmin/subscription/payment-methods?_t=' + Date.now());
+        if (res.ok) {
+            const data = await res.json();
+            textarea.value = data.metodos_pago_suscripcion || '';
+        }
+    } catch(e) {
+        console.error("Error cargando métodos de pago de suscripción en superadmin:", e);
+    }
+}
+
+async function saveSuperadminEmbeddedSubscriptionMethods() {
+    const textarea = document.getElementById('sa-embedded-sub-payment-methods');
+    const msgEl = document.getElementById('sa-embedded-sub-payment-msg');
+    if (!textarea) return;
+    const metodos = textarea.value.trim();
+    if (!metodos) {
+        alert("Los métodos de pago de suscripción no pueden estar vacíos.");
+        return;
+    }
+    try {
+        const res = await fetch('/api/superadmin/subscription/payment-methods', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ metodos_pago_suscripcion: metodos })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || "Error al guardar métodos de pago.");
+            return;
+        }
+        if (msgEl) {
+            msgEl.className = 'status-msg success mt-2';
+            msgEl.textContent = '✅ Métodos de pago de suscripción actualizados con éxito.';
+            msgEl.classList.remove('hide');
+            setTimeout(() => msgEl.classList.add('hide'), 4000);
+        }
+        if (typeof loadSubscriptionInfo === 'function') {
+            loadSubscriptionInfo();
+        }
+    } catch(e) {
+        alert("Error de conexión al guardar métodos de pago.");
+    }
+}
+
+window.loadSuperadminSubscriptionPaymentMethods = loadSuperadminSubscriptionPaymentMethods;
+window.saveSuperadminEmbeddedSubscriptionMethods = saveSuperadminEmbeddedSubscriptionMethods;
 
 async function sendManualWhatsAppReminder(citaId) {
     if (!confirm('¿Deseas enviar el recordatorio de WhatsApp a este consultante ahora mismo?')) return;

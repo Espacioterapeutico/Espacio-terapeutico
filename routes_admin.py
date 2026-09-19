@@ -766,6 +766,7 @@ def api_subscription_my_info():
         'metodos_pago_plataforma': metodos_pago_plataforma
     })
 
+@admin_bp.route('/api/superadmin/subscription/payment-methods', methods=['GET', 'POST'])
 @admin_bp.route('/api/superadmin/subscription-payment-methods', methods=['GET', 'POST'])
 @login_required
 def api_superadmin_subscription_payment_methods():

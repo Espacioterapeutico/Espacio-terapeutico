@@ -1568,6 +1568,29 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Métodos de Pago de Suscripción Integrados en Superadmin (Dentro de Suscripción) -->
+                        <div class="card mt-4" style="border-radius: 14px; border: 1.5px solid #e2e8f0; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                            <div class="card-header" style="background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #702e5e; display: flex; align-items: center; gap: 0.5rem;">
+                                        💳 Métodos de Pago Oficiales de Suscripción
+                                    </h3>
+                                    <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">
+                                        Configura aquí las cuentas bancarias, Pago Móvil, Zelle o transferencias oficiales. Esta información la verán todos los psicólogos en su sección de <strong>Ajustes > Mi Suscripción & Plan</strong> para renovar su servicio.
+                                    </p>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="saveSuperadminEmbeddedSubscriptionMethods()" style="font-weight: 800; background: #702e5e; border: none; padding: 0.55rem 1.25rem; border-radius: 8px;">
+                                    💾 Guardar Métodos de Suscripción
+                                </button>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="form-group mb-3">
+                                    <textarea id="sa-embedded-sub-payment-methods" class="form-control" rows="8" placeholder="Escribe aquí los métodos de pago de suscripción (Bancos, Pago Móvil, Zelle, etc.)..." style="font-family: monospace, inherit; font-size: 0.88rem; width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0.75rem; line-height: 1.5;"></textarea>
+                                </div>
+                                <div id="sa-embedded-sub-payment-msg" class="status-msg hide mt-2"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Contenedor: Mensajes de Soporte -->
@@ -2416,7 +2439,7 @@
                         <button type="button" id="set-tab-google" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('google')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Google Calendar</button>
                         <button type="button" id="set-tab-whatsapp" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('whatsapp')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Whatsapp</button>
                         <button type="button" id="set-tab-horarios" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('horarios')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Horarios de Atención</button>
-                        <button type="button" id="set-tab-pagos" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('pagos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Métodos de Pago</button>
+                        <button type="button" id="set-tab-pagos" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('pagos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">💵 Cobros a Pacientes</button>
                         <button type="button" id="set-tab-firebase" class="btn btn-sm btn-secondary hide" onclick="switchSettingsTab('firebase')" style="display: none !important; font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Notificaciones FCM</button>
                         <button type="button" id="set-tab-enlaces" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('enlaces')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Enlaces de Paciente</button>
                         <button type="button" id="set-tab-terminos" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('terminos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">📜 Términos y Condiciones</button>
