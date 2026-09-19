@@ -1209,10 +1209,17 @@ def init_db():
     if 'user_id' not in cols_notif:
         cursor.execute("ALTER TABLE notificaciones ADD COLUMN user_id INTEGER")
     cursor.execute("UPDATE notificaciones SET user_id = 1 WHERE user_id IS NULL")
-    try:
-        cursor.execute("DELETE FROM notificaciones WHERE tipo = 'cumpleanos_wa'")
-    except Exception:
-        pass
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registro_cumpleanos_enviados (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            psicologo_id INTEGER NOT NULL,
+            ano INTEGER NOT NULL,
+            fecha_envio TEXT NOT NULL,
+            telefono TEXT,
+            UNIQUE(paciente_id, ano)
+        )
+    """)
     db.commit()
     # Asegurar existencia de la tabla soporte
     cursor.execute("""
@@ -2295,12 +2302,20 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
         if force:
             if target_patient_id:
                 cursor.execute("""
+                    DELETE FROM registro_cumpleanos_enviados
+                    WHERE paciente_id = ? AND ano = ?
+                """, (target_patient_id, now_dt.year))
+                cursor.execute("""
                     DELETE FROM notificaciones
                     WHERE tipo IN ('cumpleanos', 'cumpleanos_wa')
                     AND (fecha LIKE ? OR fecha IS NULL)
                     AND (mensaje LIKE ? OR mensaje LIKE '%Venuska%')
                 """, (f"{today_str}%", f"%ID: {target_patient_id}%"))
             else:
+                cursor.execute("""
+                    DELETE FROM registro_cumpleanos_enviados
+                    WHERE ano = ?
+                """, (now_dt.year,))
                 cursor.execute("""
                     DELETE FROM notificaciones
                     WHERE tipo IN ('cumpleanos', 'cumpleanos_wa')
@@ -2371,25 +2386,42 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
 
                 # 2. Envío de WhatsApp automático de Feliz Cumpleaños (si el interruptor está activo)
                 if auto_cumple_activo and p['telefono']:
+                    current_year = now_dt.year
+                    # A) Verificación a nivel de base de datos dedicada (inmune a vaciado de notificaciones)
+                    cursor.execute("""
+                        SELECT id FROM registro_cumpleanos_enviados
+                        WHERE paciente_id = ? AND ano = ?
+                    """, (pac_id, current_year))
+                    if cursor.fetchone():
+                        continue
+
+                    # B) Verificación en historial de notificaciones del día
                     cursor.execute("""
                         SELECT id FROM notificaciones
                         WHERE user_id = ? AND tipo = 'cumpleanos_wa' AND mensaje LIKE ? AND fecha LIKE ?
                     """, (psic_id, f"%ID: {pac_id}%", f"{today_str}%"))
-                    
-                    if not cursor.fetchone():
-                        msg_wa = tmpl_cumple_default.replace('{nombre}', first_name).replace('{nombre_completo}', pac_nombre)
-                        try:
-                            from routes_notificaciones import make_wa_http_request
-                            res = make_wa_http_request('POST', '/send', json_data={'phone': p['telefono'], 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
-                            if res and res.status_code == 200:
-                                wa_log_msg = f"Mensaje de cumpleaños enviado por WhatsApp a {pac_nombre} (ID: {pac_id})"
-                                cursor.execute("""
-                                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                                    VALUES (?, 'cumpleanos_wa', '🎂 WhatsApp de Cumpleaños Enviado', ?, ?, 1, '')
-                                """, (psic_id, wa_log_msg, now_str))
-                                db.commit()
-                        except Exception as ex_wa:
-                            print(f"Error al enviar WhatsApp de cumpleaños a {pac_nombre}:", ex_wa)
+                    if cursor.fetchone():
+                        continue
+
+                    msg_wa = tmpl_cumple_default.replace('{nombre}', first_name).replace('{nombre_completo}', pac_nombre)
+                    try:
+                        from routes_notificaciones import make_wa_http_request
+                        res = make_wa_http_request('POST', '/send', json_data={'phone': p['telefono'], 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
+                        if res and res.status_code == 200:
+                            # Registrar en la tabla permanente con restricción UNIQUE(paciente_id, ano)
+                            cursor.execute("""
+                                INSERT OR IGNORE INTO registro_cumpleanos_enviados (paciente_id, psicologo_id, ano, fecha_envio, telefono)
+                                VALUES (?, ?, ?, ?, ?)
+                            """, (pac_id, psic_id, current_year, now_str, p['telefono']))
+
+                            wa_log_msg = f"Mensaje de cumpleaños enviado por WhatsApp a {pac_nombre} (ID: {pac_id})"
+                            cursor.execute("""
+                                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                                VALUES (?, 'cumpleanos_wa', '🎂 WhatsApp de Cumpleaños Enviado', ?, ?, 1, '')
+                            """, (psic_id, wa_log_msg, now_str))
+                            db.commit()
+                    except Exception as ex_wa:
+                        print(f"Error al enviar WhatsApp de cumpleaños a {pac_nombre}:", ex_wa)
     except Exception as e:
         print("Error en auto_check_patient_birthdays:", e)
 
