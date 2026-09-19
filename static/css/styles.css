@@ -50,7 +50,24 @@ html[data-theme="clasica"], body[data-theme="clasica"] {
     --input-focus: rgba(147, 51, 234, 0.25);
 }
 
-/* 2. Océano Calmo (Azul Clínico & Turquesa) */
+/* 2. Rosa Terapéutico (Rosa Palo & Malva Pastel) */
+html[data-theme="rosado"], body[data-theme="rosado"] {
+    --primary-color: #b84a86;
+    --primary-brand: #b84a86;
+    --primary-accent: #db689c;
+    --primary-gradient: linear-gradient(135deg, #a83d78, #db689c);
+    --primary-light: #fdf2f7;
+    --primary-border: #fbcfe8;
+    --sidebar-bg: #2b1222;
+    --bg-color: #fbf6f8;
+    --card-bg: #FFFFFF;
+    --text-dark: #23111d;
+    --text-muted: #795d6f;
+    --border-color: #f3e2eb;
+    --input-focus: rgba(219, 104, 156, 0.28);
+}
+
+/* 3. Océano Calmo (Azul Clínico & Turquesa) */
 html[data-theme="oceano"], body[data-theme="oceano"] {
     --primary-color: #0284c7;
     --primary-brand: #0284c7;

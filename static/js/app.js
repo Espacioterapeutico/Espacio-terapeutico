@@ -18336,7 +18336,8 @@ async function handleLogoutWhatsApp() {
 // PERSONALIZACIÓN VISUAL & PALETAS DE COLORES (THEMES)
 // =========================================================================
 const APP_THEMES = {
-    'clasica': { name: 'Espacio Terapéutico', color: '#702e5e' },
+    'clasica': { name: 'Espacio Terapéutico (Morada)', color: '#702e5e' },
+    'rosado': { name: 'Espacio Terapéutico (Rosada)', color: '#b84a86' },
     'oceano': { name: 'Océano Calmo', color: '#0284c7' },
     'bosque': { name: 'Bosque Terapéutico', color: '#059669' },
     'atardecer': { name: 'Atardecer Cálido', color: '#c2410c' },
