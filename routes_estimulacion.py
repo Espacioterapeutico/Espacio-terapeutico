@@ -276,16 +276,52 @@ def api_ejercicio_detail(ejercicio_id):
         titulo = data.get('titulo', '').strip()
         instrucciones = data.get('instrucciones', '').strip()
         enlace_externo = data.get('enlace_externo', '').strip()
+        orden = data.get('orden')
+
+        cursor.execute("SELECT * FROM cat_ejercicios_cognitivos WHERE id = ?", (ejercicio_id,))
+        current_ex = cursor.fetchone()
+        if not current_ex:
+            return jsonify({'error': 'Ficha o ejercicio no encontrado.'}), 404
+
+        archivo_url = current_ex['archivo_url']
+        tipo_archivo = current_ex['tipo_archivo']
+
+        if 'archivo' in request.files:
+            file = request.files['archivo']
+            if file and file.filename != '':
+                if allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'pdf'
+                    tipo_archivo = 'imagen' if ext in ['png', 'jpg', 'jpeg', 'webp'] else 'pdf'
+                    
+                    unique_filename = f"cog_{current_ex['carpeta_id']}_{uuid.uuid4().hex[:10]}.{ext}"
+                    base_dir = os.path.dirname(os.path.abspath(__file__))
+                    upload_dir = os.path.join(base_dir, 'static', 'uploads', 'estimulacion')
+                    os.makedirs(upload_dir, exist_ok=True)
+                    
+                    filepath = os.path.join(upload_dir, unique_filename)
+                    file.save(filepath)
+                    archivo_url = f"/static/uploads/estimulacion/{unique_filename}"
+                else:
+                    return jsonify({'error': 'Tipo de archivo no permitido. Sube PDF, imagen o documento.'}), 400
+
+        try:
+            orden_val = int(orden) if orden is not None and str(orden).strip() != '' else current_ex['orden']
+        except Exception:
+            orden_val = current_ex['orden']
 
         cursor.execute("""
             UPDATE cat_ejercicios_cognitivos
             SET titulo = COALESCE(NULLIF(?, ''), titulo),
+                orden = ?,
                 instrucciones = ?,
-                enlace_externo = ?
+                enlace_externo = ?,
+                archivo_url = ?,
+                tipo_archivo = ?
             WHERE id = ?
-        """, (titulo, instrucciones, enlace_externo, ejercicio_id))
+        """, (titulo, orden_val, instrucciones, enlace_externo, archivo_url, tipo_archivo, ejercicio_id))
         db.commit()
-        return jsonify({'success': 'Ejercicio actualizado exitosamente.'})
+        return jsonify({'success': 'Ficha de ejercicio actualizada exitosamente.'})
 
     elif request.method == 'DELETE':
         cursor.execute("SELECT archivo_url FROM cat_ejercicios_cognitivos WHERE id = ?", (ejercicio_id,))

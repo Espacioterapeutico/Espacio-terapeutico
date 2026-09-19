@@ -8908,6 +8908,87 @@ async function handleQuickAddPatientSubmit(e) {
         </div>
     </div>
 
+    <!-- MODAL EDITAR CARPETA COGNITIVA -->
+    <div id="modal-estimulacion-folder-edit" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('modal-estimulacion-folder-edit')" style="z-index: 3810;">
+        <div class="modal-content" style="max-width: 480px; border-radius: 12px;">
+            <div class="modal-header" style="background: #f8fafc; border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;">✏️ Editar Carpeta de Estimulación</h3>
+                <button class="btn-close-modal" onclick="closeModal('modal-estimulacion-folder-edit')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.25rem;">
+                <form id="form-cog-folder-edit" onsubmit="submitCogFolderEdit(event)">
+                    <input type="hidden" id="cog-folder-edit-id">
+                    <div class="form-group" style="margin-bottom: 0.85rem;">
+                        <label style="font-weight: 700; font-size: 0.85rem;">Título de la Carpeta *</label>
+                        <input type="text" id="cog-folder-edit-titulo" required class="form-control" placeholder="Ej: Memoria y Retención (Adultos)">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.85rem;">
+                        <label style="font-weight: 700; font-size: 0.85rem;">Descripción</label>
+                        <input type="text" id="cog-folder-edit-descripcion" class="form-control" placeholder="Ej: Fichas de agilidad mental y memoria a corto plazo">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label style="font-weight: 700; font-size: 0.85rem;">Color Distintivo</label>
+                            <input type="color" id="cog-folder-edit-color" value="#9333ea" style="width: 100%; height: 38px; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer; padding: 2px;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 700; font-size: 0.85rem;">Icono</label>
+                            <select id="cog-folder-edit-icono" class="form-control">
+                                <option value="🧠">🧠 Cerebro</option>
+                                <option value="🎯">🎯 Atención</option>
+                                <option value="🧩">🧩 Rompecabezas</option>
+                                <option value="💡">💡 Memoria</option>
+                                <option value="📚">📚 Fichas</option>
+                                <option value="🔢">🔢 Cálculo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" id="btn-submit-cog-folder-edit" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, #702e5e, #9333ea); border: none; font-weight: 700;">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR EJERCICIO / FICHA COGNITIVA -->
+    <div id="modal-estimulacion-exercise-edit" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('modal-estimulacion-exercise-edit')" style="z-index: 3830;">
+        <div class="modal-content" style="max-width: 520px; border-radius: 12px;">
+            <div class="modal-header" style="background: #f8fafc; border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;">✏️ Editar Ficha / Ejercicio</h3>
+                <button class="btn-close-modal" onclick="closeModal('modal-estimulacion-exercise-edit')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.25rem;">
+                <form id="form-cog-exercise-edit" onsubmit="submitCogExerciseEdit(event)">
+                    <input type="hidden" id="cog-ex-edit-id">
+                    <div style="display: grid; grid-template-columns: 90px 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+                        <div class="form-group">
+                            <label style="font-weight: 700; font-size: 0.85rem;"># Día/Orden *</label>
+                            <input type="number" id="cog-ex-edit-orden" required min="1" class="form-control" style="font-weight: 700;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 700; font-size: 0.85rem;">Título del Ejercicio *</label>
+                            <input type="text" id="cog-ex-edit-titulo" required class="form-control" placeholder="Ej: Día 21: Ficha de Atención">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.85rem;">
+                        <label style="font-weight: 700; font-size: 0.85rem;">Instrucciones para el Consultante</label>
+                        <textarea id="cog-ex-edit-instrucciones" rows="3" class="form-control" placeholder="Ej: Completa los patrones indicados..."></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.85rem;">
+                        <label style="font-weight: 700; font-size: 0.85rem;">Reemplazar Archivo (Opcional)</label>
+                        <div id="cog-ex-edit-current-file" style="margin-bottom: 0.4rem; font-size: 0.78rem; color: #64748b;"></div>
+                        <input type="file" id="cog-ex-edit-archivo" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx" class="form-control" style="padding: 0.4rem;">
+                        <small style="color: #64748b; font-size: 0.74rem; display: block; margin-top: 0.25rem;">Deja vacío si deseas conservar el archivo actual.</small>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="font-weight: 700; font-size: 0.85rem;">O enlace interactivo externo</label>
+                        <input type="url" id="cog-ex-edit-enlace" class="form-control" placeholder="https://ejemplo.com/juego-cognitivo">
+                    </div>
+                    <button type="submit" id="btn-submit-cog-ex-edit" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, #702e5e, #9333ea); border: none; font-weight: 700;">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL ASIGNAR ESTIMULACIÓN COGNITIVA AL PACIENTE -->
     <div id="modal-estimulacion-assign" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('modal-estimulacion-assign')" style="z-index: 10060;">
         <div class="modal-content" style="max-width: 520px; border-radius: 14px; overflow: hidden; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.18);">

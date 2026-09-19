@@ -28771,7 +28771,11 @@ let cogCurrentPatientId = null;
 let cogFoldersLibrary = [];
 
 async function loadEstimulacionLibrary() {
-    showCogFoldersView();
+    const viewFolders = document.getElementById('cog-view-folders');
+    const viewExercises = document.getElementById('cog-view-exercises');
+    if (viewFolders) viewFolders.style.display = 'block';
+    if (viewExercises) viewExercises.style.display = 'none';
+    cogCurrentFolderId = null;
     const grid = document.getElementById('cog-folders-grid');
     if (grid) {
         grid.innerHTML = '<p class="text-muted text-center py-4" style="grid-column: 1 / -1;">Cargando carpetas de estimulación...</p>';
@@ -28824,6 +28828,9 @@ async function loadEstimulacionLibrary() {
                         <div style="display: flex; gap: 0.45rem; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
                             <button type="button" class="btn btn-sm btn-primary" onclick="openFolderExercises(${f.id}, '${safeTitle}', '${safeDesc}')" style="flex: 1; background: linear-gradient(135deg, #702e5e, #9333ea); border: none; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;">
                                 📂 Ver Fichas
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditCogFolderModal(${f.id}, '${safeTitle}', '${safeDesc}', '${color}', '${icon}')" style="font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;" title="Editar Carpeta">
+                                ✏️
                             </button>
                             <button type="button" class="btn btn-sm" onclick="deleteCogFolder(${f.id})" style="background: #fee2e2; color: #dc2626; border: none; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;" title="Eliminar Carpeta">
                                 🗑️
@@ -28887,11 +28894,7 @@ async function deleteCogFolder(folderId) {
 }
 
 function showCogFoldersView() {
-    const viewFolders = document.getElementById('cog-view-folders');
-    const viewExercises = document.getElementById('cog-view-exercises');
-    if (viewFolders) viewFolders.style.display = 'block';
-    if (viewExercises) viewExercises.style.display = 'none';
-    cogCurrentFolderId = null;
+    loadEstimulacionLibrary();
 }
 
 async function openFolderExercises(folderId, folderTitle, folderDesc) {
@@ -28931,6 +28934,15 @@ async function openFolderExercises(folderId, folderTitle, folderDesc) {
                 fileBadge = `<a href="${ex.enlace_externo}" target="_blank" class="badge" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.75rem; text-decoration: none; padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;">🔗 Enlace</a>`;
             }
 
+            const safeExData = JSON.stringify({
+                id: ex.id,
+                orden: num,
+                titulo: ex.titulo || '',
+                instrucciones: ex.instrucciones || '',
+                enlace_externo: ex.enlace_externo || '',
+                archivo_url: ex.archivo_url || ''
+            }).replace(/"/g, '&quot;');
+
             return `
                 <tr>
                     <td style="text-align: center; font-weight: 800; color: #702e5e;">${num}</td>
@@ -28938,9 +28950,14 @@ async function openFolderExercises(folderId, folderTitle, folderDesc) {
                     <td style="font-size: 0.82rem; color: #475569; max-width: 250px;">${ex.instrucciones || '-'}</td>
                     <td>${fileBadge}</td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-sm" onclick="deleteCogExercise(${ex.id})" style="background: #fee2e2; color: #dc2626; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 700;">
-                            🗑️
-                        </button>
+                        <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditCogExerciseModal(${safeExData})" style="padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" title="Editar Ficha">
+                                ✏️ Editar
+                            </button>
+                            <button type="button" class="btn btn-sm" onclick="deleteCogExercise(${ex.id})" style="background: #fee2e2; color: #dc2626; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 700;" title="Eliminar Ficha">
+                                🗑️
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -29014,6 +29031,123 @@ async function deleteCogExercise(exId) {
         openFolderExercises(cogCurrentFolderId, title, desc);
     } catch (err) {
         alert(err.message);
+    }
+}
+
+function openEditCogFolderModal(folderId, title, desc, color, icon) {
+    document.getElementById('cog-folder-edit-id').value = folderId;
+    document.getElementById('cog-folder-edit-titulo').value = title || '';
+    document.getElementById('cog-folder-edit-descripcion').value = desc || '';
+    document.getElementById('cog-folder-edit-color').value = color || '#9333ea';
+    document.getElementById('cog-folder-edit-icono').value = icon || '🧠';
+    openModal('modal-estimulacion-folder-edit');
+}
+
+async function submitCogFolderEdit(e) {
+    if (e) e.preventDefault();
+    const folderId = document.getElementById('cog-folder-edit-id').value;
+    if (!folderId) return;
+
+    const btn = document.getElementById('btn-submit-cog-folder-edit');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
+    }
+
+    const payload = {
+        titulo: document.getElementById('cog-folder-edit-titulo').value.trim(),
+        descripcion: document.getElementById('cog-folder-edit-descripcion').value.trim(),
+        color: document.getElementById('cog-folder-edit-color').value,
+        icono: document.getElementById('cog-folder-edit-icono').value
+    };
+
+    try {
+        const res = await fetch(`/api/estimulacion/carpetas/${folderId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al actualizar carpeta');
+
+        closeModal('modal-estimulacion-folder-edit');
+        if (typeof showToast === 'function') showToast("Carpeta actualizada exitosamente");
+        loadEstimulacionLibrary();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Guardar Cambios';
+        }
+    }
+}
+
+function openEditCogExerciseModal(ex) {
+    if (!ex) return;
+    document.getElementById('cog-ex-edit-id').value = ex.id;
+    document.getElementById('cog-ex-edit-orden').value = ex.orden || 1;
+    document.getElementById('cog-ex-edit-titulo').value = ex.titulo || '';
+    document.getElementById('cog-ex-edit-instrucciones').value = ex.instrucciones || '';
+    document.getElementById('cog-ex-edit-enlace').value = ex.enlace_externo || '';
+
+    const currentFileEl = document.getElementById('cog-ex-edit-current-file');
+    if (currentFileEl) {
+        if (ex.archivo_url) {
+            currentFileEl.innerHTML = `<span>Archivo actual: <a href="${ex.archivo_url}" target="_blank" style="color: #9333ea; font-weight: 600; text-decoration: underline;">Ver archivo cargado</a></span>`;
+        } else {
+            currentFileEl.innerHTML = `<span style="color: #94a3b8;">Sin archivo adjunto previo</span>`;
+        }
+    }
+
+    const fileInput = document.getElementById('cog-ex-edit-archivo');
+    if (fileInput) fileInput.value = '';
+
+    openModal('modal-estimulacion-exercise-edit');
+}
+
+async function submitCogExerciseEdit(e) {
+    if (e) e.preventDefault();
+    const exId = document.getElementById('cog-ex-edit-id').value;
+    if (!exId) return;
+
+    const btn = document.getElementById('btn-submit-cog-ex-edit');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
+    }
+
+    const formData = new FormData();
+    formData.append('orden', document.getElementById('cog-ex-edit-orden').value);
+    formData.append('titulo', document.getElementById('cog-ex-edit-titulo').value.trim());
+    formData.append('instrucciones', document.getElementById('cog-ex-edit-instrucciones').value.trim());
+    formData.append('enlace_externo', document.getElementById('cog-ex-edit-enlace').value.trim());
+
+    const fileInput = document.getElementById('cog-ex-edit-archivo');
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        formData.append('archivo', fileInput.files[0]);
+    }
+
+    try {
+        const res = await fetch(`/api/estimulacion/ejercicios/${exId}`, {
+            method: 'PUT',
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al actualizar ficha');
+
+        closeModal('modal-estimulacion-exercise-edit');
+        if (typeof showToast === 'function') showToast("Ficha actualizada correctamente");
+        const title = document.getElementById('cog-current-folder-title')?.textContent || '';
+        const desc = document.getElementById('cog-current-folder-desc')?.textContent || '';
+        openFolderExercises(cogCurrentFolderId, title, desc);
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Guardar Cambios';
+        }
     }
 }
 
@@ -29490,6 +29624,16 @@ async function submitPatientCogComplete(registroId) {
     }
 }
 
+window.loadEstimulacionLibrary = loadEstimulacionLibrary;
+window.showCogFoldersView = showCogFoldersView;
+window.openFolderExercises = openFolderExercises;
+window.deleteCogFolder = deleteCogFolder;
+window.deleteCogExercise = deleteCogExercise;
+window.openEditCogFolderModal = openEditCogFolderModal;
+window.submitCogFolderEdit = submitCogFolderEdit;
+window.openEditCogExerciseModal = openEditCogExerciseModal;
+window.submitCogExerciseEdit = submitCogExerciseEdit;
+window.openAssignEstimulacionModal = openAssignEstimulacionModal;
 window.loadPatientEstimulacionData = loadPatientEstimulacionData;
 window.submitPatientCogComplete = submitPatientCogComplete;
 
