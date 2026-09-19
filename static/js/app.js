@@ -5434,9 +5434,14 @@ async function openSummaryModal(patientId) {
                         </div>
                     </div>
 
-                    <button class="btn btn-secondary btn-sm btn-block mb-4" onclick="openNewEventModalFromSummary(${p.id})">
-                        + Registrar Pago / Cita
-                    </button>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <button class="btn btn-primary btn-sm" style="flex: 1; font-weight: 700;" onclick="openNewEventModalFromSummary(${p.id}, 'consulta')">
+                            📅 Agendar Cita
+                        </button>
+                        <button class="btn btn-secondary btn-sm" style="flex: 1; font-weight: 700;" onclick="openNewEventModalFromSummary(${p.id}, 'pago')">
+                            💰 Registrar Pago
+                        </button>
+                    </div>
                     
                     <h4 class="summary-block-title">Notas de Última Sesión</h4>
                     <div class="summary-recap-box mb-3">
@@ -7731,11 +7736,19 @@ async function openEditEventModal(eventId) {
     }
 }
 
-async function openNewEventModalFromSummary(patientId) {
+async function openNewEventModalFromSummary(patientId, defaultMode = 'consulta') {
     closeModal('summary-modal');
     await openNewEventModal(true);
     document.getElementById('e-paciente').value = patientId;
     await checkPatientPrepayments(patientId);
+    
+    const regType = document.getElementById('e-tipo-registro');
+    if (regType) {
+        regType.value = defaultMode;
+        if (typeof toggleEventTypeFields === 'function') {
+            toggleEventTypeFields(defaultMode);
+        }
+    }
 }
 
 function toggleControlUsoField(status) {
@@ -7908,6 +7921,11 @@ function toggleEventTypeFields(val) {
     const bloqueoFields = document.getElementById('e-block-section') || document.getElementById('event-bloqueo-fields');
     const financeFields = document.getElementById('e-finance-fields');
     const submitBtn = document.getElementById('event-submit-btn');
+    const horaInput = document.getElementById('e-hora');
+    const horaGroup = horaInput ? horaInput.parentElement : null;
+    const tzConverter = document.getElementById('e-timezone-converter-container');
+    const modalidadInput = document.getElementById('e-tipo');
+    const modalidadGroup = modalidadInput ? modalidadInput.parentElement : null;
 
     if (val === 'bloqueo') {
         if (citaFields) citaFields.classList.add('hide');
@@ -7919,9 +7937,27 @@ function toggleEventTypeFields(val) {
         if (blockFecha && !blockFecha.value) {
             blockFecha.value = new Date().toISOString().split('T')[0];
         }
+    } else if (val === 'pago') {
+        if (citaFields) citaFields.classList.remove('hide');
+        if (bloqueoFields) bloqueoFields.classList.add('hide');
+        if (financeFields) financeFields.classList.remove('hide');
+        if (horaGroup) horaGroup.style.display = 'none';
+        if (tzConverter) tzConverter.style.display = 'none';
+        if (modalidadGroup) modalidadGroup.style.display = 'none';
+        if (horaInput) horaInput.value = '00:00';
+        if (submitBtn) submitBtn.textContent = '💰 Confirmar y Registrar Pago';
+
+        const estEl = document.getElementById('e-estado');
+        if (estEl && estEl.value === 'Pendiente') {
+            estEl.value = 'Paga';
+        }
     } else {
         if (citaFields) citaFields.classList.remove('hide');
         if (bloqueoFields) bloqueoFields.classList.add('hide');
+        if (horaGroup) horaGroup.style.display = '';
+        if (tzConverter) tzConverter.style.display = '';
+        if (modalidadGroup) modalidadGroup.style.display = '';
+        if (horaInput && horaInput.value === '00:00') horaInput.value = '09:00';
         if (submitBtn) submitBtn.textContent = 'Guardar Cita';
     }
 }
@@ -8015,8 +8051,8 @@ async function handleEventSubmit(e) {
     const payload = {
         paciente_id: document.getElementById('e-paciente').value,
         fecha: document.getElementById('e-fecha').value,
-        hora: document.getElementById('e-hora').value,
-        tipo_consulta: document.getElementById('e-tipo').value,
+        hora: (tipoRegistro === 'pago') ? '00:00' : document.getElementById('e-hora').value,
+        tipo_consulta: (tipoRegistro === 'pago') ? 'Pago / Transacción' : document.getElementById('e-tipo').value,
         monto: parseFloat(document.getElementById('e-monto').value || 0.0),
         moneda: document.getElementById('e-moneda').value,
         estado_pago: document.getElementById('e-estado').value,
@@ -8025,7 +8061,7 @@ async function handleEventSubmit(e) {
         fecha_pago: document.getElementById('e-fecha-pago').value,
         metodo_pago: document.getElementById('e-metodo').value,
         referencia: document.getElementById('e-referencia').value,
-        confirmada: document.getElementById('e-confirmada').checked ? 1 : 0
+        confirmada: (tipoRegistro === 'pago') ? 1 : (document.getElementById('e-confirmada').checked ? 1 : 0)
     };
 
     // Calcular hora_paciente en formato HH:MM 24h usando el convertidor de zona horaria
@@ -20054,8 +20090,15 @@ async function selectPatientForTherapistTools(id, name, code) {
                 const waBtn = isActivo 
                     ? `<button type="button" class="btn btn-sm" onclick="enviarWhatsAppDirectoHerramienta(${id}, '${m.clave}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 5px; cursor: pointer;">💬 WhatsApp Directo</button>` 
                     : '';
+                const mCfg = m.config || {};
+                const mHora = mCfg.hora || (m.clave === 'sueno' ? '08:00' : '20:00');
+                const mDias = mCfg.dias || [1, 2, 3, 4, 5, 6, 7];
+                const mPausado = mCfg.recordatorio_activo === false;
+                const horaLabel = (typeof formatHoraAmPm === 'function') ? formatHoraAmPm(mHora) : mHora;
+                const diasLabel = mDias.length === 7 ? 'Todos los días' : `${mDias.length} días/sem`;
+                const safeDiasJson = JSON.stringify(mDias).replace(/"/g, '&quot;');
                 const progBtn = isActivo 
-                    ? `<button type="button" class="btn btn-sm" onclick="programarRecordatorioWhatsApp(${id}, '${m.clave}', '20:00')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; cursor: pointer;">⏰ Recordatorio 8 PM</button>` 
+                    ? `<button type="button" class="btn btn-sm" onclick="openToolScheduleModal(${id}, '${m.clave}', '${safePName}', '${m.nombre}', '${mHora}', ${safeDiasJson}, ${mPausado})" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 700; color: ${mPausado ? '#b45309' : '#1e40af'}; background: ${mPausado ? '#fef3c7' : '#eff6ff'}; border: 1px solid ${mPausado ? '#fde68a' : '#bfdbfe'}; border-radius: 5px; cursor: pointer;" title="Configurar hora y días del recordatorio">⏰ ${horaLabel} (${diasLabel})${mPausado ? ' ⏸️' : ''}</button>` 
                     : '';
                 const histBtn = `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="openPatientToolHistoryModal(${id}, '${m.clave}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; border-radius: 5px; cursor: pointer;">📄 Historial</button>`;
 
@@ -27927,11 +27970,102 @@ async function programarRecordatorioWhatsApp(patientId, toolKey, horaStr) {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al programar recordatorio.');
-        alert('✅ ' + (data.message || 'Recordatorio diario a las 8:00 PM fijado con éxito.'));
+        alert('✅ ' + (data.message || 'Recordatorio fijado con éxito.'));
     } catch (err) {
         alert('❌ ' + err.message);
     }
 }
+
+function formatHoraAmPm(hStr) {
+    if (!hStr) return '08:00 PM';
+    try {
+        const parts = hStr.split(':');
+        let h = parseInt(parts[0], 10);
+        const m = (parts[1] || '00').slice(0, 2);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${m} ${ampm}`;
+    } catch(e) {
+        return hStr;
+    }
+}
+window.formatHoraAmPm = formatHoraAmPm;
+
+function openToolScheduleModal(patientId, toolKey, patientName, toolName, currentHora, currentDays, isPausado) {
+    document.getElementById('ts-patient-id').value = patientId;
+    document.getElementById('ts-tool-key').value = toolKey;
+    document.getElementById('ts-tool-title').textContent = toolName || 'Programar Recordatorio';
+    document.getElementById('ts-patient-name').textContent = patientName || 'Consultante';
+    document.getElementById('ts-hora').value = currentHora || (toolKey === 'sueno' ? '08:00' : '20:00');
+    document.getElementById('ts-pausado').checked = !!isPausado;
+    
+    let days = currentDays;
+    if (typeof days === 'string') {
+        try { days = JSON.parse(days); } catch(e) { days = [1, 2, 3, 4, 5, 6, 7]; }
+    }
+    if (!Array.isArray(days) || days.length === 0) {
+        days = [1, 2, 3, 4, 5, 6, 7];
+    }
+    
+    document.querySelectorAll('.ts-day-cb').forEach(cb => {
+        cb.checked = days.includes(parseInt(cb.value, 10));
+    });
+    
+    openModal('tool-schedule-modal');
+}
+window.openToolScheduleModal = openToolScheduleModal;
+
+function toggleAllToolDays() {
+    const cbs = document.querySelectorAll('.ts-day-cb');
+    const allChecked = Array.from(cbs).every(cb => cb.checked);
+    cbs.forEach(cb => cb.checked = !allChecked);
+}
+window.toggleAllToolDays = toggleAllToolDays;
+
+async function saveToolSchedule() {
+    const patientId = document.getElementById('ts-patient-id').value;
+    const toolKey = document.getElementById('ts-tool-key').value;
+    const hora = document.getElementById('ts-hora').value || (toolKey === 'sueno' ? '08:00' : '20:00');
+    const pausado = document.getElementById('ts-pausado').checked ? 1 : 0;
+    
+    const selectedDays = [];
+    document.querySelectorAll('.ts-day-cb:checked').forEach(cb => {
+        selectedDays.push(parseInt(cb.value, 10));
+    });
+    
+    if (selectedDays.length === 0 && !pausado) {
+        alert('Por favor selecciona al menos un día de la semana o marca pausar recordatorios.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/herramientas/programar-recordatorio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: patientId,
+                herramienta_tipo: toolKey,
+                hora_programada: hora,
+                dias_semana: selectedDays,
+                pausado: pausado
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ Horario de recordatorio guardado exitosamente.');
+            closeModal('tool-schedule-modal');
+            if (typeof selectPatientForTherapistTools === 'function' && patientId) {
+                selectPatientForTherapistTools(patientId, currentMedPatientName, currentMedPatientCode);
+            }
+        } else {
+            alert('❌ ' + (data.error || 'Error al guardar horario.'));
+        }
+    } catch (err) {
+        console.error('Error guardando horario de herramienta:', err);
+        alert('❌ Error de conexión al guardar horario.');
+    }
+}
+window.saveToolSchedule = saveToolSchedule;
 
 async function copyToolDirectLink(link) {
     if (!link) return;

@@ -82,9 +82,10 @@ def get_patient_modules(patient_id):
     if not patient:
         return jsonify({'error': 'Paciente no encontrado o sin permisos.'}), 404
         
-    cursor.execute("SELECT modulo_clave, activo FROM modulos_terapeuticos_paciente WHERE paciente_id = ?", (patient_id,))
+    cursor.execute("SELECT modulo_clave, activo, configuracion_json FROM modulos_terapeuticos_paciente WHERE paciente_id = ?", (patient_id,))
     rows = cursor.fetchall()
     active_map = {r['modulo_clave']: r['activo'] for r in rows}
+    cfg_map = {r['modulo_clave']: r['configuracion_json'] for r in rows}
     
     host_url = get_public_base_url()
     now = datetime.now()
@@ -176,6 +177,18 @@ def get_patient_modules(patient_id):
         m_dict['activo'] = activo
         m_dict['token'] = token_str
         m_dict['link'] = link_str
+        raw_cfg = cfg_map.get(clave)
+        cfg_parsed = {}
+        if raw_cfg:
+            try:
+                cfg_parsed = json.loads(raw_cfg) if isinstance(raw_cfg, str) else raw_cfg
+            except Exception:
+                cfg_parsed = {}
+        m_dict['config'] = {
+            'hora': cfg_parsed.get('hora', '08:00' if clave == 'sueno' else '20:00'),
+            'dias': cfg_parsed.get('dias', [1, 2, 3, 4, 5, 6, 7]),
+            'recordatorio_activo': cfg_parsed.get('recordatorio_activo', True)
+        }
         modules.append(m_dict)
 
     return jsonify({'patient': dict(patient), 'modules': modules})
@@ -1282,7 +1295,9 @@ def programar_recordatorio_herramienta():
     data = request.json or {}
     patient_id = data.get('patient_id')
     herramienta_tipo = (data.get('herramienta_tipo') or 'pantalla').strip().lower()
-    hora = (data.get('hora_programada') or '20:00').strip()
+    default_h = '08:00' if herramienta_tipo == 'sueno' else '20:00'
+    hora = (data.get('hora_programada') or default_h).strip()
+    dias = data.get('dias_semana', [1, 2, 3, 4, 5, 6, 7])
     pausado = 1 if data.get('pausado') else 0
     
     if not patient_id:
@@ -1293,7 +1308,20 @@ def programar_recordatorio_herramienta():
     cursor = db.cursor()
     
     today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # 1. Guardar configuración personalizada permanente en modulos_terapeuticos_paciente
+    cfg_data = {
+        'hora': hora,
+        'dias': dias,
+        'recordatorio_activo': (pausado == 0)
+    }
+    cursor.execute("""
+        UPDATE modulos_terapeuticos_paciente
+        SET configuracion_json = ?
+        WHERE paciente_id = ? AND modulo_clave = ?
+    """, (json.dumps(cfg_data), patient_id, herramienta_tipo))
     
+    # 2. Actualizar o insertar en cola de hoy
     cursor.execute("""
         INSERT INTO cola_recordatorios_herramientas (
             psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, pausado
@@ -1305,7 +1333,8 @@ def programar_recordatorio_herramienta():
     
     return jsonify({
         'success': True,
-        'message': f'Recordatorio diario para {TOOL_NAMES.get(herramienta_tipo, "Herramienta")} fijado para las {hora}.',
+        'message': f'Recordatorio para {TOOL_NAMES.get(herramienta_tipo, "Herramienta")} fijado para las {hora}.',
+        'config': cfg_data,
         'pausado': pausado
     })
 

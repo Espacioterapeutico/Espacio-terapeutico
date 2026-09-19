@@ -2003,10 +2003,14 @@ def auto_send_appointment_reminders(db):
 
     cursor = db.cursor()
     try:
+        # El recordatorio de citas del día para el terapeuta se envía a partir de las 8:00 AM
+        if now_dt.hour < 8:
+            return
+
         import requests
         today_str = now_dt.strftime("%Y-%m-%d")
         
-        # Buscar citas agendadas para el día de hoy no canceladas
+        # Buscar citas agendadas para el día de hoy no canceladas (excluyendo pagos puros sin cita)
         cursor.execute("""
             SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, p.nombres, p.apellidos, p.psicologo_id
             FROM agenda_finanzas af
@@ -2017,6 +2021,7 @@ def auto_send_appointment_reminders(db):
               AND af.estado_pago != 'Reprogramada'
               AND (af.control_uso IS NULL OR af.control_uso != 'Consumida')
               AND af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL
+              AND (af.tipo_consulta IS NULL OR (af.tipo_consulta NOT LIKE '%Pago%' AND af.tipo_consulta NOT LIKE '%Transacci%'))
         """, (today_str,))
         
         today_appts = cursor.fetchall()
@@ -2865,33 +2870,56 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
             current_hour = patient_local.hour
             current_minute = patient_local.minute
 
-            cursor.execute("SELECT modulo_clave FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND activo = 1", (p_id,))
-            active_modules = [r['modulo_clave'] for r in cursor.fetchall()]
+            cursor.execute("SELECT modulo_clave, configuracion_json FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND activo = 1", (p_id,))
+            active_modules = cursor.fetchall()
             
-            for mod_clave in active_modules:
+            for mod_row in active_modules:
+                mod_clave = mod_row['modulo_clave']
+                cfg_raw = mod_row['configuracion_json']
+                cfg = {}
+                if cfg_raw:
+                    try:
+                        cfg = json.loads(cfg_raw) if isinstance(cfg_raw, str) else cfg_raw
+                    except Exception:
+                        cfg = {}
+
+                # Si el recordatorio está explícitamente pausado/desactivado
+                if cfg.get('recordatorio_activo') is False:
+                    continue
+
+                # Días programados (1=Lunes .. 7=Domingo)
+                scheduled_days = cfg.get('dias') or [1, 2, 3, 4, 5, 6, 7]
+                if patient_local.isoweekday() not in scheduled_days and not force:
+                    continue
+
                 is_sleep = (mod_clave == 'sueno')
-                target_hora_str = '08:00' if is_sleep else '20:00'
-                
-                # REGLA 1: Sueño SOLO de 07:30 a 11:59 AM. NUNCA en la tarde/noche (hora >= 12)
-                # REGLA 2: Otras herramientas SOLO de 19:30 a 23:59 PM. NUNCA en la mañana/tarde (hora < 19)
+                default_hora = '08:00' if is_sleep else '20:00'
+                target_hora_str = (cfg.get('hora') or default_hora).strip()
+
+                try:
+                    th_hour, th_minute = map(int, target_hora_str.split(':')[:2])
+                except Exception:
+                    th_hour, th_minute = (8, 0) if is_sleep else (20, 0)
+
                 eval_window = False
                 should_dispatch_wa = False
 
                 if force:
                     eval_window = True
                     should_dispatch_wa = True
-                elif is_sleep:
-                    # Estrictamente en la mañana
-                    if current_hour < 7 or current_hour >= 12:
-                        continue
-                    eval_window = (current_hour >= 8) or (current_hour == 7 and current_minute >= 30)
-                    should_dispatch_wa = (current_hour >= 8 and current_hour < 12)
                 else:
-                    # Estrictamente en la noche
-                    if current_hour < 19:
+                    # Ventana de evaluación y despacho según la hora programada personalizada:
+                    if current_hour == th_hour:
+                        eval_window = (current_minute >= th_minute)
+                        should_dispatch_wa = (current_minute >= th_minute)
+                    elif current_hour == th_hour - 1 and th_minute == 0:
+                        eval_window = (current_minute >= 30)
+                        should_dispatch_wa = False
+                    elif th_hour < current_hour < (th_hour + 4):
+                        eval_window = True
+                        should_dispatch_wa = True
+                    else:
                         continue
-                    eval_window = (current_hour >= 20) or (current_hour == 19 and current_minute >= 30)
-                    should_dispatch_wa = (current_hour >= 20 and current_hour < 24)
 
                 if not eval_window:
                     continue
