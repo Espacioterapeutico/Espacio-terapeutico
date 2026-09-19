@@ -20406,7 +20406,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         <td style="padding: 0.6rem;">
                             ${r.somnolencia_dia ? '🥱 Somnolencia ' : ''}${r.pesadez_dia ? '🪨 Pesadez ' : ''}${r.agotamiento_dia ? '🔋 Agotamiento' : ''}
                         </td>
-                        <td style="padding: 0.6rem; font-size: 0.8rem; max-width: 220px;">
+                        <td style="padding: 0.6rem; font-size: 0.84rem; line-height: 1.4; min-width: 280px;">
                             ${r.proceso_dormir ? `<div><strong>Conciliación:</strong> ${r.proceso_dormir}</div>` : ''}
                             ${r.situaciones_dia ? `<div><strong>Situaciones:</strong> ${r.situaciones_dia}</div>` : ''}
                             ${r.emociones_dia ? `<div><strong>Emociones:</strong> ${r.emociones_dia}</div>` : ''}
