@@ -1042,6 +1042,8 @@ if (window.location.pathname.startsWith('/evaluacion/')) {
 
 // Al iniciar la ventana (Arranque Seguro Móvil y Escritorio)
 document.addEventListener('DOMContentLoaded', () => {
+    try { initAppTheme(); } catch(e) {}
+
     if (window.location.pathname.startsWith('/evaluacion/')) {
         document.documentElement.classList.add('is-public-eval-page');
         initPublicTestRouteHandler();
@@ -18330,6 +18332,80 @@ async function handleLogoutWhatsApp() {
     }
 }
 
+// =========================================================================
+// PERSONALIZACIÓN VISUAL & PALETAS DE COLORES (THEMES)
+// =========================================================================
+const APP_THEMES = {
+    'clasica': { name: 'Espacio Terapéutico', color: '#702e5e' },
+    'oceano': { name: 'Océano Calmo', color: '#0284c7' },
+    'bosque': { name: 'Bosque Terapéutico', color: '#059669' },
+    'atardecer': { name: 'Atardecer Cálido', color: '#c2410c' },
+    'grafito': { name: 'Grafito Minimalista', color: '#334155' },
+    'dark': { name: 'Modo Oscuro Clínico', color: '#a855f7' }
+};
+
+function setAppTheme(themeKey) {
+    if (!APP_THEMES[themeKey]) themeKey = 'clasica';
+    try {
+        localStorage.setItem('app_theme', themeKey);
+    } catch(e) {}
+
+    document.documentElement.setAttribute('data-theme', themeKey);
+    if (document.body) {
+        document.body.setAttribute('data-theme', themeKey);
+    }
+
+    syncThemeCardsUI(themeKey);
+
+    if (typeof showToast === 'function') {
+        showToast(`Tema visual aplicado: ${APP_THEMES[themeKey].name}`);
+    }
+}
+
+function syncThemeCardsUI(themeKey) {
+    if (!themeKey) {
+        try {
+            themeKey = localStorage.getItem('app_theme') || 'clasica';
+        } catch(e) {
+            themeKey = 'clasica';
+        }
+    }
+    const themeInfo = APP_THEMES[themeKey] || APP_THEMES['clasica'];
+    
+    // Actualizar píldora de tema activo
+    const pill = document.getElementById('theme-active-pill');
+    if (pill) {
+        pill.textContent = `Tema Activo: ${themeInfo.name}`;
+    }
+
+    // Actualizar tarjetas en Ajustes
+    const cards = document.querySelectorAll('.theme-option-card');
+    cards.forEach(card => {
+        const key = card.getAttribute('data-theme-card');
+        const badge = card.querySelector('.theme-card-badge');
+        if (key === themeKey) {
+            card.style.borderColor = 'var(--primary-brand, #702e5e)';
+            card.style.boxShadow = '0 8px 24px rgba(112, 46, 94, 0.22)';
+            card.style.transform = 'scale(1.02)';
+            if (badge) badge.style.display = 'inline-block';
+        } else {
+            card.style.borderColor = key === 'dark' ? '#334155' : '#e2e8f0';
+            card.style.boxShadow = 'none';
+            card.style.transform = 'none';
+            if (badge) badge.style.display = 'none';
+        }
+    });
+}
+
+function initAppTheme() {
+    let saved = 'clasica';
+    try {
+        saved = localStorage.getItem('app_theme') || 'clasica';
+    } catch(e) {}
+    document.documentElement.setAttribute('data-theme', saved);
+    if (document.body) document.body.setAttribute('data-theme', saved);
+    syncThemeCardsUI(saved);
+}
 
 function switchSettingsTab(tabName) {
     const isPsicologo = (window.currentUser && window.currentUser.rol === 'psicologo') || (sessionStorage.getItem('userRole') === 'psicologo');
@@ -18344,7 +18420,7 @@ function switchSettingsTab(tabName) {
     }
 
     if (tabName === 'contrasena') tabName = 'password';
-    const tabs = ['perfil', 'equipo', 'backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
+    const tabs = ['perfil', 'apariencia', 'equipo', 'backup', 'google', 'whatsapp', 'horarios', 'pagos', 'firebase', 'enlaces', 'password', 'contrasena', 'terminos', 'soporte'];
     tabs.forEach(t => {
         const btn = document.getElementById(`set-tab-${t}`);
         const card = document.getElementById(`set-card-${t}`);
@@ -18358,6 +18434,10 @@ function switchSettingsTab(tabName) {
             }
         }
     });
+
+    if (tabName === 'apariencia') {
+        syncThemeCardsUI();
+    }
 
     if (tabName !== 'whatsapp' && typeof waPollInterval !== 'undefined' && waPollInterval) {
         clearInterval(waPollInterval);
@@ -29636,5 +29716,8 @@ window.submitCogExerciseEdit = submitCogExerciseEdit;
 window.openAssignEstimulacionModal = openAssignEstimulacionModal;
 window.loadPatientEstimulacionData = loadPatientEstimulacionData;
 window.submitPatientCogComplete = submitPatientCogComplete;
+window.setAppTheme = setAppTheme;
+window.initAppTheme = initAppTheme;
+window.syncThemeCardsUI = syncThemeCardsUI;
 
 

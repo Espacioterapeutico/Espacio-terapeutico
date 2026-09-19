@@ -10,6 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Local CSS Link -->
     <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_v or '1788791000' }}">
+    <script>
+        (function() {
+            try {
+                var savedTheme = localStorage.getItem('app_theme') || 'clasica';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } catch(e) {}
+        })();
+    </script>
     <!-- FullCalendar v6 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/es.global.min.js"></script>
@@ -2387,6 +2395,7 @@
                     <!-- Menú de Sub-módulos (Pestañas de Ajustes) -->
                     <div class="sub-nav-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
                         <button type="button" id="set-tab-perfil" class="btn btn-sm btn-primary" onclick="switchSettingsTab('perfil')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">👤 Perfil Público & Modalidades</button>
+                        <button type="button" id="set-tab-apariencia" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('apariencia')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; background: var(--primary-light, #fdf4ff); color: var(--primary-brand, #702e5e); border: 1.5px solid var(--primary-border, #f0abfc);">🎨 Apariencia & Colores</button>
                         <button type="button" id="set-tab-equipo" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('equipo')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; background: #fdf4ff; color: #702e5e; border: 1.5px solid #f0abfc;">👥 Equipo de Trabajo</button>
                         <button type="button" id="set-tab-backup" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('backup')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Copia de Seguridad</button>
                         <button type="button" id="set-tab-google" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('google')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Google Calendar</button>
@@ -2398,6 +2407,122 @@
                         <button type="button" id="set-tab-terminos" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('terminos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">📜 Términos y Condiciones</button>
                         <button type="button" id="set-tab-password" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('password')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">🔑 Cambiar Contraseña</button>
                         <button type="button" id="set-tab-soporte" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('soporte')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Soporte Técnico</button>
+                    </div>
+
+                    <!-- Contenedor: Apariencia & Colores de la App -->
+                    <div id="set-card-apariencia" class="settings-tab-content hide">
+                        <div class="card" style="border-radius: 16px; border: 1.5px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                            <div class="card-header" style="background: var(--card-bg); border-bottom: 1.5px solid var(--border-color); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--primary-brand, #702e5e); margin: 0;">🎨 Personalización de Paletas & Apariencia</h3>
+                                    <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">Elige el estilo visual y colores que mejor se adapten a tu consultorio y ergonomía visual. El cambio se aplica en tiempo real sin recargar.</p>
+                                </div>
+                                <div>
+                                    <span id="theme-active-pill" class="badge" style="background: var(--primary-light, #fdf4ff); color: var(--primary-brand, #702e5e); border: 1px solid var(--primary-border, #f0abfc); font-size: 0.82rem; padding: 0.4rem 0.8rem; font-weight: 700;">Tema Activo</span>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;" id="theme-cards-grid">
+                                    
+                                    <!-- 1. Clásica / Espacio Terapéutico -->
+                                    <div class="theme-option-card" onclick="setAppTheme('clasica')" data-theme-card="clasica" style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; cursor: pointer; transition: all 0.2s ease; background: #ffffff; position: relative;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                            <span style="font-weight: 800; font-size: 1rem; color: #1e293b;">🍇 Espacio Terapéutico</span>
+                                            <span class="theme-card-badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700; display: none; background: #702e5e; color: #ffffff;">✓ Activo</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;">Paleta institucional clásica: Malva profundo, ciruela y tonos lavanda equilibrados.</p>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #702e5e; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#702e5e"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #9333ea; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#9333ea"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #2a1124; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="Barra lateral #2a1124"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #fdf4ff; border: 1.5px solid #cbd5e1;" title="Fondo suave #fdf4ff"></span>
+                                        </div>
+                                        <button type="button" style="width: 100%; border: none; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.82rem; color: #ffffff; background: linear-gradient(135deg, #702e5e, #9333ea); pointer-events: none;">Vista previa de botón</button>
+                                    </div>
+
+                                    <!-- 2. Océano Calmo -->
+                                    <div class="theme-option-card" onclick="setAppTheme('oceano')" data-theme-card="oceano" style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; cursor: pointer; transition: all 0.2s ease; background: #ffffff; position: relative;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                            <span style="font-weight: 800; font-size: 1rem; color: #1e293b;">🌊 Océano Calmo</span>
+                                            <span class="theme-card-badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700; display: none; background: #0284c7; color: #ffffff;">✓ Activo</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;">Azul clínico, zafiro sereno y turquesa. Transmite tranquilidad, orden y claridad mental.</p>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #0284c7; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#0284c7"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #0f766e; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#0f766e"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #0c1a2e; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="Barra lateral #0c1a2e"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #f0f9ff; border: 1.5px solid #cbd5e1;" title="Fondo suave #f0f9ff"></span>
+                                        </div>
+                                        <button type="button" style="width: 100%; border: none; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.82rem; color: #ffffff; background: linear-gradient(135deg, #0369a1, #0284c7); pointer-events: none;">Vista previa de botón</button>
+                                    </div>
+
+                                    <!-- 3. Bosque Terapéutico -->
+                                    <div class="theme-option-card" onclick="setAppTheme('bosque')" data-theme-card="bosque" style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; cursor: pointer; transition: all 0.2s ease; background: #ffffff; position: relative;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                            <span style="font-weight: 800; font-size: 1rem; color: #1e293b;">🌿 Bosque Terapéutico</span>
+                                            <span class="theme-card-badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700; display: none; background: #059669; color: #ffffff;">✓ Activo</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;">Verde salvia, esmeralda y menta suave. Asociado a bienestar, balance y resiliencia.</p>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #059669; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#059669"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #10b981; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#10b981"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #0d2419; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="Barra lateral #0d2419"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #f0fdf4; border: 1.5px solid #cbd5e1;" title="Fondo suave #f0fdf4"></span>
+                                        </div>
+                                        <button type="button" style="width: 100%; border: none; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.82rem; color: #ffffff; background: linear-gradient(135deg, #047857, #10b981); pointer-events: none;">Vista previa de botón</button>
+                                    </div>
+
+                                    <!-- 4. Atardecer Cálido -->
+                                    <div class="theme-option-card" onclick="setAppTheme('atardecer')" data-theme-card="atardecer" style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; cursor: pointer; transition: all 0.2s ease; background: #ffffff; position: relative;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                            <span style="font-weight: 800; font-size: 1rem; color: #1e293b;">🌅 Atardecer Cálido</span>
+                                            <span class="theme-card-badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700; display: none; background: #c2410c; color: #ffffff;">✓ Activo</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;">Terracota, ámbar y calidez humana. Perfecto para un enfoque cercano y empático.</p>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #c2410c; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#c2410c"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #ea580c; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#ea580c"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #291206; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="Barra lateral #291206"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #fff7ed; border: 1.5px solid #cbd5e1;" title="Fondo suave #fff7ed"></span>
+                                        </div>
+                                        <button type="button" style="width: 100%; border: none; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.82rem; color: #ffffff; background: linear-gradient(135deg, #9a3412, #ea580c); pointer-events: none;">Vista previa de botón</button>
+                                    </div>
+
+                                    <!-- 5. Grafito Minimalista -->
+                                    <div class="theme-option-card" onclick="setAppTheme('grafito')" data-theme-card="grafito" style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; cursor: pointer; transition: all 0.2s ease; background: #ffffff; position: relative;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                            <span style="font-weight: 800; font-size: 1rem; color: #1e293b;">🪐 Grafito Minimalista</span>
+                                            <span class="theme-card-badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700; display: none; background: #334155; color: #ffffff;">✓ Activo</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;">Gris grafito y pizarra neutro. Look moderno, ejecutivo y libre de distracciones.</p>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #334155; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#334155"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #475569; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="#475569"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #0f172a; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.15);" title="Barra lateral #0f172a"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #f8fafc; border: 1.5px solid #cbd5e1;" title="Fondo suave #f8fafc"></span>
+                                        </div>
+                                        <button type="button" style="width: 100%; border: none; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.82rem; color: #ffffff; background: linear-gradient(135deg, #1e293b, #475569); pointer-events: none;">Vista previa de botón</button>
+                                    </div>
+
+                                    <!-- 6. Modo Oscuro Clínico -->
+                                    <div class="theme-option-card" onclick="setAppTheme('dark')" data-theme-card="dark" style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; cursor: pointer; transition: all 0.2s ease; background: #0f172a; color: #f8fafc; position: relative;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                            <span style="font-weight: 800; font-size: 1rem; color: #f8fafc;">🌑 Modo Oscuro Clínico</span>
+                                            <span class="theme-card-badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700; display: none; background: #a855f7; color: #ffffff;">✓ Activo</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem;">Diseñado para sesiones nocturnas. Descanso visual total y máxima comodidad ocular.</p>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #0b0f19; border: 2px solid #334155; box-shadow: 0 2px 4px rgba(0,0,0,0.4);" title="Fondo #0b0f19"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #131b2e; border: 2px solid #334155; box-shadow: 0 2px 4px rgba(0,0,0,0.4);" title="Tarjeta #131b2e"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #a855f7; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.4);" title="Acento #a855f7"></span>
+                                            <span style="width: 28px; height: 28px; border-radius: 50%; background: #090d16; border: 2px solid #334155;" title="Barra lateral #090d16"></span>
+                                        </div>
+                                        <button type="button" style="width: 100%; border: none; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.82rem; color: #ffffff; background: linear-gradient(135deg, #7e22ce, #9333ea); pointer-events: none;">Vista previa de botón</button>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Contenedor: Equipo de Trabajo -->
