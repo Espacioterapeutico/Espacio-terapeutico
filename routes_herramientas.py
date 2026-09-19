@@ -1135,7 +1135,7 @@ def get_therapist_module_report(modulo_clave):
                        r.fecha_envio as fecha
                 FROM registro_estimulacion_cognitiva r
                 LEFT JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
-                LEFT JOIN cat_carpetas_cognitivas c ON r.carpeta_id = c.id
+                LEFT JOIN cat_carpetas_cognitivas c ON e.carpeta_id = c.id
                 JOIN pacientes p ON r.paciente_id = p.id
                 WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY r.id DESC LIMIT 100

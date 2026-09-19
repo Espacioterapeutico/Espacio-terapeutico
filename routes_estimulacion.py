@@ -427,18 +427,23 @@ def api_toggle_estimulacion(patient_id, asig_id):
 @estimulacion_bp.route('/api/pacientes/<int:patient_id>/estimulacion/historial', methods=['GET'])
 @login_required
 def api_historial_estimulacion(patient_id):
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("""
-        SELECT r.*, e.titulo as ejercicio_titulo, e.tipo_archivo, e.archivo_url, c.titulo as carpeta_titulo
-        FROM registro_estimulacion_cognitiva r
-        LEFT JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
-        LEFT JOIN cat_carpetas_cognitivas c ON (r.carpeta_id = c.id OR e.carpeta_id = c.id)
-        WHERE r.paciente_id = ?
-        ORDER BY r.id DESC
-    """, (patient_id,))
-    rows = [dict(r) for r in cursor.fetchall()]
-    return jsonify({'historial': rows})
+    try:
+        db = get_db()
+        ensure_estimulacion_tables(db)
+        cursor = db.cursor()
+        cursor.execute("""
+            SELECT r.*, e.titulo as ejercicio_titulo, e.tipo_archivo, e.archivo_url, c.titulo as carpeta_titulo
+            FROM registro_estimulacion_cognitiva r
+            LEFT JOIN cat_ejercicios_cognitivos e ON r.ejercicio_id = e.id
+            LEFT JOIN cat_carpetas_cognitivas c ON e.carpeta_id = c.id
+            WHERE r.paciente_id = ?
+            ORDER BY r.id DESC
+        """, (patient_id,))
+        rows = [dict(r) for r in cursor.fetchall()]
+        return jsonify({'historial': rows})
+    except Exception as e:
+        print(f"Error en api_historial_estimulacion: {e}")
+        return jsonify({'historial': [], 'error': str(e)}), 500
 
 @estimulacion_bp.route('/api/patient/estimulacion', methods=['GET'])
 def api_patient_current_estimulacion():
