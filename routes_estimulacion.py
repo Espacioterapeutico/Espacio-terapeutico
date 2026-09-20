@@ -133,6 +133,14 @@ def ensure_estimulacion_tables(db=None):
     """)
     db.commit()
 
+    # Limpieza preventiva: evitar que cola_recordatorios_herramientas guarde registros erróneos de estimulación
+    try:
+        cursor.execute("DELETE FROM cola_recordatorios_herramientas WHERE herramienta_tipo IN ('estimulacion_cognitiva', 'estimulacion')")
+        cursor.execute("DELETE FROM tokens_herramientas WHERE herramienta_tipo IN ('estimulacion_cognitiva', 'estimulacion') AND usado = 0")
+        db.commit()
+    except Exception:
+        pass
+
 # =======================================================
 # GESTIÓN DE CARPETAS / BIBLIOTECAS (PROFESIONAL)
 # =======================================================
@@ -421,6 +429,7 @@ def api_toggle_estimulacion(patient_id, asig_id):
 
     nuevo_estado = 0 if row['activa'] == 1 else 1
     cursor.execute("UPDATE paciente_estimulacion_cognitiva SET activa = ? WHERE id = ?", (nuevo_estado, asig_id))
+    cursor.execute("UPDATE modulos_terapeuticos_paciente SET activo = ? WHERE paciente_id = ? AND modulo_clave = 'estimulacion_cognitiva'", (nuevo_estado, patient_id))
     db.commit()
     return jsonify({'success': 'Estado actualizado.', 'activa': nuevo_estado})
 
@@ -705,12 +714,12 @@ def auto_send_cognitive_reminders(db):
             FROM paciente_estimulacion_cognitiva pec
             JOIN pacientes p ON pec.paciente_id = p.id
             JOIN cat_carpetas_cognitivas c ON pec.carpeta_id = c.id
-            WHERE pec.activa = 1 AND pec.hora_recordatorio LIKE ?
-        """, (f"%{now_time_str}%",))
+            WHERE pec.activa = 1
+        """)
         asignaciones = cursor.fetchall()
 
         for asig in asignaciones:
-            # 1. Verificar si corresponde hoy según los días de la semana
+            # 1. Verificar si corresponde hoy según los días de la semana (1=Lunes .. 7=Domingo)
             dias_semana = []
             try:
                 dias_semana = json.loads(asig['dias_semana_json'] or '[]')
@@ -718,6 +727,16 @@ def auto_send_cognitive_reminders(db):
                 pass
 
             if dias_semana and weekday not in dias_semana:
+                continue
+
+            # Verificar horario programado (ventana de despacho: desde hora_recordatorio hasta hora_recordatorio + 4 horas)
+            hora_str = (asig.get('hora_recordatorio') or '09:00').strip()
+            try:
+                h_rec, m_rec = map(int, hora_str.split(':')[:2])
+            except Exception:
+                h_rec, m_rec = 9, 0
+
+            if (now_dt.hour < h_rec) or (now_dt.hour == h_rec and now_dt.minute < m_rec) or (now_dt.hour >= h_rec + 4):
                 continue
 
             # 2. Verificar si ya se envió un ejercicio hoy para esta asignación

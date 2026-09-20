@@ -2923,6 +2923,10 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
             
             for mod_row in active_modules:
                 mod_clave = mod_row['modulo_clave']
+                # Excluir explícitamente herramientas que tienen su propio motor autónomo de recordatorios
+                if mod_clave in ('estimulacion_cognitiva', 'estimulacion', 'meditacion', 'meditaciones') or mod_clave not in TOOL_NAME_MAP:
+                    continue
+
                 cfg_raw = mod_row['configuracion_json']
                 cfg = {}
                 if cfg_raw:
