@@ -643,7 +643,7 @@ DEFAULT_SUBSCRIPTION_PAYMENT_METHODS = """🏦 Pago Móvil / Transferencia Banca
 • Banco: Banesco Banco Universal
 • Titular: Espacio Terapéutico
 • C.I. / RIF: J-504938210
-• Teléfono Pago Móvil: 0414-0000000
+• Teléfono Pago Móvil: 0424-5926114
 
 💵 Pagos Internacionales / Divisas:
 • Zelle: pagos@espacioterapeutico.net
@@ -651,7 +651,7 @@ DEFAULT_SUBSCRIPTION_PAYMENT_METHODS = """🏦 Pago Móvil / Transferencia Banca
 • PayPal: pagos@espacioterapeutico.net
 
 📌 Instrucciones de Notificación:
-Una vez realizada tu transferencia o pago, presiona el botón "Notificar Pago por WhatsApp" o envía tu comprobante a soporte@espacioterapeutico.net indicando tu nombre de usuario para registrar la renovación de inmediato."""
+Una vez realizada tu transferencia o pago, presiona el botón "Notificar Pago por WhatsApp" o envía tu comprobante al +58 424-5926114 indicando tu nombre de usuario para registrar la renovación de inmediato."""
 
 @admin_bp.route('/api/subscription/my-info', methods=['GET'])
 @login_required

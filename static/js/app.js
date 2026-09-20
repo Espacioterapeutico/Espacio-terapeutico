@@ -18706,15 +18706,9 @@ function copySubscriptionPaymentMethods() {
 function notifySubscriptionPaymentWhatsApp() {
     const user = (window.currentUser && window.currentUser.username) || sessionStorage.getItem('username') || '';
     const name = (window.currentUser && (window.currentUser.nombres || window.currentUser.username)) || '';
-    const text = window._currentSubscriptionPaymentMethods || '';
-    let phone = '';
-    const match = text.match(/(?:04\d{2}[-\s]?\d{7}|58\d{10})/);
-    if (match) {
-        phone = match[0].replace(/\D/g, '');
-        if (phone.startsWith('0')) phone = '58' + phone.substring(1);
-    }
+    const phone = '584245926114';
     const msg = encodeURIComponent(`Hola Espacio Terapéutico, he realizado el pago de mi suscripción para el usuario: ${user} (${name}). Adjunto el comprobante.`);
-    const url = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+    const url = `https://wa.me/${phone}?text=${msg}`;
     window.open(url, '_blank');
 }
 
