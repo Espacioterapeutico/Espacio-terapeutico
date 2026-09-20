@@ -1503,6 +1503,7 @@
                     <div class="sub-nav-tabs mt-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
                         <button type="button" id="sa-tab-therapists" class="btn btn-sm btn-primary" onclick="switchSuperadminTab('therapists')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Psicólogos y Suscripciones</button>
                         <button type="button" id="sa-tab-support" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('support')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Mensajes de Soporte</button>
+                        <button type="button" id="sa-tab-payment-methods" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('payment-methods')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; color: #702e5e; background: #fdf4ff; border: 1.5px solid #f0abfc;">💳 Métodos de Pago</button>
                         <button type="button" id="sa-tab-landing" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('landing')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">🌐 Editar Portada Web</button>
                         <button type="button" id="sa-tab-tests" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('tests')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">📑 Gestión de Tests</button>
                     </div>
@@ -1516,7 +1517,6 @@
                                     <span id="superadmin-therapists-count" style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;">Cargando psicólogos...</span>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="openSuperadminPaymentModal()" style="font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 0.45rem 0.9rem; border-radius: 8px;">💳 Métodos de Pago Suscripción</button>
                                     <button type="button" class="btn btn-primary btn-sm" onclick="openCreatePsychologistModal()" style="font-weight: 700; background: #0d9488; border: none; padding: 0.45rem 0.9rem; border-radius: 8px;">➕ Registrar Psicólogo</button>
                                     <button type="button" class="btn btn-secondary btn-sm" onclick="loadSuperadminData()" style="font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 8px;">🔄 Actualizar Lista</button>
                                 </div>
@@ -1568,25 +1568,30 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Métodos de Pago de Suscripción Integrados en Superadmin (Dentro de Suscripción) -->
-                        <div class="card mt-4" style="border-radius: 14px; border: 1.5px solid #e2e8f0; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                            <div class="card-header" style="background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <!-- Contenedor: Métodos de Pago de Suscripción (Superadmin) -->
+                    <div id="sa-card-payment-methods" class="superadmin-tab-content hide">
+                        <div class="card" style="border-radius: 16px; border: 1.5px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                            <div class="card-header" style="background: var(--card-bg); border-bottom: 1.5px solid var(--border-color); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                                 <div>
-                                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #702e5e; display: flex; align-items: center; gap: 0.5rem;">
+                                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--primary-brand, #702e5e); display: flex; align-items: center; gap: 0.5rem;">
                                         💳 Métodos de Pago Oficiales de Suscripción
                                     </h3>
                                     <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">
                                         Configura aquí las cuentas bancarias, Pago Móvil, Zelle o transferencias oficiales. Esta información la verán todos los psicólogos en su sección de <strong>Ajustes > Mi Suscripción & Plan</strong> para renovar su servicio.
                                     </p>
                                 </div>
-                                <button type="button" class="btn btn-primary btn-sm" onclick="saveSuperadminEmbeddedSubscriptionMethods()" style="font-weight: 800; background: #702e5e; border: none; padding: 0.55rem 1.25rem; border-radius: 8px;">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="saveSuperadminEmbeddedSubscriptionMethods()" style="font-weight: 800; background: #702e5e; border: none; padding: 0.6rem 1.4rem; border-radius: 10px;">
                                     💾 Guardar Métodos de Suscripción
                                 </button>
                             </div>
                             <div class="card-body" style="padding: 1.5rem;">
                                 <div class="form-group mb-3">
-                                    <textarea id="sa-embedded-sub-payment-methods" class="form-control" rows="8" placeholder="Escribe aquí los métodos de pago de suscripción (Bancos, Pago Móvil, Zelle, etc.)..." style="font-family: monospace, inherit; font-size: 0.88rem; width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0.75rem; line-height: 1.5;"></textarea>
+                                    <label for="sa-embedded-sub-payment-methods" style="font-weight: 700; font-size: 0.9rem; color: #1e293b; display: block; margin-bottom: 0.5rem;">
+                                        Instrucciones y Datos Bancarios / Pago Móvil / Zelle para los Terapeutas:
+                                    </label>
+                                    <textarea id="sa-embedded-sub-payment-methods" class="form-control" rows="12" placeholder="Escribe aquí los métodos de pago de suscripción (Bancos, Pago Móvil, Zelle, etc.)..." style="font-family: monospace, inherit; font-size: 0.9rem; width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 1rem; line-height: 1.6;"></textarea>
                                 </div>
                                 <div id="sa-embedded-sub-payment-msg" class="status-msg hide mt-2"></div>
                             </div>
@@ -2434,7 +2439,6 @@
                         <button type="button" id="set-tab-perfil" class="btn btn-sm btn-primary" onclick="switchSettingsTab('perfil')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">👤 Perfil Público & Modalidades</button>
                         <button type="button" id="set-tab-apariencia" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('apariencia')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; background: var(--primary-light, #fdf4ff); color: var(--primary-brand, #702e5e); border: 1.5px solid var(--primary-border, #f0abfc);">🎨 Apariencia & Colores</button>
                         <button type="button" id="set-tab-equipo" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('equipo')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; background: #fdf4ff; color: #702e5e; border: 1.5px solid #f0abfc;">👥 Equipo de Trabajo</button>
-                        <button type="button" id="set-tab-suscripcion" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('suscripcion')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">💳 Mi Suscripción & Plan</button>
                         <button type="button" id="set-tab-backup" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('backup')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Copia de Seguridad</button>
                         <button type="button" id="set-tab-google" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('google')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Google Calendar</button>
                         <button type="button" id="set-tab-whatsapp" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('whatsapp')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Whatsapp</button>
@@ -2445,6 +2449,7 @@
                         <button type="button" id="set-tab-terminos" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('terminos')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">📜 Términos y Condiciones</button>
                         <button type="button" id="set-tab-password" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('password')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">🔑 Cambiar Contraseña</button>
                         <button type="button" id="set-tab-soporte" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('soporte')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Soporte Técnico</button>
+                        <button type="button" id="set-tab-suscripcion" class="btn btn-sm btn-secondary" onclick="switchSettingsTab('suscripcion')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; color: #702e5e; background: #fdf4ff; border: 1.5px solid #f0abfc;">💳 Mi Suscripción & Plan</button>
                     </div>
 
                     <!-- Contenedor: Mi Suscripción & Plan -->

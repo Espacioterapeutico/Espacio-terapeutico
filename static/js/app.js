@@ -15832,11 +15832,24 @@ function switchSuperadminTab(tabId) {
     
     const tabTherapists = document.getElementById('sa-tab-therapists');
     const tabSupport = document.getElementById('sa-tab-support');
+    const tabPayments = document.getElementById('sa-tab-payment-methods');
     const tabLanding = document.getElementById('sa-tab-landing');
     const tabTests = document.getElementById('sa-tab-tests');
     
     if (tabTherapists) tabTherapists.className = (tabId === 'therapists') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     if (tabSupport) tabSupport.className = (tabId === 'support') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (tabPayments) {
+        tabPayments.className = (tabId === 'payment-methods') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+        if (tabId === 'payment-methods') {
+            tabPayments.style.background = '';
+            tabPayments.style.color = '';
+            tabPayments.style.border = '';
+        } else {
+            tabPayments.style.background = '#fdf4ff';
+            tabPayments.style.color = '#702e5e';
+            tabPayments.style.border = '1.5px solid #f0abfc';
+        }
+    }
     if (tabLanding) tabLanding.className = (tabId === 'landing') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     if (tabTests) tabTests.className = (tabId === 'tests') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     
@@ -15844,6 +15857,8 @@ function switchSuperadminTab(tabId) {
         loadSuperadminData();
     } else if (tabId === 'support') {
         loadSupportTickets();
+    } else if (tabId === 'payment-methods') {
+        loadSuperadminSubscriptionPaymentMethods();
     } else if (tabId === 'landing') {
         loadLandingPageContentForAdmin();
     } else if (tabId === 'tests') {
@@ -18465,6 +18480,17 @@ function switchSettingsTab(tabName) {
             if (t === 'firebase' && !isSuperadmin) {
                 btn.classList.add('hide');
                 btn.style.setProperty('display', 'none', 'important');
+            }
+            if (t === 'suscripcion') {
+                if (t === tabName) {
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.style.border = '';
+                } else {
+                    btn.style.background = '#fdf4ff';
+                    btn.style.color = '#702e5e';
+                    btn.style.border = '1.5px solid #f0abfc';
+                }
             }
         }
         if (card) {
