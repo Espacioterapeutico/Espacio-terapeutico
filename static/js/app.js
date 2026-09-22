@@ -11494,11 +11494,6 @@ async function loadNotifications() {
         list.innerHTML = '';
         if (data.notifications && data.notifications.length > 0) {
             data.notifications.forEach(n => {
-                // Mostrar notificación en barra del sistema si no ha sido mostrada aún
-                if (!n.leida && typeof triggerNativeNotification === 'function') {
-                    triggerNativeNotification(n.titulo, n.mensaje, `admin_${n.id}`, n.link);
-                }
-
                 const item = document.createElement('div');
                 item.style.padding = '0.75rem 1rem';
                 item.style.borderBottom = '1px solid var(--border-color)';
@@ -11650,9 +11645,6 @@ async function loadPatientNotifications(patientId) {
         notifList.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         
         notifList.forEach(n => {
-            // Disparar notificación nativa si no ha sido leída
-            triggerNativeNotification(n.titulo || 'Espacio Terapéutico', n.mensaje || '', `pat_${n.key}`, '');
-
             const item = document.createElement('div');
             item.style.padding = '0.65rem 0.85rem';
             item.style.borderBottom = '1px solid var(--border-color)';
@@ -12927,8 +12919,13 @@ async function initFirebaseMessagingFlow(registration, forceRefresh = false) {
                 audio.play().catch(() => {});
             } catch(e) {}
 
-            // 3. Mostrar notificación nativa en la barra del sistema (Android / Windows / PWA)
-            if ('serviceWorker' in navigator && ('Notification' in window) && Notification.permission === 'granted') {
+            // 3. Actualizar la campanita de notificaciones en tiempo real
+            if (typeof loadNotifications === 'function') {
+                loadNotifications();
+            }
+
+            // 4. Si la pestaña está en segundo plano / minimizada, mostrar alerta nativa en la barra del sistema
+            if (document.hidden && 'serviceWorker' in navigator && ('Notification' in window) && Notification.permission === 'granted') {
                 navigator.serviceWorker.ready.then(reg => {
                     reg.showNotification(title, {
                         body: body,
