@@ -1294,7 +1294,7 @@ def patient_add_appointment():
             end_datetime = f"{fecha_norm}T{end_hour}:{hora_norm.split(':')[1]}:00-04:00"
             
             event_body = {
-                'summary': f"🟠 [Pendiente] Consulta Auto-agendada: {paciente['nombres']} {paciente['apellidos']}",
+                'summary': f"🟠 Consulta Auto-agendada: {paciente['nombres']} {paciente['apellidos']}",
                 'colorId': '6',
                 'description': f"Modalidad: {tipo_consulta}\nPaciente: {paciente['nombres']} {paciente['apellidos']}\nCédula: {paciente['cedula']}\nNota: {nota}",
                 'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},

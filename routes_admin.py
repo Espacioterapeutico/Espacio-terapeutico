@@ -945,10 +945,10 @@ def update_calendar_event_status(service, google_event_id, status, paciente_nomb
         return False
 
     status_map = {
-        'pendiente': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
-        'esperando': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
-        'confirmada': {'colorId': '10', 'prefix': '🟢 [Confirmada]'},
-        'cancelada': {'colorId': '11', 'prefix': '🔴 [Cancelada]'}
+        'pendiente': {'colorId': '6', 'prefix': '🟠'},
+        'esperando': {'colorId': '6', 'prefix': '🟠'},
+        'confirmada': {'colorId': '10', 'prefix': '🟢'},
+        'cancelada': {'colorId': '11', 'prefix': '🔴'}
     }
 
     norm_status = (status or 'pendiente').lower().strip()
@@ -2632,9 +2632,9 @@ def update_transaction(trans_id):
                 st = 'cancelada' if is_canc else ('confirmada' if is_conf else 'pendiente')
 
                 status_map = {
-                    'pendiente': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
-                    'confirmada': {'colorId': '10', 'prefix': '🟢 [Confirmada]'},
-                    'cancelada': {'colorId': '11', 'prefix': '🔴 [Cancelada]'}
+                    'pendiente': {'colorId': '6', 'prefix': '🟠'},
+                    'confirmada': {'colorId': '10', 'prefix': '🟢'},
+                    'cancelada': {'colorId': '11', 'prefix': '🔴'}
                 }
                 st_info = status_map[st]
 
@@ -3360,13 +3360,13 @@ def sync_google_calendar():
                 is_conf = bool(lp.get('confirmada'))
                 is_canc = lp.get('estado_pago') in ['Cancelada con aviso', 'Cancelada sin aviso']
                 if is_canc:
-                    prefix = "🔴 [Cancelada] "
+                    prefix = "🔴 "
                     c_id = '11'
                 elif is_conf:
-                    prefix = "🟢 [Confirmada] "
+                    prefix = "🟢 "
                     c_id = '10'
                 else:
-                    prefix = "🟠 [Pendiente] "
+                    prefix = "🟠 "
                     c_id = '6'
 
                 event_b = {

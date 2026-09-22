@@ -65,10 +65,10 @@ def _update_google_calendar_status_bg(event_id, status, motivo=None):
                     # Si no tenía google_event_id, crear el evento directamente con el estatus correcto
                     norm_st = (status or 'pendiente').lower().strip()
                     status_map = {
-                        'pendiente': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
-                        'esperando': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
-                        'confirmada': {'colorId': '10', 'prefix': '🟢 [Confirmada]'},
-                        'cancelada': {'colorId': '11', 'prefix': '🔴 [Cancelada]'}
+                        'pendiente': {'colorId': '6', 'prefix': '🟠'},
+                        'esperando': {'colorId': '6', 'prefix': '🟠'},
+                        'confirmada': {'colorId': '10', 'prefix': '🟢'},
+                        'cancelada': {'colorId': '11', 'prefix': '🔴'}
                     }
                     st_info = status_map.get(norm_st, status_map['pendiente'])
                     
@@ -894,7 +894,7 @@ def add_agenda_event():
                 end_dt = f"{fecha}T{end_h}:{m_part}:00-04:00"
                 
                 is_conf = bool(confirmada)
-                prefix = "🟢 [Confirmada] " if is_conf else "🟠 [Pendiente] "
+                prefix = "🟢 " if is_conf else "🟠 "
                 c_id = '10' if is_conf else '6'
 
                 event_body = {
@@ -1477,7 +1477,7 @@ def fast_booking_book():
             therapist_name = u_row['nombres'] if u_row else "Paulo Mora"
             
             event_body = {
-                'summary': f"🟠 [Pendiente] Consulta Psicológica - {pac_nombre}",
+                'summary': f"🟠 Consulta Psicológica - {pac_nombre}",
                 'colorId': '6',
                 'description': f"Modalidad: {modalidad}\nPsicólogo: Psic. {therapist_name}",
                 'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
