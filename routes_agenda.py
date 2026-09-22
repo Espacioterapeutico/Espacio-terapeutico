@@ -874,6 +874,17 @@ def add_agenda_event():
     db.commit()
     event_id = cursor.lastrowid
 
+    if paciente_id and creado_por_user_id and creado_por_user_id > 0:
+        try:
+            cursor.execute("""
+                UPDATE pacientes 
+                SET psicologo_id = ? 
+                WHERE id = ? AND (psicologo_id IS NULL OR psicologo_id = 1)
+            """, (creado_por_user_id, paciente_id))
+            db.commit()
+        except Exception:
+            pass
+
     # Notificar al consultante vía WebPush y Firebase si está disponible
     if paciente_id:
         try:
@@ -1050,7 +1061,7 @@ def update_agenda_event_status(event_id):
             cita_dict = {
                 'nombre': f"{cita['nombres']} {cita['apellidos']}".strip(),
                 'fecha': cita['fecha'],
-                'hora': cita['hora'],
+                'hora': cita['hora_paciente'] or cita['hora'],
                 'modalidad': cita['tipo_consulta'] or 'Presencial'
             }
             psicologo_data = {
@@ -1450,10 +1461,20 @@ def fast_booking_book():
         cursor.execute("""
             INSERT INTO agenda_finanzas (
                 paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
-                estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, 1, ?)
-        """, (patient_id, fecha, hora, modalidad, monto, moneda, google_event_id, f"Auto-agendada rápida por paciente. Cédula: {cedula}"))
+                estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia, creado_por_user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, 1, ?, ?)
+        """, (patient_id, fecha, hora, modalidad, monto, moneda, google_event_id, f"Auto-agendada rápida por paciente. Cédula: {cedula}", psicologo_id))
         
+        if patient_id and psicologo_id:
+            try:
+                cursor.execute("""
+                    UPDATE pacientes 
+                    SET psicologo_id = ? 
+                    WHERE id = ? AND (psicologo_id IS NULL OR psicologo_id = 1)
+                """, (psicologo_id, patient_id))
+            except Exception:
+                pass
+
         # Enviar notificación al psicólogo en SQLite
         from datetime import datetime
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1624,7 +1645,7 @@ def accion_cita_publica():
     cursor = db.cursor()
     
     cursor.execute("""
-        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago, af.creado_por_user_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.confirmada, af.estado_pago, af.creado_por_user_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.username as psic_username
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
@@ -1648,7 +1669,7 @@ def accion_cita_publica():
     if accion in ('cancelar', 'reprogramar') and cita['estado_pago'] == 'Cancelada':
         return jsonify({'success': True, 'fast_booking_url': fast_booking_url})
     
-    # Preparamos datos para Whatsapp
+    # Preparamos datos para Whatsapp (usando la hora calculada para la zona del paciente)
     patient_dict = {
         'nombres': cita['pat_nombres'],
         'apellidos': cita['pat_apellidos'],
@@ -1657,7 +1678,7 @@ def accion_cita_publica():
     cita_dict = {
         'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}".strip(),
         'fecha': cita['fecha'],
-        'hora': cita['hora'],
+        'hora': cita['hora_paciente'] or cita['hora'],
         'modalidad': cita['tipo_consulta'] or 'Presencial'
     }
     psicologo_data = {

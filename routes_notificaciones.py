@@ -586,7 +586,7 @@ def send_manual_whatsapp_reminder(cita_id):
     cita_dict = {
         'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
         'fecha': cita['fecha'],
-        'hora': cita['hora'],
+        'hora': cita.get('hora_paciente') or cita['hora'],
         'modalidad': cita['tipo_consulta'] or 'Presencial'
     }
     mensaje_texto = format_whatsapp_message(template, cita_dict, cita_dict, psicologo)
@@ -872,7 +872,7 @@ def cron_send_whatsapp_reminders():
                     cita_dict = {
                         'nombre': pat_name,
                         'fecha': cita['fecha'],
-                        'hora': cita['hora'],
+                        'hora': cita.get('hora_paciente') or cita['hora'],
                         'modalidad': cita.get('tipo_consulta') or 'Presencial'
                     }
                     patient_dict = {
@@ -932,7 +932,7 @@ def cron_send_whatsapp_reminders():
                 cita_dict = {
                     'nombre': pat_name,
                     'fecha': cita['fecha'],
-                    'hora': cita['hora'],
+                    'hora': cita.get('hora_paciente') or cita['hora'],
                     'modalidad': cita.get('tipo_consulta') or 'Presencial',
                     'tareas': (cita.get('tareas_asignadas') or '').strip()
                 }
@@ -1138,7 +1138,7 @@ def send_queue_item_now(item_id):
             cita_dict = {
                 'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
                 'fecha': cita['fecha'],
-                'hora': cita['hora'],
+                'hora': cita.get('hora_paciente') or cita['hora'],
                 'modalidad': cita['tipo_consulta'] or 'Presencial'
             }
             patient_dict = {
@@ -1860,7 +1860,7 @@ def whatsapp_webhook():
     
     # Buscar la cita más cercana (desde hoy en adelante) que no esté confirmada ni cancelada
     cursor.execute(f"""
-        SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.paciente_id,
+        SELECT af.id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.confirmada, af.paciente_id,
                p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
         FROM agenda_finanzas af 
@@ -1886,7 +1886,7 @@ def whatsapp_webhook():
     cita_dict = {
         'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}".strip(),
         'fecha': cita['fecha'],
-        'hora': cita['hora'],
+        'hora': cita.get('hora_paciente') or cita['hora'],
         'modalidad': cita['tipo_consulta'] or 'Presencial'
     }
     psicologo_data = {

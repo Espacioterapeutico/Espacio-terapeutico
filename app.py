@@ -991,6 +991,30 @@ def init_db():
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
         cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
         
+        # Sincronizar consultantes que pertenecen a otros psicólogos según sus citas en agenda
+        try:
+            cursor.execute("""
+                UPDATE pacientes 
+                SET psicologo_id = (
+                    SELECT af.creado_por_user_id 
+                    FROM agenda_finanzas af 
+                    WHERE af.paciente_id = pacientes.id 
+                      AND af.creado_por_user_id IS NOT NULL 
+                      AND af.creado_por_user_id > 0 
+                    ORDER BY af.fecha DESC, af.id DESC LIMIT 1
+                )
+                WHERE id IN (
+                    SELECT DISTINCT af.paciente_id 
+                    FROM agenda_finanzas af 
+                    WHERE af.creado_por_user_id IS NOT NULL 
+                      AND af.creado_por_user_id > 0 
+                      AND af.creado_por_user_id != 1
+                ) AND (psicologo_id IS NULL OR psicologo_id = 1)
+            """)
+            db.commit()
+        except Exception:
+            pass
+        
         # Normalizar fechas con barras en agenda_finanzas a formato ISO YYYY-MM-DD
         cursor.execute("SELECT id, fecha FROM agenda_finanzas WHERE fecha LIKE '%/%'")
         slash_rows = cursor.fetchall()
@@ -2228,8 +2252,8 @@ def auto_send_meditation_reminders(db):
             FROM paciente_meditaciones pm
             JOIN pacientes p ON pm.paciente_id = p.id
             JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
-            WHERE pm.activa = 1 AND pm.hora_recordatorio LIKE ?
-        """, (f"%{now_time_str}%",))
+            WHERE pm.activa = 1
+        """)
         
         assignments = cursor.fetchall()
         current_weekday = now_dt.isoweekday() # 1=Lunes .. 7=Domingo
@@ -2243,6 +2267,16 @@ def auto_send_meditation_reminders(db):
                         continue
                 except Exception:
                     pass
+
+            # Check time window
+            hora_str = (asig.get('hora_recordatorio') or '20:00').strip()
+            try:
+                h_rec, m_rec = map(int, hora_str.split(':')[:2])
+            except Exception:
+                h_rec, m_rec = 20, 0
+
+            if (now_dt.hour < h_rec) or (now_dt.hour == h_rec and now_dt.minute < m_rec) or (now_dt.hour >= h_rec + 4):
+                continue
 
             # Check if notification was already sent today for this assignment
             cursor.execute("""
@@ -2342,7 +2376,59 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
                 continue
             dob_norm = normalize_date_str(dob_str)
             if len(dob_norm) >= 10 and dob_norm[5:10] == today_md:
-                psic_id = p['psicologo_id'] or 1
+                pac_id = p['id']
+                psic_id = p['psicologo_id']
+
+                # Determinar el psicólogo tratante real según historial de citas o asignaciones activas
+                cursor.execute("""
+                    SELECT creado_por_user_id 
+                    FROM agenda_finanzas 
+                    WHERE paciente_id = ? AND creado_por_user_id IS NOT NULL AND creado_por_user_id > 0
+                    ORDER BY fecha DESC, id DESC LIMIT 1
+                """, (pac_id,))
+                af_psic = cursor.fetchone()
+                if af_psic and af_psic['creado_por_user_id']:
+                    real_psic = af_psic['creado_por_user_id']
+                    if not psic_id or psic_id == 1 or psic_id != real_psic:
+                        psic_id = real_psic
+                        try:
+                            cursor.execute("UPDATE pacientes SET psicologo_id = ? WHERE id = ?", (real_psic, pac_id))
+                            db.commit()
+                        except Exception:
+                            pass
+                elif not psic_id or psic_id == 1:
+                    cursor.execute("""
+                        SELECT psicologo_id FROM paciente_estimulacion_cognitiva
+                        WHERE paciente_id = ? AND psicologo_id IS NOT NULL AND psicologo_id > 0
+                        ORDER BY id DESC LIMIT 1
+                    """, (pac_id,))
+                    est_psic = cursor.fetchone()
+                    if est_psic and est_psic['psicologo_id']:
+                        real_psic = est_psic['psicologo_id']
+                        psic_id = real_psic
+                        try:
+                            cursor.execute("UPDATE pacientes SET psicologo_id = ? WHERE id = ?", (real_psic, pac_id))
+                            db.commit()
+                        except Exception:
+                            pass
+                    else:
+                        cursor.execute("""
+                            SELECT psicologo_id FROM modulos_terapeuticos_paciente
+                            WHERE paciente_id = ? AND psicologo_id IS NOT NULL AND psicologo_id > 0
+                            ORDER BY id DESC LIMIT 1
+                        """, (pac_id,))
+                        mod_psic = cursor.fetchone()
+                        if mod_psic and mod_psic['psicologo_id']:
+                            real_psic = mod_psic['psicologo_id']
+                            psic_id = real_psic
+                            try:
+                                cursor.execute("UPDATE pacientes SET psicologo_id = ? WHERE id = ?", (real_psic, pac_id))
+                                db.commit()
+                            except Exception:
+                                pass
+
+                if not psic_id:
+                    psic_id = 1
 
                 # Validar hora configurada para este psicólogo o global (ej. 09:00 AM)
                 if not force:
@@ -2357,7 +2443,6 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
                             continue  # Aún no es la hora programada para este psicólogo
                     except Exception:
                         pass
-                pac_id = p['id']
                 pac_nombre = f"{p['nombres']} {p['apellidos']}".strip()
                 first_name = p['nombres'].strip().split()[0] if p['nombres'] else 'Consultante'
                 notif_msg = f"¡Hoy es el cumpleaños de {pac_nombre}! Deséale un feliz día."
@@ -2404,10 +2489,12 @@ def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
                     if cursor.fetchone():
                         continue
 
+                    from routes_herramientas import clean_phone_number
+                    clean_phone = clean_phone_number(p['telefono'])
                     msg_wa = tmpl_cumple_default.replace('{nombre}', first_name).replace('{nombre_completo}', pac_nombre)
                     try:
                         from routes_notificaciones import make_wa_http_request
-                        res = make_wa_http_request('POST', '/send', json_data={'phone': p['telefono'], 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
+                        res = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
                         if res and res.status_code == 200:
                             # Registrar en la tabla permanente con restricción UNIQUE(paciente_id, ano)
                             cursor.execute("""
