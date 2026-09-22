@@ -832,28 +832,83 @@ try:
 except ImportError:
     GOOGLE_CALENDAR_AVAILABLE = False
 
-def get_calendar_service(user_id=None):
+def get_calendar_service(user_id=None, db=None):
     if not GOOGLE_CALENDAR_AVAILABLE:
         return None
-    db = get_db()
+        
+    close_db_local = False
+    if db is None:
+        try:
+            from flask import has_app_context
+            if has_app_context():
+                db = get_db()
+            else:
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                db_path = os.path.join(base_dir, 'clinica.db')
+                db = sqlite3.connect(db_path, timeout=30.0)
+                db.row_factory = sqlite3.Row
+                close_db_local = True
+        except Exception:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(base_dir, 'clinica.db')
+            db = sqlite3.connect(db_path, timeout=30.0)
+            db.row_factory = sqlite3.Row
+            close_db_local = True
+
     cursor = db.cursor()
     
     if not user_id:
         try:
             user_id = session.get('user_id')
-        except RuntimeError:
+        except (RuntimeError, Exception):
             user_id = None
             
-    if not user_id:
-        return None
-            
-    token_key = f'google_token_{user_id}'
-    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (token_key,))
-    row = cursor.fetchone()
-    
+    # 1. Intentar con el user_id solicitado si existe
+    row = None
+    target_uid = user_id
+    if target_uid:
+        token_key = f'google_token_{target_uid}'
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (token_key,))
+        row = cursor.fetchone()
+        
+    # 2. Si no se encontró token para ese usuario, buscar fallback:
+    # a. Usuario en sesión si era distinto
+    # b. Usuario administrador principal (id = 1)
+    # c. Cualquier token válido registrado en la clínica
     if not row:
+        session_uid = None
+        try:
+            session_uid = session.get('user_id')
+        except Exception:
+            pass
+        if session_uid and session_uid != target_uid:
+            token_key = f'google_token_{session_uid}'
+            cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (token_key,))
+            row = cursor.fetchone()
+            if row:
+                target_uid = session_uid
+
+    if not row:
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'google_token_1'")
+        row = cursor.fetchone()
+        if row:
+            target_uid = 1
+
+    if not row:
+        cursor.execute("SELECT clave, valor FROM configuracion WHERE clave LIKE 'google_token_%' LIMIT 1")
+        row = cursor.fetchone()
+        if row:
+            try:
+                target_uid = int(row['clave'].replace('google_token_', ''))
+            except Exception:
+                target_uid = 1
+
+    if not row:
+        if close_db_local:
+            db.close()
         return None
         
+    token_key = f'google_token_{target_uid}'
     try:
         creds_data = json.loads(row['valor'])
         creds = Credentials.from_authorized_user_info(creds_data, SCOPES)
@@ -864,9 +919,17 @@ def get_calendar_service(user_id=None):
                            (token_key, creds.to_json()))
             db.commit()
             
-        return build('calendar', 'v3', credentials=creds)
+        svc = build('calendar', 'v3', credentials=creds)
+        if close_db_local:
+            db.close()
+        return svc
     except Exception as e:
         print("Error al inicializar servicio de Google Calendar:", e)
+        if close_db_local:
+            try:
+                db.close()
+            except Exception:
+                pass
         return None
 
 def update_calendar_event_status(service, google_event_id, status, paciente_nombre="", tipo_consulta=None, motivo=None):
@@ -878,11 +941,6 @@ def update_calendar_event_status(service, google_event_id, status, paciente_nomb
     - 'cancelada': colorId '11' (Tomate/Rojo), prefijo '🔴 [Cancelada]'
     NUNCA borra el evento de Google Calendar.
     """
-    import sys, os
-    if sys.platform == 'win32' and not os.environ.get('ENABLE_LOCAL_GOOGLE_SYNC'):
-        print(f"[GOOGLE CALENDAR DEV] Sincronización omitida en desarrollo local Windows (status={status}, id={google_event_id}) para proteger el calendario real.")
-        return True
-
     if not service or not google_event_id:
         return False
 
@@ -2545,27 +2603,78 @@ def update_transaction(trans_id):
             cantidad_sesiones = 1
             control_uso = 'Consumida'
         
+        confirmada = data.get('confirmada') if 'confirmada' in data else row['confirmada']
+
         # Sincronizar actualización con Google Calendar si está enlazado
         google_event_id = row['google_event_id']
-        if google_event_id:
-            service = get_calendar_service()
-            if service:
-                start_datetime = f"{fecha}T{hora}:00"
-                end_hour = str(int(hora.split(':')[0]) + 1).zfill(2)
-                end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00"
-                try:
-                    g_event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
-                    g_event['start'] = {'dateTime': start_datetime, 'timeZone': 'America/Caracas'}
-                    g_event['end'] = {'dateTime': end_datetime, 'timeZone': 'America/Caracas'}
-                    # Obtener paciente para rellenar la descripción
-                    cursor.execute("SELECT nombres, apellidos, cedula FROM pacientes WHERE id = ?", (row['paciente_id'],))
-                    pac = cursor.fetchone()
-                    g_event['description'] = f"Cédula: {pac['cedula'] if pac else ''}\nModalidad: {tipo_consulta}\nEstado: {estado_pago}"
-                    service.events().update(calendarId='primary', eventId=google_event_id, body=g_event).execute()
-                except Exception as ge:
-                    print("Error al sincronizar cambio con Google Calendar:", ge)
-        
-        confirmada = data.get('confirmada') if 'confirmada' in data else row['confirmada']
+        psych_gc_id = row.get('creado_por_user_id') or session.get('user_id') or 1
+        service = get_calendar_service(psych_gc_id, db=db)
+        if service:
+            try:
+                # Normalizar hora y fechas
+                hora_str = str(hora).strip()
+                h_parts = hora_str.split(':')
+                h_int = int(h_parts[0]) if (h_parts and h_parts[0].isdigit()) else 0
+                end_h = str(h_int + 1).zfill(2) if h_int < 23 else "23"
+                m_part = h_parts[1].split(' ')[0] if len(h_parts) > 1 else "00"
+                
+                start_datetime = f"{fecha}T{str(h_int).zfill(2)}:{m_part}:00-04:00"
+                end_datetime = f"{fecha}T{end_h}:{m_part}:00-04:00"
+
+                # Obtener paciente para rellenar nombre y descripción
+                cursor.execute("SELECT nombres, apellidos, cedula, email FROM pacientes WHERE id = ?", (row['paciente_id'],))
+                pac = cursor.fetchone()
+                pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip() if pac else ""
+
+                # Determinar estatus correspondiente
+                is_canc = (estado_pago in ['Cancelada', 'Cancelada con aviso', 'Cancelada sin aviso'])
+                is_conf = (bool(confirmada) or estado_pago == 'Confirmada')
+                st = 'cancelada' if is_canc else ('confirmada' if is_conf else 'pendiente')
+
+                status_map = {
+                    'pendiente': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
+                    'confirmada': {'colorId': '10', 'prefix': '🟢 [Confirmada]'},
+                    'cancelada': {'colorId': '11', 'prefix': '🔴 [Cancelada]'}
+                }
+                st_info = status_map[st]
+
+                if google_event_id:
+                    try:
+                        g_event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
+                        g_event['start'] = {'dateTime': start_datetime, 'timeZone': 'America/Caracas'}
+                        g_event['end'] = {'dateTime': end_datetime, 'timeZone': 'America/Caracas'}
+
+                        clean_sum = g_event.get('summary', '')
+                        for pfx in ['🟠 [Pendiente] ', '🟢 [Confirmada] ', '🔴 [Cancelada] ', '[Pendiente] ', '[Confirmada] ', '[Cancelada] ', '🟠 ', '🟢 ', '🔴 ']:
+                            clean_sum = clean_sum.replace(pfx, '')
+                        clean_sum = clean_sum.strip()
+                        if not clean_sum:
+                            clean_sum = f"Consulta Psicológica - {pac_nombre}" if pac_nombre else "Consulta Psicológica"
+
+                        g_event['summary'] = f"{st_info['prefix']} {clean_sum}"
+                        g_event['colorId'] = st_info['colorId']
+                        g_event['description'] = f"Cédula: {pac['cedula'] if pac else ''}\nModalidad: {tipo_consulta}\nEstado: {estado_pago}"
+                        if g_event.get('status') == 'cancelled' and not is_canc:
+                            g_event['status'] = 'confirmed'
+                        service.events().update(calendarId='primary', eventId=google_event_id, body=g_event).execute()
+                    except Exception as ge:
+                        print("Error al sincronizar evento existente en Google Calendar:", ge)
+                else:
+                    # Crear nuevo evento en Google Calendar si la cita previa no lo tenía
+                    new_body = {
+                        'summary': f"{st_info['prefix']} Consulta Psicológica - {pac_nombre}",
+                        'colorId': st_info['colorId'],
+                        'description': f"Cédula: {pac['cedula'] if pac else ''}\nModalidad: {tipo_consulta}\nEstado: {estado_pago}",
+                        'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
+                        'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'}
+                    }
+                    if pac and pac['email'] and '@' in pac['email']:
+                        new_body['attendees'] = [{'email': pac['email'].strip(), 'displayName': pac_nombre}]
+                    g_ev = service.events().insert(calendarId='primary', body=new_body).execute()
+                    google_event_id = g_ev.get('id')
+                    cursor.execute("UPDATE agenda_finanzas SET google_event_id = ? WHERE id = ?", (google_event_id, trans_id))
+            except Exception as ge:
+                print("Error general al sincronizar cambio con Google Calendar:", ge)
         
         cursor.execute("""
             UPDATE agenda_finanzas SET

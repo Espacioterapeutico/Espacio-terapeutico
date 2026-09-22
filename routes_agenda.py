@@ -32,13 +32,14 @@ def _update_google_calendar_status_bg(event_id, status, motivo=None):
             cursor = db.cursor()
             
             cursor.execute("""
-                SELECT af.google_event_id, af.tipo_consulta, p.psicologo_id, af.creado_por_user_id, p.nombres, p.apellidos 
+                SELECT af.id, af.fecha, af.hora, af.google_event_id, af.tipo_consulta, p.psicologo_id, 
+                       af.creado_por_user_id, p.nombres, p.apellidos, p.email, p.cedula
                 FROM agenda_finanzas af
                 LEFT JOIN pacientes p ON af.paciente_id = p.id
                 WHERE af.id = ?
             """, (event_id,))
             cita = cursor.fetchone()
-            if not cita or not cita['google_event_id']:
+            if not cita:
                 db.close()
                 return
 
@@ -46,14 +47,57 @@ def _update_google_calendar_status_bg(event_id, status, motivo=None):
             psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or 1
             pac_nombre = f"{cita['nombres'] or ''} {cita['apellidos'] or ''}".strip()
             
-            service = get_calendar_service(psych_id)
+            service = get_calendar_service(psych_id, db=db)
+            if not service and cita['creado_por_user_id']:
+                service = get_calendar_service(cita['creado_por_user_id'], db=db)
+            if not service:
+                service = get_calendar_service(1, db=db)
+
             if service:
-                update_calendar_event_status(
-                    service, google_event_id, status,
-                    paciente_nombre=pac_nombre,
-                    tipo_consulta=cita['tipo_consulta'],
-                    motivo=motivo
-                )
+                if google_event_id:
+                    update_calendar_event_status(
+                        service, google_event_id, status,
+                        paciente_nombre=pac_nombre,
+                        tipo_consulta=cita['tipo_consulta'],
+                        motivo=motivo
+                    )
+                else:
+                    # Si no tenía google_event_id, crear el evento directamente con el estatus correcto
+                    norm_st = (status or 'pendiente').lower().strip()
+                    status_map = {
+                        'pendiente': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
+                        'esperando': {'colorId': '6', 'prefix': '🟠 [Pendiente]'},
+                        'confirmada': {'colorId': '10', 'prefix': '🟢 [Confirmada]'},
+                        'cancelada': {'colorId': '11', 'prefix': '🔴 [Cancelada]'}
+                    }
+                    st_info = status_map.get(norm_st, status_map['pendiente'])
+                    
+                    hora_str = str(cita['hora']).strip()
+                    h_parts = hora_str.split(':')
+                    h_int = int(h_parts[0]) if (h_parts and h_parts[0].isdigit()) else 0
+                    end_h = str(h_int + 1).zfill(2) if h_int < 23 else "23"
+                    m_part = h_parts[1].split(' ')[0] if len(h_parts) > 1 else "00"
+                    
+                    start_dt = f"{cita['fecha']}T{str(h_int).zfill(2)}:{m_part}:00-04:00"
+                    end_dt = f"{cita['fecha']}T{end_h}:{m_part}:00-04:00"
+                    
+                    event_body = {
+                        'summary': f"{st_info['prefix']} Consulta Psicológica - {pac_nombre}",
+                        'colorId': st_info['colorId'],
+                        'description': f"Modalidad: {cita['tipo_consulta']}\nMotivo/Nota: {motivo or ''}".strip(),
+                        'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},
+                        'end': {'dateTime': end_dt, 'timeZone': 'America/Caracas'}
+                    }
+                    if cita['email'] and '@' in cita['email'] and '.' in cita['email']:
+                        event_body['attendees'] = [{'email': cita['email'].strip(), 'displayName': pac_nombre}]
+                    try:
+                        g_event = service.events().insert(calendarId='primary', body=event_body).execute()
+                        new_gid = g_event.get('id')
+                        if new_gid:
+                            cursor.execute("UPDATE agenda_finanzas SET google_event_id = ? WHERE id = ?", (new_gid, event_id))
+                            db.commit()
+                    except Exception as ins_err:
+                        print("Error al insertar evento en Google Calendar desde background sync:", ins_err)
                     
             db.close()
         except Exception as e:
@@ -828,16 +872,26 @@ def add_agenda_event():
     google_event_id = None
     try:
         from routes_admin import get_calendar_service
-        service = get_calendar_service(creado_por_user_id)
+        psych_gc_id = target_psic_id or creado_por_user_id or session.get('user_id') or 1
+        service = get_calendar_service(psych_gc_id, db=db)
+        if not service and creado_por_user_id:
+            service = get_calendar_service(creado_por_user_id, db=db)
+        if not service:
+            service = get_calendar_service(1, db=db)
+
         if service and paciente_id:
             cursor.execute("SELECT nombres, apellidos, email FROM pacientes WHERE id = ?", (paciente_id,))
             pac_row = cursor.fetchone()
             if pac_row:
                 pac_nombre = f"{pac_row['nombres']} {pac_row['apellidos']}".strip()
-                start_dt = f"{fecha}T{hora}:00-04:00"
-                h_int = int(hora.split(':')[0]) + 1
-                end_h = str(h_int).zfill(2) if h_int < 24 else "23"
-                end_dt = f"{fecha}T{end_h}:{hora.split(':')[1]}:00-04:00"
+                hora_str = str(hora).strip()
+                h_parts = hora_str.split(':')
+                h_int = int(h_parts[0]) if (h_parts and h_parts[0].isdigit()) else 0
+                end_h = str(h_int + 1).zfill(2) if h_int < 23 else "23"
+                m_part = h_parts[1].split(' ')[0] if len(h_parts) > 1 else "00"
+                
+                start_dt = f"{fecha}T{str(h_int).zfill(2)}:{m_part}:00-04:00"
+                end_dt = f"{fecha}T{end_h}:{m_part}:00-04:00"
                 
                 is_conf = bool(confirmada)
                 prefix = "🟢 [Confirmada] " if is_conf else "🟠 [Pendiente] "
@@ -850,10 +904,12 @@ def add_agenda_event():
                     'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},
                     'end': {'dateTime': end_dt, 'timeZone': 'America/Caracas'}
                 }
-                if pac_row['email']:
-                    event_body['attendees'] = [{'email': pac_row['email'], 'displayName': pac_nombre}]
+                if pac_row['email'] and '@' in pac_row['email'] and '.' in pac_row['email']:
+                    event_body['attendees'] = [{'email': pac_row['email'].strip(), 'displayName': pac_nombre}]
+                    g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
+                else:
+                    g_event = service.events().insert(calendarId='primary', body=event_body).execute()
                 
-                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
                 google_event_id = g_event.get('id')
     except Exception as ge:
         print("Error creando cita en Google Calendar:", ge)
@@ -1111,7 +1167,7 @@ def delete_agenda_event(event_id):
         psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or user_id or 1
         try:
             from routes_admin import get_calendar_service, update_calendar_event_status
-            service = get_calendar_service(psych_id)
+            service = get_calendar_service(psych_id, db=db)
             if service:
                 update_calendar_event_status(
                     service, cita['google_event_id'], 'cancelada',
@@ -1581,7 +1637,7 @@ def delete_admin_consultation_history_event(event_id):
 
         if google_event_id:
             from routes_admin import get_calendar_service, update_calendar_event_status
-            service = get_calendar_service(user_id)
+            service = get_calendar_service(user_id, db=db)
             if service:
                 try:
                     update_calendar_event_status(
