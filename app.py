@@ -1910,7 +1910,7 @@ def auto_cancel_unconfirmed_sessions(db):
         
         # Obtener citas no confirmadas en estado 'Agendada'
         cursor.execute("""
-            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.google_event_id, p.nombres, p.apellidos, p.psicologo_id
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.google_event_id, p.nombres, p.apellidos, p.psicologo_id, p.telefono
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.confirmada = 0 
@@ -2011,6 +2011,40 @@ def auto_cancel_unconfirmed_sessions(db):
             except Exception as fe:
                 print("Error al notificar al paciente en Firebase:", fe)
                 
+            # 5. Notificación WhatsApp al paciente por cancelación por falta de confirmación
+            phone_raw = appt['telefono'] or ''
+            clean_phone = "".join([c for c in str(phone_raw) if c.isdigit()])
+            if clean_phone and not clean_phone.startswith("58") and len(clean_phone) == 10:
+                clean_phone = "58" + clean_phone
+                
+            if clean_phone:
+                try:
+                    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_cancelacion_no_conf_{target_psic}",))
+                    tmpl_row = cursor.fetchone()
+                    if not tmpl_row or not tmpl_row[0]:
+                        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cancelacion_no_conf'")
+                        tmpl_row = cursor.fetchone()
+                    
+                    tmpl = tmpl_row[0] if tmpl_row and tmpl_row[0] else (
+                        "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, "
+                        "por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
+                    )
+                    
+                    cursor.execute("SELECT nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (target_psic,))
+                    psic_row = cursor.fetchone()
+                    psic_data = dict(psic_row) if psic_row else {}
+                    
+                    patient_dict = {'nombres': appt['nombres'], 'apellidos': appt['apellidos'], 'telefono': clean_phone}
+                    cita_dict = {'fecha': fecha_cita, 'hora': hora_cita, 'modalidad': appt['tipo_consulta']}
+                    
+                    from routes_notificaciones import format_whatsapp_message, make_wa_http_request
+                    msg_wa = format_whatsapp_message(tmpl, patient_dict, cita_dict, psic_data)
+                    
+                    res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': target_psic}, timeout=15, user_id=target_psic)
+                    print(f"[AUTO-CANCEL-WA] Mensaje enviado a {clean_phone} cita {appt_id}: {res_wa.status_code if res_wa else 'No res'}")
+                except Exception as we:
+                    print(f"[AUTO-CANCEL-WA] Error enviando WhatsApp al paciente:", we)
+
             # Sincronizar paciente en segundo plano
             threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
             

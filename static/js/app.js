@@ -11947,6 +11947,7 @@ async function loadMessageTemplates() {
         const c = document.getElementById('template-confirmacion');
         const cok = document.getElementById('template-confirmacion-ok');
         const caok = document.getElementById('template-cancelacion-ok');
+        const caNoConf = document.getElementById('template-cancelacion-no-conf');
         const r = document.getElementById('template-recordatorio');
         const rg = document.getElementById('template-reagendamiento');
         const ci = document.getElementById('template-cierre');
@@ -11959,6 +11960,7 @@ async function loadMessageTemplates() {
         if (c) c.value = data.msg_confirmacion || "";
         if (cok) cok.value = data.msg_confirmacion_ok || "¡Gracias por confirmar tu sesión, *{nombre}*! 🌿\n\n📅 *Fecha:* {fecha}\n⏰ *Hora:* {hora}\n\nRecuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo.";
         if (caok) caok.value = data.msg_cancelacion_ok || "Entendido, *{nombre}*. Hemos registrado la cancelación de tu sesión del *{fecha}* a las *{hora}*.\n\nSi deseas reprogramar en otro momento, no dudes en escribirnos o agendar desde tu portal.";
+        if (caNoConf) caNoConf.value = data.msg_cancelacion_no_conf || "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}";
         if (r) r.value = data.msg_recordatorio || "";
         if (rg) rg.value = data.msg_reagendamiento || "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!";
         if (ci) ci.value = data.msg_cierre || "Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿\n\n📌 *Tus compromisos y tareas para esta semana:*\n{tareas}\n\nSi deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:\nhttps://www.espacioterapeutico.net/agendar/psic.paulomora";
@@ -12003,6 +12005,7 @@ async function handleSaveMessageTemplates(e) {
     const msgConfirmacion = document.getElementById('template-confirmacion').value;
     const msgConfirmacionOk = document.getElementById('template-confirmacion-ok')?.value || '';
     const msgCancelacionOk = document.getElementById('template-cancelacion-ok')?.value || '';
+    const msgCancelacionNoConf = document.getElementById('template-cancelacion-no-conf')?.value || '';
     const msgRecordatorio = document.getElementById('template-recordatorio').value;
     const msgReagendamiento = document.getElementById('template-reagendamiento')?.value || '';
     const msgCierre = document.getElementById('template-cierre').value;
@@ -12020,6 +12023,7 @@ async function handleSaveMessageTemplates(e) {
                 msg_confirmacion: msgConfirmacion,
                 msg_confirmacion_ok: msgConfirmacionOk,
                 msg_cancelacion_ok: msgCancelacionOk,
+                msg_cancelacion_no_conf: msgCancelacionNoConf,
                 msg_recordatorio: msgRecordatorio,
                 msg_reagendamiento: msgReagendamiento,
                 msg_cierre: msgCierre,
@@ -22574,6 +22578,10 @@ async function renderManualConfirmationsView() {
 
                         <button type="button" class="btn btn-sm btn-secondary" onclick="sendWhatsappTemplateFromMc(${appt.id}, 'cierre')" style="font-weight: 600; font-size: 0.8rem; padding: 0.4rem 0.75rem;">
                             📱 Enviar Mensaje de Cierre
+                        </button>
+
+                        <button type="button" class="btn btn-sm" onclick="sendWhatsappTemplateFromMc(${appt.id}, 'cancelacion_no_conf')" style="border: 1.5px solid #fca5a5; color: #b91c1c; background: #fff5f5; font-weight: 700; font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+                            ⚠️ Aviso No Confirmó
                         </button>
                     </div>
                 </div>

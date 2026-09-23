@@ -179,7 +179,7 @@ def admin_notifications_mark_read():
 def format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data):
     """
     Formatea un template de mensaje de WhatsApp reemplazando placeholders con datos reales.
-    Placeholders soportados: {nombre}, {fecha}, {hora}, {modalidad}, {psicologo}
+    Placeholders soportados: {nombre}, {nombre_completo}, {fecha}, {hora}, {modalidad}, {psicologo}, {terapeuta}, {tareas}, {link_agendar}, {link_confirmacion}
     """
     if not template:
         template = "Hola {nombre}, te recordamos que tu cita está agendada para el {fecha} a las {hora} en modalidad {modalidad}. ¡Nos vemos pronto!"
@@ -200,11 +200,42 @@ def format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data):
     hora = cita_dict.get('hora', '') if cita_dict else ''
     modalidad = cita_dict.get('modalidad', 'Presencial') if cita_dict else 'Presencial'
 
+    # Formato amigable de fecha y hora
+    fecha_amigable = fecha
+    try:
+        from datetime import datetime
+        if fecha and '-' in fecha and len(fecha) == 10:
+            date_obj = datetime.strptime(fecha, "%Y-%m-%d")
+            fecha_amigable = date_obj.strftime("%d/%m/%Y")
+    except Exception:
+        fecha_amigable = fecha
+
+    hora_amigable = hora
+    try:
+        if hora and ':' in hora:
+            parts = hora.split(':')
+            h, m = int(parts[0]), int(parts[1][:2])
+            ampm = "PM" if h >= 12 else "AM"
+            h_12 = h - 12 if h > 12 else (12 if h == 0 else h)
+            hora_amigable = f"{str(h_12).zfill(2)}:{str(m).zfill(2)} {ampm}"
+    except Exception:
+        hora_amigable = hora
+
     psic_name = ''
+    slug = ''
     if psicologo_data:
         p_nombres = psicologo_data.get('nombres', '') or ''
         p_apellidos = psicologo_data.get('apellidos', '') or ''
         psic_name = f"{p_nombres} {p_apellidos}".strip()
+        slug = (psicologo_data.get('slug') or '').strip()
+        if not slug:
+            username = (psicologo_data.get('username') or '').strip()
+            slug = f"psic.{username.lower()}" if username else "psic.paulomora"
+        elif not slug.startswith('psic.'):
+            slug = f"psic.{slug}"
+    if not slug:
+        slug = "psic.paulomora"
+    link_agendar = f"https://www.espacioterapeutico.net/agendar/{slug}"
 
     tareas = ''
     if cita_dict:
@@ -215,14 +246,17 @@ def format_whatsapp_message(template, patient_dict, cita_dict, psicologo_data):
     msg = template
     msg = msg.replace('{nombre}', first_name)
     msg = msg.replace('{nombre_completo}', full_name)
-    msg = msg.replace('{fecha}', fecha)
-    msg = msg.replace('{hora}', hora)
+    msg = msg.replace('{fecha}', fecha_amigable)
+    msg = msg.replace('{hora}', hora_amigable)
     msg = msg.replace('{modalidad}', modalidad)
     msg = msg.replace('{psicologo}', psic_name)
     msg = msg.replace('{terapeuta}', psic_name)
     msg = msg.replace('{tareas}', tareas)
     msg = msg.replace('{tareas_asignadas}', tareas)
     msg = msg.replace('{compromisos}', tareas)
+    msg = msg.replace('{link_agendar}', link_agendar)
+    msg = msg.replace('{link_reagendar}', link_agendar)
+    msg = msg.replace('{slug_link}', link_agendar)
 
     if cita_dict and 'link_confirmacion' in cita_dict:
         msg = msg.replace('{link_confirmacion}', cita_dict['link_confirmacion'])
@@ -431,7 +465,7 @@ def admin_message_templates():
     cursor = db.cursor()
     user_id = session.get('user_id')
     
-    keys = ['msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo', 'hora_cumpleanos', 'msg_herramientas']
+    keys = ['msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_cancelacion_no_conf', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo', 'hora_cumpleanos', 'msg_herramientas']
     
     if request.method == 'GET':
         templates = {}
@@ -443,7 +477,10 @@ def admin_message_templates():
             if not row or not row['valor']:
                 cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (key,))
                 row = cursor.fetchone()
-            templates[key] = row['valor'] if row else ""
+            val = row['valor'] if row else ""
+            if not val and key == 'msg_cancelacion_no_conf':
+                val = "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
+            templates[key] = val
         return jsonify(templates)
         
     data = request.json or {}
@@ -490,6 +527,14 @@ def admin_message_templates_render():
             row = cursor.fetchone()
         template = row['valor'] if row else ""
         
+        if not template:
+            if template_type == 'cancelacion_no_conf':
+                template = "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
+            elif template_type == 'confirmacion_ok':
+                template = "¡Gracias por confirmar tu sesión, *{nombre}*! 🌿\n\n📅 *Fecha:* {fecha}\n⏰ *Hora:* {hora}\n\nRecuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo."
+            elif template_type == 'cancelacion_ok':
+                template = "Entendido, *{nombre}*. Hemos registrado la cancelación de tu sesión del *{fecha}* a las *{hora}*.\n\nSi deseas reprogramar en otro momento, no dudes en escribirnos o agendar desde tu portal."
+        
         nombre = f"{appt['nombres']} {appt['apellidos']}"
         fecha = appt['fecha']
         hora = appt['hora']
@@ -523,9 +568,19 @@ def admin_message_templates_render():
         if not tareas:
             tareas = "Continuar reflexionando sobre lo abordado en sesión."
 
-        cursor.execute("SELECT nombres, apellidos FROM usuarios WHERE id = ?", (user_id,))
+        cursor.execute("SELECT nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (user_id,))
         usr = cursor.fetchone()
         psic_name = f"{usr['nombres']} {usr['apellidos']}".strip() if usr else ""
+        
+        slug = (usr['slug'] or '').strip() if usr and 'slug' in usr.keys() and usr['slug'] else ''
+        if not slug and usr:
+            uname = (usr['username'] or '').strip()
+            slug = f"psic.{uname.lower()}" if uname else "psic.paulomora"
+        elif slug and not slug.startswith('psic.'):
+            slug = f"psic.{slug}"
+        if not slug:
+            slug = "psic.paulomora"
+        link_agendar = f"https://www.espacioterapeutico.net/agendar/{slug}"
         
         rendered_message = template.replace("{nombre}", nombre)\
                                    .replace("{fecha}", fecha_amigable)\
@@ -534,7 +589,10 @@ def admin_message_templates_render():
                                    .replace("{link_conexion}", link_conexion)\
                                    .replace("{tareas}", tareas)\
                                    .replace("{tareas_asignadas}", tareas)\
-                                   .replace("{compromisos}", tareas)
+                                   .replace("{compromisos}", tareas)\
+                                   .replace("{link_agendar}", link_agendar)\
+                                   .replace("{link_reagendar}", link_agendar)\
+                                   .replace("{slug_link}", link_agendar)
         if psic_name:
             rendered_message = rendered_message.replace("{psicologo}", psic_name).replace("{terapeuta}", psic_name)
                                    

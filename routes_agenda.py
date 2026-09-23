@@ -1105,9 +1105,23 @@ def update_agenda_event_status(event_id):
             phone_clean = clean_phone_number(cita['telefono'])
             psych_id = cita['psicologo_id'] or session.get('user_id') or 1
             
-            # Fetch templates
-            cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok')")
+            # Fetch templates (globales y específicas del psicólogo)
+            cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_cancelacion_no_conf')")
             templates = {r['clave']: r['valor'] for r in cursor.fetchall()}
+            
+            cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN (?, ?, ?)", (
+                f"msg_confirmacion_ok_{psych_id}",
+                f"msg_cancelacion_ok_{psych_id}",
+                f"msg_cancelacion_no_conf_{psych_id}"
+            ))
+            for r in cursor.fetchall():
+                base_k = r['clave'].rsplit('_', 1)[0]
+                if r['valor']:
+                    templates[base_k] = r['valor']
+            
+            # Obtener slug y datos del psicólogo
+            cursor.execute("SELECT username, slug FROM usuarios WHERE id = ?", (psych_id,))
+            u_info = cursor.fetchone()
             
             patient_dict = {
                 'nombres': cita['nombres'],
@@ -1122,11 +1136,21 @@ def update_agenda_event_status(event_id):
             }
             psicologo_data = {
                 'nombres': cita['psic_nombres'],
-                'apellidos': cita['psic_apellidos']
+                'apellidos': cita['psic_apellidos'],
+                'username': u_info['username'] if u_info else '',
+                'slug': u_info['slug'] if u_info else ''
             }
+            
+            is_no_conf = bool(
+                'no confirm' in (motivo or '').lower() or
+                'falta de confirmaci' in (motivo or '').lower() or
+                (request.json and request.json.get('motivo_tipo') == 'no_confirmo')
+            )
             
             if is_confirming:
                 template = templates.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
+            elif is_no_conf:
+                template = templates.get('msg_cancelacion_no_conf') or "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
             else:
                 template = templates.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
             

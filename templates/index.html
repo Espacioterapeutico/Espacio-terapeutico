@@ -3153,6 +3153,11 @@
                                             <label for="template-cancelacion-ok" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #dc2626;">Respuesta Automática cuando el Paciente Cancela (NO / ❌)</label>
                                             <textarea id="template-cancelacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
                                         </div>
+                                        <div class="form-group mb-3" style="background: rgba(220, 38, 38, 0.04); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(220, 38, 38, 0.2);">
+                                            <label for="template-cancelacion-no-conf" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #b91c1c;">Cancelación por Falta de Confirmación (Tiempo Límite Expirado)</label>
+                                            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.35rem;">Se envía automáticamente cuando expira el plazo sin confirmación o al cancelar por falta de respuesta. Variables disponibles: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{link_agendar}</code> (tu enlace personalizado), <code>{psicologo}</code>.</p>
+                                            <textarea id="template-cancelacion-no-conf" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:&#10;{link_agendar}"></textarea>
+                                        </div>
                                         <div class="form-group mb-3">
                                             <label for="template-recordatorio" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #10b981;">Fase 2: Recordatorio del Día (Mismo día)</label>
                                             <textarea id="template-recordatorio" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
@@ -6619,12 +6624,22 @@
 
                     <!-- Motivo / Justificación -->
                     <div class="form-group" style="margin-bottom: 1.15rem;">
-                        <label for="cancel-modal-motivo" style="font-weight: 700; font-size: 0.85rem; color: var(--text-dark); margin-bottom: 0.35rem; display: block;">
-                            Motivo o Justificación <span style="font-weight: normal; color: var(--text-secondary); font-size: 0.78rem;">(opcional)</span>
-                        </label>
-                        <textarea id="cancel-modal-motivo" rows="2" placeholder="Ej: Fallecimiento de un familiar cercano, reprogramarán más adelante..." style="width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.85rem; font-family: inherit; resize: vertical;"></textarea>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+                            <label for="cancel-modal-motivo" style="font-weight: 700; font-size: 0.85rem; color: var(--text-dark); margin: 0;">
+                                Motivo o Justificación <span style="font-weight: normal; color: var(--text-secondary); font-size: 0.78rem;">(opcional)</span>
+                            </label>
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-sm" onclick="document.getElementById('cancel-modal-motivo').value='No confirmó asistencia a tiempo';" style="font-size: 0.73rem; padding: 0.15rem 0.45rem; border-radius: 4px; border: 1px solid #fca5a5; background: #fef2f2; color: #b91c1c; cursor: pointer; font-weight: 600;">
+                                    ⏱️ No confirmó a tiempo
+                                </button>
+                                <button type="button" class="btn btn-sm" onclick="document.getElementById('cancel-modal-motivo').value='Reprogramará para otra fecha';" style="font-size: 0.73rem; padding: 0.15rem 0.45rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; cursor: pointer; font-weight: 600;">
+                                    📅 Reprogramará
+                                </button>
+                            </div>
+                        </div>
+                        <textarea id="cancel-modal-motivo" rows="2" placeholder="Ej: No confirmó asistencia a tiempo / Fuerza mayor..." style="width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.85rem; font-family: inherit; resize: vertical;"></textarea>
                         <small class="text-secondary" style="font-size: 0.75rem; display: block; margin-top: 0.25rem;">
-                            ℹ️ Este motivo se registrará en el expediente clínico de la sesión y en la referencia de la cita.
+                            ℹ️ Si indicas que no confirmó o vence el tiempo límite, se enviará la plantilla de cancelación por falta de confirmación con tu enlace para reagendar.
                         </small>
                     </div>
 
