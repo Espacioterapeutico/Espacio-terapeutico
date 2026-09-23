@@ -24638,6 +24638,41 @@ function continueRavenSeries() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function previousRavenMatrix() {
+    if (window.ravenBreakSeries) {
+        // Volver a la última matriz de la serie recién terminada
+        window.ravenBreakSeries = null;
+    } else if (window.ravenCurrentIndex > 1) {
+        window.ravenCurrentIndex--;
+        window.ravenBreakSeries = null;
+    }
+    if (currentPublicTestDefinition) {
+        renderPublicTestItems(currentPublicTestDefinition);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextRavenMatrix() {
+    const curIdx = window.ravenCurrentIndex;
+    if (curIdx >= 60) {
+        window.ravenCurrentIndex = 61;
+    } else if (curIdx === 12) {
+        window.ravenBreakSeries = { fromSerie: 'A', nextSerie: 'B' };
+    } else if (curIdx === 24) {
+        window.ravenBreakSeries = { fromSerie: 'B', nextSerie: 'C' };
+    } else if (curIdx === 36) {
+        window.ravenBreakSeries = { fromSerie: 'C', nextSerie: 'D' };
+    } else if (curIdx === 48) {
+        window.ravenBreakSeries = { fromSerie: 'D', nextSerie: 'E' };
+    } else {
+        window.ravenCurrentIndex++;
+    }
+    if (currentPublicTestDefinition) {
+        renderPublicTestItems(currentPublicTestDefinition);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function selectRavenAnswer(matCode, val) {
     currentPublicTestAnswers[matCode] = val;
     autoSavePublicTestProgress(false);
@@ -24679,6 +24714,7 @@ function renderRavenPublicView(testDef, container) {
                     <div>📌 <strong>5 Series de Matrices:</strong> Serie A, B, C, D y E (12 matrices por serie = 60 en total).</div>
                     <div style="margin-top: 6px;">⏱️ <strong>Registro de Tiempo:</strong> El tiempo de resolución se registrará automáticamente al hacer clic en comenzar.</div>
                     <div style="margin-top: 6px;">☕ <strong>Pausas de Respiro:</strong> Entre cada serie se mostrará una breve pantalla de descanso.</div>
+                    <div style="margin-top: 6px;">🔄 <strong>Corrección de Respuestas:</strong> Podrá retroceder en cualquier momento con el botón «← Anterior» para cambiar una respuesta si se equivocó.</div>
                 </div>
                 <button type="button" onclick="startRavenTest()" class="btn" style="background: linear-gradient(135deg, #702e5e 0%, #a855f7 100%); color: white; font-weight: 800; font-size: 1.1rem; padding: 0.85rem 2.2rem; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(112,46,94,0.35); cursor: pointer;">
                     🚀 Comenzar Evaluación de Matrices
@@ -24698,9 +24734,14 @@ function renderRavenPublicView(testDef, container) {
                     Has completado exitosamente la <strong>Serie ${window.ravenBreakSeries.fromSerie} (12 matrices)</strong>.<br>
                     A continuación iniciará la <strong>Serie ${window.ravenBreakSeries.nextSerie} (12 matrices)</strong>.
                 </p>
-                <button type="button" onclick="continueRavenSeries()" class="btn" style="background: #702e5e; color: white; font-weight: 800; font-size: 1.05rem; padding: 0.85rem 2.2rem; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(112,46,94,0.25); cursor: pointer;">
-                    Continuar a la Serie ${window.ravenBreakSeries.nextSerie} →
-                </button>
+                <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                    <button type="button" onclick="previousRavenMatrix()" class="btn" style="background: #ffffff; color: #475569; border: 1.5px solid #cbd5e1; font-weight: 700; font-size: 1rem; padding: 0.85rem 1.8rem; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        ← Revisar Matriz ${window.ravenBreakSeries.fromSerie}12
+                    </button>
+                    <button type="button" onclick="continueRavenSeries()" class="btn" style="background: #702e5e; color: white; font-weight: 800; font-size: 1.05rem; padding: 0.85rem 2.2rem; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(112,46,94,0.25); cursor: pointer;">
+                        Continuar a la Serie ${window.ravenBreakSeries.nextSerie} →
+                    </button>
+                </div>
             </div>
         `;
         return;
@@ -24724,11 +24765,16 @@ function renderRavenPublicView(testDef, container) {
                     Tiempo total transcurrido: <strong>${timeStr}</strong>
                 </p>
                 <div style="font-size: 0.88rem; color: #64748b; margin-bottom: 1.5rem;">
-                    Presione el botón a continuación para enviar sus respuestas al expediente clínico del terapeuta.
+                    Presione el botón a continuación para enviar sus respuestas al expediente clínico del terapeuta, o retroceda si desea revisar o corregir alguna matriz.
                 </div>
-                <button type="button" id="pub-test-submit-btn" onclick="submitPublicTestResponse()" class="btn" style="background: linear-gradient(135deg, #15803d 0%, #22c55e 100%); color: white; font-weight: 800; font-size: 1.08rem; padding: 0.85rem 2.2rem; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(21,128,61,0.3); cursor: pointer;">
-                    ✅ Enviar Evaluación Completada
-                </button>
+                <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                    <button type="button" onclick="previousRavenMatrix()" class="btn" style="background: #ffffff; color: #475569; border: 1.5px solid #cbd5e1; font-weight: 700; font-size: 1rem; padding: 0.85rem 1.8rem; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        ← Revisar / Cambiar Respuestas
+                    </button>
+                    <button type="button" id="pub-test-submit-btn" onclick="submitPublicTestResponse()" class="btn" style="background: linear-gradient(135deg, #15803d 0%, #22c55e 100%); color: white; font-weight: 800; font-size: 1.08rem; padding: 0.85rem 2.2rem; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(21,128,61,0.3); cursor: pointer;">
+                        ✅ Enviar Evaluación Completada
+                    </button>
+                </div>
             </div>
         `;
         return;
@@ -24753,7 +24799,7 @@ function renderRavenPublicView(testDef, container) {
         const btnBorder = isSel ? '#702e5e' : '#cbd5e1';
 
         optsButtonsHtml += `
-            <button type="button" onclick="selectRavenAnswer('${matCode}', ${o})" style="flex: 1; min-width: 60px; max-width: 90px; height: 58px; background: ${btnBg}; color: ${btnColor}; border: 2.5px solid ${btnBorder}; border-radius: 12px; font-size: 1.3rem; font-weight: 800; cursor: pointer; transition: all 0.15 ease; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <button type="button" onclick="selectRavenAnswer('${matCode}', ${o})" style="flex: 1; min-width: 60px; max-width: 90px; height: 58px; background: ${btnBg}; color: ${btnColor}; border: 2.5px solid ${btnBorder}; border-radius: 12px; font-size: 1.3rem; font-weight: 800; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
                 ${o}
             </button>
         `;
@@ -24763,12 +24809,26 @@ function renderRavenPublicView(testDef, container) {
         <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 18px; padding: 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.04);">
             <!-- Barra de Progreso Header -->
             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
-                <div>
-                    <span style="font-size: 0.75rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 10px; border-radius: 12px;">Serie ${serieCode} (${serieNum} de 12)</span>
-                    <h3 style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: 800; color: #0f172a;">Matriz ${matCode}</h3>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    ${curIdx > 1 ? `
+                        <button type="button" onclick="previousRavenMatrix()" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #475569; padding: 5px 12px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.15s;">
+                            ← Anterior
+                        </button>
+                    ` : ''}
+                    <div>
+                        <span style="font-size: 0.75rem; font-weight: 800; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 10px; border-radius: 12px;">Serie ${serieCode} (${serieNum} de 12)</span>
+                        <h3 style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: 800; color: #0f172a;">Matriz ${matCode}</h3>
+                    </div>
                 </div>
-                <div style="font-size: 0.85rem; font-weight: 700; color: #64748b;">
-                    Progreso: ${curIdx} / 60 (${progressPct}%)
+                <div style="text-align: right;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: #64748b;">
+                        Progreso: ${curIdx} / 60 (${progressPct}%)
+                    </div>
+                    ${selectedVal !== undefined ? `
+                        <span style="font-size: 0.75rem; color: #15803d; font-weight: 700;">✓ Seleccionada: Opción ${selectedVal}</span>
+                    ` : `
+                        <span style="font-size: 0.75rem; color: #b45309; font-weight: 600;">(Sin responder)</span>
+                    `}
                 </div>
             </div>
 
@@ -24786,10 +24846,27 @@ function renderRavenPublicView(testDef, container) {
                     ${optsButtonsHtml}
                 </div>
             </div>
+
+            <!-- Barra de Navegación Inferior (Anterior / Siguiente) -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f1f5f9;">
+                <div>
+                    ${curIdx > 1 ? `
+                        <button type="button" onclick="previousRavenMatrix()" style="background: #ffffff; border: 1.5px solid #cbd5e1; color: #334155; font-weight: 700; padding: 0.6rem 1.25rem; border-radius: 10px; cursor: pointer; font-size: 0.88rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                            ← Matriz Anterior
+                        </button>
+                    ` : ''}
+                </div>
+                <div>
+                    ${selectedVal !== undefined ? `
+                        <button type="button" onclick="nextRavenMatrix()" style="background: #702e5e; border: none; color: #ffffff; font-weight: 700; padding: 0.6rem 1.25rem; border-radius: 10px; cursor: pointer; font-size: 0.88rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(112,46,94,0.25);">
+                            Siguiente Matriz →
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
         </div>
     `;
 }
-
 
 function renderPublicTestItems(testDef) {
     if (!testDef) return;

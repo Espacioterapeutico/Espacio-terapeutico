@@ -201,14 +201,13 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             fireInitQueries: false,         // AHORRO GB: No descargar configuraciones de privacidad ni contactos
             generateHighQualityLinkPreview: false, // AHORRO GB: No descargar previsualizaciones de imágenes
             shouldIgnoreJid: (jid) => {
-                // AHORRO GB ESTRICTO: Solo leer chats individuales de pacientes (@s.whatsapp.net)
                 if (!jid) return true;
-                if (jid.endsWith('@g.us')) return true;          // Grupos
-                if (jid.includes('broadcast')) return true;      // Estados / Historias
-                if (jid.includes('newsletter')) return true;     // Canales
-                if (jid.endsWith('@call')) return true;          // Llamadas
-                if (jid.endsWith('@lid')) return true;           // Identificadores secundarios
-                return !jid.endsWith('@s.whatsapp.net');         // Ignorar cualquier otra cosa que no sea chat directo
+                if (jid.endsWith('@g.us')) return true;          // Ignorar grupos para ahorrar ancho de banda
+                if (jid.includes('broadcast')) return true;      // Ignorar estados / historias
+                if (jid.includes('newsletter')) return true;     // Ignorar canales
+                if (jid.endsWith('@call')) return true;          // Ignorar llamadas
+                // Permitir @s.whatsapp.net y @lid (indispensable para intercambio de claves Signal y evitar "Esperando el mensaje")
+                return false;
             },
             msgRetryCounterCache,
             getMessage: async (key) => {
@@ -275,7 +274,7 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
         session.sock.ev.on('messages.upsert', async (m) => {
             for (const msg of (m.messages || [])) {
                 const rJid = msg.key?.remoteJid;
-                if (!rJid || !rJid.endsWith('@s.whatsapp.net')) continue;
+                if (!rJid || (!rJid.endsWith('@s.whatsapp.net') && !rJid.endsWith('@lid'))) continue;
                 if (msg.key && msg.key.id && msg.message) {
                     storeMessage(msg.key.id, msg.message);
                 }
