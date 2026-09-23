@@ -340,6 +340,14 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
 }
 
 // API Endpoints Multitenant (Aceptan user_id por query, headers o body)
+app.get('/', (req, res) => {
+    res.json({
+        status: 'ok',
+        service: 'Espacio Terapéutico WhatsApp Microservice',
+        timestamp: new Date().toISOString()
+    });
+});
+
 app.get('/status', (req, res) => {
     const userId = req.query.user_id || req.headers['x-user-id'] || '1';
     const session = getSessionObj(userId);
