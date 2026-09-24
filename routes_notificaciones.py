@@ -1024,6 +1024,22 @@ def cron_send_whatsapp_reminders():
     except Exception as e_tools:
         print("Aviso al ejecutar send_hourly_patient_tool_reminders en cron:", e_tools)
 
+    # 5. ENVIAR RECORDATORIOS DE ESTIMULACIÓN COGNITIVA PROGRAMADA
+    estimulacion_enviada = 0
+    try:
+        from routes_estimulacion import auto_send_cognitive_reminders
+        estimulacion_enviada = auto_send_cognitive_reminders(db) or 0
+    except Exception as e_cog:
+        print("Aviso al ejecutar auto_send_cognitive_reminders en cron:", e_cog)
+
+    # 6. ENVIAR RECORDATORIOS DE MEDITACIÓN PROGRAMADA
+    meditaciones_enviadas = 0
+    try:
+        from app import auto_send_meditation_reminders
+        meditaciones_enviadas = auto_send_meditation_reminders(db) or 0
+    except Exception as e_med:
+        print("Aviso al ejecutar auto_send_meditation_reminders en cron:", e_med)
+
     db.commit()
 
     return jsonify({
@@ -1033,6 +1049,8 @@ def cron_send_whatsapp_reminders():
         'reagendamientos_enviados': len(enviados_reagendamientos),
         'cierres_enviados': len(enviados_cierres),
         'herramientas_enviadas': herramientas_enviadas,
+        'estimulacion_enviada': estimulacion_enviada,
+        'meditaciones_enviadas': meditaciones_enviadas,
         'detalles': {
             'confirmaciones': enviados_confirmaciones,
             'recordatorios': enviados_recordatorios,

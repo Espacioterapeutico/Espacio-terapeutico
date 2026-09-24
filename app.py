@@ -3270,14 +3270,20 @@ def before_request_cleanup():
         _last_cleanup_timestamp = now_ts
 
         db = get_db()
-        auto_cancel_unconfirmed_sessions(db)
-        auto_send_appointment_reminders(db)
-        auto_send_confirmation_requests(db)
-        auto_check_patient_birthdays(db)
-        auto_send_meditation_reminders(db)
-        auto_send_cognitive_reminders(db)
-        send_hourly_patient_tool_reminders(db)
-        auto_check_subscription_expiration_reminders(db)
+        for fn_name, fn in [
+            ('auto_cancel_unconfirmed_sessions', auto_cancel_unconfirmed_sessions),
+            ('auto_send_appointment_reminders', auto_send_appointment_reminders),
+            ('auto_send_confirmation_requests', auto_send_confirmation_requests),
+            ('auto_check_patient_birthdays', auto_check_patient_birthdays),
+            ('auto_send_meditation_reminders', auto_send_meditation_reminders),
+            ('auto_send_cognitive_reminders', auto_send_cognitive_reminders),
+            ('send_hourly_patient_tool_reminders', send_hourly_patient_tool_reminders),
+            ('auto_check_subscription_expiration_reminders', auto_check_subscription_expiration_reminders)
+        ]:
+            try:
+                fn(db)
+            except Exception as task_err:
+                print(f"Aviso en tarea de segundo plano {fn_name}: {task_err}")
     except Exception as e_bg:
         print("Aviso en ejecutor en segundo plano before_request_cleanup:", e_bg)
     finally:

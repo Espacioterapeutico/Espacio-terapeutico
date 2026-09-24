@@ -137,13 +137,6 @@ def ensure_estimulacion_tables(db=None):
     try:
         cursor.execute("DELETE FROM cola_recordatorios_herramientas WHERE herramienta_tipo IN ('estimulacion_cognitiva', 'estimulacion')")
         cursor.execute("DELETE FROM tokens_herramientas WHERE herramienta_tipo IN ('estimulacion_cognitiva', 'estimulacion') AND usado = 0")
-        # Si hubo un envío fallido hoy donde no se concretó la entrega ni el WhatsApp, limpiar para permitir reintento inmediato
-        cursor.execute("""
-            DELETE FROM registro_estimulacion_cognitiva
-            WHERE fecha_envio = strftime('%Y-%m-%d', 'now', 'localtime')
-              AND completado = 0
-              AND (archivo_respuesta_url IS NULL OR archivo_respuesta_url = '')
-        """)
         db.commit()
     except Exception:
         pass
@@ -440,6 +433,23 @@ def api_toggle_estimulacion(patient_id, asig_id):
     db.commit()
     return jsonify({'success': 'Estado actualizado.', 'activa': nuevo_estado})
 
+@estimulacion_bp.route('/api/pacientes/<int:patient_id>/estimulacion/enviar-hoy', methods=['POST'])
+@login_required
+def api_enviar_estimulacion_hoy(patient_id):
+    """
+    Fuerza el envío manual inmediato del ejercicio correspondiente de estimulación cognitiva
+    por WhatsApp al paciente seleccionado.
+    """
+    db = get_db()
+    try:
+        count = auto_send_cognitive_reminders(db, target_patient_id=patient_id, force=True)
+        if count and count > 0:
+            return jsonify({'success': '¡Ejercicio de Estimulación Cognitiva enviado con éxito por WhatsApp!'})
+        else:
+            return jsonify({'error': 'No se pudo enviar el ejercicio. Verifica que el paciente tenga una asignación activa con ejercicios disponibles y teléfono celular válido.'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Error al enviar ejercicio: {str(e)}'}), 500
+
 @estimulacion_bp.route('/api/pacientes/<int:patient_id>/estimulacion/historial', methods=['GET'])
 @login_required
 def api_historial_estimulacion(patient_id):
@@ -691,16 +701,16 @@ def portal_estimulacion_completar(token):
 # MOTOR AUTOMATIZADO DE ENVÍOS (CRON / SEGUNDO PLANO)
 # =======================================================
 
-def auto_send_cognitive_reminders(db):
+def auto_send_cognitive_reminders(db, target_patient_id=None, force=False):
     """
     Evalúa las asignaciones activas de estimulación cognitiva.
     Si hoy coincide con los días de la semana y la hora coincide con hora_recordatorio:
-    Envía el siguiente ejercicio secuencial. Al culminar el último ejercicio de la carpeta,
+    Envía el siguiente ejercicio secuencial por WhatsApp. Al culminar el último ejercicio de la carpeta,
     se pausa automáticamente la asignación y se notifica al terapeuta.
     """
-    import sys
     cursor = db.cursor()
     ensure_estimulacion_tables(db)
+    enviados_count = 0
 
     try:
         try:
@@ -716,177 +726,203 @@ def auto_send_cognitive_reminders(db):
         now_full_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         weekday = now_dt.isoweekday() # 1=Lunes, 7=Domingo
 
-        cursor.execute("""
-            SELECT pec.*, p.nombres, p.apellidos, p.telefono, c.titulo as carpeta_titulo
+        where_clauses = ["pec.activa = 1"]
+        params = []
+        if target_patient_id:
+            where_clauses.append("pec.paciente_id = ?")
+            params.append(target_patient_id)
+
+        cursor.execute(f"""
+            SELECT pec.*, p.nombres, p.apellidos, p.telefono, COALESCE(c.titulo, 'Estimulación Cognitiva') as carpeta_titulo
             FROM paciente_estimulacion_cognitiva pec
             JOIN pacientes p ON pec.paciente_id = p.id
-            JOIN cat_carpetas_cognitivas c ON pec.carpeta_id = c.id
-            WHERE pec.activa = 1
-        """)
+            LEFT JOIN cat_carpetas_cognitivas c ON pec.carpeta_id = c.id
+            WHERE {' AND '.join(where_clauses)}
+        """, params)
         asignaciones = cursor.fetchall()
 
         for asig in asignaciones:
-            # 1. Verificar si corresponde hoy según los días de la semana (1=Lunes .. 7=Domingo)
-            dias_semana = []
             try:
-                dias_semana = json.loads(asig['dias_semana_json'] or '[]')
-            except:
-                pass
-
-            if dias_semana and weekday not in dias_semana:
-                continue
-
-            # Verificar horario programado (enviar cuando la hora actual >= hora_recordatorio)
-            hora_str = (asig.get('hora_recordatorio') or '09:00').strip()
-            try:
-                h_rec, m_rec = map(int, hora_str.split(':')[:2])
-            except Exception:
-                h_rec, m_rec = 9, 0
-
-            curr_total_mins = now_dt.hour * 60 + now_dt.minute
-            target_total_mins = h_rec * 60 + m_rec
-
-            if curr_total_mins < target_total_mins:
-                continue # Aún no es la hora programada
-
-            # 2. Verificar si ya se envió un ejercicio hoy para esta asignación
-            cursor.execute("""
-                SELECT id FROM registro_estimulacion_cognitiva
-                WHERE asignacion_id = ? AND fecha_envio = ?
-            """, (asig['id'], today_str))
-            reg_hoy = cursor.fetchone()
-            if reg_hoy:
-                # Si existe registro de hoy, verificar si el WhatsApp se envió efectivamente
-                first_name_check = asig['nombres'].split()[0] if asig['nombres'] else 'Consultante'
-                cursor.execute("""
-                    SELECT id FROM notificaciones 
-                    WHERE user_id = ? AND tipo = 'estimulacion_wa' AND fecha LIKE ? AND mensaje LIKE ?
-                """, (asig['psicologo_id'] or 1, f"{today_str}%", f"%{first_name_check}%"))
-                if cursor.fetchone():
-                    continue # Ya enviado y confirmado hoy con éxito
-                else:
-                    # Fila fallida previa sin entrega de WhatsApp: eliminarla para permitir el despacho
-                    cursor.execute("DELETE FROM registro_estimulacion_cognitiva WHERE id = ?", (reg_hoy['id'],))
-                    db.commit()
-
-            # 3. Obtener ejercicios de la carpeta ordenados secuencialmente
-            cursor.execute("""
-                SELECT id, orden, titulo, instrucciones, tipo_archivo
-                FROM cat_ejercicios_cognitivos
-                WHERE carpeta_id = ?
-                ORDER BY orden ASC, id ASC
-            """, (asig['carpeta_id'],))
-            ejercicios = cursor.fetchall()
-
-            if not ejercicios:
-                continue
-
-            ultimo_id = asig['ultimo_ejercicio_id']
-            siguiente_ejercicio = None
-            es_ultimo_ejercicio = False
-
-            if not ultimo_id:
-                siguiente_ejercicio = ejercicios[0]
-                if len(ejercicios) == 1:
-                    es_ultimo_ejercicio = True
-            else:
-                found = False
-                for idx, ej in enumerate(ejercicios):
-                    if ej['id'] == ultimo_id:
-                        if idx + 1 < len(ejercicios):
-                            siguiente_ejercicio = ejercicios[idx + 1]
-                            if idx + 1 == len(ejercicios) - 1:
-                                es_ultimo_ejercicio = True
-                        else:
-                            # Ya se habían entregado todos
-                            siguiente_ejercicio = None
-                        found = True
-                        break
-                if not found:
-                    siguiente_ejercicio = ejercicios[0]
-
-            if not siguiente_ejercicio:
-                # Ya no quedan ejercicios por enviar: pausar asignación
-                cursor.execute("UPDATE paciente_estimulacion_cognitiva SET activa = 0, fecha_culminacion = ? WHERE id = ?", (now_full_str, asig['id']))
-                db.commit()
-                continue
-
-            # 4. Generar token seguro y mensaje de WhatsApp
-            token_entrega = secrets.token_urlsafe(32)
-            app_url = get_public_base_url()
-            link = f"{app_url}/portal/estimulacion/{token_entrega}"
-            first_name = asig['nombres'].split()[0] if asig['nombres'] else 'Consultante'
-            psic_id = asig['psicologo_id'] or 1
-
-            from routes_herramientas import clean_phone_number
-            clean_phone = clean_phone_number(asig['telefono']) if asig['telefono'] else ''
-
-            msg_wa = (
-                f"Hola *{first_name}* 👋🧠\n\n"
-                f"Te comparto tu ejercicio de Estimulación Cognitiva de hoy:\n"
-                f"*{siguiente_ejercicio['titulo']}* ({asig['carpeta_titulo']})\n\n"
-                f"Haz clic en el siguiente enlace para descargarlo y completarlo:\n"
-                f"{link}\n\n"
-                f"_Al terminarlo, presiona 'Marcar como realizado' en ese mismo enlace._"
-            )
-
-            # 5. Enviar por WhatsApp primero; sólo registrar en base de datos si la entrega es exitosa
-            send_ok = False
-            if clean_phone:
-                from routes_notificaciones import make_wa_http_request
+                # 1. Verificar si corresponde hoy según los días de la semana (1=Lunes .. 7=Domingo)
+                dias_semana = []
                 try:
-                    res = make_wa_http_request(
-                        'POST', '/send',
-                        json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id},
-                        timeout=15, user_id=psic_id
-                    )
-                    if res and res.status_code == 200:
-                        send_ok = True
-                    else:
-                        err_text = getattr(res, 'text', '')
-                        print(f"Error enviando WhatsApp de estimulación cognitiva a {clean_phone} (status {getattr(res, 'status_code', None)}): {err_text}")
-                except Exception as ex_wa:
-                    print("Error enviando WhatsApp de estimulación cognitiva:", ex_wa)
-            else:
-                # Si no tiene teléfono configurado, registrar en portal
-                send_ok = True
+                    raw_dias = json.loads(asig['dias_semana_json'] or '[]')
+                    if isinstance(raw_dias, list):
+                        dias_semana = [int(d) for d in raw_dias if str(d).isdigit()]
+                    elif isinstance(raw_dias, int):
+                        dias_semana = [raw_dias]
+                except Exception:
+                    dias_semana = [1, 3, 5]
 
-            if not send_ok:
-                continue
+                if not force and dias_semana and weekday not in dias_semana:
+                    continue
 
-            # 6. Registrar entrega y actualizar estado en base de datos
-            cursor.execute("""
-                INSERT INTO registro_estimulacion_cognitiva (
-                    asignacion_id, paciente_id, ejercicio_id, token_acceso, fecha_envio, hora_envio
-                ) VALUES (?, ?, ?, ?, ?, ?)
-            """, (asig['id'], asig['paciente_id'], siguiente_ejercicio['id'], token_entrega, today_str, now_time_str))
+                # Verificar horario programado (enviar cuando la hora actual >= hora_recordatorio)
+                hora_str = (asig.get('hora_recordatorio') or '09:00').strip()
+                try:
+                    h_rec, m_rec = map(int, hora_str.split(':')[:2])
+                except Exception:
+                    h_rec, m_rec = 9, 0
 
-            if es_ultimo_ejercicio:
+                curr_total_mins = now_dt.hour * 60 + now_dt.minute
+                target_total_mins = h_rec * 60 + m_rec
+
+                if not force:
+                    # Aún no es la hora programada
+                    if curr_total_mins < target_total_mins:
+                        continue
+                    # Si pasaron más de 8 horas después de la hora programada, no enviar para evitar spam tardío
+                    if curr_total_mins > (target_total_mins + 480):
+                        continue
+
+                # 2. Verificar si ya se envió un ejercicio hoy para esta asignación
+                if not force:
+                    cursor.execute("""
+                        SELECT id FROM registro_estimulacion_cognitiva
+                        WHERE asignacion_id = ? AND fecha_envio = ?
+                    """, (asig['id'], today_str))
+                    reg_hoy = cursor.fetchone()
+                    if reg_hoy:
+                        # Si existe registro de hoy, verificar si el WhatsApp se envió efectivamente
+                        first_name_check = asig['nombres'].split()[0] if asig['nombres'] else 'Consultante'
+                        cursor.execute("""
+                            SELECT id FROM notificaciones 
+                            WHERE user_id = ? AND tipo = 'estimulacion_wa' AND fecha LIKE ? AND mensaje LIKE ?
+                        """, (asig['psicologo_id'] or 1, f"{today_str}%", f"%{first_name_check}%"))
+                        if cursor.fetchone():
+                            continue # Ya enviado y confirmado hoy con éxito
+                        else:
+                            # Fila fallida previa sin entrega de WhatsApp: eliminarla para permitir reintento
+                            cursor.execute("DELETE FROM registro_estimulacion_cognitiva WHERE id = ?", (reg_hoy['id'],))
+                            db.commit()
+
+                # 3. Obtener ejercicios de la carpeta ordenados secuencialmente
                 cursor.execute("""
-                    UPDATE paciente_estimulacion_cognitiva
-                    SET ultimo_ejercicio_id = ?, activa = 0, fecha_culminacion = ?
-                    WHERE id = ?
-                """, (siguiente_ejercicio['id'], now_full_str, asig['id']))
+                    SELECT id, orden, titulo, instrucciones, tipo_archivo
+                    FROM cat_ejercicios_cognitivos
+                    WHERE carpeta_id = ?
+                    ORDER BY orden ASC, id ASC
+                """, (asig['carpeta_id'],))
+                ejercicios = cursor.fetchall()
+
+                if not ejercicios:
+                    print(f"[COGNITIVE-REMINDERS] Carpeta {asig['carpeta_id']} sin ejercicios para paciente {asig['paciente_id']}")
+                    continue
+
+                ultimo_id = asig['ultimo_ejercicio_id']
+                siguiente_ejercicio = None
+                es_ultimo_ejercicio = False
+
+                if not ultimo_id:
+                    siguiente_ejercicio = ejercicios[0]
+                    if len(ejercicios) == 1:
+                        es_ultimo_ejercicio = True
+                else:
+                    found = False
+                    for idx, ej in enumerate(ejercicios):
+                        if ej['id'] == ultimo_id:
+                            if idx + 1 < len(ejercicios):
+                                siguiente_ejercicio = ejercicios[idx + 1]
+                                if idx + 1 == len(ejercicios) - 1:
+                                    es_ultimo_ejercicio = True
+                            else:
+                                siguiente_ejercicio = None
+                            found = True
+                            break
+                    if not found:
+                        siguiente_ejercicio = ejercicios[0]
+
+                if not siguiente_ejercicio:
+                    # Ya no quedan ejercicios por enviar: pausar asignación
+                    cursor.execute("UPDATE paciente_estimulacion_cognitiva SET activa = 0, fecha_culminacion = ? WHERE id = ?", (now_full_str, asig['id']))
+                    db.commit()
+                    continue
+
+                # 4. Generar token seguro y mensaje de WhatsApp
+                token_entrega = secrets.token_urlsafe(32)
+                app_url = get_public_base_url()
+                link = f"{app_url}/portal/estimulacion/{token_entrega}"
+                first_name = asig['nombres'].split()[0] if asig['nombres'] else 'Consultante'
+                psic_id = asig['psicologo_id'] or 1
+
+                from routes_herramientas import clean_phone_number
+                raw_phone = asig['telefono'] or ''
+                clean_phone = clean_phone_number(raw_phone)
+                if clean_phone and not clean_phone.startswith('58') and len(clean_phone) == 10:
+                    clean_phone = '58' + clean_phone
+
+                msg_wa = (
+                    f"Hola *{first_name}* 👋🧠\n\n"
+                    f"Te comparto tu ejercicio de Estimulación Cognitiva de hoy:\n"
+                    f"*{siguiente_ejercicio['titulo']}* ({asig['carpeta_titulo']})\n\n"
+                    f"Haz clic en el siguiente enlace para descargarlo y completarlo:\n"
+                    f"{link}\n\n"
+                    f"_Al terminarlo, presiona 'Marcar como realizado' en ese mismo enlace._"
+                )
+
+                # 5. Enviar por WhatsApp primero; sólo registrar en base de datos si la entrega es exitosa
+                send_ok = False
+                if clean_phone:
+                    from routes_notificaciones import make_wa_http_request
+                    try:
+                        res = make_wa_http_request(
+                            'POST', '/send',
+                            json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id},
+                            timeout=25, user_id=psic_id
+                        )
+                        if res and res.status_code == 200:
+                            send_ok = True
+                            print(f"[COGNITIVE-REMINDERS] WhatsApp enviado con éxito a {clean_phone} para {first_name}")
+                        else:
+                            err_text = getattr(res, 'text', '')
+                            print(f"[COGNITIVE-REMINDERS] Error enviando WhatsApp a {clean_phone} (status {getattr(res, 'status_code', None)}): {err_text}")
+                    except Exception as ex_wa:
+                        print(f"[COGNITIVE-REMINDERS] Excepción enviando WhatsApp a {clean_phone}: {ex_wa}")
+                else:
+                    # Si no tiene teléfono configurado, registrar en portal
+                    send_ok = True
+
+                if not send_ok:
+                    continue
+
+                # 6. Registrar entrega y actualizar estado en base de datos
+                cursor.execute("""
+                    INSERT INTO registro_estimulacion_cognitiva (
+                        asignacion_id, paciente_id, ejercicio_id, token_acceso, fecha_envio, hora_envio
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (asig['id'], asig['paciente_id'], siguiente_ejercicio['id'], token_entrega, today_str, now_time_str))
+
+                if es_ultimo_ejercicio:
+                    cursor.execute("""
+                        UPDATE paciente_estimulacion_cognitiva
+                        SET ultimo_ejercicio_id = ?, activa = 0, fecha_culminacion = ?
+                        WHERE id = ?
+                    """, (siguiente_ejercicio['id'], now_full_str, asig['id']))
+                    
+                    notif_fin = f"🏁 El consultante {asig['nombres']} {asig['apellidos']} ha recibido la última ficha de la carpeta '{asig['carpeta_titulo']}'. El ciclo se ha pausado automáticamente."
+                    cursor.execute("""
+                        INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                        VALUES (?, 'herramienta_terapeutica', '🏁 Carpeta Cognitiva Culminada', ?, ?, 0, '/#pacientes')
+                    """, (psic_id, notif_fin, now_full_str))
+                else:
+                    cursor.execute("""
+                        UPDATE paciente_estimulacion_cognitiva
+                        SET ultimo_ejercicio_id = ?
+                        WHERE id = ?
+                    """, (siguiente_ejercicio['id'], asig['id']))
+
+                if clean_phone:
+                    cursor.execute("""
+                        INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                        VALUES (?, 'estimulacion_wa', '🧠 Ejercicio Cognitivo Enviado', ?, ?, 1, '')
+                    """, (psic_id, f"Ficha '{siguiente_ejercicio['titulo']}' enviada a {first_name}", now_full_str))
                 
-                notif_fin = f"🏁 El consultante {asig['nombres']} {asig['apellidos']} ha recibido la última ficha de la carpeta '{asig['carpeta_titulo']}'. El ciclo se ha pausado automáticamente."
-                cursor.execute("""
-                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                    VALUES (?, 'herramienta_terapeutica', '🏁 Carpeta Cognitiva Culminada', ?, ?, 0, '/#pacientes')
-                """, (psic_id, notif_fin, now_full_str))
-            else:
-                cursor.execute("""
-                    UPDATE paciente_estimulacion_cognitiva
-                    SET ultimo_ejercicio_id = ?
-                    WHERE id = ?
-                """, (siguiente_ejercicio['id'], asig['id']))
+                db.commit()
+                enviados_count += 1
+            except Exception as e_item:
+                print(f"[COGNITIVE-REMINDERS] Error procesando asignación {asig['id']}: {e_item}")
 
-            if clean_phone:
-                cursor.execute("""
-                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                    VALUES (?, 'estimulacion_wa', '🧠 Ejercicio Cognitivo Enviado', ?, ?, 1, '')
-                """, (psic_id, f"Ficha '{siguiente_ejercicio['titulo']}' enviada a {first_name}", now_full_str))
-            
-            db.commit()
-
+        return enviados_count
     except Exception as e:
         print("Error en auto_send_cognitive_reminders:", e)
+        return enviados_count

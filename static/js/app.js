@@ -20541,6 +20541,9 @@ async function selectPatientForTherapistTools(id, name, code) {
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEstimulacionHistoryModal(${id}, '${safePName}')" style="font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 5px; cursor: pointer;">
                                         📄 Historial
                                     </button>
+                                    <button type="button" class="btn btn-sm" onclick="sendCognitiveExerciseNow(${id}, '${safePName}')" title="Enviar ejercicio de hoy por WhatsApp ahora mismo" style="font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 5px; cursor: pointer; background: #25D366; color: white; border: none; display: flex; align-items: center; gap: 0.25rem;">
+                                        📲 Enviar Hoy
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -29845,8 +29848,13 @@ async function submitCogAssign(e) {
     }
 }
 
+let currentCogHistoryPatientId = null;
+let currentCogHistoryPatientName = '';
+
 // HISTORIAL DEL PACIENTE
 async function openEstimulacionHistoryModal(patientId, patientName) {
+    currentCogHistoryPatientId = patientId;
+    currentCogHistoryPatientName = patientName || '';
     openModal('modal-estimulacion-history');
     const headerTitle = document.querySelector('#modal-estimulacion-history .modal-header h3');
     if (headerTitle) {
@@ -29909,6 +29917,49 @@ async function openEstimulacionHistoryModal(patientId, patientName) {
     }
 }
 
+// ENVÍO INMEDIATO POR WHATSAPP (BOTÓN MANUAL)
+async function sendCognitiveExerciseNow(patientId, patientName) {
+    if (!patientId) {
+        alert('ID de paciente no válido.');
+        return;
+    }
+    const nameStr = patientName ? ` a ${patientName}` : '';
+    if (!confirm(`¿Deseas enviar inmediatamente por WhatsApp la ficha correspondiente de estimulación cognitiva${nameStr}?`)) {
+        return;
+    }
+
+    try {
+        if (typeof showToast === 'function') {
+            showToast('⏳ Enviando ficha por WhatsApp...', 'info');
+        }
+        const res = await fetch(`/api/pacientes/${patientId}/estimulacion/enviar-hoy`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            alert(`✅ ${data.message || 'Ficha de estimulación enviada con éxito.'}`);
+            // Si el modal de historial está abierto, refrescarlo
+            const historyModal = document.getElementById('modal-estimulacion-history');
+            if (historyModal && !historyModal.classList.contains('hide')) {
+                openEstimulacionHistoryModal(patientId, patientName);
+            }
+        } else {
+            alert(`⚠️ ${data.message || 'No se pudo enviar el ejercicio.'}`);
+        }
+    } catch (err) {
+        alert(`❌ Error al conectar con el servidor: ${err.message}`);
+    }
+}
+
+function sendCognitiveExerciseNowFromHistory() {
+    if (currentCogHistoryPatientId) {
+        sendCognitiveExerciseNow(currentCogHistoryPatientId, currentCogHistoryPatientName);
+    } else {
+        alert('No hay un paciente seleccionado actualmente.');
+    }
+}
+
 window.loadEstimulacionLibrary = loadEstimulacionLibrary;
 window.openEstimulacionFolderModal = openEstimulacionFolderModal;
 window.submitCogFolderCreate = submitCogFolderCreate;
@@ -29922,6 +29973,8 @@ window.openAssignEstimulacionModal = openAssignEstimulacionModal;
 window.toggleCogDay = toggleCogDay;
 window.submitCogAssign = submitCogAssign;
 window.openEstimulacionHistoryModal = openEstimulacionHistoryModal;
+window.sendCognitiveExerciseNow = sendCognitiveExerciseNow;
+window.sendCognitiveExerciseNowFromHistory = sendCognitiveExerciseNowFromHistory;
 
 // =======================================================
 // PORTAL DEL CONSULTANTE: ESTIMULACIÓN COGNITIVA

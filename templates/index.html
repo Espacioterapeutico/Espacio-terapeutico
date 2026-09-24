@@ -9382,7 +9382,12 @@ async function handleQuickAddPatientSubmit(e) {
                 <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.4rem;">
                     📊 Historial de Estimulación Cognitiva
                 </h3>
-                <button class="btn-close-modal" onclick="closeModal('modal-estimulacion-history')">&times;</button>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button type="button" id="btn-cog-send-now-modal" class="btn btn-sm" onclick="sendCognitiveExerciseNowFromHistory()" title="Enviar inmediatamente la ficha que corresponde hoy por WhatsApp" style="background: #25D366; color: white; font-weight: 700; border: none; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem; cursor: pointer; box-shadow: 0 2px 4px rgba(37,211,102,0.25);">
+                        <span>📲</span> Enviar Ficha por WhatsApp Ahora
+                    </button>
+                    <button class="btn-close-modal" onclick="closeModal('modal-estimulacion-history')">&times;</button>
+                </div>
             </div>
             <div class="modal-body" style="padding: 1.25rem; max-height: 70vh; overflow-y: auto;">
                 <div class="table-responsive">
