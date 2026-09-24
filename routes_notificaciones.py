@@ -1040,6 +1040,13 @@ def cron_send_whatsapp_reminders():
     except Exception as e_med:
         print("Aviso al ejecutar auto_send_meditation_reminders en cron:", e_med)
 
+    # 7. AUTO-CANCELAR CITAS NO CONFIRMADAS QUE SUPERARON EL LÍMITE
+    try:
+        from app import auto_cancel_unconfirmed_sessions
+        auto_cancel_unconfirmed_sessions(db)
+    except Exception as e_cancel:
+        print("Aviso al ejecutar auto_cancel_unconfirmed_sessions en cron:", e_cancel)
+
     db.commit()
 
     return jsonify({
