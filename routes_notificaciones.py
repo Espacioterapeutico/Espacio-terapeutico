@@ -693,12 +693,12 @@ def cron_send_whatsapp_reminders():
     current_hour = now_local.hour
     print(f"[CRON] === Inicio cron_send_whatsapp_reminders === Hora local: {now_local.strftime('%Y-%m-%d %H:%M:%S')} (hour={current_hour})", flush=True)
     
-    # Delimitar horario de envíos automáticos: NO enviar entre las 10:00 PM (22:00) y las 7:59 AM (07:59)
-    if current_hour < 8 or current_hour >= 22:
-        print(f"[CRON] Skipped: fuera de horario laboral (hour={current_hour})", flush=True)
+    # Delimitar horario de envíos automáticos: NO enviar entre las 10:00 PM (22:00) y las 6:59 AM (06:59)
+    if current_hour < 7 or current_hour >= 22:
+        print(f"[CRON] Skipped: fuera de horario de servicio (hour={current_hour})", flush=True)
         return jsonify({
             'status': 'skipped',
-            'message': f'Filtro de horario laboral activo (10:00 PM - 7:59 AM). Hora actual: {current_hour:02d}:00. Los envíos automáticos están pausados hasta las 8:00 AM.',
+            'message': f'Filtro de horario de servicio activo (10:00 PM - 6:59 AM). Hora actual: {current_hour:02d}:00. Los envíos automáticos están pausados hasta las 7:00 AM.',
             'confirmaciones_enviadas': 0,
             'recordatorios_enviados': 0
         })

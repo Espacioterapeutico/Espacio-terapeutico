@@ -1227,8 +1227,8 @@ def admin_availability():
         "alerta_confirmacion": 24,
         "alerta_recordatorio": 2,
         "alerta_cierre": 2,
-        "limite_cancelacion_tipo": "horas",
-        "limite_cancelacion_valor": 24,
+        "limite_cancelacion_tipo": "mismo_dia",
+        "limite_cancelacion_valor": "07:00",
         "perfiles": [
             {
                 "id": "default_online",

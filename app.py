@@ -1914,7 +1914,7 @@ def auto_cancel_unconfirmed_sessions(db):
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.confirmada = 0 
-              AND af.estado_pago = 'Agendada' 
+              AND (af.estado_pago IN ('Agendada', 'Pendiente', '') OR af.estado_pago IS NULL)
               AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
               AND af.fecha >= ?
         """, (start_date_str,))
