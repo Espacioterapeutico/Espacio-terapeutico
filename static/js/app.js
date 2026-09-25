@@ -29938,14 +29938,14 @@ async function sendCognitiveExerciseNow(patientId, patientName) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert(`✅ ${data.message || 'Ficha de estimulación enviada con éxito.'}`);
+            alert(`✅ ${data.message || 'Ficha de estimulación enviada con éxito por WhatsApp.'}`);
             // Si el modal de historial está abierto, refrescarlo
             const historyModal = document.getElementById('modal-estimulacion-history');
             if (historyModal && !historyModal.classList.contains('hide')) {
                 openEstimulacionHistoryModal(patientId, patientName);
             }
         } else {
-            alert(`⚠️ ${data.message || 'No se pudo enviar el ejercicio.'}`);
+            alert(`⚠️ ${data.message || data.error || 'No se pudo enviar el ejercicio.'}`);
         }
     } catch (err) {
         alert(`❌ Error al conectar con el servidor: ${err.message}`);

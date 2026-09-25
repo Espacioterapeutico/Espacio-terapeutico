@@ -2292,9 +2292,10 @@ def auto_send_meditation_reminders(db):
         assignments = cursor.fetchall()
         current_weekday = now_dt.isoweekday() # 1=Lunes .. 7=Domingo
         
-        for asig in assignments:
+        for asig_raw in assignments:
+            asig = dict(asig_raw)
             # Check weekday
-            if 'dias_semana_json' in asig.keys() and asig['dias_semana_json']:
+            if 'dias_semana_json' in asig and asig['dias_semana_json']:
                 try:
                     dias = json.loads(asig['dias_semana_json'])
                     if isinstance(dias, list) and current_weekday not in dias:

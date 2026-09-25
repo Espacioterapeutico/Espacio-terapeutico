@@ -444,11 +444,11 @@ def api_enviar_estimulacion_hoy(patient_id):
     try:
         count = auto_send_cognitive_reminders(db, target_patient_id=patient_id, force=True)
         if count and count > 0:
-            return jsonify({'success': '¡Ejercicio de Estimulación Cognitiva enviado con éxito por WhatsApp!'})
+            return jsonify({'success': True, 'message': '¡Ejercicio de Estimulación Cognitiva enviado con éxito por WhatsApp!'})
         else:
-            return jsonify({'error': 'No se pudo enviar el ejercicio. Verifica que el paciente tenga una asignación activa con ejercicios disponibles y teléfono celular válido.'}), 400
+            return jsonify({'success': False, 'message': 'No se pudo enviar el ejercicio. Verifica que el paciente tenga una asignación activa con ejercicios disponibles y teléfono celular válido.'}), 400
     except Exception as e:
-        return jsonify({'error': f'Error al enviar ejercicio: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Error al enviar ejercicio: {str(e)}'}), 500
 
 @estimulacion_bp.route('/api/pacientes/<int:patient_id>/estimulacion/historial', methods=['GET'])
 @login_required
@@ -741,8 +741,9 @@ def auto_send_cognitive_reminders(db, target_patient_id=None, force=False):
         """, params)
         asignaciones = cursor.fetchall()
 
-        for asig in asignaciones:
+        for asig_raw in asignaciones:
             try:
+                asig = dict(asig_raw)
                 # 1. Verificar si corresponde hoy según los días de la semana (1=Lunes .. 7=Domingo)
                 dias_semana = []
                 try:
