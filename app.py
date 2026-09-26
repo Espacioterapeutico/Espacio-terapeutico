@@ -767,6 +767,8 @@ def init_db():
             cursor.execute("ALTER TABLE sesiones ADD COLUMN archivo_adjunto TEXT")
         if 'resumen_paciente' not in columns:
             cursor.execute("ALTER TABLE sesiones ADD COLUMN resumen_paciente TEXT")
+        if 'examen_mental_id' not in columns:
+            cursor.execute("ALTER TABLE sesiones ADD COLUMN examen_mental_id INTEGER")
         db.commit()
         
     # Migración automática de usuarios (psicólogos)

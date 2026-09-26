@@ -139,13 +139,36 @@ def get_examen_mental_historial():
         
     return jsonify(result)
 
-@examen_mental_bp.route('/api/examen-mental/<int:exam_id>', methods=['GET'])
+@examen_mental_bp.route('/api/examen-mental/<int:exam_id>', methods=['GET', 'PUT'])
 @login_required
-def get_examen_mental_detail(exam_id):
+def get_or_update_examen_mental(exam_id):
     user_id = session.get('user_id')
     db = get_db()
     cursor = db.cursor()
     _ensure_examenes_mentales_table(cursor)
+    
+    if request.method == 'PUT':
+        data = request.json or {}
+        fecha_evaluacion = data.get('fecha_evaluacion')
+        medio_evaluacion = data.get('medio_evaluacion', 'Presencial')
+        datos_evaluacion = data.get('datos_evaluacion_json', {})
+        observaciones_generales = data.get('observaciones_generales', '').strip()
+        
+        try:
+            datos_json_str = json.dumps(datos_evaluacion, ensure_ascii=False)
+            cursor.execute("""
+                UPDATE examenes_mentales
+                SET fecha_evaluacion = COALESCE(?, fecha_evaluacion),
+                    medio_evaluacion = COALESCE(?, medio_evaluacion),
+                    datos_evaluacion_json = ?,
+                    observaciones_generales = ?
+                WHERE id = ? AND (psicologo_id = ? OR ? = 1)
+            """, (fecha_evaluacion, medio_evaluacion, datos_json_str, observaciones_generales, exam_id, user_id, 1 if session.get('role') in ['admin', 'superadmin'] else 0))
+            db.commit()
+            return jsonify({'success': 'Examen mental actualizado con éxito.', 'id': exam_id})
+        except Exception as e:
+            db.rollback()
+            return jsonify({'error': f'Error al actualizar el examen mental: {str(e)}'}), 500
     
     cursor.execute("""
         SELECT e.*, p.nombres as pac_nombres, p.apellidos as pac_apellidos, p.cedula as pac_cedula,

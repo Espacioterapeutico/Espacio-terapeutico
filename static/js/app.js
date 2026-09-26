@@ -5788,6 +5788,11 @@ function applySessionsFilters(resetPage = false) {
                             📄 Ver Informe PDF
                         </button>
                     ` : ''}
+                    ${s.examen_mental_id ? `
+                        <button type="button" class="btn btn-sm" style="background: #fdf4f9; color: var(--primary-color); border: 1.5px solid rgba(169, 89, 147, 0.4); font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" onclick="viewExamenMentalDetail(${s.examen_mental_id})" title="Ver Examen Mental (MSE) vinculado a esta sesión">
+                            🧠 Ver Examen Mental
+                        </button>
+                    ` : ''}
                     <button class="btn btn-sm" style="background: #25D366; color: white; border: none; padding: 0.35rem 0.7rem; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;" onclick="sendSessionCierreWhatsApp(${s.id}, '${escapeJsQuotes(s.nombres || '')}')" title="Enviar Nota Post-sesión con tareas al consultante por WhatsApp">
                         <i class="fab fa-whatsapp"></i> Enviar Tareas (WhatsApp)
                     </button>
@@ -6041,6 +6046,10 @@ async function openNewSessionModal() {
     const resFileName = document.getElementById('s-recursos-file-name');
     if (resFileName) resFileName.textContent = '';
     
+    if (typeof clearSessionMseForm === 'function') clearSessionMseForm();
+    const mseDrawer = document.getElementById('session-mse-drawer');
+    if (mseDrawer) mseDrawer.classList.add('hide');
+    
     await loadPatientsDropdowns();
     
     // Asegurar que todas las opciones estén visibles
@@ -6100,6 +6109,10 @@ async function openRegisterSessionFromEvent(eventId) {
         
         const searchInput = document.getElementById('s-paciente-search');
         if (searchInput) searchInput.value = '';
+        
+        if (typeof clearSessionMseForm === 'function') clearSessionMseForm();
+        const mseDrawer = document.getElementById('session-mse-drawer');
+        if (mseDrawer) mseDrawer.classList.add('hide');
         
         await loadPatientsDropdowns();
         
@@ -6178,6 +6191,38 @@ async function handleSessionSubmit(e) {
         }
     }
     
+    let examenMentalId = document.getElementById('session-mse-linked-id')?.value || null;
+    if (typeof sessionMseHasData === 'function' && sessionMseHasData()) {
+        try {
+            const pacId = document.getElementById('s-paciente').value;
+            const fecha = document.getElementById('s-fecha').value;
+            const modalidad = document.getElementById('s-modalidad').value;
+            const msePayload = gatherSessionMsePayload(pacId, fecha, modalidad);
+            
+            let mseRes;
+            if (examenMentalId) {
+                mseRes = await fetch(`/api/examen-mental/${examenMentalId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(msePayload)
+                });
+            } else {
+                mseRes = await fetch('/api/examen-mental', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(msePayload)
+                });
+            }
+            
+            if (mseRes.ok) {
+                const mseData = await mseRes.json();
+                examenMentalId = mseData.id || examenMentalId;
+            }
+        } catch (mseErr) {
+            console.error("Error al guardar examen mental integrado:", mseErr);
+        }
+    }
+
     const estado = document.getElementById('s-estado').value;
     const payload = {
         paciente_id: document.getElementById('s-paciente').value,
@@ -6194,6 +6239,7 @@ async function handleSessionSubmit(e) {
         diagnostico: document.getElementById('s-diagnostico-clinico').value,
         test_aplicados: document.getElementById('s-test-aplicados').value,
         archivo_adjunto: document.getElementById('s-archivo-adjunto').value,
+        examen_mental_id: examenMentalId ? parseInt(examenMentalId) : null,
         
         // Campos financieros
         tipo_liquidacion: (estado === 'Realizada' || estado === 'Cancelada sin aviso') ? document.getElementById('s-tipo-liq').value : null,
@@ -6267,6 +6313,13 @@ async function openEditSessionModal(sessionId) {
         if (resFile) resFile.value = '';
         const resFileName = document.getElementById('s-recursos-file-name');
         if (resFileName) resFileName.textContent = '';
+
+        if (typeof clearSessionMseForm === 'function') clearSessionMseForm();
+        const mseDrawer = document.getElementById('session-mse-drawer');
+        if (mseDrawer) mseDrawer.classList.add('hide');
+        if (s.examen_mental_id && typeof loadSessionMseData === 'function') {
+            await loadSessionMseData(s.examen_mental_id);
+        }
 
         await loadPatientsDropdowns();
         
@@ -24809,6 +24862,274 @@ async function viewExamenMentalDetail(id) {
         </div>`;
     } catch (e) {
         bodyContent.innerHTML = '<p style="color: #ef4444;">Error al cargar detalle del examen mental.</p>';
+    }
+}
+
+// =========================================================================
+// INTEGRACIÓN DE EXAMEN MENTAL (MSE) DENTRO DE LA EVOLUCIÓN CLÍNICA
+// =========================================================================
+
+function renderSessionMseAreas() {
+    const container = document.getElementById('session-mse-areas-container');
+    if (!container || container.children.length > 0) return;
+    
+    let html = '';
+    MSE_AREAS_CONFIG.forEach((area, index) => {
+        let chipsHtml = '';
+        area.chips.forEach(chipText => {
+            chipsHtml += `
+            <button type="button" class="session-mse-chip-btn" data-area="${area.key}" data-val="${chipText.replace(/"/g, '&quot;')}" onclick="toggleSessionMseChip(this)" style="padding: 0.3rem 0.65rem; border-radius: 14px; border: 1.5px solid rgba(169, 89, 147, 0.3); background: #ffffff; color: #3D1E3F; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease;">
+                + ${chipText}
+            </button>`;
+        });
+        
+        html += `
+        <div class="session-mse-accordion-item" id="session-mse-acc-${area.key}" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; transition: all 0.2s ease;">
+            <div class="session-mse-accordion-header" onclick="toggleSessionMseArea('${area.key}')" style="background: #fdfafc; padding: 0.55rem 0.85rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+                    <span style="font-weight: 700; color: #6b21a8; font-size: 0.86rem; white-space: nowrap;">${area.title}</span>
+                    <span id="session-mse-summary-${area.key}" style="font-size: 0.75rem; background: rgba(0,0,0,0.04); color: #64748b; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 500; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 320px;">
+                        Sin hallazgos
+                    </span>
+                </div>
+                <span id="session-mse-arrow-${area.key}" style="font-size: 0.75rem; color: #7e22ce; font-weight: 800; margin-left: 0.4rem;">▼</span>
+            </div>
+            <div class="session-mse-accordion-body" id="session-mse-body-${area.key}" style="display: none; padding: 0.75rem 0.85rem; background: #fafafa; border-top: 1px solid #f1f5f9;">
+                <div style="margin-bottom: 0.5rem;">
+                    <label style="font-weight: 700; font-size: 0.78rem; color: #475569; display: block; margin-bottom: 0.3rem;">Alteraciones observables (Checklist rápido):</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                        ${chipsHtml}
+                    </div>
+                </div>
+                <div>
+                    <label style="font-weight: 700; font-size: 0.78rem; color: #475569; display: block; margin-bottom: 0.25rem;">Notas de esta área:</label>
+                    <textarea id="session-mse-obs-${area.key}" rows="2" oninput="updateSessionMseAreaSummary('${area.key}')" placeholder="Detalles de ${area.title.split('.')[1].trim().toLowerCase()}..." style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1.2px solid #cbd5e1; font-size: 0.82rem; font-family: inherit; resize: vertical;"></textarea>
+                </div>
+            </div>
+        </div>`;
+    });
+    
+    container.innerHTML = html;
+}
+
+function toggleSessionMseDrawer() {
+    const drawer = document.getElementById('session-mse-drawer');
+    if (!drawer) return;
+    
+    const isHidden = drawer.classList.contains('hide');
+    if (isHidden) {
+        renderSessionMseAreas();
+        drawer.classList.remove('hide');
+        drawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        drawer.classList.add('hide');
+    }
+}
+
+function toggleSessionMseArea(key) {
+    const body = document.getElementById(`session-mse-body-${key}`);
+    const arrow = document.getElementById(`session-mse-arrow-${key}`);
+    if (!body || !arrow) return;
+    const isHidden = body.style.display === 'none' || !body.style.display;
+    body.style.display = isHidden ? 'block' : 'none';
+    arrow.textContent = isHidden ? '▲' : '▼';
+}
+
+function toggleSessionMseChip(btn) {
+    const areaKey = btn.getAttribute('data-area');
+    btn.classList.toggle('active');
+    
+    if (btn.classList.contains('active')) {
+        btn.style.background = '#7e22ce';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = '#6b21a8';
+    } else {
+        btn.style.background = '#ffffff';
+        btn.style.color = '#3D1E3F';
+        btn.style.borderColor = 'rgba(169, 89, 147, 0.3)';
+    }
+    
+    updateSessionMseAreaSummary(areaKey);
+    updateSessionMseOverallBadge();
+}
+
+function updateSessionMseAreaSummary(key) {
+    const activeChips = Array.from(document.querySelectorAll(`#session-mse-areas-container .session-mse-chip-btn.active[data-area="${key}"]`)).map(c => c.getAttribute('data-val'));
+    const obsEl = document.getElementById(`session-mse-obs-${key}`);
+    const obsVal = obsEl ? obsEl.value.trim() : '';
+    const sumEl = document.getElementById(`session-mse-summary-${key}`);
+    
+    if (!sumEl) return;
+    
+    let parts = [];
+    if (activeChips.length > 0) parts.push(activeChips.join(', '));
+    if (obsVal) parts.push(`"${obsVal}"`);
+    
+    if (parts.length > 0) {
+        sumEl.textContent = parts.join(' | ');
+        sumEl.style.color = '#6b21a8';
+        sumEl.style.fontWeight = '700';
+        sumEl.style.background = '#f3e8ff';
+    } else {
+        sumEl.textContent = 'Sin hallazgos';
+        sumEl.style.color = '#64748b';
+        sumEl.style.fontWeight = '500';
+        sumEl.style.background = 'rgba(0,0,0,0.04)';
+    }
+    updateSessionMseOverallBadge();
+}
+
+function sessionMseHasData() {
+    const hasChips = document.querySelectorAll('#session-mse-areas-container .session-mse-chip-btn.active').length > 0;
+    if (hasChips) return true;
+    
+    const obsAreas = Array.from(document.querySelectorAll('#session-mse-areas-container textarea')).some(t => t.value.trim().length > 0);
+    if (obsAreas) return true;
+    
+    const genObs = document.getElementById('session-mse-general-obs');
+    if (genObs && genObs.value.trim().length > 0) return true;
+    
+    const linkedId = document.getElementById('session-mse-linked-id');
+    if (linkedId && linkedId.value) return true;
+    
+    return false;
+}
+
+function updateSessionMseOverallBadge() {
+    const badge = document.getElementById('session-mse-status-badge');
+    if (!badge) return;
+    if (sessionMseHasData()) {
+        badge.classList.remove('hide');
+    } else {
+        badge.classList.add('hide');
+    }
+}
+
+function clearSessionMseForm() {
+    document.querySelectorAll('#session-mse-areas-container .session-mse-chip-btn.active').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#ffffff';
+        btn.style.color = '#3D1E3F';
+        btn.style.borderColor = 'rgba(169, 89, 147, 0.3)';
+    });
+    
+    document.querySelectorAll('#session-mse-areas-container textarea').forEach(t => {
+        t.value = '';
+    });
+    
+    MSE_AREAS_CONFIG.forEach(area => {
+        const sumEl = document.getElementById(`session-mse-summary-${area.key}`);
+        if (sumEl) {
+            sumEl.textContent = 'Sin hallazgos';
+            sumEl.style.color = '#64748b';
+            sumEl.style.fontWeight = '500';
+            sumEl.style.background = 'rgba(0,0,0,0.04)';
+        }
+    });
+    
+    const genObs = document.getElementById('session-mse-general-obs');
+    if (genObs) genObs.value = '';
+    
+    const linkedId = document.getElementById('session-mse-linked-id');
+    if (linkedId) linkedId.value = '';
+    
+    updateSessionMseOverallBadge();
+}
+
+function gatherSessionMsePayload(patientId, fecha, modalidad) {
+    const datosEvaluacion = {};
+    MSE_AREAS_CONFIG.forEach(area => {
+        const activeChips = Array.from(document.querySelectorAll(`#session-mse-areas-container .session-mse-chip-btn.active[data-area="${area.key}"]`)).map(c => c.getAttribute('data-val'));
+        const obsEl = document.getElementById(`session-mse-obs-${area.key}`);
+        const obsVal = obsEl ? obsEl.value.trim() : '';
+        
+        datosEvaluacion[area.key] = {
+            selecciones: activeChips,
+            observacion: obsVal
+        };
+    });
+    
+    return {
+        paciente_id: patientId,
+        fecha_evaluacion: fecha || new Date().toISOString().split('T')[0],
+        medio_evaluacion: modalidad || 'Presencial',
+        datos_evaluacion_json: datosEvaluacion,
+        observaciones_generales: (document.getElementById('session-mse-general-obs')?.value || '').trim()
+    };
+}
+
+function insertMseSummaryIntoSessionNotes() {
+    let findings = [];
+    MSE_AREAS_CONFIG.forEach(area => {
+        const activeChips = Array.from(document.querySelectorAll(`#session-mse-areas-container .session-mse-chip-btn.active[data-area="${area.key}"]`)).map(c => c.getAttribute('data-val'));
+        const obsEl = document.getElementById(`session-mse-obs-${area.key}`);
+        const obsVal = obsEl ? obsEl.value.trim() : '';
+        
+        if (activeChips.length > 0 || obsVal) {
+            let part = `• ${area.title.split('.')[1].trim()}: `;
+            if (activeChips.length > 0) part += activeChips.join(', ');
+            if (obsVal) part += ` (${obsVal})`;
+            findings.push(part);
+        }
+    });
+    
+    const genObs = document.getElementById('session-mse-general-obs')?.value.trim();
+    if (genObs) {
+        findings.push(`• Impresión/Obs. Generales: ${genObs}`);
+    }
+    
+    if (findings.length === 0) {
+        alert("Aún no has seleccionado alteraciones ni redactado observaciones en el Examen Mental.");
+        return;
+    }
+    
+    const summaryBlock = `\n\n[EXAMEN DEL ESTADO MENTAL (MSE)]:\n` + findings.join('\n');
+    const resumenEl = document.getElementById('s-resumen');
+    if (resumenEl) {
+        resumenEl.value = (resumenEl.value.trim() + summaryBlock).trim();
+        alert("✅ Síntesis del Examen Mental copiada a las observaciones clínicas.");
+    }
+}
+
+async function loadSessionMseData(examId) {
+    if (!examId) return;
+    renderSessionMseAreas();
+    try {
+        const res = await fetch(`/api/examen-mental/${examId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const linkedInput = document.getElementById('session-mse-linked-id');
+        if (linkedInput) linkedInput.value = data.id;
+        
+        const genObs = document.getElementById('session-mse-general-obs');
+        if (genObs) genObs.value = data.observaciones_generales || '';
+        
+        const datos = data.datos_evaluacion || {};
+        MSE_AREAS_CONFIG.forEach(area => {
+            const areaData = datos[area.key] || {};
+            const selecciones = areaData.selecciones || [];
+            const observacion = areaData.observacion || '';
+            
+            const obsEl = document.getElementById(`session-mse-obs-${area.key}`);
+            if (obsEl) obsEl.value = observacion;
+            
+            selecciones.forEach(val => {
+                const btn = document.querySelector(`#session-mse-areas-container .session-mse-chip-btn[data-area="${area.key}"][data-val="${val}"]`);
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.style.background = '#7e22ce';
+                    btn.style.color = '#ffffff';
+                    btn.style.borderColor = '#6b21a8';
+                }
+            });
+            
+            updateSessionMseAreaSummary(area.key);
+        });
+        
+        updateSessionMseOverallBadge();
+    } catch (e) {
+        console.error("Error al cargar examen mental de la sesión:", e);
     }
 }
 

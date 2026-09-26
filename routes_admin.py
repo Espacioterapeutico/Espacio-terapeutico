@@ -144,7 +144,7 @@ def login():
             
         db = get_db()
         cursor = db.cursor()
-        cursor.execute("SELECT * FROM usuarios WHERE LOWER(username) = ?", (username.lower(),))
+        cursor.execute("SELECT * FROM usuarios WHERE LOWER(username) = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = ?)", (username.lower(), username.lower()))
         user = cursor.fetchone()
         
         if user and check_password_hash(user['password_hash'], password):

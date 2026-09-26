@@ -425,17 +425,20 @@ def manage_sessions():
         diagnostico = encrypt_clinical_text(data.get('diagnostico'))
         test_aplicados = encrypt_clinical_text(data.get('test_aplicados'))
         archivo_adjunto = data.get('archivo_adjunto', '')
+        examen_mental_id = data.get('examen_mental_id')
 
         cursor.execute("""
             INSERT INTO sesiones (
                 paciente_id, agenda_id, fecha, modalidad, estado,
                 resumen, resumen_paciente, tareas_asignadas, recursos_entregados,
-                anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto,
+                examen_mental_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             paciente_id, agenda_id, fecha, modalidad, estado,
             resumen, resumen_paciente, tareas_asignadas, recursos_entregados,
-            anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto
+            anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto,
+            examen_mental_id
         ))
         session_id = cursor.lastrowid
         # Comprometer inmediatamente la evolución clínica para blindarla contra cualquier error posterior
@@ -524,6 +527,7 @@ def update_session_detail(session_id):
         diagnostico = encrypt_clinical_text(data.get('diagnostico')) if 'diagnostico' in data else ses['diagnostico']
         test_aplicados = encrypt_clinical_text(data.get('test_aplicados')) if 'test_aplicados' in data else ses['test_aplicados']
         archivo_adjunto = data.get('archivo_adjunto') if 'archivo_adjunto' in data else ses['archivo_adjunto']
+        examen_mental_id = data.get('examen_mental_id', ses['examen_mental_id'] if 'examen_mental_id' in ses.keys() else None)
         
         modalidad = data.get('modalidad', ses['modalidad'])
         fecha = data.get('fecha', ses['fecha'])
@@ -532,9 +536,10 @@ def update_session_detail(session_id):
         cursor.execute("""
             UPDATE sesiones 
             SET estado = ?, resumen = ?, resumen_paciente = ?, tareas_asignadas = ?, recursos_entregados = ?, anotaciones_proxima = ?, compromisos_psicologo = ?,
-                diagnostico = ?, test_aplicados = ?, archivo_adjunto = ?, modalidad = ?, fecha = ?, paciente_id = ?
+                diagnostico = ?, test_aplicados = ?, archivo_adjunto = ?, modalidad = ?, fecha = ?, paciente_id = ?,
+                examen_mental_id = ?
             WHERE id = ?
-        """, (estado, resumen, resumen_paciente, tareas_asignadas, recursos_entregados, anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto, modalidad, fecha, patient_id, session_id))
+        """, (estado, resumen, resumen_paciente, tareas_asignadas, recursos_entregados, anotaciones_proxima, compromisos_psicologo, diagnostico, test_aplicados, archivo_adjunto, modalidad, fecha, patient_id, examen_mental_id, session_id))
         db.commit()
 
         # Actualizar finanzas vinculadas (aislado para no revertir la edición clínica)

@@ -794,6 +794,10 @@ def patient_login():
                 WHERE REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '') = ?
             """, (digits_user,))
             patient = cursor.fetchone()
+
+    if not patient and '@' in username:
+        cursor.execute("SELECT * FROM pacientes WHERE LOWER(email) = ?", (username.lower(),))
+        patient = cursor.fetchone()
         
     if not patient:
         return jsonify({'error': 'Usuario no registrado.'}), 401
