@@ -1860,42 +1860,107 @@ let pendingGoogleCredential = null;
 let pendingGoogleEmail = null;
 let pendingGoogleName = null;
 
+let googleButtonRendered = false;
+
 function initGoogleSignIn() {
-    if (window.google && window.google.accounts && window.google.accounts.id) {
-        try {
-            google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleGoogleCredentialResponse,
-                auto_select: false,
-                context: "signin"
-            });
-            const parent = document.getElementById("google-btn-container");
-            if (parent) {
-                parent.innerHTML = '';
-                google.accounts.id.renderButton(parent, {
-                    theme: "outline",
-                    size: "large",
-                    type: "standard",
-                    shape: "rectangular",
-                    text: "continue_with",
-                    logo_alignment: "left",
-                    width: Math.min(320, window.innerWidth - 60)
-                });
-            }
-        } catch (e) {
-            console.warn("[Google Sign-In] Inicialización automática:", e);
-        }
+    if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+        setTimeout(initGoogleSignIn, 300);
+        return;
+    }
+    const parent = document.getElementById("google-btn-container");
+    if (!parent) return;
+
+    // Si ya está renderizado y tiene el iframe de Google, no volver a renderizar para evitar parpadeos
+    if (googleButtonRendered && parent.querySelector('iframe')) {
+        return;
+    }
+
+    try {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            context: "signin",
+            ux_mode: "popup"
+        });
+        
+        parent.innerHTML = '';
+        google.accounts.id.renderButton(parent, {
+            theme: "outline",
+            size: "large",
+            type: "standard",
+            shape: "rectangular",
+            text: "continue_with",
+            logo_alignment: "left",
+            width: Math.min(300, Math.max(260, window.innerWidth - 60))
+        });
+        googleButtonRendered = true;
+    } catch (e) {
+        console.warn("[Google Sign-In] Inicialización:", e);
     }
 }
 
-async function handleGoogleCredentialResponse(response) {
-    if (!response || !response.credential) return;
-    const errorEl = document.getElementById('auth-error-msg');
-    if (errorEl) {
-        errorEl.textContent = 'Verificando cuenta con Google...';
-        errorEl.classList.remove('hide');
-        errorEl.style.color = '#7e22ce';
+function showGoogleAuthStatus(msg, isError = false) {
+    const errBox = document.getElementById('google-auth-error-msg');
+    const normalErrBox = document.getElementById('auth-error-msg');
+    
+    if (errBox) {
+        errBox.textContent = msg;
+        errBox.style.color = isError ? '#ef4444' : '#702e5e';
+        errBox.style.display = 'block';
+        errBox.classList.remove('hide');
     }
+    if (normalErrBox) {
+        normalErrBox.textContent = msg;
+        normalErrBox.style.color = isError ? '#ef4444' : '#702e5e';
+        normalErrBox.classList.remove('hide');
+    }
+}
+
+function clearGoogleAuthStatus() {
+    const errBox = document.getElementById('google-auth-error-msg');
+    const normalErrBox = document.getElementById('auth-error-msg');
+    if (errBox) {
+        errBox.textContent = '';
+        errBox.classList.add('hide');
+        errBox.style.display = 'none';
+    }
+    if (normalErrBox) {
+        normalErrBox.textContent = '';
+        normalErrBox.classList.add('hide');
+    }
+}
+
+// Interceptar avisos y errores de la librería oficial de Google para mostrarlos en pantalla
+(function interceptGsiErrors() {
+    const origWarn = console.warn;
+    const origError = console.error;
+    console.warn = function(...args) {
+        origWarn.apply(console, args);
+        try {
+            const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+            if (msg.includes('GSI_LOGGER') || msg.includes('origin is not allowed') || msg.includes('idpiframe_initialization_failed')) {
+                showGoogleAuthStatus('⚠️ Google rechazó la conexión: El dominio (' + window.location.origin + ') no está en "Orígenes de JavaScript autorizados" en Google Cloud Console o los cambios aún se están propagando.', true);
+            }
+        } catch(e) {}
+    };
+    console.error = function(...args) {
+        origError.apply(console, args);
+        try {
+            const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+            if (msg.includes('GSI_LOGGER') || msg.includes('origin is not allowed') || msg.includes('idpiframe_initialization_failed')) {
+                showGoogleAuthStatus('⚠️ Google rechazó la conexión: El dominio (' + window.location.origin + ') no está en "Orígenes de JavaScript autorizados" en Google Cloud Console o los cambios aún se están propagando.', true);
+            }
+        } catch(e) {}
+    };
+})();
+
+async function handleGoogleCredentialResponse(response) {
+    if (!response || !response.credential) {
+        showGoogleAuthStatus('No se recibió credencial de Google.', true);
+        return;
+    }
+    showGoogleAuthStatus('Verificando cuenta con Google...', false);
     
     try {
         const res = await fetch('/api/auth/google', {
@@ -1906,28 +1971,21 @@ async function handleGoogleCredentialResponse(response) {
         const data = await res.json();
         
         if (res.ok && data.status === 'success') {
-            if (errorEl) errorEl.classList.add('hide');
+            clearGoogleAuthStatus();
             if (data.role === 'paciente') {
                 showPatientLayout(data.username, data.patient_id);
             } else {
                 showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
             }
         } else if (data.status === 'account_not_linked') {
-            if (errorEl) errorEl.classList.add('hide');
+            clearGoogleAuthStatus();
             promptGoogleAccountLinking(data.google_email, data.google_name, response.credential);
         } else {
-            if (errorEl) {
-                errorEl.textContent = data.error || 'Error al autenticar con Google.';
-                errorEl.style.color = '#ef4444';
-                errorEl.classList.remove('hide');
-            }
+            showGoogleAuthStatus(data.error || 'Error al autenticar con Google.', true);
         }
     } catch (err) {
-        if (errorEl) {
-            errorEl.textContent = 'Error de conexión con el servidor.';
-            errorEl.style.color = '#ef4444';
-            errorEl.classList.remove('hide');
-        }
+        console.error("[Google Sign-In] Error:", err);
+        showGoogleAuthStatus('Error de conexión con el servidor.', true);
     }
 }
 
