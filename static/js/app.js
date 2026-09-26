@@ -1936,6 +1936,7 @@ function promptGoogleAccountLinking(googleEmail, googleName, credential) {
     pendingGoogleEmail = googleEmail;
     pendingGoogleName = googleName;
     
+    const mainView = document.getElementById('auth-main-view');
     const authForm = document.getElementById('auth-form');
     const googleSection = document.getElementById('google-login-section');
     const linkView = document.getElementById('auth-google-link-view');
@@ -1948,6 +1949,7 @@ function promptGoogleAccountLinking(googleEmail, googleName, credential) {
         errBox.classList.add('hide');
     }
     
+    if (mainView) mainView.style.display = 'none';
     if (authForm) authForm.style.display = 'none';
     if (googleSection) googleSection.style.display = 'none';
     if (linkView) {
@@ -2018,16 +2020,17 @@ async function handleGoogleLinkSubmit(e) {
 }
 
 function cancelGoogleLink() {
-    const authForm = document.getElementById('auth-form');
-    const googleSection = document.getElementById('google-login-section');
+    const mainView = document.getElementById('auth-main-view');
     const linkView = document.getElementById('auth-google-link-view');
     
     if (linkView) {
         linkView.classList.add('hide');
         linkView.style.display = 'none';
     }
-    if (authForm) authForm.style.display = 'block';
-    if (googleSection) googleSection.style.display = 'flex';
+    if (mainView) mainView.style.display = 'block';
+    if (typeof switchAuthMethod === 'function') {
+        switchAuthMethod('google');
+    }
 }
 
 function openRegisterFromGoogle(e) {
@@ -2044,6 +2047,37 @@ function openRegisterFromGoogle(e) {
     }
 }
 
+function switchAuthMethod(method) {
+    const tabGoogle = document.getElementById('tab-auth-google');
+    const tabCreds = document.getElementById('tab-auth-credentials');
+    const googleSec = document.getElementById('google-login-section');
+    const authForm = document.getElementById('auth-form');
+
+    if (method === 'credentials') {
+        if (tabGoogle) tabGoogle.classList.remove('active');
+        if (tabCreds) tabCreds.classList.add('active');
+        if (googleSec) googleSec.style.display = 'none';
+        if (authForm) {
+            authForm.style.display = 'block';
+            setTimeout(() => {
+                const userInp = document.getElementById('auth-username');
+                if (userInp) userInp.focus();
+            }, 50);
+        }
+    } else {
+        if (tabGoogle) tabGoogle.classList.add('active');
+        if (tabCreds) tabCreds.classList.remove('active');
+        if (authForm) authForm.style.display = 'none';
+        if (googleSec) {
+            googleSec.style.display = 'flex';
+            if (typeof initGoogleSignIn === 'function') {
+                setTimeout(initGoogleSignIn, 50);
+            }
+        }
+    }
+}
+
+window.switchAuthMethod = switchAuthMethod;
 window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
 window.handleGoogleLinkSubmit = handleGoogleLinkSubmit;
 window.cancelGoogleLink = cancelGoogleLink;
@@ -12050,30 +12084,40 @@ async function submitPizarraReply(patientId, updateId) {
 
 // --- Recuperación de Contraseña ---
 async function handleForgotPassword(e) {
-    e.preventDefault();
-    const loginUser = document.getElementById('auth-username').value.trim();
+    if (e && e.preventDefault) e.preventDefault();
+    const loginUser = (document.getElementById('auth-username')?.value || '').trim();
     
-    // Ocultar form de login y mostrar vista de recuperación
-    document.getElementById('auth-form').style.display = 'none';
+    // Ocultar vista principal y mostrar vista de recuperación
+    const mainView = document.getElementById('auth-main-view');
+    if (mainView) mainView.style.display = 'none';
+    const authForm = document.getElementById('auth-form');
+    if (authForm) authForm.style.display = 'none';
+    
     const recoveryView = document.getElementById('auth-recovery-view');
-    recoveryView.style.display = 'flex';
-    recoveryView.classList.remove('hide');
+    if (recoveryView) {
+        recoveryView.style.display = 'flex';
+        recoveryView.classList.remove('hide');
+    }
     
-    document.getElementById('recovery-step-1').classList.remove('hide');
-    document.getElementById('recovery-step-2').classList.add('hide');
-    document.getElementById('recovery-username').value = loginUser; // Pre-llenar si ya escribió algo
+    document.getElementById('recovery-step-1')?.classList.remove('hide');
+    document.getElementById('recovery-step-2')?.classList.add('hide');
+    const recInput = document.getElementById('recovery-username');
+    if (recInput) recInput.value = loginUser; // Pre-llenar si ya escribió algo
 }
 
 function cancelForgotPassword(e) {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const recoveryView = document.getElementById('auth-recovery-view');
-    recoveryView.style.display = 'none';
-    recoveryView.classList.add('hide');
-    document.getElementById('auth-form').style.display = 'block';
+    if (recoveryView) {
+        recoveryView.style.display = 'none';
+        recoveryView.classList.add('hide');
+    }
+    const mainView = document.getElementById('auth-main-view');
+    if (mainView) mainView.style.display = 'block';
     
     // Reset steps
-    document.getElementById('recovery-step-1').classList.remove('hide');
-    document.getElementById('recovery-step-2').classList.add('hide');
+    document.getElementById('recovery-step-1')?.classList.remove('hide');
+    document.getElementById('recovery-step-2')?.classList.add('hide');
     const step3 = document.getElementById('recovery-step-3');
     if (step3) step3.classList.add('hide');
 }
