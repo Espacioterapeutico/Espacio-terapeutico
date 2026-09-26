@@ -64,8 +64,66 @@ def patient_login_required(f):
     return decorated_function
 
 # ==========================================
+# CATÁLOGO DE EMOCIONES PARA MOOD TRACKER
+# ==========================================
+EMOTIONS_CATALOG = [
+    {
+        'category': 'Emociones Básicas',
+        'color': '#3b82f6',
+        'items': [
+            {'id': 'alegria', 'label': 'Alegría', 'emoji': '😊'},
+            {'id': 'tristeza', 'label': 'Tristeza', 'emoji': '😢'},
+            {'id': 'enojo', 'label': 'Enojo / Rabia', 'emoji': '😡'},
+            {'id': 'miedo', 'label': 'Miedo', 'emoji': '😨'},
+            {'id': 'desagrado', 'label': 'Desagrado / Asco', 'emoji': '🤢'},
+            {'id': 'sorpresa', 'label': 'Sorpresa', 'emoji': '😲'}
+        ]
+    },
+    {
+        'category': 'Ansiedad y Estrés',
+        'color': '#f59e0b',
+        'items': [
+            {'id': 'ansiedad', 'label': 'Ansiedad', 'emoji': '😰'},
+            {'id': 'angustia', 'label': 'Angustia', 'emoji': '😣'},
+            {'id': 'estres', 'label': 'Estrés', 'emoji': '😫'},
+            {'id': 'inquietud', 'label': 'Inquietud / Nerviosismo', 'emoji': '😟'},
+            {'id': 'abrumamiento', 'label': 'Abrumamiento', 'emoji': '🤯'},
+            {'id': 'panico', 'label': 'Pánico', 'emoji': '😱'}
+        ]
+    },
+    {
+        'category': 'Sentimientos y Emociones Secundarias',
+        'color': '#ef4444',
+        'items': [
+            {'id': 'culpa', 'label': 'Culpa', 'emoji': '😔'},
+            {'id': 'verguenza', 'label': 'Vergüenza', 'emoji': '😳'},
+            {'id': 'frustracion', 'label': 'Frustración', 'emoji': '😤'},
+            {'id': 'soledad', 'label': 'Soledad', 'emoji': '🥺'},
+            {'id': 'impotencia', 'label': 'Impotencia', 'emoji': '😣'},
+            {'id': 'vacio', 'label': 'Sensación de Vacío', 'emoji': '🕳️'},
+            {'id': 'desesperanza', 'label': 'Desesperanza', 'emoji': '😞'},
+            {'id': 'resentimiento', 'label': 'Resentimiento', 'emoji': '😠'},
+            {'id': 'celos', 'label': 'Celos / Envidia', 'emoji': '😒'}
+        ]
+    },
+    {
+        'category': 'Bienestar y Calma',
+        'color': '#10b981',
+        'items': [
+            {'id': 'calma', 'label': 'Calma / Paz', 'emoji': '😌'},
+            {'id': 'gratitud', 'label': 'Gratitud', 'emoji': '🙏'},
+            {'id': 'alivio', 'label': 'Alivio', 'emoji': '😮‍💨'},
+            {'id': 'esperanza', 'label': 'Esperanza', 'emoji': '🌤️'},
+            {'id': 'seguridad', 'label': 'Confianza / Seguridad', 'emoji': '💪'},
+            {'id': 'afecto', 'label': 'Afecto / Amor', 'emoji': '🥰'},
+            {'id': 'entusiasmo', 'label': 'Entusiasmo / Motivación', 'emoji': '⚡'}
+        ]
+    }
+]
+
+# ==========================================
 # RUTAS DE MÓDULOS TERAPÉUTICOS PERSONALIZADOS
-# (Sueño, Ansiedad, Sobriedad, Adherencia, Activación, Ingesta, Cognitivo, Pantallas)
+# (Mood Tracker, Sueño, Ansiedad, Sobriedad, Adherencia, Activación, Ingesta, Cognitivo, Pantallas)
 # ==========================================
 
 @herramientas_bp.route('/api/patients/<int:patient_id>/modules', methods=['GET'])
@@ -92,6 +150,7 @@ def get_patient_modules(patient_id):
     today_str = now.strftime("%Y-%m-%d")
 
     catalog_raw = [
+        {'clave': 'mood_tracker', 'nombre': 'Mood Tracker (Registro de Emociones)'},
         {'clave': 'sueno', 'nombre': 'Higiene del Sueño'},
         {'clave': 'ansiedad', 'nombre': 'Diario de Ansiedad (Checklist)'},
         {'clave': 'sobriedad', 'nombre': 'Registro de Consumo (Días Consecutivos)'},
@@ -200,11 +259,12 @@ def get_patient_modules(patient_id):
         m_dict['config'] = {
             'hora': cfg_parsed.get('hora', '08:00' if clave == 'sueno' else '20:00'),
             'dias': cfg_parsed.get('dias', [1, 2, 3, 4, 5, 6, 7]),
-            'recordatorio_activo': cfg_parsed.get('recordatorio_activo', True)
+            'recordatorio_activo': cfg_parsed.get('recordatorio_activo', True),
+            'emociones_permitidas': cfg_parsed.get('emociones_permitidas', [it['id'] for cat in EMOTIONS_CATALOG for it in cat['items']])
         }
         modules.append(m_dict)
 
-    return jsonify({'patient': dict(patient), 'modules': modules})
+    return jsonify({'patient': dict(patient), 'modules': modules, 'emotions_catalog': EMOTIONS_CATALOG})
 
 @herramientas_bp.route('/api/patients/<int:patient_id>/modules/toggle', methods=['POST'])
 @login_required
@@ -238,6 +298,7 @@ def toggle_patient_module(patient_id):
         
         if activo == 1:
             mod_nombres = {
+                'mood_tracker': 'Mood Tracker (Registro de Emociones)',
                 'sueno': 'Registro de Higiene del Sueño',
                 'ansiedad': 'Diario de Ansiedad',
                 'sobriedad': 'Registro de Consumo y Sobriedad',
@@ -274,6 +335,147 @@ def get_patient_active_modules():
     return jsonify({'active_modules': active_keys})
 
 # --- RUTAS DE REGISTRO Y SEGUIMIENTO POR HERRAMIENTA ---
+
+# ==========================================
+# 0. MOOD TRACKER (REGISTRO DE EMOCIONES)
+# ==========================================
+
+@herramientas_bp.route('/api/patients/<int:patient_id>/modules/mood-tracker/config', methods=['POST'])
+@login_required
+def save_patient_mood_tracker_config(patient_id):
+    user_id = session.get('user_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    if not cursor.fetchone():
+        return jsonify({'error': 'Paciente no encontrado o sin permisos.'}), 404
+
+    data = request.json or {}
+    emociones_permitidas = data.get('emociones_permitidas', [])
+
+    cursor.execute("SELECT configuracion_json FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND modulo_clave = 'mood_tracker'", (patient_id,))
+    row = cursor.fetchone()
+    cfg = {}
+    if row and row['configuracion_json']:
+        try:
+            cfg = json.loads(row['configuracion_json']) if isinstance(row['configuracion_json'], str) else row['configuracion_json']
+        except Exception:
+            cfg = {}
+
+    cfg['emociones_permitidas'] = emociones_permitidas
+
+    cursor.execute("""
+        INSERT INTO modulos_terapeuticos_paciente (paciente_id, modulo_clave, activo, configuracion_json)
+        VALUES (?, 'mood_tracker', 1, ?)
+        ON CONFLICT(paciente_id, modulo_clave) DO UPDATE SET configuracion_json = excluded.configuracion_json
+    """, (patient_id, json.dumps(cfg)))
+    db.commit()
+
+    return jsonify({'success': True, 'emociones_permitidas': emociones_permitidas})
+
+@herramientas_bp.route('/api/patient/mood_tracker/emociones-config', methods=['GET'])
+@patient_login_required
+def get_patient_mood_tracker_emotions_config():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT configuracion_json FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND modulo_clave = 'mood_tracker'", (patient_id,))
+    row = cursor.fetchone()
+    allowed_ids = None
+    if row and row['configuracion_json']:
+        try:
+            cfg = json.loads(row['configuracion_json']) if isinstance(row['configuracion_json'], str) else row['configuracion_json']
+            allowed_ids = cfg.get('emociones_permitidas')
+        except Exception:
+            pass
+
+    if allowed_ids is not None and isinstance(allowed_ids, list) and len(allowed_ids) > 0:
+        filtered_catalog = []
+        for cat in EMOTIONS_CATALOG:
+            cat_items = [it for it in cat['items'] if it['id'] in allowed_ids]
+            if cat_items:
+                filtered_catalog.append({
+                    'category': cat['category'],
+                    'color': cat['color'],
+                    'items': cat_items
+                })
+        return jsonify({'catalog': filtered_catalog, 'allowed_ids': allowed_ids})
+    else:
+        return jsonify({'catalog': EMOTIONS_CATALOG, 'allowed_ids': None})
+
+@herramientas_bp.route('/api/patient/mood_tracker/log', methods=['POST'])
+@patient_login_required
+def log_patient_mood_tracker():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    fecha = data.get('fecha') or datetime.now().strftime('%Y-%m-%d')
+    emociones = data.get('emociones', [])
+    situaciones = (data.get('situaciones_detonantes') or data.get('situaciones') or '').strip()
+    intensidad = int(data.get('intensidad', 3) or 3)
+    if intensidad < 1: intensidad = 1
+    if intensidad > 5: intensidad = 5
+    accion = (data.get('accion_conducta') or data.get('accion') or '').strip()
+
+    if not emociones or len(emociones) == 0:
+        return jsonify({'error': 'Por favor selecciona al menos una emoción que hayas sentido.'}), 400
+
+    emociones_json = json.dumps(emociones)
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO registros_mood_tracker (
+            paciente_id, fecha, emociones_json, situaciones_detonantes, intensidad, accion_conducta, fecha_registro
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (patient_id, fecha, emociones_json, situaciones, intensidad, accion, now_str))
+    db.commit()
+
+    # Notificar al psicólogo
+    try:
+        cursor.execute("SELECT nombres, apellidos, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        pac = cursor.fetchone()
+        if pac:
+            pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+            psic_id = pac['psicologo_id'] or 1
+            emociones_str = ", ".join([str(e) for e in emociones[:3]])
+            if len(emociones) > 3:
+                emociones_str += f" (+{len(emociones)-3} más)"
+            notif_title = "🎭 Mood Tracker Registrado"
+            notif_msg = f"El consultante {pac_nombre} registró sus emociones del día ({emociones_str}, intensidad {intensidad}/5)."
+            cursor.execute("""
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'herramienta_terapeutica', ?, ?, ?, 0, '/#therapist-tools')
+            """, (psic_id, notif_title, notif_msg, now_str))
+            db.commit()
+            try:
+                import threading
+                from app import send_webpush_notification
+                threading.Thread(
+                    target=send_webpush_notification,
+                    kwargs=dict(user_id=psic_id, title=notif_title, body=notif_msg, url="/#therapist-tools"),
+                    daemon=True
+                ).start()
+            except Exception as _wp_ex:
+                print("Error al enviar push de Mood Tracker:", _wp_ex)
+    except Exception as _ne:
+        print("Error al notificar registro de Mood Tracker:", _ne)
+
+    return jsonify({'success': True, 'message': 'Registro de Mood Tracker guardado exitosamente.'})
+
+@herramientas_bp.route('/api/patient/mood_tracker/history', methods=['GET'])
+@patient_login_required
+def get_patient_mood_tracker_history():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT * FROM registros_mood_tracker
+        WHERE paciente_id = ?
+        ORDER BY fecha DESC, id DESC LIMIT 50
+    """, (patient_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    return jsonify(rows)
 
 @herramientas_bp.route('/api/patient/sleep/log', methods=['POST'])
 @patient_login_required
@@ -1140,6 +1342,14 @@ def get_therapist_module_report(modulo_clave):
                 WHERE p.psicologo_id = ?{p_filter}
                 ORDER BY r.id DESC LIMIT 100
             """, params)
+        elif modulo_clave in ('mood_tracker', 'moodtracker', 'emociones'):
+            cursor.execute(f"""
+                SELECT rmt.*, p.nombres, p.apellidos, p.cedula
+                FROM registros_mood_tracker rmt
+                JOIN pacientes p ON rmt.paciente_id = p.id
+                WHERE p.psicologo_id = ?{p_filter}
+                ORDER BY rmt.fecha DESC, rmt.id DESC LIMIT 100
+            """, params)
         else:
             return jsonify({'error': 'Módulo desconocido'}), 400
 
@@ -1226,6 +1436,7 @@ def toggle_activation_activity(act_id):
 # =========================================================================
 
 TOOL_NAMES = {
+    'mood_tracker': 'Mood Tracker (Registro de Emociones)',
     'pantalla': 'Registro de Consumo de Pantallas',
     'cognitivo': 'Registro Cognitivo (TCC)',
     'ingesta': 'Registro de Ingesta Alimentaria',
@@ -1495,6 +1706,29 @@ def render_public_tool_page():
         elif t_dict['herramienta_tipo'] == 'activacion':
             cursor.execute("SELECT id, categoria, nombre_actividad FROM activacion_actividades WHERE paciente_id = ? AND activa = 1", (t_dict['paciente_id'],))
             extra_data['actividades'] = [dict(r) for r in cursor.fetchall()]
+        elif t_dict['herramienta_tipo'] == 'mood_tracker':
+            cursor.execute("SELECT configuracion_json FROM modulos_terapeuticos_paciente WHERE paciente_id = ? AND modulo_clave = 'mood_tracker'", (t_dict['paciente_id'],))
+            row_cfg = cursor.fetchone()
+            allowed_ids = None
+            if row_cfg and row_cfg['configuracion_json']:
+                try:
+                    c = json.loads(row_cfg['configuracion_json']) if isinstance(row_cfg['configuracion_json'], str) else row_cfg['configuracion_json']
+                    allowed_ids = c.get('emociones_permitidas')
+                except Exception:
+                    pass
+            if allowed_ids is not None and isinstance(allowed_ids, list) and len(allowed_ids) > 0:
+                filtered_catalog = []
+                for cat in EMOTIONS_CATALOG:
+                    cat_items = [it for it in cat['items'] if it['id'] in allowed_ids]
+                    if cat_items:
+                        filtered_catalog.append({
+                            'category': cat['category'],
+                            'color': cat['color'],
+                            'items': cat_items
+                        })
+                extra_data['emociones_catalogo'] = filtered_catalog
+            else:
+                extra_data['emociones_catalogo'] = EMOTIONS_CATALOG
     except Exception as _ex_extra:
         print("Aviso al cargar extra_data para herramienta pública:", _ex_extra)
 
@@ -1536,7 +1770,18 @@ def save_public_tool_submission():
     today_str = now_dt.strftime("%Y-%m-%d")
     
     # 1. Guardar según tipo de herramienta
-    if tool_type == 'pantalla':
+    if tool_type == 'mood_tracker':
+        emociones = payload.get('emociones', [])
+        situaciones = payload.get('situaciones_detonantes') or payload.get('situaciones', '')
+        intensidad = int(payload.get('intensidad', 3) or 3)
+        accion = payload.get('accion_conducta') or payload.get('accion', '')
+        cursor.execute("""
+            INSERT INTO registros_mood_tracker (
+                paciente_id, fecha, emociones_json, situaciones_detonantes, intensidad, accion_conducta, fecha_registro
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (patient_id, today_str, json.dumps(emociones), situaciones, intensidad, accion, now_str))
+
+    elif tool_type == 'pantalla':
         dispositivos = json.dumps(payload.get('dispositivos', []))
         tiempo_uso = payload.get('tiempo_uso', '0')
         aplicaciones = payload.get('aplicaciones', '')

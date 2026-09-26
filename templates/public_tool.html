@@ -285,7 +285,75 @@
             <input type="hidden" id="tool-token" value="{{ token }}">
             <input type="hidden" id="tool-type" value="{{ tool_type }}">
 
-            {% if tool_type == 'pantalla' %}
+            {% if tool_type == 'mood_tracker' %}
+            <div class="form-group">
+                <label style="font-weight: 700; color: #5d3a6f; font-size: 0.95rem; margin-bottom: 0.35rem; display: block;">
+                    🎭 Selecciona las emociones que sentiste hoy *
+                </label>
+                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.75rem;">
+                    Puedes escoger una o varias emociones presentes durante el día:
+                </p>
+
+                {% if extra_data and extra_data.emociones_catalogo %}
+                    {% for cat in extra_data.emociones_catalogo %}
+                    <div style="margin-bottom: 0.85rem;">
+                        <span style="font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: {{ cat.color }}; display: block; margin-bottom: 0.35rem;">
+                            {{ cat.category }}
+                        </span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            {% for it in cat.items %}
+                            <label class="mt-chip" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #334155; transition: all 0.2s;">
+                                <input type="checkbox" name="mt_emocion" value="{{ it.emoji }} {{ it.label }}" onchange="this.parentElement.style.background = this.checked ? 'linear-gradient(135deg, #5d3a6f, #8b5cf6)' : '#f8fafc'; this.parentElement.style.color = this.checked ? 'white' : '#334155'; this.parentElement.style.borderColor = this.checked ? '#5d3a6f' : '#cbd5e1';" style="display: none;">
+                                <span>{{ it.emoji }}</span>
+                                <span>{{ it.label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                        {% for emo in [('😊', 'Alegría'), ('😢', 'Tristeza'), ('😡', 'Enojo / Rabia'), ('😨', 'Miedo'), ('😰', 'Ansiedad'), ('😔', 'Culpa'), ('😤', 'Frustración'), ('😌', 'Calma / Paz'), ('😳', 'Vergüenza'), ('🥺', 'Soledad'), ('😫', 'Estrés'), ('🙏', 'Gratitud')] %}
+                        <label class="mt-chip" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #334155; transition: all 0.2s;">
+                            <input type="checkbox" name="mt_emocion" value="{{ emo[0] }} {{ emo[1] }}" onchange="this.parentElement.style.background = this.checked ? 'linear-gradient(135deg, #5d3a6f, #8b5cf6)' : '#f8fafc'; this.parentElement.style.color = this.checked ? 'white' : '#334155'; this.parentElement.style.borderColor = this.checked ? '#5d3a6f' : '#cbd5e1';" style="display: none;">
+                            <span>{{ emo[0] }}</span>
+                            <span>{{ emo[1] }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group" style="margin-top: 1.25rem;">
+                <label for="mt_situaciones" style="font-weight: 700; color: #1e293b; font-size: 0.92rem; display: block; margin-bottom: 0.35rem;">
+                    🔍 ¿Qué situaciones detonaron estas emociones? *
+                </label>
+                <textarea id="mt_situaciones" required rows="3" placeholder="Describe qué ocurrió, dónde o con quién estabas, o qué pensamientos o eventos dispararon estas emociones..." style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;"></textarea>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.25rem;">
+                <label style="font-weight: 700; color: #1e293b; font-size: 0.92rem; display: block; margin-bottom: 0.35rem;">
+                    📊 ¿Qué tan intensa se sintió la emoción? (1 al 5) *
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.4rem; margin-top: 0.35rem;">
+                    {% for n, lbl in [(1, 'Muy leve'), (2, 'Leve'), (3, 'Moderada'), (4, 'Intensa'), (5, 'Muy intensa')] %}
+                    <label style="cursor: pointer; text-align: center; padding: 0.6rem 0.2rem; border-radius: 8px; border: 1.5px solid {{ '#c084fc' if n == 3 else '#cbd5e1' }}; background: {{ '#fdf4ff' if n == 3 else '#f8fafc' }}; color: {{ '#7e22ce' if n == 3 else '#334155' }}; transition: all 0.2s;" class="intensity-card">
+                        <input type="radio" name="mt_intensidad" value="{{ n }}" {{ 'checked' if n == 3 else '' }} onchange="document.querySelectorAll('.intensity-card').forEach(c => { c.style.background = '#f8fafc'; c.style.borderColor = '#cbd5e1'; c.style.color = '#334155'; }); this.parentElement.style.background = '#fdf4ff'; this.parentElement.style.borderColor = '#c084fc'; this.parentElement.style.color = '#7e22ce';" style="display: none;">
+                        <div style="font-weight: 800; font-size: 1.1rem; color: #5d3a6f;">{{ n }}</div>
+                        <div style="font-size: 0.68rem; font-weight: 600; margin-top: 2px;">{{ lbl }}</div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.25rem;">
+                <label for="mt_accion" style="font-weight: 700; color: #1e293b; font-size: 0.92rem; display: block; margin-bottom: 0.35rem;">
+                    💡 ¿Qué hice con la emoción? *
+                </label>
+                <textarea id="mt_accion" required rows="3" placeholder="¿Cómo respondiste o actuaste? ¿Qué hiciste para expresarla, regularla, calmarte o afrontarla?..." style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;"></textarea>
+            </div>
+
+            {% elif tool_type == 'pantalla' %}
             <div class="form-group">
                 <label>Dispositivos Utilizados Hoy *</label>
                 <div class="checkbox-group">
@@ -584,7 +652,25 @@ async function submitPublicTool(e) {
 
     let payload = {};
 
-    if (toolType === 'pantalla') {
+    if (toolType === 'mood_tracker') {
+        const emoChecked = document.querySelectorAll('input[name="mt_emocion"]:checked');
+        const emociones = Array.from(emoChecked).map(cb => cb.value);
+        if (emociones.length === 0) {
+            msgEl.textContent = 'Por favor selecciona al menos una emoción.';
+            msgEl.className = 'status-msg status-error';
+            msgEl.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '💾 Guardar Registro Diario';
+            return;
+        }
+        const intChecked = document.querySelector('input[name="mt_intensidad"]:checked');
+        payload = {
+            emociones: emociones,
+            situaciones_detonantes: document.getElementById('mt_situaciones') ? document.getElementById('mt_situaciones').value : '',
+            intensidad: intChecked ? parseInt(intChecked.value) : 3,
+            accion_conducta: document.getElementById('mt_accion') ? document.getElementById('mt_accion').value : ''
+        };
+    } else if (toolType === 'pantalla') {
         const dispNodes = document.querySelectorAll('input[name="dispositivos"]:checked');
         const dispositivos = Array.from(dispNodes).map(n => n.value);
         payload = {

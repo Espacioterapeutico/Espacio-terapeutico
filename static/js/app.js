@@ -3215,6 +3215,10 @@ function switchPatientView(viewName, fromPopState = false) {
             setDefaultToolDates();
             initChipContainers();
             loadPatientConsumoPantallaHistory();
+        } else if (viewName === 'patient-mood-tracker') {
+            setDefaultToolDates();
+            loadPatientMoodTrackerEmotions();
+            loadPatientMoodTrackerHistory();
         } else if (viewName === 'patient-estimulacion') {
             loadPatientEstimulacionData();
         }
@@ -19806,6 +19810,38 @@ function renderPaginatedHistoryTable(stateKey) {
                 </span>
             </div>
         `;
+    } else if (moduloClave === 'mood_tracker') {
+        const totalLogs = state.records.length;
+        let sumInt = 0;
+        const emoFreq = {};
+        state.records.forEach(r => {
+            sumInt += (Number(r.intensidad) || 3);
+            let emos = [];
+            try {
+                emos = typeof r.emociones_json === 'string' ? JSON.parse(r.emociones_json) : (r.emociones_json || []);
+            } catch(e) {}
+            emos.forEach(em => { emoFreq[em] = (emoFreq[em] || 0) + 1; });
+        });
+        const avgInt = totalLogs > 0 ? (sumInt / totalLogs).toFixed(1) : '0';
+        let topEmo = '-';
+        let maxE = 0;
+        Object.keys(emoFreq).forEach(em => {
+            if (emoFreq[em] > maxE) {
+                maxE = emoFreq[em];
+                topEmo = em;
+            }
+        });
+        summaryHeaderHtml = `
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center;">
+                <span class="badge" style="background:#fdf4ff; color:#7e22ce; font-weight:800; padding:0.35rem 0.65rem; border: 1px solid #d8b4fe;">
+                    🎭 Total Registros: ${totalLogs}
+                </span>
+                <span class="badge" style="background:#eff6ff; color:#1e40af; font-weight:700; padding:0.35rem 0.65rem; border: 1px solid #bfdbfe;">
+                    📊 Intensidad Media: ${avgInt} / 5
+                </span>
+                ${maxE > 0 ? `<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700; padding:0.35rem 0.65rem; border: 1px solid #bbf7d0;">⭐ Más frecuente: ${topEmo} (${maxE})</span>` : ''}
+            </div>
+        `;
     }
 
     let cardsHtml = '';
@@ -20014,6 +20050,54 @@ function renderPaginatedHistoryTable(stateKey) {
                     </div>
                     <div style="font-size: 0.84rem; color: var(--text-dark); background: #f9fafb; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #2563eb;">
                         💭 <strong>Impacto Emocional / Notas:</strong> ${r.impacto_emocional || r.notas || r.observaciones || 'Sin observaciones'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else if (moduloClave === 'mood_tracker') {
+        const intLabels = {
+            1: '1/5 - Muy leve',
+            2: '2/5 - Leve',
+            3: '3/5 - Moderada',
+            4: '4/5 - Intensa',
+            5: '5/5 - Muy intensa'
+        };
+        const intColors = {
+            1: '#10b981',
+            2: '#06b6d4',
+            3: '#8b5cf6',
+            4: '#f59e0b',
+            5: '#ef4444'
+        };
+        cardsHtml = pageRecords.map(r => {
+            let emos = [];
+            try {
+                emos = typeof r.emociones_json === 'string' ? JSON.parse(r.emociones_json) : (r.emociones_json || []);
+            } catch(e) { emos = []; }
+            const emoChips = emos.map(e => `<span class="badge" style="background: #f3e8ff; color: #6b21a8; font-weight: 700; border: 1px solid #d8b4fe; border-radius: 12px; padding: 0.2rem 0.55rem; font-size: 0.8rem; margin: 2px;">${e}</span>`).join(' ') || '<span style="color: var(--text-muted); font-size: 0.8rem;">Sin emociones registradas</span>';
+            const intVal = parseInt(r.intensidad || 3, 10);
+            const intColor = intColors[intVal] || '#8b5cf6';
+            const intLabel = intLabels[intVal] || `${intVal}/5`;
+
+            return `
+                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.45rem; box-shadow: var(--shadow-sm); margin-bottom: 0.6rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                        <strong style="font-size: 0.9rem; color: var(--text-dark);">📅 Fecha: ${r.fecha}</strong>
+                        <div>
+                            <span class="badge" style="background: ${intColor}18; color: ${intColor}; border: 1px solid ${intColor}55; font-weight: 800; padding: 0.2rem 0.5rem; font-size: 0.8rem;">
+                                📊 Intensidad: ${intLabel}
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <strong style="font-size: 0.84rem; color: #475569;">🎭 Emociones sentidas:</strong>
+                        <div style="margin-top: 0.25rem;">${emoChips}</div>
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #f8fafc; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #6366f1;">
+                        🔍 <strong>Situaciones detonantes:</strong> ${r.situaciones_detonantes || 'Sin especificar'}
+                    </div>
+                    <div style="font-size: 0.84rem; color: var(--text-dark); background: #faf5ff; padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #9333ea;">
+                        💡 <strong>¿Qué hizo con la emoción?:</strong> ${r.accion_conducta || 'Sin especificar'}
                     </div>
                 </div>
             `;
@@ -20369,6 +20453,7 @@ async function selectPatientForTherapistTools(id, name, code) {
         if (!res.ok) throw new Error(data.error || 'Error al cargar módulos');
 
         const toolIcons = {
+            'mood_tracker': '🎭',
             'sueno': '🌙',
             'ansiedad': '⚡',
             'sobriedad': '🛡️',
@@ -20382,6 +20467,7 @@ async function selectPatientForTherapistTools(id, name, code) {
         };
 
         const toolDescriptions = {
+            'mood_tracker': 'Monitoreo diario de emociones con emojis, situaciones detonantes, intensidad (1-5) y afrontamiento.',
             'sueno': 'Cuestionario diario de horas de sueño, despertares y calidad de descanso percibido.',
             'ansiedad': 'Checklist somático de síntomas físicos y termómetro emocional de malestar.',
             'sobriedad': 'Contador de días continuos sobrio/a y registro de prevención de recaídas.',
@@ -20614,6 +20700,9 @@ async function selectPatientForTherapistTools(id, name, code) {
                 const actBtn = (m.clave === 'activacion' && isActivo) 
                     ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="openTherapistActivationModal(${id}, '${safePName}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; border-radius: 5px;">⚙️ Actividades</button>` 
                     : '';
+                const mtEmotionsBtn = (m.clave === 'mood_tracker' && isActivo)
+                    ? `<button type="button" class="btn btn-sm" onclick="openMoodTrackerEmotionsModal(${id}, '${safePName}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 700; color: #7e22ce; background: #faf5ff; border: 1px solid #d8b4fe; border-radius: 5px; cursor: pointer;" title="Configurar catálogo de emociones para el consultante">⚙️ Emociones</button>`
+                    : '';
                 const waBtn = isActivo 
                     ? `<button type="button" class="btn btn-sm" onclick="enviarWhatsAppDirectoHerramienta(${id}, '${m.clave}')" style="padding: 0.25rem 0.6rem; font-size: 0.76rem; font-weight: 600; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 5px; cursor: pointer;">💬 WhatsApp Directo</button>` 
                     : '';
@@ -20718,6 +20807,7 @@ async function selectPatientForTherapistTools(id, name, code) {
                             ${waBtn}
                             ${progBtn}
                             ${actBtn}
+                            ${mtEmotionsBtn}
                             ${histBtn}
                         </div>
                         ${linkBanner}
@@ -20762,6 +20852,9 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
     
     // Normalizar clave del módulo
     const claveMap = {
+        'mood_tracker': 'mood_tracker',
+        'moodtracker': 'mood_tracker',
+        'emociones': 'mood_tracker',
         'sueno': 'sueno',
         'ansiedad': 'ansiedad',
         'sobriedad': 'sobriedad',
@@ -20776,6 +20869,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
 
     openModal('therapist-tool-report-modal');
     const namesMap = {
+        'mood_tracker': 'Mood Tracker (Registro de Emociones)',
         'sueno': 'Higiene del Sueño',
         'ansiedad': 'Diario de Ansiedad',
         'sobriedad': 'Control de Sobriedad',
@@ -20956,6 +21050,33 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                     <span class="badge" style="background:#fdf4ff; color:#702e5e; font-weight:800; padding:0.4rem 0.6rem;">🧘‍♀️ Sesiones Registradas: ${totalSes}</span>
                     <span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700; padding:0.4rem 0.6rem;">🟢 Completadas: ${compl}</span>
                 `;
+            } else if (moduloClave === 'mood_tracker') {
+                const totalLogs = recs.length;
+                let sumInt = 0;
+                const emoFreq = {};
+                recs.forEach(r => {
+                    sumInt += (Number(r.intensidad) || 3);
+                    let emos = [];
+                    try {
+                        emos = typeof r.emociones_json === 'string' ? JSON.parse(r.emociones_json) : (r.emociones_json || []);
+                    } catch(e) {}
+                    emos.forEach(em => { emoFreq[em] = (emoFreq[em] || 0) + 1; });
+                });
+                const avgInt = totalLogs > 0 ? (sumInt / totalLogs).toFixed(1) : '0';
+                let topEmo = '-';
+                let maxE = 0;
+                Object.keys(emoFreq).forEach(em => {
+                    if (emoFreq[em] > maxE) {
+                        maxE = emoFreq[em];
+                        topEmo = em;
+                    }
+                });
+
+                summaryBadgesHtml = `
+                    <span class="badge" style="background:#fdf4ff; color:#7e22ce; font-weight:800; padding:0.4rem 0.6rem;">🎭 ${totalLogs} Registros</span>
+                    <span class="badge" style="background:#eff6ff; color:#1e40af; font-weight:700; padding:0.4rem 0.6rem;">📊 Intensidad Promedio: ${avgInt} / 5</span>
+                    ${maxE > 0 ? `<span class="badge" style="background:#f0fdf4; color:#15803d; font-weight:700; padding:0.4rem 0.6rem;">⭐ Emoción frecuente: ${topEmo} (${maxE})</span>` : ''}
+                `;
             }
 
             let detailHeaders = '';
@@ -21046,6 +21167,25 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         <td style="padding: 0.6rem;">${r.notas || '-'}</td>
                     </tr>
                 `).join('');
+            } else if (moduloClave === 'mood_tracker') {
+                detailHeaders = `<th>📅 Fecha</th><th>Emociones Sentidas</th><th>Intensidad</th><th>Situaciones Detonantes</th><th>¿Qué Hizo con la Emoción?</th>`;
+                detailTableRows = recs.map(r => {
+                    let emos = [];
+                    try {
+                        emos = typeof r.emociones_json === 'string' ? JSON.parse(r.emociones_json) : (r.emociones_json || []);
+                    } catch(e){}
+                    const chips = emos.map(e => `<span class="badge" style="background:#f3e8ff; color:#6b21a8; font-weight:700; border:1px solid #d8b4fe; border-radius:12px; padding:0.2rem 0.5rem; margin:2px; font-size:0.78rem;">${e}</span>`).join(' ');
+                    const intVal = parseInt(r.intensidad || 3, 10);
+                    return `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.6rem; white-space: nowrap;"><strong>📅 ${r.fecha}</strong></td>
+                            <td style="padding: 0.6rem; min-width: 170px;">${chips || '-'}</td>
+                            <td style="padding: 0.6rem; text-align: center;"><span class="badge" style="background:#faf5ff; color:#7e22ce; font-weight:800; font-size:0.85rem; border:1px solid #d8b4fe;">${intVal} / 5</span></td>
+                            <td style="padding: 0.6rem; max-width: 280px; font-size: 0.84rem; line-height: 1.4;">${r.situaciones_detonantes || '-'}</td>
+                            <td style="padding: 0.6rem; max-width: 280px; font-size: 0.84rem; line-height: 1.4;">${r.accion_conducta || '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
             }
 
             // Desplegar siempre abierto el historial por consultante
@@ -22441,6 +22581,337 @@ window.submitPatientFoodIntakeLog = submitPatientFoodIntakeLog;
 window.loadPatientFoodIntakeHistory = loadPatientFoodIntakeHistory;
 window.submitPatientCognitiveRecordLog = submitPatientCognitiveRecordLog;
 window.loadPatientCognitiveRecordHistory = loadPatientCognitiveRecordHistory;
+
+// ==========================================
+// MÓDULO: MOOD TRACKER (REGISTRO DE EMOCIONES)
+// ==========================================
+
+function updatePmtIntensityUI(val) {
+    val = parseInt(val, 10);
+    const cards = document.querySelectorAll('.pmt-intensity-card');
+    cards.forEach((card, idx) => {
+        const num = idx + 1;
+        const radio = card.querySelector('input[type="radio"]');
+        if (num === val) {
+            if (radio) radio.checked = true;
+            card.classList.add('active');
+            card.style.background = '#fdf4ff';
+            card.style.borderColor = '#c084fc';
+            card.style.color = '#7e22ce';
+        } else {
+            if (radio) radio.checked = false;
+            card.classList.remove('active');
+            card.style.background = '#f8fafc';
+            card.style.borderColor = '#cbd5e1';
+            card.style.color = '#334155';
+        }
+    });
+}
+window.updatePmtIntensityUI = updatePmtIntensityUI;
+
+async function loadPatientMoodTrackerEmotions() {
+    const container = document.getElementById('patient-mood-tracker-emotions-container');
+    if (!container) return;
+    try {
+        const res = await fetch('/api/patient/mood_tracker/emociones-config');
+        if (!res.ok) throw new Error('Error al cargar emociones');
+        const data = await res.json();
+        const catalog = data.emotions_catalog || [];
+        if (catalog.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="font-size:0.85rem;">No hay emociones configuradas aún.</p>';
+            return;
+        }
+
+        container.innerHTML = catalog.map(cat => {
+            const itemsHtml = (cat.items || []).map(it => `
+                <label class="pmt-chip" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.42rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #334155; transition: all 0.2s; user-select: none;">
+                    <input type="checkbox" name="pmt_emocion" value="${it.emoji} ${it.label}" onchange="this.parentElement.style.background = this.checked ? 'linear-gradient(135deg, #7e22ce, #9333ea)' : '#f8fafc'; this.parentElement.style.color = this.checked ? 'white' : '#334155'; this.parentElement.style.borderColor = this.checked ? '#7e22ce' : '#cbd5e1';" style="display: none;">
+                    <span style="font-size: 1.1rem; line-height: 1;">${it.emoji}</span>
+                    <span>${it.label}</span>
+                </label>
+            `).join('');
+
+            return `
+                <div style="margin-bottom: 0.85rem;">
+                    <span style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: ${cat.color || '#7e22ce'}; display: block; margin-bottom: 0.4rem;">
+                        ${cat.category}
+                    </span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.45rem;">
+                        ${itemsHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('Error cargando emociones mood tracker:', err);
+        container.innerHTML = '<p class="text-danger" style="font-size:0.85rem;">Error al cargar las emociones.</p>';
+    }
+}
+window.loadPatientMoodTrackerEmotions = loadPatientMoodTrackerEmotions;
+
+async function submitPatientMoodTrackerLog(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit-pmt');
+    const status = document.getElementById('patient-mood-tracker-status');
+    if (status) status.classList.add('hide');
+
+    const checkedBoxes = document.querySelectorAll('input[name="pmt_emocion"]:checked');
+    const emociones = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (emociones.length === 0) {
+        if (status) {
+            status.textContent = '⚠️ Por favor selecciona al menos una emoción que hayas sentido.';
+            status.className = 'status-msg error-msg mt-3';
+            status.classList.remove('hide');
+        }
+        return;
+    }
+
+    const situaciones = (document.getElementById('pmt-situaciones')?.value || '').trim();
+    const checkedInt = document.querySelector('input[name="pmt_intensidad"]:checked');
+    const intensidad = checkedInt ? parseInt(checkedInt.value, 10) : 3;
+    const accion = (document.getElementById('pmt-accion')?.value || '').trim();
+
+    if (!situaciones) {
+        alert('Por favor responde qué situaciones detonaron estas emociones.');
+        return;
+    }
+    if (!accion) {
+        alert('Por favor responde qué hiciste con la emoción.');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Guardando...';
+    }
+
+    try {
+        const res = await fetch('/api/patient/mood_tracker/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                emociones: emociones,
+                situaciones_detonantes: situaciones,
+                intensidad: intensidad,
+                accion_conducta: accion
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (status) {
+                status.textContent = '🎉 ¡Registro de emociones guardado con éxito!';
+                status.className = 'status-msg success-msg mt-3';
+                status.classList.remove('hide');
+            }
+            document.getElementById('patient-mood-tracker-form')?.reset();
+            updatePmtIntensityUI(3);
+            loadPatientMoodTrackerEmotions();
+            loadPatientMoodTrackerHistory();
+        } else {
+            if (status) {
+                status.textContent = data.error || 'Error al guardar el registro.';
+                status.className = 'status-msg error-msg mt-3';
+                status.classList.remove('hide');
+            }
+        }
+    } catch (err) {
+        if (status) {
+            status.textContent = 'Error de conexión al guardar el registro.';
+            status.className = 'status-msg error-msg mt-3';
+            status.classList.remove('hide');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '💾 Guardar Registro de Emociones';
+        }
+    }
+}
+window.submitPatientMoodTrackerLog = submitPatientMoodTrackerLog;
+
+async function loadPatientMoodTrackerHistory() {
+    const list = document.getElementById('patient-mood-tracker-history-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/patient/mood_tracker/history');
+        if (!res.ok) throw new Error('Error al cargar historial');
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center py-3">No tienes registros de emociones guardados aún.</p>';
+            return;
+        }
+
+        const intLabels = {
+            1: '1/5 - Muy leve',
+            2: '2/5 - Leve',
+            3: '3/5 - Moderada',
+            4: '4/5 - Intensa',
+            5: '5/5 - Muy intensa'
+        };
+
+        list.innerHTML = `
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: #f8fafc;">
+                        <th style="padding: 0.6rem;">Fecha</th>
+                        <th style="padding: 0.6rem;">Emociones Sentidas</th>
+                        <th style="padding: 0.6rem; text-align: center;">Intensidad</th>
+                        <th style="padding: 0.6rem;">Situación Detonante</th>
+                        <th style="padding: 0.6rem;">¿Qué hice?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(r => {
+                        let emos = [];
+                        try {
+                            emos = typeof r.emociones_json === 'string' ? JSON.parse(r.emociones_json) : (r.emociones_json || []);
+                        } catch(e){}
+                        const chips = emos.map(e => `<span class="badge" style="background:#f3e8ff; color:#6b21a8; font-weight:700; border:1px solid #d8b4fe; border-radius:12px; padding:0.2rem 0.55rem; font-size:0.8rem; margin:2px;">${e}</span>`).join(' ');
+                        const intVal = parseInt(r.intensidad || 3, 10);
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.6rem; white-space: nowrap;"><strong>📅 ${r.fecha}</strong></td>
+                                <td style="padding: 0.6rem; min-width: 180px;">${chips || '-'}</td>
+                                <td style="padding: 0.6rem; text-align: center;"><span class="badge" style="background:#faf5ff; color:#7e22ce; font-weight:800; font-size:0.82rem; padding:0.25rem 0.5rem; border-radius:6px; border:1px solid #d8b4fe;">${intLabels[intVal] || intVal}</span></td>
+                                <td style="padding: 0.6rem; max-width: 250px; line-height: 1.4;">${r.situaciones_detonantes || '-'}</td>
+                                <td style="padding: 0.6rem; max-width: 250px; line-height: 1.4;">${r.accion_conducta || '-'}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+window.loadPatientMoodTrackerHistory = loadPatientMoodTrackerHistory;
+
+let currentMoodTrackerConfigPatientId = null;
+
+async function openMoodTrackerEmotionsModal(patientId, patientName) {
+    currentMoodTrackerConfigPatientId = patientId;
+    const pIdInput = document.getElementById('mt-emotions-patient-id');
+    if (pIdInput) pIdInput.value = patientId;
+    const nameEl = document.getElementById('mt-emotions-patient-name');
+    if (nameEl) nameEl.textContent = patientName || `Consultante #${patientId}`;
+
+    const container = document.getElementById('mt-emotions-categories-container');
+    if (container) container.innerHTML = '<p class="text-muted text-center py-3">Cargando catálogo de emociones...</p>';
+
+    openModal('mood-tracker-emotions-modal');
+
+    try {
+        const res = await fetch(`/api/patients/${patientId}/modules`);
+        if (!res.ok) throw new Error('Error al cargar módulos');
+        const data = await res.json();
+        const catalog = data.emotions_catalog || [];
+        const mtMod = (data.modules || []).find(m => m.clave === 'mood_tracker');
+        const permitted = (mtMod && mtMod.config && mtMod.config.emociones_permitidas) ? mtMod.config.emociones_permitidas : [];
+
+        if (!container) return;
+        if (catalog.length === 0) {
+            container.innerHTML = '<p class="text-muted">No hay catálogo disponible.</p>';
+            return;
+        }
+
+        container.innerHTML = catalog.map(cat => {
+            const items = cat.items || [];
+            return `
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.35rem;">
+                        <strong style="font-size: 0.88rem; color: ${cat.color || '#334155'}; text-transform: uppercase; letter-spacing: 0.5px;">
+                            ${cat.category}
+                        </strong>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleCategoryMtEmotions(this)" style="padding: 0.1rem 0.45rem; font-size: 0.72rem;">
+                            Alternar
+                        </button>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.45rem;" class="mt-cat-items">
+                        ${items.map(it => {
+                            const isChecked = permitted.length === 0 || permitted.includes(it.id);
+                            return `
+                                <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; border-radius: 16px; font-size: 0.82rem; font-weight: 600; background: ${isChecked ? '#faf5ff' : 'white'}; border: 1.5px solid ${isChecked ? '#c084fc' : '#cbd5e1'}; color: ${isChecked ? '#7e22ce' : '#475569'}; transition: all 0.15s; user-select: none;">
+                                    <input type="checkbox" class="mt-config-emo-cb" value="${it.id}" ${isChecked ? 'checked' : ''} onchange="this.parentElement.style.background = this.checked ? '#faf5ff' : 'white'; this.parentElement.style.borderColor = this.checked ? '#c084fc' : '#cbd5e1'; this.parentElement.style.color = this.checked ? '#7e22ce' : '#475569';" style="margin: 0; accent-color: #7e22ce;">
+                                    <span style="font-size: 1.05rem; line-height: 1;">${it.emoji}</span>
+                                    <span>${it.label}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        if (container) container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    }
+}
+window.openMoodTrackerEmotionsModal = openMoodTrackerEmotionsModal;
+
+function toggleCategoryMtEmotions(btn) {
+    const card = btn.closest('div').parentElement;
+    if (!card) return;
+    const cbs = card.querySelectorAll('.mt-config-emo-cb');
+    const allChecked = Array.from(cbs).every(cb => cb.checked);
+    cbs.forEach(cb => {
+        cb.checked = !allChecked;
+        cb.dispatchEvent(new Event('change'));
+    });
+}
+window.toggleCategoryMtEmotions = toggleCategoryMtEmotions;
+
+function toggleAllMtEmotions(selectBool) {
+    const cbs = document.querySelectorAll('.mt-config-emo-cb');
+    cbs.forEach(cb => {
+        cb.checked = selectBool;
+        cb.dispatchEvent(new Event('change'));
+    });
+}
+window.toggleAllMtEmotions = toggleAllMtEmotions;
+
+async function saveMoodTrackerEmotionsConfig() {
+    const patientId = currentMoodTrackerConfigPatientId || document.getElementById('mt-emotions-patient-id')?.value;
+    if (!patientId) return;
+
+    const checkedBoxes = document.querySelectorAll('.mt-config-emo-cb:checked');
+    const emocionesPermitidas = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (emocionesPermitidas.length === 0) {
+        alert('Por favor selecciona al menos una emoción para el consultante.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-save-mt-emotions');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Guardando...';
+    }
+
+    try {
+        const res = await fetch(`/api/patients/${patientId}/modules/mood-tracker/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ emociones_permitidas: emocionesPermitidas })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            closeModal('mood-tracker-emotions-modal');
+            alert(`✅ Catálogo de emociones actualizado (${emocionesPermitidas.length} emociones permitidas).`);
+        } else {
+            alert('❌ ' + (data.error || 'Error al guardar configuración.'));
+        }
+    } catch (err) {
+        console.error('Error guardando configuración de emociones:', err);
+        alert('❌ Error de conexión al guardar.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '✓ Guardar Emociones';
+        }
+    }
+}
+window.saveMoodTrackerEmotionsConfig = saveMoodTrackerEmotionsConfig;
 
 // ==========================================
 // MÓDULO: CENTRO DE CONFIRMACIONES Y RECORDATORIOS (1-CLIC WA.ME)

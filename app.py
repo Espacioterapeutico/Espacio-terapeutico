@@ -1509,6 +1509,20 @@ def init_db():
         )
     """)
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registros_mood_tracker (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            emociones_json TEXT NOT NULL,
+            situaciones_detonantes TEXT,
+            intensidad INTEGER DEFAULT 3,
+            accion_conducta TEXT,
+            fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rmt_paciente_fecha ON registros_mood_tracker(paciente_id, fecha)")
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS configuracion (
             clave TEXT PRIMARY KEY,
             valor TEXT
