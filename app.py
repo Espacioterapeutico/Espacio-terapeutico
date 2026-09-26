@@ -2789,6 +2789,101 @@ def send_subscription_renewed_email(user_email, full_name, new_exp_str):
     send_email_async(user_email, subject, html_content)
 
 
+def send_psychologist_approved_email(user_email, full_name, username, exp_date_str):
+    """
+    Envía un correo cuando la cuenta del psicólogo es aprobada por el superadministrador.
+    """
+    if not user_email or '@' not in str(user_email):
+        return
+
+    subject = f"🎉 ¡Tu cuenta ha sido aprobada! - Espacio Terapéutico"
+    site_url = "https://www.espacioterapeutico.net"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #334155; }}
+            .card {{ max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(15,23,42,0.08); border: 1px solid #e2e8f0; }}
+            .header {{ background: linear-gradient(135deg, #702e5e 0%, #984b80 100%); padding: 32px 24px; text-align: center; color: #ffffff; }}
+            .header h1 {{ margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
+            .header p {{ margin: 6px 0 0 0; opacity: 0.95; font-size: 14px; font-weight: 600; }}
+            .content {{ padding: 32px 28px; }}
+            .greeting {{ font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }}
+            .intro {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
+            .box {{ background: #fdf4ff; border: 1.5px solid #f5d0fe; border-radius: 12px; padding: 20px; margin-bottom: 20px; }}
+            .box-title {{ font-size: 13px; font-weight: 800; text-transform: uppercase; color: #702e5e; letter-spacing: 0.5px; margin-bottom: 10px; }}
+            .field {{ margin-bottom: 8px; font-size: 14px; color: #475569; }}
+            .field strong {{ color: #0f172a; font-weight: 700; width: 140px; display: inline-block; }}
+            .btn-wrap {{ text-align: center; margin: 30px 0 10px 0; }}
+            .btn {{ background: linear-gradient(135deg, #702e5e, #984b80); color: #ffffff !important; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(112,46,94,0.3); }}
+            .footer {{ background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; line-height: 1.5; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">
+                <h1>🌿 Espacio Terapéutico</h1>
+                <p>¡Cuenta Profesional Aprobada!</p>
+            </div>
+            <div class="content">
+                <div class="greeting">¡Felicidades, {full_name}! 👋</div>
+                <div class="intro">
+                    Tus credenciales y documentos han sido revisados y <strong>aprobados exitosamente</strong> por la administración. A partir de este momento tienes acceso completo a la plataforma para gestionar tu consultorio.
+                </div>
+                
+                <div class="box">
+                    <div class="box-title">📋 Detalles de tu Cuenta</div>
+                    <div class="field"><strong>Usuario:</strong> <span style="font-weight:700; color:#702e5e;">{username}</span></div>
+                    <div class="field"><strong>Estado:</strong> 🟢 Cuenta Activa</div>
+                    <div class="field"><strong>Prueba gratuita hasta:</strong> <span style="font-weight:700; background:#f5d0fe; padding:2px 8px; border-radius:4px; color:#702e5e;">{exp_date_str} (30 días)</span></div>
+                </div>
+
+                <div class="btn-wrap">
+                    <a href="{site_url}" class="btn">🚀 Iniciar Sesión en Mi Consultorio</a>
+                </div>
+            </div>
+            <div class="footer">
+                Espacio Terapéutico — Plataforma de Gestión Clínica Psicológica.<br>
+                Si tienes preguntas o necesitas ayuda con la configuración, puedes contactarnos a soporte.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    send_email_async(user_email, subject, html_content)
+
+
+def notify_superadmins_new_psychologist(nombres, apellidos, username, federacion):
+    """
+    Envía notificación Push (FCM) a todos los Superadministradores alertando del registro.
+    """
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT id FROM usuarios WHERE role IN ('superadmin', 'admin')")
+        admin_rows = cursor.fetchall()
+        
+        full_name = f"Psic. {nombres or ''} {apellidos or ''}".strip() or f"@{username}"
+        colegiado_txt = f" (Colegiado: {federacion})" if federacion else ""
+        body_text = f"Nuevo profesional registrado: {full_name}{colegiado_txt}. Pendiente de aprobación."
+        
+        for adm in admin_rows:
+            try:
+                send_fcm_notification(
+                    user_id=adm['id'],
+                    title="🔔 Nuevo Psicólogo Registrado",
+                    body=body_text,
+                    url="/#sec-superadmin"
+                )
+            except Exception as _ex_adm:
+                print(f"[PUSH ERROR] Error enviando a admin {adm['id']}: {_ex_adm}")
+    except Exception as e:
+        print(f"[PUSH ERROR] Error notificando a superadministradores: {e}")
+
+
 def send_subscription_expiring_soon_email(user_email, full_name, days_left, exp_date_str):
     """
     Envía un correo recordatorio cuando la membresía está por vencer en 3 días o menos.

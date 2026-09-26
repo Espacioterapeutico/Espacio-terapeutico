@@ -150,6 +150,15 @@ def login():
         if user and check_password_hash(user['password_hash'], password):
             u_dict = dict(user)
             
+            # Si el psicólogo no está activo (activo == 0), no permitir inicio de sesión
+            if user['role'] == 'psicologo' and user['activo'] == 0:
+                is_pending = not user['fecha_expiracion_prueba']
+                if is_pending:
+                    msg = "Tu cuenta se encuentra en proceso de validación y aprobación por la administración de Espacio Terapéutico. Te notificaremos por correo electrónico una vez sea aprobada."
+                else:
+                    msg = "Tu cuenta se encuentra inactiva o suspendida. Por favor, comunícate con la administración para más información."
+                return jsonify({'error': msg, 'pending_approval': is_pending, 'inactive': not is_pending}), 403
+            
             # Verificar si la suscripción o prueba ha expirado para psicólogos
             # NO bloqueamos el login ni desactivamos la cuenta (activo=0); permitimos acceso en modo solo lectura
             is_sub_expired = False
@@ -356,7 +365,12 @@ def auth_google():
     if user:
         u_dict = dict(user)
         if u_dict.get('activo', 1) == 0:
-            return jsonify({'error': 'Tu cuenta se encuentra inactiva. Contacta a administración.'}), 403
+            is_pending = not u_dict.get('fecha_expiracion_prueba')
+            if is_pending:
+                msg = "Tu cuenta se encuentra en proceso de validación y aprobación por la administración de Espacio Terapéutico. Te notificaremos por correo electrónico una vez sea aprobada."
+            else:
+                msg = "Tu cuenta se encuentra inactiva o suspendida. Por favor, comunícate con la administración para más información."
+            return jsonify({'status': 'error', 'error': msg, 'pending_approval': is_pending}), 403
             
         is_sub_expired = False
         if u_dict['role'] == 'psicologo':
@@ -1584,19 +1598,24 @@ def register():
             r1_hash = generate_password_hash(r1) if r1 else None
             r2_hash = generate_password_hash(r2) if r2 else None
 
+            # La cuenta se registra con activo = 0 en espera de aprobación por el Super Administrador
             cursor.execute("""
                 INSERT INTO usuarios (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, role, activo, fecha_registro, fecha_expiracion_prueba, suscripcion_paga, slug, configuracion_horarios_visual, metodos_pago, primer_inicio, pregunta_seguridad_1, respuesta_seguridad_1_hash, pregunta_seguridad_2, respuesta_seguridad_2_hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 1, ?, ?, 0, ?, ?, ?, 1, ?, ?, ?, ?)
-            """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, expiry_str, clean_slug, default_visual_cfg, default_pm_str, p1, r1_hash, p2, r2_hash))
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'psicologo', 0, ?, NULL, 0, ?, ?, ?, 1, ?, ?, ?, ?)
+            """, (username, password_hash, nombres, apellidos, estudios, federacion, foto_titulo, foto_documento, now_str, clean_slug, default_visual_cfg, default_pm_str, p1, r1_hash, p2, r2_hash))
             db.commit()
             
-            # Enviar correo de bienvenida con credenciales y preguntas de seguridad
-            email_target = username if '@' in username else data.get('email')
-            if email_target:
-                full_name_psic = f"Psic. {nombres} {apellidos}".strip()
-                send_welcome_credentials_email('psicologo', email_target, full_name_psic, username, password, p1, r1, p2, r2)
+            # Enviar notificación PUSH (FCM) inmediata al Super Administrador
+            try:
+                from app import notify_superadmins_new_psychologist
+                notify_superadmins_new_psychologist(nombres, apellidos, username, federacion)
+            except Exception as _ex_push:
+                print(f"[PUSH] Error al notificar superadmin de nuevo psicólogo: {_ex_push}")
 
-            return jsonify({'success': 'Cuenta de psicólogo creada con éxito. Tienes 1 mes (30 días) de prueba gratuita.'})
+            return jsonify({
+                'success': '¡Registro completado con éxito! Tus datos y documentos están en proceso de verificación por la administración. Te notificaremos por correo electrónico una vez sea aprobada tu cuenta para iniciar tu mes de prueba gratuito.',
+                'pending_approval': True
+            })
             
         elif tipo_usuario == 'paciente':
             nombres = data.get('nombres')
@@ -1806,7 +1825,7 @@ def superadmin_toggle_active(user_id):
         
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT activo FROM usuarios WHERE id = ? AND role = 'psicologo'", (user_id,))
+    cursor.execute("SELECT * FROM usuarios WHERE id = ? AND role = 'psicologo'", (user_id,))
     row = cursor.fetchone()
     if not row:
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
@@ -1819,10 +1838,80 @@ def superadmin_toggle_active(user_id):
         now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("UPDATE usuarios SET activo = 1, fecha_registro = COALESCE(fecha_registro, ?), fecha_expiracion_prueba = ? WHERE id = ?", (now_str, expiry_str, user_id))
+        db.commit()
+
+        # Enviar correo de aprobación y notificación Push al psicólogo
+        try:
+            email_target = row['email'] or (row['username'] if '@' in row['username'] else None)
+            full_name_psic = f"Psic. {row['nombres'] or ''} {row['apellidos'] or ''}".strip() or row['username']
+            exp_display = expiry_dt.strftime("%d/%m/%Y")
+            
+            if email_target:
+                from app import send_psychologist_approved_email
+                send_psychologist_approved_email(email_target, full_name_psic, row['username'], exp_display)
+
+            from app import send_fcm_notification
+            send_fcm_notification(
+                user_id=user_id,
+                title="🎉 ¡Tu Cuenta ha sido Aprobada!",
+                body="Tus credenciales han sido verificadas con éxito. Ya puedes iniciar sesión y disfrutar de tu mes de prueba gratuito.",
+                url="/"
+            )
+        except Exception as _ex_ap:
+            print(f"[APPROVAL NOTIFICATION ERROR]: {_ex_ap}")
     else:
         cursor.execute("UPDATE usuarios SET activo = 0 WHERE id = ?", (user_id,))
-    db.commit()
+        db.commit()
+
     return jsonify({'success': 'Estado de suscripción actualizado.', 'activo': new_status})
+
+
+@admin_bp.route('/api/superadmin/therapists/<int:user_id>/approve', methods=['POST'])
+@login_required
+def superadmin_approve_therapist(user_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM usuarios WHERE id = ? AND role = 'psicologo'", (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+        
+    import datetime
+    now_dt = datetime.datetime.now()
+    expiry_dt = now_dt + datetime.timedelta(days=30)
+    now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
+    
+    cursor.execute("UPDATE usuarios SET activo = 1, fecha_registro = COALESCE(fecha_registro, ?), fecha_expiracion_prueba = ? WHERE id = ?", (now_str, expiry_str, user_id))
+    db.commit()
+
+    # Enviar correo de aprobación y notificación Push al psicólogo
+    try:
+        email_target = row['email'] or (row['username'] if '@' in row['username'] else None)
+        full_name_psic = f"Psic. {row['nombres'] or ''} {row['apellidos'] or ''}".strip() or row['username']
+        exp_display = expiry_dt.strftime("%d/%m/%Y")
+        
+        if email_target:
+            from app import send_psychologist_approved_email
+            send_psychologist_approved_email(email_target, full_name_psic, row['username'], exp_display)
+
+        from app import send_fcm_notification
+        send_fcm_notification(
+            user_id=user_id,
+            title="🎉 ¡Tu Cuenta ha sido Aprobada!",
+            body="Tus credenciales han sido verificadas con éxito. Ya puedes iniciar sesión y disfrutar de tu mes de prueba gratuito.",
+            url="/"
+        )
+    except Exception as _ex_ap:
+        print(f"[APPROVAL NOTIFICATION ERROR]: {_ex_ap}")
+
+    return jsonify({
+        'success': f'¡Cuenta de {row.get("nombres") or row["username"]} aprobada exitosamente! Se le ha enviado el correo de activación.',
+        'activo': 1
+    })
 
 
 

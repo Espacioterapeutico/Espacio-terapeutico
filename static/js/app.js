@@ -1821,6 +1821,19 @@ async function handleAuthSubmit(e) {
                     setTimeout(() => { try { initFirebaseMessagingFlow(); } catch(e) {} }, 1500);
                     return;
                 }
+                if (resAdmin.status === 403 && dataAdmin && dataAdmin.pending_approval) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Cuenta en Verificación',
+                            text: dataAdmin.error || 'Tu cuenta se encuentra en proceso de validación y aprobación por la administración de Espacio Terapéutico.',
+                            confirmButtonColor: '#0d9488',
+                            confirmButtonText: 'Entendido'
+                        });
+                    }
+                    showError(dataAdmin.error || 'Tu cuenta se encuentra en proceso de validación.');
+                    return;
+                }
             } catch (errAdmin) {
                 console.warn("Fallo conexión login admin:", errAdmin);
                 networkError = true;
@@ -2004,6 +2017,15 @@ async function handleGoogleCredentialResponse(response) {
             clearGoogleAuthStatus();
             promptGoogleAccountLinking(data.google_email, data.google_name, response.credential);
         } else {
+            if (data.pending_approval && window.Swal) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Cuenta en Verificación',
+                    text: data.error || 'Tu cuenta se encuentra en proceso de validación y aprobación por la administración de Espacio Terapéutico.',
+                    confirmButtonColor: '#0d9488',
+                    confirmButtonText: 'Entendido'
+                });
+            }
             showGoogleAuthStatus(data.error || 'Error al autenticar con Google.', true);
         }
     } catch (err) {
@@ -14134,8 +14156,31 @@ async function submitRegister(e) {
         const data = await res.json();
         
         if (res.ok) {
-            alert(data.success || "Cuenta registrada con éxito. Inicia sesión a continuación.");
             closeRegisterModal();
+            if (data.pending_approval) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: '¡Registro Enviado!',
+                        text: data.success || "Tus datos y documentos están en proceso de verificación por la administración. Te notificaremos por correo electrónico una vez sea aprobada tu cuenta para iniciar tu mes de prueba gratuito.",
+                        confirmButtonColor: '#0d9488',
+                        confirmButtonText: 'Entendido'
+                    });
+                } else {
+                    alert(data.success || "Registro completado con éxito. Tu cuenta está en proceso de validación por la administración.");
+                }
+            } else {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Registro Exitoso!',
+                        text: data.success || "Cuenta registrada con éxito. Inicia sesión a continuación.",
+                        confirmButtonColor: '#0d9488'
+                    });
+                } else {
+                    alert(data.success || "Cuenta registrada con éxito. Inicia sesión a continuación.");
+                }
+            }
         } else {
             const errText = data.error || "Error al registrar la cuenta. Verifica los datos ingresados.";
             if (errorMsg) { errorMsg.textContent = errText; errorMsg.classList.remove('hide'); }
@@ -14466,7 +14511,23 @@ function renderSuperadminTherapistsTable() {
         const daysLeft = expDate ? Math.max(0, Math.ceil(diffHours / 24)) : 0;
         const rangeText = regStr && expStr ? `${regStr} al ${expStr}` : (expStr ? `Vence: ${expStr}` : '');
 
-        if (p.suscripcion_paga === 1 && daysLeft > 0) {
+        if (p.activo === 0 && !p.fecha_expiracion_prueba) {
+            subBadgeHtml = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <span class="badge" style="background:#f59e0b; color:#ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; box-shadow: 0 2px 4px rgba(245,158,11,0.25);">
+                    🟡 Pendiente de Aprobación
+                </span>
+                <span style="font-size:0.72rem; color:#d97706; font-weight:600;">⚠️ Sin acceso hasta aprobar</span>
+            </div>`;
+        } else if (p.activo === 0) {
+            subBadgeHtml = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <span class="badge" style="background:#64748b; color:#ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;">
+                    ⚪ Cuenta Inactiva / Pausada
+                </span>
+                ${rangeText ? `<span style="font-size:0.72rem; color:#64748b;">${rangeText}</span>` : ''}
+            </div>`;
+        } else if (p.suscripcion_paga === 1 && daysLeft > 0) {
             subBadgeHtml = `
             <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
                 <span class="badge" style="background:#10b981; color:#ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; box-shadow: 0 2px 4px rgba(16,185,129,0.2);">
@@ -14554,6 +14615,11 @@ function renderSuperadminTherapistsTable() {
             </td>
             <td style="padding: 0.85rem 1rem; text-align: center; vertical-align: middle;">
                 <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: center; width: 100%; max-width: 220px; margin: 0 auto;">
+                    ${p.activo === 0 ? `
+                        <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #16a34a; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 6px rgba(22,163,74,0.3); margin-bottom: 2px;" onclick="approveTherapistAccount(${p.id}, \`${escName}\`)">
+                            ✅ Aprobar Cuenta
+                        </button>
+                    ` : ''}
                     <button type="button" class="btn btn-sm" style="width: 100%; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #0d9488; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 4px rgba(13,148,136,0.25);" onclick="toggleTherapistAccordion(${p.id}, 'sub')">
                         🚀 Activar / Opciones ▼
                     </button>
@@ -14580,11 +14646,15 @@ function renderSuperadminTherapistsTable() {
         tbody.appendChild(trMain);
 
         // Fila Secundaria: Panel Integrado Acordeón (Ficha OR Suscripción OR Permisos)
-        const expStatusText = p.suscripcion_paga === 1 
-            ? `🟢 Suscripción Activa (${daysLeft} días restantes)`
-            : (diffHours > 0 
-                ? `⏳ Período de Prueba (${daysLeft} días restantes)` 
-                : `🔴 Sin Suscripción Activa / Expirada`);
+        const expStatusText = p.activo === 0 && !p.fecha_expiracion_prueba
+            ? `🟡 Pendiente de Aprobación`
+            : (p.activo === 0
+                ? `⚪ Cuenta Inactiva / Pausada`
+                : (p.suscripcion_paga === 1 
+                    ? `🟢 Suscripción Activa (${daysLeft} días restantes)`
+                    : (diffHours > 0 
+                        ? `⏳ Período de Prueba (${daysLeft} días restantes)` 
+                        : `🔴 Sin Suscripción Activa / Expirada`)));
         const defaultExpDate = p.fecha_expiracion_prueba ? p.fecha_expiracion_prueba.split('T')[0] : new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
         
         const trAccordion = document.createElement('tr');
@@ -14671,6 +14741,17 @@ function renderSuperadminTherapistsTable() {
                             <button type="button" class="btn btn-sm btn-secondary" onclick="toggleTherapistAccordion(${p.id}, 'sub')" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700; border-radius: 6px;">✖ Cerrar</button>
                         </div>
                     </div>
+                    
+                    ${p.activo === 0 ? `
+                        <div style="margin-bottom: 0.85rem; padding: 0.75rem; background: #ffffff; border: 1.5px solid #86efac; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                            <div style="font-size: 0.82rem; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                                <span>⚠️</span> Esta cuenta está esperando aprobación de la administración.
+                            </div>
+                            <button type="button" class="btn btn-sm btn-success" style="background: #16a34a; border: none; font-weight: 800; border-radius: 6px; padding: 0.45rem 1rem;" onclick="approveTherapistAccount(${p.id}, \`${escName}\`)">
+                                ✅ Aprobar Cuenta e Iniciar Mes de Prueba
+                            </button>
+                        </div>
+                    ` : ''}
                     
                     <!-- Presets de días -->
                     <div style="display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem;">
@@ -14798,6 +14879,11 @@ function renderSuperadminTherapistsTable() {
                 </div>
 
                 <div class="sa-therapist-actions-row">
+                    ${p.activo === 0 ? `
+                        <button type="button" class="btn btn-sm" style="width: 100%; padding: 7px 12px; font-size: 0.8rem; font-weight: 700; background: #16a34a; color: white; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 6px rgba(22,163,74,0.3); margin-bottom: 6px;" onclick="approveTherapistAccount(${p.id}, \`${escName}\`)">
+                            ✅ Aprobar Cuenta
+                        </button>
+                    ` : ''}
                     <button type="button" class="sa-btn-manage-therapist" onclick="openSuperadminManageTherapistModal(${p.id})">
                         ✏️ Gestionar Psicólogo
                     </button>
@@ -14852,11 +14938,15 @@ function openSuperadminManageTherapistModal(userId) {
     const expDate = p.fecha_expiracion_prueba ? new Date(p.fecha_expiracion_prueba) : null;
     const diffHours = expDate ? (expDate - new Date()) / (1000 * 60 * 60) : 0;
     const daysLeft = expDate ? Math.max(0, Math.ceil(diffHours / 24)) : 0;
-    const expStatusText = p.suscripcion_paga === 1 
-        ? `🟢 Suscripción Activa (${daysLeft} días restantes)`
-        : (diffHours > 0 
-            ? `⏳ Período de Prueba (${daysLeft} días restantes)` 
-            : `🔴 Sin Suscripción Activa / Expirada`);
+    const expStatusText = p.activo === 0 && !p.fecha_expiracion_prueba
+        ? `🟡 Pendiente de Aprobación`
+        : (p.activo === 0
+            ? `⚪ Cuenta Inactiva / Pausada`
+            : (p.suscripcion_paga === 1 
+                ? `🟢 Suscripción Activa (${daysLeft} días restantes)`
+                : (diffHours > 0 
+                    ? `⏳ Período de Prueba (${daysLeft} días restantes)` 
+                    : `🔴 Sin Suscripción Activa / Expirada`)));
     const defaultExpDate = p.fecha_expiracion_prueba ? p.fecha_expiracion_prueba.split('T')[0] : new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
 
     const subStatusEl = document.getElementById('sa-sub-current-status');
@@ -15456,6 +15546,69 @@ async function deactivateTherapistSubscription(userId) {
         alert("Error de conexión al desactivar suscripción.");
     }
 }
+window.deactivateTherapistSubscription = deactivateTherapistSubscription;
+
+async function approveTherapistAccount(userId, userName) {
+    const confirmMsg = `¿Deseas aprobar la cuenta del Psic. ${userName}?\n\nAl aprobarlo:\n1. Se activará su cuenta en el sistema.\n2. Se iniciará su mes de prueba gratuito (30 días de acceso total).\n3. Recibirá un correo electrónico de bienvenida confirmando la aprobación.`;
+    
+    if (window.Swal) {
+        const result = await Swal.fire({
+            title: '✅ Aprobar Cuenta',
+            text: confirmMsg,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, Aprobar y Activar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#64748b'
+        });
+        if (!result.isConfirmed) return;
+    } else {
+        if (!confirm(confirmMsg)) return;
+    }
+
+    try {
+        const res = await fetch(`/api/superadmin/therapists/${userId}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Cuenta Aprobada!',
+                    text: data.success || 'La cuenta ha sido aprobada con éxito.',
+                    confirmButtonColor: '#16a34a'
+                });
+            } else {
+                alert(data.success || '¡Cuenta aprobada con éxito!');
+            }
+            loadSuperadminData();
+        } else {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.error || 'No se pudo aprobar la cuenta.'
+                });
+            } else {
+                alert(data.error || 'No se pudo aprobar la cuenta.');
+            }
+        }
+    } catch (err) {
+        if (window.Swal) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Red',
+                text: 'Error de conexión al aprobar la cuenta.'
+            });
+        } else {
+            alert('Error de conexión al aprobar la cuenta.');
+        }
+    }
+}
+window.approveTherapistAccount = approveTherapistAccount;
 
 function renderSuperadminPaginationControls(totalFiltered, startIndex, endIndex, totalPages) {
     const container = document.getElementById('superadmin-pagination-container');
