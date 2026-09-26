@@ -2106,10 +2106,15 @@ function applyUserBlocks(bloqueos) {
     
     // Examen Mental
     const navExamen = document.querySelector('a[data-view="examen-mental"]');
-    if (bloqueos.examen_mental === 1 && navExamen) {
-        navExamen.classList.add('hide');
-    } else if (navExamen) {
-        navExamen.classList.remove('hide');
+    const btnSessionMse = document.getElementById('btn-session-toggle-mse');
+    const drawerSessionMse = document.getElementById('session-mse-drawer');
+    if (bloqueos.examen_mental === 1) {
+        if (navExamen) navExamen.classList.add('hide');
+        if (btnSessionMse) btnSessionMse.classList.add('hide');
+        if (drawerSessionMse) drawerSessionMse.classList.add('hide');
+    } else {
+        if (navExamen) navExamen.classList.remove('hide');
+        if (btnSessionMse) btnSessionMse.classList.remove('hide');
     }
     
     // Finanzas
@@ -5788,7 +5793,7 @@ function applySessionsFilters(resetPage = false) {
                             📄 Ver Informe PDF
                         </button>
                     ` : ''}
-                    ${s.examen_mental_id ? `
+                    ${s.examen_mental_id && (!window.currentUser?.bloqueos || window.currentUser.bloqueos.examen_mental !== 1) ? `
                         <button type="button" class="btn btn-sm" style="background: #fdf4f9; color: var(--primary-color); border: 1.5px solid rgba(169, 89, 147, 0.4); font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" onclick="viewExamenMentalDetail(${s.examen_mental_id})" title="Ver Examen Mental (MSE) vinculado a esta sesión">
                             🧠 Ver Examen Mental
                         </button>
@@ -6049,6 +6054,7 @@ async function openNewSessionModal() {
     if (typeof clearSessionMseForm === 'function') clearSessionMseForm();
     const mseDrawer = document.getElementById('session-mse-drawer');
     if (mseDrawer) mseDrawer.classList.add('hide');
+    if (typeof updateSessionMseButtonVisibility === 'function') updateSessionMseButtonVisibility();
     
     await loadPatientsDropdowns();
     
@@ -6113,6 +6119,7 @@ async function openRegisterSessionFromEvent(eventId) {
         if (typeof clearSessionMseForm === 'function') clearSessionMseForm();
         const mseDrawer = document.getElementById('session-mse-drawer');
         if (mseDrawer) mseDrawer.classList.add('hide');
+        if (typeof updateSessionMseButtonVisibility === 'function') updateSessionMseButtonVisibility();
         
         await loadPatientsDropdowns();
         
@@ -6317,6 +6324,7 @@ async function openEditSessionModal(sessionId) {
         if (typeof clearSessionMseForm === 'function') clearSessionMseForm();
         const mseDrawer = document.getElementById('session-mse-drawer');
         if (mseDrawer) mseDrawer.classList.add('hide');
+        if (typeof updateSessionMseButtonVisibility === 'function') updateSessionMseButtonVisibility();
         if (s.examen_mental_id && typeof loadSessionMseData === 'function') {
             await loadSessionMseData(s.examen_mental_id);
         }
@@ -24869,6 +24877,25 @@ async function viewExamenMentalDetail(id) {
 // INTEGRACIÓN DE EXAMEN MENTAL (MSE) DENTRO DE LA EVOLUCIÓN CLÍNICA
 // =========================================================================
 
+function isExamenMentalBlocked() {
+    const user = window.currentUser;
+    if (!user) return false;
+    if (user.role === 'admin' || user.role === 'superadmin') return false;
+    return !!(user.bloqueos && user.bloqueos.examen_mental === 1);
+}
+
+function updateSessionMseButtonVisibility() {
+    const btn = document.getElementById('btn-session-toggle-mse');
+    const drawer = document.getElementById('session-mse-drawer');
+    if (!btn) return;
+    if (isExamenMentalBlocked()) {
+        btn.classList.add('hide');
+        if (drawer) drawer.classList.add('hide');
+    } else {
+        btn.classList.remove('hide');
+    }
+}
+
 function renderSessionMseAreas() {
     const container = document.getElementById('session-mse-areas-container');
     if (!container || container.children.length > 0) return;
@@ -24913,6 +24940,10 @@ function renderSessionMseAreas() {
 }
 
 function toggleSessionMseDrawer() {
+    if (typeof isExamenMentalBlocked === 'function' && isExamenMentalBlocked()) {
+        alert("La función de Examen Mental no está habilitada para tu cuenta.");
+        return;
+    }
     const drawer = document.getElementById('session-mse-drawer');
     if (!drawer) return;
     
