@@ -19810,6 +19810,53 @@ const therapistPreviewTemplates = [
                 </div>
             </div>
         `
+    },
+    {
+        clave: 'mood_tracker',
+        titulo: '🎭 Mood Tracker (Registro de Emociones)',
+        descripcion: 'Formulario diario para registrar emociones presentes con emojis, situaciones detonantes, nivel de intensidad (1-5) y conductas de afrontamiento.',
+        html: `
+            <div style="background: white; border: 1.5px solid #d8b4fe; border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); height: 100%; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-family: var(--font-title); font-weight: 700; color: #6b21a8; font-size: 1.05rem;">
+                        🎭 Mood Tracker (Vista del Consultante)
+                    </h4>
+                    <span class="badge" style="background: #faf5ff; color: #7e22ce; font-weight: 700; border: 1px solid #d8b4fe; padding: 0.25rem 0.6rem;">
+                        Formulario Diario
+                    </span>
+                </div>
+                <div style="display: grid; gap: 0.85rem; width: 100%; background: #fdf4ff; padding: 1rem; border-radius: 8px; border: 1px solid #f5d0fe; box-sizing: border-box;">
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #5d3a6f; display: block; margin-bottom: 0.35rem;">1. Emociones presentes durante el día:</label>
+                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; border-radius: 20px; font-size: 0.82rem; font-weight: 700; background: linear-gradient(135deg, #7e22ce, #9333ea); color: white;">⚡ Ansioso/a</span>
+                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; border-radius: 20px; font-size: 0.82rem; font-weight: 700; background: linear-gradient(135deg, #7e22ce, #9333ea); color: white;">😰 Preocupado/a</span>
+                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: white; border: 1px solid #cbd5e1; color: #475569;">😊 Feliz</span>
+                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: white; border: 1px solid #cbd5e1; color: #475569;">🧘 Calma</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 0.35rem;">2. Situaciones detonantes:</label>
+                        <input type="text" value="Cierre de informes en el trabajo y reunión con directores" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 0.35rem;">3. Intensidad percibida (1 al 5):</label>
+                        <div style="display: flex; gap: 0.4rem;">
+                            <div style="flex: 1; text-align: center; padding: 0.35rem; border-radius: 6px; background: white; border: 1px solid #cbd5e1; font-size: 0.75rem;">1</div>
+                            <div style="flex: 1; text-align: center; padding: 0.35rem; border-radius: 6px; background: white; border: 1px solid #cbd5e1; font-size: 0.75rem;">2</div>
+                            <div style="flex: 1; text-align: center; padding: 0.35rem; border-radius: 6px; background: white; border: 1px solid #cbd5e1; font-size: 0.75rem;">3</div>
+                            <div style="flex: 1; text-align: center; padding: 0.35rem; border-radius: 6px; background: #7e22ce; color: white; font-weight: 800; font-size: 0.75rem;">4 (Intensa)</div>
+                            <div style="flex: 1; text-align: center; padding: 0.35rem; border-radius: 6px; background: white; border: 1px solid #cbd5e1; font-size: 0.75rem;">5</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 0.35rem;">4. Estrategia de afrontamiento utilizada:</label>
+                        <input type="text" value="Pausa de respiración profunda en 4 tiempos y caminata corta de 5 min" disabled style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: white;">
+                    </div>
+                    <button type="button" disabled class="btn btn-primary btn-block" style="width: 100%; opacity: 0.85; font-weight: 700; padding: 0.5rem; background: linear-gradient(135deg, #7e22ce, #9333ea); border: none; margin-top: 0.25rem;">💾 Guardar Registro de Emociones (Simulación)</button>
+                </div>
+            </div>
+        `
     }
 ];
 
@@ -19827,7 +19874,11 @@ function openToolPreviewModal(clave, nombre) {
         'ingesta': 'ingesta',
         'cognitivo': 'cognitivo',
         'pantalla': 'pantalla',
-        'meditacion': 'meditacion'
+        'meditacion': 'meditacion',
+        'estimulacion_cognitiva': 'estimulacion_cognitiva',
+        'mood_tracker': 'mood_tracker',
+        'moodtracker': 'mood_tracker',
+        'emociones': 'mood_tracker'
     };
     const normClave = claveMap[clave] || clave;
     const tmplObj = therapistPreviewTemplates.find(t => t.clave === normClave || t.clave === clave);
@@ -19944,7 +19995,7 @@ let therapistToolsPatientsCatalog = [];
 
 let currentToolsCatalogList = [];
 let currentToolsCatalogPage = 1;
-const TOOLS_CATALOG_PER_PAGE = 9;
+const TOOLS_CATALOG_PER_PAGE = 24;
 
 async function loadTherapistToolsCatalog() {
     const container = document.getElementById('tt-modules-accordion') || document.getElementById('tt-modules-grid');

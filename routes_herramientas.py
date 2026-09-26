@@ -830,6 +830,12 @@ def get_therapist_modules_catalog():
     
     modules_info = [
         {
+            'clave': 'mood_tracker',
+            'nombre': 'Mood Tracker (Registro de Emociones)',
+            'descripcion': 'Monitoreo diario de emociones con catálogo personalizable de emojis, situaciones detonantes, nivel de intensidad y estrategias de afrontamiento.',
+            'icono': '🎭'
+        },
+        {
             'clave': 'sueno',
             'nombre': 'Registro de Higiene del Sueño',
             'descripcion': 'Cuestionario de 8 ítems diarios para seguimiento del descanso, despertares nocturnos y síntomas de agotamiento.',
@@ -891,194 +897,54 @@ def get_therapist_modules_catalog():
         }
     ]
     
+    # Obtener conteos de pacientes activos de forma ultrarrápida y directa
+    active_counts = {}
+    try:
+        # 1. Módulos estándar en modulos_terapeuticos_paciente (incluye mood_tracker, sueno, etc.)
+        cursor.execute("""
+            SELECT mt.modulo_clave, COUNT(DISTINCT mt.paciente_id) as total
+            FROM modulos_terapeuticos_paciente mt
+            JOIN pacientes p ON mt.paciente_id = p.id
+            WHERE p.psicologo_id = ? AND mt.activo = 1
+            GROUP BY mt.modulo_clave
+        """, (user_id,))
+        for r in cursor.fetchall():
+            active_counts[r['modulo_clave']] = r['total'] or 0
+
+        # 2. Meditación
+        cursor.execute("""
+            SELECT COUNT(DISTINCT pm.paciente_id) as total
+            FROM paciente_meditaciones pm
+            JOIN pacientes p ON pm.paciente_id = p.id
+            WHERE p.psicologo_id = ?
+        """, (user_id,))
+        row_med = cursor.fetchone()
+        active_counts['meditacion'] = row_med['total'] if row_med else 0
+
+        # 3. Estimulación Cognitiva
+        cursor.execute("""
+            SELECT COUNT(DISTINCT pec.paciente_id) as total
+            FROM paciente_estimulacion_cognitiva pec
+            JOIN pacientes p ON pec.paciente_id = p.id
+            WHERE p.psicologo_id = ? AND pec.activa = 1
+        """, (user_id,))
+        row_ec = cursor.fetchone()
+        active_counts['estimulacion_cognitiva'] = row_ec['total'] if row_ec else 0
+    except Exception as e:
+        print(f"[WARN] Error fetching active counts for catalog: {e}")
+
     catalog = []
-    
     for mod in modules_info:
         clave = mod['clave']
-        try:
-            if clave == 'meditacion':
-                cursor.execute("""
-                    SELECT DISTINCT pm.paciente_id, p.nombres, p.apellidos, p.cedula
-                    FROM paciente_meditaciones pm
-                    JOIN pacientes p ON pm.paciente_id = p.id
-                    WHERE p.psicologo_id = ?
-                    ORDER BY p.apellidos ASC, p.nombres ASC
-                """, (user_id,))
-                patients_rows = cursor.fetchall()
-            elif clave == 'estimulacion_cognitiva':
-                cursor.execute("""
-                    SELECT DISTINCT pec.paciente_id, p.nombres, p.apellidos, p.cedula
-                    FROM paciente_estimulacion_cognitiva pec
-                    JOIN pacientes p ON pec.paciente_id = p.id
-                    WHERE p.psicologo_id = ? AND pec.activa = 1
-                    ORDER BY p.apellidos ASC, p.nombres ASC
-                """, (user_id,))
-                patients_rows = cursor.fetchall()
-            else:
-                cursor.execute("""
-                    SELECT mt.paciente_id, p.nombres, p.apellidos, p.cedula
-                    FROM modulos_terapeuticos_paciente mt
-                    JOIN pacientes p ON mt.paciente_id = p.id
-                    WHERE p.psicologo_id = ? AND mt.modulo_clave = ? AND mt.activo = 1
-                    ORDER BY p.apellidos ASC, p.nombres ASC
-                """, (user_id, clave))
-                patients_rows = cursor.fetchall()
-            
-            patients_list = []
-            for p_row in patients_rows:
-                pid = p_row['paciente_id']
-                p_name = f"{p_row['nombres'] or ''} {p_row['apellidos'] or ''}".strip() or f"Consultante #{pid}"
-                p_cedula = p_row['cedula'] or ''
-                
-                metric_text = "Sin registros recientes"
-                
-                if clave == 'sueno':
-                    cursor.execute("""
-                        SELECT hora_dormi, hora_desperto, senti_descanso, fecha
-                        FROM registros_sueno
-                        WHERE paciente_id = ?
-                        ORDER BY fecha DESC, id DESC LIMIT 1
-                    """, (pid,))
-                    r = cursor.fetchone()
-                    if r:
-                        desc_str = "Reparador" if r['senti_descanso'] == 1 else "No reparador"
-                        horario = f"{r['hora_dormi'] or ''} - {r['hora_desperto'] or ''}".strip(' -')
-                        metric_text = f"🌙 Último descanso: {horario or desc_str} ({desc_str})"
-                
-                elif clave == 'ansiedad':
-                    cursor.execute("""
-                        SELECT nivel_ansiedad, sintomas_json, fecha
-                        FROM registros_ansiedad
-                        WHERE paciente_id = ?
-                        ORDER BY fecha DESC, id DESC LIMIT 1
-                    """, (pid,))
-                    r = cursor.fetchone()
-                    if r:
-                        sintomas_count = 0
-                        try:
-                            sintomas_count = len(json.loads(r['sintomas_json'] or '[]'))
-                        except Exception:
-                            pass
-                        metric_text = f"📊 Última Ansiedad: {r['nivel_ansiedad']}/10 | ⚠️ Síntomas: {sintomas_count}"
-                
-                elif clave == 'sobriedad':
-                    cursor.execute("""
-                        SELECT sobrio, nivel_ansiedad, fecha
-                        FROM registros_sobriedad
-                        WHERE paciente_id = ?
-                        ORDER BY fecha DESC, id DESC LIMIT 1
-                    """, (pid,))
-                    r = cursor.fetchone()
-                    if r:
-                        estado = "Sobrio 🟢" if r['sobrio'] == 1 else "Recaída/Evento ⚠️"
-                        craving = f" | 📈 Craving: {r['nivel_ansiedad']}/10" if r['nivel_ansiedad'] is not None else ""
-                        metric_text = f"🏅 Estado: {estado}{craving}"
-                
-                elif clave == 'adherencia':
-                    cursor.execute("""
-                        SELECT ar.tomado, ar.fecha, am.nombre_medicamento
-                        FROM adherencia_registros ar
-                        JOIN adherencia_medicamentos am ON ar.medicamento_id = am.id
-                        WHERE ar.paciente_id = ?
-                        ORDER BY ar.fecha DESC, ar.id DESC LIMIT 1
-                    """, (pid,))
-                    r = cursor.fetchone()
-                    if r:
-                        tomado_str = "Tomado 🟢" if r['tomado'] == 1 else "Pendiente/No tomado 🔴"
-                        metric_text = f"⏰ Última Toma: {r['nombre_medicamento']} - {tomado_str}"
-                
-                elif clave == 'activacion':
-                    cursor.execute("""
-                        SELECT COUNT(*) as total FROM activacion_actividades WHERE paciente_id = ? AND activa = 1
-                    """, (pid,))
-                    total_act = cursor.fetchone()['total']
-                    cursor.execute("""
-                        SELECT COUNT(*) as completadas FROM activacion_registros WHERE paciente_id = ? AND completada = 1
-                    """, (pid,))
-                    comp_act = cursor.fetchone()['completadas']
-                    metric_text = f"✅ Actividades: {comp_act} completadas (Total activas: {total_act})"
-                
-                elif clave == 'ingesta':
-                    cursor.execute("""
-                        SELECT tipo_comida, apetito_previo, saciedad, fecha
-                        FROM registros_ingesta
-                        WHERE paciente_id = ?
-                        ORDER BY fecha DESC, id DESC LIMIT 1
-                    """, (pid,))
-                    r = cursor.fetchone()
-                    if r:
-                        metric_text = f"🥗 Última Comida: {r['tipo_comida']} | Apetito: {r['apetito_previo'] or 0}/10 | Saciedad: {r['saciedad'] or 0}/10"
+        catalog.append({
+            'clave': clave,
+            'nombre': mod['nombre'],
+            'descripcion': mod['descripcion'],
+            'icono': mod['icono'],
+            'activos': active_counts.get(clave, 0),
+            'pacientes': []
+        })
 
-                elif clave == 'cognitivo':
-                    cursor.execute("""
-                        SELECT pensamiento, emocion_sensacion, intensidad_emocion, fecha
-                        FROM registros_cognitivos
-                        WHERE paciente_id = ?
-                        ORDER BY fecha DESC, id DESC LIMIT 1
-                    """, (pid,))
-                    r = cursor.fetchone()
-                    if r:
-                        pens = (r['pensamiento'] or '')[:30]
-                        metric_text = f"🧠 Último Registro: \"{pens}...\" | Emoción: {r['emocion_sensacion'] or 'N/A'} ({r['intensidad_emocion'] or 0}/10)"
-
-                elif clave == 'meditacion':
-                    cursor.execute("""
-                        SELECT cm.titulo, pm.hora_recordatorio, pm.id as asignacion_id
-                        FROM paciente_meditaciones pm
-                        JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
-                        WHERE pm.paciente_id = ?
-                        ORDER BY pm.id DESC
-                    """, (pid,))
-                    asigs = cursor.fetchall()
-                    count_asigs = len(asigs)
-                    titles = ", ".join([a['titulo'] for a in asigs[:2]])
-                    if count_asigs > 2:
-                        titles += f" (+{count_asigs - 2} más)"
-                    
-                    cursor.execute("""
-                        SELECT fecha, completada FROM registro_meditaciones 
-                        WHERE paciente_id = ? AND completada = 1
-                        ORDER BY fecha DESC
-                    """, (pid,))
-                    completed_dates = set(r['fecha'] for r in cursor.fetchall())
-                    streak = 0
-                    check_date = datetime.now().date()
-                    while check_date.strftime("%Y-%m-%d") in completed_dates:
-                        streak += 1
-                        check_date -= timedelta(days=1)
-                    
-                    horas_str = ""
-                    if asigs and asigs[0]['hora_recordatorio']:
-                        horas_str = f" | ⏰ {asigs[0]['hora_recordatorio']}"
-                    metric_text = f"🧘 {count_asigs} asignada(s): {titles or 'Sin título'}{horas_str} | 🔥 Racha: {streak} días"
-
-                patients_list.append({
-                    'patient_id': pid,
-                    'nombre_paciente': p_name,
-                    'cedula': p_cedula,
-                    'metric_text': metric_text
-                })
-            
-            catalog.append({
-                'clave': clave,
-                'nombre': mod['nombre'],
-                'descripcion': mod['descripcion'],
-                'icono': mod['icono'],
-                'activos': len(patients_list),
-                'pacientes': patients_list
-            })
-            
-        except Exception as e:
-            print(f"[WARN] Error loading accordion for module {clave}: {e}")
-            catalog.append({
-                'clave': clave,
-                'nombre': mod['nombre'],
-                'descripcion': mod['descripcion'],
-                'icono': mod['icono'],
-                'activos': 0,
-                'pacientes': []
-            })
-            
     return jsonify(catalog)
 
 
