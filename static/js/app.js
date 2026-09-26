@@ -1608,15 +1608,15 @@ async function checkAdminExists() {
         const toggleBtn = document.getElementById('auth-toggle-btn');
         
         if (!data.exists) {
-            title.textContent = "Registrar Terapeuta";
-            subtitle.textContent = "Crea tu cuenta de acceso local única.";
-            btn.textContent = "Crear Administrador";
+            if (title) title.textContent = "Registrar Terapeuta";
+            if (subtitle) subtitle.textContent = "Crea tu cuenta de acceso única.";
+            if (btn) btn.textContent = "Crear Administrador";
             authFormMode = 'register';
             if (toggleBtn) toggleBtn.classList.add('hide');
         } else {
-            title.textContent = "Iniciar Sesión";
-            subtitle.textContent = "Acceso protegido. Base de datos local.";
-            btn.textContent = "Iniciar Sesión";
+            if (title) title.textContent = "Espacio Terapéutico";
+            if (subtitle) subtitle.textContent = "Bienvenido(a) a tu plataforma clínica";
+            if (btn) btn.textContent = "Iniciar Sesión";
             authFormMode = 'login';
             if (toggleBtn) toggleBtn.classList.remove('hide');
         }
@@ -2056,20 +2056,26 @@ function switchAuthMethod(method) {
     if (method === 'credentials') {
         if (tabGoogle) tabGoogle.classList.remove('active');
         if (tabCreds) tabCreds.classList.add('active');
-        if (googleSec) googleSec.style.display = 'none';
+        if (googleSec) {
+            googleSec.style.setProperty('display', 'none', 'important');
+            googleSec.classList.add('hide');
+        }
         if (authForm) {
-            authForm.style.display = 'block';
-            setTimeout(() => {
-                const userInp = document.getElementById('auth-username');
-                if (userInp) userInp.focus();
-            }, 50);
+            authForm.style.removeProperty('display');
+            authForm.style.setProperty('display', 'block', 'important');
+            authForm.classList.remove('hide');
         }
     } else {
         if (tabGoogle) tabGoogle.classList.add('active');
         if (tabCreds) tabCreds.classList.remove('active');
-        if (authForm) authForm.style.display = 'none';
+        if (authForm) {
+            authForm.style.setProperty('display', 'none', 'important');
+            authForm.classList.add('hide');
+        }
         if (googleSec) {
-            googleSec.style.display = 'flex';
+            googleSec.style.removeProperty('display');
+            googleSec.style.setProperty('display', 'flex', 'important');
+            googleSec.classList.remove('hide');
             if (typeof initGoogleSignIn === 'function') {
                 setTimeout(initGoogleSignIn, 50);
             }
@@ -2953,12 +2959,20 @@ function showAuthScreen() {
         try { resetPasswordVisibility('auth-password', 'btn-toggle-auth-password'); } catch(e) {}
     }
     
-    const authForm = document.getElementById('auth-form');
+    const mainView = document.getElementById('auth-main-view');
+    if (mainView) mainView.style.display = 'block';
     const recoveryView = document.getElementById('auth-recovery-view');
-    if (authForm) authForm.style.display = 'block';
+    const linkView = document.getElementById('auth-google-link-view');
     if (recoveryView) {
         recoveryView.style.display = 'none';
         recoveryView.classList.add('hide');
+    }
+    if (linkView) {
+        linkView.style.display = 'none';
+        linkView.classList.add('hide');
+    }
+    if (typeof switchAuthMethod === 'function') {
+        switchAuthMethod('google');
     }
 
     try { checkAdminExists(); } catch(e) {}
@@ -23569,12 +23583,20 @@ function openAuthModal() {
         authScreen.style.setProperty('display', 'flex', 'important');
         authScreen.scrollIntoView({ behavior: 'smooth' });
     }
-    const authForm = document.getElementById('auth-form');
+    const mainView = document.getElementById('auth-main-view');
+    if (mainView) mainView.style.display = 'block';
     const recoveryView = document.getElementById('auth-recovery-view');
-    if (authForm) authForm.style.display = 'block';
+    const linkView = document.getElementById('auth-google-link-view');
     if (recoveryView) {
         recoveryView.style.display = 'none';
         recoveryView.classList.add('hide');
+    }
+    if (linkView) {
+        linkView.style.display = 'none';
+        linkView.classList.add('hide');
+    }
+    if (typeof switchAuthMethod === 'function') {
+        switchAuthMethod('google');
     }
     if (!window.location.pathname.includes('/login')) {
         try { window.history.pushState({ auth: true }, '', '/login'); } catch(e) {}
