@@ -16,6 +16,18 @@ from functools import wraps
 from flask import Blueprint, request, jsonify, session, g, render_template, render_template_string, make_response, send_file
 from barsit_test_data import ensure_barsit_definition, process_barsit_scoring
 from mcmi2_scoring import process_mcmi2_scoring
+from psychometric_scoring import (
+    calculate_test_scoring,
+    process_asrs_adhd_scoring,
+    process_bdi2_scoring,
+    process_bai_scoring,
+    process_aq_scoring,
+    process_catq_scoring,
+    process_tcs_scoring,
+    process_ugds_scoring,
+    process_raads_scoring,
+    process_holland_scoring
+)
 
 tests_bp = Blueprint('tests', __name__)
 
@@ -2190,63 +2202,9 @@ def api_post_public_evaluacion(token):
             'genero': assignment.get('patient_genero')
         }
 
-        if assignment['test_code'] == 'ZUNG-SDS':
-            total_score, subscales_dict, classification, interpretation = process_zung_sds_scoring(answers)
-        elif assignment['test_code'] == 'HAMILTON-D':
-            total_score, subscales_dict, classification, interpretation = process_hamilton_d_scoring(answers)
-        elif assignment['test_code'] in ('IDARE-STAI', 'IDARE'):
-            total_score, subscales_dict, classification, interpretation = process_idare_stai_scoring(answers)
-        elif assignment['test_code'] == 'SCL-90-R':
-            total_score, subscales_dict, classification, interpretation = process_scl90r_scoring(answers, patient_info=patient_info)
-        elif assignment['test_code'] in ('BSI', 'BSI-53'):
-            total_score, subscales_dict, classification, interpretation = process_bsi_scoring(answers, patient_info=patient_info)
-        elif assignment['test_code'] in ('BECK-BHS', 'BHS'):
-            total_score, subscales_dict, classification, interpretation = process_beck_bhs_scoring(answers)
-        elif assignment['test_code'] in ('MMPI-2', 'MMPI2', 'MMPI'):
-            total_score, subscales_dict, classification, interpretation = process_mmpi2_scoring(answers, patient_info=patient_info)
-        elif assignment['test_code'] in ('MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II'):
-            total_score, subscales_dict, classification, interpretation = process_mcmi2_scoring(answers, patient_info=patient_info)
-        elif assignment['test_code'] == 'SWLS':
-            total_score, subscales_dict, classification, interpretation = process_swls_scoring(answers)
-        elif assignment['test_code'] in ('SHIM', 'IIEF-5'):
-            total_score, subscales_dict, classification, interpretation = process_shim_scoring(answers)
-        elif assignment['test_code'] == 'NSSS-S':
-            total_score, subscales_dict, classification, interpretation = process_nsss_s_scoring(answers)
-        elif assignment['test_code'] == 'FSFI':
-            total_score, subscales_dict, classification, interpretation = process_fsfi_scoring(answers)
-        elif assignment['test_code'] == 'MMSE':
-            total_score, subscales_dict, classification, interpretation = process_mmse_scoring(answers)
-        elif assignment['test_code'] == 'AtAS':
-            total_score, subscales_dict, classification, interpretation = process_atas_scoring(answers)
-        elif assignment['test_code'] == 'CUVINO':
-            total_score, subscales_dict, classification, interpretation = process_cuvino_scoring(answers)
-        elif assignment['test_code'] == 'ABUSO-COERCITIVO':
-            total_score, subscales_dict, classification, interpretation = process_coercitivo_scoring(answers)
-        elif assignment['test_code'] == 'VIOLENCIA-ECON':
-            total_score, subscales_dict, classification, interpretation = process_econ_scoring(answers)
-        elif assignment['test_code'] == 'BPRS':
-            total_score, subscales_dict, classification, interpretation = process_bprs_scoring(answers)
-        elif assignment['test_code'] == 'PANSS-POS':
-            total_score, subscales_dict, classification, interpretation = process_panss_scoring(answers)
-        elif assignment['test_code'] == 'JUICIO-REALIDAD':
-            total_score, subscales_dict, classification, interpretation = process_juicio_scoring(answers)
-        elif assignment['test_code'] == 'BSSC':
-            total_score, subscales_dict, classification, interpretation = process_bssc_scoring(answers)
-        elif assignment['test_code'] == 'BARSIT':
-            total_score, subscales_dict, classification, interpretation = process_barsit_scoring(answers, patient_info=patient_info)
-        elif assignment['test_code'] == 'RAADS-R':
-            total_score = sum(int(float(v)) for v in answers.values() if str(v).replace('.', '', 1).isdigit())
-            classification = "Compatible con TEA (RAADS-R >= 65)" if total_score >= 65 else "Por Debajo del Umbral Clínico (< 65)"
-            interpretation = f"Puntuación Total: {total_score} / 240 pts."
-            subscales_dict = {"Puntuación Total": {"puntuacion": total_score, "max": 240}}
-        else:
-            try:
-                total_score = sum(int(float(v)) for v in answers.values() if str(v).replace('.', '', 1).isdigit())
-                classification = "Completado"
-                interpretation = f"Puntuación Total: {total_score} pts."
-                subscales_dict = {"Puntuación Total": total_score}
-            except Exception as _pe:
-                total_score, subscales_dict, classification, interpretation = 0.0, {}, "Completado", "Respuestas registradas exitosamente."
+        total_score, subscales_dict, classification, interpretation = calculate_test_scoring(
+            assignment['test_code'], answers, patient_info=patient_info, db=db
+        )
 
         fecha_completado = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -2585,23 +2543,45 @@ def api_export_test_pdf(assignment_id):
             'edad': data.get('patient_edad')
         }
 
+        # Auto-recalificación al vuelo si las respuestas existen pero no tienen baremos completos
+        test_code = (data.get('test_code') or '').strip().upper()
+        raw_resp = data.get('respuestas_json')
+        respuestas = {}
+        if raw_resp:
+            try:
+                respuestas = json.loads(raw_resp) if isinstance(raw_resp, str) else raw_resp
+            except Exception:
+                respuestas = {}
+
+        patient_info = {
+            'genero': data.get('patient_genero'),
+            'edad': data.get('patient_edad')
+        }
+
+        # Conjunto de tests con baremos psicométricos reconocidos
+        tests_with_baremo = {
+            'ASRS-ADHD', 'TDAH', 'ADHD', 'ASRS',
+            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'CAT-Q', 'CATQ',
+            'TCS', 'UGDS-GS', 'UGDS', 'RAADS-R', 'RAADS', 'HOLLAND', 'RIASEC',
+            'MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II',
+            'MMPI-2', 'MMPI2', 'MMPI', 'ZUNG-SDS', 'HAMILTON-D', 'IDARE-STAI', 'IDARE',
+            'SCL-90-R', 'BSI', 'BSI-53', 'BECK-BHS', 'BHS', 'BARSIT', 'SWLS', 'SHIM', 'IIEF-5',
+            'FSFI', 'MMSE', 'ATAS', 'CUVINO', 'ABUSO-COERCITIVO', 'VIOLENCIA-ECON', 'BPRS', 'PANSS-POS', 'JUICIO-REALIDAD', 'BSSC'
+        }
+
         should_recalc = False
-        if respuestas and test_code in ('MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II'):
-            if not subescalas or 'Puntuación Total' in subescalas or not any(isinstance(v, dict) and 'tb' in v for v in subescalas.values()):
+        is_known_baremo = test_code in tests_with_baremo or any(k in test_code for k in ('ADHD', 'TDAH', 'BDI', 'BAI', 'AQ', 'CAT', 'RAADS', 'MILLON', 'MMPI', 'HOLLAND', 'ZUNG', 'HAM'))
+        if respuestas and is_known_baremo:
+            if not subescalas or list(subescalas.keys()) == ['Puntuación Total'] or not data.get('clasificacion_resultado') or data.get('clasificacion_resultado') == 'Completado':
                 should_recalc = True
-        elif respuestas and test_code in ('MMPI-2', 'MMPI2', 'MMPI'):
-            if not subescalas or 'Puntuación Total' in subescalas or not any(isinstance(v, dict) and ('t' in v or 'tb' in v) for v in subescalas.values()):
+            elif test_code in ('MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II') and not any(isinstance(v, dict) and 'tb' in v for v in subescalas.values()):
+                should_recalc = True
+            elif test_code in ('MMPI-2', 'MMPI2', 'MMPI') and not any(isinstance(v, dict) and ('t' in v or 'tb' in v) for v in subescalas.values()):
                 should_recalc = True
 
         if should_recalc:
             try:
-                if test_code in ('MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II'):
-                    from mcmi2_scoring import process_mcmi2_scoring
-                    tot, sub, clas, interp = process_mcmi2_scoring(respuestas, patient_info=patient_info)
-                else:
-                    from mmpi2_scoring import process_mmpi2_scoring
-                    tot, sub, clas, interp = process_mmpi2_scoring(respuestas, patient_info=patient_info)
-
+                tot, sub, clas, interp = calculate_test_scoring(test_code, respuestas, patient_info=patient_info, db=db)
                 cursor.execute("""
                     UPDATE test_asignaciones
                     SET puntaje_total = ?,
@@ -2617,12 +2597,13 @@ def api_export_test_pdf(assignment_id):
                 data['clasificacion_resultado'] = clas
                 data['interpretacion_clinica'] = interp
                 subescalas = sub
-            except Exception:
+            except Exception as _recalc_err:
                 pass
 
         sub_html = ""
         has_tb = isinstance(subescalas, dict) and any(isinstance(v, dict) and 'tb' in v for v in subescalas.values())
         has_t = isinstance(subescalas, dict) and any(isinstance(v, dict) and 't' in v for v in subescalas.values())
+        has_structured = isinstance(subescalas, dict) and any(isinstance(v, dict) and ('pd' in v or 'nivel' in v or 'baremo' in v or 'criterio' in v) for v in subescalas.values())
 
         if isinstance(subescalas, dict) and subescalas:
             if has_tb or has_t:
@@ -2674,17 +2655,85 @@ def api_export_test_pdf(assignment_id):
                             </tr>
                         """
                 sub_html += "</tbody></table></div>"
+            elif has_structured:
+                sub_html = f"""
+                <div class="section">
+                    <div class="section-title">Perfil Psicométrico de Escalas y Dimensiones Clínicas</div>
+                    <table style="width:100%; border-collapse:collapse; margin-top:10px; font-size:13px;">
+                        <thead>
+                            <tr style="background:#f1f5f9; color:#334155;">
+                                <th style="padding:9px 12px; border:1px solid #cbd5e1; text-align:left;">Escala / Dimensión</th>
+                                <th style="padding:9px 12px; border:1px solid #cbd5e1; text-align:center; width:120px;">Puntaje Directo (PD)</th>
+                                <th style="padding:9px 12px; border:1px solid #cbd5e1; text-align:center; width:180px;">Baremo / Rango Normativo</th>
+                                <th style="padding:9px 12px; border:1px solid #cbd5e1; text-align:center; width:180px;">Significación Clínica</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                """
+                for s_key, s_val in subescalas.items():
+                    if isinstance(s_val, dict):
+                        nom = s_val.get('nombre') or s_key
+                        pd_display = str(s_val.get('pd', '-'))
+                        baremo_display = str(s_val.get('baremo', '-'))
+                        nivel_display = str(s_val.get('nivel', ''))
+                        criterio_display = str(s_val.get('criterio', ''))
+                        alerta = s_val.get('alerta', 'normal')
+
+                        badge_color = "#15803d"
+                        badge_bg = "#f0fdf4"
+                        badge_border = "#bbf7d0"
+                        icon = "✓"
+
+                        nivel_lower = nivel_display.lower()
+                        if alerta == 'severo' or 'sever' in nivel_lower or 'positivo' in nivel_lower or 'elevad' in nivel_lower or 'grave' in nivel_lower:
+                            badge_color = "#991b1b"
+                            badge_bg = "#fee2e2"
+                            badge_border = "#fca5a5"
+                            icon = "⚠️"
+                        elif alerta in ('moderado', 'leve') or 'moderad' in nivel_lower or 'leve' in nivel_lower:
+                            badge_color = "#c2410c"
+                            badge_bg = "#ffedd5"
+                            badge_border = "#fdba74"
+                            icon = "🔸"
+
+                        badge = f'<span style="background:{badge_bg}; color:{badge_color}; padding:3px 10px; border-radius:12px; font-weight:bold; font-size:11px; border:1px solid {badge_border}; display:inline-block;">{icon} {nivel_display or "Registrado"}</span>'
+                        crit_html = f'<div style="font-size:11px; color:#64748b; margin-top:2px;">{criterio_display}</div>' if criterio_display else ''
+
+                        sub_html += f"""
+                            <tr>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1;"><strong>{nom}</strong></td>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:bold; color:#702e5e;">{pd_display}</td>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1; text-align:center; font-size:11.5px; color:#475569;">{baremo_display}</td>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1; text-align:center;">
+                                    {badge}
+                                    {crit_html}
+                                </td>
+                            </tr>
+                        """
+                    else:
+                        sub_html += f"""
+                            <tr>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1;"><strong>{s_key}</strong></td>
+                                <td style="padding:8px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:bold; color:#702e5e;" colspan="3">{s_val}</td>
+                            </tr>
+                        """
+                sub_html += "</tbody></table></div>"
             else:
                 sub_html = "<div class='section'><div class='section-title'>Subescalas y Dimensiones</div><table style='width:100%; border-collapse:collapse; margin-top:10px; font-size:13px;'><tr style='background:#f1f5f9;'><th style='padding:8px 12px; border:1px solid #cbd5e1; text-align:left;'>Escala / Dimensión</th><th style='padding:8px 12px; border:1px solid #cbd5e1; text-align:center; width:120px;'>Puntaje</th></tr>"
                 for k, v in subescalas.items():
                     sub_html += f"<tr><td style='padding:8px 12px; border:1px solid #cbd5e1;'>{k}</td><td style='padding:8px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:bold;'>{v}</td></tr>"
                 sub_html += "</table></div>"
 
-        # Bloque de resultado destacado
-        if has_tb or has_t:
-            titulo_res = "Diagnóstico Multiaxial / Perfil Principal"
-            score_display = data.get('clasificacion_resultado') or 'Completado'
-            score_html = f'<div style="font-size: 20px; font-weight: 800; color: #702e5e; padding: 6px 0;">{score_display}</div>'
+        # Bloque de resultado destacado según baremo oficial
+        is_baremo_applied = has_tb or has_t or has_structured or (data.get('clasificacion_resultado') and data.get('clasificacion_resultado') not in ('Completado', 'Pendiente', ''))
+        if is_baremo_applied:
+            titulo_res = "Resultado e Interpretación según Baremo Oficial"
+            score_display = data.get('clasificacion_resultado') or 'Evaluación Completada'
+            score_num = f"{data.get('puntaje_total')} pts" if data.get('puntaje_total') is not None else ""
+            score_html = f"""
+                <div style="font-size: 20px; font-weight: 800; color: #702e5e; padding: 6px 0; line-height: 1.3;">{score_display}</div>
+                {f'<div style="font-size: 13px; color: #475569; font-weight: 600; margin-bottom: 6px;">Puntaje Directo Global: <span style="color:#702e5e;">{score_num}</span></div>' if score_num else ''}
+            """
             badge_html = '<div class="badge" style="background:#15803d; border:1px solid #86efac;">✓ Corrección Psicométrica Oficial Aplicada</div>'
         else:
             titulo_res = "Puntaje Global Obtenido"

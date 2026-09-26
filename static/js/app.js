@@ -25449,6 +25449,22 @@ function openTestDetailModal(testData) {
                     <span><strong>${nameDisplay}:</strong> (PD: ${pdVal}${kInfo})</span>
                     <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">${scorePrefix} ${scoreVal}${tag}</span>
                 </li>`;
+            } else if (typeof sVal === 'object' && sVal !== null && (sVal.pd !== undefined || sVal.nivel !== undefined || sVal.baremo !== undefined)) {
+                const pdDisplay = sVal.pd !== undefined ? sVal.pd : '-';
+                const nivelDisplay = sVal.nivel || '';
+                const baremoDisplay = sVal.baremo ? ` <span style="font-size: 0.75rem; color: #64748b;">(${sVal.baremo})</span>` : '';
+                let badgeStyle = 'background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;';
+                const alerta = sVal.alerta || '';
+                const nl = nivelDisplay.toLowerCase();
+                if (alerta === 'severo' || nl.includes('sever') || nl.includes('positivo') || nl.includes('elevad') || nl.includes('grave')) {
+                    badgeStyle = 'background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;';
+                } else if (alerta === 'moderado' || alerta === 'leve' || nl.includes('moderad') || nl.includes('leve')) {
+                    badgeStyle = 'background:#ffedd5; color:#c2410c; border:1px solid #fdba74;';
+                }
+                subscalesHtml += `<li style="margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <span><strong>${sName}:</strong> (PD: ${pdDisplay})${baremoDisplay}</span>
+                    <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">${nivelDisplay || 'Registrado'}</span>
+                </li>`;
             } else {
                 const sValStr = String(sVal || '');
                 const hasCustomUnit = typeof sVal !== 'number' && (sValStr.includes('pts') || sValStr.includes('T=') || sValStr.includes('Adolescentes') || sValStr.includes('Adultos') || sValStr.includes('Media:') || sValStr.includes('ítems'));
@@ -25592,6 +25608,22 @@ async function loadAllAppliedTestsHistory() {
                 subscalesHtml += `<li style="margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                     <span><strong>${sName} - ${label}:</strong> (PD: ${pdVal})</span>
                     <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">TB ${tbVal}${tag}</span>
+                </li>`;
+            } else if (typeof sVal === 'object' && sVal !== null && (sVal.pd !== undefined || sVal.nivel !== undefined || sVal.baremo !== undefined)) {
+                const pdDisplay = sVal.pd !== undefined ? sVal.pd : '-';
+                const nivelDisplay = sVal.nivel || '';
+                const baremoDisplay = sVal.baremo ? ` <span style="font-size: 0.75rem; color: #64748b;">(${sVal.baremo})</span>` : '';
+                let badgeStyle = 'background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;';
+                const alerta = sVal.alerta || '';
+                const nl = nivelDisplay.toLowerCase();
+                if (alerta === 'severo' || nl.includes('sever') || nl.includes('positivo') || nl.includes('elevad') || nl.includes('grave')) {
+                    badgeStyle = 'background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;';
+                } else if (alerta === 'moderado' || alerta === 'leve' || nl.includes('moderad') || nl.includes('leve')) {
+                    badgeStyle = 'background:#ffedd5; color:#c2410c; border:1px solid #fdba74;';
+                }
+                subscalesHtml += `<li style="margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <span><strong>${sName}:</strong> (PD: ${pdDisplay})${baremoDisplay}</span>
+                    <span style="${badgeStyle} padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">${nivelDisplay || 'Registrado'}</span>
                 </li>`;
             } else {
                 const sValStr = String(sVal || '');

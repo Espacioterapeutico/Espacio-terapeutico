@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-consultorio-v124';
+const CACHE_NAME = 'mi-consultorio-v125';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/logo.png',
