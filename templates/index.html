@@ -21,6 +21,8 @@
     <!-- FullCalendar v6 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/es.global.min.js"></script>
+    <!-- Google Identity Services (Sign-In with Google) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Logo Favicon & PWA Manifest -->
     <link rel="icon" type="image/x-icon" href="/static/logo.ico">
     <link rel="manifest" href="/manifest.json">
@@ -923,10 +925,20 @@
             }
             var authForm = document.getElementById('auth-form');
             var recoveryView = document.getElementById('auth-recovery-view');
+            var linkView = document.getElementById('auth-google-link-view');
+            var googleSection = document.getElementById('google-login-section');
             if (authForm) authForm.style.display = 'block';
+            if (googleSection) googleSection.style.display = 'flex';
             if (recoveryView) {
                 recoveryView.style.display = 'none';
                 recoveryView.classList.add('hide');
+            }
+            if (linkView) {
+                linkView.style.display = 'none';
+                linkView.classList.add('hide');
+            }
+            if (typeof initGoogleSignIn === 'function') {
+                setTimeout(initGoogleSignIn, 60);
             }
             if (!window.location.pathname.includes('/login')) {
                 try { window.history.pushState({ auth: true }, '', '/login'); } catch(err) {}
@@ -979,6 +991,33 @@
                 <p id="auth-subtitle">Acceso protegido. Base de datos local.</p>
             </div>
             
+            <!-- BOTÓN OFICIAL DE INICIO DE SESIÓN CON GOOGLE -->
+            <div id="google-login-section" style="margin-bottom: 1.15rem; display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <div id="g_id_onload"
+                     data-client_id="437385369836-o0c7iesscvdj38obve2qi4itk5g0ongh.apps.googleusercontent.com"
+                     data-context="signin"
+                     data-ux_mode="popup"
+                     data-callback="handleGoogleCredentialResponse"
+                     data-auto_prompt="false">
+                </div>
+                <div id="google-btn-container" style="display: flex; justify-content: center; width: 100%; min-height: 44px;">
+                    <div class="g_id_signin"
+                         data-type="standard"
+                         data-shape="rectangular"
+                         data-theme="outline"
+                         data-text="continue_with"
+                         data-size="large"
+                         data-logo_alignment="left"
+                         data-width="320">
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; width: 100%; margin-top: 1rem; color: #94a3b8; font-size: 0.75rem; text-transform: uppercase;">
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                    <span style="padding: 0 0.65rem; font-weight: 600; letter-spacing: 0.5px;">O con usuario y contraseña</span>
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                </div>
+            </div>
+            
             <form id="auth-form" action="javascript:void(0);" onsubmit="if (window.handleAuthSubmit) { window.handleAuthSubmit(event); } else if (typeof handleAuthSubmit === 'function') { handleAuthSubmit(event); } return false;">
                 <div class="form-group">
                     <label for="auth-username">Usuario</label>
@@ -1007,6 +1046,44 @@
                     </div>
                 </div>
             </form>
+
+            <!-- VISTA DE VINCULACIÓN DE CUENTA GOOGLE CON USUARIO EXISTENTE -->
+            <div id="auth-google-link-view" class="hide" style="display: none; flex-direction: column;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 2.2rem; margin-bottom: 0.35rem;">🔗</div>
+                    <h3 style="color: #702e5e; font-size: 1.2rem; font-weight: 700; margin: 0 0 0.4rem 0;">Vincular con tu Cuenta</h3>
+                    <p style="font-size: 0.86rem; color: #475569; margin: 0; line-height: 1.4;">
+                        Conectado como <strong id="google-link-email-display" style="color: var(--primary-color);"></strong>
+                    </p>
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.4rem; line-height: 1.35;">
+                        Ingresa tu usuario y contraseña de Espacio Terapéutico por única vez para dejar enlazada tu cuenta de Google.
+                    </p>
+                </div>
+                
+                <form id="google-link-form" action="javascript:void(0);" onsubmit="handleGoogleLinkSubmit(event)">
+                    <div class="form-group">
+                        <label for="google-link-username">Usuario o Cédula</label>
+                        <input type="text" id="google-link-username" required placeholder="Tu usuario o cédula habitual">
+                    </div>
+                    <div class="form-group">
+                        <label for="google-link-password">Contraseña</label>
+                        <div class="password-toggle-wrapper">
+                            <input type="password" id="google-link-password" required placeholder="Tu contraseña">
+                            <button type="button" class="btn-password-toggle" onclick="togglePasswordVisibility('google-link-password', this)" title="Ver contraseña" tabindex="-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="google-link-error-msg" class="error-msg hide" style="margin-bottom: 0.75rem;"></div>
+                    <button type="submit" id="btn-google-link-submit" class="btn btn-primary btn-block" style="font-weight: 700; padding: 0.75rem;">
+                        Vincular y Entrar
+                    </button>
+                    <div style="margin-top: 1rem; text-align: center; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <a href="javascript:void(0);" onclick="openRegisterFromGoogle(event)" style="font-size: 0.82rem; color: var(--primary-color); font-weight: 600; text-decoration: none;">¿Eres nuevo? Crear cuenta con este correo</a>
+                        <a href="javascript:void(0);" onclick="cancelGoogleLink()" style="font-size: 0.8rem; color: #64748b; text-decoration: none;">← Volver al login normal</a>
+                    </div>
+                </form>
+            </div>
 
             <!-- VISTA DE RECUPERACIÓN (Mismo Card) -->
             <div id="auth-recovery-view" class="hide" style="display: none; flex-direction: column;">

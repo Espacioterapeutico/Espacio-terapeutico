@@ -1851,6 +1851,211 @@ async function handleAuthSubmit(e) {
 }
 window.handleAuthSubmit = handleAuthSubmit;
 
+// =========================================================================
+// GOOGLE SIGN-IN & VINCULACIÓN DE CUENTAS
+// =========================================================================
+
+const GOOGLE_CLIENT_ID = "437385369836-o0c7iesscvdj38obve2qi4itk5g0ongh.apps.googleusercontent.com";
+let pendingGoogleCredential = null;
+let pendingGoogleEmail = null;
+let pendingGoogleName = null;
+
+function initGoogleSignIn() {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+        try {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleCredentialResponse,
+                auto_select: false,
+                context: "signin"
+            });
+            const parent = document.getElementById("google-btn-container");
+            if (parent) {
+                parent.innerHTML = '';
+                google.accounts.id.renderButton(parent, {
+                    theme: "outline",
+                    size: "large",
+                    type: "standard",
+                    shape: "rectangular",
+                    text: "continue_with",
+                    logo_alignment: "left",
+                    width: Math.min(320, window.innerWidth - 60)
+                });
+            }
+        } catch (e) {
+            console.warn("[Google Sign-In] Inicialización automática:", e);
+        }
+    }
+}
+
+async function handleGoogleCredentialResponse(response) {
+    if (!response || !response.credential) return;
+    const errorEl = document.getElementById('auth-error-msg');
+    if (errorEl) {
+        errorEl.textContent = 'Verificando cuenta con Google...';
+        errorEl.classList.remove('hide');
+        errorEl.style.color = '#7e22ce';
+    }
+    
+    try {
+        const res = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.status === 'success') {
+            if (errorEl) errorEl.classList.add('hide');
+            if (data.role === 'paciente') {
+                showPatientLayout(data.username, data.patient_id);
+            } else {
+                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
+            }
+        } else if (data.status === 'account_not_linked') {
+            if (errorEl) errorEl.classList.add('hide');
+            promptGoogleAccountLinking(data.google_email, data.google_name, response.credential);
+        } else {
+            if (errorEl) {
+                errorEl.textContent = data.error || 'Error al autenticar con Google.';
+                errorEl.style.color = '#ef4444';
+                errorEl.classList.remove('hide');
+            }
+        }
+    } catch (err) {
+        if (errorEl) {
+            errorEl.textContent = 'Error de conexión con el servidor.';
+            errorEl.style.color = '#ef4444';
+            errorEl.classList.remove('hide');
+        }
+    }
+}
+
+function promptGoogleAccountLinking(googleEmail, googleName, credential) {
+    pendingGoogleCredential = credential;
+    pendingGoogleEmail = googleEmail;
+    pendingGoogleName = googleName;
+    
+    const authForm = document.getElementById('auth-form');
+    const googleSection = document.getElementById('google-login-section');
+    const linkView = document.getElementById('auth-google-link-view');
+    const displayEmail = document.getElementById('google-link-email-display');
+    const errBox = document.getElementById('google-link-error-msg');
+    
+    if (displayEmail) displayEmail.textContent = googleEmail || '';
+    if (errBox) {
+        errBox.textContent = '';
+        errBox.classList.add('hide');
+    }
+    
+    if (authForm) authForm.style.display = 'none';
+    if (googleSection) googleSection.style.display = 'none';
+    if (linkView) {
+        linkView.classList.remove('hide');
+        linkView.style.display = 'flex';
+    }
+}
+
+async function handleGoogleLinkSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const username = (document.getElementById('google-link-username')?.value || '').trim();
+    const password = (document.getElementById('google-link-password')?.value || '').trim();
+    const errBox = document.getElementById('google-link-error-msg');
+    const submitBtn = document.getElementById('btn-google-link-submit');
+    
+    if (!username || !password || !pendingGoogleCredential) {
+        if (errBox) {
+            errBox.textContent = 'Por favor completa usuario y contraseña.';
+            errBox.classList.remove('hide');
+        }
+        return;
+    }
+    
+    const origText = submitBtn ? submitBtn.textContent : 'Vincular y Entrar';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Vinculando...';
+    }
+    if (errBox) errBox.classList.add('hide');
+    
+    try {
+        const res = await fetch('/api/auth/google/link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                credential: pendingGoogleCredential,
+                username: username,
+                password: password
+            })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.status === 'success') {
+            if (errBox) errBox.classList.add('hide');
+            cancelGoogleLink();
+            if (data.role === 'paciente') {
+                showPatientLayout(data.username, data.patient_id);
+            } else {
+                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
+            }
+        } else {
+            if (errBox) {
+                errBox.textContent = data.error || 'Error al vincular cuenta.';
+                errBox.classList.remove('hide');
+            }
+        }
+    } catch (err) {
+        if (errBox) {
+            errBox.textContent = 'Error de conexión con el servidor.';
+            errBox.classList.remove('hide');
+        }
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = origText;
+        }
+    }
+}
+
+function cancelGoogleLink() {
+    const authForm = document.getElementById('auth-form');
+    const googleSection = document.getElementById('google-login-section');
+    const linkView = document.getElementById('auth-google-link-view');
+    
+    if (linkView) {
+        linkView.classList.add('hide');
+        linkView.style.display = 'none';
+    }
+    if (authForm) authForm.style.display = 'block';
+    if (googleSection) googleSection.style.display = 'flex';
+}
+
+function openRegisterFromGoogle(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    cancelGoogleLink();
+    if (typeof openRegisterModal === 'function') {
+        openRegisterModal(e);
+        setTimeout(() => {
+            const regEmail = document.getElementById('reg-email');
+            const regNombres = document.getElementById('reg-nombres');
+            if (regEmail && pendingGoogleEmail) regEmail.value = pendingGoogleEmail;
+            if (regNombres && pendingGoogleName) regNombres.value = pendingGoogleName;
+        }, 150);
+    }
+}
+
+window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
+window.handleGoogleLinkSubmit = handleGoogleLinkSubmit;
+window.cancelGoogleLink = cancelGoogleLink;
+window.openRegisterFromGoogle = openRegisterFromGoogle;
+window.initGoogleSignIn = initGoogleSignIn;
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initGoogleSignIn, 500));
+} else {
+    setTimeout(initGoogleSignIn, 500);
+}
+
 async function handleLogout() {
     try {
         await fetch('/api/logout', { method: 'POST' });

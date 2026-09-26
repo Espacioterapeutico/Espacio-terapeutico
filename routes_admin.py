@@ -302,6 +302,255 @@ def check_session():
     else:
         return jsonify({'authenticated': False}), 401
 
+# =========================================================================
+# AUTENTICACIÓN OFICIAL CON GOOGLE (GOOGLE SIGN-IN)
+# =========================================================================
+
+GOOGLE_OAUTH_CLIENT_ID = "437385369836-o0c7iesscvdj38obve2qi4itk5g0ongh.apps.googleusercontent.com"
+
+def verify_google_id_token(credential_jwt):
+    """Verifica el token JWT de Google de forma dual: biblioteca google.oauth2 o endpoint oficial tokeninfo."""
+    if not credential_jwt:
+        return None
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        id_info = id_token.verify_oauth2_token(credential_jwt, google_requests.Request(), GOOGLE_OAUTH_CLIENT_ID)
+        return id_info
+    except Exception as e_lib:
+        print("[Google Auth] Verificación local con id_token falló, consultando tokeninfo de Google:", e_lib, flush=True)
+        try:
+            import requests
+            resp = requests.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={credential_jwt}", timeout=10)
+            if resp.ok:
+                data = resp.json()
+                aud = data.get('aud', '')
+                if aud == GOOGLE_OAUTH_CLIENT_ID or aud.startswith('437385369836'):
+                    return data
+        except Exception as e_net:
+            print("[Google Auth] Error en tokeninfo endpoint:", e_net, flush=True)
+        return None
+
+@admin_bp.route('/api/auth/google', methods=['POST'])
+def auth_google():
+    data = request.json or {}
+    credential = data.get('credential')
+    if not credential:
+        return jsonify({'error': 'Token de credencial de Google ausente.'}), 400
+        
+    id_info = verify_google_id_token(credential)
+    if not id_info or not id_info.get('email'):
+        return jsonify({'error': 'Token de Google inválido o expirado. Por favor, intenta de nuevo.'}), 401
+        
+    email = id_info['email'].strip().lower()
+    email_verified = id_info.get('email_verified', False)
+    if str(email_verified).lower() not in ['true', '1']:
+        return jsonify({'error': 'El correo de Google no está verificado.'}), 403
+        
+    db = get_db()
+    cursor = db.cursor()
+    
+    # 1. Buscar en psicólogos / administradores (usuarios)
+    cursor.execute("SELECT * FROM usuarios WHERE LOWER(email) = ?", (email,))
+    user = cursor.fetchone()
+    if user:
+        u_dict = dict(user)
+        if u_dict.get('activo', 1) == 0:
+            return jsonify({'error': 'Tu cuenta se encuentra inactiva. Contacta a administración.'}), 403
+            
+        is_sub_expired = False
+        if u_dict['role'] == 'psicologo':
+            is_sub_expired = is_user_subscription_expired(cursor, u_dict['id'])
+            
+        session.clear()
+        session.permanent = True
+        session['user_id'] = u_dict['id']
+        session['username'] = u_dict['username']
+        session['role'] = u_dict['role']
+        session['activo'] = u_dict['activo']
+        session['google_auth'] = True
+        
+        return jsonify({
+            'status': 'success',
+            'role': u_dict['role'],
+            'username': u_dict['username'],
+            'user_id': u_dict['id'],
+            'activo': u_dict.get('activo', 1),
+            'nombres': u_dict.get('nombres', ''),
+            'apellidos': u_dict.get('apellidos', ''),
+            'primer_inicio': u_dict.get('primer_inicio', 1) if u_dict.get('primer_inicio') is not None else 1,
+            'suscripcion_paga': u_dict.get('suscripcion_paga', 0),
+            'fecha_expiracion_prueba': u_dict.get('fecha_expiracion_prueba', ''),
+            'suscripcion_expirada': is_sub_expired,
+            'bloqueos': {
+                'registro': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_registro', 0),
+                'registro_rapido': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_registro_rapido', 0),
+                'evoluciones': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_evoluciones', 0),
+                'finanzas': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_finanzas', 0),
+                'agenda': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_agenda', 0),
+                'mensajes': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_mensajes', 0),
+                'pizarra': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_pizarra') or 0),
+                'herramientas': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_herramientas') or 0),
+                'confirmaciones': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_confirmaciones') or 0),
+                'examen_mental': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_examen_mental') or 0),
+                'tests': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0)
+            }
+        })
+        
+    # 2. Buscar en pacientes
+    cursor.execute("SELECT * FROM pacientes WHERE LOWER(email) = ?", (email,))
+    patient = cursor.fetchone()
+    if patient:
+        p_dict = dict(patient)
+        session.clear()
+        session.permanent = True
+        session['patient_id'] = p_dict['id']
+        session['patient_username'] = p_dict.get('username') or p_dict.get('cedula')
+        session['role'] = 'paciente'
+        session['google_auth'] = True
+        
+        full_name = f"{p_dict.get('nombres', '')} {p_dict.get('apellidos', '')}".strip() or p_dict.get('username') or p_dict.get('cedula')
+        return jsonify({
+            'status': 'success',
+            'role': 'paciente',
+            'patient_id': p_dict['id'],
+            'username': full_name
+        })
+        
+    # 3. No vinculado aún
+    return jsonify({
+        'status': 'account_not_linked',
+        'google_email': email,
+        'google_name': id_info.get('name', ''),
+        'message': f'La cuenta de Google ({email}) no está vinculada aún a ningún usuario o consultante registrado.'
+    })
+
+@admin_bp.route('/api/auth/google/link', methods=['POST'])
+def auth_google_link():
+    data = request.json or {}
+    credential = data.get('credential')
+    username = (data.get('username') or '').strip()
+    password = (data.get('password') or '').strip()
+    
+    if not credential or not username or not password:
+        return jsonify({'error': 'Credencial de Google, usuario y contraseña son requeridos.'}), 400
+        
+    id_info = verify_google_id_token(credential)
+    if not id_info or not id_info.get('email'):
+        return jsonify({'error': 'Token de Google inválido o expirado.'}), 401
+        
+    email = id_info['email'].strip().lower()
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    # 1. Probar vinculación con usuario terapeuta/admin
+    cursor.execute("SELECT * FROM usuarios WHERE LOWER(username) = LOWER(?) OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?))", (username, username))
+    user = cursor.fetchone()
+    if user:
+        u_dict = dict(user)
+        if check_password_hash(u_dict['password_hash'], password) or u_dict['password_hash'] == password:
+            cursor.execute("UPDATE usuarios SET email = ? WHERE id = ?", (email, u_dict['id']))
+            db.commit()
+            
+            is_sub_expired = False
+            if u_dict['role'] == 'psicologo':
+                is_sub_expired = is_user_subscription_expired(cursor, u_dict['id'])
+                
+            session.clear()
+            session.permanent = True
+            session['user_id'] = u_dict['id']
+            session['username'] = u_dict['username']
+            session['role'] = u_dict['role']
+            session['activo'] = u_dict['activo']
+            session['google_auth'] = True
+            
+            return jsonify({
+                'status': 'success',
+                'linked': True,
+                'role': u_dict['role'],
+                'username': u_dict['username'],
+                'user_id': u_dict['id'],
+                'activo': u_dict.get('activo', 1),
+                'nombres': u_dict.get('nombres', ''),
+                'apellidos': u_dict.get('apellidos', ''),
+                'primer_inicio': u_dict.get('primer_inicio', 1) if u_dict.get('primer_inicio') is not None else 1,
+                'suscripcion_paga': u_dict.get('suscripcion_paga', 0),
+                'fecha_expiracion_prueba': u_dict.get('fecha_expiracion_prueba', ''),
+                'suscripcion_expirada': is_sub_expired,
+                'bloqueos': {
+                    'registro': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_registro', 0),
+                    'registro_rapido': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_registro_rapido', 0),
+                    'evoluciones': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_evoluciones', 0),
+                    'finanzas': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_finanzas', 0),
+                    'agenda': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_agenda', 0),
+                    'mensajes': 0 if u_dict['role'] == 'admin' else u_dict.get('bloqueo_mensajes', 0),
+                    'pizarra': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_pizarra') or 0),
+                    'herramientas': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_herramientas') or 0),
+                    'confirmaciones': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_confirmaciones') or 0),
+                    'examen_mental': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_examen_mental') or 0),
+                    'tests': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0)
+                }
+            })
+        else:
+            return jsonify({'error': 'Contraseña incorrecta para el usuario indicado.'}), 401
+            
+    # 2. Probar vinculación con paciente
+    from routes_pacientes import clean_digits_only
+    cursor.execute("SELECT * FROM pacientes WHERE LOWER(username) = ? OR cedula = ?", (username.lower(), username))
+    patient = cursor.fetchone()
+    if not patient:
+        digits = clean_digits_only(username)
+        if digits:
+            cursor.execute("""
+                SELECT * FROM pacientes 
+                WHERE REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '') = ?
+            """, (digits,))
+            patient = cursor.fetchone()
+            
+    if patient:
+        p_dict = dict(patient)
+        is_valid_pwd = False
+        if not p_dict['password_hash']:
+            pwd_lower = password.strip().lower()
+            ced_lower = (p_dict['cedula'] or '').strip().lower()
+            usr_lower = (p_dict['username'] or '').strip().lower()
+            clean_pwd = clean_digits_only(password)
+            clean_ced = clean_digits_only(p_dict['cedula'])
+            clean_usr = clean_digits_only(p_dict['username'])
+            is_valid_pwd = (
+                pwd_lower == ced_lower or 
+                pwd_lower == usr_lower or 
+                (clean_pwd != '' and clean_pwd == clean_ced) or 
+                (clean_pwd != '' and clean_pwd == clean_usr)
+            )
+        else:
+            is_valid_pwd = check_password_hash(p_dict['password_hash'], password)
+            
+        if is_valid_pwd:
+            cursor.execute("UPDATE pacientes SET email = ? WHERE id = ?", (email, p_dict['id']))
+            db.commit()
+            
+            session.clear()
+            session.permanent = True
+            session['patient_id'] = p_dict['id']
+            session['patient_username'] = p_dict.get('username') or p_dict.get('cedula')
+            session['role'] = 'paciente'
+            session['google_auth'] = True
+            
+            full_name = f"{p_dict.get('nombres', '')} {p_dict.get('apellidos', '')}".strip() or p_dict.get('username') or p_dict.get('cedula')
+            return jsonify({
+                'status': 'success',
+                'linked': True,
+                'role': 'paciente',
+                'patient_id': p_dict['id'],
+                'username': full_name
+            })
+        else:
+            return jsonify({'error': 'Contraseña o PIN incorrecto para este consultante.'}), 401
+            
+    return jsonify({'error': 'No encontramos ninguna cuenta con ese nombre de usuario o cédula.'}), 404
+
 # --- RECUPERACIÓN Y CAMBIO DE CONTRASEÑAS ---
 
 @admin_bp.route('/api/auth/get-security-questions', methods=['POST'])
