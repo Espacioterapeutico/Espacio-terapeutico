@@ -246,44 +246,44 @@ def get_patients():
         else:
             psic_id = user_id if user_id else 1
     
-    if search:
-        query = "%" + search + "%"
-        if psic_id is not None:
-            cursor.execute("""
-                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
-                FROM pacientes p
-                LEFT JOIN organizaciones o ON p.organizacion_id = o.id
-                WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '') AND (p.psicologo_id = ? OR p.psicologo_id IS NULL) AND (p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)
-                ORDER BY p.nombres ASC, p.apellidos ASC
-            """, (psic_id, query, query, query))
-        else:
-            cursor.execute("""
-                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
-                FROM pacientes p
-                LEFT JOIN organizaciones o ON p.organizacion_id = o.id
-                WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '') AND (p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)
-                ORDER BY p.nombres ASC, p.apellidos ASC
-            """, (query, query, query))
+    if psic_id is not None:
+        cursor.execute("""
+            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
+            FROM pacientes p
+            LEFT JOIN organizaciones o ON p.organizacion_id = o.id
+            WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '') AND (p.psicologo_id = ? OR p.psicologo_id IS NULL) 
+            ORDER BY p.nombres ASC, p.apellidos ASC
+        """, (psic_id,))
     else:
-        if psic_id is not None:
-            cursor.execute("""
-                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
-                FROM pacientes p
-                LEFT JOIN organizaciones o ON p.organizacion_id = o.id
-                WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '') AND (p.psicologo_id = ? OR p.psicologo_id IS NULL) 
-                ORDER BY p.nombres ASC, p.apellidos ASC
-            """, (psic_id,))
-        else:
-            cursor.execute("""
-                SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
-                FROM pacientes p
-                LEFT JOIN organizaciones o ON p.organizacion_id = o.id
-                WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '')
-                ORDER BY p.nombres ASC, p.apellidos ASC
-            """)
+        cursor.execute("""
+            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
+            FROM pacientes p
+            LEFT JOIN organizaciones o ON p.organizacion_id = o.id
+            WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '')
+            ORDER BY p.nombres ASC, p.apellidos ASC
+        """)
         
-    patients = [dict(row) for row in cursor.fetchall()]
-    return jsonify(patients)
+    all_patients = [dict(row) for row in cursor.fetchall()]
+
+    if search:
+        import unicodedata
+        def strip_accents(text):
+            if not text:
+                return ""
+            return ''.join(c for c in unicodedata.normalize('NFD', str(text).lower()) if unicodedata.category(c) != 'Mn')
+
+        tokens = [strip_accents(t) for t in search.split() if t.strip()]
+        if not tokens:
+            return jsonify(all_patients)
+
+        filtered_patients = []
+        for p in all_patients:
+            full_searchable = strip_accents(f"{p.get('cedula', '')} {p.get('nombres', '')} {p.get('apellidos', '')} {p.get('residencia_actual', '')} {p.get('ciudad', '')}")
+            if all(token in full_searchable for token in tokens):
+                filtered_patients.append(p)
+        return jsonify(filtered_patients)
+
+    return jsonify(all_patients)
 
 
 @pacientes_bp.route('/api/patients/archived', methods=['GET'])

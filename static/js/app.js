@@ -1,5 +1,28 @@
 
 // ==========================================
+// UTILIDADES GLOBALES DE BÚSQUEDA Y FILTRADO (ACENTOS, MULTIPALABRA Y TOKENS)
+// ==========================================
+function normalizeSearchText(str) {
+    if (!str && str !== 0) return '';
+    return str
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+}
+
+function matchesSearchQuery(targetText, queryString) {
+    if (!queryString || !queryString.trim()) return true;
+    const cleanTarget = normalizeSearchText(targetText);
+    const tokens = normalizeSearchText(queryString).split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return true;
+    return tokens.every(token => cleanTarget.includes(token));
+}
+window.normalizeSearchText = normalizeSearchText;
+window.matchesSearchQuery = matchesSearchQuery;
+
+// ==========================================
 // VARIABLES GLOBALES Y BASE DE DATOS DE TESTS PSICOLÓGICOS (TOP SCOPE)
 // ==========================================
 var allTestPatientsCache = [];
@@ -5036,12 +5059,12 @@ function renderPatientsTable(list) {
     tbody.innerHTML = '';
     
     const input = document.getElementById('patient-table-search-input');
-    const query = input ? input.value.toLowerCase().trim() : '';
+    const query = input ? input.value : '';
 
     const filtered = (list || []).filter(p => {
-        if (!query) return true;
-        const fullText = `${p.cedula || ''} ${p.nombres || ''} ${p.apellidos || ''} ${p.residencia_actual || ''}`.toLowerCase();
-        return fullText.includes(query);
+        if (!query || !query.trim()) return true;
+        const fullText = `${p.cedula || ''} ${p.nombres || ''} ${p.apellidos || ''} ${p.residencia_actual || ''}`;
+        return matchesSearchQuery(fullText, query);
     });
 
     const counter = document.getElementById('patient-search-counter');
@@ -5980,9 +6003,8 @@ function applySessionsFilters(resetPage = false) {
     // 1. Filtrar por búsqueda de texto (nombre, apellido, cédula)
     if (searchQuery) {
         filteredList = filteredList.filter(s => {
-            const fullname = `${s.nombres || ''} ${s.apellidos || ''}`.toLowerCase();
-            const cedula = (s.cedula || '').toLowerCase();
-            return fullname.includes(searchQuery) || cedula.includes(searchQuery);
+            const fullText = `${s.cedula || ''} ${s.nombres || ''} ${s.apellidos || ''}`;
+            return matchesSearchQuery(fullText, searchQuery);
         });
     }
     
@@ -11117,7 +11139,6 @@ function filterModalPatientSelect(query) {
     const select = document.getElementById('s-paciente');
     if (!select) return;
     const options = select.options;
-    const lowerQuery = query.toLowerCase();
     
     let firstVisibleMatch = null;
     
@@ -11125,8 +11146,7 @@ function filterModalPatientSelect(query) {
         const option = options[i];
         if (option.value === "") continue;
         
-        const text = option.textContent.toLowerCase();
-        if (text.includes(lowerQuery)) {
+        if (matchesSearchQuery(option.textContent, query)) {
             option.style.display = "";
             if (!firstVisibleMatch) firstVisibleMatch = option.value;
         } else {
@@ -11134,7 +11154,7 @@ function filterModalPatientSelect(query) {
         }
     }
     
-    if (query.trim() !== "") {
+    if (query && query.trim() !== "") {
         if (firstVisibleMatch && select.value !== firstVisibleMatch) {
             select.value = firstVisibleMatch;
             checkSessionPatientPrepayments(firstVisibleMatch);
@@ -11151,7 +11171,6 @@ function filterEventPatientSelect(query) {
     const select = document.getElementById('e-paciente');
     if (!select) return;
     const options = select.options;
-    const lowerQuery = query.toLowerCase();
     
     let firstVisibleMatch = null;
     
@@ -11159,8 +11178,7 @@ function filterEventPatientSelect(query) {
         const option = options[i];
         if (option.value === "") continue;
         
-        const text = option.textContent.toLowerCase();
-        if (text.includes(lowerQuery)) {
+        if (matchesSearchQuery(option.textContent, query)) {
             option.style.display = "";
             if (!firstVisibleMatch) firstVisibleMatch = option.value;
         } else {
@@ -11168,7 +11186,7 @@ function filterEventPatientSelect(query) {
         }
     }
     
-    if (query.trim() !== "") {
+    if (query && query.trim() !== "") {
         if (firstVisibleMatch && select.value !== firstVisibleMatch) {
             select.value = firstVisibleMatch;
             checkPatientPrepayments(firstVisibleMatch);
@@ -17466,9 +17484,8 @@ function renderPatientRatesTable() {
 
     const filtered = allPatientRatesData.filter(p => {
         if (!query) return true;
-        const nombreCompleto = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
-        const cedula = (p.cedula || '').toLowerCase();
-        return nombreCompleto.includes(query) || cedula.includes(query);
+        const fullText = `${p.cedula || ''} ${p.nombres || ''} ${p.apellidos || ''}`;
+        return matchesSearchQuery(fullText, query);
     });
 
     if (filtered.length === 0) {
@@ -20819,9 +20836,8 @@ async function onTherapistToolPatientSearch(query) {
         const patients = cachedTherapistPatients || [];
         
         const filtered = patients.filter(p => {
-            const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
-            const cedula = (p.cedula || '').toLowerCase();
-            return fullName.includes(q) || cedula.includes(q);
+            const fullText = `${p.cedula || ''} ${p.nombres || ''} ${p.apellidos || ''}`;
+            return matchesSearchQuery(fullText, q);
         });
 
         if (filtered.length === 0) {
@@ -24915,9 +24931,8 @@ function onMseSearchInput() {
     }
     
     const matches = msePatientsCache.filter(p => {
-        const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
-        const cedula = (p.cedula || '').toLowerCase();
-        return !query || fullName.includes(query) || cedula.includes(query);
+        const fullText = `${p.cedula || ''} ${p.nombres || ''} ${p.apellidos || ''}`;
+        return matchesSearchQuery(fullText, query);
     });
     
     if (matches.length === 0) {
@@ -27045,8 +27060,8 @@ async function filterTestPatientSelect() {
     if (clearBtn) clearBtn.style.display = 'inline-flex';
 
     const filtered = pool.filter(p => {
-        const fullStr = `${p.nombres || ''} ${p.apellidos || ''} ${p.cedula || ''}`.toLowerCase();
-        return fullStr.includes(query);
+        const fullStr = `${p.cedula || ''} ${p.nombres || ''} ${p.apellidos || ''}`;
+        return matchesSearchQuery(fullStr, query);
     });
 
     if (filtered.length === 0) {
@@ -30209,7 +30224,6 @@ function filterQuickPayPatientSelect(query) {
     const select = document.getElementById('qp-paciente');
     if (!select) return;
     const options = select.options;
-    const lowerQuery = query.toLowerCase();
     
     let firstVisibleMatch = null;
     
@@ -30217,8 +30231,7 @@ function filterQuickPayPatientSelect(query) {
         const option = options[i];
         if (option.value === "") continue;
         
-        const text = option.textContent.toLowerCase();
-        if (text.includes(lowerQuery)) {
+        if (matchesSearchQuery(option.textContent, query)) {
             option.style.display = "";
             if (!firstVisibleMatch) firstVisibleMatch = option.value;
         } else {
@@ -30226,9 +30239,13 @@ function filterQuickPayPatientSelect(query) {
         }
     }
     
-    if (firstVisibleMatch && query.trim() !== "") {
+    if (firstVisibleMatch && query && query.trim() !== "") {
         select.value = firstVisibleMatch;
         handleQuickPayPatientChange(firstVisibleMatch);
+    } else if (!query || !query.trim()) {
+        for (let i = 0; i < options.length; i++) {
+            options[i].style.display = "";
+        }
     }
 }
 
