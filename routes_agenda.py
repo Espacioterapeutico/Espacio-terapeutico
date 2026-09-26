@@ -1014,8 +1014,17 @@ def update_agenda_event_status(event_id):
     if target_cancellation == 'Cancelada con aviso':
         updates.append("estado_pago = 'Cancelada con aviso'")
         updates.append("confirmada = 0")
-        if cita['estado_pago'] == 'Prepagada' or cita['tipo_consulta'] == 'Paquete Prepagado':
-            updates.append("control_uso = 'No consumida'")
+        if cita['estado_pago'] == 'Prepagada' or cita['tipo_consulta'] == 'Paquete Prepagado' or cita['metodo_pago'] == 'Descontado de Prepago':
+            # Si era una sesión descontada de prepago, devolverla al paquete prepagado activo
+            cursor.execute("""
+                SELECT id FROM agenda_finanzas 
+                WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
+                ORDER BY id DESC LIMIT 1
+            """, (cita['paciente_id'],))
+            pkg = cursor.fetchone()
+            if pkg:
+                cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = cantidad_sesiones + 1 WHERE id = ?", (pkg['id'],))
+            updates.append("control_uso = 'Consumida'")
         else:
             updates.append("monto = 0.0")
         if motivo:
@@ -1079,9 +1088,9 @@ def update_agenda_event_status(event_id):
             if int(confirmada) == 1:
                 _update_google_calendar_status_bg(event_id, 'confirmada')
             
-        if estado_pago is not None:
+        if estado_pago is not None and str(estado_pago).strip() != '':
             updates.append("estado_pago = ?")
-            params.append(estado_pago)
+            params.append(str(estado_pago).strip())
         elif estado == 'Confirmada':
             updates.append("confirmada = 1")
             _update_google_calendar_status_bg(event_id, 'confirmada')

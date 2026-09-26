@@ -57,7 +57,7 @@ def auto_settle_patient_debts(db, patient_id):
         cursor.execute("""
             SELECT id, cantidad_sesiones 
             FROM agenda_finanzas 
-            WHERE paciente_id = ? AND estado_pago IN ('Prepagada', 'Paga') AND control_uso = 'No consumida'
+            WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
               AND id != ?
             ORDER BY fecha ASC, id ASC LIMIT 1
         """, (patient_id, debt['id']))
@@ -70,15 +70,15 @@ def auto_settle_patient_debts(db, patient_id):
         new_status = 'Cancelada sin aviso - Paga' if debt_status == 'Cancelada sin aviso' else 'Paga'
         
         pkg_id = pkg['id']
-        pkg_cant = pkg['cantidad_sesiones']
+        pkg_cant = pkg['cantidad_sesiones'] or 1
         if pkg_cant > 1:
             cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg_cant - 1, pkg_id))
         else:
-            cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg_id,))
+            cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = 0, control_uso = 'Consumida' WHERE id = ?", (pkg_id,))
             
         cursor.execute("""
             UPDATE agenda_finanzas 
-            SET estado_pago = ?, control_uso = 'No consumida', monto = 0.0,
+            SET estado_pago = ?, control_uso = 'Consumida', monto = 0.0,
                 metodo_pago = 'Descontado de Prepago', referencia = 'Prepago',
                 fecha_liquidacion = datetime('now', 'localtime')
             WHERE id = ?
