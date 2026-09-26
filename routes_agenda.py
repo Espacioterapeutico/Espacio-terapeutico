@@ -1482,9 +1482,28 @@ def fast_booking_book():
             return jsonify({'error': f'Error al registrar paciente automáticamente: {str(ex)}'}), 500
     else:
         patient_id = patient['id']
-        pac_nombre = f"{patient['nombres']} {patient['apellidos']}"
-        if email and not patient['email']:
-            cursor.execute("UPDATE pacientes SET email = ? WHERE id = ?", (email, patient_id))
+        # REGLA DE PREVALENCIA DEL PSICÓLOGO:
+        # 1. Nombres y apellidos guardados por el psicólogo SIEMPRE prevalecen
+        pac_nombre = f"{patient['nombres']} {patient['apellidos']}".strip() or f"{nombres} {apellidos}".strip()
+        
+        # 2. Contacto: solo actualizar si el consultante ingresó un dato no vacío y diferente
+        # Si el consultante dejó el teléfono vacío, NUNCA se borra el del psicólogo
+        updates = []
+        params = []
+        clean_new_tel = telefono.strip() if telefono else ''
+        if clean_new_tel and clean_new_tel != (patient['telefono'] or '').strip():
+            updates.append("telefono = ?")
+            params.append(clean_new_tel)
+            
+        clean_new_email = email.strip() if email else ''
+        if clean_new_email and clean_new_email != (patient['email'] or '').strip():
+            updates.append("email = ?")
+            params.append(clean_new_email)
+            
+        if updates:
+            params.append(patient_id)
+            cursor.execute(f"UPDATE pacientes SET {', '.join(updates)} WHERE id = ?", params)
+            db.commit()
         
     try:
         google_event_id = None
@@ -1927,15 +1946,17 @@ def fast_booking_check_cedula():
     db = get_db()
     cursor = db.cursor()
     import re
-    digits_cedula = re.sub(r'\D', '', cedula)
+    clean_cedula = cedula.strip()
+    digits_cedula = re.sub(r'\D', '', clean_cedula)
     
     cursor.execute('''
         SELECT nombres, apellidos, telefono, email 
         FROM pacientes 
         WHERE (LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '') 
-           OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = ?)
+           OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', '')))
+           OR (LOWER(username) = LOWER(?) AND username != '')
         LIMIT 1
-    ''', (digits_cedula, digits_cedula, cedula.lower()))
+    ''', (digits_cedula, digits_cedula, clean_cedula, clean_cedula.lower()))
     
     row = cursor.fetchone()
     if row:

@@ -13427,7 +13427,7 @@ async function validateRegisterCedula() {
         } else if (data.status === 'pre_registered') {
             isPreRegisteredPatient = true;
             
-            // Llenar campos y deshabilitar
+            // Llenar campos y deshabilitar identidad
             document.getElementById('reg-tipo-usuario').value = 'paciente';
             document.getElementById('reg-nombres').value = data.nombres || '';
             document.getElementById('reg-nombres').disabled = true;
@@ -13435,6 +13435,16 @@ async function validateRegisterCedula() {
             document.getElementById('reg-apellidos').disabled = true;
             document.getElementById('reg-cedula').value = cedula;
             document.getElementById('reg-cedula').disabled = true;
+
+            // Precargar datos de contacto registrados por el terapeuta (editables)
+            const telInput = document.getElementById('reg-telefono');
+            if (telInput && data.telefono) {
+                telInput.value = data.telefono;
+            }
+            const emailInput = document.getElementById('reg-email');
+            if (emailInput && data.email) {
+                emailInput.value = data.email;
+            }
             
             // Configurar modal
             document.getElementById('reg-step-cedula').classList.add('hide');
@@ -13445,7 +13455,7 @@ async function validateRegisterCedula() {
             document.getElementById('reg-psicologo-fields').classList.add('hide');
             document.getElementById('reg-security-questions-fields').classList.remove('hide'); // Mostrar preguntas de seguridad
             
-            alert(`¡Hola ${data.nombres}! Ya estás registrado en el sistema. Crea tu usuario y contraseña de acceso.`);
+            alert(`¡Hola ${data.nombres}! Ya estás registrado en el sistema por tu terapeuta. Por favor crea tu usuario y contraseña de acceso.`);
         } else {
             isPreRegisteredPatient = false;
             
@@ -28851,26 +28861,84 @@ function openWhatsAppBroadcastModal() {
     openModal('whatsapp-broadcast-modal');
 }
 
+let fastCedulaDebounceTimer = null;
+
+async function checkAndAutofillFastPatient(cedula) {
+    if (!cedula || cedula.length < 5) return;
+    try {
+        const res = await fetch('/api/fast-booking/check-cedula', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ cedula }) 
+        });
+        const data = await res.json();
+        const nomEl = document.getElementById('fast-nombres');
+        const apeEl = document.getElementById('fast-apellidos');
+        const telEl = document.getElementById('fast-telefono');
+        const mailEl = document.getElementById('fast-email');
+        const cedLabel = document.querySelector('label[for="fast-cedula"]') || document.querySelector('label[for="fast-nombres"]');
+
+        let badge = document.getElementById('fast-patient-verified-badge');
+
+        if (data.found) {
+            if (nomEl) {
+                nomEl.value = data.nombres || '';
+                nomEl.readOnly = true;
+                nomEl.style.backgroundColor = '#f8fafc';
+                nomEl.style.cursor = 'not-allowed';
+            }
+            if (apeEl) {
+                apeEl.value = data.apellidos || '';
+                apeEl.readOnly = true;
+                apeEl.style.backgroundColor = '#f8fafc';
+                apeEl.style.cursor = 'not-allowed';
+            }
+            if (telEl) {
+                telEl.value = data.telefono || '';
+                telEl.placeholder = data.telefono ? data.telefono : "Ej: +584123456789";
+            }
+            if (mailEl) {
+                mailEl.value = data.email || '';
+            }
+
+            if (!badge && cedLabel) {
+                badge = document.createElement('span');
+                badge.id = 'fast-patient-verified-badge';
+                badge.style.cssText = 'font-size: 0.74rem; background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 6px; font-weight: 700; margin-left: 6px; border: 1px solid #bae6fd;';
+                badge.textContent = '✓ Consultante Registrado';
+                cedLabel.appendChild(badge);
+            }
+        } else {
+            if (nomEl) {
+                nomEl.readOnly = false;
+                nomEl.style.backgroundColor = '';
+                nomEl.style.cursor = '';
+            }
+            if (apeEl) {
+                apeEl.readOnly = false;
+                apeEl.style.backgroundColor = '';
+                apeEl.style.cursor = '';
+            }
+            if (badge) badge.remove();
+        }
+    } catch(err) {
+        console.error('Error autofilling patient:', err);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const cedulaInput = document.getElementById('fast-cedula');
     if (cedulaInput) {
-        cedulaInput.addEventListener('blur', async (e) => {
-            const cedula = e.target.value.trim();
-            if (cedula.length > 4) {
-                try {
-                    const res = await fetch('/api/fast-booking/check-cedula', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ cedula }) 
-                    });
-                    const data = await res.json();
-                    if (data.found) {
-                        document.getElementById('fast-nombres').value = data.nombres || '';
-                        document.getElementById('fast-apellidos').value = data.apellidos || '';
-                        document.getElementById('fast-telefono').value = data.telefono || '';
-                        if (document.getElementById('fast-email')) document.getElementById('fast-email').value = data.email || '';
-                    }
-                } catch(err) { console.error('Error autofilling patient:', err); }
+        cedulaInput.addEventListener('blur', (e) => {
+            checkAndAutofillFastPatient(e.target.value.trim());
+        });
+        cedulaInput.addEventListener('input', (e) => {
+            clearTimeout(fastCedulaDebounceTimer);
+            const val = e.target.value.trim();
+            if (val.length >= 6) {
+                fastCedulaDebounceTimer = setTimeout(() => {
+                    checkAndAutofillFastPatient(val);
+                }, 400);
             }
         });
     }
@@ -28883,6 +28951,13 @@ window.resetFastBookingForm = function() {
         form.reset();
         form.classList.remove('hide');
     }
+    const nomEl = document.getElementById('fast-nombres');
+    if (nomEl) { nomEl.readOnly = false; nomEl.style.backgroundColor = ''; nomEl.style.cursor = ''; }
+    const apeEl = document.getElementById('fast-apellidos');
+    if (apeEl) { apeEl.readOnly = false; apeEl.style.backgroundColor = ''; apeEl.style.cursor = ''; }
+    const badge = document.getElementById('fast-patient-verified-badge');
+    if (badge) badge.remove();
+
     const statusMsg = document.getElementById('fast-booking-status-msg');
     if (statusMsg) statusMsg.classList.add('hide');
     

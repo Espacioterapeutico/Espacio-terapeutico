@@ -1228,7 +1228,7 @@ def check_register_cedula():
         
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT id, username, nombres, apellidos, cedula, pregunta_seguridad_1, respuesta_seguridad_1_hash FROM pacientes")
+    cursor.execute("SELECT id, username, nombres, apellidos, cedula, telefono, email, pais, ciudad, pregunta_seguridad_1, respuesta_seguridad_1_hash FROM pacientes")
     rows = cursor.fetchall()
     
     cleaned_input = ''.join(c for c in cedula if c.isdigit())
@@ -1249,7 +1249,11 @@ def check_register_cedula():
             return jsonify({
                 'status': 'pre_registered', 
                 'nombres': row['nombres'], 
-                'apellidos': row['apellidos']
+                'apellidos': row['apellidos'],
+                'telefono': row['telefono'],
+                'email': row['email'],
+                'pais': row['pais'],
+                'ciudad': row['ciudad']
             })
             
     return jsonify({'status': 'new_patient'})
@@ -1395,20 +1399,21 @@ def register():
                 if existing_patient['pregunta_seguridad_1'] and existing_patient['respuesta_seguridad_1_hash']:
                     return jsonify({'error': 'La cédula ya está registrada con una cuenta activa.'}), 400
                 
-                # Paciente pre-registrado: actualizar credenciales de acceso y campos mínimos
+                # Paciente pre-registrado: actualizar credenciales de acceso y solo actualizar contacto si se envía no-vacío
                 cursor.execute("""
                     UPDATE pacientes
                     SET username = ?, password_hash = ?,
                         pregunta_seguridad_1 = ?, respuesta_seguridad_1_hash = ?,
                         pregunta_seguridad_2 = ?, respuesta_seguridad_2_hash = ?,
-                        telefono = COALESCE(?, telefono),
-                        email = COALESCE(?, email)
+                        telefono = CASE WHEN ? IS NOT NULL AND TRIM(?) != '' THEN TRIM(?) ELSE telefono END,
+                        email = CASE WHEN ? IS NOT NULL AND TRIM(?) != '' THEN TRIM(?) ELSE email END
                     WHERE id = ?
                 """, (
                     username, password_hash, 
                     pregunta_1, resp_1_hash, 
                     pregunta_2, resp_2_hash,
-                    telefono, email,
+                    telefono, telefono, telefono,
+                    email, email, email,
                     existing_patient['id']
                 ))
                 patient_id = existing_patient['id']
