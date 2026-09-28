@@ -620,7 +620,7 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-CURRENT_SCHEMA_VER = "15"
+CURRENT_SCHEMA_VER = "16"
 
 def ensure_fcm_table_and_columns(cursor):
     cursor.execute("""
@@ -680,6 +680,7 @@ except Exception as _e_init:
 
 def init_db():
     db = sqlite3.connect(DATABASE, timeout=30.0)
+    db.row_factory = sqlite3.Row
     cursor = db.cursor()
     
     # Always ensure demo user is seeded
@@ -1596,6 +1597,20 @@ def init_db():
         """)
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
         cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
+        
+        # Normalizar horas históricas en agenda_finanzas a formato estándar 24h
+        try:
+            cursor.execute("SELECT id, hora FROM agenda_finanzas WHERE hora IS NOT NULL AND hora != '' AND hora != '00:00'")
+            rows_to_clean = cursor.fetchall()
+            from routes_agenda import normalize_time_str
+            for r_c in rows_to_clean:
+                old_h = str(r_c[1]).strip()
+                norm_h = normalize_time_str(old_h)
+                if old_h != norm_h and norm_h != '00:00':
+                    cursor.execute("UPDATE agenda_finanzas SET hora = ? WHERE id = ?", (norm_h, r_c[0]))
+        except Exception as _ex_h:
+            print(f"[WARN] Error normalizando horas históricas: {_ex_h}")
+            
         ensure_usuarios_columns(db)
         ensure_tests_tables(db)
 

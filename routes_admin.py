@@ -2923,6 +2923,21 @@ def update_transaction(trans_id):
         hora = data.get('hora') if 'hora' in data else row['hora']
         tipo_consulta = data.get('tipo_consulta') if 'tipo_consulta' in data else row['tipo_consulta']
         
+        # Validar colisión si se modifica la fecha o la hora de una consulta
+        if ('fecha' in data or 'hora' in data) and hora != '00:00':
+            from routes_agenda import normalize_date_str, normalize_time_str, check_appointment_interval_collision
+            new_f = normalize_date_str(fecha)
+            new_h = normalize_time_str(hora)
+            target_psic = row.get('creado_por_user_id') or session.get('user_id') or 1
+            if check_appointment_interval_collision(cursor, target_psic, new_f, new_h, tipo_consulta, exclude_appt_id=trans_id):
+                return jsonify({
+                    'error': f'🚫 No se puede mover la cita: ya existe otra consulta programada que se solapa con el horario {new_h} el {new_f}.'
+                }), 400
+            fecha = new_f
+            hora = new_h
+        elif 'hora' in data and hora == '00:00':
+            hora = '00:00'
+        
         if estado_pago == 'ConsumirPrepago':
             cursor.execute("""
                 SELECT id, cantidad_sesiones, control_uso 
@@ -2954,15 +2969,19 @@ def update_transaction(trans_id):
         service = get_calendar_service(psych_gc_id, db=db)
         if service:
             try:
-                # Normalizar hora y fechas
-                hora_str = str(hora).strip()
-                h_parts = hora_str.split(':')
-                h_int = int(h_parts[0]) if (h_parts and h_parts[0].isdigit()) else 0
-                end_h = str(h_int + 1).zfill(2) if h_int < 23 else "23"
-                m_part = h_parts[1].split(' ')[0] if len(h_parts) > 1 else "00"
-                
-                start_datetime = f"{fecha}T{str(h_int).zfill(2)}:{m_part}:00-04:00"
-                end_datetime = f"{fecha}T{end_h}:{m_part}:00-04:00"
+                # Normalizar hora y fechas para Google Calendar
+                from datetime import datetime, timedelta
+                from routes_agenda import normalize_date_str, normalize_time_str
+                norm_f = normalize_date_str(fecha)
+                norm_h = normalize_time_str(hora)
+                try:
+                    start_dt_obj = datetime.strptime(f"{norm_f} {norm_h}", "%Y-%m-%d %H:%M")
+                    end_dt_obj = start_dt_obj + timedelta(minutes=60 * int(cantidad_sesiones or 1))
+                    start_datetime = start_dt_obj.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+                    end_datetime = end_dt_obj.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+                except:
+                    start_datetime = f"{norm_f}T{norm_h}:00-04:00"
+                    end_datetime = f"{norm_f}T{norm_h}:00-04:00"
 
                 # Obtener paciente para rellenar nombre y descripción
                 cursor.execute("SELECT nombres, apellidos, cedula, email FROM pacientes WHERE id = ?", (row['paciente_id'],))
