@@ -265,9 +265,11 @@ def check_appointment_interval_collision(cursor, psicologo_id, fecha, hora, tipo
 
     if duracion_override:
         req_dur = int(duracion_override)
+        req_rec = cfg_rec
     else:
-        req_dur, _ = get_appointment_duration_and_recess(tipo_consulta, cfg_perfiles, cfg_dur, cfg_rec)
+        req_dur, req_rec = get_appointment_duration_and_recess(tipo_consulta, cfg_perfiles, cfg_dur, cfg_rec)
     req_end = req_start + timedelta(minutes=req_dur)
+    req_busy_until = req_end + timedelta(minutes=req_rec)
 
     f_norm = normalize_date_str(fecha)
     alt_f = f_norm
@@ -305,9 +307,16 @@ def check_appointment_interval_collision(cursor, psicologo_id, fecha, hora, tipo
             ea_dur, ea_rec = get_appointment_duration_and_recess(ea['tipo_consulta'], cfg_perfiles, cfg_dur, cfg_rec)
             ea_cant = int(ea['cantidad_sesiones'] or 1)
             ea_end = ea_start + timedelta(minutes=ea_dur * ea_cant)
+            ea_busy_until = ea_end + timedelta(minutes=ea_rec)
 
-            # Colisión directa de sesión: dos consultantes citados durante el mismo intervalo de tiempo
+            # 1. Colisión directa de sesión: dos consultantes citados durante el mismo intervalo de tiempo
             if req_start < ea_end and req_end > ea_start:
+                return True
+            # 2. Inicia durante el receso/descanso de la cita previa
+            if req_start >= ea_start and req_start < ea_busy_until:
+                return True
+            # 3. La cita previa empieza durante el receso de la nueva cita solicitada
+            if ea_start >= req_start and ea_start < req_busy_until:
                 return True
         except Exception as _e_ea:
             pass
