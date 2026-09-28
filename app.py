@@ -1127,7 +1127,7 @@ def init_db():
             cursor.execute("ALTER TABLE citas ADD COLUMN reagendamiento_enviado_wa INTEGER DEFAULT 0")
         db.commit()
         
-    # Sincronización automática de sesiones huérfanas sin fila de finanzas
+    # Sincronización inteligente de sesiones huérfanas y auto-reparación de filas de finanzas
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sesiones'")
     if cursor.fetchone():
         cursor.execute("""
@@ -1144,20 +1144,61 @@ def init_db():
                 fecha = row[2]
                 modalidad = row[3]
                 estado = row[4]
+                fecha_str = str(fecha)[:10] if fecha else ''
                 
-                estado_pago = 'Paga' if modalidad == 'Uptaeb' else 'Pendiente'
-                metodo_pago = 'Exonerado' if modalidad == 'Uptaeb' else ''
-                referencia = 'Exonerada / Registro histórico' if modalidad == 'Uptaeb' else ''
+                # Primero verificar si YA existe una fila legítima en agenda_finanzas para ese paciente y fecha
+                cursor.execute("""
+                    SELECT id FROM agenda_finanzas
+                    WHERE paciente_id = ? AND fecha LIKE ?
+                    ORDER BY (monto > 0) DESC, id ASC LIMIT 1
+                """, (patient_id, f"{fecha_str}%"))
+                existing_af = cursor.fetchone()
+                if existing_af:
+                    cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (existing_af[0], session_id))
+                else:
+                    # Si no existe ninguna fila, crearla como Paga / Consumida (histórica sin deuda)
+                    cursor.execute("""
+                        INSERT INTO agenda_finanzas (
+                            paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
+                            control_uso, fecha_liquidacion, cantidad_sesiones, referencia, metodo_pago, fecha_pago
+                        ) VALUES (?, ?, '00:00', ?, 0.0, 'USD', 'Paga', 'Consumida', ?, 1, 'Registro clínico histórico / Sin deuda', 'Histórico', ?)
+                    """, (patient_id, fecha, modalidad, fecha, fecha))
+                    agenda_id = cursor.lastrowid
+                    cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (agenda_id, session_id))
+            db.commit()
+
+        # Limpieza y curación de filas fantasma con monto 0.0 marcadas erróneamente como 'Pendiente'
+        try:
+            cursor.execute("""
+                SELECT af.id, af.paciente_id, af.fecha
+                FROM agenda_finanzas af
+                WHERE af.estado_pago = 'Pendiente' AND (af.monto IS NULL OR af.monto <= 0.0)
+            """)
+            ghosts = cursor.fetchall()
+            for g in ghosts:
+                g_id = g[0]
+                g_pac = g[1]
+                g_fecha = str(g[2])[:10] if g[2] else ''
                 
                 cursor.execute("""
-                    INSERT INTO agenda_finanzas (
-                        paciente_id, fecha, hora, tipo_consulta, monto, moneda, estado_pago,
-                        control_uso, fecha_liquidacion, cantidad_sesiones, referencia, metodo_pago, fecha_pago
-                    ) VALUES (?, ?, '00:00', ?, 0.0, 'USD', ?, 'No consumida', ?, 1, ?, ?, ?)
-                """, (patient_id, fecha, modalidad, estado_pago, fecha, referencia, metodo_pago, fecha))
-                agenda_id = cursor.lastrowid
-                cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE id = ?", (agenda_id, session_id))
+                    SELECT id FROM agenda_finanzas
+                    WHERE paciente_id = ? AND fecha LIKE ? AND id != ?
+                    ORDER BY (monto > 0) DESC, id ASC LIMIT 1
+                """, (g_pac, f"{g_fecha}%", g_id))
+                existing = cursor.fetchone()
+                if existing:
+                    cursor.execute("UPDATE sesiones SET agenda_id = ? WHERE agenda_id = ?", (existing[0], g_id))
+                    cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (g_id,))
+                else:
+                    cursor.execute("""
+                        UPDATE agenda_finanzas 
+                        SET estado_pago = 'Paga', control_uso = 'Consumida', monto = 0.0,
+                            metodo_pago = 'Histórico', referencia = 'Registro clínico histórico / Sin deuda'
+                        WHERE id = ?
+                    """, (g_id,))
             db.commit()
+        except Exception as _clean_err:
+            print(f"[AVISO] Error en auto-reparación de finanzas: {_clean_err}", flush=True)
             
     # Inicializar disponibilidad horaria predeterminada si no existe
     cursor.execute("SELECT valor FROM configuracion WHERE clave = 'disponibilidad_horarios'")
@@ -3495,6 +3536,7 @@ def auto_settle_patient_debts(db, patient_id):
         SELECT id, estado_pago, monto, tipo_consulta, referencia 
         FROM agenda_finanzas 
         WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+          AND COALESCE(monto, 0) > 0
           AND (tipo_consulta IS NULL OR tipo_consulta NOT LIKE '%Fraccionad%')
           AND (referencia IS NULL OR referencia NOT LIKE '%pago parcial%')
         ORDER BY fecha ASC, id ASC
@@ -3541,7 +3583,7 @@ def sync_patient_to_firebase(patient_id):
     try:
         import requests
         # Usar sqlite3 directo para evitar depender del contexto g si se corre fuera de una petición
-        conn = sqlite3.connect('clinica.db')
+        conn = sqlite3.connect(DATABASE, timeout=30.0)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
@@ -3587,10 +3629,11 @@ def sync_patient_to_firebase(patient_id):
         """, (patient_id,))
         prepagadas = cursor.fetchone()[0] or 0
         
-        # 2. Deuda agrupada por moneda (incluye Pendiente y Cancelada sin aviso)
+        # 2. Deuda agrupada por moneda (incluye Pendiente y Cancelada sin aviso con monto > 0)
         cursor.execute("""
             SELECT moneda, SUM(monto) FROM agenda_finanzas
             WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+              AND COALESCE(monto, 0) > 0
             GROUP BY moneda
         """, (patient_id,))
         deudas = {row[0]: row[1] or 0.0 for row in cursor.fetchall()}
@@ -3671,7 +3714,7 @@ def delete_patient_from_firebase(patient_id, u_key=None):
         import requests
         key_to_delete = u_key
         if not key_to_delete:
-            conn = sqlite3.connect('clinica.db')
+            conn = sqlite3.connect(DATABASE, timeout=30.0)
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
             c.execute("SELECT username, cedula FROM pacientes WHERE id = ?", (patient_id,))
@@ -3692,7 +3735,7 @@ def sync_all_psychologist_patients_to_firebase(psych_id):
     """Vuelve a sincronizar todos los pacientes de un psicólogo en Firebase (útil al cambiar métodos de pago)."""
     def _async_sync():
         try:
-            conn = sqlite3.connect('clinica.db')
+            conn = sqlite3.connect(DATABASE, timeout=30.0)
             c = conn.cursor()
             c.execute("SELECT id FROM pacientes WHERE psicologo_id = ?", (psych_id,))
             p_ids = [r[0] for r in c.fetchall()]

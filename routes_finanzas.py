@@ -44,6 +44,7 @@ def auto_settle_patient_debts(db, patient_id):
         SELECT id, estado_pago, monto, tipo_consulta, referencia 
         FROM agenda_finanzas 
         WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+          AND COALESCE(monto, 0) > 0
           AND (tipo_consulta IS NULL OR tipo_consulta NOT LIKE '%Fraccionad%')
           AND (referencia IS NULL OR referencia NOT LIKE '%pago parcial%')
         ORDER BY fecha ASC, id ASC
@@ -310,6 +311,7 @@ def get_monthly_balance():
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+              AND COALESCE(af.monto, 0) > 0
               AND p.psicologo_id = ?
             ORDER BY af.fecha ASC
         """, (psic_id,))
@@ -348,6 +350,7 @@ def get_monthly_balance():
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+              AND COALESCE(af.monto, 0) > 0
               AND p.psicologo_id = ?
         """, (psic_id,))
         total_pendientes = cursor.fetchone()[0] or 0
@@ -404,6 +407,7 @@ def get_monthly_balance():
             FROM agenda_finanzas af
             LEFT JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+              AND COALESCE(af.monto, 0) > 0
             ORDER BY af.fecha ASC
         """)
         pending_list = [dict(row) for row in cursor.fetchall()]
@@ -433,7 +437,7 @@ def get_monthly_balance():
         """, (date_prefix, date_prefix))
         total_pagas = cursor.fetchone()[0] or 0
         
-        cursor.execute("SELECT SUM(cantidad_sesiones) FROM agenda_finanzas WHERE estado_pago IN ('Pendiente', 'Cancelada sin aviso')")
+        cursor.execute("SELECT SUM(cantidad_sesiones) FROM agenda_finanzas WHERE estado_pago IN ('Pendiente', 'Cancelada sin aviso') AND COALESCE(monto, 0) > 0")
         total_pendientes = cursor.fetchone()[0] or 0
         
         cursor.execute("""

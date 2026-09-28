@@ -103,7 +103,7 @@ def get_patient_summary(patient_id):
     cursor.execute("""
         SELECT 
             SUM(CASE WHEN estado_pago IN ('Paga', 'Cancelada sin aviso - Paga') THEN cantidad_sesiones ELSE 0 END) as pagas,
-            SUM(CASE WHEN estado_pago IN ('Pendiente', 'Cancelada sin aviso') THEN cantidad_sesiones ELSE 0 END) as pendientes,
+            SUM(CASE WHEN estado_pago IN ('Pendiente', 'Cancelada sin aviso') AND COALESCE(monto, 0) > 0 THEN cantidad_sesiones ELSE 0 END) as pendientes,
             SUM(CASE WHEN estado_pago = 'Prepagada' AND control_uso = 'No consumida' THEN cantidad_sesiones ELSE 0 END) as prepagadas_no_consumidas,
             SUM(CASE WHEN (estado_pago = 'Prepagada' AND control_uso = 'Consumida') OR (estado_pago = 'Paga' AND control_uso = 'Consumida') THEN cantidad_sesiones ELSE 0 END) as prepagadas_consumidas
         FROM agenda_finanzas 
@@ -114,7 +114,7 @@ def get_patient_summary(patient_id):
     cursor.execute("""
         SELECT moneda, SUM(monto) as total
         FROM agenda_finanzas
-        WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+        WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso') AND COALESCE(monto, 0) > 0
         GROUP BY moneda
     """, (patient_id,))
     deuda_monto_rows = cursor.fetchall()
@@ -130,7 +130,7 @@ def get_patient_summary(patient_id):
     cursor.execute("""
         SELECT id, fecha, tipo_consulta, monto, moneda, estado_pago
         FROM agenda_finanzas
-        WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso')
+        WHERE paciente_id = ? AND estado_pago IN ('Pendiente', 'Cancelada sin aviso') AND COALESCE(monto, 0) > 0
         ORDER BY fecha DESC, id DESC
     """, (patient_id,))
     deudas_detalle = [dict(row) for row in cursor.fetchall()]
