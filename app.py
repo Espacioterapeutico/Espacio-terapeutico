@@ -668,6 +668,25 @@ def ensure_critical_migrations(cursor):
     except Exception as _ex2:
         pass
 
+    try:
+        cursor.execute("PRAGMA table_info(sesiones)")
+        cols_s = [r[1] for r in cursor.fetchall()]
+        if cols_s:
+            for col_name, col_type in [
+                ('estado', "TEXT DEFAULT 'Realizada'"),
+                ('agenda_id', 'INTEGER'),
+                ('diagnostico', 'TEXT'),
+                ('test_aplicados', 'TEXT'),
+                ('archivo_adjunto', 'TEXT'),
+                ('resumen_paciente', 'TEXT'),
+                ('examen_mental_id', 'INTEGER')
+            ]:
+                if col_name not in cols_s:
+                    try: cursor.execute(f"ALTER TABLE sesiones ADD COLUMN {col_name} {col_type}")
+                    except: pass
+    except Exception as _ex3:
+        pass
+
 # Ejecutar migración al inicio para servidores WSGI (PythonAnywhere, Gunicorn)
 try:
     with sqlite3.connect(DATABASE, timeout=30.0) as _db_init:

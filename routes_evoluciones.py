@@ -40,6 +40,26 @@ def get_psicologo_id_filter():
         return -1
     return user_id if user_id else 1
 
+def ensure_sesiones_columns(cursor):
+    try:
+        cursor.execute("PRAGMA table_info(sesiones)")
+        cols_s = [r[1] for r in cursor.fetchall()]
+        if cols_s:
+            for col_name, col_type in [
+                ('estado', "TEXT DEFAULT 'Realizada'"),
+                ('agenda_id', 'INTEGER'),
+                ('diagnostico', 'TEXT'),
+                ('test_aplicados', 'TEXT'),
+                ('archivo_adjunto', 'TEXT'),
+                ('resumen_paciente', 'TEXT'),
+                ('examen_mental_id', 'INTEGER')
+            ]:
+                if col_name not in cols_s:
+                    try: cursor.execute(f"ALTER TABLE sesiones ADD COLUMN {col_name} {col_type}")
+                    except: pass
+    except Exception:
+        pass
+
 # ==========================================
 # FICHA RESUMEN Y HISTORIAL DEL CONSULTANTE
 # ==========================================
@@ -354,6 +374,7 @@ def _apply_session_finance_liquidation(cursor, agenda_id, paciente_id, fecha, mo
 def manage_sessions():
     db = get_db()
     cursor = db.cursor()
+    ensure_sesiones_columns(cursor)
     psic_id = get_psicologo_id_filter()
     from app import decrypt_clinical_text, encrypt_clinical_text, sync_patient_to_firebase
 
@@ -494,6 +515,7 @@ def manage_sessions():
 def update_session_detail(session_id):
     db = get_db()
     cursor = db.cursor()
+    ensure_sesiones_columns(cursor)
     from app import decrypt_clinical_text, encrypt_clinical_text
     
     if request.method == 'GET':
