@@ -2653,6 +2653,17 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
     }
 
+    const waTokensBtn = document.getElementById('wa-tab-btn-tokens');
+    if (waTokensBtn) {
+        if ((cleanRole === 'superadmin') || (cleanUser === 'pamoraro') || (cleanId === 1)) {
+            waTokensBtn.classList.remove('hide');
+            waTokensBtn.style.removeProperty('display');
+        } else {
+            waTokensBtn.classList.add('hide');
+            waTokensBtn.style.setProperty('display', 'none', 'important');
+        }
+    }
+
     const isPureSuperadmin = (cleanRole === 'superadmin') && (cleanUser !== 'pamoraro') && (cleanId !== 1);
     const isSuperadminUser = isPureSuperadmin || (cleanUser === 'pamoraro') || (cleanId === 1);
 
@@ -12645,22 +12656,37 @@ async function handleSendSMTPTest() {
 function switchWaSubTab(tabName) {
     const btnTmpl = document.getElementById('wa-tab-btn-templates');
     const btnMon = document.getElementById('wa-tab-btn-monitoring');
+    const btnTok = document.getElementById('wa-tab-btn-tokens');
     const secTmpl = document.getElementById('wa-subtab-templates');
     const secMon = document.getElementById('wa-subtab-monitoring');
+    const secTok = document.getElementById('wa-subtab-tokens');
 
-    if (tabName === 'monitoring') {
+    if (tabName === 'tokens') {
+        if (btnTmpl) btnTmpl.className = 'btn btn-sm btn-secondary';
+        if (btnMon) btnMon.className = 'btn btn-sm btn-secondary';
+        if (btnTok) btnTok.className = 'btn btn-sm btn-primary';
+        if (secTmpl) secTmpl.classList.add('hide');
+        if (secMon) secMon.classList.add('hide');
+        if (secTok) secTok.classList.remove('hide');
+        loadWhatsAppTokensHistory(1);
+    } else if (tabName === 'monitoring') {
         if (btnTmpl) btnTmpl.className = 'btn btn-sm btn-secondary';
         if (btnMon) btnMon.className = 'btn btn-sm btn-primary';
+        if (btnTok) btnTok.className = 'btn btn-sm btn-secondary';
         if (secTmpl) secTmpl.classList.add('hide');
         if (secMon) secMon.classList.remove('hide');
+        if (secTok) secTok.classList.add('hide');
         loadWhatsAppMonitoringQueue();
     } else {
         if (btnTmpl) btnTmpl.className = 'btn btn-sm btn-primary';
         if (btnMon) btnMon.className = 'btn btn-sm btn-secondary';
+        if (btnTok) btnTok.className = 'btn btn-sm btn-secondary';
         if (secTmpl) secTmpl.classList.remove('hide');
         if (secMon) secMon.classList.add('hide');
+        if (secTok) secTok.classList.add('hide');
     }
 }
+window.switchWaSubTab = switchWaSubTab;
 
 let currentWaQueuePage = 1;
 let waQueuePerPage = 10;
@@ -12885,6 +12911,118 @@ async function handleCancelWaQueueItem(citaId, pacienteNombre, tokenType) {
         alert("Error de conexión al detener el envío.");
     }
 }
+window.handleCancelWaQueueItem = handleCancelWaQueueItem;
+
+let currentWaTokensPage = 1;
+let totalWaTokensPages = 1;
+
+async function loadWhatsAppTokensHistory(page = 1) {
+    const tbody = document.getElementById('wa-tokens-history-tbody');
+    const pageInfo = document.getElementById('wa-tokens-page-info');
+    const prevBtn = document.getElementById('wa-tokens-prev-btn');
+    const nextBtn = document.getElementById('wa-tokens-next-btn');
+    const searchInput = document.getElementById('wa-tokens-search-input');
+    const filterSelect = document.getElementById('wa-tokens-filter-type');
+
+    if (!tbody) return;
+
+    const q = searchInput ? encodeURIComponent(searchInput.value.trim()) : '';
+    const tipo = filterSelect ? encodeURIComponent(filterSelect.value) : 'todos';
+
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4" style="color: var(--text-secondary);">🔄 Cargando historial de tokens...</td></tr>';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+
+    try {
+        const res = await fetch(`/api/whatsapp/monitoring/tokens?page=${page}&limit=10&tipo=${tipo}&q=${q}`);
+        if (!res.ok) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">No tienes permisos para ver el historial de tokens o ocurrió un error.</td></tr>';
+            return;
+        }
+        const data = await res.json();
+        currentWaTokensPage = data.page || 1;
+        totalWaTokensPages = data.total_pages || 1;
+
+        if (pageInfo) {
+            pageInfo.textContent = `Página ${currentWaTokensPage} de ${totalWaTokensPages} (${data.total_items || 0} tokens)`;
+        }
+        if (prevBtn) prevBtn.disabled = currentWaTokensPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentWaTokensPage >= totalWaTokensPages;
+
+        if (!data.tokens || data.tokens.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4" style="color: var(--text-secondary);">No se encontraron tokens registrados para el criterio seleccionado.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.tokens.map(item => {
+            let tipoBadgeStyle = 'background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;';
+            if (item.tipo === 'test') {
+                tipoBadgeStyle = 'background: #fdf2f8; color: #9d174d; border: 1px solid #fbcfe8;';
+            } else if (item.tipo === 'cita') {
+                tipoBadgeStyle = 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;';
+            }
+
+            let estadoBadgeStyle = 'background: #f1f5f9; color: #475569;';
+            if (item.estado_badge === 'success') {
+                estadoBadgeStyle = 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;';
+            } else if (item.estado_badge === 'info') {
+                estadoBadgeStyle = 'background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;';
+            } else if (item.estado_badge === 'warning') {
+                estadoBadgeStyle = 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;';
+            } else if (item.estado_badge === 'danger') {
+                estadoBadgeStyle = 'background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;';
+            }
+
+            const shortToken = (item.token && item.token.length > 20) ? `${item.token.substring(0, 18)}...` : (item.token || '');
+
+            return `
+                <tr>
+                    <td style="vertical-align: middle;">
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 0.85rem;">${item.paciente_nombre}</div>
+                        <div style="font-size: 0.76rem; color: var(--text-secondary);">${item.paciente_telefono || 'Sin teléfono'}</div>
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <span class="badge" style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; ${tipoBadgeStyle} margin-bottom: 3px; display: inline-block;">
+                            ${item.tipo_label}
+                        </span>
+                        <div style="font-weight: 600; font-size: 0.82rem;">${item.nombre_item}</div>
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <a href="${item.link}" target="_blank" rel="noopener noreferrer" style="font-size: 0.78rem; font-family: monospace; color: var(--primary); text-decoration: underline; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.link}">
+                                ${shortToken}
+                            </a>
+                            <button type="button" class="btn btn-sm" onclick="copyToolDirectLink('${item.link}')" title="Copiar enlace directo" style="padding: 2px 7px; font-size: 0.72rem; background: var(--bg-hover, #f1f5f9); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                                📋 Copiar
+                            </button>
+                        </div>
+                    </td>
+                    <td style="vertical-align: middle; white-space: nowrap;">
+                        <div style="font-size: 0.8rem; font-weight: 600;">${item.fecha_envio}</div>
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <span class="badge" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; font-weight: 700; ${estadoBadgeStyle}">
+                            ${item.estado}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error("Error al cargar historial de tokens de WhatsApp:", err);
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Error de conexión al cargar historial de tokens.</td></tr>';
+    }
+}
+
+function changeWaTokensPage(delta) {
+    const newPage = currentWaTokensPage + delta;
+    if (newPage >= 1 && newPage <= totalWaTokensPages) {
+        loadWhatsAppTokensHistory(newPage);
+    }
+}
+
+window.loadWhatsAppTokensHistory = loadWhatsAppTokensHistory;
+window.changeWaTokensPage = changeWaTokensPage;
 
 async function sendWhatsappTemplate(type) {
     const apptId = document.getElementById('event-form-id').value;
@@ -19175,6 +19313,16 @@ function switchSettingsTab(tabName) {
                 mcToggleCard.classList.remove('hide');
             } else {
                 mcToggleCard.classList.add('hide');
+            }
+        }
+        const tokensTabBtn = document.getElementById('wa-tab-btn-tokens');
+        if (tokensTabBtn) {
+            if (isSuperadmin) {
+                tokensTabBtn.classList.remove('hide');
+                tokensTabBtn.style.removeProperty('display');
+            } else {
+                tokensTabBtn.classList.add('hide');
+                tokensTabBtn.style.setProperty('display', 'none', 'important');
             }
         }
         checkWhatsAppQRStatus();

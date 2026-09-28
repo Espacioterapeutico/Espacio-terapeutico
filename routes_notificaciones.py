@@ -1817,6 +1817,237 @@ def get_whatsapp_queue_status():
     return jsonify({'queue': queue})
 
 
+@notificaciones_bp.route('/api/whatsapp/monitoring/tokens', methods=['GET'])
+@login_required
+def get_whatsapp_tokens_history():
+    role = session.get('role', '')
+    user_id = session.get('user_id')
+    username = (session.get('username') or '').lower()
+    is_superadmin = (role in ['admin', 'superadmin']) or (user_id == 1) or (username == 'pamoraro')
+    if not is_superadmin:
+        return jsonify({'error': 'Acceso no autorizado. Función exclusiva para monitoreo de administración.'}), 403
+
+    import math
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 10))
+    tipo_filtro = request.args.get('tipo', 'todos').strip().lower()
+    search = request.args.get('q', '').strip()
+
+    base_url = get_public_base_url()
+
+    tool_names = {
+        'mood': 'Mood Tracker (Registro de Ánimo)',
+        'mood_tracker': 'Mood Tracker (Registro de Ánimo)',
+        'sueno': 'Higiene del Sueño (Registro)',
+        'ansiedad': 'Registro de Ansiedad',
+        'gratitud': 'Diario de Gratitud',
+        'pantalla': 'Tiempo en Pantalla',
+        'autocuidado': 'Plan de Autocuidado',
+        'sobriedad': 'Contador de Sobriedad',
+        'pensamientos': 'Registro de Pensamientos',
+        'metas': 'Seguimiento de Metas',
+        'adherencia': 'Adherencia a Medicación',
+        'activacion': 'Activación Conductual',
+        'ingesta': 'Alimentos y Apetito',
+        'cognitivo': 'Registro Cognitivo'
+    }
+
+    db = get_db()
+    cursor = db.cursor()
+    items = []
+
+    # 1. HERRAMIENTAS TERAPÉUTICAS
+    if tipo_filtro in ('todos', 'herramienta'):
+        try:
+            cursor.execute("""
+                SELECT 
+                    'herramienta' as tipo,
+                    th.id,
+                    th.token,
+                    th.herramienta_tipo,
+                    th.paciente_id,
+                    COALESCE(p.nombres, '') || ' ' || COALESCE(p.apellidos, '') as paciente_nombre,
+                    COALESCE(p.telefono, '') as paciente_telefono,
+                    th.usado,
+                    th.fecha_completado,
+                    crh.enviado,
+                    crh.fecha_envio,
+                    crh.hora_programada,
+                    COALESCE(crh.fecha_envio, th.fecha_registro, th.fecha_programada, '') as fecha_registro_envio
+                FROM tokens_herramientas th
+                LEFT JOIN cola_recordatorios_herramientas crh ON crh.token_id = th.id
+                LEFT JOIN pacientes p ON th.paciente_id = p.id
+            """)
+            for r in cursor.fetchall():
+                htipo = (r['herramienta_tipo'] or 'herramienta').lower()
+                nombre_item = tool_names.get(htipo, f"Herramienta: {htipo.capitalize()}")
+                link = f"{base_url}/herramienta/directa?token={r['token']}"
+
+                if r['usado']:
+                    estado = 'Respondido / Usado'
+                    estado_badge = 'success'
+                elif r['enviado']:
+                    estado = 'Enviado por WhatsApp'
+                    estado_badge = 'info'
+                elif r['enviado'] == 0:
+                    estado = 'Pendiente de Envío'
+                    estado_badge = 'warning'
+                else:
+                    estado = 'Generado'
+                    estado_badge = 'secondary'
+
+                items.append({
+                    'tipo': 'herramienta',
+                    'tipo_label': 'Herramienta Terapéutica',
+                    'id': r['id'],
+                    'token': r['token'],
+                    'nombre_item': nombre_item,
+                    'paciente_nombre': r['paciente_nombre'].strip() or 'Sin Nombre',
+                    'paciente_telefono': r['paciente_telefono'] or '',
+                    'link': link,
+                    'fecha_envio': r['fecha_registro_envio'] or '-',
+                    'estado': estado,
+                    'estado_badge': estado_badge
+                })
+        except Exception as ex_th:
+            print("Aviso al consultar tokens_herramientas:", ex_th)
+
+    # 2. TESTS PSICOLÓGICOS
+    if tipo_filtro in ('todos', 'test'):
+        try:
+            cursor.execute("""
+                SELECT 
+                    'test' as tipo,
+                    ta.id,
+                    ta.uuid_token as token,
+                    ta.test_code,
+                    COALESCE(td.nombre, ta.test_code) as test_nombre,
+                    ta.patient_id as paciente_id,
+                    COALESCE(p.nombres, '') || ' ' || COALESCE(p.apellidos, '') as paciente_nombre,
+                    COALESCE(p.telefono, '') as paciente_telefono,
+                    ta.estado,
+                    ta.fecha_asignacion as fecha_registro_envio,
+                    ta.fecha_completado
+                FROM test_asignaciones ta
+                LEFT JOIN tests_definiciones td ON ta.test_code = td.code
+                LEFT JOIN pacientes p ON ta.patient_id = p.id
+            """)
+            for r in cursor.fetchall():
+                test_title = r['test_nombre'] if r['test_nombre'] else f"Test {r['test_code']}"
+                link = f"{base_url}/evaluacion/{r['token']}"
+
+                if (r['estado'] or '').lower() == 'completado':
+                    estado = 'Completado'
+                    estado_badge = 'success'
+                else:
+                    estado = 'Pendiente'
+                    estado_badge = 'warning'
+
+                items.append({
+                    'tipo': 'test',
+                    'tipo_label': 'Test Psicológico',
+                    'id': r['id'],
+                    'token': r['token'],
+                    'nombre_item': f"{r['test_code']} - {test_title}",
+                    'paciente_nombre': r['paciente_nombre'].strip() or 'Sin Nombre',
+                    'paciente_telefono': r['paciente_telefono'] or '',
+                    'link': link,
+                    'fecha_envio': r['fecha_registro_envio'] or '-',
+                    'estado': estado,
+                    'estado_badge': estado_badge
+                })
+        except Exception as ex_ta:
+            print("Aviso al consultar test_asignaciones:", ex_ta)
+
+    # 3. CITAS AGENDADAS
+    if tipo_filtro in ('todos', 'cita'):
+        try:
+            cursor.execute("""
+                SELECT 
+                    'cita' as tipo,
+                    af.id,
+                    af.token_confirmacion as token,
+                    af.fecha,
+                    af.hora,
+                    af.confirmada,
+                    af.confirmacion_enviada_wa,
+                    af.paciente_id,
+                    COALESCE(p.nombres, '') || ' ' || COALESCE(p.apellidos, '') as paciente_nombre,
+                    COALESCE(p.telefono, '') as paciente_telefono,
+                    af.fecha || ' ' || COALESCE(af.hora, '') as fecha_registro_envio
+                FROM agenda_finanzas af
+                LEFT JOIN pacientes p ON af.paciente_id = p.id
+                WHERE af.token_confirmacion IS NOT NULL AND af.token_confirmacion != ''
+            """)
+            for r in cursor.fetchall():
+                link = f"{base_url}/cita/confirmar/{r['token']}"
+                hora_str = f" {r['hora']}" if r['hora'] else ""
+                nombre_item = f"Confirmación de Cita ({r['fecha']}{hora_str})"
+
+                if r['confirmada'] == 1:
+                    estado = 'Confirmada'
+                    estado_badge = 'success'
+                elif r['confirmada'] == -1:
+                    estado = 'Cancelada'
+                    estado_badge = 'danger'
+                elif r['confirmacion_enviada_wa'] == 1:
+                    estado = 'Enviado por WhatsApp'
+                    estado_badge = 'info'
+                else:
+                    estado = 'Pendiente'
+                    estado_badge = 'warning'
+
+                items.append({
+                    'tipo': 'cita',
+                    'tipo_label': 'Confirmación de Cita',
+                    'id': r['id'],
+                    'token': r['token'],
+                    'nombre_item': nombre_item,
+                    'paciente_nombre': r['paciente_nombre'].strip() or 'Sin Nombre',
+                    'paciente_telefono': r['paciente_telefono'] or '',
+                    'link': link,
+                    'fecha_envio': r['fecha_registro_envio'] or '-',
+                    'estado': estado,
+                    'estado_badge': estado_badge
+                })
+        except Exception as ex_af:
+            print("Aviso al consultar agenda_finanzas tokens:", ex_af)
+
+    # Filtro de búsqueda
+    if search:
+        s_lower = search.lower()
+        items = [
+            it for it in items
+            if s_lower in it['paciente_nombre'].lower()
+            or s_lower in it['paciente_telefono'].lower()
+            or s_lower in it['nombre_item'].lower()
+            or s_lower in it['token'].lower()
+        ]
+
+    # Ordenar descendente por fecha de envío / registro
+    items.sort(key=lambda x: str(x['fecha_envio']), reverse=True)
+
+    total_items = len(items)
+    total_pages = math.ceil(total_items / limit) if total_items > 0 else 1
+
+    if page < 1:
+        page = 1
+    if page > total_pages:
+        page = total_pages
+
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated_items = items[start_idx:end_idx]
+
+    return jsonify({
+        'page': page,
+        'limit': limit,
+        'total_items': total_items,
+        'total_pages': total_pages,
+        'tokens': paginated_items
+    })
+
+
 @notificaciones_bp.route('/api/whatsapp/cancel-queue-item', methods=['POST'])
 @login_required
 def cancel_whatsapp_queue_item():

@@ -3258,8 +3258,9 @@
                             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                                 <h3>Automatización de Mensajes y Monitoreo</h3>
                                 <div style="display: flex; gap: 0.35rem; background: var(--border-color); padding: 3px; border-radius: 8px;">
-                                    <button type="button" id="wa-tab-btn-templates" class="btn btn-sm btn-primary" onclick="switchWaSubTab('templates')" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem;">📝 Plantillas de Mensajes</button>
-                                    <button type="button" id="wa-tab-btn-monitoring" class="btn btn-sm btn-secondary" onclick="switchWaSubTab('monitoring')" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem;">📊 Monitoreo de Tareas & Cola</button>
+                                    <button type="button" id="wa-tab-btn-templates" class="btn btn-sm btn-primary" onclick="switchWaSubTab('templates')" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem;">📝 Plantillas</button>
+                                    <button type="button" id="wa-tab-btn-monitoring" class="btn btn-sm btn-secondary" onclick="switchWaSubTab('monitoring')" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem;">📊 Monitoreo</button>
+                                    <button type="button" id="wa-tab-btn-tokens" class="btn btn-sm btn-secondary hide" onclick="switchWaSubTab('tokens')" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem;">🔑 Tokens</button>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -3351,6 +3352,51 @@
                                                 <tr><td colspan="5" class="text-center py-4">Cargando cola de mensajes...</td></tr>
                                             </tbody>
                                         </table>
+                                    </div>
+                                </div>
+
+                                <!-- PESTAÑA 3: HISTORIAL DE TOKENS (SUPERADMIN) -->
+                                <div id="wa-subtab-tokens" class="hide">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                                        <div>
+                                            <p class="text-secondary" style="font-size: 0.85rem; margin: 0;">Historial global de tokens generados y enviados a pacientes (Herramientas terapéuticas, Tests y Citas).</p>
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                            <input type="text" id="wa-tokens-search-input" class="form-control form-control-sm" placeholder="Buscar paciente o token..." style="width: 220px; font-size: 0.82rem;" onkeyup="if(event.key==='Enter') loadWhatsAppTokensHistory(1)">
+                                            <select id="wa-tokens-filter-type" class="form-select form-select-sm" style="width: 170px; font-size: 0.82rem;" onchange="loadWhatsAppTokensHistory(1)">
+                                                <option value="todos">Todos los tipos</option>
+                                                <option value="herramienta">Herramientas Terapéuticas</option>
+                                                <option value="test">Tests Psicológicos</option>
+                                                <option value="cita">Confirmación de Citas</option>
+                                            </select>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="loadWhatsAppTokensHistory(1)" style="font-weight: 600;">🔄 Actualizar</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-responsive" style="max-height: 480px; overflow-y: auto; border: 1.5px solid var(--border-color); border-radius: 8px;">
+                                        <table class="table" style="width: 100%; margin: 0; font-size: 0.85rem;">
+                                            <thead style="background: var(--bg-color, #f8fafc); position: sticky; top: 0; z-index: 2;">
+                                                <tr>
+                                                    <th>Paciente</th>
+                                                    <th>Herramienta o Test</th>
+                                                    <th>Link Directo</th>
+                                                    <th>Fecha de Envío</th>
+                                                    <th>Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="wa-tokens-history-tbody">
+                                                <tr><td colspan="5" class="text-center py-4">Cargando tokens...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Paginación de 10 en 10 -->
+                                    <div id="wa-tokens-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.85rem; padding: 0.5rem 0.25rem;">
+                                        <span id="wa-tokens-page-info" style="font-size: 0.82rem; color: var(--text-secondary);">Página 1 de 1</span>
+                                        <div style="display: flex; gap: 0.4rem;">
+                                            <button type="button" id="wa-tokens-prev-btn" class="btn btn-sm btn-secondary" onclick="changeWaTokensPage(-1)" disabled style="font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.75rem;">⬅ Anterior</button>
+                                            <button type="button" id="wa-tokens-next-btn" class="btn btn-sm btn-secondary" onclick="changeWaTokensPage(1)" disabled style="font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.75rem;">Siguiente ➡</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
