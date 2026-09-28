@@ -326,8 +326,17 @@ def check_appointment_interval_collision(cursor, psicologo_id, fecha, hora, tipo
 def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_modality='all', exclude_appt_id=None):
     """
     Genera dinámicamente los slots de disponibilidad a partir de configuracion_horarios_visual.
+    Aplica recálculo dinámico continuo por ventanas libres (Floating Slots):
+    Si una consulta previa termina a una hora (ej. 13:00 + 60m + 5m receso = 14:05),
+    la siguiente ventana libre comienza inmediatamente a las 14:05, recalculando los turnos
+    consecutivos según la duración y el receso del perfil solicitado sin perder tiempo muerto.
     """
-    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+    try:
+        psic_id_int = int(psicologo_id) if (psicologo_id is not None and str(psicologo_id).isdigit()) else 1
+    except:
+        psic_id_int = 1
+
+    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id_int,))
     u_row = cursor.fetchone()
     
     config = {}
@@ -364,10 +373,74 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
         return []
 
     day_num = (target_dt.weekday() + 1) % 7
-    candidate_slots = []
-    seen_hours = set()
     req_mod_clean = str(requested_modality or 'all').strip().lower()
 
+    # 1. Obtener todas las citas activas del psicólogo para la fecha objetivo
+    alt_date_str = target_date_str
+    try:
+        alt_date_str = target_dt.strftime("%d/%m/%Y")
+    except: pass
+
+    query_busy = """
+        SELECT af.hora, af.id, af.tipo_consulta, af.cantidad_sesiones FROM agenda_finanzas af
+        LEFT JOIN pacientes p ON af.paciente_id = p.id
+        WHERE (af.fecha = ? OR af.fecha = ? OR TRIM(af.fecha) = ? OR TRIM(af.fecha) = ?)
+          AND (p.psicologo_id = ? OR af.creado_por_user_id = ? OR (p.psicologo_id IS NULL AND af.creado_por_user_id IS NULL) OR ? IS NULL)
+          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
+    """
+    cursor.execute(query_busy, (target_date_str, alt_date_str, target_date_str, alt_date_str, psic_id_int, psic_id_int, psic_id_int))
+    busy_rows = cursor.fetchall()
+
+    base_busy_intervals = []
+    for br in busy_rows:
+        if exclude_appt_id and br['id'] == exclude_appt_id:
+            continue
+        raw_h = (br['hora'] or '').strip()
+        if not raw_h or raw_h == '00:00':
+            continue
+        h_norm = normalize_time_str(raw_h)
+        if h_norm == '00:00':
+            continue
+        try:
+            b_start = datetime.strptime(h_norm, "%H:%M")
+            b_dur, b_rec = get_appointment_duration_and_recess(br['tipo_consulta'], perfiles, duracion, receso)
+            b_cant = int(br['cantidad_sesiones'] or 1)
+            b_end = b_start + timedelta(minutes=b_dur * b_cant)
+            b_busy_until = b_end + timedelta(minutes=b_rec)
+            base_busy_intervals.append({
+                'start': b_start,
+                'end': b_end,
+                'busy_until': b_busy_until,
+                'tipo_consulta': br['tipo_consulta']
+            })
+        except Exception:
+            pass
+
+    # 2. Obtener bloqueos personales y específicos
+    try:
+        cursor.execute("PRAGMA table_info(bloqueos_agenda_especificos)")
+        cols_b = [c[1] for c in cursor.fetchall()]
+        if 'modalidad' not in cols_b:
+            cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN modalidad TEXT DEFAULT 'Todas'")
+        if 'fecha_fin' not in cols_b:
+            cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN fecha_fin TEXT")
+        db.commit()
+    except:
+        pass
+
+    cursor.execute("""
+        SELECT hora_inicio, hora_fin, todo_el_dia, modalidad, fecha, fecha_fin 
+        FROM bloqueos_agenda_especificos
+        WHERE psicologo_id = ? 
+          AND (fecha = ? OR (fecha_fin IS NOT NULL AND fecha_fin != '' AND fecha <= ? AND fecha_fin >= ?))
+    """, (ps_id := psic_id_int, target_date_str, target_date_str, target_date_str))
+    blocks_rows = cursor.fetchall()
+
+    candidate_slots = []
+    seen_keys = set()
+    now_dt = datetime.now()
+
+    # 3. Iterar cada perfil configurado
     for perf in perfiles:
         perf_modalidad = str(perf.get('modalidad') or perf.get('nombre') or '').strip()
         perf_nombre = str(perf.get('nombre') or perf.get('modalidad') or '').strip()
@@ -389,7 +462,7 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
             if not is_match:
                 continue
 
-        # Parámetros específicos de la modalidad o herencia de valores globales
+        # Parámetros específicos de la modalidad
         p_dur = perf.get('duracion')
         p_rec = perf.get('receso')
         p_ant = perf.get('antelacion')
@@ -412,6 +485,32 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
         duration_td = timedelta(minutes=perf_duracion)
         recess_td = timedelta(minutes=perf_receso)
 
+        # Evaluar bloqueos aplicables a este perfil
+        perf_blocks = []
+        is_all_day_blocked = False
+        for blk in blocks_rows:
+            blk_dict = dict(blk)
+            blk_mod = (blk_dict.get('modalidad') or 'Todas').strip().lower()
+            is_all_mod = blk_mod in ('todas', 'all', '', 'todas las modalidades')
+            mod_match = is_all_mod or (blk_mod in perf_mod_clean or perf_mod_clean in blk_mod or blk_mod in perf_nom_clean or perf_nom_clean in blk_mod)
+            if not mod_match:
+                continue
+            if blk_dict.get('todo_el_dia') == 1:
+                is_all_day_blocked = True
+                break
+            b_in = (blk_dict.get('hora_inicio') or '').strip()
+            b_fi = (blk_dict.get('hora_fin') or '').strip()
+            if b_in and b_fi:
+                try:
+                    perf_blocks.append({
+                        'start': datetime.strptime(normalize_time_str(b_in), "%H:%M"),
+                        'busy_until': datetime.strptime(normalize_time_str(b_fi), "%H:%M")
+                    })
+                except: pass
+
+        if is_all_day_blocked:
+            continue
+
         dias_list = perf.get('dias', [])
         for d in dias_list:
             d_num = int(d.get('dia', -1))
@@ -431,14 +530,74 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                             if end_time.hour < 12:
                                 end_time = end_time.replace(hour=end_time.hour + 12)
 
-                        curr = start_time
+                        # Recolectar intervalos ocupados que intersecten con este rango laboral
+                        raw_busy = []
+                        for bi in base_busy_intervals:
+                            if bi['busy_until'] <= start_time or bi['start'] >= end_time:
+                                continue
+                            raw_busy.append({
+                                'start': max(bi['start'], start_time),
+                                'busy_until': min(bi['busy_until'], end_time),
+                                'actual_busy_until': bi['busy_until']
+                            })
+                        for p_b in perf_blocks:
+                            if p_b['busy_until'] <= start_time or p_b['start'] >= end_time:
+                                continue
+                            raw_busy.append({
+                                'start': max(p_b['start'], start_time),
+                                'busy_until': min(p_b['busy_until'], end_time),
+                                'actual_busy_until': p_b['busy_until']
+                            })
 
-                        while curr + duration_td <= end_time:
+                        raw_busy.sort(key=lambda x: x['start'])
+
+                        # Fusionar intervalos ocupados superpuestos o contiguos
+                        merged_busy = []
+                        for b in raw_busy:
+                            if not merged_busy:
+                                merged_busy.append(b)
+                            else:
+                                prev = merged_busy[-1]
+                                if b['start'] <= prev['actual_busy_until']:
+                                    prev['actual_busy_until'] = max(prev['actual_busy_until'], b['actual_busy_until'])
+                                    prev['busy_until'] = max(prev['busy_until'], b['busy_until'])
+                                else:
+                                    merged_busy.append(b)
+
+                        # Generar turnos en ventanas libres continuas (Floating Slots)
+                        curr_free_start = start_time
+                        for b in merged_busy:
+                            curr = curr_free_start
+                            # En ventana previa a una cita ocupada, la sesión + receso debe culminar antes de la cita
+                            while curr + duration_td + recess_td <= b['start']:
+                                h_str = curr.strftime("%H:%M")
+                                h_fin_str = (curr + duration_td).strftime("%H:%M")
+                                mod_label = perf_nombre or perf_modalidad or 'Online'
+                                slot_key = (h_str, mod_label)
+                                if slot_key not in seen_keys:
+                                    seen_keys.add(slot_key)
+                                    candidate_slots.append({
+                                        'hora_literal': h_str,
+                                        'hora_inicio': h_str,
+                                        'hora_fin': h_fin_str,
+                                        'modalidad': mod_label,
+                                        'perfil': perf_nombre,
+                                        'antelacion': perf_antelacion,
+                                        'duracion': perf_duracion,
+                                        'receso': perf_receso
+                                    })
+                                curr = curr + duration_td + recess_td
+                            curr_free_start = max(curr_free_start, b['actual_busy_until'])
+
+                        # Ventana libre final hasta el cierre del rango laboral
+                        curr = curr_free_start
+                        while curr + duration_td <= end_time and curr + duration_td + recess_td <= end_time + timedelta(minutes=5):
                             h_str = curr.strftime("%H:%M")
                             h_fin_str = (curr + duration_td).strftime("%H:%M")
                             mod_label = perf_nombre or perf_modalidad or 'Online'
-                            if h_str not in seen_hours:
-                                seen_hours.add(h_str)
+                            slot_key = (h_str, mod_label)
+                            if slot_key not in seen_keys:
+                                seen_keys.add(slot_key)
                                 candidate_slots.append({
                                     'hora_literal': h_str,
                                     'hora_inicio': h_str,
@@ -450,140 +609,26 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                                     'receso': perf_receso
                                 })
                             curr = curr + duration_td + recess_td
+
                     except Exception as _re:
                         print("Error calculando rango horario:", _re)
 
-    # Filtrar horas ocupadas en la base de datos (con cálculo exacto de solapamiento de intervalos)
-    alt_date_str = target_date_str
-    try:
-        alt_date_str = target_dt.strftime("%d/%m/%Y")
-    except: pass
-
-    query_busy = """
-        SELECT af.hora, af.id, af.tipo_consulta, af.cantidad_sesiones FROM agenda_finanzas af
-        LEFT JOIN pacientes p ON af.paciente_id = p.id
-        WHERE (af.fecha = ? OR af.fecha = ? OR TRIM(af.fecha) = ? OR TRIM(af.fecha) = ?)
-          AND (p.psicologo_id = ? OR af.creado_por_user_id = ? OR (p.psicologo_id IS NULL AND af.creado_por_user_id IS NULL) OR ? IS NULL)
-          AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
-    """
-    cursor.execute(query_busy, (target_date_str, alt_date_str, target_date_str, alt_date_str, psicologo_id, psicologo_id, psicologo_id))
-    busy_rows = cursor.fetchall()
-    
-    busy_hours = set()
-    busy_intervals = []
-    for br in busy_rows:
-        if exclude_appt_id and br['id'] == exclude_appt_id:
-            continue
-        h_val = (br['hora'] or '').strip()
-        if not h_val or h_val == '00:00':
-            continue
-        h_short = normalize_time_str(h_val)
-        if h_short == '00:00':
-            continue
-        busy_hours.add(h_short)
-        try:
-            b_start = datetime.strptime(h_short, "%H:%M")
-            b_dur, b_rec = get_appointment_duration_and_recess(br['tipo_consulta'], perfiles, duracion, receso)
-            b_cant = int(br['cantidad_sesiones'] or 1)
-            b_total_dur = b_dur * b_cant
-            b_end = b_start + timedelta(minutes=b_total_dur)
-            b_busy_until = b_end + timedelta(minutes=b_rec)
-            busy_intervals.append({
-                'start': b_start,
-                'end': b_end,
-                'busy_until': b_busy_until,
-                'hora': h_short
-            })
-        except Exception as _e_time:
-            pass
-
-    # Bloqueos personales y de espacios del psicólogo (soporta modalidad específica y rangos de fecha)
-    try:
-        cursor.execute("PRAGMA table_info(bloqueos_agenda_especificos)")
-        cols_b = [c[1] for c in cursor.fetchall()]
-        if 'modalidad' not in cols_b:
-            cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN modalidad TEXT DEFAULT 'Todas'")
-        if 'fecha_fin' not in cols_b:
-            cursor.execute("ALTER TABLE bloqueos_agenda_especificos ADD COLUMN fecha_fin TEXT")
-        db.commit()
-    except:
-        pass
-
-    cursor.execute("""
-        SELECT hora_inicio, hora_fin, todo_el_dia, modalidad, fecha, fecha_fin 
-        FROM bloqueos_agenda_especificos
-        WHERE psicologo_id = ? 
-          AND (fecha = ? OR (fecha_fin IS NOT NULL AND fecha_fin != '' AND fecha <= ? AND fecha_fin >= ?))
-    """, (psicologo_id, target_date_str, target_date_str, target_date_str))
-    blocks = cursor.fetchall()
-    
-    slots_to_remove = set()
-    for blk in blocks:
-        blk_dict = dict(blk)
-        blk_mod = (blk_dict.get('modalidad') or 'Todas').strip().lower()
-        is_all_modalities = blk_mod in ('todas', 'all', '', 'todas las modalidades')
-        is_all_day = (blk_dict.get('todo_el_dia') == 1)
-        b_in = (blk_dict.get('hora_inicio') or '').strip()
-        b_fi = (blk_dict.get('hora_fin') or '').strip()
-
-        for s in candidate_slots:
-            slot_mod = (s.get('modalidad') or s.get('perfil') or '').strip().lower()
-            slot_perf = (s.get('perfil') or s.get('modalidad') or '').strip().lower()
-            
-            matches_modality = is_all_modalities or (blk_mod in slot_mod or slot_mod in blk_mod or blk_mod in slot_perf or slot_perf in blk_mod)
-            if not matches_modality:
-                continue
-
-            if is_all_day:
-                slots_to_remove.add(id(s))
-            elif b_in and b_fi:
-                if b_in <= s['hora_inicio'] < b_fi:
-                    slots_to_remove.add(id(s))
-
-    if slots_to_remove:
-        candidate_slots = [s for s in candidate_slots if id(s) not in slots_to_remove]
-
-    now_dt = datetime.now()
-
+    # 4. Validar antelación mínima y formato ISO
     valid_slots = []
     for slot in candidate_slots:
         h_lit = normalize_time_str(slot['hora_literal'])
-        if h_lit in busy_hours:
-            continue
-            
-        # Comprobar si el intervalo del slot colisiona con alguna cita existente
         try:
-            s_start = datetime.strptime(normalize_time_str(slot['hora_inicio']), "%H:%M")
-            s_end = datetime.strptime(normalize_time_str(slot['hora_fin']), "%H:%M")
-            slot_rec = timedelta(minutes=int(slot.get('receso', 0) or 0))
-            has_overlap = False
-            for bi in busy_intervals:
-                # 1. Solapamiento directo de sesión
-                if s_start < bi['end'] and s_end > bi['start']:
-                    has_overlap = True
-                    break
-                # 2. Inicia durante el receso/descanso de la cita previa
-                if s_start >= bi['start'] and s_start < bi['busy_until']:
-                    has_overlap = True
-                    break
-                # 3. La cita previa empieza durante el receso de este slot
-                if bi['start'] >= s_start and bi['start'] < s_end + slot_rec:
-                    has_overlap = True
-                    break
-            if has_overlap:
+            slot_dt = datetime.strptime(f"{target_date_str} {h_lit}", "%Y-%m-%d %H:%M")
+            slot_antelacion = slot.get('antelacion', antelacion)
+            min_allowed_dt = now_dt + timedelta(hours=slot_antelacion)
+            if slot_dt < min_allowed_dt:
                 continue
+
+            slot['iso_timestamp'] = slot_dt.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+            slot['iso'] = slot['iso_timestamp']
+            valid_slots.append(slot)
         except Exception:
             pass
-
-        slot_dt = datetime.strptime(f"{target_date_str} {h_lit}", "%Y-%m-%d %H:%M")
-        slot_antelacion = slot.get('antelacion', antelacion)
-        min_allowed_dt = now_dt + timedelta(hours=slot_antelacion)
-        if slot_dt < min_allowed_dt:
-            continue
-
-        slot['iso_timestamp'] = slot_dt.strftime("%Y-%m-%dT%H:%M:%S-04:00")
-        slot['iso'] = slot['iso_timestamp']
-        valid_slots.append(slot)
 
     valid_slots.sort(key=lambda x: x['hora_literal'])
     return valid_slots
