@@ -3150,6 +3150,8 @@ def patient_has_filled_tool_today(cursor, paciente_id, mod_clave, today_str):
             cursor.execute("SELECT id FROM adherencia_registros WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ?)", (paciente_id, today_str, today_str))
         elif mod_clave == 'pizarra':
             cursor.execute("SELECT id FROM pizarra_terapeutica WHERE paciente_id = ? AND (fecha_registro LIKE ? OR DATE(fecha_registro) = ?)", (paciente_id, f"{today_str}%", today_str))
+        elif mod_clave == 'mood_tracker':
+            cursor.execute("SELECT id FROM registros_mood_tracker WHERE paciente_id = ? AND (fecha = ? OR DATE(fecha) = ? OR DATE(fecha_registro) = ?)", (paciente_id, today_str, today_str, today_str))
         else:
             return False
         return cursor.fetchone() is not None
@@ -3177,6 +3179,7 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
         cursor = db.cursor()
 
         TOOL_NAME_MAP = {
+            'mood_tracker': 'Mood Tracker (Registro de Emociones)',
             'pantalla': 'Registro de Consumo de Pantallas',
             'cognitivo': 'Registro Cognitivo (TCC)',
             'ingesta': 'Registro de Ingesta Alimentaria',

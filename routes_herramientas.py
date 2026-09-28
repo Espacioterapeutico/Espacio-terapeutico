@@ -712,6 +712,7 @@ def get_therapist_patients_active_tools():
     cursor = db.cursor()
 
     tools_meta = {
+        'mood_tracker': {'nombre': 'Mood Tracker (Registro de Emociones)', 'icono': '🎭'},
         'sueno': {'nombre': 'Higiene del Sueño', 'icono': '🌙'},
         'ansiedad': {'nombre': 'Diario de Ansiedad', 'icono': '⚡'},
         'sobriedad': {'nombre': 'Control de Sobriedad', 'icono': '🛡️'},

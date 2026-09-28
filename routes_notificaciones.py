@@ -1143,6 +1143,7 @@ def send_queue_item_now(item_id):
             first_name = (q_row['nombres'] or '').strip().split()[0] if q_row['nombres'] else 'Consultante'
 
             TOOL_NAME_MAP = {
+                'mood_tracker': 'Mood Tracker (Registro de Emociones)',
                 'pantalla': 'Registro de Consumo de Pantallas',
                 'cognitivo': 'Registro Cognitivo (TCC)',
                 'ingesta': 'Registro de Ingesta Alimentaria',
@@ -1726,6 +1727,7 @@ def get_whatsapp_queue_status():
 
             host_url = get_public_base_url()
             tool_names_map = {
+                'mood_tracker': 'Mood Tracker',
                 'sueno': 'Higiene del Sueño',
                 'ansiedad': 'Diario de Ansiedad',
                 'sobriedad': 'Registro de Consumo',
