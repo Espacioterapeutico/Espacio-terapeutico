@@ -9894,19 +9894,53 @@ function saveEditProfileDescModal() {
 window.openEditProfileDescModal = openEditProfileDescModal;
 window.saveEditProfileDescModal = saveEditProfileDescModal;
 
-function toggleCancelRuleInputs() {
-    const tipo = document.getElementById('avail-limite-cancelacion-tipo').value;
-    const hoursGroup = document.getElementById('cancel-rule-value-hours-group');
-    const timeGroup = document.getElementById('cancel-rule-value-time-group');
+function toggleConfirmationRuleInputs() {
+    const tipo = document.getElementById('avail-confirmacion-tipo')?.value || 'horas';
+    const numGroup = document.getElementById('confirmacion-rule-value-num-group');
+    const timeGroup = document.getElementById('confirmacion-rule-value-time-group');
+    const numLabel = document.getElementById('confirmacion-num-label');
+    const numInput = document.getElementById('avail-confirmacion-num');
     
-    if (tipo === 'horas') {
-        hoursGroup.classList.remove('hide');
-        timeGroup.classList.add('hide');
+    if (tipo === 'minutos') {
+        if (numGroup) numGroup.classList.remove('hide');
+        if (timeGroup) timeGroup.classList.add('hide');
+        if (numLabel) numLabel.textContent = 'Cantidad de Minutos *';
+        if (numInput && (!numInput.value || numInput.value > 1440 || numInput.value < 10)) numInput.value = 120;
+    } else if (tipo === 'horas') {
+        if (numGroup) numGroup.classList.remove('hide');
+        if (timeGroup) timeGroup.classList.add('hide');
+        if (numLabel) numLabel.textContent = 'Cantidad de Horas *';
+        if (numInput && (!numInput.value || numInput.value > 168)) numInput.value = 24;
     } else {
-        hoursGroup.classList.add('hide');
-        timeGroup.classList.remove('hide');
+        if (numGroup) numGroup.classList.add('hide');
+        if (timeGroup) timeGroup.classList.remove('hide');
     }
 }
+window.toggleConfirmationRuleInputs = toggleConfirmationRuleInputs;
+
+function toggleCancelRuleInputs() {
+    const tipo = document.getElementById('avail-limite-cancelacion-tipo')?.value || 'horas';
+    const hoursGroup = document.getElementById('cancel-rule-value-hours-group');
+    const timeGroup = document.getElementById('cancel-rule-value-time-group');
+    const numLabel = document.getElementById('cancel-num-label');
+    const numInput = document.getElementById('avail-limite-cancelacion');
+    
+    if (tipo === 'minutos') {
+        if (hoursGroup) hoursGroup.classList.remove('hide');
+        if (timeGroup) timeGroup.classList.add('hide');
+        if (numLabel) numLabel.textContent = 'Cantidad de Minutos *';
+        if (numInput && (!numInput.value || numInput.value > 1440 || numInput.value < 5)) numInput.value = 60;
+    } else if (tipo === 'horas') {
+        if (hoursGroup) hoursGroup.classList.remove('hide');
+        if (timeGroup) timeGroup.classList.add('hide');
+        if (numLabel) numLabel.textContent = 'Cantidad de Horas *';
+        if (numInput && (!numInput.value || numInput.value > 168)) numInput.value = 24;
+    } else {
+        if (hoursGroup) hoursGroup.classList.add('hide');
+        if (timeGroup) timeGroup.classList.remove('hide');
+    }
+}
+window.toggleCancelRuleInputs = toggleCancelRuleInputs;
 
 async function loadAdminAvailability() {
     const listContainer = document.getElementById('availability-days-list');
@@ -9935,11 +9969,26 @@ async function loadAdminAvailability() {
         document.getElementById('avail-tiempo-confirmacion').value = data.alerta_confirmacion !== undefined ? data.alerta_confirmacion : 24;
         document.getElementById('avail-tiempo-cierre').value = data.alerta_cierre !== undefined ? data.alerta_cierre : 2;
         
+        // Confirmación personalizada
+        const confTipo = data.alerta_confirmacion_tipo || 'horas';
+        const confVal = data.alerta_confirmacion_valor !== undefined ? data.alerta_confirmacion_valor : (data.alerta_confirmacion !== undefined ? data.alerta_confirmacion : 24);
+        const selConfTipo = document.getElementById('avail-confirmacion-tipo');
+        if (selConfTipo) selConfTipo.value = confTipo;
+        if (confTipo === 'horas' || confTipo === 'minutos') {
+            const numEl = document.getElementById('avail-confirmacion-num');
+            if (numEl) numEl.value = confVal;
+        } else {
+            const timeEl = document.getElementById('avail-confirmacion-time');
+            if (timeEl) timeEl.value = confVal;
+        }
+        toggleConfirmationRuleInputs();
+
+        // Cancelación personalizada
         const cTipo = data.limite_cancelacion_tipo || 'horas';
         const cVal = data.limite_cancelacion_valor !== undefined ? data.limite_cancelacion_valor : (data.limite_cancelacion !== undefined ? data.limite_cancelacion : 24);
         
         document.getElementById('avail-limite-cancelacion-tipo').value = cTipo;
-        if (cTipo === 'horas') {
+        if (cTipo === 'horas' || cTipo === 'minutos') {
             document.getElementById('avail-limite-cancelacion').value = cVal;
         } else {
             document.getElementById('avail-limite-cancelacion-time').value = cVal;
@@ -10304,13 +10353,25 @@ async function handleSaveAvailability(e) {
     const duracion = parseInt(document.getElementById('avail-duracion').value);
     const receso = parseInt(document.getElementById('avail-receso').value);
     const antelacion = parseInt(document.getElementById('avail-antelacion').value);
-    const alerta_confirmacion = parseInt(document.getElementById('avail-tiempo-confirmacion').value);
+    
+    // Alerta de confirmación personalizada
+    const alerta_confirmacion_tipo = document.getElementById('avail-confirmacion-tipo')?.value || 'horas';
+    const alerta_confirmacion_valor = (alerta_confirmacion_tipo === 'horas' || alerta_confirmacion_tipo === 'minutos')
+        ? parseInt(document.getElementById('avail-confirmacion-num')?.value || 24)
+        : (document.getElementById('avail-confirmacion-time')?.value || '18:00');
+    
+    const alerta_confirmacion = (alerta_confirmacion_tipo === 'horas') 
+        ? alerta_confirmacion_valor 
+        : (alerta_confirmacion_tipo === 'minutos' ? Math.max(1, Math.round(alerta_confirmacion_valor / 60)) : 24);
+
     const alerta_recordatorio = parseInt(document.getElementById('avail-tiempo-recordatorio').value);
     const alerta_cierre = parseInt(document.getElementById('avail-tiempo-cierre').value);
-    const limite_cancelacion_tipo = document.getElementById('avail-limite-cancelacion-tipo').value;
-    const limite_cancelacion_valor = limite_cancelacion_tipo === 'horas' 
-        ? parseInt(document.getElementById('avail-limite-cancelacion').value || 24)
-        : document.getElementById('avail-limite-cancelacion-time').value;
+    
+    // Límite de cancelación personalizado
+    const limite_cancelacion_tipo = document.getElementById('avail-limite-cancelacion-tipo')?.value || 'horas';
+    const limite_cancelacion_valor = (limite_cancelacion_tipo === 'horas' || limite_cancelacion_tipo === 'minutos')
+        ? parseInt(document.getElementById('avail-limite-cancelacion')?.value || 24)
+        : (document.getElementById('avail-limite-cancelacion-time')?.value || '07:00');
     
     const profileCards = document.querySelectorAll('.avail-profile-card');
     const perfiles = [];
@@ -10375,7 +10436,19 @@ async function handleSaveAvailability(e) {
         const res = await fetch('/api/admin/availability', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ duracion, receso, perfiles, antelacion, alerta_confirmacion, alerta_recordatorio, alerta_cierre, limite_cancelacion_tipo, limite_cancelacion_valor })
+            body: JSON.stringify({
+                duracion,
+                receso,
+                perfiles,
+                antelacion,
+                alerta_confirmacion,
+                alerta_confirmacion_tipo,
+                alerta_confirmacion_valor,
+                alerta_recordatorio,
+                alerta_cierre,
+                limite_cancelacion_tipo,
+                limite_cancelacion_valor
+            })
         });
         
         const data = await res.json();

@@ -741,6 +741,7 @@ def cron_send_whatsapp_reminders():
     citas_confirmar = cursor.fetchall()
     print(f"[CRON] Citas pendientes de confirmación encontradas: {len(citas_confirmar)} (rango {today_str} a {future_3days_str})", flush=True)
 
+    psych_configs = {}
     for cita_raw in citas_confirmar:
         try:
             cita = dict(cita_raw)
@@ -759,19 +760,30 @@ def cron_send_whatsapp_reminders():
                 diff_hours = 12.0
                 dia_previo_str = today_str
 
-            # Regla de Confirmación:
-            # 1. Cita programada normal: Sale a las 8:00 AM del día previo a la cita.
-            paso_8am_dia_previo = (today_str >= dia_previo_str) and (current_hour >= 8)
+            psych_id = cita.get('psicologo_id') or 1
+            if psych_id not in psych_configs:
+                cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psych_id,))
+                u_row = cursor.fetchone()
+                cfg_p = {}
+                if u_row and u_row[0]:
+                    try: cfg_p = json.loads(u_row[0])
+                    except: pass
+                psych_configs[psych_id] = cfg_p
+            cfg_p = psych_configs[psych_id]
 
-            # 2. Cita de última hora: Faltan menos de 24 horas para la consulta.
-            es_ultima_hora = (0 < diff_hours < 24)
+            conf_rule_type = cfg_p.get('alerta_confirmacion_tipo', 'horas')
+            conf_rule_val = cfg_p.get('alerta_confirmacion_valor', cfg_p.get('alerta_confirmacion', 24))
 
-            print(f"[CRON]   Evaluando {pat_name} | cita={cita['fecha']} {cita['hora']} | diff_hours={diff_hours:.1f} | dia_previo={dia_previo_str} | today={today_str} | paso_8am={paso_8am_dia_previo} | ultima_hora={es_ultima_hora}", flush=True)
+            from routes_pacientes import get_confirmation_trigger_datetime
+            trigger_dt = get_confirmation_trigger_datetime(cita['fecha'], cita['hora'], conf_rule_type, conf_rule_val)
+            now_naive = now_local.replace(tzinfo=None)
 
-            should_send_confirmation = paso_8am_dia_previo or es_ultima_hora
+            should_send_confirmation = (now_naive >= trigger_dt) and (cita_dt > now_naive)
+
+            print(f"[CRON]   Evaluando {pat_name} | cita={cita['fecha']} {cita['hora']} | regla={conf_rule_type}:{conf_rule_val} | trigger={trigger_dt} | now={now_naive} | enviar={should_send_confirmation}", flush=True)
 
             if not should_send_confirmation:
-                print(f"[CRON]   Saltando {pat_name}: no cumple condiciones de envío", flush=True)
+                print(f"[CRON]   Saltando {pat_name}: aún no cumple momento de disparo ({trigger_dt})", flush=True)
                 continue
             
             print(f"[CRON]   >>> ENVIANDO confirmación a {pat_name} ({phone})...", flush=True)

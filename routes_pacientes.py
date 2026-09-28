@@ -88,19 +88,22 @@ def get_deadline_datetime(fecha_str, hora_str, rule_type, rule_value):
     except Exception:
         return datetime.now() + timedelta(days=365)
 
-    if rule_type == 'dias':
+    if rule_type == 'minutos':
+        rule_val = float(rule_value or 60)
+        return cita_dt - timedelta(minutes=rule_val)
+    elif rule_type == 'dias':
         rule_val = float(rule_value or 1)
         return cita_dt - timedelta(days=rule_val)
-    elif rule_type == 'previo':
+    elif rule_type in ('previo', 'dia_previo'):
         try:
             prev_day = cita_dt - timedelta(days=1)
-            deadline_time = datetime.strptime(str(rule_value), "%H:%M").time()
+            deadline_time = datetime.strptime(normalize_time_str(str(rule_value)), "%H:%M").time()
             return datetime.combine(prev_day.date(), deadline_time)
         except:
             return cita_dt - timedelta(hours=24)
     elif rule_type == 'mismo_dia':
         try:
-            deadline_time = datetime.strptime(str(rule_value), "%H:%M").time()
+            deadline_time = datetime.strptime(normalize_time_str(str(rule_value)), "%H:%M").time()
             return datetime.combine(cita_dt.date(), deadline_time)
         except:
             return cita_dt - timedelta(hours=24)
@@ -108,10 +111,20 @@ def get_deadline_datetime(fecha_str, hora_str, rule_type, rule_value):
         rule_val = float(rule_value or 24)
         return cita_dt - timedelta(hours=rule_val)
 
+def get_confirmation_trigger_datetime(fecha_str, hora_str, rule_type, rule_value):
+    """Calcula la fecha y hora a partir de la cual debe enviarse la solicitud de confirmación."""
+    return get_deadline_datetime(fecha_str, hora_str, rule_type, rule_value)
+
 def get_rule_description(rule_type, rule_value):
+    if rule_type == 'minutos':
+        return f"{int(float(rule_value or 60))} minuto(s) antes de la cita"
+    elif rule_type == 'dias':
+        return f"{int(float(rule_value or 1))} día(s) antes de la cita"
+    elif rule_type in ('previo', 'dia_previo'):
+        return f"El día previo a las {rule_value}"
+    elif rule_type == 'mismo_dia':
+        return f"El mismo día a las {rule_value}"
     rule_val = int(float(rule_value or 24))
-    if rule_type == 'dias':
-        return f"{rule_val} día(s) antes de la cita"
     return f"{rule_val} hora(s) antes de la cita"
 
 def create_auto_cancellation_session(db, patient_id, appt_id, fecha, modalidad, estado, motivo):

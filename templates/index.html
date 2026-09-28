@@ -3461,47 +3461,75 @@
                                                         🔔 Parámetros de Agenda y Notificaciones
                                                     </h5>
                                                     <div class="form-row mb-3">
-                                                        <div class="form-group col-6">
-                                                            <label for="avail-antelacion" style="font-weight: 600; font-size: 0.88rem;">Antelación mínima para agendar (horas)</label>
+                                                        <div class="form-group col-12">
+                                                            <label for="avail-antelacion" style="font-weight: 600; font-size: 0.88rem;">Antelación mínima para agendar (horas previas que debe tener el paciente) *</label>
                                                             <input type="number" id="avail-antelacion" value="24" min="0" max="168" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
                                                         </div>
-                                                        <div class="form-group col-6">
-                                                            <label for="avail-tiempo-confirmacion" style="font-weight: 600; font-size: 0.88rem;">Alerta de Confirmación (horas antes)</label>
-                                                            <input type="number" id="avail-tiempo-confirmacion" value="24" min="1" max="168" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
-                                                        </div>
                                                     </div>
+
+                                                    <!-- Regla de Envío de Solicitud de Confirmación -->
+                                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.9rem; margin-bottom: 1rem;">
+                                                        <label style="font-weight: 700; font-size: 0.9rem; color: #1e40af; margin-bottom: 0.5rem; display: block;">
+                                                            📲 ¿Cuándo enviar la Solicitud de Confirmación por WhatsApp? (Fase 1)
+                                                        </label>
+                                                        <div class="form-row">
+                                                            <div class="form-group col-6">
+                                                                <label for="avail-confirmacion-tipo" style="font-weight: 600; font-size: 0.84rem;">Criterio de Envío *</label>
+                                                                <select id="avail-confirmacion-tipo" required onchange="toggleConfirmationRuleInputs()" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem;">
+                                                                    <option value="horas">Cantidad de horas antes de la sesión</option>
+                                                                    <option value="minutos">Cantidad de minutos antes de la sesión</option>
+                                                                    <option value="previo">El día previo a la hora especificada</option>
+                                                                    <option value="mismo_dia">El mismo día a la hora especificada</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="form-group col-6" id="confirmacion-rule-value-num-group">
+                                                                <label for="avail-confirmacion-num" id="confirmacion-num-label" style="font-weight: 600; font-size: 0.84rem;">Cantidad de Horas *</label>
+                                                                <input type="number" id="avail-confirmacion-num" value="24" min="1" max="1440" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
+                                                            <div class="form-group col-6 hide" id="confirmacion-rule-value-time-group">
+                                                                <label for="avail-confirmacion-time" style="font-weight: 600; font-size: 0.84rem;">Hora de Envío *</label>
+                                                                <input type="time" id="avail-confirmacion-time" value="18:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
+                                                        </div>
+                                                        <input type="hidden" id="avail-tiempo-confirmacion" value="24">
+                                                    </div>
+
                                                     <div class="form-row">
                                                         <div class="form-group col-6">
-                                                            <label for="avail-tiempo-recordatorio" style="font-weight: 600; font-size: 0.88rem;">Alerta de Recordatorio (horas antes)</label>
+                                                            <label for="avail-tiempo-recordatorio" style="font-weight: 600; font-size: 0.88rem;">Alerta de Recordatorio Final (horas antes)</label>
                                                             <input type="number" id="avail-tiempo-recordatorio" value="2" min="1" max="72" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
                                                         </div>
                                                         <div class="form-group col-6">
-                                                            <label for="avail-tiempo-cierre" style="font-weight: 600; font-size: 0.88rem;">Alerta de Cierre (horas después)</label>
+                                                            <label for="avail-tiempo-cierre" style="font-weight: 600; font-size: 0.88rem;">Alerta de Cierre / Seguimiento (horas después)</label>
                                                             <input type="number" id="avail-tiempo-cierre" value="2" min="1" max="72" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <!-- Tarjeta 3: Regla de Cancelación -->
+                                                <!-- Tarjeta 3: Regla de Cancelación por No Confirmación y Sin Cobro -->
                                                 <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-                                                    <h5 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
-                                                        🛡️ Política de Cancelación sin Cobro
+                                                    <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 700; color: #dc2626; display: flex; align-items: center; gap: 0.5rem;">
+                                                        🛡️ Límite de Auto-Cancelación y Política sin Cobro (Fase 2)
                                                     </h5>
+                                                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                                        Determina hasta qué momento tiene el paciente para confirmar su asistencia antes de que el sistema cancele la cita, libere el horario en tu agenda y le envíe el aviso con enlace para reagendar.
+                                                    </p>
                                                     <div class="form-row">
                                                         <div class="form-group col-6">
-                                                            <label for="avail-limite-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Regla de Límite de Cancelación *</label>
+                                                            <label for="avail-limite-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Criterio de Cancelación *</label>
                                                             <select id="avail-limite-cancelacion-tipo" required onchange="toggleCancelRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">
-                                                                <option value="horas">Cantidad de horas antes de la cita</option>
+                                                                <option value="horas">Cantidad de horas antes de la sesión</option>
+                                                                <option value="minutos">Cantidad de minutos antes de la sesión</option>
                                                                 <option value="previo">Condición: El día previo a la hora especificada</option>
                                                                 <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
                                                             </select>
                                                         </div>
                                                         <div class="form-group col-6" id="cancel-rule-value-hours-group">
-                                                            <label for="avail-limite-cancelacion" style="font-weight: 600; font-size: 0.88rem;">Cantidad de Horas *</label>
-                                                            <input type="number" id="avail-limite-cancelacion" value="24" min="0" max="168" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            <label for="avail-limite-cancelacion" id="cancel-num-label" style="font-weight: 600; font-size: 0.88rem;">Cantidad de Horas *</label>
+                                                            <input type="number" id="avail-limite-cancelacion" value="24" min="0" max="1440" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
                                                         </div>
                                                         <div class="form-group col-6 hide" id="cancel-rule-value-time-group">
-                                                            <label for="avail-limite-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora de Cierre (Límite) *</label>
+                                                            <label for="avail-limite-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora Límite de Cierre *</label>
                                                             <input type="time" id="avail-limite-cancelacion-time" value="08:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
                                                         </div>
                                                     </div>

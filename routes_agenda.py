@@ -1320,6 +1320,8 @@ def admin_availability():
         "receso": 15,
         "antelacion": 24,
         "alerta_confirmacion": 24,
+        "alerta_confirmacion_tipo": "horas",
+        "alerta_confirmacion_valor": 24,
         "alerta_recordatorio": 2,
         "alerta_cierre": 2,
         "limite_cancelacion_tipo": "mismo_dia",
