@@ -353,9 +353,15 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                 config = json.loads(row['valor'])
             except: pass
 
-    duracion = int(config.get('duracion', 60))
-    receso = int(config.get('receso', 0))
-    antelacion = int(config.get('antelacion', 24))
+    try:
+        duracion = int(config.get('duracion') or 60)
+    except: duracion = 60
+    try:
+        receso = int(config.get('receso') or 0)
+    except: receso = 0
+    try:
+        antelacion = int(config.get('antelacion') or 24)
+    except: antelacion = 24
     raw_perfiles = config.get('perfiles', [])
     perfiles = []
     if isinstance(raw_perfiles, dict):
