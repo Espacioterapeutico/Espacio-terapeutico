@@ -1856,6 +1856,9 @@ def get_whatsapp_tokens_history():
     cursor = db.cursor()
     items = []
 
+    # Filtrar estrictamente por el psicólogo activo (Paulo Mora) para no mostrar pacientes de otros terapeutas
+    psic_owner_id = user_id if (user_id and username != 'pamoraro') else 1
+
     # 1. HERRAMIENTAS TERAPÉUTICAS
     if tipo_filtro in ('todos', 'herramienta'):
         try:
@@ -1877,7 +1880,8 @@ def get_whatsapp_tokens_history():
                 FROM tokens_herramientas th
                 LEFT JOIN cola_recordatorios_herramientas crh ON crh.token_id = th.id
                 LEFT JOIN pacientes p ON th.paciente_id = p.id
-            """)
+                WHERE (th.psicologo_id = ? OR (th.psicologo_id IS NULL AND (p.psicologo_id = ? OR p.psicologo_id IS NULL)))
+            """, (psic_owner_id, psic_owner_id))
             for r in cursor.fetchall():
                 htipo = (r['herramienta_tipo'] or 'herramienta').lower()
                 nombre_item = tool_names.get(htipo, f"Herramienta: {htipo.capitalize()}")
@@ -1931,7 +1935,8 @@ def get_whatsapp_tokens_history():
                 FROM test_asignaciones ta
                 LEFT JOIN tests_definiciones td ON ta.test_code = td.code
                 LEFT JOIN pacientes p ON ta.patient_id = p.id
-            """)
+                WHERE (ta.user_id = ? OR (ta.user_id IS NULL AND (p.psicologo_id = ? OR p.psicologo_id IS NULL)))
+            """, (psic_owner_id, psic_owner_id))
             for r in cursor.fetchall():
                 test_title = r['test_nombre'] if r['test_nombre'] else f"Test {r['test_code']}"
                 link = f"{base_url}/evaluacion/{r['token']}"
@@ -1978,7 +1983,8 @@ def get_whatsapp_tokens_history():
                 FROM agenda_finanzas af
                 LEFT JOIN pacientes p ON af.paciente_id = p.id
                 WHERE af.token_confirmacion IS NOT NULL AND af.token_confirmacion != ''
-            """)
+                  AND (p.psicologo_id = ? OR af.creado_por_user_id = ? OR (p.psicologo_id IS NULL AND (af.creado_por_user_id IS NULL OR af.creado_por_user_id = ?)))
+            """, (psic_owner_id, psic_owner_id, psic_owner_id))
             for r in cursor.fetchall():
                 link = f"{base_url}/cita/confirmar/{r['token']}"
                 hora_str = f" {r['hora']}" if r['hora'] else ""
