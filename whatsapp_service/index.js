@@ -479,7 +479,7 @@ app.post('/send', async (req, res) => {
         const MAX_SEND_RETRIES = 2;
         for (let attempt = 0; attempt <= MAX_SEND_RETRIES; attempt++) {
             try {
-                sentMsg = await session.sock.sendMessage(targetJid, { text: text });
+                sentMsg = await session.sock.sendMessage(targetJid, { text: text, linkPreview: false });
                 lastSendErr = null;
                 break; // Éxito → salir del loop
             } catch (sendErr) {
