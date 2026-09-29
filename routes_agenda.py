@@ -982,9 +982,11 @@ def add_agenda_event():
                 is_conf = bool(confirmada)
                 prefix = "🟢 " if is_conf else "🟠 "
                 c_id = '10' if is_conf else '6'
+                mod_label = (tipo_consulta or '').strip()
+                summary_text = f"{prefix}Consulta {mod_label} - {pac_nombre}" if mod_label else f"{prefix}Consulta Psicológica - {pac_nombre}"
 
                 event_body = {
-                    'summary': f"{prefix}Consulta Psicológica - {pac_nombre}",
+                    'summary': summary_text,
                     'colorId': c_id,
                     'description': f"Modalidad: {tipo_consulta}",
                     'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},
@@ -1603,63 +1605,15 @@ def fast_booking_book():
             db.commit()
         
     try:
-        google_event_id = None
-        from routes_admin import get_calendar_service
-        service = get_calendar_service(psicologo_id)
-        if service:
-            start_datetime = f"{fecha}T{hora}:00-04:00"
-            end_hour = str(int(hora.split(':')[0]) + 1).zfill(2)
-            end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00-04:00"
-            
-            # Obtener datos del psicólogo
-            cursor.execute("SELECT nombres FROM usuarios WHERE id = ?", (psicologo_id,))
-            u_row = cursor.fetchone()
-            therapist_name = u_row['nombres'] if u_row else "Paulo Mora"
-            
-            event_body = {
-                'summary': f"🟠 Consulta Psicológica - {pac_nombre}",
-                'colorId': '6',
-                'description': f"Modalidad: {modalidad}\nPsicólogo: Psic. {therapist_name}",
-                'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
-                'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
-                'guestsCanInviteOthers': False,
-                'reminders': {
-                    'useDefault': False,
-                    'overrides': [
-                        { 'method': 'email', 'minutes': 1440 },
-                        { 'method': 'popup', 'minutes': 60 }
-                    ]
-                }
-            }
-            # Agregar al paciente como invitado en Google Calendar para enviar invitación por correo
-            email_paciente = data.get('email', '').strip() or data.get('correo', '').strip()
-            if not email_paciente and patient:
-                try:
-                    email_paciente = patient['email'] if isinstance(patient, dict) and 'email' in patient else (patient[14] if len(patient) > 14 else None)
-                except:
-                    pass
-            
-            if email_paciente:
-                event_body['attendees'] = [
-                    {
-                        'email': email_paciente,
-                        'displayName': pac_nombre
-                    }
-                ]
-            try:
-                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
-                google_event_id = g_event.get('id')
-            except Exception as ge:
-                print("Error creando evento en Google Calendar desde fast-booking:", ge)
-                
         monto, moneda = get_appointment_fee(cursor, patient_id, psicologo_id, modalidad)
         
         cursor.execute("""
             INSERT INTO agenda_finanzas (
                 paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
                 estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia, creado_por_user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, 1, ?, ?)
-        """, (patient_id, fecha, hora, modalidad, monto, moneda, google_event_id, f"Auto-agendada rápida por paciente. Cédula: {cedula}", psicologo_id))
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?)
+        """, (patient_id, fecha, hora, modalidad, monto, moneda, f"Auto-agendada rápida por paciente. Cédula: {cedula}", psicologo_id))
+        agenda_id = cursor.lastrowid
         
         if patient_id and psicologo_id:
             try:
@@ -1680,6 +1634,62 @@ def fast_booking_book():
         """, (psicologo_id, 'cita', 'Nueva Cita Agendada (Rápida)', f"{pac_nombre} ha auto-agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
         
         db.commit()
+
+        # Una vez asegurada la cita en la base de datos local, sincronizamos con Google Calendar
+        google_event_id = None
+        try:
+            from routes_admin import get_calendar_service
+            service = get_calendar_service(psicologo_id)
+            if service:
+                start_datetime = f"{fecha}T{hora}:00-04:00"
+                end_hour = str(int(hora.split(':')[0]) + 1).zfill(2)
+                end_datetime = f"{fecha}T{end_hour}:{hora.split(':')[1]}:00-04:00"
+                
+                # Obtener datos del psicólogo
+                cursor.execute("SELECT nombres FROM usuarios WHERE id = ?", (psicologo_id,))
+                u_row = cursor.fetchone()
+                therapist_name = u_row['nombres'] if u_row else "Paulo Mora"
+                
+                mod_label = (modalidad or '').strip()
+                summary_text = f"🟠 Consulta {mod_label} - {pac_nombre}" if mod_label else f"🟠 Consulta Psicológica - {pac_nombre}"
+                
+                event_body = {
+                    'summary': summary_text,
+                    'colorId': '6',
+                    'description': f"Modalidad: {modalidad}\nPsicólogo: Psic. {therapist_name}",
+                    'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
+                    'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
+                    'guestsCanInviteOthers': False,
+                    'reminders': {
+                        'useDefault': False,
+                        'overrides': [
+                            { 'method': 'email', 'minutes': 1440 },
+                            { 'method': 'popup', 'minutes': 60 }
+                        ]
+                    }
+                }
+                # Agregar al paciente como invitado en Google Calendar para enviar invitación por correo
+                email_paciente = data.get('email', '').strip() or data.get('correo', '').strip()
+                if not email_paciente and patient:
+                    try:
+                        email_paciente = patient['email'] if isinstance(patient, dict) and 'email' in patient else (patient[14] if len(patient) > 14 else None)
+                    except:
+                        pass
+                
+                if email_paciente:
+                    event_body['attendees'] = [
+                        {
+                            'email': email_paciente,
+                            'displayName': pac_nombre
+                        }
+                    ]
+                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
+                google_event_id = g_event.get('id')
+                if google_event_id:
+                    cursor.execute("UPDATE agenda_finanzas SET google_event_id = ? WHERE id = ?", (google_event_id, agenda_id))
+                    db.commit()
+        except Exception as ge:
+            print("Error creando evento en Google Calendar desde fast-booking:", ge)
 
         # Enviar notificación WebPush al psicólogo
         try:

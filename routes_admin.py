@@ -3010,8 +3010,11 @@ def update_transaction(trans_id):
                         for pfx in ['🟠 [Pendiente] ', '🟢 [Confirmada] ', '🔴 [Cancelada] ', '[Pendiente] ', '[Confirmada] ', '[Cancelada] ', '🟠 ', '🟢 ', '🔴 ']:
                             clean_sum = clean_sum.replace(pfx, '')
                         clean_sum = clean_sum.strip()
-                        if not clean_sum:
-                            clean_sum = f"Consulta Psicológica - {pac_nombre}" if pac_nombre else "Consulta Psicológica"
+                        mod_label = (tipo_consulta or '').strip()
+                        if pac_nombre:
+                            clean_sum = f"Consulta {mod_label} - {pac_nombre}" if mod_label else f"Consulta Psicológica - {pac_nombre}"
+                        elif not clean_sum:
+                            clean_sum = f"Consulta {mod_label}".strip() or "Consulta Psicológica"
 
                         g_event['summary'] = f"{st_info['prefix']} {clean_sum}"
                         g_event['colorId'] = st_info['colorId']
@@ -3023,8 +3026,10 @@ def update_transaction(trans_id):
                         print("Error al sincronizar evento existente en Google Calendar:", ge)
                 else:
                     # Crear nuevo evento en Google Calendar si la cita previa no lo tenía
+                    mod_label = (tipo_consulta or '').strip()
+                    summary_title = f"{st_info['prefix']} Consulta {mod_label} - {pac_nombre}" if mod_label else f"{st_info['prefix']} Consulta Psicológica - {pac_nombre}"
                     new_body = {
-                        'summary': f"{st_info['prefix']} Consulta Psicológica - {pac_nombre}",
+                        'summary': summary_title,
                         'colorId': st_info['colorId'],
                         'description': f"Cédula: {pac['cedula'] if pac else ''}\nModalidad: {tipo_consulta}\nEstado: {estado_pago}",
                         'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
@@ -3667,15 +3672,35 @@ def sync_google_calendar():
                     """, (fecha_g, hora_g, g_id))
                 synced_count += 1
             else:
-                # Es nuevo desde Google Calendar. Intentamos enlazarlo a un paciente por nombre
+                # Es nuevo desde Google Calendar. Intentamos enlazarlo a un paciente por correo de asistentes o por nombre limpio
                 paciente_id = None
-                if "Consulta:" in summary or "Consulta Psicológica -" in summary:
-                    nombre_buscado = summary.replace("Consulta Psicológica -", "").replace("Consulta:", "").strip()
+                
+                # 1. Buscar coincidencia por email de los asistentes de Google Calendar
+                attendees = ge.get('attendees', [])
+                for att in attendees:
+                    att_email = (att.get('email') or '').strip().lower()
+                    if att_email and '@' in att_email:
+                        cursor.execute("SELECT id FROM pacientes WHERE LOWER(email) = ? LIMIT 1", (att_email,))
+                        p_row = cursor.fetchone()
+                        if p_row:
+                            paciente_id = p_row['id']
+                            break
+
+                # 2. Si no se encontró por email, limpiar prefijos, estados, emojis y variantes de "Consulta [Modalidad] -"
+                clean_name = summary
+                for pfx in ['🟠 [Pendiente]', '🟢 [Confirmada]', '🔴 [Cancelada]', '🟠 [Reprogramada]', '[Pendiente]', '[Confirmada]', '[Cancelada]', '[Reprogramada]', '🟠', '🟢', '🔴', '✅', '⛔']:
+                    clean_name = clean_name.replace(pfx, '')
+                clean_name = clean_name.strip()
+                nombre_buscado = re.sub(r'(?i)^consulta\s*[^:\-–—]*[:\-–—]\s*', '', clean_name).strip()
+
+                if not paciente_id and nombre_buscado:
                     cursor.execute("""
                         SELECT id FROM pacientes 
                         WHERE (nombres || ' ' || apellidos) LIKE ? 
+                           OR (apellidos || ' ' || nombres) LIKE ?
+                           OR nombres LIKE ?
                         LIMIT 1
-                    """, (f"%{nombre_buscado}%",))
+                    """, (f"%{nombre_buscado}%", f"%{nombre_buscado}%", f"%{nombre_buscado}%"))
                     pac_row = cursor.fetchone()
                     if pac_row:
                         paciente_id = pac_row['id']
@@ -3686,9 +3711,20 @@ def sync_google_calendar():
                         fecha_g = start.split('T')[0]
                         hora_g = start.split('T')[1][:5]
                         
-                        modalidad = 'Online'
-                        if 'Presencial' in desc or 'presencial' in summary.lower():
-                            modalidad = 'Presencial'
+                        # Extraer modalidad del resumen o de la descripción
+                        m_mod = re.search(r'(?i)consulta\s+([^:\-–—]+)[:\-–—]', clean_name)
+                        extracted_mod = m_mod.group(1).strip() if m_mod else ''
+                        if extracted_mod.lower() in ('psicológica', 'psicologica'):
+                            extracted_mod = ''
+
+                        modalidad = extracted_mod or 'Online'
+                        if not extracted_mod:
+                            if 'Presencial' in desc or 'presencial' in summary.lower():
+                                modalidad = 'Presencial'
+                            elif 'UPTAEB' in desc or 'uptaeb' in summary.lower():
+                                modalidad = 'UPTAEB'
+                            elif 'Online' in desc or 'online' in summary.lower():
+                                modalidad = 'Online'
                             
                         cursor.execute("""
                             INSERT INTO agenda_finanzas (
@@ -3731,8 +3767,11 @@ def sync_google_calendar():
                     prefix = "🟠 "
                     c_id = '6'
 
+                mod_label = (lp['tipo_consulta'] or '').strip()
+                summary_exp = f"{prefix}Consulta {mod_label} - {pac_nombre}" if mod_label else f"{prefix}Consulta Psicológica - {pac_nombre}"
+
                 event_b = {
-                    'summary': f"{prefix}Consulta Psicológica - {pac_nombre}",
+                    'summary': summary_exp,
                     'colorId': c_id,
                     'description': f"Modalidad: {lp['tipo_consulta']}",
                     'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},

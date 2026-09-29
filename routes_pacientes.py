@@ -1305,35 +1305,15 @@ def patient_add_appointment():
         except Exception:
             service = None
         
-        if service:
-            start_datetime = f"{fecha_norm}T{hora_norm}:00-04:00"
-            end_hour = str(int(hora_norm.split(':')[0]) + 1).zfill(2)
-            end_datetime = f"{fecha_norm}T{end_hour}:{hora_norm.split(':')[1]}:00-04:00"
-            
-            event_body = {
-                'summary': f"🟠 Consulta Auto-agendada: {paciente['nombres']} {paciente['apellidos']}",
-                'colorId': '6',
-                'description': f"Modalidad: {tipo_consulta}\nPaciente: {paciente['nombres']} {paciente['apellidos']}\nCédula: {paciente['cedula']}\nNota: {nota}",
-                'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
-                'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
-            }
-            if paciente and paciente['email']:
-                event_body['attendees'] = [{'email': paciente['email'], 'displayName': f"{paciente['nombres']} {paciente['apellidos']}"}]
-
-            try:
-                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
-                google_event_id = g_event.get('id')
-            except Exception as ge:
-                print("Error creando evento en Google Calendar desde portal del paciente:", ge)
-        
         monto, moneda = get_appointment_fee(cursor, patient_id, psicologo_id, tipo_consulta)
         
         cursor.execute("""
             INSERT INTO agenda_finanzas (
                 paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
                 estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, 1, ?)
-        """, (patient_id, fecha_norm, hora_norm, tipo_consulta, monto, moneda, google_event_id, f"Auto-agendada por paciente. Nota: {nota}"))
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?)
+        """, (patient_id, fecha_norm, hora_norm, tipo_consulta, monto, moneda, f"Auto-agendada por paciente. Nota: {nota}"))
+        agenda_id = cursor.lastrowid
         
         pac_nombre = f"{paciente['nombres']} {paciente['apellidos']}"
         
@@ -1345,6 +1325,34 @@ def patient_add_appointment():
         """, (psicologo_id, 'cita', 'Nueva Cita Agendada', f"{pac_nombre} ha agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
         
         db.commit()
+
+        google_event_id = None
+        if service:
+            start_datetime = f"{fecha_norm}T{hora_norm}:00-04:00"
+            end_hour = str(int(hora_norm.split(':')[0]) + 1).zfill(2)
+            end_datetime = f"{fecha_norm}T{end_hour}:{hora_norm.split(':')[1]}:00-04:00"
+            
+            mod_label = (tipo_consulta or '').strip()
+            summary_text = f"🟠 Consulta {mod_label} - {pac_nombre}" if mod_label else f"🟠 Consulta Psicológica - {pac_nombre}"
+            
+            event_body = {
+                'summary': summary_text,
+                'colorId': '6',
+                'description': f"Modalidad: {tipo_consulta}\nPaciente: {pac_nombre}\nCédula: {paciente['cedula']}\nNota: {nota}",
+                'start': {'dateTime': start_datetime, 'timeZone': 'America/Caracas'},
+                'end': {'dateTime': end_datetime, 'timeZone': 'America/Caracas'},
+            }
+            if paciente and paciente['email']:
+                event_body['attendees'] = [{'email': paciente['email'], 'displayName': pac_nombre}]
+
+            try:
+                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
+                google_event_id = g_event.get('id')
+                if google_event_id:
+                    cursor.execute("UPDATE agenda_finanzas SET google_event_id = ? WHERE id = ?", (google_event_id, agenda_id))
+                    db.commit()
+            except Exception as ge:
+                print("Error creando evento en Google Calendar desde portal del paciente:", ge)
 
         # Enviar notificación Push al psicólogo
         try:
@@ -1784,8 +1792,15 @@ def patient_reschedule_appointment():
                     u_row3 = cursor.fetchone()
                     therapist_name = u_row3['nombres'] if u_row3 else "Paulo Mora"
                     
-                    event_body = service.events().get(calendarId='primary', eventId=google_event_id).execute()
-                    event_body['summary'] = f"Consulta Psicológica - {pac_name}"
+                    prev_summary = event_body.get('summary', '')
+                    clean_prev = prev_summary
+                    for pfx in ['🟠 [Reprogramada] ', '🟠 [Pendiente] ', '🟢 [Confirmada] ', '🔴 [Cancelada] ', '🟠 ', '🟢 ', '🔴 ']:
+                        clean_prev = clean_prev.replace(pfx, '')
+                    clean_prev = clean_prev.strip()
+                    if not clean_prev:
+                        mod_desc = event_body.get('description', '').split('Modalidad:')[-1].splitlines()[0].strip() if 'Modalidad:' in event_body.get('description', '') else 'Online'
+                        clean_prev = f"Consulta {mod_desc} - {pac_name}"
+                    event_body['summary'] = f"🟠 [Reprogramada] {clean_prev}"
                     event_body['description'] = f"Modalidad: {event_body.get('description', '').split('Modalidad:')[-1].splitlines()[0] if 'Modalidad:' in event_body.get('description', '') else 'Online'}\nPsicólogo: Psic. {therapist_name}\n[Reprogramada]"
                     event_body['start'] = {'dateTime': start_iso, 'timeZone': 'America/Caracas'}
                     event_body['end'] = {'dateTime': end_iso, 'timeZone': 'America/Caracas'}
