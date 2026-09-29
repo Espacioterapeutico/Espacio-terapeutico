@@ -38,8 +38,32 @@ function storeMessage(id, message) {
     messageStore.set(String(id), message);
 }
 
-// Cache para conteo y control de reintentos de mensajes
+// Cache para conteo y control de reintentos de mensajes (persistido en disco)
+const RETRY_CACHE_PATH = path.join(__dirname, 'auth_info_baileys', 'retry_cache.json');
 const retryCache = new Map();
+
+// Cargar cache desde disco al arrancar (para sobrevivir reinicios / hibernación de Render)
+try {
+    if (fs.existsSync(RETRY_CACHE_PATH)) {
+        const raw = JSON.parse(fs.readFileSync(RETRY_CACHE_PATH, 'utf8'));
+        for (const [k, v] of Object.entries(raw)) retryCache.set(k, v);
+        console.log(`🗄️  retry_cache.json cargado (${retryCache.size} entradas).`);
+    }
+} catch (_e) {}
+
+let _retryCacheSaveTimer = null;
+function _saveRetryCacheToDisk() {
+    if (_retryCacheSaveTimer) clearTimeout(_retryCacheSaveTimer);
+    _retryCacheSaveTimer = setTimeout(() => {
+        try {
+            const dir = path.dirname(RETRY_CACHE_PATH);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(RETRY_CACHE_PATH, JSON.stringify(Object.fromEntries(retryCache)), 'utf8');
+        } catch (_e) {}
+        _retryCacheSaveTimer = null;
+    }, 3000); // Debounce 3 s para no saturar disco
+}
+
 const msgRetryCounterCache = {
     get: (key) => retryCache.get(key),
     set: (key, value) => {
@@ -48,9 +72,10 @@ const msgRetryCounterCache = {
             retryCache.delete(first);
         }
         retryCache.set(key, value);
+        _saveRetryCacheToDisk();
     },
-    del: (key) => retryCache.delete(key),
-    flushAll: () => retryCache.clear()
+    del: (key) => { retryCache.delete(key); _saveRetryCacheToDisk(); },
+    flushAll: () => { retryCache.clear(); _saveRetryCacheToDisk(); }
 };
 
 function getSessionObj(userId) {
@@ -438,14 +463,41 @@ app.post('/send', async (req, res) => {
         }
 
         // Negociar presencia y sesión de claves criptográficas antes del envío para evitar 'Esperando mensaje'
-        try {
-            await session.sock.presenceSubscribe(targetJid).catch(() => {});
-            await session.sock.sendPresenceUpdate('composing', targetJid).catch(() => {});
-            await new Promise(resolve => setTimeout(resolve, 800));
-            await session.sock.sendPresenceUpdate('paused', targetJid).catch(() => {});
-        } catch (_presErr) {}
+        const _negotiatePresence = async () => {
+            try {
+                await session.sock.presenceSubscribe(targetJid).catch(() => {});
+                await session.sock.sendPresenceUpdate('composing', targetJid).catch(() => {});
+                await new Promise(resolve => setTimeout(resolve, 2000)); // ↑ 800ms → 2000ms: más tiempo para negociar claves Signal
+                await session.sock.sendPresenceUpdate('paused', targetJid).catch(() => {});
+            } catch (_presErr) {}
+        };
+        await _negotiatePresence();
 
-        const sentMsg = await session.sock.sendMessage(targetJid, { text: text });
+        // Envío con reintentos automáticos si falla por error de claves (protocolo Signal)
+        let sentMsg = null;
+        let lastSendErr = null;
+        const MAX_SEND_RETRIES = 2;
+        for (let attempt = 0; attempt <= MAX_SEND_RETRIES; attempt++) {
+            try {
+                sentMsg = await session.sock.sendMessage(targetJid, { text: text });
+                lastSendErr = null;
+                break; // Éxito → salir del loop
+            } catch (sendErr) {
+                lastSendErr = sendErr;
+                const errMsg = String(sendErr?.message || '').toLowerCase();
+                const isKeyError = errMsg.includes('key') || errMsg.includes('decrypt') || errMsg.includes('session') || errMsg.includes('signal');
+                if (attempt < MAX_SEND_RETRIES && isKeyError) {
+                    console.warn(`[User ${userId}] Reintento ${attempt + 1}/${MAX_SEND_RETRIES} por error de claves: ${sendErr.message}`);
+                    await _negotiatePresence(); // Re-negociar antes del reintento
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                } else {
+                    break; // No es error de claves o se agotaron los reintentos
+                }
+            }
+        }
+
+        if (lastSendErr) throw lastSendErr;
+
         if (sentMsg && sentMsg.key && sentMsg.key.id && sentMsg.message) {
             storeMessage(sentMsg.key.id, sentMsg.message);
         }
