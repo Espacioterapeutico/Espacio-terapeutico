@@ -26201,7 +26201,9 @@ async function loadAndRenderPublicTest(token) {
         }
 
         const badgeCat = document.getElementById('pub-test-badge-categoria');
-        if (badgeCat) badgeCat.textContent = testDef.categoria || 'Evaluación Clínica';
+        if (badgeCat) {
+            badgeCat.style.display = 'none';
+        }
 
         const testTitleEl = document.getElementById('pub-test-title');
         if (testTitleEl) testTitleEl.textContent = displayTitle;
