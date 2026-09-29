@@ -846,15 +846,15 @@ def cron_send_whatsapp_reminders():
             errores.append({'cita_id': c_id, 'paciente': p_n, 'phone': p_t, 'error': str(e)})
             print(f"[CRON]   EXCEPCION enviando confirmación a cita {c_id}: {e}", flush=True)
 
-    # 2. ENVIAR RECORDATORIOS DEL DÍA (Citas de Hoy CONFIRMADAS en Citas O Finanzas)
+    # 2. ENVIAR RECORDATORIOS (Citas CONFIRMADAS que cumplan el criterio de recordatorio)
     cursor.execute("""
         SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
-        WHERE af.fecha = ? AND COALESCE(af.confirmada, 0) = 1 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0 AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
-    """, (today_str,))
+        WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 1 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0 AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
+    """, (today_str, future_3days_str))
     citas_recordar = cursor.fetchall()
 
     for cita_raw in citas_recordar:
@@ -864,6 +864,34 @@ def cron_send_whatsapp_reminders():
             if not phone or not phone.strip():
                 continue
             pat_name = f"{cita.get('pat_nombres', '')} {cita.get('pat_apellidos', '')}".strip()
+
+            psych_id = cita.get('psicologo_id') or 1
+            if psych_id not in psych_configs:
+                cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psych_id,))
+                u_row = cursor.fetchone()
+                cfg_p = {}
+                if u_row and u_row[0]:
+                    try: cfg_p = json.loads(u_row[0])
+                    except: pass
+                psych_configs[psych_id] = cfg_p
+            cfg_p = psych_configs[psych_id]
+
+            rec_rule_type = cfg_p.get('alerta_recordatorio_tipo', 'horas')
+            rec_rule_val = cfg_p.get('alerta_recordatorio_valor', cfg_p.get('alerta_recordatorio', 2))
+
+            from routes_pacientes import get_deadline_datetime
+            trigger_dt = get_deadline_datetime(cita['fecha'], cita['hora'], rec_rule_type, rec_rule_val)
+            now_naive = now_local.replace(tzinfo=None)
+            try:
+                cita_dt = datetime.strptime(f"{cita['fecha']} {cita['hora']}", "%Y-%m-%d %H:%M")
+            except Exception:
+                cita_dt = now_naive
+
+            should_send_reminder = (now_naive >= trigger_dt) and (cita_dt > now_naive)
+
+            if not should_send_reminder:
+                continue
+
             psicologo_data = {'nombres': cita.get('psic_nombres'), 'apellidos': cita.get('psic_apellidos')}
             cita_dict = {
                 'nombre': pat_name,
@@ -1620,7 +1648,7 @@ def get_whatsapp_queue_status():
                 if not is_past or status != 'esperando':
                     queue.append({**base_item, 'token_name': 'Respuesta Automática', 'pipeline_status': status, 'pipeline_label': lbl, 'can_cancel': False, 'token_type': 'confirmacion_ok', 'priority': 2})
 
-            # TOKEN 3: Recordatorio del Día
+            # TOKEN 3: Recordatorio Pre-Sesión
             if not is_cancelada:
                 if r['recordatorio_enviado'] == 1:
                     lbl = 'Enviado ✅'
@@ -1631,16 +1659,12 @@ def get_whatsapp_queue_status():
                 elif is_past:
                     lbl = '⚠️ No Enviado (Cita Pasada)'
                     status = 'cancelado'
-                elif is_today:
-                    if is_confirmada:
-                        lbl = '📥 En Cola (Mismo Día)'
-                        status = 'en_cola'
-                    else:
-                        lbl = '⏳ Esperando Confirmación'
-                        status = 'esperando'
+                elif is_confirmada:
+                    lbl = '📥 En Cola (Recordatorio Pre-Sesión)'
+                    status = 'en_cola'
                 else:
-                    lbl = '⏳ Programado (Mismo día)'
-                    status = 'esperando_fecha'
+                    lbl = '⏳ Esperando Confirmación'
+                    status = 'esperando'
                 if not is_past or r['recordatorio_enviado'] == 1:
                     queue.append({**base_item, 'token_name': 'Fase 2: Recordatorio', 'pipeline_status': status, 'pipeline_label': lbl, 'can_cancel': status == 'en_cola', 'token_type': 'recordatorio', 'priority': 3})
 

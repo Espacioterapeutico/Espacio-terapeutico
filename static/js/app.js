@@ -9929,6 +9929,30 @@ function toggleConfirmationRuleInputs() {
 }
 window.toggleConfirmationRuleInputs = toggleConfirmationRuleInputs;
 
+function toggleRecordatorioRuleInputs() {
+    const tipo = document.getElementById('avail-recordatorio-tipo')?.value || 'horas';
+    const numGroup = document.getElementById('recordatorio-rule-value-num-group');
+    const timeGroup = document.getElementById('recordatorio-rule-value-time-group');
+    const numLabel = document.getElementById('recordatorio-num-label');
+    const numInput = document.getElementById('avail-recordatorio-num');
+    
+    if (tipo === 'minutos') {
+        if (numGroup) numGroup.classList.remove('hide');
+        if (timeGroup) timeGroup.classList.add('hide');
+        if (numLabel) numLabel.textContent = 'Cantidad de Minutos *';
+        if (numInput && (!numInput.value || numInput.value > 1440 || numInput.value < 5)) numInput.value = 60;
+    } else if (tipo === 'horas') {
+        if (numGroup) numGroup.classList.remove('hide');
+        if (timeGroup) timeGroup.classList.add('hide');
+        if (numLabel) numLabel.textContent = 'Cantidad de Horas *';
+        if (numInput && (!numInput.value || numInput.value > 168)) numInput.value = 2;
+    } else {
+        if (numGroup) numGroup.classList.add('hide');
+        if (timeGroup) timeGroup.classList.remove('hide');
+    }
+}
+window.toggleRecordatorioRuleInputs = toggleRecordatorioRuleInputs;
+
 function toggleCancelRuleInputs() {
     const tipo = document.getElementById('avail-limite-cancelacion-tipo')?.value || 'horas';
     const hoursGroup = document.getElementById('cancel-rule-value-hours-group');
@@ -10017,6 +10041,20 @@ async function loadAdminAvailability() {
             if (timeEl) timeEl.value = confVal;
         }
         toggleConfirmationRuleInputs();
+
+        // Recordatorio pre-sesión personalizado
+        const recTipo = data.alerta_recordatorio_tipo || 'horas';
+        const recVal = data.alerta_recordatorio_valor !== undefined ? data.alerta_recordatorio_valor : (data.alerta_recordatorio !== undefined ? data.alerta_recordatorio : 2);
+        const selRecTipo = document.getElementById('avail-recordatorio-tipo');
+        if (selRecTipo) selRecTipo.value = recTipo;
+        if (recTipo === 'horas' || recTipo === 'minutos') {
+            const numRecEl = document.getElementById('avail-recordatorio-num');
+            if (numRecEl) numRecEl.value = recVal;
+        } else {
+            const timeRecEl = document.getElementById('avail-recordatorio-time');
+            if (timeRecEl) timeRecEl.value = recVal;
+        }
+        toggleRecordatorioRuleInputs();
 
         // Auto-Cancelación por falta de confirmación
         const cTipo = data.limite_auto_cancelacion_tipo || data.limite_cancelacion_tipo || 'horas';
@@ -10417,7 +10455,16 @@ async function handleSaveAvailability(e) {
         ? alerta_confirmacion_valor 
         : (alerta_confirmacion_tipo === 'minutos' ? Math.max(1, Math.round(alerta_confirmacion_valor / 60)) : 24);
 
-    const alerta_recordatorio = parseInt(document.getElementById('avail-tiempo-recordatorio').value);
+    // Alerta de recordatorio pre-sesión personalizada
+    const alerta_recordatorio_tipo = document.getElementById('avail-recordatorio-tipo')?.value || 'horas';
+    const alerta_recordatorio_valor = (alerta_recordatorio_tipo === 'horas' || alerta_recordatorio_tipo === 'minutos')
+        ? parseInt(document.getElementById('avail-recordatorio-num')?.value || 2)
+        : (document.getElementById('avail-recordatorio-time')?.value || '08:00');
+    
+    const alerta_recordatorio = (alerta_recordatorio_tipo === 'horas') 
+        ? alerta_recordatorio_valor 
+        : (alerta_recordatorio_tipo === 'minutos' ? Math.max(1, Math.round(alerta_recordatorio_valor / 60)) : 2);
+
     const alerta_cierre = parseInt(document.getElementById('avail-tiempo-cierre').value);
     
     // Límite de auto-cancelación por falta de confirmación
@@ -10504,6 +10551,8 @@ async function handleSaveAvailability(e) {
                 alerta_confirmacion_tipo,
                 alerta_confirmacion_valor,
                 alerta_recordatorio,
+                alerta_recordatorio_tipo,
+                alerta_recordatorio_valor,
                 alerta_cierre,
                 limite_cancelacion_tipo,
                 limite_cancelacion_valor,

@@ -1325,6 +1325,8 @@ def admin_availability():
         "alerta_confirmacion_tipo": "horas",
         "alerta_confirmacion_valor": 24,
         "alerta_recordatorio": 2,
+        "alerta_recordatorio_tipo": "horas",
+        "alerta_recordatorio_valor": 2,
         "alerta_cierre": 2,
         "limite_cancelacion_tipo": "mismo_dia",
         "limite_cancelacion_valor": "07:00",
