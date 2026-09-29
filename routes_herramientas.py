@@ -270,6 +270,8 @@ def get_patient_modules(patient_id):
 @login_required
 def toggle_patient_module(patient_id):
     user_id = session.get('user_id')
+    role = session.get('role', '')
+    username = (session.get('username') or '').lower()
     data = request.json or {}
     modulo_clave = data.get('modulo_clave')
     activo = int(data.get('activo', 0))
@@ -279,7 +281,11 @@ def toggle_patient_module(patient_id):
         
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT id FROM pacientes WHERE id = ? AND psicologo_id = ?", (patient_id, user_id))
+    is_superadmin = (role in ['admin', 'superadmin']) or (user_id == 1) or (username == 'pamoraro')
+    if is_superadmin:
+        cursor.execute("SELECT id FROM pacientes WHERE id = ?", (patient_id,))
+    else:
+        cursor.execute("SELECT id FROM pacientes WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (patient_id, user_id))
     if not cursor.fetchone():
         return jsonify({'error': 'Paciente no encontrado o sin permisos.'}), 404
         
@@ -290,6 +296,20 @@ def toggle_patient_module(patient_id):
     """, (patient_id, modulo_clave, activo))
     if modulo_clave == 'estimulacion_cognitiva':
         cursor.execute("UPDATE paciente_estimulacion_cognitiva SET activa = ? WHERE paciente_id = ?", (activo, patient_id))
+
+    # Si se desactiva la herramienta, cancelar inmediatamente cualquier envío pendiente en cola y anular tokens no usados
+    if activo == 0:
+        cursor.execute("""
+            UPDATE cola_recordatorios_herramientas
+            SET estado = 'cancelado', pausado = 1
+            WHERE paciente_id = ? AND herramienta_tipo = ? AND enviado = 0
+        """, (patient_id, modulo_clave))
+        cursor.execute("""
+            UPDATE tokens_herramientas
+            SET usado = 2
+            WHERE paciente_id = ? AND herramienta_tipo = ? AND usado = 0
+        """, (patient_id, modulo_clave))
+
     db.commit()
     
     try:

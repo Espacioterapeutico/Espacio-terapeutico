@@ -301,7 +301,7 @@
                             {{ cat.category }}
                         </span>
                         <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
-                            {% for it in cat.items %}
+                            {% for it in cat['items'] %}
                             <label class="mt-chip" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #334155; transition: all 0.2s;">
                                 <input type="checkbox" name="mt_emocion" value="{{ it.emoji }} {{ it.label }}" onchange="this.parentElement.style.background = this.checked ? 'linear-gradient(135deg, #5d3a6f, #8b5cf6)' : '#f8fafc'; this.parentElement.style.color = this.checked ? 'white' : '#334155'; this.parentElement.style.borderColor = this.checked ? '#5d3a6f' : '#cbd5e1';" style="display: none;">
                                 <span>{{ it.emoji }}</span>
