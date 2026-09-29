@@ -3271,68 +3271,104 @@
                                     <form id="settings-messages-form" onsubmit="handleSaveMessageTemplates(event)">
 
                                         <!-- 1. Fase 1: Confirmación -->
-                                        <div class="rules-accordion-item mb-2">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
-                                                <span>📲 Fase 1: Confirmación <small style="font-weight:400; color:var(--text-muted);">(1 día previo)</small></span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">📲</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #2563eb; display: block;">Fase 1: Confirmación</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Se envía 1 día antes · Incluye link de confirmación</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
                                                 <textarea id="template-confirmacion" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
                                             </div>
                                         </div>
 
                                         <!-- 2. Respuesta: Confirma -->
-                                        <div class="rules-accordion-item mb-2">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
-                                                <span style="color:#059669;">✅ Respuesta: Paciente Confirma <small style="font-weight:400; color:var(--text-muted);">(SÍ / ✅)</small></span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid rgba(5, 150, 105, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(5, 150, 105, 0.04); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">✅</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #059669; display: block;">Respuesta: Paciente Confirma</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Se envía al responder SÍ o ✅</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
                                                 <textarea id="template-confirmacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
                                             </div>
                                         </div>
 
                                         <!-- 3. Respuesta: Cancela -->
-                                        <div class="rules-accordion-item mb-2">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
-                                                <span style="color:#dc2626;">❌ Respuesta: Paciente Cancela <small style="font-weight:400; color:var(--text-muted);">(NO / ❌)</small></span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid rgba(220, 38, 38, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(220, 38, 38, 0.04); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">❌</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #dc2626; display: block;">Respuesta: Paciente Cancela</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Se envía al responder NO o ❌</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
                                                 <textarea id="template-cancelacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
                                             </div>
                                         </div>
 
                                         <!-- 4. Cancelación por Falta de Confirmación -->
-                                        <div class="rules-accordion-item mb-2" style="border-color: rgba(220, 38, 38, 0.25);">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="background: rgba(220, 38, 38, 0.04);">
-                                                <span style="color:#b91c1c;">⚠️ Cancelación por Falta de Confirmación</span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid rgba(220, 38, 38, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(220, 38, 38, 0.04); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">⚠️</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #b91c1c; display: block;">Cancelación por Falta de Confirmación</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Se envía al expirar el plazo sin respuesta</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
-                                                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Se envía automáticamente cuando expira el plazo sin confirmación o al cancelar por falta de respuesta. Variables: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{link_agendar}</code>, <code>{psicologo}</code>.</p>
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Variables: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{link_agendar}</code>, <code>{psicologo}</code>.</p>
                                                 <textarea id="template-cancelacion-no-conf" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:&#10;{link_agendar}"></textarea>
                                             </div>
                                         </div>
 
                                         <!-- 5. Fase 2: Recordatorio -->
-                                        <div class="rules-accordion-item mb-2">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
-                                                <span style="color:#10b981;">📅 Fase 2: Recordatorio del Día <small style="font-weight:400; color:var(--text-muted);">(Mismo día)</small></span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(16, 185, 129, 0.04); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">📅</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #10b981; display: block;">Fase 2: Recordatorio del Día</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Se envía el mismo día de la cita</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
                                                 <textarea id="template-recordatorio" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
                                             </div>
                                         </div>
 
                                         <!-- 6. Fase 3: Reagendamiento -->
-                                        <div class="rules-accordion-item mb-2" style="border-color: rgba(217, 119, 6, 0.25);">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="background: rgba(217, 119, 6, 0.05);">
-                                                <span style="color:#d97706;">🔄 Fase 3: Reagendamiento <small style="font-weight:400; color:var(--text-muted);">(Fin de Día / No asistidas)</small></span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid rgba(217, 119, 6, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(217, 119, 6, 0.05); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">🔄</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #d97706; display: block;">Fase 3: Reagendamiento</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Fin de día · Citas no asistidas</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
                                                 <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; font-weight: 700; color: var(--text-dark); margin-bottom: 0.5rem;">
                                                     <input type="checkbox" id="auto-reagendamiento-switch"> 🔔 Enviar Automáticamente a las 6 PM
                                                 </label>
@@ -3341,24 +3377,36 @@
                                         </div>
 
                                         <!-- 7. Mensaje de Cierre -->
-                                        <div class="rules-accordion-item mb-2">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
-                                                <span style="color:#64748b;">📝 Mensaje de Cierre / Nota Post-sesión</span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid rgba(100, 116, 139, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(100, 116, 139, 0.04); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">📝</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #64748b; display: block;">Mensaje de Cierre / Nota Post-sesión</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Se envía al finalizar la sesión · Incluye tareas</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
                                                 <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Variables: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{tareas}</code> (compromisos de la evolución), <code>{psicologo}</code>.</p>
                                                 <textarea id="template-cierre" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿&#10;&#10;📌 *Tus compromisos y tareas para esta semana:*&#10;{tareas}&#10;&#10;Si deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:&#10;https://www.espacioterapeutico.net/agendar/psic.paulomora"></textarea>
                                             </div>
                                         </div>
 
                                         <!-- 8. Fase 4: Cumpleaños -->
-                                        <div class="rules-accordion-item mb-2" style="border-color: rgba(16, 185, 129, 0.25);">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="background: rgba(16, 185, 129, 0.05);">
-                                                <span style="color:#10b981;">🎂 Fase 4: Cumpleaños de Consultante <small style="font-weight:400; color:var(--text-muted);">(Día de Cumpleaños)</small></span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(16, 185, 129, 0.05); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">🎂</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #10b981; display: block;">Fase 4: Cumpleaños de Consultante</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Día de cumpleaños · Envío automático opcional</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
                                                 <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; font-weight: 700; color: var(--text-dark); margin-bottom: 0.5rem;">
                                                     <input type="checkbox" id="auto-cumpleanos-switch"> 🎂 Enviar Saludo de Cumpleaños Automático por WhatsApp
                                                 </label>
@@ -3372,12 +3420,18 @@
                                         </div>
 
                                         <!-- 9. Herramientas Terapéuticas -->
-                                        <div class="rules-accordion-item mb-4" style="border-color: rgba(59, 130, 246, 0.25);">
-                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="background: rgba(59, 130, 246, 0.05);">
-                                                <span style="color:#2563eb;">🛠️ Recordatorio de Herramientas Terapéuticas <small style="font-weight:400; color:var(--text-muted);">(Link Directo)</small></span>
-                                                <span class="rules-accordion-arrow">▼</span>
+                                        <div class="rules-accordion-item mb-4" style="background: white; border: 1.5px solid rgba(59, 130, 246, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(59, 130, 246, 0.05); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">🛠️</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #2563eb; display: block;">Recordatorio de Herramientas Terapéuticas</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Incluye link directo de registro rápido</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                             </button>
-                                            <div class="rules-accordion-body hide">
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
                                                 <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Variables: <code>{nombre}</code>, <code>{herramienta}</code> (ej. Diario de Ansiedad), <code>{hora}</code> (ej. 08:00 AM), <code>{fecha}</code>, <code>{link}</code> (enlace directo de registro rápido).</p>
                                                 <textarea id="template-herramientas" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}* 👋 Espero te encuentres muy bien.&#10;&#10;Te recuerdo completar tu *{herramienta}* programada para las *{hora}*. Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):&#10;👉 {link}&#10;&#10;¡Gracias por tu constancia!"></textarea>
                                             </div>
