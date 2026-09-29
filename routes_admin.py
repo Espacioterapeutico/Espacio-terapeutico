@@ -2971,17 +2971,35 @@ def update_transaction(trans_id):
             try:
                 # Normalizar hora y fechas para Google Calendar
                 from datetime import datetime, timedelta
-                from routes_agenda import normalize_date_str, normalize_time_str
+                from routes_agenda import normalize_date_str, normalize_time_str, get_appointment_duration_and_recess
                 norm_f = normalize_date_str(fecha)
                 norm_h = normalize_time_str(hora)
+                # Obtener duración real del tipo de consulta desde la configuración del psicólogo
+                _psic_id_dur = row.get('creado_por_user_id') or session.get('user_id') or 1
+                cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (_psic_id_dur,))
+                _u_cfg_row = cursor.fetchone()
+                _cfg_perfiles = []
+                _cfg_dur_default = 60
+                if _u_cfg_row:
+                    import json as _json
+                    _raw = (_u_cfg_row['configuracion_horarios_visual'] if hasattr(_u_cfg_row, 'keys') else _u_cfg_row[0]) or ''
+                    if _raw:
+                        try:
+                            _cfg = _json.loads(_raw)
+                            _cfg_dur_default = int(_cfg.get('duracion', 60))
+                            _raw_p = _cfg.get('perfiles', [])
+                            _cfg_perfiles = list(_raw_p.values()) if isinstance(_raw_p, dict) else _raw_p
+                        except:
+                            pass
+                _real_dur, _ = get_appointment_duration_and_recess(tipo_consulta, _cfg_perfiles, _cfg_dur_default)
                 try:
                     start_dt_obj = datetime.strptime(f"{norm_f} {norm_h}", "%Y-%m-%d %H:%M")
-                    end_dt_obj = start_dt_obj + timedelta(minutes=60 * int(cantidad_sesiones or 1))
+                    end_dt_obj = start_dt_obj + timedelta(minutes=_real_dur)
                     start_datetime = start_dt_obj.strftime("%Y-%m-%dT%H:%M:%S-04:00")
                     end_datetime = end_dt_obj.strftime("%Y-%m-%dT%H:%M:%S-04:00")
                 except:
                     start_datetime = f"{norm_f}T{norm_h}:00-04:00"
-                    end_datetime = f"{norm_f}T{norm_h}:00-04:00"
+                    end_datetime = (datetime.strptime(f"{norm_f} {norm_h}", "%Y-%m-%d %H:%M") + timedelta(minutes=_real_dur)).strftime("%Y-%m-%dT%H:%M:%S-04:00") if norm_f and norm_h else start_datetime
 
                 # Obtener paciente para rellenar nombre y descripción
                 cursor.execute("SELECT nombres, apellidos, cedula, email FROM pacientes WHERE id = ?", (row['paciente_id'],))
@@ -3746,14 +3764,35 @@ def sync_google_calendar():
               AND (p.psicologo_id = ? OR ? IS NULL)
         """, (today_str, user_id, user_id))
         local_pending = cursor.fetchall()
-        
+
+        # Cargar configuración de duración del psicólogo una sola vez para el loop
+        from routes_agenda import get_appointment_duration_and_recess
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (user_id,))
+        _u_row = cursor.fetchone()
+        _sync_perfiles = []
+        _sync_dur_default = 60
+        if _u_row:
+            import json as _json2
+            _raw2 = (_u_row['configuracion_horarios_visual'] if hasattr(_u_row, 'keys') else _u_row[0]) or ''
+            if _raw2:
+                try:
+                    _cfg2 = _json2.loads(_raw2)
+                    _sync_dur_default = int(_cfg2.get('duracion', 60))
+                    _raw_p2 = _cfg2.get('perfiles', [])
+                    _sync_perfiles = list(_raw_p2.values()) if isinstance(_raw_p2, dict) else _raw_p2
+                except:
+                    pass
+
         pushed_count = 0
         for lp in local_pending:
             try:
                 pac_nombre = f"{lp['nombres']} {lp['apellidos']}"
-                start_dt = f"{lp['fecha']}T{lp['hora']}:00-04:00"
-                end_h = str(int(lp['hora'].split(':')[0]) + 1).zfill(2)
-                end_dt = f"{lp['fecha']}T{end_h}:{lp['hora'].split(':')[1]}:00-04:00"
+                _lp_dur, _ = get_appointment_duration_and_recess(lp['tipo_consulta'], _sync_perfiles, _sync_dur_default)
+                from datetime import datetime as _dt2, timedelta as _td2
+                _lp_start = _dt2.strptime(f"{lp['fecha']}T{lp['hora']}", "%Y-%m-%dT%H:%M")
+                _lp_end = _lp_start + _td2(minutes=_lp_dur)
+                start_dt = _lp_start.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+                end_dt = _lp_end.strftime("%Y-%m-%dT%H:%M:%S-04:00")
                 
                 is_conf = bool(lp.get('confirmada'))
                 is_canc = lp.get('estado_pago') in ['Cancelada con aviso', 'Cancelada sin aviso']

@@ -1328,9 +1328,28 @@ def patient_add_appointment():
 
         google_event_id = None
         if service:
-            start_datetime = f"{fecha_norm}T{hora_norm}:00-04:00"
-            end_hour = str(int(hora_norm.split(':')[0]) + 1).zfill(2)
-            end_datetime = f"{fecha_norm}T{end_hour}:{hora_norm.split(':')[1]}:00-04:00"
+            from routes_agenda import get_appointment_duration_and_recess
+            from datetime import datetime as _dt3, timedelta as _td3
+            import json as _json3
+            cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+            _u_row3 = cursor.fetchone()
+            _pac_perfiles = []
+            _pac_dur_default = 60
+            if _u_row3:
+                _raw3 = (_u_row3['configuracion_horarios_visual'] if hasattr(_u_row3, 'keys') else _u_row3[0]) or ''
+                if _raw3:
+                    try:
+                        _cfg3 = _json3.loads(_raw3)
+                        _pac_dur_default = int(_cfg3.get('duracion', 60))
+                        _raw_p3 = _cfg3.get('perfiles', [])
+                        _pac_perfiles = list(_raw_p3.values()) if isinstance(_raw_p3, dict) else _raw_p3
+                    except:
+                        pass
+            _pac_dur, _ = get_appointment_duration_and_recess(tipo_consulta, _pac_perfiles, _pac_dur_default)
+            _pac_start = _dt3.strptime(f"{fecha_norm}T{hora_norm}", "%Y-%m-%dT%H:%M")
+            _pac_end = _pac_start + _td3(minutes=_pac_dur)
+            start_datetime = _pac_start.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+            end_datetime = _pac_end.strftime("%Y-%m-%dT%H:%M:%S-04:00")
             
             mod_label = (tipo_consulta or '').strip()
             summary_text = f"🟠 Consulta {mod_label} - {pac_nombre}" if mod_label else f"🟠 Consulta Psicológica - {pac_nombre}"
