@@ -3474,54 +3474,92 @@
 
                                             <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.5rem;">
                                                 
-                                                <!-- Tarjeta 1: Tiempos de Sesión -->
-                                                <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                                                        <h5 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
-                                                            ⏱️ Duración de Consulta y Recesos (Valores Globales)
-                                                        </h5>
-                                                        <button type="button" class="btn text-xs" onclick="openModalityParamsModal()" style="background: rgba(152,75,128,0.1); color: var(--primary-color); border: 1px solid rgba(152,75,128,0.25); border-radius: 8px; font-weight: 700; padding: 0.4rem 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;">
-                                                            ⚙️ Personalizar por Modalidad (Avanzado)
-                                                        </button>
-                                                    </div>
-                                                    <div class="form-row">
-                                                        <div class="form-group col-6">
-                                                            <label for="avail-duracion" style="font-weight: 600; font-size: 0.88rem;">Duración de la Sesión por Defecto (minutos)</label>
-                                                            <input type="number" id="avail-duracion" value="60" min="15" max="180" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                <!-- 1. Duración de Consulta y Recesos -->
+                                                <div class="rules-accordion-item" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.2s;">
+                                                    <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                            <span style="font-size: 1.15rem;">⏱️</span>
+                                                            <div>
+                                                                <span style="font-weight: 700; font-size: 0.92rem; color: var(--text-dark); display: block;">Duración de Consulta y Recesos</span>
+                                                                <span id="badge-duracion-resumen" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Duración global y modalidades</span>
+                                                            </div>
                                                         </div>
-                                                        <div class="form-group col-6">
-                                                            <label for="avail-receso" style="font-weight: 600; font-size: 0.88rem;">Receso entre Sesiones por Defecto (minutos)</label>
-                                                            <input type="number" id="avail-receso" value="15" min="0" max="120" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                                         </div>
-                                                    </div>
-                                                    
-                                                    <!-- Desglose visual en vivo de modalidades personalizadas en la planilla principal -->
-                                                    <div id="avail-custom-modalities-summary" style="margin-top: 1rem; padding-top: 1rem; border-top: 1.5px dashed var(--border-color);">
-                                                        <!-- Contenido dinámico inyectado por updateCustomModalitiesSummary() -->
+                                                    </button>
+                                                    <div class="rules-accordion-body hide" style="padding: 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                                                            <span style="font-size: 0.84rem; color: var(--text-muted);">Ajusta los valores globales de tiempo para tus sesiones y descansos:</span>
+                                                            <button type="button" class="btn text-xs" onclick="openModalityParamsModal()" style="background: rgba(152,75,128,0.1); color: var(--primary-color); border: 1px solid rgba(152,75,128,0.25); border-radius: 8px; font-weight: 700; padding: 0.4rem 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;">
+                                                                ⚙️ Personalizar por Modalidad (Avanzado)
+                                                            </button>
+                                                        </div>
+                                                        <div class="form-row">
+                                                            <div class="form-group col-6">
+                                                                <label for="avail-duracion" style="font-weight: 600; font-size: 0.88rem;">Duración de la Sesión por Defecto (minutos)</label>
+                                                                <input type="number" id="avail-duracion" value="60" min="15" max="180" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
+                                                            <div class="form-group col-6">
+                                                                <label for="avail-receso" style="font-weight: 600; font-size: 0.88rem;">Receso entre Sesiones por Defecto (minutos)</label>
+                                                                <input type="number" id="avail-receso" value="15" min="0" max="120" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
+                                                        </div>
+                                                        <div id="avail-custom-modalities-summary" style="margin-top: 1rem; padding-top: 1rem; border-top: 1.5px dashed var(--border-color);">
+                                                            <!-- Contenido dinámico inyectado por updateCustomModalitiesSummary() -->
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <!-- Tarjeta 2: Tiempos de Alerta y Antelación -->
-                                                <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-                                                    <h5 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
-                                                        🔔 Parámetros de Agenda y Notificaciones
-                                                    </h5>
-                                                    <div class="form-row mb-3">
-                                                        <div class="form-group col-12">
-                                                            <label for="avail-antelacion" style="font-weight: 600; font-size: 0.88rem;">Antelación mínima para agendar (horas previas que debe tener el paciente) *</label>
-                                                            <input type="number" id="avail-antelacion" value="24" min="0" max="168" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                <!-- 2. Antelación Mínima para Agendar -->
+                                                <div class="rules-accordion-item" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.2s;">
+                                                    <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                            <span style="font-size: 1.15rem;">⏳</span>
+                                                            <div>
+                                                                <span style="font-weight: 700; font-size: 0.92rem; color: var(--text-dark); display: block;">Antelación Mínima para Agendar</span>
+                                                                <span id="badge-antelacion-resumen" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Margen previo para reservar citas</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
+                                                        </div>
+                                                    </button>
+                                                    <div class="rules-accordion-body hide" style="padding: 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                                            Tiempo mínimo de anticipación que requiere un paciente para agendar en tu portal antes de que comience el horario.
+                                                        </p>
+                                                        <div class="form-row">
+                                                            <div class="form-group col-12">
+                                                                <label for="avail-antelacion" style="font-weight: 600; font-size: 0.88rem;">Antelación mínima para agendar (horas previas) *</label>
+                                                                <input type="number" id="avail-antelacion" value="24" min="0" max="168" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                </div>
 
-                                                    <!-- Regla de Envío de Solicitud de Confirmación -->
-                                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.9rem; margin-bottom: 1rem;">
-                                                        <label style="font-weight: 700; font-size: 0.9rem; color: #1e40af; margin-bottom: 0.5rem; display: block;">
-                                                            📲 ¿Cuándo enviar la Solicitud de Confirmación por WhatsApp? (Fase 1)
-                                                        </label>
+                                                <!-- 3. Confirmación de Sesión -->
+                                                <div class="rules-accordion-item" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.2s;">
+                                                    <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                            <span style="font-size: 1.15rem;">📲</span>
+                                                            <div>
+                                                                <span style="font-weight: 700; font-size: 0.92rem; color: #1e40af; display: block;">Confirmación de Sesión</span>
+                                                                <span id="badge-confirmacion-resumen" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Envío de solicitud para confirmar asistencia</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
+                                                        </div>
+                                                    </button>
+                                                    <div class="rules-accordion-body hide" style="padding: 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                                            Define cuándo se le enviará al paciente el mensaje por WhatsApp solicitando confirmar su cita (Fase 1).
+                                                        </p>
                                                         <div class="form-row">
                                                             <div class="form-group col-6">
                                                                 <label for="avail-confirmacion-tipo" style="font-weight: 600; font-size: 0.84rem;">Criterio de Envío *</label>
-                                                                <select id="avail-confirmacion-tipo" required onchange="toggleConfirmationRuleInputs()" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem;">
+                                                                <select id="avail-confirmacion-tipo" onchange="toggleConfirmationRuleInputs()" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem;">
                                                                     <option value="horas">Cantidad de horas antes de la sesión</option>
                                                                     <option value="minutos">Cantidad de minutos antes de la sesión</option>
                                                                     <option value="previo">El día previo a la hora especificada</option>
@@ -3539,16 +3577,30 @@
                                                         </div>
                                                         <input type="hidden" id="avail-tiempo-confirmacion" value="24">
                                                     </div>
+                                                </div>
 
-                                                    <!-- Regla de Envío de Recordatorio Pre-Sesión -->
-                                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.9rem; margin-bottom: 1rem;">
-                                                        <label style="font-weight: 700; font-size: 0.9rem; color: #0284c7; margin-bottom: 0.5rem; display: block;">
-                                                            ⏰ ¿Cuándo enviar el Recordatorio Previo a la Sesión por WhatsApp? (Fase 2)
-                                                        </label>
+                                                <!-- 4. Recordatorio Previo a la Sesión -->
+                                                <div class="rules-accordion-item" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.2s;">
+                                                    <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                            <span style="font-size: 1.15rem;">⏰</span>
+                                                            <div>
+                                                                <span style="font-weight: 700; font-size: 0.92rem; color: #0284c7; display: block;">Recordatorio Previo a la Sesión</span>
+                                                                <span id="badge-recordatorio-resumen" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Mensaje recordatorio antes de iniciar</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
+                                                        </div>
+                                                    </button>
+                                                    <div class="rules-accordion-body hide" style="padding: 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                                            Define el momento exacto en que se enviará el recordatorio por WhatsApp antes de que comience la consulta (Fase 2).
+                                                        </p>
                                                         <div class="form-row">
                                                             <div class="form-group col-6">
                                                                 <label for="avail-recordatorio-tipo" style="font-weight: 600; font-size: 0.84rem;">Criterio de Envío *</label>
-                                                                <select id="avail-recordatorio-tipo" required onchange="toggleRecordatorioRuleInputs()" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem;">
+                                                                <select id="avail-recordatorio-tipo" onchange="toggleRecordatorioRuleInputs()" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem;">
                                                                     <option value="horas">Cantidad de horas antes de la sesión</option>
                                                                     <option value="minutos">Cantidad de minutos antes de la sesión</option>
                                                                     <option value="mismo_dia">El mismo día a la hora especificada</option>
@@ -3566,69 +3618,111 @@
                                                         </div>
                                                         <input type="hidden" id="avail-tiempo-recordatorio" value="2">
                                                     </div>
+                                                </div>
 
-                                                    <div class="form-row">
-                                                        <div class="form-group col-12">
-                                                            <label for="avail-tiempo-cierre" style="font-weight: 600; font-size: 0.88rem;">Alerta de Cierre / Seguimiento (horas después de la sesión) *</label>
-                                                            <input type="number" id="avail-tiempo-cierre" value="2" min="1" max="72" required style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                <!-- 5. Plazo Límite de Confirmación (Auto-Cancelación) -->
+                                                <div class="rules-accordion-item" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.2s;">
+                                                    <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                            <span style="font-size: 1.15rem;">⏳</span>
+                                                            <div>
+                                                                <span style="font-weight: 700; font-size: 0.92rem; color: #dc2626; display: block;">Plazo Límite de Confirmación (Auto-Cancelación)</span>
+                                                                <span id="badge-cancel-resumen" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Cancelación si el paciente no responde</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
+                                                        </div>
+                                                    </button>
+                                                    <div class="rules-accordion-body hide" style="padding: 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                                            Determina hasta qué momento tiene el paciente para confirmar su asistencia tras recibir el recordatorio. Si no confirma dentro de este plazo, el sistema cancela automáticamente la cita, libera el cupo en tu agenda y le envía el mensaje de aviso por WhatsApp con enlace para reagendar.
+                                                        </p>
+                                                        <div class="form-row">
+                                                            <div class="form-group col-6">
+                                                                <label for="avail-limite-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Criterio de Plazo Límite *</label>
+                                                                <select id="avail-limite-cancelacion-tipo" onchange="toggleCancelRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">
+                                                                    <option value="horas">Cantidad de horas antes de la sesión</option>
+                                                                    <option value="minutos">Cantidad de minutos antes de la sesión</option>
+                                                                    <option value="previo">Condición: El día previo a la hora especificada</option>
+                                                                    <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="form-group col-6" id="cancel-rule-value-hours-group">
+                                                                <label for="avail-limite-cancelacion" id="cancel-num-label" style="font-weight: 600; font-size: 0.88rem;">Cantidad de Horas *</label>
+                                                                <input type="number" id="avail-limite-cancelacion" value="24" min="0" max="1440" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
+                                                            <div class="form-group col-6 hide" id="cancel-rule-value-time-group">
+                                                                <label for="avail-limite-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora Límite de Cierre *</label>
+                                                                <input type="time" id="avail-limite-cancelacion-time" value="08:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                 <!-- Tarjeta 3: Plazo Límite de Confirmación (Auto-Cancelación por Falta de Respuesta) -->
-                                                <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-                                                    <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 700; color: #dc2626; display: flex; align-items: center; gap: 0.5rem;">
-                                                        ⏳ Plazo Límite de Confirmación (Auto-Cancelación de Cita)
-                                                    </h5>
-                                                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
-                                                        Determina hasta qué momento tiene el paciente para confirmar su asistencia tras recibir el recordatorio. Si no confirma dentro de este plazo, el sistema cancela automáticamente la cita, libera el cupo en tu agenda y le envía el mensaje de aviso por WhatsApp con enlace para reagendar.
-                                                    </p>
-                                                    <div class="form-row">
-                                                        <div class="form-group col-6">
-                                                            <label for="avail-limite-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Criterio de Plazo Límite *</label>
-                                                            <select id="avail-limite-cancelacion-tipo" required onchange="toggleCancelRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">
-                                                                <option value="horas">Cantidad de horas antes de la sesión</option>
-                                                                <option value="minutos">Cantidad de minutos antes de la sesión</option>
-                                                                <option value="previo">Condición: El día previo a la hora especificada</option>
-                                                                <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
-                                                            </select>
+                                                <!-- 6. Política de Cancelación del Consultante (Cobro / Penalidad) -->
+                                                <div class="rules-accordion-item" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.2s;">
+                                                    <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                            <span style="font-size: 1.15rem;">🛡️</span>
+                                                            <div>
+                                                                <span style="font-weight: 700; font-size: 0.92rem; color: #b45309; display: block;">Política de Cancelación del Consultante</span>
+                                                                <span id="badge-politica-resumen" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Cancelación y reprogramación con/sin cobro</span>
+                                                            </div>
                                                         </div>
-                                                        <div class="form-group col-6" id="cancel-rule-value-hours-group">
-                                                            <label for="avail-limite-cancelacion" id="cancel-num-label" style="font-weight: 600; font-size: 0.88rem;">Cantidad de Horas *</label>
-                                                            <input type="number" id="avail-limite-cancelacion" value="24" min="0" max="1440" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                                         </div>
-                                                        <div class="form-group col-6 hide" id="cancel-rule-value-time-group">
-                                                            <label for="avail-limite-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora Límite de Cierre *</label>
-                                                            <input type="time" id="avail-limite-cancelacion-time" value="08:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                    </button>
+                                                    <div class="rules-accordion-body hide" style="padding: 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                                            Regula el margen de tiempo en que un paciente puede cancelar o reprogramar por su cuenta sin costo. Si cancela con menor anticipación que este límite (o no asiste), el sistema registrará la cita como <strong>Cancelada sin aviso</strong> y aplicará el cobro de la sesión.
+                                                        </p>
+                                                        <div class="form-row">
+                                                            <div class="form-group col-6">
+                                                                <label for="avail-politica-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Criterio de Política *</label>
+                                                                <select id="avail-politica-cancelacion-tipo" onchange="togglePoliticaRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">
+                                                                    <option value="horas">Cantidad de horas antes de la sesión</option>
+                                                                    <option value="minutos">Cantidad de minutos antes de la sesión</option>
+                                                                    <option value="previo">Condición: El día previo a la hora especificada</option>
+                                                                    <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="form-group col-6" id="politica-rule-value-hours-group">
+                                                                <label for="avail-politica-cancelacion" id="politica-num-label" style="font-weight: 600; font-size: 0.88rem;">Cantidad de Horas de Anticipación *</label>
+                                                                <input type="number" id="avail-politica-cancelacion" value="24" min="0" max="1440" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
+                                                            <div class="form-group col-6 hide" id="politica-rule-value-time-group">
+                                                                <label for="avail-politica-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora Límite *</label>
+                                                                <input type="time" id="avail-politica-cancelacion-time" value="18:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <!-- Tarjeta 4: Política de Cancelación Voluntaria y Cobro (Paciente) -->
-                                                <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-                                                    <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 0.5rem;">
-                                                        🛡️ Política de Cancelación del Consultante (Con Cobro / Sin Cobro)
-                                                    </h5>
-                                                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
-                                                        Regula el margen de tiempo en que un paciente puede cancelar o reprogramar por su cuenta sin costo. Si cancela con menor anticipación que este límite (o no asiste), el sistema registrará la cita como <strong>Cancelada sin aviso</strong> y aplicará el cobro de la sesión.
-                                                    </p>
-                                                    <div class="form-row">
-                                                        <div class="form-group col-6">
-                                                            <label for="avail-politica-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Criterio de Política *</label>
-                                                            <select id="avail-politica-cancelacion-tipo" required onchange="togglePoliticaRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">
-                                                                <option value="horas">Cantidad de horas antes de la sesión</option>
-                                                                <option value="minutos">Cantidad de minutos antes de la sesión</option>
-                                                                <option value="previo">Condición: El día previo a la hora especificada</option>
-                                                                <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
-                                                            </select>
+                                                <!-- 7. Alerta de Cierre y Seguimiento -->
+                                                <div class="rules-accordion-item" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.2s;">
+                                                    <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                            <span style="font-size: 1.15rem;">📋</span>
+                                                            <div>
+                                                                <span style="font-weight: 700; font-size: 0.92rem; color: var(--text-dark); display: block;">Alerta de Cierre y Seguimiento</span>
+                                                                <span id="badge-cierre-resumen" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Mensaje post-sesión al consultante</span>
+                                                            </div>
                                                         </div>
-                                                        <div class="form-group col-6" id="politica-rule-value-hours-group">
-                                                            <label for="avail-politica-cancelacion" id="politica-num-label" style="font-weight: 600; font-size: 0.88rem;">Cantidad de Horas de Anticipación *</label>
-                                                            <input type="number" id="avail-politica-cancelacion" value="24" min="0" max="1440" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
                                                         </div>
-                                                        <div class="form-group col-6 hide" id="politica-rule-value-time-group">
-                                                            <label for="avail-politica-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora Límite *</label>
-                                                            <input type="time" id="avail-politica-cancelacion-time" value="18:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                    </button>
+                                                    <div class="rules-accordion-body hide" style="padding: 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                                            Tiempo posterior a la sesión para el envío del mensaje de seguimiento o cierre de la consulta.
+                                                        </p>
+                                                        <div class="form-row">
+                                                            <div class="form-group col-12">
+                                                                <label for="avail-tiempo-cierre" style="font-weight: 600; font-size: 0.88rem;">Horas después de la sesión *</label>
+                                                                <input type="number" id="avail-tiempo-cierre" value="2" min="1" max="72" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>

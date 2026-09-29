@@ -9905,6 +9905,118 @@ function saveEditProfileDescModal() {
 window.openEditProfileDescModal = openEditProfileDescModal;
 window.saveEditProfileDescModal = saveEditProfileDescModal;
 
+function toggleRulesAccordion(headerBtn) {
+    const item = headerBtn.closest('.rules-accordion-item');
+    if (!item) return;
+    const body = item.querySelector('.rules-accordion-body');
+    const arrow = headerBtn.querySelector('.rules-accordion-arrow');
+    if (!body) return;
+    const isHidden = body.classList.contains('hide');
+    if (isHidden) {
+        body.classList.remove('hide');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+        item.style.borderColor = 'var(--primary-color, #984b80)';
+        item.style.boxShadow = '0 4px 12px rgba(152,75,128,0.08)';
+        headerBtn.style.background = '#fdf4f9';
+    } else {
+        body.classList.add('hide');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+        item.style.borderColor = 'var(--border-color, #e2e8f0)';
+        item.style.boxShadow = 'none';
+        headerBtn.style.background = 'var(--bg-body, #fafafa)';
+    }
+}
+window.toggleRulesAccordion = toggleRulesAccordion;
+
+function updateRulesSummaryBadges() {
+    // 1. Duración y receso
+    const dur = document.getElementById('avail-duracion')?.value || '60';
+    const rec = document.getElementById('avail-receso')?.value || '15';
+    const bDur = document.getElementById('badge-duracion-resumen');
+    if (bDur) bDur.textContent = `${dur} min de sesión · ${rec} min de receso`;
+
+    // 2. Antelación
+    const ant = document.getElementById('avail-antelacion')?.value || '24';
+    const bAnt = document.getElementById('badge-antelacion-resumen');
+    if (bAnt) bAnt.textContent = `Mínimo ${ant}h de anticipación para agendar`;
+
+    // 3. Confirmación
+    const confTipo = document.getElementById('avail-confirmacion-tipo')?.value || 'horas';
+    const confVal = (confTipo === 'horas' || confTipo === 'minutos')
+        ? (document.getElementById('avail-confirmacion-num')?.value || '24')
+        : (document.getElementById('avail-confirmacion-time')?.value || '18:00');
+    const bConf = document.getElementById('badge-confirmacion-resumen');
+    if (bConf) {
+        if (confTipo === 'horas') bConf.textContent = `Se envía ${confVal}h antes de la cita`;
+        else if (confTipo === 'minutos') bConf.textContent = `Se envía ${confVal} min antes de la cita`;
+        else if (confTipo === 'previo') bConf.textContent = `Se envía el día previo a las ${confVal}`;
+        else if (confTipo === 'mismo_dia') bConf.textContent = `Se envía el mismo día a las ${confVal}`;
+    }
+
+    // 4. Recordatorio
+    const recTipo = document.getElementById('avail-recordatorio-tipo')?.value || 'horas';
+    const recVal = (recTipo === 'horas' || recTipo === 'minutos')
+        ? (document.getElementById('avail-recordatorio-num')?.value || '2')
+        : (document.getElementById('avail-recordatorio-time')?.value || '08:00');
+    const bRec = document.getElementById('badge-recordatorio-resumen');
+    if (bRec) {
+        if (recTipo === 'horas') bRec.textContent = `Aviso ${recVal}h antes del inicio`;
+        else if (recTipo === 'minutos') bRec.textContent = `Aviso ${recVal} min antes del inicio`;
+        else if (recTipo === 'mismo_dia') bRec.textContent = `Aviso el mismo día a las ${recVal}`;
+        else if (recTipo === 'previo') bRec.textContent = `Aviso el día previo a las ${recVal}`;
+    }
+
+    // 5. Plazo límite (auto-cancelación)
+    const cTipo = document.getElementById('avail-limite-cancelacion-tipo')?.value || 'horas';
+    const cVal = (cTipo === 'horas' || cTipo === 'minutos')
+        ? (document.getElementById('avail-limite-cancelacion')?.value || '24')
+        : (document.getElementById('avail-limite-cancelacion-time')?.value || '08:00');
+    const bCanc = document.getElementById('badge-cancel-resumen');
+    if (bCanc) {
+        if (cTipo === 'horas') bCanc.textContent = `Auto-cancela si no responde ${cVal}h antes`;
+        else if (cTipo === 'minutos') bCanc.textContent = `Auto-cancela si no responde ${cVal} min antes`;
+        else if (cTipo === 'previo') bCanc.textContent = `Auto-cancela el día previo a las ${cVal}`;
+        else if (cTipo === 'mismo_dia') bCanc.textContent = `Auto-cancela el mismo día a las ${cVal}`;
+    }
+
+    // 6. Política de cancelación (cobro)
+    const polTipo = document.getElementById('avail-politica-cancelacion-tipo')?.value || 'horas';
+    const polVal = (polTipo === 'horas' || polTipo === 'minutos')
+        ? (document.getElementById('avail-politica-cancelacion')?.value || '24')
+        : (document.getElementById('avail-politica-cancelacion-time')?.value || '18:00');
+    const bPol = document.getElementById('badge-politica-resumen');
+    if (bPol) {
+        if (polTipo === 'horas') bPol.textContent = `Sin cobro hasta ${polVal}h antes`;
+        else if (polTipo === 'minutos') bPol.textContent = `Sin cobro hasta ${polVal} min antes`;
+        else if (polTipo === 'previo') bPol.textContent = `Sin cobro hasta el día previo a las ${polVal}`;
+        else if (polTipo === 'mismo_dia') bPol.textContent = `Sin cobro hasta el mismo día a las ${polVal}`;
+    }
+
+    // 7. Cierre
+    const cierreVal = document.getElementById('avail-tiempo-cierre')?.value || '2';
+    const bCierre = document.getElementById('badge-cierre-resumen');
+    if (bCierre) bCierre.textContent = `Seguimiento ${cierreVal}h después de finalizar`;
+
+    // Sincronización de eventos para actualización reactiva
+    const inputIds = [
+        'avail-duracion', 'avail-receso', 'avail-antelacion',
+        'avail-confirmacion-tipo', 'avail-confirmacion-num', 'avail-confirmacion-time',
+        'avail-recordatorio-tipo', 'avail-recordatorio-num', 'avail-recordatorio-time',
+        'avail-limite-cancelacion-tipo', 'avail-limite-cancelacion', 'avail-limite-cancelacion-time',
+        'avail-politica-cancelacion-tipo', 'avail-politica-cancelacion', 'avail-politica-cancelacion-time',
+        'avail-tiempo-cierre'
+    ];
+    inputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.boundBadgeSync) {
+            el.dataset.boundBadgeSync = '1';
+            el.addEventListener('input', updateRulesSummaryBadges);
+            el.addEventListener('change', updateRulesSummaryBadges);
+        }
+    });
+}
+window.updateRulesSummaryBadges = updateRulesSummaryBadges;
+
 function toggleConfirmationRuleInputs() {
     const tipo = document.getElementById('avail-confirmacion-tipo')?.value || 'horas';
     const numGroup = document.getElementById('confirmacion-rule-value-num-group');
@@ -9926,6 +10038,7 @@ function toggleConfirmationRuleInputs() {
         if (numGroup) numGroup.classList.add('hide');
         if (timeGroup) timeGroup.classList.remove('hide');
     }
+    updateRulesSummaryBadges();
 }
 window.toggleConfirmationRuleInputs = toggleConfirmationRuleInputs;
 
@@ -9950,6 +10063,7 @@ function toggleRecordatorioRuleInputs() {
         if (numGroup) numGroup.classList.add('hide');
         if (timeGroup) timeGroup.classList.remove('hide');
     }
+    updateRulesSummaryBadges();
 }
 window.toggleRecordatorioRuleInputs = toggleRecordatorioRuleInputs;
 
@@ -9974,6 +10088,7 @@ function toggleCancelRuleInputs() {
         if (hoursGroup) hoursGroup.classList.add('hide');
         if (timeGroup) timeGroup.classList.remove('hide');
     }
+    updateRulesSummaryBadges();
 }
 window.toggleCancelRuleInputs = toggleCancelRuleInputs;
 
@@ -9998,6 +10113,7 @@ function togglePoliticaRuleInputs() {
         if (hoursGroup) hoursGroup.classList.add('hide');
         if (timeGroup) timeGroup.classList.remove('hide');
     }
+    updateRulesSummaryBadges();
 }
 window.togglePoliticaRuleInputs = togglePoliticaRuleInputs;
 
@@ -10084,6 +10200,7 @@ async function loadAdminAvailability() {
             if (polTimeEl) polTimeEl.value = polVal;
         }
         togglePoliticaRuleInputs();
+        updateRulesSummaryBadges();
 
         switchHorariosMode(currentHorariosPersonalMode);
         
