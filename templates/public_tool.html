@@ -243,6 +243,90 @@
             border: 1px solid #bbf7d0;
             display: block;
         }
+
+        /* Grid de tarjetas cuadradas de emociones */
+        .emotions-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 0.55rem;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 480px) {
+            .emotions-cards-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.45rem;
+            }
+        }
+
+        .emo-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0.65rem 0.3rem;
+            min-height: 88px;
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: all 0.18s ease-in-out;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .emo-card:hover {
+            border-color: #c084fc;
+            background: #faf5ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(139, 92, 246, 0.12);
+        }
+
+        .emo-card input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .emo-card .emo-icon {
+            font-size: 1.95rem;
+            line-height: 1;
+            margin-bottom: 0.35rem;
+            transition: transform 0.18s ease;
+        }
+
+        .emo-card .emo-label {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #334155;
+            line-height: 1.15;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+            transition: color 0.18s ease;
+        }
+
+        /* Estado seleccionado */
+        .emo-card.selected {
+            background: linear-gradient(135deg, #5d3a6f 0%, #8b5cf6 100%) !important;
+            border-color: #5d3a6f !important;
+            box-shadow: 0 4px 12px rgba(93, 58, 111, 0.28) !important;
+            transform: scale(1.02);
+        }
+
+        .emo-card.selected .emo-icon {
+            transform: scale(1.15);
+        }
+
+        .emo-card.selected .emo-label {
+            color: #ffffff !important;
+        }
     </style>
 </head>
 <body>
@@ -294,34 +378,27 @@
                     Puedes escoger una o varias emociones presentes durante el día:
                 </p>
 
+                <div class="emotions-cards-grid">
                 {% if extra_data and extra_data.emociones_catalogo %}
                     {% for cat in extra_data.emociones_catalogo %}
-                    <div style="margin-bottom: 0.85rem;">
-                        <span style="font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: {{ cat.color }}; display: block; margin-bottom: 0.35rem;">
-                            {{ cat.category }}
-                        </span>
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
-                            {% for it in cat['items'] %}
-                            <label class="mt-chip" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #334155; transition: all 0.2s;">
-                                <input type="checkbox" name="mt_emocion" value="{{ it.emoji }} {{ it.label }}" onchange="this.parentElement.style.background = this.checked ? 'linear-gradient(135deg, #5d3a6f, #8b5cf6)' : '#f8fafc'; this.parentElement.style.color = this.checked ? 'white' : '#334155'; this.parentElement.style.borderColor = this.checked ? '#5d3a6f' : '#cbd5e1';" style="display: none;">
-                                <span>{{ it.emoji }}</span>
-                                <span>{{ it.label }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
-                        {% for emo in [('😊', 'Alegría'), ('😢', 'Tristeza'), ('😡', 'Enojo / Rabia'), ('😨', 'Miedo'), ('😰', 'Ansiedad'), ('😔', 'Culpa'), ('😤', 'Frustración'), ('😌', 'Calma / Paz'), ('😳', 'Vergüenza'), ('🥺', 'Soledad'), ('😫', 'Estrés'), ('🙏', 'Gratitud')] %}
-                        <label class="mt-chip" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #334155; transition: all 0.2s;">
-                            <input type="checkbox" name="mt_emocion" value="{{ emo[0] }} {{ emo[1] }}" onchange="this.parentElement.style.background = this.checked ? 'linear-gradient(135deg, #5d3a6f, #8b5cf6)' : '#f8fafc'; this.parentElement.style.color = this.checked ? 'white' : '#334155'; this.parentElement.style.borderColor = this.checked ? '#5d3a6f' : '#cbd5e1';" style="display: none;">
-                            <span>{{ emo[0] }}</span>
-                            <span>{{ emo[1] }}</span>
+                        {% for it in cat['items'] %}
+                        <label class="emo-card">
+                            <input type="checkbox" name="mt_emocion" value="{{ it.emoji }} {{ it.label }}" onchange="toggleEmoCard(this)">
+                            <span class="emo-icon">{{ it.emoji }}</span>
+                            <span class="emo-label">{{ it.label }}</span>
                         </label>
                         {% endfor %}
-                    </div>
+                    {% endfor %}
+                {% else %}
+                    {% for emo in [('😊', 'Alegría'), ('😢', 'Tristeza'), ('😡', 'Enojo / Rabia'), ('😨', 'Miedo'), ('🤢', 'Desagrado'), ('😲', 'Sorpresa'), ('😰', 'Ansiedad'), ('😫', 'Angustia'), ('🤯', 'Estrés'), ('😣', 'Inquietud'), ('😵‍💫', 'Abrumamiento'), ('😱', 'Pánico'), ('😔', 'Culpa'), ('😳', 'Vergüenza'), ('😤', 'Frustración'), ('🥺', 'Soledad'), ('😞', 'Impotencia'), ('🕳️', 'Vacío'), ('💔', 'Desesperanza'), ('😠', 'Resentimiento'), ('😒', 'Celos'), ('😌', 'Calma / Paz'), ('🙏', 'Gratitud'), ('😮‍💨', 'Alivio'), ('🌤️', 'Esperanza'), ('💪', 'Confianza'), ('🥰', 'Amor'), ('⚡', 'Entusiasmo')] %}
+                    <label class="emo-card">
+                        <input type="checkbox" name="mt_emocion" value="{{ emo[0] }} {{ emo[1] }}" onchange="toggleEmoCard(this)">
+                        <span class="emo-icon">{{ emo[0] }}</span>
+                        <span class="emo-label">{{ emo[1] }}</span>
+                    </label>
+                    {% endfor %}
                 {% endif %}
+                </div>
             </div>
 
             <div class="form-group" style="margin-top: 1.25rem;">
@@ -637,6 +714,17 @@
 </div>
 
 <script>
+function toggleEmoCard(input) {
+    const card = input.closest('.emo-card');
+    if (card) {
+        if (input.checked) {
+            card.classList.add('selected');
+        } else {
+            card.classList.remove('selected');
+        }
+    }
+}
+
 async function submitPublicTool(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-submit-public');
