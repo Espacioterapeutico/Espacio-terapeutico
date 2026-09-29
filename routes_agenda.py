@@ -1328,6 +1328,8 @@ def admin_availability():
         "alerta_cierre": 2,
         "limite_cancelacion_tipo": "mismo_dia",
         "limite_cancelacion_valor": "07:00",
+        "politica_cancelacion_tipo": "horas",
+        "politica_cancelacion_valor": 24,
         "perfiles": [
             {
                 "id": "default_online",

@@ -2031,8 +2031,8 @@ def auto_cancel_unconfirmed_sessions(db):
                 psic_configs[psic_id] = cfg
                 
             cfg = psic_configs[psic_id]
-            rule_type = cfg.get('limite_cancelacion_tipo', 'horas')
-            rule_value = cfg.get('limite_cancelacion_valor', 24)
+            rule_type = cfg.get('limite_auto_cancelacion_tipo') or cfg.get('limite_cancelacion_tipo', 'horas')
+            rule_value = cfg.get('limite_auto_cancelacion_valor') if cfg.get('limite_auto_cancelacion_valor') is not None else cfg.get('limite_cancelacion_valor', 24)
             
             deadline_dt = get_deadline_datetime(appt['fecha'], appt['hora'], rule_type, rule_value)
             

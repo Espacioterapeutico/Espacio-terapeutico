@@ -3552,17 +3552,17 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- Tarjeta 3: Regla de Cancelación por No Confirmación y Sin Cobro -->
+                                                 <!-- Tarjeta 3: Plazo Límite de Confirmación (Auto-Cancelación por Falta de Respuesta) -->
                                                 <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
                                                     <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 700; color: #dc2626; display: flex; align-items: center; gap: 0.5rem;">
-                                                        🛡️ Límite de Auto-Cancelación y Política sin Cobro (Fase 2)
+                                                        ⏳ Plazo Límite de Confirmación (Auto-Cancelación de Cita)
                                                     </h5>
                                                     <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
-                                                        Determina hasta qué momento tiene el paciente para confirmar su asistencia antes de que el sistema cancele la cita, libere el horario en tu agenda y le envíe el aviso con enlace para reagendar.
+                                                        Determina hasta qué momento tiene el paciente para confirmar su asistencia tras recibir el recordatorio. Si no confirma dentro de este plazo, el sistema cancela automáticamente la cita, libera el cupo en tu agenda y le envía el mensaje de aviso por WhatsApp con enlace para reagendar.
                                                     </p>
                                                     <div class="form-row">
                                                         <div class="form-group col-6">
-                                                            <label for="avail-limite-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Criterio de Cancelación *</label>
+                                                            <label for="avail-limite-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Criterio de Plazo Límite *</label>
                                                             <select id="avail-limite-cancelacion-tipo" required onchange="toggleCancelRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">
                                                                 <option value="horas">Cantidad de horas antes de la sesión</option>
                                                                 <option value="minutos">Cantidad de minutos antes de la sesión</option>
@@ -3577,6 +3577,35 @@
                                                         <div class="form-group col-6 hide" id="cancel-rule-value-time-group">
                                                             <label for="avail-limite-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora Límite de Cierre *</label>
                                                             <input type="time" id="avail-limite-cancelacion-time" value="08:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Tarjeta 4: Política de Cancelación Voluntaria y Cobro (Paciente) -->
+                                                <div style="background: var(--bg-body, #fafafa); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+                                                    <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 0.5rem;">
+                                                        🛡️ Política de Cancelación del Consultante (Con Cobro / Sin Cobro)
+                                                    </h5>
+                                                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                                        Regula el margen de tiempo en que un paciente puede cancelar o reprogramar por su cuenta sin costo. Si cancela con menor anticipación que este límite (o no asiste), el sistema registrará la cita como <strong>Cancelada sin aviso</strong> y aplicará el cobro de la sesión.
+                                                    </p>
+                                                    <div class="form-row">
+                                                        <div class="form-group col-6">
+                                                            <label for="avail-politica-cancelacion-tipo" style="font-weight: 600; font-size: 0.88rem;">Criterio de Política *</label>
+                                                            <select id="avail-politica-cancelacion-tipo" required onchange="togglePoliticaRuleInputs()" style="width: 100%; padding: 0.65rem; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">
+                                                                <option value="horas">Cantidad de horas antes de la sesión</option>
+                                                                <option value="minutos">Cantidad de minutos antes de la sesión</option>
+                                                                <option value="previo">Condición: El día previo a la hora especificada</option>
+                                                                <option value="mismo_dia">Condición: El mismo día a la hora especificada</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="form-group col-6" id="politica-rule-value-hours-group">
+                                                            <label for="avail-politica-cancelacion" id="politica-num-label" style="font-weight: 600; font-size: 0.88rem;">Cantidad de Horas de Anticipación *</label>
+                                                            <input type="number" id="avail-politica-cancelacion" value="24" min="0" max="1440" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
+                                                        </div>
+                                                        <div class="form-group col-6 hide" id="politica-rule-value-time-group">
+                                                            <label for="avail-politica-cancelacion-time" style="font-weight: 600; font-size: 0.88rem;">Hora Límite *</label>
+                                                            <input type="time" id="avail-politica-cancelacion-time" value="18:00" style="border-radius: 8px; padding: 0.6rem; border: 1.5px solid var(--border-color); width: 100%;">
                                                         </div>
                                                     </div>
                                                 </div>

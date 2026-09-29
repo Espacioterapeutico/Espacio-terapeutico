@@ -9953,6 +9953,30 @@ function toggleCancelRuleInputs() {
 }
 window.toggleCancelRuleInputs = toggleCancelRuleInputs;
 
+function togglePoliticaRuleInputs() {
+    const tipo = document.getElementById('avail-politica-cancelacion-tipo')?.value || 'horas';
+    const hoursGroup = document.getElementById('politica-rule-value-hours-group');
+    const timeGroup = document.getElementById('politica-rule-value-time-group');
+    const numLabel = document.getElementById('politica-num-label');
+    const numInput = document.getElementById('avail-politica-cancelacion');
+    
+    if (tipo === 'minutos') {
+        if (hoursGroup) hoursGroup.classList.remove('hide');
+        if (timeGroup) timeGroup.classList.add('hide');
+        if (numLabel) numLabel.textContent = 'Cantidad de Minutos de Anticipación *';
+        if (numInput && (!numInput.value || numInput.value > 1440 || numInput.value < 5)) numInput.value = 60;
+    } else if (tipo === 'horas') {
+        if (hoursGroup) hoursGroup.classList.remove('hide');
+        if (timeGroup) timeGroup.classList.add('hide');
+        if (numLabel) numLabel.textContent = 'Cantidad de Horas de Anticipación *';
+        if (numInput && (!numInput.value || numInput.value > 168)) numInput.value = 24;
+    } else {
+        if (hoursGroup) hoursGroup.classList.add('hide');
+        if (timeGroup) timeGroup.classList.remove('hide');
+    }
+}
+window.togglePoliticaRuleInputs = togglePoliticaRuleInputs;
+
 async function loadAdminAvailability() {
     const listContainer = document.getElementById('availability-days-list');
     if (!listContainer) return;
@@ -9994,17 +10018,35 @@ async function loadAdminAvailability() {
         }
         toggleConfirmationRuleInputs();
 
-        // Cancelación personalizada
-        const cTipo = data.limite_cancelacion_tipo || 'horas';
-        const cVal = data.limite_cancelacion_valor !== undefined ? data.limite_cancelacion_valor : (data.limite_cancelacion !== undefined ? data.limite_cancelacion : 24);
+        // Auto-Cancelación por falta de confirmación
+        const cTipo = data.limite_auto_cancelacion_tipo || data.limite_cancelacion_tipo || 'horas';
+        const cVal = data.limite_auto_cancelacion_valor !== undefined ? data.limite_auto_cancelacion_valor : (data.limite_cancelacion_valor !== undefined ? data.limite_cancelacion_valor : (data.limite_cancelacion !== undefined ? data.limite_cancelacion : 24));
         
-        document.getElementById('avail-limite-cancelacion-tipo').value = cTipo;
+        const selLimEl = document.getElementById('avail-limite-cancelacion-tipo');
+        if (selLimEl) selLimEl.value = cTipo;
         if (cTipo === 'horas' || cTipo === 'minutos') {
-            document.getElementById('avail-limite-cancelacion').value = cVal;
+            const limValEl = document.getElementById('avail-limite-cancelacion');
+            if (limValEl) limValEl.value = cVal;
         } else {
-            document.getElementById('avail-limite-cancelacion-time').value = cVal;
+            const limTimeEl = document.getElementById('avail-limite-cancelacion-time');
+            if (limTimeEl) limTimeEl.value = cVal;
         }
         toggleCancelRuleInputs();
+
+        // Política de cancelación voluntaria del consultante (Con cobro / Sin cobro)
+        const polTipo = data.politica_cancelacion_tipo || 'horas';
+        const polVal = data.politica_cancelacion_valor !== undefined ? data.politica_cancelacion_valor : 24;
+        const selPolEl = document.getElementById('avail-politica-cancelacion-tipo');
+        if (selPolEl) selPolEl.value = polTipo;
+        if (polTipo === 'horas' || polTipo === 'minutos') {
+            const polValEl = document.getElementById('avail-politica-cancelacion');
+            if (polValEl) polValEl.value = polVal;
+        } else {
+            const polTimeEl = document.getElementById('avail-politica-cancelacion-time');
+            if (polTimeEl) polTimeEl.value = polVal;
+        }
+        togglePoliticaRuleInputs();
+
         switchHorariosMode(currentHorariosPersonalMode);
         
         ['avail-duracion', 'avail-receso', 'avail-antelacion'].forEach(inputId => {
@@ -10378,11 +10420,17 @@ async function handleSaveAvailability(e) {
     const alerta_recordatorio = parseInt(document.getElementById('avail-tiempo-recordatorio').value);
     const alerta_cierre = parseInt(document.getElementById('avail-tiempo-cierre').value);
     
-    // Límite de cancelación personalizado
+    // Límite de auto-cancelación por falta de confirmación
     const limite_cancelacion_tipo = document.getElementById('avail-limite-cancelacion-tipo')?.value || 'horas';
     const limite_cancelacion_valor = (limite_cancelacion_tipo === 'horas' || limite_cancelacion_tipo === 'minutos')
         ? parseInt(document.getElementById('avail-limite-cancelacion')?.value || 24)
-        : (document.getElementById('avail-limite-cancelacion-time')?.value || '07:00');
+        : (document.getElementById('avail-limite-cancelacion-time')?.value || '08:00');
+
+    // Política de cancelación voluntaria del consultante (Con cobro / Sin cobro)
+    const politica_cancelacion_tipo = document.getElementById('avail-politica-cancelacion-tipo')?.value || 'horas';
+    const politica_cancelacion_valor = (politica_cancelacion_tipo === 'horas' || politica_cancelacion_tipo === 'minutos')
+        ? parseInt(document.getElementById('avail-politica-cancelacion')?.value || 24)
+        : (document.getElementById('avail-politica-cancelacion-time')?.value || '18:00');
     
     const profileCards = document.querySelectorAll('.avail-profile-card');
     const perfiles = [];
@@ -10458,7 +10506,11 @@ async function handleSaveAvailability(e) {
                 alerta_recordatorio,
                 alerta_cierre,
                 limite_cancelacion_tipo,
-                limite_cancelacion_valor
+                limite_cancelacion_valor,
+                limite_auto_cancelacion_tipo: limite_cancelacion_tipo,
+                limite_auto_cancelacion_valor: limite_cancelacion_valor,
+                politica_cancelacion_tipo,
+                politica_cancelacion_valor
             })
         });
         

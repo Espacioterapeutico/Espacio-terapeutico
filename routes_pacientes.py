@@ -1427,7 +1427,7 @@ def patient_cancel_appointment():
         pac_nombre = f"{pac['nombres']} {pac['apellidos']}"
         psicologo_id = pac['psicologo_id']
         
-        # Obtener límite de cancelación configurado por el psicólogo
+        # Obtener política de cancelación configurada por el psicólogo
         cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
         u_row = cursor.fetchone()
         rule_type = 'horas'
@@ -1435,8 +1435,8 @@ def patient_cancel_appointment():
         if u_row and u_row[0]:
             try:
                 config = json.loads(u_row[0])
-                rule_type = config.get('limite_cancelacion_tipo', 'horas')
-                rule_value = config.get('limite_cancelacion_valor', 24)
+                rule_type = config.get('politica_cancelacion_tipo') or config.get('limite_cancelacion_tipo', 'horas')
+                rule_value = config.get('politica_cancelacion_valor') if config.get('politica_cancelacion_valor') is not None else config.get('limite_cancelacion_valor', 24)
             except:
                 pass
                 
@@ -1746,7 +1746,8 @@ def patient_reschedule_appointment():
         if u_row and u_row[0]:
             try:
                 config = json.loads(u_row[0])
-                limite_cancelacion = int(config.get('limite_cancelacion', 24))
+                pol_val = config.get('politica_cancelacion_valor') if config.get('politica_cancelacion_valor') is not None else config.get('limite_cancelacion_valor', config.get('limite_cancelacion', 24))
+                limite_cancelacion = int(pol_val) if config.get('politica_cancelacion_tipo', config.get('limite_cancelacion_tipo', 'horas')) == 'horas' else 24
             except:
                 pass
                 
@@ -2057,8 +2058,8 @@ def get_patient_portal_data_dict(patient_id):
         if u_row and u_row[0]:
             try:
                 config = json.loads(u_row[0])
-                rule_type = config.get('limite_cancelacion_tipo', 'horas')
-                rule_value = config.get('limite_cancelacion_valor', 24)
+                rule_type = config.get('politica_cancelacion_tipo') or config.get('limite_cancelacion_tipo', 'horas')
+                rule_value = config.get('politica_cancelacion_valor') if config.get('politica_cancelacion_valor') is not None else config.get('limite_cancelacion_valor', 24)
             except:
                 pass
 
