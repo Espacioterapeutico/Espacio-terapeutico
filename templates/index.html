@@ -3269,62 +3269,120 @@
                                     <p class="text-secondary mb-4" style="font-size: 0.85rem; line-height: 1.4;">Personaliza los mensajes que se enviarán automáticamente a tus pacientes. El sistema rellenará las variables <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{modalidad}</code>, <code>{link_conexion}</code> y <code>{link_confirmacion}</code>.</p>
                                     
                                     <form id="settings-messages-form" onsubmit="handleSaveMessageTemplates(event)">
-                                        <div class="form-group mb-3">
-                                            <label for="template-confirmacion" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: var(--primary-color);">Fase 1: Confirmación (1 día previo)</label>
-                                            <textarea id="template-confirmacion" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+
+                                        <!-- 1. Fase 1: Confirmación -->
+                                        <div class="rules-accordion-item mb-2">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
+                                                <span>📲 Fase 1: Confirmación <small style="font-weight:400; color:var(--text-muted);">(1 día previo)</small></span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <textarea id="template-confirmacion" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
+                                            </div>
                                         </div>
-                                        <div class="form-group mb-3">
-                                            <label for="template-confirmacion-ok" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #059669;">Respuesta Automática cuando el Paciente Confirma (SÍ / ✅)</label>
-                                            <textarea id="template-confirmacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+
+                                        <!-- 2. Respuesta: Confirma -->
+                                        <div class="rules-accordion-item mb-2">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
+                                                <span style="color:#059669;">✅ Respuesta: Paciente Confirma <small style="font-weight:400; color:var(--text-muted);">(SÍ / ✅)</small></span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <textarea id="template-confirmacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
+                                            </div>
                                         </div>
-                                        <div class="form-group mb-3">
-                                            <label for="template-cancelacion-ok" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #dc2626;">Respuesta Automática cuando el Paciente Cancela (NO / ❌)</label>
-                                            <textarea id="template-cancelacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+
+                                        <!-- 3. Respuesta: Cancela -->
+                                        <div class="rules-accordion-item mb-2">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
+                                                <span style="color:#dc2626;">❌ Respuesta: Paciente Cancela <small style="font-weight:400; color:var(--text-muted);">(NO / ❌)</small></span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <textarea id="template-cancelacion-ok" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
+                                            </div>
                                         </div>
-                                        <div class="form-group mb-3" style="background: rgba(220, 38, 38, 0.04); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(220, 38, 38, 0.2);">
-                                            <label for="template-cancelacion-no-conf" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #b91c1c;">Cancelación por Falta de Confirmación (Tiempo Límite Expirado)</label>
-                                            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.35rem;">Se envía automáticamente cuando expira el plazo sin confirmación o al cancelar por falta de respuesta. Variables disponibles: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{link_agendar}</code> (tu enlace personalizado), <code>{psicologo}</code>.</p>
-                                            <textarea id="template-cancelacion-no-conf" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:&#10;{link_agendar}"></textarea>
+
+                                        <!-- 4. Cancelación por Falta de Confirmación -->
+                                        <div class="rules-accordion-item mb-2" style="border-color: rgba(220, 38, 38, 0.25);">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="background: rgba(220, 38, 38, 0.04);">
+                                                <span style="color:#b91c1c;">⚠️ Cancelación por Falta de Confirmación</span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Se envía automáticamente cuando expira el plazo sin confirmación o al cancelar por falta de respuesta. Variables: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{link_agendar}</code>, <code>{psicologo}</code>.</p>
+                                                <textarea id="template-cancelacion-no-conf" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:&#10;{link_agendar}"></textarea>
+                                            </div>
                                         </div>
-                                        <div class="form-group mb-3">
-                                            <label for="template-recordatorio" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #10b981;">Fase 2: Recordatorio del Día (Mismo día)</label>
-                                            <textarea id="template-recordatorio" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" required></textarea>
+
+                                        <!-- 5. Fase 2: Recordatorio -->
+                                        <div class="rules-accordion-item mb-2">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
+                                                <span style="color:#10b981;">📅 Fase 2: Recordatorio del Día <small style="font-weight:400; color:var(--text-muted);">(Mismo día)</small></span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <textarea id="template-recordatorio" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
+                                            </div>
                                         </div>
-                                        <div class="form-group mb-3" style="background: rgba(217, 119, 6, 0.05); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(217, 119, 6, 0.2);">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
-                                                <label for="template-reagendamiento" style="font-weight: 700; color: #d97706; margin: 0;">Fase 3: Reagendamiento (Fin de Día / No asistidas)</label>
-                                                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; font-weight: 700; color: var(--text-dark);">
+
+                                        <!-- 6. Fase 3: Reagendamiento -->
+                                        <div class="rules-accordion-item mb-2" style="border-color: rgba(217, 119, 6, 0.25);">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="background: rgba(217, 119, 6, 0.05);">
+                                                <span style="color:#d97706;">🔄 Fase 3: Reagendamiento <small style="font-weight:400; color:var(--text-muted);">(Fin de Día / No asistidas)</small></span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; font-weight: 700; color: var(--text-dark); margin-bottom: 0.5rem;">
                                                     <input type="checkbox" id="auto-reagendamiento-switch"> 🔔 Enviar Automáticamente a las 6 PM
                                                 </label>
+                                                <textarea id="template-reagendamiento" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
                                             </div>
-                                            <textarea id="template-reagendamiento" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);"></textarea>
                                         </div>
-                                        <div class="form-group mb-3">
-                                            <label for="template-cierre" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #64748b;">Mensaje de Cierre / Nota Post-sesión</label>
-                                            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.35rem;">Variables disponibles: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{tareas}</code> (compromisos acordados en la evolución), <code>{psicologo}</code>.</p>
-                                            <textarea id="template-cierre" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿&#10;&#10;📌 *Tus compromisos y tareas para esta semana:*&#10;{tareas}&#10;&#10;Si deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:&#10;https://www.espacioterapeutico.net/agendar/psic.paulomora" required></textarea>
+
+                                        <!-- 7. Mensaje de Cierre -->
+                                        <div class="rules-accordion-item mb-2">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)">
+                                                <span style="color:#64748b;">📝 Mensaje de Cierre / Nota Post-sesión</span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Variables: <code>{nombre}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{tareas}</code> (compromisos de la evolución), <code>{psicologo}</code>.</p>
+                                                <textarea id="template-cierre" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}*, gracias por compartir el espacio terapéutico hoy. 🌿&#10;&#10;📌 *Tus compromisos y tareas para esta semana:*&#10;{tareas}&#10;&#10;Si deseas agendar tu próxima sesión, puedes hacerlo desde tu portal o a través del siguiente enlace:&#10;https://www.espacioterapeutico.net/agendar/psic.paulomora"></textarea>
+                                            </div>
                                         </div>
-                                        <div class="form-group mb-4" style="background: rgba(16, 185, 129, 0.05); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(16, 185, 129, 0.2);">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                                                <label for="template-cumpleanos" style="font-weight: 700; color: #10b981; margin: 0;">Fase 4: Cumpleaños de Consultante (Día de Cumpleaños)</label>
-                                                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; font-weight: 700; color: var(--text-dark);">
+
+                                        <!-- 8. Fase 4: Cumpleaños -->
+                                        <div class="rules-accordion-item mb-2" style="border-color: rgba(16, 185, 129, 0.25);">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="background: rgba(16, 185, 129, 0.05);">
+                                                <span style="color:#10b981;">🎂 Fase 4: Cumpleaños de Consultante <small style="font-weight:400; color:var(--text-muted);">(Día de Cumpleaños)</small></span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; font-weight: 700; color: var(--text-dark); margin-bottom: 0.5rem;">
                                                     <input type="checkbox" id="auto-cumpleanos-switch"> 🎂 Enviar Saludo de Cumpleaños Automático por WhatsApp
                                                 </label>
+                                                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.55rem; flex-wrap: wrap; background: rgba(255,255,255,0.85); padding: 0.35rem 0.65rem; border-radius: 6px; border: 1px dashed rgba(16, 185, 129, 0.4);">
+                                                    <label for="template-hora-cumpleanos" style="font-size: 0.82rem; font-weight: 700; color: #047857; margin: 0;">⏰ Hora de envío de saludo:</label>
+                                                    <input type="time" id="template-hora-cumpleanos" value="09:00" style="padding: 0.2rem 0.45rem; border: 1.5px solid #10b981; border-radius: 5px; font-size: 0.85rem; font-weight: 700; color: #065f46; background: #fff;">
+                                                    <span style="font-size: 0.74rem; color: #64748b;">(Evita enviar a la medianoche. Por defecto: 09:00 AM)</span>
+                                                </div>
+                                                <textarea id="template-cumpleanos" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="¡Feliz cumpleaños, *{nombre}*! 🎉🎂"></textarea>
                                             </div>
-                                            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.55rem; flex-wrap: wrap; background: rgba(255, 255, 255, 0.85); padding: 0.35rem 0.65rem; border-radius: 6px; border: 1px dashed rgba(16, 185, 129, 0.4);">
-                                                <label for="template-hora-cumpleanos" style="font-size: 0.82rem; font-weight: 700; color: #047857; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-                                                    ⏰ Hora de envío de saludo:
-                                                </label>
-                                                <input type="time" id="template-hora-cumpleanos" value="09:00" style="padding: 0.2rem 0.45rem; border: 1.5px solid #10b981; border-radius: 5px; font-size: 0.85rem; font-weight: 700; color: #065f46; background: #fff;">
-                                                <span style="font-size: 0.74rem; color: #64748b;">(Evita enviar a la medianoche. Por defecto: 09:00 AM)</span>
+                                        </div>
+
+                                        <!-- 9. Herramientas Terapéuticas -->
+                                        <div class="rules-accordion-item mb-4" style="border-color: rgba(59, 130, 246, 0.25);">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="background: rgba(59, 130, 246, 0.05);">
+                                                <span style="color:#2563eb;">🛠️ Recordatorio de Herramientas Terapéuticas <small style="font-weight:400; color:var(--text-muted);">(Link Directo)</small></span>
+                                                <span class="rules-accordion-arrow">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide">
+                                                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Variables: <code>{nombre}</code>, <code>{herramienta}</code> (ej. Diario de Ansiedad), <code>{hora}</code> (ej. 08:00 AM), <code>{fecha}</code>, <code>{link}</code> (enlace directo de registro rápido).</p>
+                                                <textarea id="template-herramientas" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}* 👋 Espero te encuentres muy bien.&#10;&#10;Te recuerdo completar tu *{herramienta}* programada para las *{hora}*. Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):&#10;👉 {link}&#10;&#10;¡Gracias por tu constancia!"></textarea>
                                             </div>
-                                            <textarea id="template-cumpleanos" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="¡Feliz cumpleaños, *{nombre}*! 🎉🎂"></textarea>
                                         </div>
-                                        <div class="form-group mb-4" style="background: rgba(59, 130, 246, 0.05); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(59, 130, 246, 0.2);">
-                                            <label for="template-herramientas" style="font-weight: 700; margin-bottom: 0.35rem; display: block; color: #2563eb;">🛠️ Recordatorio Diario de Herramientas Terapéuticas (Link Directo)</label>
-                                            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.35rem;">Variables disponibles: <code>{nombre}</code> (primer nombre), <code>{herramienta}</code> (ej. Diario de Ansiedad), <code>{hora}</code> (hora programada, ej. 08:00 AM / 08:00 PM), <code>{fecha}</code>, <code>{link}</code> (enlace directo de registro rápido).</p>
-                                            <textarea id="template-herramientas" rows="4" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola *{nombre}* 👋 Espero te encuentres muy bien.&#10;&#10;Te recuerdo completar tu *{herramienta}* programada para las *{hora}*. Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):&#10;👉 {link}&#10;&#10;¡Gracias por tu constancia!"></textarea>
-                                        </div>
+
                                         <button type="submit" class="btn btn-primary btn-block" style="width: 100%;">Guardar Plantillas de Mensaje</button>
                                     </form>
                                 </div>
