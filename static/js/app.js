@@ -26866,42 +26866,39 @@ function renderPublicTestItems(testDef) {
         return trimmedTxt || strVal;
     };
 
-    pageItems.forEach((item, index) => {
-        const itemNum = item.num || item.id || (startIdx + index + 1);
-        
-        // Extraer texto del reactivo soportando todas las nomenclaturas del catálogo
-        const rawTitle = (item.texto || item.txt || item.titulo || item.text || item.enunciado || item.pregunta || item.pregunta_texto || '').trim();
-        let itemTitle = rawTitle;
-        if (rawTitle) {
-            // Si no empieza con número ("1.", "P1.", etc.), anteponer el número de reactivo
-            if (!/^(?:P\d+|\d+)[\.\-\)]\s*/i.test(rawTitle)) {
-                itemTitle = `<strong>${itemNum}.</strong> ${rawTitle}`;
+    // Detección: si algún ítem de la página tiene sus propias opciones personalizadas (ej. BDI-II, HAMILTON-D)
+    const hasCustomOptions = pageItems.some(item => Boolean(item.opciones && Array.isArray(item.opciones) && item.opciones.length > 0));
+
+    if (hasCustomOptions) {
+        // Renderizado en tarjetas individuales descriptivas (para BDI-II, etc.)
+        html += `<div style="display: flex; flex-direction: column; gap: 1.25rem;">`;
+        pageItems.forEach((item, index) => {
+            const itemNum = item.num || item.id || (startIdx + index + 1);
+            const rawTitle = (item.texto || item.txt || item.titulo || item.text || item.enunciado || item.pregunta || item.pregunta_texto || '').trim();
+            let itemTitle = rawTitle;
+            if (rawTitle) {
+                if (!/^(?:P\d+|\d+)[\.\-\)]\s*/i.test(rawTitle)) {
+                    itemTitle = `<strong>${itemNum}.</strong> ${rawTitle}`;
+                }
+            } else {
+                itemTitle = `Pregunta ${itemNum}`;
             }
-        } else {
-            itemTitle = `Pregunta ${itemNum}`;
-        }
 
-        const selectedVal = currentPublicTestAnswers[itemNum];
-        const isAnswered = selectedVal !== undefined;
+            const selectedVal = currentPublicTestAnswers[itemNum];
+            const isAnswered = selectedVal !== undefined;
+            const cardBorder = isAnswered ? '#a855f7' : '#e2e8f0';
+            const cardBg = isAnswered ? '#fdf4ff' : '#ffffff';
+            const sectionBadge = item.sec || item.seccion || item.categoria;
 
-        const cardBorder = isAnswered ? '#a855f7' : '#e2e8f0';
-        const cardBg = isAnswered ? '#fdf4ff' : '#ffffff';
-
-        const sectionBadge = item.sec || item.seccion || item.categoria;
-
-        html += `
-            <div id="test-item-card-${itemNum}" style="background: ${cardBg}; border: 1.5px solid ${cardBorder}; border-radius: 12px; padding: 1.25rem; transition: all 0.2s ease;">
-                ${sectionBadge ? `<div style="font-size: 0.76rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-bottom: 0.5rem;">${sectionBadge}</div>` : ''}
-                <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                    <span style="line-height: 1.45;">${itemTitle}</span>
-                    ${isAnswered ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap;">✓ Respondida</span>' : ''}
-                </div>`;
-
-        // Si el ítem tiene sus propias opciones personalizadas (ej. BDI-II, HAMILTON-D, etc.)
-        const hasCustomOptions = Boolean(item.opciones && Array.isArray(item.opciones) && item.opciones.length > 0);
-
-        if (hasCustomOptions) {
-            html += `<div style="display: flex; flex-direction: column; gap: 0.6rem;">`;
+            html += `
+                <div id="test-item-card-${itemNum}" style="background: ${cardBg}; border: 1.5px solid ${cardBorder}; border-radius: 12px; padding: 1.25rem; transition: all 0.2s ease;">
+                    ${sectionBadge ? `<div style="font-size: 0.76rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-bottom: 0.5rem;">${sectionBadge}</div>` : ''}
+                    <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <span style="line-height: 1.45;">${itemTitle}</span>
+                        ${isAnswered ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap;">✓ Respondida</span>' : ''}
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">`;
+                    
             item.opciones.forEach((op, opIdx) => {
                 let opVal = opIdx;
                 let opTxt = String(op);
@@ -26919,37 +26916,159 @@ function renderPublicTestItems(testDef) {
                         <span style="font-size: 0.92rem; color: #334155; line-height: 1.45; font-weight: ${isChecked ? '700' : '500'};">${opTxt}</span>
                     </label>`;
             });
-            html += `</div>`;
-        } else {
-            const escala = testDef.escala_opciones || [];
-            
-            // Disposición en columna limpia para legibilidad óptima en móviles y escritorio
-            html += `<div style="display: flex; flex-direction: column; gap: 0.5rem;">`;
-            escala.forEach((op, opIdx) => {
-                let opVal = opIdx;
-                let opTxt = String(op);
-                if (typeof op === 'object' && op !== null) {
-                    opVal = (op.val !== undefined) ? op.val : (op.valor !== undefined ? op.valor : opIdx);
-                    const extractedTxt = op.text || op.txt || op.texto || op.label || op.titulo || op.nombre || '';
-                    opTxt = getFallbackOptionLabel(testDef.code, testDef.siglas, opVal, extractedTxt);
-                } else {
-                    opTxt = getFallbackOptionLabel(testDef.code, testDef.siglas, opVal, opTxt);
-                }
-                const isChecked = (selectedVal !== undefined && String(selectedVal) === String(opVal));
-                const checked = isChecked ? 'checked' : '';
-                const optBg = isChecked ? '#fdf4ff' : '#f8fafc';
-                const optBorder = isChecked ? '#702e5e' : '#cbd5e1';
-                html += `
-                    <label style="display: flex; align-items: center; gap: 12px; background: ${optBg}; border: 1.5px solid ${optBorder}; padding: 0.7rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
-                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="accent-color: #702e5e; transform: scale(1.15);">
-                        <span style="font-size: 0.92rem; font-weight: ${isChecked ? '700' : '600'}; color: ${isChecked ? '#702e5e' : '#334155'};">${opTxt}</span>
-                    </label>`;
-            });
-            html += `</div>`;
-        }
-
+            html += `</div></div>`;
+        });
         html += `</div>`;
-    });
+    } else {
+        // MODO MATRIZ / REJILLA PSICOMÉTRICA (Para escalas Likert y Dicotómicas uniformes)
+        const escala = testDef.escala_opciones || [];
+        const parsedOptions = escala.map((op, opIdx) => {
+            let opVal = opIdx;
+            let opTxt = String(op);
+            if (typeof op === 'object' && op !== null) {
+                opVal = (op.val !== undefined) ? op.val : (op.valor !== undefined ? op.valor : opIdx);
+                const extractedTxt = op.text || op.txt || op.texto || op.label || op.titulo || op.nombre || '';
+                opTxt = getFallbackOptionLabel(testDef.code, testDef.siglas, opVal, extractedTxt);
+            } else {
+                opTxt = getFallbackOptionLabel(testDef.code, testDef.siglas, opVal, opTxt);
+            }
+            return { val: opVal, text: opTxt };
+        });
+
+        const getOptionHeaderParts = (txt, fallbackVal) => {
+            const str = String(txt || '').trim();
+            const match = str.match(/^(\d+)[\s\-\.\)]+(.*)$/);
+            if (match) {
+                return { badge: match[1], label: match[2].trim() || match[1] };
+            }
+            return { badge: String(fallbackVal), label: str };
+        };
+
+        html += `
+            <style>
+                .test-matrix-wrap {
+                    background: #ffffff;
+                    border: 1.5px solid #cbd5e1;
+                    border-radius: 14px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+                    margin-bottom: 1.25rem;
+                }
+                .test-matrix-table {
+                    width: 100%;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    min-width: 600px;
+                }
+                .test-matrix-table th {
+                    background: linear-gradient(135deg, #702e5e 0%, #541d45 100%);
+                    color: #ffffff;
+                    padding: 12px 8px;
+                    font-weight: 700;
+                    position: sticky;
+                    top: 0;
+                    z-index: 10;
+                }
+                .test-matrix-table tbody tr {
+                    border-bottom: 1px solid #e2e8f0;
+                    transition: background 0.15s ease;
+                }
+                .test-matrix-table tbody tr:hover td {
+                    background-color: #f1f5f9;
+                }
+                .test-matrix-table tbody tr.is-answered:hover td {
+                    background-color: #fae8ff;
+                }
+                .test-matrix-table .matrix-opt-cell:hover {
+                    background-color: #ede9fe !important;
+                }
+                @media (max-width: 768px) {
+                    .matrix-scroll-hint {
+                        display: inline-block !important;
+                    }
+                }
+            </style>
+
+            <div class="test-matrix-wrap">
+                <div style="background: #fdf4ff; border-bottom: 1.5px solid #f0abfc; padding: 0.65rem 1.25rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.82rem; color: #702e5e;">
+                    <span>👉 <strong>Haga clic en la opción que mejor describa su respuesta</strong> para cada ítem.</span>
+                    <span class="matrix-scroll-hint" style="display: none; font-size: 0.76rem; color: #9333ea; font-weight: 700;">⇄ Deslice horizontalmente si no ve todas las columnas</span>
+                </div>
+
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="test-matrix-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 52px; text-align: center; border-bottom: 2px solid #3b1431;">N°</th>
+                                <th style="text-align: left; padding-left: 14px; border-bottom: 2px solid #3b1431; min-width: 250px;">Ítem / Pregunta</th>
+                                ${parsedOptions.map(op => {
+                                    const parts = getOptionHeaderParts(op.text, op.val);
+                                    return `
+                                        <th style="text-align: center; padding: 10px 6px; border-bottom: 2px solid #3b1431; border-left: 1px solid rgba(255,255,255,0.18); min-width: 80px; max-width: 140px; vertical-align: middle;">
+                                            <div style="display: inline-block; background: rgba(255,255,255,0.22); border-radius: 6px; padding: 1px 7px; font-size: 0.72rem; font-weight: 800; margin-bottom: 3px;">
+                                                ${parts.badge}
+                                            </div>
+                                            <div style="font-size: 0.76rem; line-height: 1.2; font-weight: 600;">
+                                                ${parts.label}
+                                            </div>
+                                        </th>
+                                    `;
+                                }).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pageItems.map((item, index) => {
+                                const itemNum = item.num || item.id || (startIdx + index + 1);
+                                const rawTitle = (item.texto || item.txt || item.titulo || item.text || item.enunciado || item.pregunta || item.pregunta_texto || '').trim();
+                                const cleanTitle = rawTitle.replace(/^(?:P\d+|\d+)[\.\-\)]\s*/i, '');
+                                const selectedVal = currentPublicTestAnswers[itemNum];
+                                const isAnswered = selectedVal !== undefined;
+                                const isEven = index % 2 === 0;
+                                const rowBg = isAnswered ? '#fdf4ff' : (isEven ? '#ffffff' : '#f8fafc');
+                                const sectionBadge = item.sec || item.seccion || item.categoria;
+
+                                return `
+                                    <tr id="test-item-row-${itemNum}" class="test-matrix-row ${isAnswered ? 'is-answered' : ''}" style="background: ${rowBg};">
+                                        <td class="item-num-cell" style="text-align: center; padding: 12px 6px; font-weight: 800; font-size: 0.88rem; color: ${isAnswered ? '#702e5e' : '#64748b'}; vertical-align: middle; border-bottom: 1px solid #e2e8f0;">
+                                            ${itemNum} ${isAnswered ? '<span style="color:#10b981; font-size:0.85rem;" title="Respondido">✓</span>' : ''}
+                                        </td>
+                                        <td style="padding: 12px 14px; font-size: 0.92rem; color: #1e293b; line-height: 1.45; vertical-align: middle; border-bottom: 1px solid #e2e8f0;">
+                                            ${sectionBadge ? `<div style="font-size: 0.72rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">${sectionBadge}</div>` : ''}
+                                            <div style="font-weight: 500;">${cleanTitle}</div>
+                                        </td>
+                                        ${parsedOptions.map(op => {
+                                            const isChecked = (selectedVal !== undefined && String(selectedVal) === String(op.val));
+                                            const checked = isChecked ? 'checked' : '';
+                                            const cellBg = isChecked ? '#f3e8ff' : 'transparent';
+                                            const parts = getOptionHeaderParts(op.text, op.val);
+                                            return `
+                                                <td class="matrix-opt-cell" 
+                                                    data-item="${itemNum}" 
+                                                    data-val="${op.val}" 
+                                                    onclick="selectPublicTestAnswer(${itemNum}, ${op.val}); const r = this.querySelector('input[type=radio]'); if(r){ r.checked=true; }"
+                                                    style="text-align: center; padding: 6px 4px; vertical-align: middle; cursor: pointer; border-left: 1px solid #f1f5f9; border-bottom: 1px solid #e2e8f0; background: ${cellBg}; transition: all 0.15s ease;"
+                                                    title="${cleanTitle} — ${op.text}">
+                                                    <label style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; min-height: 48px; cursor: pointer; margin: 0;">
+                                                        <input type="radio" 
+                                                               name="item_${itemNum}" 
+                                                               value="${op.val}" 
+                                                               ${checked} 
+                                                               onchange="selectPublicTestAnswer(${itemNum}, ${op.val})" 
+                                                               style="accent-color: #702e5e; width: 20px; height: 20px; cursor: pointer; margin: 0; transform: scale(1.1);">
+                                                        <span style="font-size: 0.73rem; font-weight: ${isChecked ? '800' : '600'}; color: ${isChecked ? '#702e5e' : '#64748b'};">${parts.badge}</span>
+                                                    </label>
+                                                </td>
+                                            `;
+                                        }).join('')}
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
 
     // Controles inferiores de navegación (si es paginado)
     if (isPaginated) {
@@ -26998,10 +27117,41 @@ function changePublicTestPage(delta) {
 function selectPublicTestAnswer(itemNum, value) {
     currentPublicTestAnswers[itemNum] = value;
 
+    // A. Formato tarjeta individual (ej. BDI-II, HAMILTON-D)
     const card = document.getElementById(`test-item-card-${itemNum}`);
     if (card) {
         card.style.borderColor = '#a855f7';
         card.style.background = '#fdf4ff';
+    }
+
+    // B. Formato Matriz / Rejilla Psicométrica (Likert / Dicotómicos)
+    const row = document.getElementById(`test-item-row-${itemNum}`);
+    if (row) {
+        row.classList.add('is-answered');
+        row.style.background = '#fdf4ff';
+        const numCell = row.querySelector('.item-num-cell');
+        if (numCell) {
+            numCell.style.color = '#702e5e';
+            numCell.style.fontWeight = '800';
+            numCell.innerHTML = `${itemNum} <span style="color:#10b981; font-size:0.85rem;" title="Respondido">✓</span>`;
+        }
+        row.querySelectorAll('.matrix-opt-cell').forEach(cell => {
+            cell.style.background = 'transparent';
+            const span = cell.querySelector('span');
+            if (span) {
+                span.style.color = '#64748b';
+                span.style.fontWeight = '600';
+            }
+        });
+        const activeCell = row.querySelector(`.matrix-opt-cell[data-val="${value}"]`);
+        if (activeCell) {
+            activeCell.style.background = '#f3e8ff';
+            const activeSpan = activeCell.querySelector('span');
+            if (activeSpan) {
+                activeSpan.style.color = '#702e5e';
+                activeSpan.style.fontWeight = '800';
+            }
+        }
     }
 
     updatePublicTestProgressBar();
@@ -27028,7 +27178,36 @@ async function submitPublicTestResponse() {
     const answeredCount = Object.keys(currentPublicTestAnswers).length;
 
     if (answeredCount < totalItems) {
-        alert(`Por favor responda todas las preguntas antes de enviar (${answeredCount} de ${totalItems} completadas).`);
+        const allItems = currentPublicTestDefinition.items || [];
+        let firstUnansweredIdx = -1;
+        let firstUnansweredNum = null;
+        for (let idx = 0; idx < allItems.length; idx++) {
+            const num = allItems[idx].num || allItems[idx].id || (idx + 1);
+            if (currentPublicTestAnswers[num] === undefined) {
+                firstUnansweredIdx = idx;
+                firstUnansweredNum = num;
+                break;
+            }
+        }
+        const isPaginated = allItems.length > 15;
+        if (firstUnansweredIdx !== -1 && isPaginated) {
+            const targetPage = Math.floor(firstUnansweredIdx / (currentPublicTestPageSize || 20));
+            if (targetPage !== currentPublicTestPageIndex) {
+                currentPublicTestPageIndex = targetPage;
+                renderPublicTestItems(currentPublicTestDefinition);
+            }
+        }
+        if (firstUnansweredNum) {
+            setTimeout(() => {
+                const targetRow = document.getElementById(`test-item-row-${firstUnansweredNum}`) || document.getElementById(`test-item-card-${firstUnansweredNum}`);
+                if (targetRow) {
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetRow.style.boxShadow = '0 0 0 3px #ef4444';
+                    setTimeout(() => { if (targetRow) targetRow.style.boxShadow = ''; }, 3500);
+                }
+            }, 150);
+        }
+        alert(`Por favor responda todas las preguntas antes de enviar (${answeredCount} de ${totalItems} completadas). Le hemos ubicado en la primera pregunta pendiente.`);
         return;
     }
 
