@@ -7085,27 +7085,6 @@ function renderUpcomingConsultationPage(idx) {
 
     const btnEliminar = `<button class="btn btn-sm btn-danger" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #ef4444; color: white; border: none;" onclick="deleteAgendaEventFromDashboard(${nextE.id})">🗑️ Eliminar</button>`;
 
-    let carouselChips = '';
-    if (totalCount > 1) {
-        carouselChips = `
-            <div class="upcoming-carousel-chips" style="display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.15rem 0.2rem 0.5rem 0.2rem; margin-bottom: 0.4rem; scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
-                ${_upcomingEventsCache.map((ev, i) => {
-                    const isCur = i === idx;
-                    const isTod = ev.fecha === todayStr;
-                    const dateParts = (ev.fecha || '').split('-');
-                    const dateTag = isTod ? 'Hoy' : (dateParts.length >= 3 ? `${dateParts[2]}/${dateParts[1]}` : ev.fecha);
-                    const nameTag = `${ev.nombres || ''} ${(ev.apellidos || '').charAt(0)}.`.trim();
-                    return `
-                        <button type="button" onclick="renderUpcomingConsultationPage(${i})" 
-                            style="flex-shrink: 0; padding: 0.3rem 0.65rem; font-size: 0.75rem; border-radius: 20px; cursor: pointer; border: 1px solid ${isCur ? 'var(--primary-color)' : '#e2e8f0'}; background: ${isCur ? 'var(--primary-color)' : '#ffffff'}; color: ${isCur ? '#ffffff' : '#475569'}; font-weight: ${isCur ? '700' : '500'}; transition: all 0.15s ease; box-shadow: ${isCur ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'};">
-                            ${dateTag} ${ev.hora} • ${nameTag}
-                        </button>
-                    `;
-                }).join('')}
-            </div>
-        `;
-    }
-
     const paginationControls = totalCount > 1 ? `
         <div class="pagination-capsule-wrapper" style="margin-top: 0; margin-bottom: 0.65rem;">
             <div class="pagination-capsule">
@@ -7124,7 +7103,6 @@ function renderUpcomingConsultationPage(idx) {
 
     // Renderizar la tarjeta de la consulta inmediatamente
     nextConsultation.innerHTML = `
-        ${carouselChips}
         ${paginationControls}
         <div class="next-patient-card" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap: wrap; gap: 0.65rem;">
             <div>
