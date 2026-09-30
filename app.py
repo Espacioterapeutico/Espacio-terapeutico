@@ -237,9 +237,51 @@ def get_fernet_cipher():
             _fernet_cipher_cache = False
     return _fernet_cipher_cache if _fernet_cipher_cache else None
 
+def normalize_slug_text(val):
+    if not val:
+        return ''
+    import unicodedata
+    val = unicodedata.normalize('NFKD', str(val)).encode('ASCII', 'ignore').decode('utf-8')
+    val = val.lower().strip()
+    for prefix in ['psicologa.', 'psicologa-', 'psicologa_', 'psicologo.', 'psicologo-', 'psicologo_', 'psico.', 'psico-', 'psic.', 'psic-', 'psic_']:
+        if val.startswith(prefix):
+            val = val[len(prefix):]
+    return re.sub(r'[^a-z0-9]', '', val)
+
+def heal_orphaned_slug_records(cursor, db=None):
+    try:
+        cursor.execute("SELECT id, username, slug FROM usuarios")
+        users = cursor.fetchall()
+        for u in users:
+            uid = int(u['id'] if hasattr(u, 'keys') else u[0])
+            u_slug = str((u['slug'] if hasattr(u, 'keys') else u[2]) or '').strip().lower()
+            u_user = str((u['username'] if hasattr(u, 'keys') else u[1]) or '').strip().lower()
+            
+            slug_variants = {str(uid), u_slug, u_user}
+            clean1 = u_slug.replace('psic.', '').replace('psic-', '').strip()
+            if clean1:
+                slug_variants.add(clean1)
+                slug_variants.add(f"psic.{clean1}")
+                slug_variants.add(f"psic-{clean1}")
+            clean2 = u_user.replace('psic.', '').replace('psic-', '').strip()
+            if clean2:
+                slug_variants.add(clean2)
+            if uid == 1:
+                slug_variants.update({'paulo-mora', 'paulomora', 'psic.paulomora', 'pamoraro'})
+
+            for s in slug_variants:
+                if s:
+                    cursor.execute("UPDATE agenda_finanzas SET creado_por_user_id = ? WHERE CAST(creado_por_user_id AS TEXT) = ?", (uid, s))
+                    cursor.execute("UPDATE pacientes SET psicologo_id = ? WHERE CAST(psicologo_id AS TEXT) = ?", (uid, s))
+                    cursor.execute("UPDATE notificaciones SET user_id = ? WHERE CAST(user_id AS TEXT) = ?", (uid, s))
+        if db:
+            db.commit()
+    except Exception as e:
+        print("Error en heal_orphaned_slug_records:", e)
+
 def get_psychologist_by_id_or_slug(cursor, identifier):
     """
-    Busca un psicólogo en la tabla usuarios por ID (int) o por slug / username.
+    Busca un psicólogo en la tabla usuarios por ID (int) o por slug / username / nombre.
     """
     if not identifier:
         return None
@@ -249,23 +291,29 @@ def get_psychologist_by_id_or_slug(cursor, identifier):
         row = cursor.fetchone()
         if row:
             return dict(row)
-    clean_slug = ident_str.lower().replace('psic.', '').replace('psic-', '').strip()
+    norm_ident = normalize_slug_text(ident_str)
     cursor.execute("SELECT * FROM usuarios")
-    rows = cursor.fetchall()
+    rows = [dict(r) for r in cursor.fetchall()]
     for r in rows:
-        r_dict = dict(r)
-        uid = str(r_dict.get('id', ''))
-        u_slug = str(r_dict.get('slug') or '').lower().replace('psic.', '').replace('psic-', '').strip()
-        u_user = str(r_dict.get('username') or '').lower().replace('psic.', '').replace('psic-', '').strip()
-        if ident_str == uid or clean_slug == u_slug or clean_slug == u_user:
-            return r_dict
+        u_slug = normalize_slug_text(r.get('slug'))
+        u_user = normalize_slug_text(r.get('username'))
+        u_full = normalize_slug_text(f"{r.get('nombres','')} {r.get('apellidos','')}")
+        if norm_ident and (norm_ident == u_slug or norm_ident == u_user or norm_ident == u_full):
+            return r
     for r in rows:
-        r_dict = dict(r)
-        u_slug = str(r_dict.get('slug') or '').lower()
-        u_user = str(r_dict.get('username') or '').lower()
-        if clean_slug and (clean_slug in u_slug or clean_slug in u_user or u_slug in clean_slug):
-            return r_dict
+        u_slug = normalize_slug_text(r.get('slug'))
+        u_user = normalize_slug_text(r.get('username'))
+        u_full = normalize_slug_text(f"{r.get('nombres','')} {r.get('apellidos','')}")
+        if norm_ident and len(norm_ident) >= 4:
+            if norm_ident in u_slug or u_slug in norm_ident or norm_ident in u_user or norm_ident in u_full:
+                return r
+    if any(k in ident_str.lower() for k in ['paulo', 'mora', 'pamoraro']):
+        cursor.execute("SELECT * FROM usuarios WHERE id = 1")
+        row1 = cursor.fetchone()
+        if row1:
+            return dict(row1)
     return None
+
 
 def encrypt_clinical_text(text):
     cipher = get_fernet_cipher()
@@ -1657,6 +1705,12 @@ def init_db():
         """)
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
         cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
+        
+        # Curación automática de registros con slugs en lugar de IDs de usuario
+        try:
+            heal_orphaned_slug_records(cursor, db)
+        except Exception as _e_heal:
+            print("Error ejecutando heal_orphaned_slug_records:", _e_heal)
         
         # Normalizar horas históricas en agenda_finanzas a formato estándar 24h
         try:
