@@ -3231,7 +3231,8 @@ async function renderBookingCalendar() {
     
     grid.innerHTML = '';
     
-    const firstDay = new Date(bookingYear, bookingMonth, 1).getDay();
+    const rawDay = new Date(bookingYear, bookingMonth, 1).getDay();
+    const firstDay = (rawDay + 6) % 7;
     const totalDays = new Date(bookingYear, bookingMonth + 1, 0).getDate();
     
     for (let i = 0; i < firstDay; i++) {
@@ -3247,8 +3248,8 @@ async function renderBookingCalendar() {
         cell.className = 'pat-cal-day-cell';
         cell.textContent = day;
         
-        const cellMonthStr = String(bookingMonth + 1).zfill(2);
-        const cellDayStr = String(day).zfill(2);
+        const cellMonthStr = String(bookingMonth + 1).padStart(2, '0');
+        const cellDayStr = String(day).padStart(2, '0');
         const dateStr = `${bookingYear}-${cellMonthStr}-${cellDayStr}`;
         
         const cellDate = new Date(bookingYear, bookingMonth, day);
@@ -16485,8 +16486,10 @@ window.viewDocumentPreview = viewDocumentPreview;
 let fastBookingMonth = new Date().getMonth();
 let fastBookingYear = new Date().getFullYear();
 let fastBookingTherapistId = null;
+let isCheckingFastBooking = false;
 
 async function checkFastBookingQuery() {
+    if (isCheckingFastBooking) return true;
     const urlParams = new URLSearchParams(window.location.search);
     const path = window.location.pathname.toLowerCase();
     
@@ -16500,98 +16503,113 @@ async function checkFastBookingQuery() {
     }
     
     if (paramVal) {
-        fastBookingTherapistId = paramVal;
-        
-        const loginScreen = document.getElementById('auth-screen');
-        if (loginScreen) { loginScreen.classList.add('hide'); loginScreen.style.display = 'none'; }
-        
-        const pubLanding = document.getElementById('public-landing-screen');
-        if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
-
-        const appLayout = document.getElementById('app-layout');
-        if (appLayout) { appLayout.classList.add('hide'); appLayout.style.display = 'none'; }
-
-        const profScreen = document.getElementById('public-therapist-profile-screen');
-        if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
-
-        const fastScreen = document.getElementById('fast-booking-screen');
-        if (fastScreen) {
-            fastScreen.classList.remove('hide');
-            fastScreen.style.display = 'flex';
-        }
-        
-        const titleEl = document.getElementById('fast-booking-therapist-name');
-        
+        isCheckingFastBooking = true;
         try {
-            const pRes = await fetch(`/api/public/therapist/${encodeURIComponent(fastBookingTherapistId)}`);
-            if (pRes.ok) {
-                const pData = await pRes.json();
-                if (pData && (pData.nombre_completo || pData.nombres)) {
-                    if (titleEl) {
-                        const fullname = pData.nombre_completo || `Psic. ${pData.nombres} ${pData.apellidos}`;
-                        titleEl.textContent = fullname.startsWith('Psic.') ? fullname : `Psic. ${fullname}`;
-                    }
-                    if (pData.id) fastBookingTherapistId = pData.id;
-                }
-            }
-        } catch (e) {
-            console.error("Error al obtener perfil directo de terapeuta:", e);
-        }
+            fastBookingTherapistId = paramVal;
+            
+            const loginScreen = document.getElementById('auth-screen');
+            if (loginScreen) { loginScreen.classList.add('hide'); loginScreen.style.display = 'none'; }
+            
+            const pubLanding = document.getElementById('public-landing-screen');
+            if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
 
-        if (titleEl && (titleEl.textContent === 'Cargando terapeuta...' || titleEl.textContent === '')) {
+            const appLayout = document.getElementById('app-layout');
+            if (appLayout) { appLayout.classList.add('hide'); appLayout.style.display = 'none'; }
+
+            const profScreen = document.getElementById('public-therapist-profile-screen');
+            if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
+
+            const fastScreen = document.getElementById('fast-booking-screen');
+            if (fastScreen) {
+                fastScreen.classList.remove('hide');
+                fastScreen.style.display = 'flex';
+            }
+            
+            const titleEl = document.getElementById('fast-booking-therapist-name');
+            
             try {
-                const res = await fetch(`/api/active-psychologists`);
-                if (res.ok) {
-                    const psychologists = await res.json();
-                    const cleanParam = String(fastBookingTherapistId).toLowerCase().replace(/^psic\./, '').replace(/^psic-/, '');
-                    const matched = psychologists.find(p => 
-                        String(p.id) === String(fastBookingTherapistId) || 
-                        (p.slug && p.slug.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
-                        (p.slug && p.slug.toLowerCase().replace(/^psic\./, '').replace(/^psic-/, '') === cleanParam) ||
-                        (p.username && p.username.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
-                        (p.username && p.username.toLowerCase() === cleanParam)
-                    );
-                    if (matched) {
-                        titleEl.textContent = `Psic. ${matched.nombres} ${matched.apellidos}`;
-                        fastBookingTherapistId = matched.id;
-                    } else {
-                        titleEl.textContent = `Psic. Paulo Mora`;
+                const pRes = await fetch(`/api/public/therapist/${encodeURIComponent(fastBookingTherapistId)}`);
+                if (pRes.ok) {
+                    const pData = await pRes.json();
+                    if (pData && (pData.nombre_completo || pData.nombres)) {
+                        if (titleEl) {
+                            const fullname = pData.nombre_completo || `Psic. ${pData.nombres} ${pData.apellidos}`;
+                            titleEl.textContent = fullname.startsWith('Psic.') ? fullname : `Psic. ${fullname}`;
+                        }
+                        if (pData.id) fastBookingTherapistId = pData.id;
                     }
                 }
             } catch (e) {
-                titleEl.textContent = `Psic. Paulo Mora`;
+                console.error("Error al obtener perfil directo de terapeuta:", e);
             }
-        }
-        
-        // Cargar modalidades del terapeuta asignado para auto-agenda rápida
-        try {
-            const mRes = await fetch(`/api/psychologists/${fastBookingTherapistId}/modalities`);
-            if (mRes.ok) {
-                const modalities = await mRes.json();
-                const selectElement = document.getElementById('fast-modalidad');
-                if (selectElement) {
-                    selectElement.innerHTML = '';
-                    modalities.forEach(m => {
-                        const opt = document.createElement('option');
-                        const val = typeof m === 'object' ? (m.modalidad || m.nombre) : m;
-                        const label = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
-                        const desc = typeof m === 'object' ? (m.descripcion || '') : '';
-                        opt.value = val;
-                        opt.textContent = label;
-                        opt.dataset.desc = desc;
-                        selectElement.appendChild(opt);
-                    });
-                    if (typeof updateFastModalityDescription === 'function') {
-                        updateFastModalityDescription();
+
+            if (titleEl && (titleEl.textContent === 'Cargando terapeuta...' || titleEl.textContent === '')) {
+                try {
+                    const res = await fetch(`/api/active-psychologists`);
+                    if (res.ok) {
+                        const psychologists = await res.json();
+                        const cleanParam = String(fastBookingTherapistId).toLowerCase().replace(/^psic\./, '').replace(/^psic-/, '');
+                        const matched = psychologists.find(p => 
+                            String(p.id) === String(fastBookingTherapistId) || 
+                            (p.slug && p.slug.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
+                            (p.slug && p.slug.toLowerCase().replace(/^psic\./, '').replace(/^psic-/, '') === cleanParam) ||
+                            (p.username && p.username.toLowerCase() === String(fastBookingTherapistId).toLowerCase()) ||
+                            (p.username && p.username.toLowerCase() === cleanParam)
+                        );
+                        if (matched) {
+                            titleEl.textContent = `Psic. ${matched.nombres} ${matched.apellidos}`;
+                            fastBookingTherapistId = matched.id;
+                        } else {
+                            titleEl.textContent = `Psic. Paulo Mora`;
+                        }
                     }
+                } catch (e) {
+                    titleEl.textContent = `Psic. Paulo Mora`;
                 }
             }
-        } catch (e) {
-            console.error("Error al obtener modalidades para auto-agenda:", e);
+            
+            // Cargar modalidades del terapeuta asignado para auto-agenda rápida preservando selección actual
+            try {
+                const mRes = await fetch(`/api/psychologists/${fastBookingTherapistId}/modalities`);
+                if (mRes.ok) {
+                    const modalities = await mRes.json();
+                    const selectElement = document.getElementById('fast-modalidad');
+                    if (selectElement) {
+                        const currentSelectedVal = selectElement.value;
+                        selectElement.innerHTML = '';
+                        modalities.forEach(m => {
+                            const opt = document.createElement('option');
+                            const val = typeof m === 'object' ? (m.modalidad || m.nombre) : m;
+                            const label = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
+                            const desc = typeof m === 'object' ? (m.descripcion || '') : '';
+                            opt.value = val;
+                            opt.textContent = label;
+                            opt.dataset.desc = desc;
+                            selectElement.appendChild(opt);
+                        });
+                        if (currentSelectedVal && Array.from(selectElement.options).some(o => o.value.toLowerCase() === currentSelectedVal.toLowerCase())) {
+                            for (let opt of selectElement.options) {
+                                if (opt.value.toLowerCase() === currentSelectedVal.toLowerCase()) {
+                                    selectElement.value = opt.value;
+                                    break;
+                                }
+                            }
+                        }
+                        if (typeof updateFastModalityDescription === 'function') {
+                            updateFastModalityDescription();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error al obtener modalidades para auto-agenda:", e);
+            }
+            
+            initFastTimeZoneSelector(); 
+            renderFastCalendar();
+            return true;
+        } finally {
+            isCheckingFastBooking = false;
         }
-        
-        initFastTimeZoneSelector(); renderFastCalendar();
-        return true;
     }
     
     if (urlParams.has('ref_psicologo')) {
@@ -16621,6 +16639,12 @@ window.updateFastModalityDescription = updateFastModalityDescription;
 
 function onFastModalityChange() {
     updateFastModalityDescription();
+    const reqHora = document.getElementById('fast-req-hora');
+    if (reqHora) reqHora.value = '';
+    const details = document.getElementById('fast-patient-details');
+    if (details) details.classList.add('hide');
+    const hoursCont = document.getElementById('fast-hours-container');
+    if (hoursCont) hoursCont.classList.add('hide');
     renderFastCalendar();
 }
 window.onFastModalityChange = onFastModalityChange;
@@ -16662,7 +16686,8 @@ async function renderFastCalendar() {
     
     grid.innerHTML = '';
     
-    const firstDay = new Date(fastBookingYear, fastBookingMonth, 1).getDay();
+    const rawDay = new Date(fastBookingYear, fastBookingMonth, 1).getDay();
+    const firstDay = (rawDay + 6) % 7;
     const totalDays = new Date(fastBookingYear, fastBookingMonth + 1, 0).getDate();
     
     for (let i = 0; i < firstDay; i++) {
@@ -16714,7 +16739,7 @@ async function renderFastCalendar() {
             cell.style.backgroundColor = '#ecfdf5';
             
             cell.onclick = () => {
-                document.querySelectorAll('.fast-cal-day-cell.selected').forEach(c => {
+                document.querySelectorAll('.pat-cal-day-cell.selected, .fast-cal-day-cell.selected').forEach(c => {
                     c.style.backgroundColor = '#ecfdf5';
                     c.style.color = '#047857';
                     c.classList.remove('selected');
@@ -16782,7 +16807,8 @@ async function fetchFastAvailableHours(dateStr) {
                     displayFull: `${format12h(converted.timeStr)}${converted.dayOffsetStr}`,
                     therapistTime: format12h(hourStr),
                     valFecha: therapistDate,
-                    valHour: hourStr
+                    valHour: hourStr,
+                    modalidad: slotObj.modalidad || (document.getElementById('fast-modalidad') ? document.getElementById('fast-modalidad').value : 'Online')
                 });
             });
         }
@@ -16817,6 +16843,20 @@ async function fetchFastAvailableHours(dateStr) {
                     
                     document.getElementById('fast-req-fecha').value = slot.valFecha;
                     document.getElementById('fast-req-hora').value = slot.valHour;
+                    
+                    // Asegurar que la modalidad en el selector permanezca consistente y no se resetee
+                    const fastModSelect = document.getElementById('fast-modalidad');
+                    if (fastModSelect && slot.modalidad) {
+                        for (let opt of fastModSelect.options) {
+                            if (opt.value.toLowerCase() === slot.modalidad.toLowerCase()) {
+                                fastModSelect.value = opt.value;
+                                break;
+                            }
+                        }
+                        if (typeof updateFastModalityDescription === 'function') {
+                            updateFastModalityDescription();
+                        }
+                    }
                     
                     document.getElementById('fast-patient-details').classList.remove('hide');
                 };
@@ -17850,7 +17890,8 @@ async function renderRescheduleCalendar() {
     
     grid.innerHTML = '';
     
-    const firstDay = new Date(reschedYear, reschedMonth, 1).getDay();
+    const rawDay = new Date(reschedYear, reschedMonth, 1).getDay();
+    const firstDay = (rawDay + 6) % 7;
     const totalDays = new Date(reschedYear, reschedMonth + 1, 0).getDate();
     
     for (let i = 0; i < firstDay; i++) {
