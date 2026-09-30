@@ -1229,7 +1229,7 @@ function switchView(viewId, fromPopState = false) {
     let subTabToActivate = null;
     if (viewId === 'agenda') {
         viewId = 'dashboard';
-        subTabToActivate = 'calendario';
+        subTabToActivate = 'proximas';
     } else if (viewId === 'patient-list') {
         viewId = 'expedientes-clinicos';
         subTabToActivate = 'historias';
@@ -2888,9 +2888,15 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     if (isPureSuperadmin) {
         switchView('superadmin-dashboard');
     } else if (targetView && typeof switchView === 'function') {
-        switchView(targetView);
+        if (targetView === 'agenda' || targetView === 'calendario') {
+            switchView('dashboard');
+            switchDashboardTab('proximas');
+        } else {
+            switchView(targetView);
+        }
     } else {
         switchView('dashboard');
+        switchDashboardTab('proximas');
     }
     clearAllNotificationIntervals();
     if (typeof checkAndInitClinicaNav === 'function') checkAndInitClinicaNav();
