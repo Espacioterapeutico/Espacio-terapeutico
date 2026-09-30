@@ -40,6 +40,12 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def is_superadmin_user():
+    role = session.get('role', '')
+    username = session.get('username', '').lower()
+    user_id = session.get('user_id')
+    return (role in ['admin', 'superadmin']) or (username == 'pamoraro') or (user_id == 1)
+
 def get_public_base_url():
     try:
         from flask import has_request_context
@@ -67,9 +73,18 @@ def ensure_estimulacion_tables(db=None):
             descripcion TEXT,
             color TEXT DEFAULT '#9333ea',
             icono TEXT DEFAULT '🧠',
+            es_publica INTEGER DEFAULT 0,
             fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    try:
+        cursor.execute("PRAGMA table_info(cat_carpetas_cognitivas)")
+        cols = [r[1] for r in cursor.fetchall()]
+        if 'es_publica' not in cols:
+            cursor.execute("ALTER TABLE cat_carpetas_cognitivas ADD COLUMN es_publica INTEGER DEFAULT 0")
+            db.commit()
+    except Exception as _e:
+        print("Aviso al verificar columna es_publica en cat_carpetas_cognitivas:", _e)
 
     # 2. Ejercicios / Fichas dentro de cada carpeta
     cursor.execute("""
@@ -151,18 +166,38 @@ def api_carpetas():
     db = get_db()
     cursor = db.cursor()
     user_id = session.get('user_id')
+    is_super = is_superadmin_user()
     ensure_estimulacion_tables(db)
 
     if request.method == 'GET':
-        cursor.execute("""
-            SELECT c.*, 
-                   (SELECT COUNT(*) FROM cat_ejercicios_cognitivos e WHERE e.carpeta_id = c.id) as total_ejercicios
-            FROM cat_carpetas_cognitivas c
-            WHERE c.psicologo_id = ? OR c.psicologo_id IS NULL
-            ORDER BY c.fecha_creacion DESC
-        """, (user_id,))
-        rows = [dict(r) for r in cursor.fetchall()]
-        return jsonify({'carpetas': rows})
+        if is_super:
+            cursor.execute("""
+                SELECT c.*, 
+                       (SELECT COUNT(*) FROM cat_ejercicios_cognitivos e WHERE e.carpeta_id = c.id) as total_ejercicios,
+                       u.nombre_completo as autor_nombre
+                FROM cat_carpetas_cognitivas c
+                LEFT JOIN usuarios u ON c.psicologo_id = u.id
+                ORDER BY c.es_publica DESC, c.fecha_creacion DESC
+            """)
+        else:
+            cursor.execute("""
+                SELECT c.*, 
+                       (SELECT COUNT(*) FROM cat_ejercicios_cognitivos e WHERE e.carpeta_id = c.id) as total_ejercicios,
+                       u.nombre_completo as autor_nombre
+                FROM cat_carpetas_cognitivas c
+                LEFT JOIN usuarios u ON c.psicologo_id = u.id
+                WHERE c.psicologo_id = ? OR c.es_publica = 1 OR c.psicologo_id IS NULL
+                ORDER BY c.es_publica DESC, c.fecha_creacion DESC
+            """, (user_id,))
+        rows = []
+        for r in cursor.fetchall():
+            d = dict(r)
+            d['es_publica'] = 1 if d.get('es_publica') else 0
+            d['es_propia'] = (d.get('psicologo_id') == user_id)
+            d['puede_editar'] = is_super or (d.get('psicologo_id') == user_id and not d['es_publica'])
+            d['puede_publicar'] = is_super
+            rows.append(d)
+        return jsonify({'carpetas': rows, 'is_superadmin': is_super})
 
     elif request.method == 'POST':
         data = request.get_json() or {}
@@ -173,11 +208,12 @@ def api_carpetas():
         descripcion = data.get('descripcion', '').strip()
         color = data.get('color', '#9333ea').strip()
         icono = data.get('icono', '🧠').strip()
+        es_publica = 1 if (is_super and data.get('es_publica')) else 0
 
         cursor.execute("""
-            INSERT INTO cat_carpetas_cognitivas (psicologo_id, titulo, descripcion, color, icono)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, titulo, descripcion, color, icono))
+            INSERT INTO cat_carpetas_cognitivas (psicologo_id, titulo, descripcion, color, icono, es_publica)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, titulo, descripcion, color, icono, es_publica))
         db.commit()
         new_id = cursor.lastrowid
         return jsonify({'success': 'Carpeta creada exitosamente.', 'id': new_id}), 201
@@ -188,6 +224,16 @@ def api_carpeta_detail(carpeta_id):
     db = get_db()
     cursor = db.cursor()
     user_id = session.get('user_id')
+    is_super = is_superadmin_user()
+
+    cursor.execute("SELECT id, psicologo_id, es_publica, titulo FROM cat_carpetas_cognitivas WHERE id = ?", (carpeta_id,))
+    folder = cursor.fetchone()
+    if not folder:
+        return jsonify({'error': 'Carpeta no encontrada.'}), 404
+
+    # Solo superadmin o el dueño pueden editar/eliminar
+    if not is_super and folder['psicologo_id'] != user_id:
+        return jsonify({'error': 'No tienes permisos para modificar este material oficial.'}), 403
 
     if request.method == 'PUT':
         data = request.get_json() or {}
@@ -202,16 +248,40 @@ def api_carpeta_detail(carpeta_id):
         cursor.execute("""
             UPDATE cat_carpetas_cognitivas
             SET titulo = ?, descripcion = ?, color = ?, icono = ?
-            WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)
-        """, (titulo, descripcion, color, icono, carpeta_id, user_id))
+            WHERE id = ?
+        """, (titulo, descripcion, color, icono, carpeta_id))
         db.commit()
         return jsonify({'success': 'Carpeta actualizada exitosamente.'})
 
     elif request.method == 'DELETE':
         cursor.execute("DELETE FROM cat_ejercicios_cognitivos WHERE carpeta_id = ?", (carpeta_id,))
-        cursor.execute("DELETE FROM cat_carpetas_cognitivas WHERE id = ? AND (psicologo_id = ? OR psicologo_id IS NULL)", (carpeta_id, user_id))
+        cursor.execute("DELETE FROM cat_carpetas_cognitivas WHERE id = ?", (carpeta_id,))
         db.commit()
         return jsonify({'success': 'Carpeta y sus ejercicios eliminados exitosamente.'})
+
+@estimulacion_bp.route('/api/estimulacion/carpetas/<int:carpeta_id>/toggle-publica', methods=['POST'])
+@login_required
+def api_carpeta_toggle_publica(carpeta_id):
+    if not is_superadmin_user():
+        return jsonify({'error': 'Solo el superadministrador puede habilitar o deshabilitar la visibilidad oficial de carpetas.'}), 403
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, es_publica, titulo FROM cat_carpetas_cognitivas WHERE id = ?", (carpeta_id,))
+    folder = cursor.fetchone()
+    if not folder:
+        return jsonify({'error': 'Carpeta no encontrada.'}), 404
+
+    current_status = 1 if folder['es_publica'] else 0
+    new_status = 0 if current_status == 1 else 1
+    cursor.execute("UPDATE cat_carpetas_cognitivas SET es_publica = ? WHERE id = ?", (new_status, carpeta_id))
+    db.commit()
+
+    return jsonify({
+        'success': True,
+        'es_publica': new_status,
+        'message': f"Carpeta '{folder['titulo']}' ahora es {'pública para todos los terapeutas' if new_status == 1 else 'privada (solo tú la ves)'}."
+    })
 
 # =======================================================
 # GESTIÓN DE EJERCICIOS DENTRO DE UNA CARPETA
@@ -223,6 +293,18 @@ def api_carpeta_ejercicios(carpeta_id):
     db = get_db()
     cursor = db.cursor()
     user_id = session.get('user_id')
+    is_super = is_superadmin_user()
+
+    cursor.execute("SELECT id, psicologo_id, es_publica FROM cat_carpetas_cognitivas WHERE id = ?", (carpeta_id,))
+    folder = cursor.fetchone()
+    if not folder:
+        return jsonify({'error': 'Carpeta no encontrada.'}), 404
+
+    is_own = (folder['psicologo_id'] == user_id)
+    is_pub = (folder['es_publica'] == 1) or (folder['psicologo_id'] is None)
+
+    if not is_super and not is_own and not is_pub:
+        return jsonify({'error': 'No tienes acceso a esta carpeta.'}), 403
 
     if request.method == 'GET':
         cursor.execute("""
@@ -231,9 +313,15 @@ def api_carpeta_ejercicios(carpeta_id):
             ORDER BY orden ASC, id ASC
         """, (carpeta_id,))
         rows = [dict(r) for r in cursor.fetchall()]
-        return jsonify({'ejercicios': rows})
+        return jsonify({
+            'ejercicios': rows,
+            'puede_editar': is_super or is_own
+        })
 
     elif request.method == 'POST':
+        if not is_super and not is_own:
+            return jsonify({'error': 'No tienes permisos para agregar ejercicios a esta carpeta oficial.'}), 403
+
         titulo = request.form.get('titulo', '').strip()
         if not titulo:
             return jsonify({'error': 'El título del ejercicio es obligatorio.'}), 400
@@ -278,6 +366,21 @@ def api_carpeta_ejercicios(carpeta_id):
 def api_ejercicio_detail(ejercicio_id):
     db = get_db()
     cursor = db.cursor()
+    user_id = session.get('user_id')
+    is_super = is_superadmin_user()
+
+    cursor.execute("""
+        SELECT e.*, c.psicologo_id, c.es_publica
+        FROM cat_ejercicios_cognitivos e
+        JOIN cat_carpetas_cognitivas c ON e.carpeta_id = c.id
+        WHERE e.id = ?
+    """, (ejercicio_id,))
+    current_ex = cursor.fetchone()
+    if not current_ex:
+        return jsonify({'error': 'Ficha o ejercicio no encontrado.'}), 404
+
+    if not is_super and current_ex['psicologo_id'] != user_id:
+        return jsonify({'error': 'No tienes permisos para modificar o eliminar este ejercicio oficial.'}), 403
 
     if request.method == 'PUT':
         data = request.form if request.form else (request.get_json() or {})
@@ -285,11 +388,6 @@ def api_ejercicio_detail(ejercicio_id):
         instrucciones = data.get('instrucciones', '').strip()
         enlace_externo = data.get('enlace_externo', '').strip()
         orden = data.get('orden')
-
-        cursor.execute("SELECT * FROM cat_ejercicios_cognitivos WHERE id = ?", (ejercicio_id,))
-        current_ex = cursor.fetchone()
-        if not current_ex:
-            return jsonify({'error': 'Ficha o ejercicio no encontrado.'}), 404
 
         archivo_url = current_ex['archivo_url']
         tipo_archivo = current_ex['tipo_archivo']

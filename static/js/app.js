@@ -30866,6 +30866,9 @@ async function loadMeditacionesLibrary() {
         }
         const data = await res.json();
         meditationsLibrary = (data && data.meditaciones) ? data.meditaciones : [];
+        if (typeof data.is_superadmin !== 'undefined') {
+            window.isSuperadminSession = Boolean(data.is_superadmin);
+        }
         if (!tbody) return;
         tbody.innerHTML = '';
         
@@ -30878,12 +30881,48 @@ async function loadMeditacionesLibrary() {
             const tr = document.createElement('tr');
             const fecha = m.fecha_creacion ? m.fecha_creacion.split(' ')[0] : 'N/A';
             const tipoLabel = m.tipo_contenido === 'youtube' ? '🎥 YouTube' : '🎵 Audio MP3';
+            const isPublic = (m.es_publica === 1);
+            const canManagePublic = Boolean(m.puede_publicar || window.isSuperadminSession);
+            const canEdit = Boolean(m.puede_editar);
+            const isOwn = Boolean(m.es_propia);
+
+            let statusBadge = '';
+            if (canManagePublic) {
+                if (isPublic) {
+                    statusBadge = `
+                        <button type="button" class="btn btn-sm" onclick="toggleMeditacionVisibility(${m.id})" title="Habilitada para todos los terapeutas. Haz clic para hacerla privada solo para ti." style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
+                            👁️ Pública
+                        </button>
+                    `;
+                } else {
+                    statusBadge = `
+                        <button type="button" class="btn btn-sm" onclick="toggleMeditacionVisibility(${m.id})" title="Meditación privada (solo visible para ti). Haz clic para publicarla a todos los terapeutas." style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                            👁️‍🗨️ Privada
+                        </button>
+                    `;
+                }
+            } else if (isPublic && !isOwn) {
+                statusBadge = `<span class="badge" style="background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 10px;" title="Meditación oficial de Espacio Terapéutico">⭐ Base Oficial</span>`;
+            }
+
+            let deleteBtn = '';
+            if (canEdit) {
+                deleteBtn = `<button type="button" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:600;" onclick="deleteMeditacion(${m.id})">Eliminar</button>`;
+            } else {
+                deleteBtn = `<span style="font-size:0.75rem; color:#94a3b8; font-weight: 600;">⭐ Oficial</span>`;
+            }
+
             tr.innerHTML = `
-                <td><strong style="color: var(--text-dark); font-size: 0.92rem;">${m.titulo || 'Sin título'}</strong></td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <strong style="color: var(--text-dark); font-size: 0.92rem;">${m.titulo || 'Sin título'}</strong>
+                        ${statusBadge}
+                    </div>
+                </td>
                 <td><span class="badge" style="background:#f3e8ff;color:#702e5e;font-weight:600;padding:0.25rem 0.5rem;border-radius:4px;">${tipoLabel}</span></td>
                 <td style="color: var(--text-muted); font-size: 0.82rem;">${fecha}</td>
                 <td style="text-align: right;">
-                    <button type="button" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:600;" onclick="deleteMeditacion(${m.id})">Eliminar</button>
+                    ${deleteBtn}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -30893,6 +30932,23 @@ async function loadMeditacionesLibrary() {
         if (tbody) {
             tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-danger">Error al cargar biblioteca: ${err.message}</td></tr>`;
         }
+    }
+}
+
+async function toggleMeditacionVisibility(id) {
+    try {
+        const res = await fetch(`/api/meditaciones/${id}/toggle-publica`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Error al actualizar visibilidad');
+        if (typeof showToast === 'function') {
+            showToast(data.message || 'Visibilidad actualizada');
+        }
+        await loadMeditacionesLibrary();
+    } catch (err) {
+        alert(err.message);
     }
 }
 
@@ -30910,6 +30966,13 @@ function openMeditacionModal() {
     if (form) form.reset();
     document.getElementById('med-youtube-group')?.classList.remove('hide');
     document.getElementById('med-audio-group')?.classList.add('hide');
+
+    const pubGroup = document.getElementById('med-publica-group');
+    if (pubGroup) {
+        if (window.isSuperadminSession) pubGroup.classList.remove('hide');
+        else pubGroup.classList.add('hide');
+    }
+
     openModal('meditacion-create-modal');
 }
 
@@ -30952,6 +31015,11 @@ function submitMeditacionCreate(e) {
         formData.append('url_youtube', document.getElementById('med-url').value);
     } else {
         formData.append('audio_file', document.getElementById('med-audio').files[0]);
+    }
+
+    const esPubCheck = document.getElementById('med-es-publica');
+    if (esPubCheck && esPubCheck.checked) {
+        formData.append('es_publica', '1');
     }
     
     fetch('/api/meditaciones', {
@@ -31246,6 +31314,7 @@ window.closeAssignMeditacionModal = closeAssignMeditacionModal;
 window.submitMeditacionAssign = submitMeditacionAssign;
 window.unassignMeditacion = unassignMeditacion;
 window.loadMeditacionesLibrary = loadMeditacionesLibrary;
+window.toggleMeditacionVisibility = toggleMeditacionVisibility;
 
 // =========================================================================
 // ESTIMULACIÓN COGNITIVA: BIBLIOTECA, CARPETAS, EJERCICIOS, ASIGNACIÓN Y SEGUIMIENTO
@@ -31270,6 +31339,9 @@ async function loadEstimulacionLibrary() {
         if (!res.ok) throw new Error(`Error ${res.status}`);
         const data = await res.json();
         cogFoldersLibrary = data.carpetas || [];
+        if (typeof data.is_superadmin !== 'undefined') {
+            window.isSuperadminSession = Boolean(data.is_superadmin);
+        }
 
         if (!grid) return;
 
@@ -31293,6 +31365,41 @@ async function loadEstimulacionLibrary() {
             const color = f.color || '#9333ea';
             const icon = f.icono || '🧠';
             const count = f.total_ejercicios || 0;
+            const isPublic = (f.es_publica === 1);
+            const canManagePublic = Boolean(f.puede_publicar || window.isSuperadminSession);
+            const canEdit = Boolean(f.puede_editar);
+            const isOwn = Boolean(f.es_propia);
+
+            let visibilityBadge = '';
+            if (canManagePublic) {
+                if (isPublic) {
+                    visibilityBadge = `
+                        <button type="button" class="btn btn-sm" onclick="toggleCogFolderVisibility(${f.id}, event)" title="Habilitada para todos los terapeutas. Haz clic para hacerla privada solo para ti." style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
+                            👁️ Pública
+                        </button>
+                    `;
+                } else {
+                    visibilityBadge = `
+                        <button type="button" class="btn btn-sm" onclick="toggleCogFolderVisibility(${f.id}, event)" title="Carpeta privada (solo visible para ti). Haz clic para publicarla a todos los terapeutas." style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                            👁️‍🗨️ Privada
+                        </button>
+                    `;
+                }
+            } else if (isPublic && !isOwn) {
+                visibilityBadge = `<span class="badge" style="background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 4px;" title="Biblioteca oficial provista por Espacio Terapéutico">⭐ Base Oficial</span>`;
+            }
+
+            let editBtns = '';
+            if (canEdit) {
+                editBtns = `
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditCogFolderModal(${f.id}, '${safeTitle}', '${safeDesc}', '${color}', '${icon}')" style="font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;" title="Editar Carpeta">
+                        ✏️
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="deleteCogFolder(${f.id})" style="background: #fee2e2; color: #dc2626; border: none; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;" title="Eliminar Carpeta">
+                        🗑️
+                    </button>
+                `;
+            }
 
             return `
                 <div style="background: white; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.04);">
@@ -31303,9 +31410,12 @@ async function loadEstimulacionLibrary() {
                                 <span style="font-size: 1.6rem; line-height: 1;">${icon}</span>
                                 <h4 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: #1e293b; line-height: 1.25;">${f.titulo}</h4>
                             </div>
-                            <span class="badge" style="background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.45rem; border-radius: 10px; white-space: nowrap;">
-                                📄 ${count} ficha${count === 1 ? '' : 's'}
-                            </span>
+                            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end;">
+                                ${visibilityBadge}
+                                <span class="badge" style="background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.45rem; border-radius: 10px; white-space: nowrap;">
+                                    📄 ${count} ficha${count === 1 ? '' : 's'}
+                                </span>
+                            </div>
                         </div>
                         <p style="margin: 0 0 1rem 0; font-size: 0.82rem; color: #64748b; line-height: 1.4; flex: 1;">
                             ${f.descripcion || 'Sin descripción.'}
@@ -31314,12 +31424,7 @@ async function loadEstimulacionLibrary() {
                             <button type="button" class="btn btn-sm btn-primary" onclick="openFolderExercises(${f.id}, '${safeTitle}', '${safeDesc}')" style="flex: 1; background: linear-gradient(135deg, #702e5e, #9333ea); border: none; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;">
                                 📂 Ver Fichas
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditCogFolderModal(${f.id}, '${safeTitle}', '${safeDesc}', '${color}', '${icon}')" style="font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;" title="Editar Carpeta">
-                                ✏️
-                            </button>
-                            <button type="button" class="btn btn-sm" onclick="deleteCogFolder(${f.id})" style="background: #fee2e2; color: #dc2626; border: none; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;" title="Eliminar Carpeta">
-                                🗑️
-                            </button>
+                            ${editBtns}
                         </div>
                     </div>
                 </div>
@@ -31332,9 +31437,32 @@ async function loadEstimulacionLibrary() {
     }
 }
 
+async function toggleCogFolderVisibility(folderId, event) {
+    if (event) event.stopPropagation();
+    try {
+        const res = await fetch(`/api/estimulacion/carpetas/${folderId}/toggle-publica`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Error al actualizar visibilidad');
+        if (typeof showToast === 'function') showToast(data.message || "Visibilidad actualizada");
+        loadEstimulacionLibrary();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
 function openEstimulacionFolderModal() {
     const form = document.getElementById('form-cog-folder-create');
     if (form) form.reset();
+
+    const pubGroup = document.getElementById('cog-folder-publica-group');
+    if (pubGroup) {
+        if (window.isSuperadminSession) pubGroup.classList.remove('hide');
+        else pubGroup.classList.add('hide');
+    }
+
     openModal('modal-estimulacion-folder-create');
 }
 
@@ -31344,6 +31472,8 @@ async function submitCogFolderCreate(e) {
     const descripcion = document.getElementById('cog-folder-descripcion').value.trim();
     const color = document.getElementById('cog-folder-color').value;
     const icono = document.getElementById('cog-folder-icono').value;
+    const esPubCheck = document.getElementById('cog-folder-es-publica');
+    const es_publica = (esPubCheck && esPubCheck.checked) ? 1 : 0;
 
     if (!titulo) return alert("Ingresa un título para la carpeta.");
 
@@ -31351,7 +31481,7 @@ async function submitCogFolderCreate(e) {
         const res = await fetch('/api/estimulacion/carpetas', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ titulo, descripcion, color, icono })
+            body: JSON.stringify({ titulo, descripcion, color, icono, es_publica })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear carpeta');
@@ -31402,11 +31532,19 @@ async function openFolderExercises(folderId, folderTitle, folderDesc) {
         if (!res.ok) throw new Error(`Error ${res.status}`);
         const data = await res.json();
         const ejercicios = data.ejercicios || [];
+        const puedeEditar = (typeof data.puede_editar !== 'undefined') ? Boolean(data.puede_editar) : true;
+
+        const btnAdd = document.getElementById('btn-add-cog-exercise');
+        if (btnAdd) {
+            btnAdd.style.display = puedeEditar ? 'inline-block' : 'none';
+        }
 
         if (!tbody) return;
 
         if (ejercicios.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No hay fichas en esta carpeta. Haz clic en <strong>"+ Añadir Ficha / Ejercicio"</strong> para subir una.</td></tr>';
+            tbody.innerHTML = puedeEditar ? 
+                '<tr><td colspan="5" class="text-center py-4 text-muted">No hay fichas en esta carpeta. Haz clic en <strong>"+ Añadir Ficha / Ejercicio"</strong> para subir una.</td></tr>' :
+                '<tr><td colspan="5" class="text-center py-4 text-muted">Esta carpeta oficial aún no contiene fichas de ejercicio.</td></tr>';
             return;
         }
 
@@ -31428,6 +31566,22 @@ async function openFolderExercises(folderId, folderTitle, folderDesc) {
                 archivo_url: ex.archivo_url || ''
             }).replace(/"/g, '&quot;');
 
+            let actionsHtml = '';
+            if (puedeEditar) {
+                actionsHtml = `
+                    <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditCogExerciseModal(${safeExData})" style="padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" title="Editar Ficha">
+                            ✏️ Editar
+                        </button>
+                        <button type="button" class="btn btn-sm" onclick="deleteCogExercise(${ex.id})" style="background: #fee2e2; color: #dc2626; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 700;" title="Eliminar Ficha">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+            } else {
+                actionsHtml = `<span style="font-size: 0.76rem; color: #94a3b8; font-weight: 600;">⭐ Oficial</span>`;
+            }
+
             return `
                 <tr>
                     <td style="text-align: center; font-weight: 800; color: #702e5e;">${num}</td>
@@ -31435,14 +31589,7 @@ async function openFolderExercises(folderId, folderTitle, folderDesc) {
                     <td style="font-size: 0.82rem; color: #475569; max-width: 250px;">${ex.instrucciones || '-'}</td>
                     <td>${fileBadge}</td>
                     <td style="text-align: right;">
-                        <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditCogExerciseModal(${safeExData})" style="padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" title="Editar Ficha">
-                                ✏️ Editar
-                            </button>
-                            <button type="button" class="btn btn-sm" onclick="deleteCogExercise(${ex.id})" style="background: #fee2e2; color: #dc2626; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 700;" title="Eliminar Ficha">
-                                🗑️
-                            </button>
-                        </div>
+                        ${actionsHtml}
                     </td>
                 </tr>
             `;
@@ -32169,6 +32316,7 @@ async function submitPatientCogComplete(registroId) {
 }
 
 window.loadEstimulacionLibrary = loadEstimulacionLibrary;
+window.toggleCogFolderVisibility = toggleCogFolderVisibility;
 window.showCogFoldersView = showCogFoldersView;
 window.openFolderExercises = openFolderExercises;
 window.deleteCogFolder = deleteCogFolder;

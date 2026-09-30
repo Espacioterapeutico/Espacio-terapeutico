@@ -26,6 +26,12 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def is_superadmin_user():
+    role = session.get('role', '')
+    username = session.get('username', '').lower()
+    user_id = session.get('user_id')
+    return (role in ['admin', 'superadmin']) or (username == 'pamoraro') or (user_id == 1)
+
 def get_psicologo_id_filter():
     role = session.get('role')
     user_id = session.get('user_id')
@@ -47,9 +53,18 @@ def ensure_meditaciones_tables(db=None):
             titulo TEXT NOT NULL,
             tipo_contenido TEXT NOT NULL,
             url_contenido TEXT,
+            es_publica INTEGER DEFAULT 0,
             fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    try:
+        cursor.execute("PRAGMA table_info(cat_meditaciones)")
+        cols = [r[1] for r in cursor.fetchall()]
+        if 'es_publica' not in cols:
+            cursor.execute("ALTER TABLE cat_meditaciones ADD COLUMN es_publica INTEGER DEFAULT 0")
+            db.commit()
+    except Exception as _e:
+        print("Aviso al verificar columna es_publica en cat_meditaciones:", _e)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS paciente_meditaciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,15 +115,39 @@ def get_catalogo():
     db = get_db()
     ensure_meditaciones_tables(db)
     cursor = db.cursor()
-    psic_id = get_psicologo_id_filter()
+    user_id = session.get('user_id')
+    is_super = is_superadmin_user()
     
-    if psic_id:
-        cursor.execute("SELECT * FROM cat_meditaciones WHERE psicologo_id = ? ORDER BY fecha_creacion DESC", (psic_id,))
+    if is_super:
+        cursor.execute("""
+            SELECT m.*, u.nombre_completo as autor_nombre
+            FROM cat_meditaciones m
+            LEFT JOIN usuarios u ON m.psicologo_id = u.id
+            ORDER BY m.es_publica DESC, m.fecha_creacion DESC
+        """)
     else:
-        cursor.execute("SELECT * FROM cat_meditaciones ORDER BY fecha_creacion DESC")
+        cursor.execute("""
+            SELECT m.*, u.nombre_completo as autor_nombre
+            FROM cat_meditaciones m
+            LEFT JOIN usuarios u ON m.psicologo_id = u.id
+            WHERE m.psicologo_id = ? OR m.es_publica = 1 OR m.psicologo_id IS NULL
+            ORDER BY m.es_publica DESC, m.fecha_creacion DESC
+        """, (user_id,))
         
-    meditaciones = [dict(row) for row in cursor.fetchall()]
-    return jsonify({'meditaciones': meditaciones})
+    rows = cursor.fetchall()
+    meditaciones = []
+    for r in rows:
+        d = dict(r)
+        d['es_publica'] = 1 if d.get('es_publica') else 0
+        d['es_propia'] = (d.get('psicologo_id') == user_id)
+        d['puede_editar'] = is_super or (d.get('psicologo_id') == user_id and not d['es_publica'])
+        d['puede_publicar'] = is_super
+        meditaciones.append(d)
+        
+    return jsonify({
+        'meditaciones': meditaciones,
+        'is_superadmin': is_super
+    })
 
 @meditaciones_bp.route('/api/meditaciones', methods=['POST'])
 @login_required
@@ -116,10 +155,14 @@ def add_catalogo():
     db = get_db()
     cursor = db.cursor()
     psic_id = get_psicologo_id_filter() or 1
+    user_id = session.get('user_id')
+    is_super = is_superadmin_user()
     
     titulo = request.form.get('titulo')
     tipo = request.form.get('tipo') # 'audio' o 'youtube'
     url_youtube = request.form.get('url_youtube')
+    es_pub_raw = request.form.get('es_publica')
+    es_publica = 1 if (is_super and es_pub_raw in ['1', 'true', 'on', True]) else 0
     
     if not titulo or not tipo:
         return jsonify({'error': 'Faltan campos obligatorios'}), 400
@@ -128,7 +171,6 @@ def add_catalogo():
     if tipo == 'youtube':
         if not url_youtube:
             return jsonify({'error': 'Debe proveer el enlace de YouTube'}), 400
-        # Parse YouTube URL to standard embed format if possible, otherwise keep as is
         url_contenido = url_youtube
     elif tipo == 'audio':
         if 'audio_file' not in request.files:
@@ -150,9 +192,9 @@ def add_catalogo():
             return jsonify({'error': 'Formato de audio no permitido'}), 400
 
     cursor.execute("""
-        INSERT INTO cat_meditaciones (psicologo_id, titulo, tipo_contenido, url_contenido)
-        VALUES (?, ?, ?, ?)
-    """, (psic_id, titulo, tipo, url_contenido))
+        INSERT INTO cat_meditaciones (psicologo_id, titulo, tipo_contenido, url_contenido, es_publica)
+        VALUES (?, ?, ?, ?, ?)
+    """, (psic_id, titulo, tipo, url_contenido, es_publica))
     db.commit()
     
     return jsonify({'message': 'Meditación agregada al catálogo', 'id': cursor.lastrowid})
@@ -162,16 +204,16 @@ def add_catalogo():
 def delete_catalogo(med_id):
     db = get_db()
     cursor = db.cursor()
-    psic_id = get_psicologo_id_filter()
+    user_id = session.get('user_id')
+    is_super = is_superadmin_user()
     
-    if psic_id:
-        cursor.execute("SELECT url_contenido, tipo_contenido FROM cat_meditaciones WHERE id = ? AND psicologo_id = ?", (med_id, psic_id))
-    else:
-        cursor.execute("SELECT url_contenido, tipo_contenido FROM cat_meditaciones WHERE id = ?", (med_id,))
-        
+    cursor.execute("SELECT psicologo_id, url_contenido, tipo_contenido, es_publica FROM cat_meditaciones WHERE id = ?", (med_id,))
     row = cursor.fetchone()
     if not row:
         return jsonify({'error': 'Meditación no encontrada'}), 404
+        
+    if not is_super and row['psicologo_id'] != user_id:
+        return jsonify({'error': 'No tienes permisos para eliminar este contenido oficial.'}), 403
         
     # Eliminar asignaciones vinculadas
     cursor.execute("DELETE FROM paciente_meditaciones WHERE meditacion_id = ?", (med_id,))
@@ -190,6 +232,30 @@ def delete_catalogo(med_id):
             pass
             
     return jsonify({'message': 'Meditación eliminada'})
+
+@meditaciones_bp.route('/api/meditaciones/<int:med_id>/toggle-publica', methods=['POST'])
+@login_required
+def toggle_publica_meditacion(med_id):
+    if not is_superadmin_user():
+        return jsonify({'error': 'Solo el superadministrador puede habilitar o deshabilitar la visibilidad oficial de meditaciones.'}), 403
+        
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, es_publica, titulo FROM cat_meditaciones WHERE id = ?", (med_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Meditación no encontrada'}), 404
+        
+    current_status = 1 if row['es_publica'] else 0
+    new_status = 0 if current_status == 1 else 1
+    cursor.execute("UPDATE cat_meditaciones SET es_publica = ? WHERE id = ?", (new_status, med_id))
+    db.commit()
+    
+    return jsonify({
+        'success': True,
+        'es_publica': new_status,
+        'message': f"Meditación '{row['titulo']}' ahora es {'pública para todos los terapeutas' if new_status == 1 else 'privada (solo tú la ves)'}."
+    })
 
 # ==========================================
 # ASIGNACIÓN A PACIENTES
