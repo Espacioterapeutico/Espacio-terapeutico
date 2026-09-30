@@ -767,9 +767,9 @@ def get_agenda():
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
-              AND p.psicologo_id = ?
+              AND (p.psicologo_id = ? OR af.creado_por_user_id = ?)
             ORDER BY af.fecha ASC, af.hora ASC
-        """, (psic_id,))
+        """, (psic_id, psic_id))
     else:
         cursor.execute("""
             SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,

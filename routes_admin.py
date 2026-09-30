@@ -3744,13 +3744,26 @@ def sync_google_calendar():
                             elif 'Online' in desc or 'online' in summary.lower():
                                 modalidad = 'Online'
                             
+                        from routes_agenda import get_appointment_fee
+                        monto_sync, moneda_sync = get_appointment_fee(cursor, paciente_id, user_id, modalidad)
+                        
                         cursor.execute("""
                             INSERT INTO agenda_finanzas (
                                 paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
-                                estado_pago, control_uso, google_event_id
-                            ) VALUES (?, ?, ?, ?, 0.0, 'USD', 'Pendiente', 'Consumida', ?)
-                        """, (paciente_id, fecha_g, hora_g, modalidad, g_id))
+                                estado_pago, control_uso, google_event_id, cantidad_sesiones, creado_por_user_id
+                            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, 1, ?)
+                        """, (paciente_id, fecha_g, hora_g, modalidad, monto_sync, moneda_sync, g_id, user_id))
                         synced_count += 1
+                        
+                        if paciente_id and user_id:
+                            try:
+                                cursor.execute("""
+                                    UPDATE pacientes 
+                                    SET psicologo_id = ? 
+                                    WHERE id = ? AND (psicologo_id IS NULL OR psicologo_id = 1)
+                                """, (user_id, paciente_id))
+                            except Exception:
+                                pass
 
         # 2. Exportar citas futuras locales que no tengan google_event_id hacia Google Calendar
         today_str = datetime.datetime.now().strftime("%Y-%m-%d")

@@ -11063,6 +11063,9 @@ async function syncGoogleCalendar() {
         
         if (res.ok) {
             alert(data.success);
+            if (typeof renderFullCalendar === 'function') {
+                try { renderFullCalendar(); } catch (eCal) {}
+            }
             if (activeView === 'agenda') loadAgenda();
             if (activeView === 'dashboard') loadAgendaCompact();
         } else {
