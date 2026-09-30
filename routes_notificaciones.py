@@ -761,6 +761,12 @@ def cron_send_whatsapp_reminders():
                 dia_previo_str = today_str
 
             psych_id = cita.get('psicologo_id') or 1
+            if isinstance(psych_id, str) and not psych_id.isdigit():
+                from app import get_psychologist_by_id_or_slug
+                p_obj = get_psychologist_by_id_or_slug(cursor, psych_id)
+                psych_id = int(p_obj['id']) if p_obj else 1
+            elif str(psych_id).isdigit():
+                psych_id = int(psych_id)
             if psych_id not in psych_configs:
                 cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psych_id,))
                 u_row = cursor.fetchone()
@@ -866,6 +872,12 @@ def cron_send_whatsapp_reminders():
             pat_name = f"{cita.get('pat_nombres', '')} {cita.get('pat_apellidos', '')}".strip()
 
             psych_id = cita.get('psicologo_id') or 1
+            if isinstance(psych_id, str) and not psych_id.isdigit():
+                from app import get_psychologist_by_id_or_slug
+                p_obj = get_psychologist_by_id_or_slug(cursor, psych_id)
+                psych_id = int(p_obj['id']) if p_obj else 1
+            elif str(psych_id).isdigit():
+                psych_id = int(psych_id)
             if psych_id not in psych_configs:
                 cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psych_id,))
                 u_row = cursor.fetchone()

@@ -2101,6 +2101,11 @@ def auto_cancel_unconfirmed_sessions(db):
             appt_id = appt['id']
             patient_id = appt['paciente_id']
             psic_id = appt['psicologo_id'] or 1
+            if isinstance(psic_id, str) and not psic_id.isdigit():
+                p_obj = get_psychologist_by_id_or_slug(cursor, psic_id)
+                psic_id = int(p_obj['id']) if p_obj else 1
+            elif str(psic_id).isdigit():
+                psic_id = int(psic_id)
             
             if psic_id not in psic_configs:
                 cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))

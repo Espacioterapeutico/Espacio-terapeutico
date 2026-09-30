@@ -1343,10 +1343,17 @@ def delete_agenda_event(event_id):
         LEFT JOIN usuarios u ON u.id = COALESCE(p.psicologo_id, af.creado_por_user_id, 1)
         WHERE af.id = ?
     """, (event_id,))
-    cita = cursor.fetchone()
+    cita_row = cursor.fetchone()
+    cita = dict(cita_row) if cita_row else None
 
-    if cita and cita['google_event_id']:
-        psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or user_id or 1
+    if cita and cita.get('google_event_id'):
+        psych_id = cita.get('psicologo_id') or cita.get('creado_por_user_id') or user_id or 1
+        if isinstance(psych_id, str) and not psych_id.isdigit():
+            from app import get_psychologist_by_id_or_slug
+            p_obj = get_psychologist_by_id_or_slug(cursor, psych_id)
+            psych_id = int(p_obj['id']) if p_obj else 1
+        elif str(psych_id).isdigit():
+            psych_id = int(psych_id)
         try:
             from routes_admin import get_calendar_service, update_calendar_event_status
             service = get_calendar_service(psych_id, db=db)
@@ -1367,7 +1374,7 @@ def delete_agenda_event(event_id):
                     fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                event_id, cita['token_confirmacion'], cita['paciente_id'],
+                event_id, cita.get('token_confirmacion'), cita.get('paciente_id'),
                 cita.get('psicologo_id') or cita.get('creado_por_user_id'),
                 f"{cita.get('nombres','')} {cita.get('apellidos','')}".strip(),
                 f"{cita.get('psic_nombres','')} {cita.get('psic_apellidos','')}".strip(),

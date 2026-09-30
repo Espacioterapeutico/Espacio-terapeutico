@@ -7378,11 +7378,16 @@ async function deleteAgendaEventFromDashboard(citaId) {
             const curPid = sessionStorage.getItem('patient_id');
             if (curPid && typeof loadPatientPortalData === 'function') loadPatientPortalData(curPid);
         } else {
-            const data = await res.json();
-            alert('Error: ' + (data.error || 'No se pudo eliminar la cita.'));
+            let errMsg = 'No se pudo eliminar la cita.';
+            try {
+                const data = await res.json();
+                errMsg = data.error || errMsg;
+            } catch (_) {}
+            alert('Error: ' + errMsg);
         }
     } catch(err) {
-        alert('Error de conexión al eliminar la cita.');
+        console.error("Error al eliminar cita:", err);
+        alert('Error de conexión al eliminar la cita: ' + (err.message || String(err)));
     }
 }
 window.deleteAgendaEventFromDashboard = deleteAgendaEventFromDashboard;
