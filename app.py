@@ -1734,68 +1734,12 @@ def init_db():
         cursor.execute("UPDATE pacientes SET terminos_aceptados = 0 WHERE terminos_aceptados IS NULL")
         cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE psicologo_id IS NULL")
         
-        # Curación automática de registros con slugs en lugar de IDs de usuario
+        # Ejecución del sistema de migraciones versionadas y propagación de reglas
         try:
-            heal_orphaned_slug_records(cursor, db)
-        except Exception as _e_heal:
-            print("Error ejecutando heal_orphaned_slug_records:", _e_heal)
-
-        # Restauración de la cita de Aiverson si fue auto-cancelada indebidamente
-        try:
-            cursor.execute("""
-                SELECT af.id, af.google_event_id, p.id as pac_id, p.nombres, p.apellidos, af.tipo_consulta
-                FROM agenda_finanzas af
-                JOIN pacientes p ON af.paciente_id = p.id
-                WHERE (af.id = 269 OR LOWER(p.nombres) LIKE '%aiverson%' OR p.cedula IN ('30590594', '30.590.594', 'V-30590594', 'V-30.590.594'))
-                  AND af.fecha = '2026-10-01'
-                  AND af.estado_pago = 'Cancelada con aviso'
-            """)
-            to_restore = cursor.fetchall()
-            for r in to_restore:
-                appt_id = r['id'] if hasattr(r, 'keys') else r[0]
-                gev_id = r['google_event_id'] if hasattr(r, 'keys') else r[1]
-                p_nom = f"{r['nombres']} {r['apellidos']}" if hasattr(r, 'keys') else ""
-                t_cons = r['tipo_consulta'] if hasattr(r, 'keys') else None
-                
-                cursor.execute("""
-                    UPDATE agenda_finanzas 
-                    SET estado_pago = 'Agendada', confirmada = 0,
-                        referencia = CASE 
-                            WHEN referencia LIKE '%Cancelada automáticamente por falta de confirmación%'
-                            THEN REPLACE(referencia, ' | Cancelada automáticamente por falta de confirmación', '')
-                            ELSE referencia
-                        END
-                    WHERE id = ?
-                """, (appt_id,))
-                
-                cursor.execute("DELETE FROM citas_canceladas_log WHERE agenda_id = ?", (appt_id,))
-                cursor.execute("DELETE FROM sesiones WHERE agenda_id = ? AND resumen LIKE '%cancelada automáticamente%'", (appt_id,))
-                
-                if gev_id:
-                    try:
-                        from routes_admin import get_calendar_service, update_calendar_event_status
-                        service = get_calendar_service(1)
-                        if service:
-                            update_calendar_event_status(service, gev_id, 'pendiente', paciente_nombre=p_nom, tipo_consulta=t_cons)
-                    except Exception as _g_err:
-                        print("Error restaurando evento en Google Calendar:", _g_err)
-            if to_restore and db:
-                db.commit()
-        except Exception as _e_rest:
-            print("Error restaurando cita de Aiverson:", _e_rest)
-        
-        # Normalizar horas históricas en agenda_finanzas a formato estándar 24h
-        try:
-            cursor.execute("SELECT id, hora FROM agenda_finanzas WHERE hora IS NOT NULL AND hora != '' AND hora != '00:00'")
-            rows_to_clean = cursor.fetchall()
-            from routes_agenda import normalize_time_str
-            for r_c in rows_to_clean:
-                old_h = str(r_c[1]).strip()
-                norm_h = normalize_time_str(old_h)
-                if old_h != norm_h and norm_h != '00:00':
-                    cursor.execute("UPDATE agenda_finanzas SET hora = ? WHERE id = ?", (norm_h, r_c[0]))
-        except Exception as _ex_h:
-            print(f"[WARN] Error normalizando horas históricas: {_ex_h}")
+            from migrations import run_migrations
+            run_migrations(db)
+        except Exception as _mig_err:
+            print(f"[MIGRATION] Error al ejecutar migraciones: {_mig_err}")
             
         ensure_usuarios_columns(db)
         ensure_tests_tables(db)

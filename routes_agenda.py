@@ -1540,6 +1540,14 @@ def admin_availability():
         try:
             cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (json.dumps(data), session.get('user_id')))
             db.commit()
+
+            # HOOK (Alternativa 2): Sincronizar inmediatamente las citas activas/futuras con las nuevas reglas
+            try:
+                from migrations import sync_psychologist_rules_to_appointments
+                sync_psychologist_rules_to_appointments(cursor, db, session.get('user_id'), data)
+            except Exception as _sync_err:
+                print(f"[HOOK] Error al sincronizar reglas con citas: {_sync_err}")
+
             return jsonify({'success': 'Horarios y disponibilidad guardados con éxito.'})
         except Exception as e:
             return jsonify({'error': f'Error al guardar horarios: {str(e)}'}), 500
