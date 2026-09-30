@@ -26,7 +26,11 @@ from psychometric_scoring import (
     process_tcs_scoring,
     process_ugds_scoring,
     process_raads_scoring,
-    process_holland_scoring
+    process_holland_scoring,
+    process_tas20_scoring,
+    process_erq_scoring,
+    process_tmms24_scoring,
+    process_ders_scoring
 )
 
 tests_bp = Blueprint('tests', __name__)
@@ -138,6 +142,7 @@ def ensure_tests_tables(db):
     ensure_new_latin_tests_definitions(db)
     ensure_new_sexology_and_cognitive_tests_definitions(db)
     ensure_violence_and_psychotic_tests_definitions(db)
+    ensure_emotional_management_tests_definitions(db)
     ensure_barsit_definition(db)
     sync_existing_completed_tests_to_evoluciones(db)
 
@@ -3058,4 +3063,210 @@ def process_juicio_scoring(answers):
     classification = "Juicio Alterado" if total > 15 else "Juicio Conservado"
     interpretation = f"Puntuación Total IPRJC: {total} puntos. Evalúa si el paciente conserva la capacidad de comprobar la realidad de forma adecuada."
     return total, {"Total": total}, classification, interpretation
+
+
+def ensure_emotional_management_tests_definitions(db):
+    """
+    Registra y homologa las evaluaciones psicométricas de Gestión y Regulación Emocional:
+    1. TAS-20 (Escala de Alexitimia de Toronto - Bagby, Parker & Taylor, 1994)
+    2. ERQ (Cuestionario de Regulación Emocional - Gross & John, 2003 / Canales et al., 2022)
+    3. TMMS-24 (Escala de Inteligencia Emocional Percibida - Fernández-Berrocal et al., 2004)
+    4. DERS-E (Escala de Dificultades en la Regulación Emocional - Hervás & Jódar, 2008)
+    """
+    cursor = db.cursor()
+
+    # 1. TAS-20
+    opciones_tas20 = [
+        {"val": 1, "text": "1 - Totalmente en desacuerdo", "txt": "1 - Totalmente en desacuerdo"},
+        {"val": 2, "text": "2 - En desacuerdo", "txt": "2 - En desacuerdo"},
+        {"val": 3, "text": "3 - Ni de acuerdo ni en desacuerdo", "txt": "3 - Ni de acuerdo ni en desacuerdo"},
+        {"val": 4, "text": "4 - De acuerdo", "txt": "4 - De acuerdo"},
+        {"val": 5, "text": "5 - Totalmente de acuerdo", "txt": "5 - Totalmente de acuerdo"}
+    ]
+    items_tas20 = [
+        {"id": 1, "num": 1, "texto": "A menudo estoy confuso(a) acerca de qué emoción estoy sintiendo.", "txt": "A menudo estoy confuso(a) acerca de qué emoción estoy sintiendo.", "reverse": False},
+        {"id": 2, "num": 2, "texto": "Me es difícil encontrar las palabras correctas para expresar mis sentimientos.", "txt": "Me es difícil encontrar las palabras correctas para expresar mis sentimientos.", "reverse": False},
+        {"id": 3, "num": 3, "texto": "Tengo sensaciones físicas que incluso los médicos no entienden.", "txt": "Tengo sensaciones físicas que incluso los médicos no entienden.", "reverse": False},
+        {"id": 4, "num": 4, "texto": "Soy capaz de describir mis sentimientos fácilmente.", "txt": "Soy capaz de describir mis sentimientos fácilmente.", "reverse": True},
+        {"id": 5, "num": 5, "texto": "Prefiero analizar los problemas en lugar de sólo describirlos.", "txt": "Prefiero analizar los problemas en lugar de sólo describirlos.", "reverse": True},
+        {"id": 6, "num": 6, "texto": "Cuando estoy disgustado(a), no sé si estoy triste, asustado(a) o enfadado(a).", "txt": "Cuando estoy disgustado(a), no sé si estoy triste, asustado(a) o enfadado(a).", "reverse": False},
+        {"id": 7, "num": 7, "texto": "A menudo me siento intrigado(a) por sensaciones en mi cuerpo.", "txt": "A menudo me siento intrigado(a) por sensaciones en mi cuerpo.", "reverse": False},
+        {"id": 8, "num": 8, "texto": "Prefiero dejar que las cosas sucedan en vez de entender por qué sucedieron de esa manera.", "txt": "Prefiero dejar que las cosas sucedan en vez de entender por qué sucedieron de esa manera.", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Tengo sentimientos que no puedo identificar del todo.", "txt": "Tengo sentimientos que no puedo identificar del todo.", "reverse": False},
+        {"id": 10, "num": 10, "texto": "Ser capaz de contactar con las emociones es esencial.", "txt": "Ser capaz de contactar con las emociones es esencial.", "reverse": True},
+        {"id": 11, "num": 11, "texto": "Me resulta difícil decir lo que siento sobre otras personas.", "txt": "Me resulta difícil decir lo que siento sobre otras personas.", "reverse": False},
+        {"id": 12, "num": 12, "texto": "Las personas me dicen que describa más detalladamente mis sentimientos.", "txt": "Las personas me dicen que describa más detalladamente mis sentimientos.", "reverse": False},
+        {"id": 13, "num": 13, "texto": "No sé lo que está pasando dentro de mí.", "txt": "No sé lo que está pasando dentro de mí.", "reverse": False},
+        {"id": 14, "num": 14, "texto": "Con frecuencia no sé por qué estoy enfadado(a).", "txt": "Con frecuencia no sé por qué estoy enfadado(a).", "reverse": False},
+        {"id": 15, "num": 15, "texto": "Prefiero hablar con las personas sobre sus actividades cotidianas que sobre sus sentimientos.", "txt": "Prefiero hablar con las personas sobre sus actividades cotidianas que sobre sus sentimientos.", "reverse": False},
+        {"id": 16, "num": 16, "texto": "Prefiero ver espectáculos de entretenimiento ligero más que dramas psicológicos.", "txt": "Prefiero ver espectáculos de entretenimiento ligero más que dramas psicológicos.", "reverse": False},
+        {"id": 17, "num": 17, "texto": "Me es difícil revelar mis sentimientos más íntimos, incluso a los amigos cercanos.", "txt": "Me es difícil revelar mis sentimientos más íntimos, incluso a los amigos cercanos.", "reverse": False},
+        {"id": 18, "num": 18, "texto": "Puedo sentirme cercano(a) a alguien incluso en momentos de silencio.", "txt": "Puedo sentirme cercano(a) a alguien incluso en momentos de silencio.", "reverse": True},
+        {"id": 19, "num": 19, "texto": "Encuentro útil examinar mis sentimientos para resolver problemas personales.", "txt": "Encuentro útil examinar mis sentimientos para resolver problemas personales.", "reverse": True},
+        {"id": 20, "num": 20, "texto": "La búsqueda de significados ocultos en las películas o en las obras de teatro distrae del placer de contemplarlas.", "txt": "La búsqueda de significados ocultos en las películas o en las obras de teatro distrae del placer de contemplarlas.", "reverse": False}
+    ]
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'TAS-20'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ('TAS-20', 'TAS-20 — Escala de Alexitimia de Toronto', 'TAS-20', 'Gestión Emocional',
+             'Instrumento de referencia internacional de 20 ítems para evaluar alexitimia, dificultad para identificar y describir sentimientos y estilo de pensamiento externamente orientado.',
+             'Indique en qué medida está de acuerdo o en desacuerdo con cada una de las afirmaciones seleccionando del 1 al 5.',
+             json.dumps(opciones_tas20, ensure_ascii=False), json.dumps(items_tas20, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'TAS-20'
+        """, ('TAS-20 — Escala de Alexitimia de Toronto', 'TAS-20', 'Gestión Emocional',
+             'Instrumento de referencia internacional de 20 ítems para evaluar alexitimia, dificultad para identificar y describir sentimientos y estilo de pensamiento externamente orientado.',
+             'Indique en qué medida está de acuerdo o en desacuerdo con cada una de las afirmaciones seleccionando del 1 al 5.',
+             json.dumps(opciones_tas20, ensure_ascii=False), json.dumps(items_tas20, ensure_ascii=False)))
+
+    # 2. ERQ
+    opciones_erq = [
+        {"val": 1, "text": "1 - Totalmente en desacuerdo", "txt": "1 - Totalmente en desacuerdo"},
+        {"val": 2, "text": "2 - Bastante en desacuerdo", "txt": "2 - Bastante en desacuerdo"},
+        {"val": 3, "text": "3 - Algo en desacuerdo", "txt": "3 - Algo en desacuerdo"},
+        {"val": 4, "text": "4 - Neutral / Ni de acuerdo ni en desacuerdo", "txt": "4 - Neutral / Ni de acuerdo ni en desacuerdo"},
+        {"val": 5, "text": "5 - Algo de acuerdo", "txt": "5 - Algo de acuerdo"},
+        {"val": 6, "text": "6 - Bastante de acuerdo", "txt": "6 - Bastante de acuerdo"},
+        {"val": 7, "text": "7 - Totalmente de acuerdo", "txt": "7 - Totalmente de acuerdo"}
+    ]
+    items_erq = [
+        {"id": 1, "num": 1, "texto": "Cuando quiero sentir más emociones positivas (como alegría o diversión), cambio la forma en que estoy pensando.", "txt": "Cuando quiero sentir más emociones positivas (como alegría o diversión), cambio la forma en que estoy pensando.", "reverse": False},
+        {"id": 2, "num": 2, "texto": "Mantengo mis emociones para mí mismo(a).", "txt": "Mantengo mis emociones para mí mismo(a).", "reverse": False},
+        {"id": 3, "num": 3, "texto": "Cuando quiero sentir menos emociones negativas (como tristeza o ira), cambio la forma en que estoy pensando.", "txt": "Cuando quiero sentir menos emociones negativas (como tristeza o ira), cambio la forma en que estoy pensando.", "reverse": False},
+        {"id": 4, "num": 4, "texto": "Cuando estoy sintiendo emociones positivas, tengo cuidado de no expresarlas.", "txt": "Cuando estoy sintiendo emociones positivas, tengo cuidado de no expresarlas.", "reverse": False},
+        {"id": 5, "num": 5, "texto": "Cuando me enfrento a una situación estresante, me obligo a pensar en ella de una manera que me ayude a mantener la calma.", "txt": "Cuando me enfrento a una situación estresante, me obligo a pensar en ella de una manera que me ayude a mantener la calma.", "reverse": False},
+        {"id": 6, "num": 6, "texto": "Controlo mis emociones no expresándolas.", "txt": "Controlo mis emociones no expresándolas.", "reverse": False},
+        {"id": 7, "num": 7, "texto": "Cuando quiero sentir más emociones positivas, cambio la forma de pensar acerca de la situación.", "txt": "Cuando quiero sentir más emociones positivas, cambio la forma de pensar acerca de la situación.", "reverse": False},
+        {"id": 8, "num": 8, "texto": "Controlo mis emociones cambiando la forma de pensar sobre la situación en la que me encuentro.", "txt": "Controlo mis emociones cambiando la forma de pensar sobre la situación en la que me encuentro.", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Cuando estoy sintiendo emociones negativas, me aseguro de no expresarlas.", "txt": "Cuando estoy sintiendo emociones negativas, me aseguro de no expresarlas.", "reverse": False},
+        {"id": 10, "num": 10, "texto": "Cuando quiero sentir menos emociones negativas, cambio la forma de pensar sobre la situación.", "txt": "Cuando quiero sentir menos emociones negativas, cambio la forma de pensar sobre la situación.", "reverse": False}
+    ]
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'ERQ'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ('ERQ', 'ERQ — Cuestionario de Regulación Emocional', 'ERQ', 'Gestión Emocional',
+             'Evalúa el uso habitual de dos estrategias fundamentales de regulación emocional: Reevaluación Cognitiva y Supresión Expresiva (Gross & John / Canales et al.).',
+             'Responda del 1 al 7 el grado en que está de acuerdo con cada frase sobre el manejo de sus emociones positivas y negativas.',
+             json.dumps(opciones_erq, ensure_ascii=False), json.dumps(items_erq, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'ERQ'
+        """, ('ERQ — Cuestionario de Regulación Emocional', 'ERQ', 'Gestión Emocional',
+             'Evalúa el uso habitual de dos estrategias fundamentales de regulación emocional: Reevaluación Cognitiva y Supresión Expresiva (Gross & John / Canales et al.).',
+             'Responda del 1 al 7 el grado en que está de acuerdo con cada frase sobre el manejo de sus emociones positivas y negativas.',
+             json.dumps(opciones_erq, ensure_ascii=False), json.dumps(items_erq, ensure_ascii=False)))
+
+    # 3. TMMS-24
+    opciones_tmms24 = [
+        {"val": 1, "text": "1 - Nada de acuerdo", "txt": "1 - Nada de acuerdo"},
+        {"val": 2, "text": "2 - Algo de acuerdo", "txt": "2 - Algo de acuerdo"},
+        {"val": 3, "text": "3 - Bastante de acuerdo", "txt": "3 - Bastante de acuerdo"},
+        {"val": 4, "text": "4 - Muy de acuerdo", "txt": "4 - Muy de acuerdo"},
+        {"val": 5, "text": "5 - Totalmente de acuerdo", "txt": "5 - Totalmente de acuerdo"}
+    ]
+    items_tmms24 = [
+        {"id": 1, "num": 1, "texto": "Presto mucha atención a los sentimientos.", "txt": "Presto mucha atención a los sentimientos.", "reverse": False},
+        {"id": 2, "num": 2, "texto": "Normalmente me preocupo por lo que siento.", "txt": "Normalmente me preocupo por lo que siento.", "reverse": False},
+        {"id": 3, "num": 3, "texto": "Normalmente dedico tiempo a pensar en mis emociones.", "txt": "Normalmente dedico tiempo a pensar en mis emociones.", "reverse": False},
+        {"id": 4, "num": 4, "texto": "Pienso que merece la pena prestar atención a mis emociones o estados de ánimo.", "txt": "Pienso que merece la pena prestar atención a mis emociones o estados de ánimo.", "reverse": False},
+        {"id": 5, "num": 5, "texto": "Dejo que mis sentimientos afecten a mis pensamientos.", "txt": "Dejo que mis sentimientos afecten a mis pensamientos.", "reverse": False},
+        {"id": 6, "num": 6, "texto": "Pienso en mi estado de ánimo constantemente.", "txt": "Pienso en mi estado de ánimo constantemente.", "reverse": False},
+        {"id": 7, "num": 7, "texto": "A menudo pienso en mis sentimientos.", "txt": "A menudo pienso en mis sentimientos.", "reverse": False},
+        {"id": 8, "num": 8, "texto": "Presto mucha atención a cómo me siento.", "txt": "Presto mucha atención a cómo me siento.", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Tengo claros mis sentimientos.", "txt": "Tengo claros mis sentimientos.", "reverse": False},
+        {"id": 10, "num": 10, "texto": "Frecuentemente puedo definir mis sentimientos.", "txt": "Frecuentemente puedo definir mis sentimientos.", "reverse": False},
+        {"id": 11, "num": 11, "texto": "Casi siempre sé cómo me siento.", "txt": "Casi siempre sé cómo me siento.", "reverse": False},
+        {"id": 12, "num": 12, "texto": "Normalmente conozco mis sentimientos sobre las personas.", "txt": "Normalmente conozco mis sentimientos sobre las personas.", "reverse": False},
+        {"id": 13, "num": 13, "texto": "A menudo me doy cuenta de mis sentimientos en diferentes situaciones.", "txt": "A menudo me doy cuenta de mis sentimientos en diferentes situaciones.", "reverse": False},
+        {"id": 14, "num": 14, "texto": "Siempre puedo decir cómo me siento.", "txt": "Siempre puedo decir cómo me siento.", "reverse": False},
+        {"id": 15, "num": 15, "texto": "A veces puedo decir cuáles son mis emociones.", "txt": "A veces puedo decir cuáles son mis emociones.", "reverse": False},
+        {"id": 16, "num": 16, "texto": "Puedo llegar a comprender mis sentimientos.", "txt": "Puedo llegar a comprender mis sentimientos.", "reverse": False},
+        {"id": 17, "num": 17, "texto": "Aunque a veces me siento triste, suelo tener una visión optimista.", "txt": "Aunque a veces me siento triste, suelo tener una visión optimista.", "reverse": False},
+        {"id": 18, "num": 18, "texto": "Aunque me sienta mal, procuro pensar en cosas agradables.", "txt": "Aunque me sienta mal, procuro pensar en cosas agradables.", "reverse": False},
+        {"id": 19, "num": 19, "texto": "Cuando estoy triste, pienso en todos los placeres de la vida.", "txt": "Cuando estoy triste, pienso en todos los placeres de la vida.", "reverse": False},
+        {"id": 20, "num": 20, "texto": "Intento tener pensamientos positivos aunque me sienta mal.", "txt": "Intento tener pensamientos positivos aunque me sienta mal.", "reverse": False},
+        {"id": 21, "num": 21, "texto": "Si doy demasiadas vueltas a las cosas, complicándolas, trato de calmarme.", "txt": "Si doy demasiadas vueltas a las cosas, complicándolas, trato de calmarme.", "reverse": False},
+        {"id": 22, "num": 22, "texto": "Me preocupo por tener un buen estado de ánimo.", "txt": "Me preocupo por tener un buen estado de ánimo.", "reverse": False},
+        {"id": 23, "num": 23, "texto": "Tengo mucha energía cuando me siento feliz.", "txt": "Tengo mucha energía cuando me siento feliz.", "reverse": False},
+        {"id": 24, "num": 24, "texto": "Cuando estoy enfadado(a) intento cambiar mi estado de ánimo.", "txt": "Cuando estoy enfadado(a) intento cambiar mi estado de ánimo.", "reverse": False}
+    ]
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'TMMS-24'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ('TMMS-24', 'TMMS-24 — Escala de Inteligencia Emocional Percibida', 'TMMS-24', 'Gestión Emocional',
+             'Versión adaptada al español de 24 ítems que evalúa la inteligencia emocional percibida a través de tres dimensiones clave: Atención, Claridad y Reparación Emocional (Fernández-Berrocal et al., 2004).',
+             'Lea atentamente cada afirmación e indique en qué grado está de acuerdo con cada una seleccionando del 1 al 5.',
+             json.dumps(opciones_tmms24, ensure_ascii=False), json.dumps(items_tmms24, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'TMMS-24'
+        """, ('TMMS-24 — Escala de Inteligencia Emocional Percibida', 'TMMS-24', 'Gestión Emocional',
+             'Versión adaptada al español de 24 ítems que evalúa la inteligencia emocional percibida a través de tres dimensiones clave: Atención, Claridad y Reparación Emocional (Fernández-Berrocal et al., 2004).',
+             'Lea atentamente cada afirmación e indique en qué grado está de acuerdo con cada una seleccionando del 1 al 5.',
+             json.dumps(opciones_tmms24, ensure_ascii=False), json.dumps(items_tmms24, ensure_ascii=False)))
+
+    # 4. DERS-E (28 ítems, Hervás & Jódar, 2008)
+    opciones_ders = [
+        {"val": 1, "text": "1 - Casi nunca (0-10% de las veces)", "txt": "1 - Casi nunca (0-10% de las veces)"},
+        {"val": 2, "text": "2 - A veces (11-35% de las veces)", "txt": "2 - A veces (11-35% de las veces)"},
+        {"val": 3, "text": "3 - La mitad de las veces (36-65% de las veces)", "txt": "3 - La mitad de las veces (36-65% de las veces)"},
+        {"val": 4, "text": "4 - La mayoría de las veces (66-90% de las veces)", "txt": "4 - La mayoría de las veces (66-90% de las veces)"},
+        {"val": 5, "text": "5 - Casi siempre (91-100% de las veces)", "txt": "5 - Casi siempre (91-100% de las veces)"}
+    ]
+    items_ders = [
+        {"id": 1, "num": 1, "texto": "Tengo claros mis sentimientos.", "txt": "Tengo claros mis sentimientos.", "reverse": True},
+        {"id": 2, "num": 2, "texto": "Presto atención a cómo me siento.", "txt": "Presto atención a cómo me siento.", "reverse": True},
+        {"id": 3, "num": 3, "texto": "Experimento mis emociones como algo arrollador y fuera de control.", "txt": "Experimento mis emociones como algo arrollador y fuera de control.", "reverse": False},
+        {"id": 4, "num": 4, "texto": "No tengo idea de cómo me siento.", "txt": "No tengo idea de cómo me siento.", "reverse": False},
+        {"id": 5, "num": 5, "texto": "Tengo dificultades para dar sentido a lo que siento.", "txt": "Tengo dificultades para dar sentido a lo que siento.", "reverse": False},
+        {"id": 6, "num": 6, "texto": "Me mantengo atento(a) a mis sentimientos.", "txt": "Me mantengo atento(a) a mis sentimientos.", "reverse": True},
+        {"id": 7, "num": 7, "texto": "Sé exactamente cómo me siento.", "txt": "Sé exactamente cómo me siento.", "reverse": True},
+        {"id": 8, "num": 8, "texto": "Me preocupa lo que estoy sintiendo.", "txt": "Me preocupa lo que estoy sintiendo.", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Me doy cuenta de cómo me siento.", "txt": "Me doy cuenta de cómo me siento.", "reverse": True},
+        {"id": 10, "num": 10, "texto": "Cuando me siento mal, me enfado conmigo mismo(a) por sentirme de esa manera.", "txt": "Cuando me siento mal, me enfado conmigo mismo(a) por sentirme de esa manera.", "reverse": False},
+        {"id": 11, "num": 11, "texto": "Cuando me siento mal, me da vergüenza sentirme así.", "txt": "Cuando me siento mal, me da vergüenza sentirme así.", "reverse": False},
+        {"id": 12, "num": 12, "texto": "Cuando me siento mal, me resulta difícil concentrarme en hacer mis tareas.", "txt": "Cuando me siento mal, me resulta difícil concentrarme en hacer mis tareas.", "reverse": False},
+        {"id": 13, "num": 13, "texto": "Cuando me siento mal, pierdo el control sobre mis conductas.", "txt": "Cuando me siento mal, pierdo el control sobre mis conductas.", "reverse": False},
+        {"id": 14, "num": 14, "texto": "Cuando me siento mal, me siento fuera de control.", "txt": "Cuando me siento mal, me siento fuera de control.", "reverse": False},
+        {"id": 15, "num": 15, "texto": "Cuando me siento mal, creo que seguiré sintiéndome así durante mucho tiempo.", "txt": "Cuando me siento mal, creo que seguiré sintiéndome así durante mucho tiempo.", "reverse": False},
+        {"id": 16, "num": 16, "texto": "Cuando me siento mal, me cuesta concentrarme en otras cosas.", "txt": "Cuando me siento mal, me cuesta concentrarme en otras cosas.", "reverse": False},
+        {"id": 17, "num": 17, "texto": "Cuando me siento mal, creo que acabaré sintiéndome muy deprimido(a).", "txt": "Cuando me siento mal, creo que acabaré sintiéndome muy deprimido(a).", "reverse": False},
+        {"id": 18, "num": 18, "texto": "Cuando me siento mal, me siento culpable por sentirme de esa manera.", "txt": "Cuando me siento mal, me siento culpable por sentirme de esa manera.", "reverse": False},
+        {"id": 19, "num": 19, "texto": "Cuando me siento mal, me siento como una persona débil por sentirme así.", "txt": "Cuando me siento mal, me siento como una persona débil por sentirme así.", "reverse": False},
+        {"id": 20, "num": 20, "texto": "Cuando me siento mal, siento vergüenza por tener esos sentimientos.", "txt": "Cuando me siento mal, siento vergüenza por tener esos sentimientos.", "reverse": False},
+        {"id": 21, "num": 21, "texto": "Cuando me siento mal, me resulta difícil concentrarme en el trabajo o estudio.", "txt": "Cuando me siento mal, me resulta difícil concentrarme en el trabajo o estudio.", "reverse": False},
+        {"id": 22, "num": 22, "texto": "Cuando me siento mal, siento que pierdo totalmente el control.", "txt": "Cuando me siento mal, siento que pierdo totalmente el control.", "reverse": False},
+        {"id": 23, "num": 23, "texto": "Cuando me siento mal, me juzgo negativamente por sentirme así.", "txt": "Cuando me siento mal, me juzgo negativamente por sentirme así.", "reverse": False},
+        {"id": 24, "num": 24, "texto": "Cuando me siento mal, siento que no debería sentirme de esa manera.", "txt": "Cuando me siento mal, siento que no debería sentirme de esa manera.", "reverse": False},
+        {"id": 25, "num": 25, "texto": "Cuando me siento mal, me siento culpable por tener esos sentimientos.", "txt": "Cuando me siento mal, me siento culpable por tener esos sentimientos.", "reverse": False},
+        {"id": 26, "num": 26, "texto": "Cuando me siento mal, me cuesta concentrarme en cualquier actividad.", "txt": "Cuando me siento mal, me cuesta concentrarme en cualquier actividad.", "reverse": False},
+        {"id": 27, "num": 27, "texto": "Cuando me siento mal, me resulta muy difícil terminar las cosas que tengo que hacer.", "txt": "Cuando me siento mal, me resulta muy difícil terminar las cosas que tengo que hacer.", "reverse": False},
+        {"id": 28, "num": 28, "texto": "Cuando me siento mal, me siento completamente abrumado(a) por mis emociones.", "txt": "Cuando me siento mal, me siento completamente abrumado(a) por mis emociones.", "reverse": False}
+    ]
+    for ders_code in ['DERS-E', 'DERS']:
+        cursor.execute("SELECT code FROM tests_definiciones WHERE code = ?", (ders_code,))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (ders_code, 'DERS-E — Escala de Dificultades en la Regulación Emocional', 'DERS-E', 'Gestión Emocional',
+                 'Evaluación psicométrica multidimensional de 28 ítems y 5 factores adaptada al español por Hervás & Jódar (2008) a partir de Gratz & Roemer.',
+                 'Indique con qué frecuencia experimenta cada una de las siguientes afirmaciones (del 1: Casi nunca al 5: Casi siempre).',
+                 json.dumps(opciones_ders, ensure_ascii=False), json.dumps(items_ders, ensure_ascii=False)))
+        else:
+            cursor.execute("""
+                UPDATE tests_definiciones 
+                SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+                WHERE code = ?
+            """, ('DERS-E — Escala de Dificultades en la Regulación Emocional', 'DERS-E', 'Gestión Emocional',
+                 'Evaluación psicométrica multidimensional de 28 ítems y 5 factores adaptada al español por Hervás & Jódar (2008) a partir de Gratz & Roemer.',
+                 'Indique con qué frecuencia experimenta cada una de las siguientes afirmaciones (del 1: Casi nunca al 5: Casi siempre).',
+                 json.dumps(opciones_ders, ensure_ascii=False), json.dumps(items_ders, ensure_ascii=False), ders_code))
+
+    db.commit()
 

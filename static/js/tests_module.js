@@ -10,6 +10,60 @@ var CATALOG_PER_PAGE = 10; // Vista cuadrícula 5x2 (10 por página)
 
 // BASE DE DATOS DE EVALUACIONES PSICOMÉTRICAS CON METADATOS COMPLETOS
 var testsCatalogDatabase = [
+    // --- GESTIÓN Y REGULACIÓN EMOCIONAL ---
+    { 
+        code: 'TAS-20', 
+        name: 'TAS-20 — Escala de Alexitimia de Toronto', 
+        siglas: 'TAS-20', 
+        cat: 'Gestión Emocional', 
+        desc: 'Instrumento de referencia internacional de 20 ítems para evaluar alexitimia: dificultad para identificar y describir sentimientos, y estilo de pensamiento externamente orientado.', 
+        autor: 'Bagby, Parker & Taylor (1994)', 
+        poblacion: 'Adolescentes y Adultos', 
+        validez: 'Uso Clínico e Investigación', 
+        itemsCount: 20,
+        isPhysical: false,
+        instrucciones: 'Indique su grado de acuerdo o desacuerdo con cada una de las 20 afirmaciones según su experiencia personal.'
+    },
+    { 
+        code: 'ERQ', 
+        name: 'ERQ — Cuestionario de Regulación Emocional', 
+        siglas: 'ERQ', 
+        cat: 'Gestión Emocional', 
+        desc: 'Evalúa el uso habitual de dos estrategias fundamentales de regulación emocional: Reevaluación Cognitiva y Supresión Expresiva.', 
+        autor: 'Gross & John (2003) / Canales et al.', 
+        poblacion: 'Adolescentes y Adultos', 
+        validez: 'Baremos Validados por Sexo', 
+        itemsCount: 10,
+        isPhysical: false,
+        instrucciones: 'Responda del 1 al 7 el grado en que está de acuerdo con cada frase sobre el manejo de sus emociones.'
+    },
+    { 
+        code: 'TMMS-24', 
+        name: 'TMMS-24 — Escala de Inteligencia Emocional Percibida', 
+        siglas: 'TMMS-24', 
+        cat: 'Gestión Emocional', 
+        desc: 'Mide la inteligencia emocional intrapersonal percibida en tres dimensiones clave: Atención a los sentimientos, Claridad emocional y Reparación del afecto.', 
+        autor: 'Fernández-Berrocal et al. (2004) / Salovey & Mayer', 
+        poblacion: 'Adolescentes y Adultos', 
+        validez: 'Baremos Normativos por Sexo', 
+        itemsCount: 24,
+        isPhysical: false,
+        instrucciones: 'Valore del 1 al 5 en qué medida está de acuerdo con cada una de las afirmaciones acerca de cómo vive sus emociones.'
+    },
+    { 
+        code: 'DERS-E', 
+        name: 'DERS-E — Escala de Dificultades en la Regulación Emocional', 
+        siglas: 'DERS-E', 
+        cat: 'Gestión Emocional', 
+        desc: 'Evaluación psicométrica adaptada de 28 ítems para detectar descontrol emocional, rechazo a las emociones, interferencia cotidiana, desatención y confusión afectiva.', 
+        autor: 'Hervás & Jódar (2008) / Gratz & Roemer', 
+        poblacion: 'Adolescentes y Adultos', 
+        validez: 'Adaptación Española (5 Factores)', 
+        itemsCount: 28,
+        isPhysical: false,
+        instrucciones: 'Indique con qué frecuencia experimenta cada situación (desde Casi nunca hasta Casi siempre).'
+    },
+
     // --- NUEVAS EVALUACIONES DE VIOLENCIA Y PSICOSIS ---
     { 
         code: 'CUVINO', 

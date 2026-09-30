@@ -760,7 +760,537 @@ def process_holland_scoring(answers, db=None):
 
 
 # =========================================================================
-# DISPATCHER MAESTRO UNIVERSAL
+# 10. TAS-20 (ESCALA DE ALEXITIMIA DE TORONTO - BAGBY, PARKER & TAYLOR)
+# =========================================================================
+def process_tas20_scoring(answers):
+    """
+    TAS-20 (Toronto Alexithymia Scale - Bagby, Parker & Taylor, 1994)
+    20 ítems con escala Likert de 5 puntos (1 a 5).
+    Ítems inversos: 4, 5, 10, 18, 19 (Puntuación invertida: 6 - valor).
+    Subescalas:
+    - F1: Dificultad para Identificar Sentimientos (DIF): ítems 1, 3, 6, 7, 9, 13, 14 (rango 7-35).
+    - F2: Dificultad para Describir Sentimientos (DDF): ítems 2, 4, 11, 12, 17 (rango 5-25).
+    - F3: Pensamiento Orientado Externamente (EOT): ítems 5, 8, 10, 15, 16, 18, 19, 20 (rango 8-40).
+    Puntuación Total Directa: 20 a 100 pts.
+    Puntos de corte oficiales:
+    - <= 51: Sin Alexitimia (Normal)
+    - 52 a 60: Alexitimia Posible / Límite
+    - >= 61: Presencia Significativa de Alexitimia (Clínico)
+    """
+    ans_map = _extract_answer_map(answers)
+    reverse_items = {4, 5, 10, 18, 19}
+    
+    scored_items = {}
+    for i in range(1, 21):
+        raw = ans_map.get(i, 3)
+        if raw in (0, 1, 2, 3, 4) and max(ans_map.values(), default=0) <= 4:
+            raw = raw + 1
+        if raw < 1: raw = 1
+        if raw > 5: raw = 5
+        scored_items[i] = (6 - raw) if i in reverse_items else raw
+        
+    dif_items = [1, 3, 6, 7, 9, 13, 14]
+    ddf_items = [2, 4, 11, 12, 17]
+    eot_items = [5, 8, 10, 15, 16, 18, 19, 20]
+    
+    dif_score = sum(scored_items[i] for i in dif_items)
+    ddf_score = sum(scored_items[i] for i in ddf_items)
+    eot_score = sum(scored_items[i] for i in eot_items)
+    total_score = dif_score + ddf_score + eot_score
+    
+    if total_score <= 51:
+        classification = "Sin Alexitimia (Nivel Normal)"
+        alerta = "normal"
+        desc_global = "Puntuación dentro de la normalidad. La persona presenta adecuada capacidad para identificar, diferenciar y verbalizar sus estados afectivos, manteniendo un estilo introspectivo saludable."
+    elif total_score <= 60:
+        classification = "Alexitimia Posible / Zona Límite (Riesgo Moderado)"
+        alerta = "moderado"
+        desc_global = "Puntuación límite o intermedia. Sugiere dificultades moderadas para conectar con el mundo afectivo interno o verbalizar emociones en momentos de estrés o conflicto interpersonal."
+    else:
+        classification = "Presencia Significativa de Alexitimia (Criterio Clínico)"
+        alerta = "severo"
+        desc_global = "Puntuación con significación clínica elevada. Indica marcadas dificultades para identificar emociones, severa limitación para verbalizar sentimientos a otros y un estilo cognitivo predominantemente concreto y orientado al exterior."
+        
+    subscales_dict = {
+        "Dificultad para Identificar Sentimientos (DIF)": {
+            "pd": f"{dif_score} / 35",
+            "nivel": "Elevado" if dif_score >= 22 else ("Moderado" if dif_score >= 15 else "Bajo / Adecuado"),
+            "alerta": "severo" if dif_score >= 22 else ("moderado" if dif_score >= 15 else "normal"),
+            "criterio": "Ítems 1, 3, 6, 7, 9, 13, 14"
+        },
+        "Dificultad para Describir Sentimientos (DDF)": {
+            "pd": f"{ddf_score} / 25",
+            "nivel": "Elevado" if ddf_score >= 16 else ("Moderado" if ddf_score >= 11 else "Bajo / Adecuado"),
+            "alerta": "severo" if ddf_score >= 16 else ("moderado" if ddf_score >= 11 else "normal"),
+            "criterio": "Ítems 2, 4, 11, 12, 17"
+        },
+        "Pensamiento Orientado Externamente (EOT)": {
+            "pd": f"{eot_score} / 40",
+            "nivel": "Elevado" if eot_score >= 25 else ("Moderado" if eot_score >= 18 else "Bajo / Adecuado"),
+            "alerta": "severo" if eot_score >= 25 else ("moderado" if eot_score >= 18 else "normal"),
+            "criterio": "Ítems 5, 8, 10, 15, 16, 18, 19, 20"
+        },
+        "Puntuación Total TAS-20": {
+            "pd": f"{total_score} / 100",
+            "nivel": classification,
+            "alerta": alerta,
+            "criterio": "Baremo de Bagby, Parker & Taylor (Corte <=51 / 52-60 / >=61)"
+        }
+    }
+    
+    interpretation = (
+        f"INFORME PSICOMÉTRICO: ESCALA DE ALEXITIMIA DE TORONTO (TAS-20)\n\n"
+        f"• Puntuación Total: {total_score}/100 pts\n"
+        f"• Clasificación Clínica: {classification}\n\n"
+        f"Interpretación Diagnóstica:\n{desc_global}\n\n"
+        f"Desglose por Factores Dimensionales:\n"
+        f"1. Dificultad para Identificar Sentimientos (DIF): {dif_score}/35 pts — Nivel {subscales_dict['Dificultad para Identificar Sentimientos (DIF)']['nivel']}.\n"
+        f"2. Dificultad para Describir Sentimientos (DDF): {ddf_score}/25 pts — Nivel {subscales_dict['Dificultad para Describir Sentimientos (DDF)']['nivel']}.\n"
+        f"3. Pensamiento Orientado Externamente (EOT): {eot_score}/40 pts — Nivel {subscales_dict['Pensamiento Orientado Externamente (EOT)']['nivel']}.\n\n"
+        f"Sugerencias Clínicas: " + (
+            "Se aconseja trabajar en psicoeducación emocional, conexión somatosensorial y ampliación del vocabulario afectivo para facilitar la regulación de las emociones."
+            if total_score >= 52 else "Mantiene un perfil emocional funcional adecuado para el abordaje terapéutico regular."
+        )
+    )
+    return float(total_score), subscales_dict, classification, interpretation
+
+
+# =========================================================================
+# 11. ERQ (CUESTIONARIO DE REGULACIÓN EMOCIONAL - GROSS & JOHN / CANALES)
+# =========================================================================
+def process_erq_scoring(answers, patient_info=None):
+    """
+    ERQ (Emotion Regulation Questionnaire - Gross & John, 2003 / Canales et al., 2022)
+    10 ítems con escala Likert de 7 puntos (1 a 7).
+    Subescalas:
+    - Reevaluación Cognitiva (CR): ítems 1, 3, 5, 7, 8, 10 (rango 6 a 42).
+    - Supresión Expresiva (ES): ítems 2, 4, 6, 9 (rango 4 a 28).
+    Baremos normativos (Canales et al., 2022):
+    - Reevaluación: Bajo <= 26, Promedio 27-34, Alto >= 35.
+    - Supresión:
+      * Hombres: Bajo <= 11, Promedio 12-19, Alto >= 20.
+      * Mujeres: Bajo <= 9, Promedio 10-17, Alto >= 18.
+    """
+    ans_map = _extract_answer_map(answers)
+    patient_info = patient_info or {}
+    genero_str = (patient_info.get('genero') or '').strip().lower()
+    is_male = genero_str in ['m', 'masculino', 'hombre', 'varon', 'varón'] or any(genero_str.startswith(g) for g in ['masc', 'homb', 'var'])
+    is_female = genero_str in ['f', 'femenino', 'mujer'] or any(genero_str.startswith(g) for g in ['fem', 'muj'])
+    
+    scored_items = {}
+    for i in range(1, 11):
+        v = ans_map.get(i, 4)
+        if v < 1: v = 1
+        if v > 7: v = 7
+        scored_items[i] = v
+        
+    cr_items = [1, 3, 5, 7, 8, 10]
+    es_items = [2, 4, 6, 9]
+    
+    cr_score = sum(scored_items[i] for i in cr_items)
+    es_score = sum(scored_items[i] for i in es_items)
+    total_score = cr_score + es_score
+    
+    # Niveles Reevaluación
+    if cr_score <= 26:
+        cr_nivel = "Uso Bajo (Dificultad de Reevaluación Adaptativa)"
+        cr_alerta = "moderado"
+        cr_interp = "Tiende a experimentar dificultades para reformular cognitivamente las situaciones estresantes antes de que provoquen una respuesta emocional displacentera."
+    elif cr_score <= 34:
+        cr_nivel = "Uso Promedio / Normativo"
+        cr_alerta = "normal"
+        cr_interp = "Presenta un empleo habitual y adecuado de la reinterpretación cognitiva para amortiguar estados emocionales negativos o potenciar los positivos."
+    else:
+        cr_nivel = "Uso Alto / Frecuente (Estrategia Adaptativa)"
+        cr_alerta = "normal"
+        cr_interp = "Alta capacidad y disposición para modificar su perspectiva y pensamiento ante acontecimientos difíciles, manteniendo una buena autorregulación emocional."
+        
+    # Niveles Supresión (diferenciado por sexo)
+    if is_female:
+        if es_score <= 9:
+            es_nivel = "Uso Bajo (Alta Expresividad Emocional)"
+            es_alerta = "normal"
+            es_desc = "Baja inhibición; expresa espontánea y saludablemente sus estados afectivos en sus interacciones."
+        elif es_score <= 17:
+            es_nivel = "Uso Promedio / Normativo"
+            es_alerta = "normal"
+            es_desc = "Nivel normativo de contención emocional acorde a los contextos interpersonales."
+        else:
+            es_nivel = "Uso Alto (Inhibición Expresiva Marcada)"
+            es_alerta = "severo"
+            es_desc = "Fuerte tendencia a ocultar e inhibir las emociones internas, lo cual se asocia con mayor sobrecarga alostática y menor intimidad relacional."
+    elif is_male:
+        if es_score <= 11:
+            es_nivel = "Uso Bajo (Alta Expresividad Emocional)"
+            es_alerta = "normal"
+            es_desc = "Baja inhibición; expresa espontánea y abiertamente lo que experimenta internamente."
+        elif es_score <= 19:
+            es_nivel = "Uso Promedio / Normativo"
+            es_alerta = "normal"
+            es_desc = "Nivel normativo de contención emocional en consonancia con el promedio poblacional."
+        else:
+            es_nivel = "Uso Alto (Inhibición Expresiva Marcada)"
+            es_alerta = "severo"
+            es_desc = "Tendencia significativa a reprimir la expresión externa de emociones tanto positivas como negativas, pudiendo generar distanciamiento interpersonal o somatizaciones."
+    else:
+        if es_score <= 10:
+            es_nivel = "Uso Bajo (Alta Expresividad Emocional)"
+            es_alerta = "normal"
+            es_desc = "Baja inhibición expresiva general."
+        elif es_score <= 18:
+            es_nivel = "Uso Promedio / Normativo"
+            es_alerta = "normal"
+            es_desc = "Nivel estándar de contención expresiva."
+        else:
+            es_nivel = "Uso Alto (Inhibición Emocional Marcada)"
+            es_alerta = "severo"
+            es_desc = "Tendencia relevante a sofocar la manifestación externa de las emociones."
+
+    # Clasificación Global del Perfil
+    es_alta = (es_score >= 18 if is_female else (es_score >= 20 if is_male else es_score >= 19))
+    cr_alta = cr_score >= 27
+    if cr_alta and not es_alta:
+        classification = "Perfil Regulador Adaptativo (Alta Reevaluación / Baja Inhibición)"
+    elif cr_alta and es_alta:
+        classification = "Perfil Regulador Mixto (Estratégico pero con Inhibición Afectiva)"
+    elif not cr_alta and es_alta:
+        classification = "Perfil Desadaptativo / Supresor (Baja Flexibilidad y Alta Represión)"
+    else:
+        classification = "Perfil No Regulado / Reactivo (Baja Reevaluación y Baja Inhibición)"
+
+    subscales_dict = {
+        "Reevaluación Cognitiva (CR)": {
+            "pd": f"{cr_score} / 42",
+            "nivel": cr_nivel,
+            "alerta": cr_alerta,
+            "criterio": "Media pop: ~29.9 (Bajo <=26, Medio 27-34, Alto >=35)"
+        },
+        "Supresión Expresiva (ES)": {
+            "pd": f"{es_score} / 28",
+            "nivel": es_nivel,
+            "alerta": es_alerta,
+            "criterio": f"Baremo {'Mujeres' if is_female else ('Hombres' if is_male else 'General')}"
+        },
+        "Puntuación Global ERQ": {
+            "pd": f"{total_score} / 70",
+            "nivel": classification,
+            "alerta": "moderado" if not cr_alta or es_alta else "normal",
+            "criterio": "Gross & John / Canales et al."
+        }
+    }
+
+    interpretation = (
+        f"INFORME DEL CUESTIONARIO DE REGULACIÓN EMOCIONAL (ERQ):\n\n"
+        f"• Perfil de Regulación Emocional: {classification}\n"
+        f"• Baremo Aplicado: {'Baremo Femenino' if is_female else ('Baremo Masculino' if is_male else 'Baremo General')}\n\n"
+        f"1. Reevaluación Cognitiva (CR): {cr_score}/42 pts — {cr_nivel}\n"
+        f"   {cr_interp}\n\n"
+        f"2. Supresión Expresiva (ES): {es_score}/28 pts — {es_nivel}\n"
+        f"   {es_desc}\n\n"
+        f"Recomendación Terapéutica: " + (
+            "Se sugiere fortalecer la reestructuración cognitiva y desensibilizar el temor a la expresión emocional libre y asertiva."
+            if not cr_alta or es_alta else "Perfil regulatorio adaptativo que favorece una adecuada resiliencia psicológica y salud relacional."
+        )
+    )
+    return float(total_score), subscales_dict, classification, interpretation
+
+
+# =========================================================================
+# 12. TMMS-24 (TRAIT META-MOOD SCALE - FERNÁNDEZ-BERROCAL ET AL., 2004)
+# =========================================================================
+def process_tmms24_scoring(answers, patient_info=None):
+    """
+    TMMS-24 (Escala de Inteligencia Emocional Percibida - Salovey & Mayer / Fernández-Berrocal et al., 2004)
+    24 ítems con escala Likert de 5 puntos (1 a 5).
+    Subescalas (8 ítems cada una, rango 8 a 40):
+    - Atención Emocional (ítems 1-8).
+    - Claridad Emocional (ítems 9-16).
+    - Reparación Emocional (ítems 17-24).
+    Baremos normativos diferenciados por sexo (Fernández-Berrocal et al., 2004).
+    """
+    ans_map = _extract_answer_map(answers)
+    patient_info = patient_info or {}
+    genero_str = (patient_info.get('genero') or '').strip().lower()
+    is_male = genero_str in ['m', 'masculino', 'hombre', 'varon', 'varón'] or any(genero_str.startswith(g) for g in ['masc', 'homb', 'var'])
+    is_female = genero_str in ['f', 'femenino', 'mujer'] or any(genero_str.startswith(g) for g in ['fem', 'muj'])
+    
+    scored_items = {}
+    for i in range(1, 25):
+        v = ans_map.get(i, 3)
+        if v < 1: v = 1
+        if v > 5: v = 5
+        scored_items[i] = v
+        
+    atencion_items = list(range(1, 9))
+    claridad_items = list(range(9, 17))
+    reparacion_items = list(range(17, 25))
+    
+    atencion_score = sum(scored_items[i] for i in atencion_items)
+    claridad_score = sum(scored_items[i] for i in claridad_items)
+    reparacion_score = sum(scored_items[i] for i in reparacion_items)
+    total_score = atencion_score + claridad_score + reparacion_score
+    
+    # Baremos oficiales por sexo
+    if is_female:
+        if atencion_score < 24:
+            atn_desc = "Debe mejorar su atención: presta poca atención a sus emociones"
+            atn_alerta = "moderado"
+        elif atencion_score <= 35:
+            atn_desc = "Adecuada atención a sus emociones"
+            atn_alerta = "normal"
+        else:
+            atn_desc = "Debe mejorar su atención: presta demasiada atención (posible hipervigilancia/rumiación)"
+            atn_alerta = "moderado"
+            
+        if claridad_score < 23:
+            cla_desc = "Debe mejorar su claridad: dificultad para comprender lo que siente"
+            cla_alerta = "moderado"
+        elif claridad_score <= 34:
+            cla_desc = "Adecuada comprensión de sus estados emocionales"
+            cla_alerta = "normal"
+        else:
+            cla_desc = "Excelente comprensión y claridad emocional"
+            cla_alerta = "normal"
+            
+        if reparacion_score < 23:
+            rep_desc = "Debe mejorar su capacidad de regulación / reparación emocional"
+            rep_alerta = "moderado"
+        elif reparacion_score <= 34:
+            rep_desc = "Adecuada capacidad para reparar y regular estados de ánimo negativos"
+            rep_alerta = "normal"
+        else:
+            rep_desc = "Excelente capacidad de regulación y optimismo reparador"
+            rep_alerta = "normal"
+            
+    elif is_male:
+        if atencion_score < 21:
+            atn_desc = "Debe mejorar su atención: presta poca atención a sus emociones"
+            atn_alerta = "moderado"
+        elif atencion_score <= 32:
+            atn_desc = "Adecuada atención a sus emociones"
+            atn_alerta = "normal"
+        else:
+            atn_desc = "Debe mejorar su atención: presta demasiada atención (hipervigilancia/rumiación)"
+            atn_alerta = "moderado"
+            
+        if claridad_score < 25:
+            cla_desc = "Debe mejorar su claridad: dificultad para comprender lo que siente"
+            cla_alerta = "moderado"
+        elif claridad_score <= 35:
+            cla_desc = "Adecuada comprensión de sus estados emocionales"
+            cla_alerta = "normal"
+        else:
+            cla_desc = "Excelente comprensión y claridad emocional"
+            cla_alerta = "normal"
+            
+        if reparacion_score < 23:
+            rep_desc = "Debe mejorar su capacidad de regulación / reparación emocional"
+            rep_alerta = "moderado"
+        elif reparacion_score <= 35:
+            rep_desc = "Adecuada capacidad para reparar y regular estados de ánimo negativos"
+            rep_alerta = "normal"
+        else:
+            rep_desc = "Excelente capacidad de regulación y optimismo reparador"
+            rep_alerta = "normal"
+            
+    else:
+        if atencion_score < 22:
+            atn_desc = "Poca atención a las emociones (Debe mejorar)"
+            atn_alerta = "moderado"
+        elif atencion_score <= 33:
+            atn_desc = "Adecuada atención emocional"
+            atn_alerta = "normal"
+        else:
+            atn_desc = "Demasiada atención emocional (Riesgo de rumiación)"
+            atn_alerta = "moderado"
+
+        if claridad_score < 24:
+            cla_desc = "Baja claridad emocional (Debe mejorar)"
+            cla_alerta = "moderado"
+        elif claridad_score <= 34:
+            cla_desc = "Adecuada claridad emocional"
+            cla_alerta = "normal"
+        else:
+            cla_desc = "Excelente claridad emocional"
+            cla_alerta = "normal"
+
+        if reparacion_score < 23:
+            rep_desc = "Baja capacidad de reparación (Debe mejorar)"
+            rep_alerta = "moderado"
+        elif reparacion_score <= 34:
+            rep_desc = "Adecuada reparación emocional"
+            rep_alerta = "normal"
+        else:
+            rep_desc = "Excelente capacidad de reparación emocional"
+            rep_alerta = "normal"
+
+    alertas_count = sum(1 for a in [atn_alerta, cla_alerta, rep_alerta] if a == 'moderado')
+    if alertas_count == 0:
+        classification = "Inteligencia Emocional Percibida Óptima y Equilibrada"
+    elif alertas_count == 1:
+        classification = "Inteligencia Emocional Percibida con Área Específica a Fortalecer"
+    else:
+        classification = "Dificultades en Inteligencia Emocional Percibida (Atención, Claridad o Regulación)"
+
+    subscales_dict = {
+        "Atención Emocional": {
+            "pd": f"{atencion_score} / 40",
+            "nivel": atn_desc,
+            "alerta": atn_alerta,
+            "criterio": "Baremo Fernández-Berrocal"
+        },
+        "Claridad Emocional": {
+            "pd": f"{claridad_score} / 40",
+            "nivel": cla_desc,
+            "alerta": cla_alerta,
+            "criterio": "Baremo Fernández-Berrocal"
+        },
+        "Reparación Emocional": {
+            "pd": f"{reparacion_score} / 40",
+            "nivel": rep_desc,
+            "alerta": rep_alerta,
+            "criterio": "Baremo Fernández-Berrocal"
+        },
+        "Puntuación Global TMMS-24": {
+            "pd": f"{total_score} / 120",
+            "nivel": classification,
+            "alerta": "moderado" if alertas_count > 0 else "normal",
+            "criterio": "Evaluación Perceptivo-Emocional"
+        }
+    }
+
+    interpretation = (
+        f"INFORME PSICOMÉTRICO: TRAIT META-MOOD SCALE-24 (TMMS-24)\n\n"
+        f"• Puntuación Total Global: {total_score}/120 pts\n"
+        f"• Diagnóstico del Perfil: {classification}\n"
+        f"• Grupo de Baremo Aplicado: {'Norma Femenina' if is_female else ('Norma Masculina' if is_male else 'Norma Poblacional General')}\n\n"
+        f"Resultados por Dimensiones de Inteligencia Emocional:\n"
+        f"1. Atención Emocional: {atencion_score}/40 pts\n"
+        f"   Dictamen: {atn_desc}\n\n"
+        f"2. Claridad Emocional: {claridad_score}/40 pts\n"
+        f"   Dictamen: {cla_desc}\n\n"
+        f"3. Reparación Emocional: {reparacion_score}/40 pts\n"
+        f"   Dictamen: {rep_desc}\n\n"
+        f"Conclusión Clínica: " + (
+            "Se observa un patrón armónico de autoconocimiento, comprensión de estados internos y habilidad para modular el afecto disfórico."
+            if alertas_count == 0 else "Se recomienda orientar la intervención hacia el entrenamiento en habilidades de comprensión emocional o técnicas de desactivación rumiativa / reparación del estado de ánimo."
+        )
+    )
+    return float(total_score), subscales_dict, classification, interpretation
+
+
+# =========================================================================
+# 13. DERS-E (ESCALA DE DIFICULTADES EN LA REGULACIÓN EMOCIONAL - HERVÁS & JÓDAR)
+# =========================================================================
+def process_ders_scoring(answers, patient_info=None):
+    """
+    DERS-E (Escala de Dificultades en la Regulación Emocional - Versión adaptada de 28 ítems por Hervás & Jódar, 2008)
+    28 ítems con escala Likert de 5 puntos (1 a 5).
+    5 Factores:
+    - Descontrol Emocional (9 ítems): 3, 13, 14, 15, 17, 22, 25, 26, 28 (Media 16.2, DE 7.1).
+    - Rechazo Emocional (7 ítems): 10, 11, 18, 19, 20, 23, 24 (Media 14.7, DE 6.4).
+    - Interferencia Cotidiana (4 ítems): 12, 16, 21, 27 (Media 10.1, DE 3.8).
+    - Desatención Emocional (4 ítems, inversos): 2, 6, 7, 9 (Media 9.6, DE 3.3).
+    - Confusión Emocional (4 ítems, ítem 1 inverso): 1, 4, 5, 8 (Media 7.8, DE 3.1).
+    Total: Rango 28 a 140 (Media 58.4, DE 17.6).
+    """
+    ans_map = _extract_answer_map(answers)
+    reverse_items = {1, 2, 6, 7, 9}
+    
+    scored_items = {}
+    for i in range(1, 29):
+        v = ans_map.get(i, 3)
+        if v < 1: v = 1
+        if v > 5: v = 5
+        scored_items[i] = (6 - v) if i in reverse_items else v
+        
+    descontrol_items = [3, 13, 14, 15, 17, 22, 25, 26, 28]
+    rechazo_items = [10, 11, 18, 19, 20, 23, 24]
+    interferencia_items = [12, 16, 21, 27]
+    desatencion_items = [2, 6, 7, 9]
+    confusion_items = [1, 4, 5, 8]
+    
+    descontrol_score = sum(scored_items[i] for i in descontrol_items)
+    rechazo_score = sum(scored_items[i] for i in rechazo_items)
+    interferencia_score = sum(scored_items[i] for i in interferencia_items)
+    desatencion_score = sum(scored_items[i] for i in desatencion_items)
+    confusion_score = sum(scored_items[i] for i in confusion_items)
+    total_score = descontrol_score + rechazo_score + interferencia_score + desatencion_score + confusion_score
+    
+    if total_score < 58:
+        classification = "Dificultades Bajas / Regulación Emocional Óptima"
+        alerta = "normal"
+        desc_global = "Puntuación en el percentil inferior a la media normativa. La persona cuenta con recursos psicológicos sólidos para tolerar, comprender y modular sus experiencias emocionales sin verse desbordada."
+    elif total_score <= 75:
+        classification = "Dificultades Moderadas / Promedio Normativo"
+        alerta = "leve"
+        desc_global = "Puntuación dentro del rango medio esperado de la población. Manifiesta oscilaciones o dificultades ocasionales en la regulación del afecto displacentero, pero sin compromiso funcional severo."
+    elif total_score <= 93:
+        classification = "Dificultades Altas en Regulación Emocional (Significación Clínica)"
+        alerta = "moderado"
+        desc_global = "Puntuación superior a 1 desviación estándar sobre la media. Evidencia dificultades clínicamente significativas para contener impulsos, aceptar emociones desagradables o sostener actividades cotidianas durante episodios de malestar."
+    else:
+        classification = "Desregulación Emocional Severa (Alerta Clínica Alta)"
+        alerta = "severo"
+        desc_global = "Puntuación superior a 2 desviaciones estándar sobre la media. Indica dificultades generalizadas y graves en todos los componentes de la regulación afectiva, con alto riesgo de conductas impulsivas o desbordamiento emocional desadaptativo."
+
+    subscales_dict = {
+        "Descontrol Emocional": {
+            "pd": f"{descontrol_score} / 45",
+            "nivel": "Elevado" if descontrol_score >= 23 else ("Moderado" if descontrol_score >= 17 else "Bajo"),
+            "alerta": "severo" if descontrol_score >= 23 else ("moderado" if descontrol_score >= 17 else "normal"),
+            "criterio": "Norma Hervás: M=16.2, DE=7.1"
+        },
+        "Rechazo Emocional": {
+            "pd": f"{rechazo_score} / 35",
+            "nivel": "Elevado" if rechazo_score >= 21 else ("Moderado" if rechazo_score >= 15 else "Bajo"),
+            "alerta": "severo" if rechazo_score >= 21 else ("moderado" if rechazo_score >= 15 else "normal"),
+            "criterio": "Norma Hervás: M=14.7, DE=6.4"
+        },
+        "Interferencia Cotidiana": {
+            "pd": f"{interferencia_score} / 20",
+            "nivel": "Elevado" if interferencia_score >= 14 else ("Moderado" if interferencia_score >= 11 else "Bajo"),
+            "alerta": "severo" if interferencia_score >= 14 else ("moderado" if interferencia_score >= 11 else "normal"),
+            "criterio": "Norma Hervás: M=10.1, DE=3.8"
+        },
+        "Desatención Emocional": {
+            "pd": f"{desatencion_score} / 20",
+            "nivel": "Elevado" if desatencion_score >= 13 else ("Moderado" if desatencion_score >= 10 else "Bajo"),
+            "alerta": "severo" if desatencion_score >= 13 else ("moderado" if desatencion_score >= 10 else "normal"),
+            "criterio": "Norma Hervás: M=9.6, DE=3.3"
+        },
+        "Confusión Emocional": {
+            "pd": f"{confusion_score} / 20",
+            "nivel": "Elevado" if confusion_score >= 11 else ("Moderado" if confusion_score >= 8 else "Bajo"),
+            "alerta": "severo" if confusion_score >= 11 else ("moderado" if confusion_score >= 8 else "normal"),
+            "criterio": "Norma Hervás: M=7.8, DE=3.1"
+        },
+        "Puntuación Global DERS-E": {
+            "pd": f"{total_score} / 140",
+            "nivel": classification,
+            "alerta": alerta,
+            "criterio": "Baremo Hervás & Jódar (M=58.4, DE=17.6)"
+        }
+    }
+
+    interpretation = (
+        f"INFORME PSICOMÉTRICO: ESCALA DE DIFICULTADES EN LA REGULACIÓN EMOCIONAL (DERS-E)\n\n"
+        f"• Puntuación Total Global: {total_score}/140 pts\n"
+        f"• Clasificación Clínica: {classification}\n"
+        f"• Referencia Baremo: Adaptación española de 28 ítems (Hervás & Jódar, 2008; N=254)\n\n"
+        f"Interpretación Diagnóstica:\n{desc_global}\n\n"
+        f"Perfil Dimensional por Factores:\n"
+        f"1. Descontrol Emocional: {descontrol_score}/45 pts (M=16.2, DE=7.1) — Nivel {subscales_dict['Descontrol Emocional']['nivel']}.\n"
+        f"2. Rechazo Emocional: {rechazo_score}/35 pts (M=14.7, DE=6.4) — Nivel {subscales_dict['Rechazo Emocional']['nivel']}.\n"
+        f"3. Interferencia Cotidiana: {interferencia_score}/20 pts (M=10.1, DE=3.8) — Nivel {subscales_dict['Interferencia Cotidiana']['nivel']}.\n"
+        f"4. Desatención Emocional: {desatencion_score}/20 pts (M=9.6, DE=3.3) — Nivel {subscales_dict['Desatención Emocional']['nivel']}.\n"
+        f"5. Confusión Emocional: {confusion_score}/20 pts (M=7.8, DE=3.1) — Nivel {subscales_dict['Confusión Emocional']['nivel']}.\n\n"
+        f"Recomendaciones Clínicas: " + (
+            "Se recomienda focalizar el plan terapéutico en técnicas de aceptación emocional (reducción de culpa y vergüenza secundaria), entrenamiento en tolerancia al malestar y habilidades DBT de regulación del afecto e impulsividad."
+            if total_score >= 76 else "El paciente conserva un repertorio funcional de regulación afectiva adecuado para las demandas de su vida diaria."
+        )
+    )
+    return float(total_score), subscales_dict, classification, interpretation
 # =========================================================================
 def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     """
@@ -915,6 +1445,22 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     elif code == 'BSSC':
         from routes_tests import process_bssc_scoring
         return process_bssc_scoring(answers)
+        
+    # 32. TAS-20 (Alexitimia de Toronto)
+    elif code in ('TAS-20', 'TAS20', 'ALEXITIMIA', 'TORONTO') or 'ALEXITIMIA' in code:
+        return process_tas20_scoring(answers)
+        
+    # 33. ERQ (Cuestionario de Regulación Emocional)
+    elif code in ('ERQ', 'REGULACION-EMOCIONAL', 'GROSS'):
+        return process_erq_scoring(answers, patient_info=patient_info)
+        
+    # 34. TMMS-24 (Inteligencia Emocional Percibida)
+    elif code in ('TMMS-24', 'TMMS24', 'TMMS', 'INTELIGENCIA-EMOCIONAL'):
+        return process_tmms24_scoring(answers, patient_info=patient_info)
+        
+    # 35. DERS-E (Dificultades en la Regulación Emocional)
+    elif code in ('DERS-E', 'DERS', 'DERS-28', 'DERS28'):
+        return process_ders_scoring(answers, patient_info=patient_info)
         
     # Fallback genérico
     else:
