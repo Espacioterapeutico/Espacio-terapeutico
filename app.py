@@ -342,6 +342,13 @@ def decrypt_clinical_text(cipher_text):
         except Exception as e:
             print(f"Error decrypting: {e}")
             break
+    if isinstance(current, str) and current.startswith("gAAAAAB"):
+        try:
+            raw_cipher = current.encode('utf-8')
+            decrypted_bytes = cipher.decrypt(raw_cipher)
+            current = decrypted_bytes.decode('utf-8')
+        except Exception as e:
+            print(f"Error decrypting raw Fernet token: {e}")
     return current
 def get_vapid_keys(cursor):
     cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('vapid_public_key', 'vapid_private_key')")

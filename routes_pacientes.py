@@ -160,7 +160,12 @@ def clean_digits_only(s):
 def decrypt_clinical_text(txt):
     if not txt:
         return ""
-    return str(txt)
+    try:
+        from app import decrypt_clinical_text as _dct
+        return _dct(txt)
+    except Exception as ex:
+        print("Error desencriptando texto clínico en routes_pacientes:", ex)
+        return str(txt)
 
 def delete_patient_from_firebase(patient_id):
     try:
@@ -2002,6 +2007,9 @@ def get_patient_portal_data_dict(patient_id):
         
     p_dict = dict(row)
     p_dict.pop('password_hash', None)
+    for k in ['diagnostico', 'motivo_consulta', 'antecedentes']:
+        if p_dict.get(k):
+            p_dict[k] = decrypt_clinical_text(p_dict[k])
     
     psic_nom = f"Psic. {p_dict.get('psicologo_nombres') or ''} {p_dict.get('psicologo_apellidos') or ''}".strip()
     if psic_nom == "Psic.":
@@ -2105,10 +2113,10 @@ def get_patient_portal_data_dict(patient_id):
     compartido = {}
     if s_row:
         compartido = {
-            'resumen_sesion': s_row['resumen_paciente'] or '',
-            'temas_proxima_sesion': s_row['anotaciones_proxima'] or '',
-            'tareas_asignadas': s_row['tareas_asignadas'] or '',
-            'recursos_entregados': s_row['recursos_entregados'] or '',
+            'resumen_sesion': decrypt_clinical_text(s_row['resumen_paciente']) or '',
+            'temas_proxima_sesion': decrypt_clinical_text(s_row['anotaciones_proxima']) or '',
+            'tareas_asignadas': decrypt_clinical_text(s_row['tareas_asignadas']) or '',
+            'recursos_entregados': decrypt_clinical_text(s_row['recursos_entregados']) or '',
             'archivo_adjunto': s_row['archivo_adjunto'] or ''
         }
 
@@ -2277,6 +2285,9 @@ def get_patient_session_history():
     for r in rows:
         d = dict(r)
         d['resumen_paciente'] = decrypt_clinical_text(d.get('resumen_paciente')) or ''
+        d['anotaciones_proxima'] = decrypt_clinical_text(d.get('anotaciones_proxima')) or ''
+        d['tareas_asignadas'] = decrypt_clinical_text(d.get('tareas_asignadas')) or ''
+        d['recursos_entregados'] = decrypt_clinical_text(d.get('recursos_entregados')) or ''
         results.append(d)
     return jsonify(results)
 
