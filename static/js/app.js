@@ -16849,10 +16849,9 @@ async function submitFastBooking(e) {
                     <div style="font-weight: 800; font-size: 1rem; color: #065f46; margin-bottom: 0.35rem;">🎉 ¡Cita agendada con éxito!</div>
                     <div style="font-size: 0.85rem; color: #047857; margin-bottom: 0.25rem;">🕒 <strong>Tu hora local (${targetTz}):</strong> ${format12h(converted.timeStr)}${converted.dayOffsetStr} (${converted.dateStr})</div>
                     <div style="font-size: 0.82rem; color: #065f46; opacity: 0.9; margin-bottom: 0.75rem;">🇻🇪 <strong>Hora Terapeuta (Venezuela):</strong> ${format12h(hora)} (${fecha})</div>
-                    <a href="${gcalUrl}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 6px; background: #4285f4; color: white; padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(66,133,244,0.3);">
-                        📅 Agregar a mi Google Calendar
-                    </a>
-                    <br><br>
+                    <div style="font-size: 0.8rem; color: #047857; margin-bottom: 0.85rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.5rem 0.75rem; font-weight: 600;">
+                        ✓ Sincronizada automáticamente con Google Calendar
+                    </div>
                     <button type="button" onclick="resetFastBookingForm()" class="btn btn-secondary" style="width: 100%; border-radius: 8px; font-weight: 700; padding: 0.6rem;">Agendar nueva consulta</button>
                 </div>
             `;
