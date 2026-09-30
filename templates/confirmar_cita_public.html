@@ -300,10 +300,20 @@
                         }
                     }
                 } else {
-                    icon.innerText = '⚠️';
-                    icon.style.background = 'rgba(255, 193, 7, 0.1)';
-                    title.innerText = 'Error';
-                    desc.innerText = data.error || 'Ocurrió un problema, intenta de nuevo.';
+                    icon.innerText = data.cancelada ? '🚫' : '⚠️';
+                    icon.style.background = data.cancelada ? 'rgba(220, 38, 38, 0.1)' : 'rgba(255, 193, 7, 0.1)';
+                    title.innerText = data.cancelada ? 'Consulta Cancelada' : 'Aviso';
+                    let actionHtml = `<p style="line-height:1.45;">${data.error || 'Ocurrió un problema, intenta de nuevo.'}</p>`;
+                    if (data.fast_booking_url) {
+                        actionHtml += `
+                            <div style="margin-top: 1.5rem;">
+                                <a href="${data.fast_booking_url}" class="btn btn-confirm" style="text-decoration:none; display:block; text-align:center;">
+                                    📅 Volver a Agendar Consulta
+                                </a>
+                            </div>
+                        `;
+                    }
+                    desc.innerHTML = actionHtml;
                 }
             } catch (err) {
                 document.getElementById('loading-view').style.display = 'none';

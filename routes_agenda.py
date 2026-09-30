@@ -1240,6 +1240,22 @@ def update_agenda_event_status(event_id):
         is_confirming = (confirmada == 1 or estado == 'Confirmada')
         is_cancelling = bool(target_cancellation)
 
+        if is_cancelling and cita and cita.get('token_confirmacion'):
+            try:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO citas_canceladas_log (
+                        agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                        paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    event_id, cita['token_confirmacion'], cita['paciente_id'],
+                    cita.get('psicologo_id'), f"{cita.get('nombres','')} {cita.get('apellidos','')}".strip(),
+                    cita.get('fecha'), cita.get('hora'), cita.get('tipo_consulta'),
+                    f"Cancelada: {motivo or target_cancellation}"
+                ))
+            except Exception as _e_canc_log:
+                print("Error registering cancellation in citas_canceladas_log:", _e_canc_log)
+
         if (is_confirming or (is_cancelling and notificar_wa)) and cita and cita['telefono']:
             phone_clean = clean_phone_number(cita['telefono'])
             psych_id = cita['psicologo_id'] or session.get('user_id') or 1
@@ -1317,11 +1333,14 @@ def delete_agenda_event(event_id):
     cursor = db.cursor()
     user_id = session.get('user_id')
 
-    # 1. Consultar cita antes de borrar para limpiar Google Calendar
+    # 1. Consultar cita antes de borrar para limpiar Google Calendar y guardar en citas_canceladas_log
     cursor.execute("""
-        SELECT af.id, af.google_event_id, af.paciente_id, af.creado_por_user_id, p.psicologo_id
+        SELECT af.id, af.google_event_id, af.paciente_id, af.creado_por_user_id, af.token_confirmacion,
+               af.fecha, af.hora, af.tipo_consulta, p.nombres, p.apellidos, p.psicologo_id,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.slug as psic_slug, u.whatsapp_publico as psic_wa
         FROM agenda_finanzas af
         LEFT JOIN pacientes p ON af.paciente_id = p.id
+        LEFT JOIN usuarios u ON u.id = COALESCE(p.psicologo_id, af.creado_por_user_id, 1)
         WHERE af.id = ?
     """, (event_id,))
     cita = cursor.fetchone()
@@ -1338,6 +1357,27 @@ def delete_agenda_event(event_id):
                 )
         except Exception as ge:
             print("Error al actualizar evento en Google Calendar al borrar cita:", ge)
+
+    if cita and cita.get('token_confirmacion'):
+        try:
+            cursor.execute("""
+                INSERT OR REPLACE INTO citas_canceladas_log (
+                    agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                    paciente_nombre, psicologo_nombre, psicologo_slug, psicologo_telefono,
+                    fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                event_id, cita['token_confirmacion'], cita['paciente_id'],
+                cita.get('psicologo_id') or cita.get('creado_por_user_id'),
+                f"{cita.get('nombres','')} {cita.get('apellidos','')}".strip(),
+                f"{cita.get('psic_nombres','')} {cita.get('psic_apellidos','')}".strip(),
+                cita.get('psic_slug') or 'psic.paulomora',
+                cita.get('psic_wa') or '584245926114',
+                cita.get('fecha'), cita.get('hora'), cita.get('tipo_consulta'),
+                'Cancelada / Eliminada de la agenda'
+            ))
+        except Exception as _e_del_log:
+            print("Error logging deleted appointment in citas_canceladas_log:", _e_del_log)
 
     cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
     cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
@@ -1868,27 +1908,102 @@ def delete_admin_consultation_history_event(event_id):
 def vista_confirmar_cita(token):
     db = get_db()
     cursor = db.cursor()
+    import re, urllib.parse
     
-    # Buscar la cita por token
+    # 1. Buscar la cita por token en agenda_finanzas
     cursor.execute("""
-        SELECT af.*, p.nombres, p.apellidos, u.nombres as psic_nombres, u.apellidos as psic_apellidos
+        SELECT af.*, p.nombres, p.apellidos, p.psicologo_id,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.username as psic_username,
+               u.slug as psic_slug, u.whatsapp_publico as psic_whatsapp
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
-        LEFT JOIN usuarios u ON p.psicologo_id = u.id
+        LEFT JOIN usuarios u ON u.id = COALESCE(p.psicologo_id, af.creado_por_user_id, 1)
         WHERE af.token_confirmacion = ?
     """, (token,))
     cita = cursor.fetchone()
-    
-    if not cita:
-        return render_template('cita_invalida.html', mensaje="El enlace proporcionado no es válido o la cita ya no existe.")
+    if cita:
+        cita = dict(cita)
+        estado_pago = str(cita.get('estado_pago') or '').strip()
+        referencia = str(cita.get('referencia') or '').strip()
+        is_cancelled = 'cancelad' in estado_pago.lower() or 'cancelad' in referencia.lower() or (cita.get('confirmada') == 0 and ('falta' in referencia.lower() or 'sistema' in referencia.lower()))
+
+        psic_nombre = f"{cita.get('psic_nombres') or ''} {cita.get('psic_apellidos') or ''}".strip() or "Tu especialista"
+        pac_primer_nombre = (cita.get('nombres') or '').split()[0] if cita.get('nombres') else 'consultante'
+        fecha_display = cita.get('fecha')
+        hora_display = cita.get('hora_paciente') or cita.get('hora')
+        modalidad_display = cita.get('tipo_consulta') or 'Online'
         
-    from datetime import datetime
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    
-    if cita['fecha'] < today_str:
-        return render_template('cita_invalida.html', mensaje="Esta cita ya ocurrió y no puede ser modificada.")
+        target_slug = cita.get('psic_slug') or cita.get('psic_username') or 'psic.paulomora'
+        clean_slug = target_slug if str(target_slug).startswith('psic.') else f"psic.{target_slug}"
+        fast_booking_url = f"https://www.espacioterapeutico.net/agendar/{clean_slug}"
         
-    return render_template('confirmar_cita_public.html', cita=cita)
+        psic_tel = cita.get('psic_whatsapp') or '+584245926114'
+        clean_tel = re.sub(r'\D', '', str(psic_tel))
+        if clean_tel and not clean_tel.startswith('58') and len(clean_tel) == 10:
+            clean_tel = '58' + clean_tel
+        wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada por falta de confirmación y quisiera coordinar una nueva cita."
+        whatsapp_url = f"https://wa.me/{clean_tel}?text={urllib.parse.quote(wa_text)}" if clean_tel else None
+
+        if is_cancelled:
+            return render_template('cita_cancelada.html',
+                paciente_nombre=pac_primer_nombre,
+                psicologo_nombre=psic_nombre,
+                fecha=fecha_display,
+                hora=hora_display,
+                modalidad=modalidad_display,
+                fast_booking_url=fast_booking_url,
+                whatsapp_url=whatsapp_url
+            )
+            
+        from datetime import datetime
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        
+        if cita.get('fecha') < today_str:
+            return render_template('cita_invalida.html', mensaje="Esta cita ya ocurrió y no puede ser modificada.")
+            
+        return render_template('confirmar_cita_public.html', cita=cita)
+
+    # 2. Si no está en agenda_finanzas, verificar en citas_canceladas_log
+    cursor.execute("""
+        SELECT c.*, u.nombres as psic_u_nombres, u.apellidos as psic_u_apellidos,
+               u.slug as psic_u_slug, u.username as psic_u_user, u.whatsapp_publico as psic_u_wa
+        FROM citas_canceladas_log c
+        LEFT JOIN usuarios u ON c.psicologo_id = u.id
+        WHERE c.token_confirmacion = ?
+    """, (token,))
+    log_c = cursor.fetchone()
+
+    if log_c:
+        log_c = dict(log_c)
+        psic_nombre = log_c.get('psicologo_nombre') or f"{log_c.get('psic_u_nombres','')} {log_c.get('psic_u_apellidos','')}".strip() or "Tu especialista"
+        pac_nombre = log_c.get('paciente_nombre') or 'consultante'
+        pac_primer_nombre = pac_nombre.split()[0] if pac_nombre else 'consultante'
+        fecha_display = log_c.get('fecha_cita')
+        hora_display = log_c.get('hora_cita')
+        modalidad_display = log_c.get('tipo_consulta') or 'Online'
+        
+        target_slug = log_c.get('psicologo_slug') or log_c.get('psic_u_slug') or log_c.get('psic_u_user') or 'psic.paulomora'
+        clean_slug = target_slug if str(target_slug).startswith('psic.') else f"psic.{target_slug}"
+        fast_booking_url = f"https://www.espacioterapeutico.net/agendar/{clean_slug}"
+        
+        psic_tel = log_c.get('psicologo_telefono') or log_c.get('psic_u_wa') or '+584245926114'
+        clean_tel = re.sub(r'\D', '', str(psic_tel))
+        if clean_tel and not clean_tel.startswith('58') and len(clean_tel) == 10:
+            clean_tel = '58' + clean_tel
+        wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada por falta de confirmación y quisiera coordinar una nueva cita."
+        whatsapp_url = f"https://wa.me/{clean_tel}?text={urllib.parse.quote(wa_text)}" if clean_tel else None
+
+        return render_template('cita_cancelada.html',
+            paciente_nombre=pac_primer_nombre,
+            psicologo_nombre=psic_nombre,
+            fecha=fecha_display,
+            hora=hora_display,
+            modalidad=modalidad_display,
+            fast_booking_url=fast_booking_url,
+            whatsapp_url=whatsapp_url
+        )
+
+    return render_template('cita_invalida.html', mensaje="El enlace proporcionado no es válido o la cita ya no existe.")
 
 @agenda_bp.route('/api/cita/accion', methods=['POST'])
 def accion_cita_publica():
@@ -1903,8 +2018,8 @@ def accion_cita_publica():
     cursor = db.cursor()
     
     cursor.execute("""
-        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.confirmada, af.estado_pago, af.creado_por_user_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
-               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.username as psic_username
+        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.confirmada, af.estado_pago, af.referencia, af.creado_por_user_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+               u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.username as psic_username, u.slug as psic_slug
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON u.id = COALESCE(p.psicologo_id, af.creado_por_user_id, 1)
@@ -1913,18 +2028,43 @@ def accion_cita_publica():
     cita = cursor.fetchone()
     
     if not cita:
-        return jsonify({'error': 'Cita no encontrada.'}), 404
+        cursor.execute("SELECT * FROM citas_canceladas_log WHERE token_confirmacion = ?", (token,))
+        log_c = cursor.fetchone()
+        log_dict = dict(log_c) if log_c else {}
+        target_slug = log_dict.get('psicologo_slug') or 'psic.paulomora'
+        clean_slug = target_slug if str(target_slug).startswith('psic.') else f"psic.{target_slug}"
+        return jsonify({
+            'error': 'Esta consulta fue cancelada por falta de confirmación y no puede ser confirmada. Por favor agenda una nueva cita o comunícate con tu especialista.',
+            'cancelada': True,
+            'fast_booking_url': f"https://www.espacioterapeutico.net/agendar/{clean_slug}"
+        }), 400
+        
+    cita = dict(cita)
         
     appt_id = cita['id']
     psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or 1
     phone = cita['pat_telefono']
     
-    fast_booking_url = f"https://www.espacioterapeutico.net/agendar/{cita['psic_username'] or 'psic.paulomora'}"
+    target_slug = cita['psic_slug'] or cita['psic_username'] or 'psic.paulomora'
+    clean_slug = target_slug if str(target_slug).startswith('psic.') else f"psic.{target_slug}"
+    fast_booking_url = f"https://www.espacioterapeutico.net/agendar/{clean_slug}"
     
+    estado_pago = str(cita['estado_pago'] or '').strip()
+    referencia = str(cita['referencia'] or '').strip()
+    is_cancelled = 'cancelad' in estado_pago.lower() or 'cancelad' in referencia.lower() or (cita.get('confirmada') == 0 and ('falta' in referencia.lower() or 'sistema' in referencia.lower()))
+
+    # Si la consulta ya fue cancelada, rechazar intento de confirmación
+    if accion == 'confirmar' and is_cancelled:
+        return jsonify({
+            'error': 'Esta consulta fue cancelada por falta de confirmación y ya no puede ser confirmada. Por favor agenda una nueva cita o comunícate con tu especialista.',
+            'cancelada': True,
+            'fast_booking_url': fast_booking_url
+        }), 400
+
     # Prevenir doble-click
     if accion == 'confirmar' and cita['confirmada'] == 1:
         return jsonify({'success': True})
-    if accion in ('cancelar', 'reprogramar') and cita['estado_pago'] == 'Cancelada':
+    if accion in ('cancelar', 'reprogramar') and is_cancelled:
         return jsonify({'success': True, 'fast_booking_url': fast_booking_url})
     
     # Preparamos datos para Whatsapp (usando la hora calculada para la zona del paciente)

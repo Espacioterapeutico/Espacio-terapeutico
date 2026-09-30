@@ -1436,6 +1436,27 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_historial_reprog_paciente ON historial_reprogramaciones(paciente_id)")
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS citas_canceladas_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agenda_id INTEGER,
+            token_confirmacion TEXT UNIQUE,
+            paciente_id INTEGER,
+            psicologo_id INTEGER,
+            paciente_nombre TEXT,
+            psicologo_nombre TEXT,
+            psicologo_slug TEXT,
+            psicologo_telefono TEXT,
+            fecha_cita TEXT,
+            hora_cita TEXT,
+            tipo_consulta TEXT,
+            motivo_cancelacion TEXT,
+            fecha_cancelacion DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_citas_canceladas_token ON citas_canceladas_log(token_confirmacion)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_citas_canceladas_agenda ON citas_canceladas_log(agenda_id)")
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS web_push_subscriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
@@ -2055,7 +2076,7 @@ def auto_cancel_unconfirmed_sessions(db):
         
         # Obtener citas no confirmadas en estado 'Agendada'
         cursor.execute("""
-            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.google_event_id, p.nombres, p.apellidos, p.psicologo_id, p.telefono
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.google_event_id, af.token_confirmacion, p.nombres, p.apellidos, p.psicologo_id, p.telefono
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.confirmada = 0 
@@ -2117,9 +2138,30 @@ def auto_cancel_unconfirmed_sessions(db):
             # 2. Cancelar la cita en SQLite (preservando google_event_id para trazabilidad)
             cursor.execute("""
                 UPDATE agenda_finanzas
-                SET estado_pago = 'Cancelada con aviso', monto = 0.0
+                SET estado_pago = 'Cancelada con aviso', confirmada = 0, monto = 0.0,
+                    referencia = CASE 
+                        WHEN referencia IS NULL OR referencia = '' THEN 'Cancelada automáticamente por falta de confirmación'
+                        ELSE referencia || ' | Cancelada automáticamente por falta de confirmación'
+                    END
                 WHERE id = ?
             """, (appt_id,))
+            
+            # Registrar en citas_canceladas_log para proteger el enlace de confirmación
+            token_val = appt['token_confirmacion'] if hasattr(appt, 'keys') and 'token_confirmacion' in appt.keys() else (appt['token_confirmacion'] if isinstance(appt, dict) else None)
+            if token_val:
+                try:
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO citas_canceladas_log (
+                            agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                            paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        appt_id, token_val, patient_id, target_psic,
+                        pac_nombre, fecha_cita, hora_cita, appt['tipo_consulta'],
+                        'Cancelada por falta de confirmación'
+                    ))
+                except Exception as _e_clog:
+                    print("Error registrando en citas_canceladas_log:", _e_clog)
             
             # Auto-generar evolución clínica
             create_auto_cancellation_session(
