@@ -1012,14 +1012,39 @@ def add_agenda_event():
             pac_row = cursor.fetchone()
             if pac_row:
                 pac_nombre = f"{pac_row['nombres']} {pac_row['apellidos']}".strip()
+                # Obtener duración configurada para este perfil/modalidad
+                from datetime import datetime as _dt_local, timedelta as _td_local
+                cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psych_gc_id,))
+                _u_cfg_row = cursor.fetchone()
+                _cfg_perfiles = []
+                _cfg_dur_default = 60
+                if _u_cfg_row:
+                    import json as _json
+                    _raw = (_u_cfg_row['configuracion_horarios_visual'] if hasattr(_u_cfg_row, 'keys') else _u_cfg_row[0]) or ''
+                    if _raw:
+                        try:
+                            _cfg = _json.loads(_raw)
+                            _cfg_dur_default = int(_cfg.get('duracion', 60))
+                            _raw_p = _cfg.get('perfiles', [])
+                            _cfg_perfiles = list(_raw_p.values()) if isinstance(_raw_p, dict) else _raw_p
+                        except:
+                            pass
+                _session_dur, _ = get_appointment_duration_and_recess(tipo_consulta, _cfg_perfiles, _cfg_dur_default)
+                _total_duration = _session_dur * max(1, cantidad_sesiones)
+
                 try:
-                    start_dt_obj = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
-                    end_dt_obj = start_dt_obj + timedelta(minutes=60 * cantidad_sesiones)
+                    start_dt_obj = _dt_local.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
+                    end_dt_obj = start_dt_obj + _td_local(minutes=_total_duration)
                     start_dt = start_dt_obj.strftime("%Y-%m-%dT%H:%M:%S-04:00")
                     end_dt = end_dt_obj.strftime("%Y-%m-%dT%H:%M:%S-04:00")
-                except:
-                    start_dt = f"{fecha}T{hora}:00-04:00"
-                    end_dt = f"{fecha}T{hora}:00-04:00"
+                except Exception as _dt_err:
+                    print("Error calculando start_dt/end_dt para Google Calendar:", _dt_err)
+                    h_parts = hora.split(':')
+                    h_int = int(h_parts[0]) if (h_parts and h_parts[0].isdigit()) else 0
+                    m_int = int(h_parts[1]) if (len(h_parts) > 1 and h_parts[1].isdigit()) else 0
+                    end_h = str((h_int + 1) % 24).zfill(2)
+                    start_dt = f"{fecha}T{str(h_int).zfill(2)}:{str(m_int).zfill(2)}:00-04:00"
+                    end_dt = f"{fecha}T{end_h}:{str(m_int).zfill(2)}:00-04:00"
                 
                 is_conf = bool(confirmada)
                 prefix = "🟢 " if is_conf else "🟠 "
@@ -1076,7 +1101,6 @@ def add_agenda_event():
         try:
             from app import send_webpush_notification, FIREBASE_DB_URL
             import requests
-            from datetime import datetime
             hora_display = hora_paciente or hora  # Mostrar la hora en la zona horaria del paciente
             send_webpush_notification(
                 patient_id=paciente_id,
