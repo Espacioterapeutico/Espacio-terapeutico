@@ -1991,7 +1991,10 @@ def vista_confirmar_cita(token):
 
         if is_cancelled:
             # Determinar el motivo real de la cancelación
-            if 'falta' in referencia.lower() or 'sistema' in referencia.lower():
+            if 'reprogram' in referencia.lower() or estado_pago == 'Reprogramada':
+                motivo_tipo = 'reprogramar'
+                wa_text = f"Hola {psic_nombre}, solicité reprogramar mi cita del {fecha_display} a las {hora_display} y quisiera coordinar una nueva fecha."
+            elif 'falta' in referencia.lower() or 'sistema' in referencia.lower():
                 motivo_tipo = 'auto_falta_confirmacion'
                 wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada por falta de confirmación y quisiera coordinar una nueva fecha."
             elif 'fuera de tiempo' in referencia.lower() or estado_pago == 'Cancelada sin aviso':
@@ -2001,8 +2004,19 @@ def vista_confirmar_cita(token):
                 motivo_tipo = 'terapeuta'
                 wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada y quisiera coordinar una nueva fecha."
             else:
-                motivo_tipo = 'consultante'
-                wa_text = f"Hola {psic_nombre}, he cancelado mi cita del {fecha_display} a las {hora_display} y quisiera coordinar una nueva fecha."
+                # Verificar si hubo notificación de reprogramación registrada en el sistema
+                cursor.execute("""
+                    SELECT id FROM notificaciones 
+                    WHERE tipo = 'cita' AND (titulo LIKE '%Reprogram%' OR mensaje LIKE '%reprogram%')
+                      AND mensaje LIKE ? AND mensaje LIKE ?
+                    LIMIT 1
+                """, (f"%{fecha_display}%", f"%{pac_primer_nombre}%"))
+                if cursor.fetchone():
+                    motivo_tipo = 'reprogramar'
+                    wa_text = f"Hola {psic_nombre}, solicité reprogramar mi cita del {fecha_display} a las {hora_display} y quisiera coordinar una nueva fecha."
+                else:
+                    motivo_tipo = 'consultante'
+                    wa_text = f"Hola {psic_nombre}, he cancelado mi cita del {fecha_display} a las {hora_display} y quisiera coordinar una nueva fecha."
                 
             whatsapp_url = f"https://wa.me/{clean_tel}?text={urllib.parse.quote(wa_text)}" if clean_tel else None
 
@@ -2054,7 +2068,10 @@ def vista_confirmar_cita(token):
             clean_tel = '58' + clean_tel
 
         motivo_log = str(log_c.get('motivo_cancelacion') or '').lower()
-        if 'falta' in motivo_log:
+        if 'reprogram' in motivo_log:
+            motivo_tipo = 'reprogramar'
+            wa_text = f"Hola {psic_nombre}, solicité reprogramar mi cita del {fecha_display} a las {hora_display} y quisiera coordinar una nueva fecha."
+        elif 'falta' in motivo_log:
             motivo_tipo = 'auto_falta_confirmacion'
             wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada por falta de confirmación y quisiera coordinar una nueva cita."
         elif 'fuera de tiempo' in motivo_log:
@@ -2427,10 +2444,29 @@ def accion_cita_publica():
             })
         
     elif accion == 'reprogramar':
-        cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
+        cursor.execute("""
+            UPDATE agenda_finanzas 
+            SET estado_pago = 'Cancelada', confirmada = 0,
+                referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Solicitud de reprogramación por consultante' ELSE referencia || ' | Solicitud de reprogramación por consultante' END
+            WHERE id = ?
+        """, (appt_id,))
         template = cfg_rows.get('msg_reagendamiento') or "Hemos recibido tu solicitud para reprogramar. Pronto nos pondremos en contacto contigo para agendar un nuevo espacio."
         _update_google_calendar_status_bg(appt_id, 'cancelada')
         
+        try:
+            cursor.execute("""
+                INSERT OR REPLACE INTO citas_canceladas_log (
+                    agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                    paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                appt_id, token, cita['paciente_id'], psych_id,
+                pat_full_name, cita['fecha'], cita['hora'], cita['tipo_consulta'],
+                'Solicitud de reprogramación por consultante'
+            ))
+        except Exception as _e_clog:
+            print("Error registrando citas_canceladas_log reprogramacion:", _e_clog)
+
         # Notificar reprogramación al psicólogo
         try:
             cursor.execute("""
