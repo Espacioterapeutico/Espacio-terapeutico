@@ -1751,6 +1751,177 @@ function hideLoadingScreen() {
     }
 }
 
+// ==========================================
+// MODO OFFLINE / SIN CONEXIÓN Y SINCRONIZACIÓN
+// ==========================================
+let isSyncingOffline = false;
+
+function updateOfflineStatusUI(isSyncing = false) {
+    let banner = document.getElementById('offline-global-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'offline-global-banner';
+        banner.style.cssText = 'position: sticky; top: 0; z-index: 9999; padding: 0.45rem 1rem; font-size: 0.82rem; font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.06);';
+        document.body.prepend(banner);
+    }
+    
+    const isOnline = navigator.onLine;
+    let queue = [];
+    try {
+        queue = JSON.parse(localStorage.getItem('offline_evoluciones_queue') || '[]');
+    } catch (e) { queue = []; }
+    
+    if (isOnline && queue.length === 0 && !isSyncing) {
+        banner.style.display = 'none';
+        return;
+    }
+    
+    banner.style.display = 'flex';
+    
+    if (isSyncing) {
+        banner.style.background = '#eff6ff';
+        banner.style.color = '#1d4ed8';
+        banner.style.borderBottom = '1px solid #bfdbfe';
+        banner.innerHTML = `<span>🔄 Sincronizando ${queue.length} evolución(es) clínica(s) con el servidor...</span>`;
+    } else if (!isOnline) {
+        banner.style.background = '#fffbeb';
+        banner.style.color = '#92400e';
+        banner.style.borderBottom = '1px solid #fef3c7';
+        let txt = `<span>📶 <strong>Modo sin conexión:</strong> Consulta de agenda y redacción de evoluciones activa. Agendamiento y registro deshabilitados.</span>`;
+        if (queue.length > 0) {
+            txt += ` <span style="background:#fde047; color:#854d0e; padding: 2px 7px; border-radius: 999px; font-size: 0.75rem; margin-left: 6px;">⏳ ${queue.length} evolución(es) guardada(s) pendiente(s)</span>`;
+        }
+        banner.innerHTML = txt;
+    } else if (queue.length > 0) {
+        banner.style.background = '#ecfdf5';
+        banner.style.color = '#065f46';
+        banner.style.borderBottom = '1px solid #a7f3d0';
+        banner.innerHTML = `<span>🟢 Conexión restablecida. Sincronizando ${queue.length} evolución(es) pendiente(s)...</span>`;
+        syncOfflineEvoluciones();
+    }
+}
+window.updateOfflineStatusUI = updateOfflineStatusUI;
+
+async function syncOfflineEvoluciones() {
+    if (!navigator.onLine || isSyncingOffline) return;
+    let queue = [];
+    try {
+        queue = JSON.parse(localStorage.getItem('offline_evoluciones_queue') || '[]');
+    } catch(e) { return; }
+    if (queue.length === 0) {
+        updateOfflineStatusUI();
+        return;
+    }
+    
+    isSyncingOffline = true;
+    updateOfflineStatusUI(true);
+    
+    const remaining = [];
+    let synced = 0;
+    
+    for (const item of queue) {
+        try {
+            const res = await fetch(item.url, {
+                method: item.method || 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item.payload)
+            });
+            if (res.ok) {
+                synced++;
+            } else if (res.status >= 400 && res.status < 500) {
+                console.warn("[Offline Sync] Error no recuperable:", await res.text());
+            } else {
+                remaining.push(item);
+            }
+        } catch (e) {
+            remaining.push(item);
+        }
+    }
+    
+    try {
+        localStorage.setItem('offline_evoluciones_queue', JSON.stringify(remaining));
+    } catch(e) {}
+    isSyncingOffline = false;
+    updateOfflineStatusUI();
+    
+    if (synced > 0) {
+        alert(`✅ ¡Conexión restablecida!\n\nSe han sincronizado exitosamente ${synced} evolución(es) clínica(s) guardadas sin conexión.`);
+        if (typeof loadSessions === 'function') loadSessions('');
+        if (typeof loadAgenda === 'function') loadAgenda();
+        if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+        if (typeof loadDashboardStats === 'function') loadDashboardStats();
+    }
+}
+window.syncOfflineEvoluciones = syncOfflineEvoluciones;
+
+function saveEvolutionOffline(payload, id, method, url) {
+    clearSessionDraft(payload.paciente_id, id);
+    const pacSelect = document.getElementById('s-paciente');
+    const pacName = pacSelect && pacSelect.selectedIndex >= 0 ? pacSelect.options[pacSelect.selectedIndex].text : 'Consultante';
+    
+    let queue = [];
+    try {
+        queue = JSON.parse(localStorage.getItem('offline_evoluciones_queue') || '[]');
+    } catch (e) { queue = []; }
+    
+    const tempId = 'offline_' + Date.now();
+    queue.push({
+        temp_id: tempId,
+        id: id || tempId,
+        method: method,
+        url: url,
+        payload: payload,
+        paciente_nombre: pacName,
+        saved_at: new Date().toISOString()
+    });
+    
+    try {
+        localStorage.setItem('offline_evoluciones_queue', JSON.stringify(queue));
+    } catch (e) {}
+    
+    // Insertar en la lista local de sesiones para visualización inmediata
+    try {
+        let cached = JSON.parse(localStorage.getItem('offline_cache_sessions') || '[]');
+        const newLocalSession = {
+            id: id || tempId,
+            paciente_id: payload.paciente_id,
+            fecha: payload.fecha,
+            modalidad: payload.modalidad,
+            contenido: payload.contenido,
+            tareas_asignadas: payload.tareas_asignadas,
+            monto: payload.monto,
+            moneda: payload.moneda,
+            estado_pago: payload.estado_pago || 'Paga',
+            metodo_pago: payload.metodo_pago,
+            nombres: pacName.split(' ')[0] || '',
+            apellidos: pacName.split(' ').slice(1).join(' ') || '',
+            is_offline_pending: true
+        };
+        const idx = cached.findIndex(s => s.id == (id || tempId));
+        if (idx >= 0) cached[idx] = newLocalSession;
+        else cached.unshift(newLocalSession);
+        localStorage.setItem('offline_cache_sessions', JSON.stringify(cached));
+        currentSessionsList = cached;
+        if (typeof applySessionsFilters === 'function') applySessionsFilters();
+    } catch (e) {}
+
+    closeModal('session-modal');
+    updateOfflineStatusUI();
+    alert("📶 Guardado sin conexión:\n\nLa evolución clínica ha sido guardada localmente en tu dispositivo con éxito.\n\nEn cuanto te conectes a internet o Wi-Fi, el sistema la sincronizará automáticamente con el servidor.");
+}
+window.saveEvolutionOffline = saveEvolutionOffline;
+
+window.addEventListener('online', () => {
+    updateOfflineStatusUI();
+    syncOfflineEvoluciones();
+});
+window.addEventListener('offline', () => {
+    updateOfflineStatusUI();
+});
+setInterval(() => {
+    if (navigator.onLine) syncOfflineEvoluciones();
+}, 30000);
+
 async function checkSession() {
     try {
         const controller = new AbortController();
@@ -1758,24 +1929,55 @@ async function checkSession() {
         const res = await fetch('/api/check-session', { signal: controller.signal });
         clearTimeout(timeoutId);
         if (!res.ok) {
+            if (!navigator.onLine || res.status === 503) {
+                const cachedSession = localStorage.getItem('offline_last_session');
+                if (cachedSession) {
+                    const data = JSON.parse(cachedSession);
+                    if (data.role === 'paciente' || data.user_type === 'patient') {
+                        showPatientLayout(data.username, data.patient_id);
+                    } else {
+                        showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
+                    }
+                    updateOfflineStatusUI();
+                    return;
+                }
+            }
             showAuthScreen();
             return;
         }
         const data = await res.json();
         
         if (data.logged_in || data.authenticated) {
+            try {
+                localStorage.setItem('offline_last_session', JSON.stringify(data));
+            } catch (e) {}
             if (data.role === 'paciente' || data.user_type === 'patient') {
                 showPatientLayout(data.username, data.patient_id);
             } else {
                 showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
             }
         } else {
+            localStorage.removeItem('offline_last_session');
             showAuthScreen();
         }
     } catch (err) {
+        const cachedSession = localStorage.getItem('offline_last_session');
+        if (cachedSession) {
+            try {
+                const data = JSON.parse(cachedSession);
+                if (data.role === 'paciente' || data.user_type === 'patient') {
+                    showPatientLayout(data.username, data.patient_id);
+                } else {
+                    showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
+                }
+                updateOfflineStatusUI();
+                return;
+            } catch (e) {}
+        }
         showAuthScreen();
     } finally {
         hideLoadingScreen();
+        updateOfflineStatusUI();
     }
 }
 
@@ -5134,10 +5336,22 @@ window.handlePatientDeleteAccountSubmit = handlePatientDeleteAccountSubmit;
 async function loadPatients() {
     try {
         const res = await fetch('/api/patients');
-        patients = await res.json();
+        if (res.ok) {
+            patients = await res.json();
+            try { localStorage.setItem('offline_cache_patients', JSON.stringify(patients)); } catch(e){}
+        } else {
+            throw new Error("HTTP error " + res.status);
+        }
         renderPatientsTable(patients);
     } catch (err) {
-        console.error("Error al cargar pacientes:", err);
+        console.warn("Fallo o sin conexión al cargar pacientes. Usando caché local:", err);
+        const cached = localStorage.getItem('offline_cache_patients');
+        if (cached) {
+            try {
+                patients = JSON.parse(cached);
+                renderPatientsTable(patients);
+            } catch(e){}
+        }
     }
     if (typeof loadArchivedPatients === 'function') {
         loadArchivedPatients();
@@ -5301,6 +5515,10 @@ async function checkCedulaAutoFill() {
 }
 
 function openNewPatientModal() {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nEl registro de nuevos consultantes está deshabilitado sin internet para garantizar la integridad de la base de datos central.\n\nPuedes consultar las historias clínicas existentes en modo lectura.");
+        return;
+    }
     const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
     if (isSubExpired) {
         alert("Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga de datos).\n\nPuedes consultar y descargar las historias clínicas de todos tus consultantes existentes, pero para agregar nuevos pacientes reactiva tu suscripción.");
@@ -5479,6 +5697,10 @@ function onPatientOrigenChange() {
 
 async function handlePatientSubmit(e) {
     e.preventDefault();
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nNo es posible registrar nuevos consultantes ni modificar historias clínicas sin conexión al servidor central.");
+        return;
+    }
     if (!confirm("¿Está seguro de guardar los cambios en esta Historia Clínica?")) {
         return;
     }
@@ -5549,6 +5771,10 @@ async function handlePatientSubmit(e) {
 }
 
 function openQuickAddPatientModal() {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nEl registro rápido de consultantes requiere conexión a internet con el servidor central.");
+        return;
+    }
     const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
     if (isSubExpired) {
         alert("Tu suscripción o período de prueba ha finalizado. Tu cuenta se encuentra en modo solo lectura (consulta y descarga de datos).\n\nPara registrar nuevos consultantes, por favor reactiva tu suscripción.");
@@ -5564,6 +5790,10 @@ function openQuickAddPatientModal() {
 }
 
 async function togglePatientEstado(patientId) {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nEl cambio de estado de consultantes requiere conexión al servidor.");
+        return;
+    }
     try {
         const res = await fetch(`/api/patients/${patientId}/toggle-estado`, { method: 'POST' });
         const data = await res.json();
@@ -5585,6 +5815,10 @@ window.togglePatientEstado = togglePatientEstado;
 
 async function handleQuickAddPatientSubmit(e) {
     e.preventDefault();
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nEl registro rápido de consultantes requiere conexión con el servidor central.");
+        return;
+    }
     const payload = {
         nombres: document.getElementById('qa-nombres').value,
         apellidos: document.getElementById('qa-apellidos').value,
@@ -5803,9 +6037,26 @@ document.addEventListener('click', (e) => {
 // ==========================================
 async function openSummaryModal(patientId) {
     try {
-        const res = await fetch(`/api/patients/${patientId}/summary`);
-        if (!res.ok) throw new Error("Ficha de paciente no encontrada.");
-        const summary = await res.json();
+        let summary = null;
+        try {
+            const res = await fetch(`/api/patients/${patientId}/summary`);
+            if (res.ok) summary = await res.json();
+        } catch (netErr) {}
+        
+        if (!summary) {
+            let cachedPatients = [];
+            try { cachedPatients = JSON.parse(localStorage.getItem('offline_cache_patients') || '[]'); } catch(e){}
+            const p = cachedPatients.find(x => x.id == patientId);
+            if (!p) throw new Error("Ficha de paciente no disponible sin conexión.");
+            let cachedSessions = [];
+            try { cachedSessions = JSON.parse(localStorage.getItem('offline_cache_sessions') || '[]'); } catch(e){}
+            const pSessions = cachedSessions.filter(s => s.paciente_id == patientId);
+            summary = {
+                patient: p,
+                last_session: pSessions.length > 0 ? pSessions[0] : null,
+                finance: { pagas: 0, pendientes: 0, saldo_prepago: 0 }
+            };
+        }
         
         const container = document.getElementById('summary-modal-content');
         const p = summary.patient;
@@ -6017,9 +6268,23 @@ async function loadPatientRescheduleHistory(patientId) {
 // GESTIÓN DE SESIONES (EVOLUCIONES)
 // ==========================================
 async function loadPatientsDropdowns() {
+    let patients = [];
     try {
-        const res = await fetch('/api/patients');
-        patients = await res.json();
+        try {
+            const res = await fetch('/api/patients');
+            if (res.ok) {
+                patients = await res.json();
+                try { localStorage.setItem('offline_cache_patients', JSON.stringify(patients)); } catch(e){}
+            } else {
+                throw new Error("HTTP error " + res.status);
+            }
+        } catch (fetchErr) {
+            console.warn("Fallo o sin conexión al cargar desplegable de pacientes:", fetchErr);
+            const cached = localStorage.getItem('offline_cache_patients');
+            if (cached) {
+                try { patients = JSON.parse(cached); } catch(e){}
+            }
+        }
         
         const filterSelect = document.getElementById('session-filter-patient');
         const sessionFormSelect = document.getElementById('s-paciente');
@@ -6070,10 +6335,32 @@ async function loadSessions(patientId = '') {
     
     try {
         const res = await fetch(url);
-        currentSessionsList = await res.json();
+        if (res.ok) {
+            currentSessionsList = await res.json();
+            if (!patientId) {
+                try { localStorage.setItem('offline_cache_sessions', JSON.stringify(currentSessionsList)); } catch(e){}
+            }
+        } else {
+            throw new Error("HTTP error " + res.status);
+        }
         applySessionsFilters();
     } catch (err) {
-        timeline.innerHTML = '<p class="text-danger">Error al cargar evoluciones.</p>';
+        console.warn("Fallo o sin conexión al cargar evoluciones. Usando caché local:", err);
+        const cached = localStorage.getItem('offline_cache_sessions');
+        if (cached) {
+            try {
+                let list = JSON.parse(cached);
+                if (patientId) {
+                    list = list.filter(s => s.paciente_id == patientId);
+                }
+                currentSessionsList = list;
+                applySessionsFilters();
+            } catch(e) {
+                timeline.innerHTML = '<p class="text-danger">Error al cargar evoluciones.</p>';
+            }
+        } else {
+            timeline.innerHTML = '<p class="text-secondary text-center py-4">No hay evoluciones clínicas disponibles en caché local sin conexión.</p>';
+        }
     }
 }
 
@@ -6131,7 +6418,10 @@ function applySessionsFilters(resetPage = false) {
         const item = document.createElement('div');
         item.className = 'timeline-item';
         
-        const pacName = s.nombres ? `<h4>${s.nombres} ${s.apellidos}</h4>` : '';
+        const offlineBadge = s.is_offline_pending 
+            ? `<span class="badge" style="background:#fef3c7; color:#92400e; border: 1px solid #fde68a; font-size:0.72rem; padding: 2px 7px; border-radius: 4px; margin-left: 6px;">⏳ Guardada sin conexión (Pendiente de sincronizar)</span>` 
+            : '';
+        const pacName = s.nombres ? `<h4>${s.nombres} ${s.apellidos} ${offlineBadge}</h4>` : '';
         const statusClass = s.estado === 'Realizada' ? 'badge-success' : (s.estado === 'Cancelada con aviso' || s.estado === 'Reprogramada' ? 'badge-info' : 'badge-danger');
         
         // Renderizado del adjunto
@@ -6530,9 +6820,18 @@ async function openNewSessionModal() {
 
 async function openRegisterSessionFromEvent(eventId) {
     try {
-        const res = await fetch(`/api/finance/transactions/${eventId}`);
-        if (!res.ok) throw new Error("Cita no encontrada.");
-        const e = await res.json();
+        let e = null;
+        try {
+            const res = await fetch(`/api/finance/transactions/${eventId}`);
+            if (res.ok) e = await res.json();
+        } catch(netErr) {}
+        
+        if (!e) {
+            let cachedAgenda = [];
+            try { cachedAgenda = JSON.parse(localStorage.getItem('offline_cache_agenda') || '[]'); } catch(eCache){}
+            e = cachedAgenda.find(x => x.id == eventId);
+        }
+        if (!e) throw new Error("Cita no encontrada en el dispositivo.");
         
         document.getElementById('session-form').reset();
         document.getElementById('session-form-id').value = '';
@@ -6561,9 +6860,11 @@ async function openRegisterSessionFromEvent(eventId) {
         document.getElementById('s-fecha').value = e.fecha;
         document.getElementById('s-modalidad').value = e.tipo_consulta;
         
-        // Cargar alertas de prepagos y deudas y ficha rápida (esto autocompleta s-monto con los honorarios)
-        await checkSessionPatientPrepayments(e.paciente_id);
-        await updateSessionPatientQuickInfo(e.paciente_id);
+        // Cargar alertas de prepagos y deudas y ficha rápida
+        try {
+            await checkSessionPatientPrepayments(e.paciente_id);
+            await updateSessionPatientQuickInfo(e.paciente_id);
+        } catch(eAlerts){}
         
         // Estado por defecto
         document.getElementById('s-estado').value = 'Realizada';
@@ -6687,13 +6988,18 @@ async function handleSessionSubmit(e) {
     const method = id ? 'PUT' : 'POST';
     const url = id ? `/api/sessions/${id}` : '/api/sessions';
     
+    if (!navigator.onLine) {
+        saveEvolutionOffline(payload, id, method, url);
+        return;
+    }
+    
     try {
         const res = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         
         if (res.ok) {
             clearSessionDraft(payload.paciente_id, id);
@@ -6718,11 +7024,15 @@ async function handleSessionSubmit(e) {
                 }, 350);
             }
         } else {
+            if (data.offline || res.status === 503) {
+                saveEvolutionOffline(payload, id, method, url);
+                return;
+            }
             alert(data.error || "Ocurrió un error al guardar la evolución clínica.");
         }
     } catch (err) {
-        console.error("Error de conexión al guardar evolución:", err);
-        alert("Error de conexión al guardar evolución clínica.");
+        console.warn("Error de conexión al guardar evolución. Guardando en cola offline:", err);
+        saveEvolutionOffline(payload, id, method, url);
     }
 }
 
@@ -6967,9 +7277,23 @@ async function loadAgendaCompact() {
     if (!listContainer || !nextConsultation) return;
 
     try {
-        const res = await fetch('/api/agenda?_t=' + Date.now());
-        if (!res.ok) throw new Error("HTTP error " + res.status);
-        const events = await res.json();
+        let events = [];
+        try {
+            const res = await fetch('/api/agenda?_t=' + Date.now());
+            if (res.ok) {
+                events = await res.json();
+                try { localStorage.setItem('offline_cache_agenda', JSON.stringify(events)); } catch(e){}
+            }
+        } catch (fetchErr) {
+            console.warn("Fallo de red al cargar agenda compacta:", fetchErr);
+        }
+        
+        if (!events || events.length === 0) {
+            try {
+                const cached = localStorage.getItem('offline_cache_agenda');
+                if (cached) events = JSON.parse(cached);
+            } catch(e){}
+        }
         
         const _nowDate = new Date();
         const todayStr = `${_nowDate.getFullYear()}-${String(_nowDate.getMonth() + 1).padStart(2, '0')}-${String(_nowDate.getDate()).padStart(2, '0')}`;
@@ -7210,6 +7534,10 @@ function updateCancelRadioStyles() {
 window.updateCancelRadioStyles = updateCancelRadioStyles;
 
 async function openCancelAppointmentModal(apptId, eventData = null) {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nLa cancelación de citas requiere conexión al servidor para liberar el horario y notificar al consultante.\n\nPor favor, conéctate a internet para cancelar una cita.");
+        return;
+    }
     const modal = document.getElementById('cancel-appointment-modal');
     if (!modal) return;
 
@@ -7274,6 +7602,10 @@ window.openCancelAppointmentModal = openCancelAppointmentModal;
 
 async function handleCancelAppointmentSubmit(event) {
     event.preventDefault();
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nNo es posible cancelar una cita sin conexión a internet.");
+        return;
+    }
     const apptId = document.getElementById('cancel-modal-appt-id').value;
     if (!apptId) return;
 
@@ -7499,9 +7831,18 @@ async function loadFinanceData() {
                 incomeBody.innerHTML = '<tr><td colspan="3" class="text-center text-secondary">Sin ingresos registrados este mes.</td></tr>';
             } else {
                 data.income_list.forEach(item => {
+                    const payDate = (item.fecha_pago || item.fecha_liquidacion || item.fecha || '').split('T')[0].split(' ')[0];
+                    const apptDate = (item.fecha || '').split('T')[0].split(' ')[0];
+                    const isPrior = apptDate && payDate && apptDate !== payDate;
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${item.nombres || ''} ${item.apellidos || ''}</td>
+                        <td>
+                            <div><strong>${item.nombres || ''} ${item.apellidos || ''}</strong></div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">
+                                <span>Cobro: ${payDate}</span>
+                                ${isPrior ? `<span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4338ca; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">Cita del ${apptDate}</span>` : ''}
+                            </div>
+                        </td>
                         <td class="text-success"><strong>${item.monto} ${item.moneda}</strong></td>
                         <td style="text-align: right; display: flex; gap: 0.35rem; justify-content: flex-end;">
                             <button class="btn btn-secondary btn-sm" onclick="openEditEventModal(${item.id})">Editar</button>
@@ -7775,12 +8116,33 @@ async function renderFullCalendar() {
     if (!calendarEl) return;
     
     try {
-        const [resEvents, resBlocks] = await Promise.all([
-            fetch('/api/agenda'),
-            fetch('/api/agenda/blocks')
-        ]);
-        const list = resEvents.ok ? await resEvents.json() : [];
-        const blocksList = resBlocks.ok ? await resBlocks.json() : [];
+        let list = [];
+        let blocksList = [];
+        try {
+            const [resEvents, resBlocks] = await Promise.all([
+                fetch('/api/agenda'),
+                fetch('/api/agenda/blocks')
+            ]);
+            list = resEvents.ok ? await resEvents.json() : [];
+            blocksList = resBlocks.ok ? await resBlocks.json() : [];
+            if (resEvents.ok) {
+                try { localStorage.setItem('offline_cache_agenda', JSON.stringify(list)); } catch (e) {}
+            }
+            if (resBlocks.ok) {
+                try { localStorage.setItem('offline_cache_blocks', JSON.stringify(blocksList)); } catch (e) {}
+            }
+        } catch (fetchErr) {
+            console.warn("Fallo de red en renderFullCalendar, cargando desde caché:", fetchErr);
+        }
+
+        if (list.length === 0 && blocksList.length === 0 && (!navigator.onLine || !list || list.length === 0)) {
+            try {
+                const cachedAgenda = localStorage.getItem('offline_cache_agenda');
+                const cachedBlocks = localStorage.getItem('offline_cache_blocks');
+                if (cachedAgenda) list = JSON.parse(cachedAgenda);
+                if (cachedBlocks) blocksList = JSON.parse(cachedBlocks);
+            } catch (e) {}
+        }
         
         const events = list.map(e => {
             if (!e.fecha || !e.hora || e.estado_pago === 'Prepagada') return null;
@@ -8058,80 +8420,107 @@ async function loadAgenda() {
     const tbody = document.getElementById('agenda-table-body');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary">Cargando cronograma...</td></tr>';
     
+    let list = [];
+    let blocksList = [];
+    let isOffline = !navigator.onLine;
+
     try {
         const [resEvents, resBlocks] = await Promise.all([
             fetch('/api/agenda'),
             fetch('/api/agenda/blocks')
         ]);
-        const list = resEvents.ok ? await resEvents.json() : [];
-        const blocksList = resBlocks.ok ? await resBlocks.json() : [];
-        
-        tbody.innerHTML = '';
-        
-        if (list.length === 0 && blocksList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary">No hay citas ni bloqueos en agenda.</td></tr>';
-            return;
+        if (resEvents.ok) {
+            list = await resEvents.json();
+            try { localStorage.setItem('offline_cache_agenda', JSON.stringify(list)); } catch (e) {}
         }
-
-        // Renderizar Bloqueos de Agenda primero si existen (solo activos o futuros)
-        const todayAgendaStr = (typeof getLocalDateString === 'function') 
-            ? getLocalDateString() 
-            : new Date().toISOString().split('T')[0];
-
-        blocksList.forEach(b => {
-            const bEnd = (b.fecha_fin && b.fecha_fin.trim()) ? b.fecha_fin.trim() : (b.fecha || '').trim();
-            if (bEnd < todayAgendaStr) return; // Omitir bloqueos pasados
-
-            const tr = document.createElement('tr');
-            const horStr = b.todo_el_dia ? 'Todo el día' : `${b.hora_inicio} - ${b.hora_fin}`;
-            tr.innerHTML = `
-                <td><strong>${b.fecha} (${horStr})</strong></td>
-                <td><span style="color: #d97706; font-weight:600;">🔒 Evento Personal / Bloqueo</span></td>
-                <td>${b.motivo}</td>
-                <td>-</td>
-                <td><span class="badge badge-warning" style="background-color:#f59e0b; color:white;">Bloqueado</span></td>
-                <td class="actions-cell">
-                    <button class="btn btn-secondary btn-sm text-danger" onclick="deleteAgendaBlock(${b.id})">Eliminar Bloqueo</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-        
-        list.forEach(e => {
-            if (e.estado_pago === 'Prepagada') return; // Omitir paquetes prepagados en el calendario de citas
-            if (e.has_session) return; // Omitir consultas ya atendidas (evolucionadas)
-            
-            const tr = document.createElement('tr');
-            const paymentBadgeClass = e.estado_pago === 'Paga' ? 'badge-success' : (e.estado_pago === 'Pendiente' ? 'badge-danger' : 'badge-info');
-            
-            const btnEvolucionar = !e.has_session 
-                ? `<button class="btn btn-primary btn-sm" onclick="openRegisterSessionFromEvent(${e.id})">Evolucionar</button>` 
-                : '';
-            const showMonto = e.estado_pago === 'Agendada' ? '-' : `${e.monto} ${e.moneda}`;
-            const confirmBadge = e.confirmada === 1 
-                ? ` <span class="badge bg-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; color: white; border-radius: 4px; font-weight: bold; background-color: #15803d; margin-left: 0.35rem;">✓ Confirmada</span>`
-                : '';
-                
-            tr.innerHTML = `
-                <td><strong>${e.fecha} ${e.hora}</strong></td>
-                <td>${e.nombres} ${e.apellidos}${confirmBadge}</td>
-                <td>${e.tipo_consulta}</td>
-                <td>${showMonto}</td>
-                <td><span class="badge ${paymentBadgeClass}">${e.estado_pago}</span></td>
-                <td class="actions-cell">
-                    ${btnEvolucionar}
-                    <button class="btn btn-secondary btn-sm" onclick="openEditEventModal(${e.id})">Editar</button>
-                    <button class="btn btn-secondary btn-sm text-danger" onclick="openCancelAppointmentModal(${e.id})">Cancelar</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+        if (resBlocks.ok) {
+            blocksList = await resBlocks.json();
+            try { localStorage.setItem('offline_cache_blocks', JSON.stringify(blocksList)); } catch (e) {}
+        }
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error de conexión al cargar agenda.</td></tr>';
+        isOffline = true;
     }
+
+    if (list.length === 0 && blocksList.length === 0 && (!navigator.onLine || isOffline)) {
+        try {
+            const cachedAgenda = localStorage.getItem('offline_cache_agenda');
+            const cachedBlocks = localStorage.getItem('offline_cache_blocks');
+            if (cachedAgenda) list = JSON.parse(cachedAgenda);
+            if (cachedBlocks) blocksList = JSON.parse(cachedBlocks);
+        } catch (e) {
+            console.error('Error al recuperar agenda offline:', e);
+        }
+    }
+
+    tbody.innerHTML = '';
+    
+    if (list.length === 0 && blocksList.length === 0) {
+        tbody.innerHTML = !navigator.onLine 
+            ? '<tr><td colspan="6" class="text-center text-secondary">No hay citas en caché local (modo sin conexión).</td></tr>'
+            : '<tr><td colspan="6" class="text-center text-secondary">No hay citas ni bloqueos en agenda.</td></tr>';
+        return;
+    }
+
+    // Renderizar Bloqueos de Agenda primero si existen (solo activos o futuros)
+    const todayAgendaStr = (typeof getLocalDateString === 'function') 
+        ? getLocalDateString() 
+        : new Date().toISOString().split('T')[0];
+
+    blocksList.forEach(b => {
+        const bEnd = (b.fecha_fin && b.fecha_fin.trim()) ? b.fecha_fin.trim() : (b.fecha || '').trim();
+        if (bEnd < todayAgendaStr) return; // Omitir bloqueos pasados
+
+        const tr = document.createElement('tr');
+        const horStr = b.todo_el_dia ? 'Todo el día' : `${b.hora_inicio} - ${b.hora_fin}`;
+        tr.innerHTML = `
+            <td><strong>${b.fecha} (${horStr})</strong></td>
+            <td><span style="color: #d97706; font-weight:600;">🔒 Evento Personal / Bloqueo</span></td>
+            <td>${b.motivo}</td>
+            <td>-</td>
+            <td><span class="badge badge-warning" style="background-color:#f59e0b; color:white;">Bloqueado</span></td>
+            <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm text-danger" onclick="deleteAgendaBlock(${b.id})">Eliminar Bloqueo</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    list.forEach(e => {
+        if (e.estado_pago === 'Prepagada') return; // Omitir paquetes prepagados en el calendario de citas
+        if (e.has_session) return; // Omitir consultas ya atendidas (evolucionadas)
+        
+        const tr = document.createElement('tr');
+        const paymentBadgeClass = e.estado_pago === 'Paga' ? 'badge-success' : (e.estado_pago === 'Pendiente' ? 'badge-danger' : 'badge-info');
+        
+        const btnEvolucionar = !e.has_session 
+            ? `<button class="btn btn-primary btn-sm" onclick="openRegisterSessionFromEvent(${e.id})">Evolucionar</button>` 
+            : '';
+        const showMonto = e.estado_pago === 'Agendada' ? '-' : `${e.monto} ${e.moneda}`;
+        const confirmBadge = e.confirmada === 1 
+            ? ` <span class="badge bg-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; color: white; border-radius: 4px; font-weight: bold; background-color: #15803d; margin-left: 0.35rem;">✓ Confirmada</span>`
+            : '';
+            
+        tr.innerHTML = `
+            <td><strong>${e.fecha} ${e.hora}</strong></td>
+            <td>${e.nombres} ${e.apellidos}${confirmBadge}</td>
+            <td>${e.tipo_consulta}</td>
+            <td>${showMonto}</td>
+            <td><span class="badge ${paymentBadgeClass}">${e.estado_pago}</span></td>
+            <td class="actions-cell">
+                ${btnEvolucionar}
+                <button class="btn btn-secondary btn-sm" onclick="openEditEventModal(${e.id})">Editar</button>
+                <button class="btn btn-secondary btn-sm text-danger" onclick="openCancelAppointmentModal(${e.id})">Cancelar</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 async function openNewEventModal(defaultPaid = false, initialType = 'consulta') {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nEl agendamiento de nuevas citas está deshabilitado sin internet para evitar citas dobles o conflictos de horario con el portal web.\n\nPuedes consultar tu agenda y consultantes en modo lectura.");
+        return;
+    }
     if (isNoSolvente()) {
         const isSubExpired = (window.currentUser && window.currentUser.suscripcion_expirada) || sessionStorage.getItem('suscripcion_expirada') === 'true';
         if (isSubExpired) {
@@ -8223,6 +8612,10 @@ async function openNewEventModal(defaultPaid = false, initialType = 'consulta') 
 }
 
 async function openEditEventModal(eventId) {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nLa edición de citas y cobros requiere conexión al servidor.");
+        return;
+    }
     try {
         const res = await fetch(`/api/finance/transactions/${eventId}`);
         if (!res.ok) throw new Error("Cita/transacción no encontrada.");
@@ -8549,6 +8942,10 @@ function toggleBlockTimeInputs(isAllDay) {
 }
 
 async function deleteAgendaBlock(blockId) {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nNo es posible eliminar eventos o bloqueos de agenda sin conexión a internet.");
+        return;
+    }
     if (!confirm('¿Deseas eliminar este evento personal / bloqueo de agenda?')) return;
     try {
         const res = await fetch(`/api/agenda/blocks/${blockId}`, { method: 'DELETE' });
@@ -8576,6 +8973,10 @@ window.deleteAgendaBlock = deleteAgendaBlock;
 
 async function handleEventSubmit(e) {
     e.preventDefault();
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nNo es posible agendar ni modificar citas sin conexión a internet.");
+        return;
+    }
     
     const tipoRegistro = document.getElementById('e-tipo-registro') ? document.getElementById('e-tipo-registro').value : 'cita';
     
@@ -9159,6 +9560,10 @@ function toggleBloqueoHoras(isTodoDia) {
 
 async function handleSaveBloqueoEspacio(e) {
     if (e) e.preventDefault();
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nNo es posible registrar bloqueos de espacio sin conexión a internet.");
+        return;
+    }
 
     const modalidad = (document.getElementById('block-modal-modalidad')?.value || 'Todas').trim();
     const tipoPeriodo = document.querySelector('input[name="block_modal_tipo_periodo"]:checked')?.value || 'unico';
@@ -18443,6 +18848,10 @@ let _qpPatients = [];
 let _qpCurrentProfile = null;
 
 async function openQuickPayModal() {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nEl registro de cobros y pagos requiere conexión al servidor.");
+        return;
+    }
     const modal = document.getElementById('quick-pay-modal');
     if (!modal) return;
 
@@ -18662,6 +19071,10 @@ function showQuickPayStatus(type, msg) {
 }
 
 async function submitQuickPay() {
+    if (!navigator.onLine) {
+        showQuickPayStatus('error', '⚠️ No es posible registrar pagos sin conexión a internet.');
+        return;
+    }
     const patientId  = document.getElementById('qp-paciente').value;
     const concept    = document.getElementById('qp-concepto').value;
     const montoVal   = parseFloat(document.getElementById('qp-monto').value || 0);
@@ -30052,6 +30465,10 @@ function renderClinicaIngresos(data) {
 // ------------------------------------------------------------------------------
 
 async function abrirModalNuevaCitaClinica() {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nEl agendamiento de citas corporativas requiere conexión a internet.");
+        return;
+    }
     const modal = document.getElementById('modal-cita-clinica');
     const selPsych = document.getElementById('mcita-clinica-psicologo');
     const selRoom = document.getElementById('mcita-clinica-consultorio');
@@ -30103,6 +30520,10 @@ async function abrirModalNuevaCitaClinica() {
 }
 
 async function guardarCitaClinica() {
+    if (!navigator.onLine) {
+        alert("⚠️ Modo sin conexión activo\n\nNo es posible agendar citas corporativas sin conexión a internet.");
+        return;
+    }
     const psychId = document.getElementById('mcita-clinica-psicologo').value;
     const room = document.getElementById('mcita-clinica-consultorio').value;
     const patientId = document.getElementById('mcita-clinica-paciente').value;

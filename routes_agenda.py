@@ -1245,6 +1245,12 @@ def update_agenda_event_status(event_id):
         if estado_pago is not None and str(estado_pago).strip() != '':
             updates.append("estado_pago = ?")
             params.append(str(estado_pago).strip())
+            if str(estado_pago).strip() == 'Paga':
+                today_vet = datetime.now().strftime('%Y-%m-%d')
+                updates.append("fecha_pago = COALESCE(NULLIF(fecha_pago, ''), ?)")
+                params.append(today_vet)
+                updates.append("fecha_liquidacion = COALESCE(NULLIF(fecha_liquidacion, ''), ?)")
+                params.append(today_vet)
         elif estado == 'Confirmada':
             updates.append("confirmada = 1")
             _update_google_calendar_status_bg(event_id, 'confirmada')

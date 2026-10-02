@@ -81,6 +81,7 @@ def auto_settle_patient_debts(db, patient_id):
             UPDATE agenda_finanzas 
             SET estado_pago = ?, control_uso = 'Consumida', monto = 0.0,
                 metodo_pago = 'Descontado de Prepago', referencia = 'Prepago',
+                fecha_pago = date('now', 'localtime'),
                 fecha_liquidacion = datetime('now', 'localtime')
             WHERE id = ?
         """, (new_status, debt_id))
@@ -121,15 +122,17 @@ def agenda_quick_pay():
         """, (paciente_id, fecha))
         pending_match = cursor.fetchone()
 
-        if pending_match and not data.get('forzar_nuevo_registro'):
+        is_paquete = estado_pago == 'Prepagada' or 'paquete' in (tipo_consulta or '').lower()
+        if pending_match and not data.get('forzar_nuevo_registro') and not is_paquete:
             pending_id = pending_match['id']
+            pay_date = (fecha_pago or '').strip() or (fecha or '').strip() or get_now_vet().strftime('%Y-%m-%d')
             cursor.execute("""
                 UPDATE agenda_finanzas
                 SET monto = ?, moneda = ?, tipo_consulta = ?, estado_pago = 'Paga',
                     control_uso = 'No consumida', cantidad_sesiones = ?,
-                    referencia = ?, metodo_pago = ?, fecha_pago = ?
+                    referencia = ?, metodo_pago = ?, fecha_pago = ?, fecha_liquidacion = ?
                 WHERE id = ?
-            """, (monto, moneda, tipo_consulta, cantidad_ses, referencia, metodo_pago, fecha_pago, pending_id))
+            """, (monto, moneda, tipo_consulta, cantidad_ses, referencia, metodo_pago, pay_date, pay_date, pending_id))
             db.commit()
             auto_settle_patient_debts(db, paciente_id)
             
@@ -236,7 +239,9 @@ def mark_debts_paid():
     debt_ids = data.get('debt_ids', [])
     metodo_pago = data.get('metodo_pago', '')
     referencia = data.get('referencia', '')
-    fecha_pago = data.get('fecha_pago', '')
+    fecha_pago = (data.get('fecha_pago') or '').strip()
+    if not fecha_pago:
+        fecha_pago = get_now_vet().strftime('%Y-%m-%d')
 
     if not debt_ids:
         return jsonify({'error': 'No se indicaron deudas a pagar.'}), 400
@@ -252,12 +257,13 @@ def mark_debts_paid():
                 estado_pago = 'Paga',
                 metodo_pago = ?,
                 referencia = ?,
-                fecha_pago = ?
+                fecha_pago = ?,
+                fecha_liquidacion = ?
             WHERE id = ?
               AND paciente_id IN (
                   SELECT id FROM pacientes WHERE psicologo_id = ?
               )
-        """, (metodo_pago, referencia, fecha_pago, did, psicologo_id))
+        """, (metodo_pago, referencia, fecha_pago, fecha_pago, did, psicologo_id))
         updated += cursor.rowcount
 
     db.commit()
@@ -296,11 +302,11 @@ def get_monthly_balance():
             SELECT af.moneda, af.tipo_consulta, SUM(af.monto) as total_monto
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
-            WHERE (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?) 
+            WHERE COALESCE(NULLIF(af.fecha_pago, ''), NULLIF(af.fecha_liquidacion, ''), af.fecha) LIKE ? 
               AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
               AND p.psicologo_id = ?
             GROUP BY af.moneda, af.tipo_consulta
-        """, (date_prefix, date_prefix, psic_id))
+        """, (date_prefix, psic_id))
         breakdown = [dict(row) for row in cursor.fetchall()]
         
         cursor.execute("""
@@ -323,12 +329,12 @@ def get_monthly_balance():
                    COALESCE(p.apellidos, '') as apellidos
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
-            WHERE (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?) 
+            WHERE COALESCE(NULLIF(af.fecha_pago, ''), NULLIF(af.fecha_liquidacion, ''), af.fecha) LIKE ? 
               AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
               AND af.monto > 0
               AND p.psicologo_id = ?
-            ORDER BY af.fecha DESC
-        """, (date_prefix, date_prefix, psic_id))
+            ORDER BY COALESCE(NULLIF(af.fecha_pago, ''), NULLIF(af.fecha_liquidacion, ''), af.fecha) DESC, af.id DESC
+        """, (date_prefix, psic_id))
         income_list = [dict(row) for row in cursor.fetchall()]
         
         cursor.execute("SELECT COUNT(id) FROM pacientes WHERE psicologo_id = ?", (psic_id,))
@@ -340,9 +346,9 @@ def get_monthly_balance():
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
               AND af.monto > 0
-              AND (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?)
+              AND COALESCE(NULLIF(af.fecha_pago, ''), NULLIF(af.fecha_liquidacion, ''), af.fecha) LIKE ?
               AND p.psicologo_id = ?
-        """, (date_prefix, date_prefix, psic_id))
+        """, (date_prefix, psic_id))
         total_pagas = cursor.fetchone()[0] or 0
         
         cursor.execute("""
@@ -394,9 +400,10 @@ def get_monthly_balance():
         cursor.execute("""
             SELECT moneda, tipo_consulta, SUM(monto) as total_monto
             FROM agenda_finanzas
-            WHERE (fecha LIKE ? OR fecha_liquidacion LIKE ?) AND estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
+            WHERE COALESCE(NULLIF(fecha_pago, ''), NULLIF(fecha_liquidacion, ''), fecha) LIKE ? 
+              AND estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
             GROUP BY moneda, tipo_consulta
-        """, (date_prefix, date_prefix))
+        """, (date_prefix,))
         breakdown = [dict(row) for row in cursor.fetchall()]
         
         cursor.execute("""
@@ -418,11 +425,11 @@ def get_monthly_balance():
                    COALESCE(p.apellidos, '') as apellidos
             FROM agenda_finanzas af
             LEFT JOIN pacientes p ON af.paciente_id = p.id
-            WHERE (fecha LIKE ? OR fecha_liquidacion LIKE ?) 
+            WHERE COALESCE(NULLIF(af.fecha_pago, ''), NULLIF(af.fecha_liquidacion, ''), af.fecha) LIKE ? 
               AND af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga')
               AND af.monto > 0
-            ORDER BY af.fecha DESC
-        """, (date_prefix, date_prefix))
+            ORDER BY COALESCE(NULLIF(af.fecha_pago, ''), NULLIF(af.fecha_liquidacion, ''), af.fecha) DESC, af.id DESC
+        """, (date_prefix,))
         income_list = [dict(row) for row in cursor.fetchall()]
         
         cursor.execute("SELECT COUNT(id) FROM pacientes")
@@ -433,8 +440,8 @@ def get_monthly_balance():
             FROM agenda_finanzas 
             WHERE estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
               AND monto > 0
-              AND (fecha LIKE ? OR fecha_liquidacion LIKE ?)
-        """, (date_prefix, date_prefix))
+              AND COALESCE(NULLIF(fecha_pago, ''), NULLIF(fecha_liquidacion, ''), fecha) LIKE ?
+        """, (date_prefix,))
         total_pagas = cursor.fetchone()[0] or 0
         
         cursor.execute("SELECT SUM(cantidad_sesiones) FROM agenda_finanzas WHERE estado_pago IN ('Pendiente', 'Cancelada sin aviso') AND COALESCE(monto, 0) > 0")

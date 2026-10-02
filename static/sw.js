@@ -1,17 +1,23 @@
-const CACHE_NAME = 'mi-consultorio-v140';
+const CACHE_NAME = 'mi-consultorio-v141';
 const ASSETS_TO_CACHE = [
   '/',
+  '/static/css/styles.css',
+  '/static/js/app.js',
+  '/static/js/tests_module.js',
   '/static/logo.png',
   '/static/manifest.json',
   '/static/notification.wav',
-  '/static/js/tests_module.js'
+  'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js',
+  'https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/es.global.min.js'
 ];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch(() => {});
+      return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
+        console.warn('[SW] Error precaching assets:', err);
+      });
     })
   );
 });
@@ -34,11 +40,11 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // APIs: Strictly Network-Only (no-store) to prevent stale data bugs
+  // APIs: Network-first, fallback to offline JSON response
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request, { cache: 'no-store' }).catch(() => {
-        return new Response(JSON.stringify({ error: 'Conexión offline.' }), {
+        return new Response(JSON.stringify({ error: 'offline', offline: true }), {
           status: 503,
           headers: { 'Content-Type': 'application/json' }
         });
@@ -47,26 +53,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // JS/CSS/Root: Always Network-First
-  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname === '/') {
+  // Navegación (HTML principal): Network first, fallback to cached root '/'
+  if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css'))) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-        }
-        return networkResponse;
-      }).catch(() => {
-        return caches.match(event.request).then(cached => cached || new Response('Offline', { status: 503 }));
-      })
+      fetch(event.request).catch(() => caches.match('/'))
     );
     return;
   }
 
-  // Other assets: Cache First
+  // JS/CSS/Fonts/Images/CDN: Network-First con actualización y fallback a caché
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
+    fetch(event.request).then((networkResponse) => {
+      if (networkResponse && networkResponse.status === 200) {
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+      }
+      return networkResponse;
+    }).catch(() => {
+      return caches.match(event.request).then(cached => cached || (url.pathname === '/' ? caches.match('/') : new Response('Offline', { status: 503 })));
     })
   );
 });
