@@ -1990,6 +1990,22 @@ def vista_confirmar_cita(token):
         whatsapp_url = f"https://wa.me/{clean_tel}?text={urllib.parse.quote(wa_text)}" if clean_tel else None
 
         if is_cancelled:
+            # Determinar el motivo real de la cancelación
+            if 'falta' in referencia.lower() or 'sistema' in referencia.lower():
+                motivo_tipo = 'auto_falta_confirmacion'
+                wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada por falta de confirmación y quisiera coordinar una nueva fecha."
+            elif 'fuera de tiempo' in referencia.lower() or estado_pago == 'Cancelada sin aviso':
+                motivo_tipo = 'fuera_de_tiempo'
+                wa_text = f"Hola {psic_nombre}, he cancelado mi cita del {fecha_display} a las {hora_display} fuera del tiempo límite y quisiera coordinar el pago y una nueva fecha."
+            elif 'terapeuta' in referencia.lower() or 'especialista' in referencia.lower():
+                motivo_tipo = 'terapeuta'
+                wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada y quisiera coordinar una nueva fecha."
+            else:
+                motivo_tipo = 'consultante'
+                wa_text = f"Hola {psic_nombre}, he cancelado mi cita del {fecha_display} a las {hora_display} y quisiera coordinar una nueva fecha."
+                
+            whatsapp_url = f"https://wa.me/{clean_tel}?text={urllib.parse.quote(wa_text)}" if clean_tel else None
+
             return render_template('cita_cancelada.html',
                 paciente_nombre=pac_primer_nombre,
                 psicologo_nombre=psic_nombre,
@@ -1997,7 +2013,8 @@ def vista_confirmar_cita(token):
                 hora=hora_display,
                 modalidad=modalidad_display,
                 fast_booking_url=fast_booking_url,
-                whatsapp_url=whatsapp_url
+                whatsapp_url=whatsapp_url,
+                motivo_tipo=motivo_tipo
             )
             
         from datetime import datetime
@@ -2035,7 +2052,21 @@ def vista_confirmar_cita(token):
         clean_tel = re.sub(r'\D', '', str(psic_tel))
         if clean_tel and not clean_tel.startswith('58') and len(clean_tel) == 10:
             clean_tel = '58' + clean_tel
-        wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada por falta de confirmación y quisiera coordinar una nueva cita."
+
+        motivo_log = str(log_c.get('motivo_cancelacion') or '').lower()
+        if 'falta' in motivo_log:
+            motivo_tipo = 'auto_falta_confirmacion'
+            wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada por falta de confirmación y quisiera coordinar una nueva cita."
+        elif 'fuera de tiempo' in motivo_log:
+            motivo_tipo = 'fuera_de_tiempo'
+            wa_text = f"Hola {psic_nombre}, he cancelado mi cita del {fecha_display} a las {hora_display} fuera del tiempo límite y quisiera coordinar el pago y una nueva fecha."
+        elif 'terapeuta' in motivo_log or 'especialista' in motivo_log:
+            motivo_tipo = 'terapeuta'
+            wa_text = f"Hola {psic_nombre}, mi cita para el {fecha_display} a las {hora_display} fue cancelada y quisiera coordinar una nueva cita."
+        else:
+            motivo_tipo = 'consultante'
+            wa_text = f"Hola {psic_nombre}, he cancelado mi cita del {fecha_display} a las {hora_display} y quisiera coordinar una nueva fecha."
+
         whatsapp_url = f"https://wa.me/{clean_tel}?text={urllib.parse.quote(wa_text)}" if clean_tel else None
 
         return render_template('cita_cancelada.html',
@@ -2045,7 +2076,8 @@ def vista_confirmar_cita(token):
             hora=hora_display,
             modalidad=modalidad_display,
             fast_booking_url=fast_booking_url,
-            whatsapp_url=whatsapp_url
+            whatsapp_url=whatsapp_url,
+            motivo_tipo=motivo_tipo
         )
 
     return render_template('cita_invalida.html', mensaje="El enlace proporcionado no es válido o la cita ya no existe.")
@@ -2063,7 +2095,7 @@ def accion_cita_publica():
     cursor = db.cursor()
     
     cursor.execute("""
-        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.confirmada, af.estado_pago, af.referencia, af.creado_por_user_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+        SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.confirmada, af.estado_pago, af.referencia, af.monto, af.moneda, af.google_event_id, af.creado_por_user_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
                u.nombres as psic_nombres, u.apellidos as psic_apellidos, u.username as psic_username, u.slug as psic_slug
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
@@ -2079,7 +2111,7 @@ def accion_cita_publica():
         target_slug = log_dict.get('psicologo_slug') or 'psic.paulomora'
         clean_slug = target_slug if str(target_slug).startswith('psic.') else f"psic.{target_slug}"
         return jsonify({
-            'error': 'Esta consulta fue cancelada por falta de confirmación y no puede ser confirmada. Por favor agenda una nueva cita o comunícate con tu especialista.',
+            'error': 'Esta consulta ya ha sido cancelada. Por favor agenda una nueva cita o comunícate con tu especialista.',
             'cancelada': True,
             'fast_booking_url': f"https://www.espacioterapeutico.net/agendar/{clean_slug}"
         }), 400
@@ -2101,12 +2133,12 @@ def accion_cita_publica():
     # Si la consulta ya fue cancelada, rechazar intento de confirmación
     if accion == 'confirmar' and is_cancelled:
         return jsonify({
-            'error': 'Esta consulta fue cancelada por falta de confirmación y ya no puede ser confirmada. Por favor agenda una nueva cita o comunícate con tu especialista.',
+            'error': 'Esta consulta ya ha sido cancelada. Por favor agenda una nueva cita o comunícate con tu especialista.',
             'cancelada': True,
             'fast_booking_url': fast_booking_url
         }), 400
 
-    # Prevenir doble-click
+    # Prevenir doble-click en confirmar
     if accion == 'confirmar' and cita['confirmada'] == 1:
         return jsonify({'success': True})
     if accion in ('cancelar', 'reprogramar') and is_cancelled:
@@ -2183,31 +2215,216 @@ def accion_cita_publica():
                 pass
         
     elif accion == 'cancelar':
-        cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
-        template = cfg_rows.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar, por favor contáctanos."
-        _update_google_calendar_status_bg(appt_id, 'cancelada')
+        # 1. Obtener política de cancelación configurada por el psicólogo
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psych_id,))
+        u_row = cursor.fetchone()
+        rule_type = 'horas'
+        rule_value = 24
+        if u_row and u_row[0]:
+            try:
+                config = json.loads(u_row[0])
+                rule_type = config.get('politica_cancelacion_tipo') or config.get('limite_cancelacion_tipo', 'horas')
+                rule_value = config.get('politica_cancelacion_valor') if config.get('politica_cancelacion_valor') is not None else config.get('limite_cancelacion_valor', 24)
+            except Exception:
+                pass
+                
+        from routes_pacientes import get_deadline_datetime, create_auto_cancellation_session
+        deadline_dt = get_deadline_datetime(cita['fecha'], cita['hora'], rule_type, rule_value)
+        fuera_de_tiempo = datetime.now() > deadline_dt
         
-        # Notificar cancelación al psicólogo
-        try:
-            cursor.execute("""
-                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                VALUES (?, 'cita', '❌ Cita Cancelada por Consultante', ?, ?, 0, 'agenda')
-            """, (psych_id, f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']}.", now_str))
-        except Exception as _ne:
-            print("Error notificando cancelacion publica:", _ne)
+        # Solo se cobra si está fuera de tiempo Y el paciente había confirmado la cita previamente
+        es_late_charge = fuera_de_tiempo and (cita['confirmada'] == 1)
 
-        db.commit()
+        # Actualizar Google Calendar si existe
+        google_event_id = cita.get('google_event_id')
+        if google_event_id:
+            try:
+                from routes_admin import get_calendar_service, update_calendar_event_status
+                service = get_calendar_service(psych_id, db=db)
+                if service:
+                    update_calendar_event_status(
+                        service, google_event_id, 'cancelada',
+                        paciente_nombre=pat_full_name,
+                        tipo_consulta=cita['tipo_consulta'],
+                        motivo=f"Cancelada por consultante {'fuera de tiempo' if es_late_charge else 'a tiempo'} desde link público"
+                    )
+            except Exception as _ge:
+                print("Error actualizando Google Calendar:", _ge)
 
-        try:
-            from app import send_webpush_notification
-            send_webpush_notification(
-                user_id=psych_id,
-                title="❌ Cita Cancelada",
-                body=f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']}.",
-                url="/?view=agenda"
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS citas_canceladas_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                agenda_id INTEGER,
+                token_confirmacion TEXT UNIQUE,
+                paciente_id INTEGER,
+                psicologo_id INTEGER,
+                paciente_nombre TEXT,
+                psicologo_nombre TEXT,
+                psicologo_slug TEXT,
+                psicologo_telefono TEXT,
+                fecha_cita TEXT,
+                hora_cita TEXT,
+                tipo_consulta TEXT,
+                motivo_cancelacion TEXT,
+                fecha_cancelacion DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        except Exception as _wp_ex:
-            print("Error enviando WebPush de cancelacion publica:", _wp_ex)
+        """)
+
+        if es_late_charge:
+            # Cancelación tardía cobrada: Se cobra o se descuenta de prepago si existe
+            if cita['estado_pago'] in ['Paga', 'Prepagada']:
+                cursor.execute("""
+                    UPDATE agenda_finanzas
+                    SET estado_pago = 'Cancelada sin aviso - Paga', confirmada = 0, control_uso = 'Consumida',
+                        fecha_liquidacion = datetime('now', 'localtime'),
+                        referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Cancelada por consultante fuera de tiempo' ELSE referencia || ' | Cancelada fuera de tiempo' END
+                    WHERE id = ?
+                """, (appt_id,))
+            else:
+                cursor.execute("""
+                    SELECT id, cantidad_sesiones 
+                    FROM agenda_finanzas 
+                    WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
+                    ORDER BY fecha ASC, id ASC LIMIT 1
+                """, (cita['paciente_id'],))
+                pkg = cursor.fetchone()
+                if pkg:
+                    pkg_id = pkg['id']
+                    pkg_cant = pkg['cantidad_sesiones']
+                    if pkg_cant > 1:
+                        cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg_cant - 1, pkg_id))
+                    else:
+                        cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg_id,))
+                        
+                    cursor.execute("""
+                        UPDATE agenda_finanzas
+                        SET estado_pago = 'Cancelada sin aviso - Paga', confirmada = 0, control_uso = 'Consumida', monto = 0.0,
+                            metodo_pago = 'Descontado de Prepago', referencia = 'Prepago | Cancelada fuera de tiempo',
+                            fecha_liquidacion = datetime('now', 'localtime')
+                        WHERE id = ?
+                    """, (appt_id,))
+                else:
+                    if float(cita.get('monto') or 0.0) == 0.0:
+                        costo_real, moneda_real = get_appointment_fee(cursor, cita['paciente_id'], psych_id, cita['tipo_consulta'])
+                    else:
+                        costo_real, moneda_real = cita['monto'], cita['moneda']
+                    cursor.execute("""
+                        UPDATE agenda_finanzas
+                        SET estado_pago = 'Cancelada sin aviso', confirmada = 0, monto = ?, moneda = ?,
+                            referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Cancelada por consultante fuera de tiempo' ELSE referencia || ' | Cancelada fuera de tiempo' END
+                        WHERE id = ?
+                    """, (costo_real, moneda_real, appt_id))
+
+            create_auto_cancellation_session(
+                db, cita['paciente_id'], appt_id, cita['fecha'], cita['tipo_consulta'],
+                'Cancelada sin aviso',
+                f"Consulta cancelada por el consultante fuera del límite de tiempo ({cita['fecha']} a las {cita['hora']}). Registrada para cobro."
+            )
+
+            try:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO citas_canceladas_log (
+                        agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                        paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    appt_id, token, cita['paciente_id'], psych_id,
+                    pat_full_name, cita['fecha'], cita['hora'], cita['tipo_consulta'],
+                    'Cancelada por consultante fuera de tiempo'
+                ))
+            except Exception as _e_clog:
+                print("Error registrando citas_canceladas_log:", _e_clog)
+
+            template = cfg_rows.get('msg_cancelacion_ok') or "Entendido, tu cita ha sido cancelada."
+
+            try:
+                cursor.execute("""
+                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                    VALUES (?, 'cita', '⚠️ Cita Cancelada FUERA DE TIEMPO por Consultante', ?, ?, 0, 'agenda')
+                """, (psych_id, f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']} FUERA DEL LÍMITE DE TIEMPO (Cita Confirmada). Se registrará para cobro.", now_str))
+            except Exception as _ne:
+                print("Error notificando cancelacion publica tardia:", _ne)
+
+            try:
+                from app import send_webpush_notification
+                send_webpush_notification(
+                    user_id=psych_id,
+                    title="⚠️ Cita Cancelada FUERA DE TIEMPO",
+                    body=f"{pat_full_name} canceló su cita del {cita['fecha']} fuera del límite de tiempo.",
+                    url="/?view=agenda"
+                )
+            except Exception as _wp_ex:
+                print("Error enviando WebPush de cancelacion publica:", _wp_ex)
+
+            db.commit()
+
+            return jsonify({
+                'success': True,
+                'late_charge': True,
+                'titulo': 'Consulta Cancelada Fuera de Tiempo',
+                'mensaje': 'Has cancelado la consulta fuera del tiempo límite permitido. De acuerdo con las normas de atención, esta sesión debe ser cancelada/abonada.',
+                'fast_booking_url': fast_booking_url
+            })
+
+        else:
+            # Cancelación a tiempo (sin cobro) o aún no confirmada
+            cursor.execute("""
+                UPDATE agenda_finanzas
+                SET estado_pago = 'Cancelada con aviso', confirmada = 0, control_uso = 'No consumida', monto = 0.0,
+                    referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Cancelada a tiempo por consultante' ELSE referencia || ' | Cancelada a tiempo por consultante' END
+                WHERE id = ?
+            """, (appt_id,))
+
+            create_auto_cancellation_session(
+                db, cita['paciente_id'], appt_id, cita['fecha'], cita['tipo_consulta'],
+                'Cancelada con aviso',
+                f"Consulta cancelada por el consultante a tiempo ({cita['fecha']} a las {cita['hora']})."
+            )
+
+            try:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO citas_canceladas_log (
+                        agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                        paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    appt_id, token, cita['paciente_id'], psych_id,
+                    pat_full_name, cita['fecha'], cita['hora'], cita['tipo_consulta'],
+                    'Cancelada por consultante a tiempo'
+                ))
+            except Exception as _e_clog:
+                print("Error registrando citas_canceladas_log:", _e_clog)
+
+            template = cfg_rows.get('msg_cancelacion_ok') or "Entendido. Tu cita ha sido cancelada."
+
+            try:
+                cursor.execute("""
+                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                    VALUES (?, 'cita', '❌ Cita Cancelada por Consultante', ?, ?, 0, 'agenda')
+                """, (psych_id, f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']}.", now_str))
+            except Exception as _ne:
+                print("Error notificando cancelacion publica:", _ne)
+
+            try:
+                from app import send_webpush_notification
+                send_webpush_notification(
+                    user_id=psych_id,
+                    title="❌ Cita Cancelada",
+                    body=f"{pat_full_name} ha cancelado su cita del {cita['fecha']} a las {cita['hora']}.",
+                    url="/?view=agenda"
+                )
+            except Exception as _wp_ex:
+                print("Error enviando WebPush de cancelacion publica:", _wp_ex)
+
+            db.commit()
+
+            return jsonify({
+                'success': True,
+                'late_charge': False,
+                'titulo': 'Cita Cancelada',
+                'mensaje': 'Has cancelado tu sesión exitosamente sin costo. El horario ha sido liberado.',
+                'fast_booking_url': fast_booking_url
+            })
         
     elif accion == 'reprogramar':
         cursor.execute("UPDATE agenda_finanzas SET estado_pago = 'Cancelada', confirmada = 0 WHERE id = ?", (appt_id,))
