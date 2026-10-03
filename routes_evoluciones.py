@@ -617,32 +617,68 @@ def delete_session_detail(session_id):
             
         agenda_id = ses['agenda_id']
         patient_id = ses['paciente_id']
+        ses_estado = str(ses.get('estado') or '').strip().lower()
         
         if agenda_id:
-            cursor.execute("SELECT estado_pago, metodo_pago FROM agenda_finanzas WHERE id = ?", (agenda_id,))
+            cursor.execute("SELECT id, estado_pago, metodo_pago, fecha, confirmada FROM agenda_finanzas WHERE id = ?", (agenda_id,))
             af_row = cursor.fetchone()
-            if af_row and (af_row['estado_pago'] == 'Prepagada' or af_row['metodo_pago'] == 'Descontado de Prepago'):
-                cursor.execute("""
-                    SELECT id FROM agenda_finanzas 
-                    WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
-                    ORDER BY id DESC LIMIT 1
-                """, (patient_id,))
-                pkg = cursor.fetchone()
-                if pkg:
-                    cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = cantidad_sesiones + 1 WHERE id = ?", (pkg['id'],))
-            cursor.execute("""
-                UPDATE agenda_finanzas 
-                SET estado_pago = 'Agendada', control_uso = 'No consumida', monto = 0.0, metodo_pago = NULL, referencia = NULL, fecha_pago = NULL
-                WHERE id = ?
-            """, (agenda_id,))
+            if af_row:
+                af_estado = str(af_row.get('estado_pago') or '').strip().lower()
+                
+                # REGLA CRÍTICA:
+                # Si la sesión eliminada era una nota de cancelación (auto-cancelada o cancelada por paciente/terapeuta)
+                # o la cita en agenda_finanzas ya estaba cancelada/reprogramada:
+                # ¡NUNCA REVERTIRLA A 'Agendada'! Revertirla a 'Agendada' resucita la cita y el cron automático
+                # de citas vencidas la vuelve a cancelar enviando un WhatsApp al paciente y re-creando la evolución.
+                es_cancelada = ('cancelad' in ses_estado) or ('cancelad' in af_estado) or (af_estado == 'reprogramada')
+                
+                if es_cancelada:
+                    # Dejar la cita en su estado cancelado legítimo; solo se elimina la nota clínica de sesiones
+                    pass
+                else:
+                    # Si fue pagada mediante prepago, restaurar el cupo al paquete
+                    if af_row['estado_pago'] == 'Prepagada' or af_row['metodo_pago'] == 'Descontado de Prepago':
+                        cursor.execute("""
+                            SELECT id FROM agenda_finanzas 
+                            WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
+                            ORDER BY id DESC LIMIT 1
+                        """, (patient_id,))
+                        pkg = cursor.fetchone()
+                        if pkg:
+                            cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = cantidad_sesiones + 1 WHERE id = ?", (pkg['id'],))
+                    
+                    from datetime import datetime
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    # Si la fecha de la cita ya ocurrió en el pasado, NO dejarla como 'Agendada' no confirmada
+                    # para evitar que el cron de auto-cancelación la detecte como expirada y le mande mensajes al consultante.
+                    if af_row['fecha'] and af_row['fecha'] < today_str:
+                        cursor.execute("""
+                            UPDATE agenda_finanzas 
+                            SET estado_pago = 'Pendiente', confirmada = 1, control_uso = 'No consumida', monto = 0.0, metodo_pago = NULL, fecha_pago = NULL
+                            WHERE id = ?
+                        """, (agenda_id,))
+                    else:
+                        cursor.execute("""
+                            UPDATE agenda_finanzas 
+                            SET estado_pago = 'Agendada', control_uso = 'No consumida', monto = 0.0, metodo_pago = NULL, referencia = NULL, fecha_pago = NULL
+                            WHERE id = ?
+                        """, (agenda_id,))
             
         cursor.execute("DELETE FROM sesiones WHERE id = ?", (session_id,))
         db.commit()
         
         try:
-            from app import sync_patient_to_firebase
+            from app import sync_patient_to_firebase, FIREBASE_DB_URL
+            import requests
             import threading
-            threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+            def _bg_firebase_cleanup():
+                try:
+                    if patient_id and session_id:
+                        requests.delete(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/diario/{session_id}.json", timeout=3.0)
+                except Exception:
+                    pass
+                sync_patient_to_firebase(patient_id)
+            threading.Thread(target=_bg_firebase_cleanup, daemon=True).start()
         except Exception: pass
         
         return jsonify({'success': 'Evolución eliminada con éxito.'})

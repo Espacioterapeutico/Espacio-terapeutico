@@ -2077,6 +2077,8 @@ def auto_cancel_unconfirmed_sessions(db):
             WHERE af.confirmada = 0 
               AND (af.estado_pago IN ('Agendada', 'Pendiente', '') OR af.estado_pago IS NULL)
               AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
+              AND (af.referencia IS NULL OR (af.referencia NOT LIKE '%Cancelada%' AND af.referencia NOT LIKE '%cancelad%'))
+              AND af.id NOT IN (SELECT agenda_id FROM citas_canceladas_log WHERE agenda_id IS NOT NULL)
               AND af.fecha >= ?
         """, (start_date_str,))
         
@@ -2197,14 +2199,17 @@ def auto_cancel_unconfirmed_sessions(db):
                 requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=firebase_payload, timeout=2.0)
             except Exception as fe:
                 print("Error al notificar al paciente en Firebase:", fe)
-                
             # 5. Notificación WhatsApp al paciente por cancelación por falta de confirmación
+            # Protección: Si esta cita ya figuraba en citas_canceladas_log, NO reenviar WhatsApp
+            cursor.execute("SELECT id FROM citas_canceladas_log WHERE agenda_id = ?", (appt_id,))
+            ya_cancelada = cursor.fetchone()
+            
             phone_raw = appt['telefono'] or ''
             clean_phone = "".join([c for c in str(phone_raw) if c.isdigit()])
             if clean_phone and not clean_phone.startswith("58") and len(clean_phone) == 10:
                 clean_phone = "58" + clean_phone
                 
-            if clean_phone:
+            if clean_phone and not ya_cancelada:
                 try:
                     cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_cancelacion_no_conf_{target_psic}",))
                     tmpl_row = cursor.fetchone()
