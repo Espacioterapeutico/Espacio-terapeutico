@@ -3597,5 +3597,16 @@ body.is-patient .main-content {
     color: var(--text-muted, #64748b);
 }
 
+/* Tarjetas en Grid de Consultantes con Herramientas Activas */
+.active-patient-tool-card {
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--card-bg, #ffffff);
+    transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+}
 
-
+.active-patient-tool-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(112, 46, 94, 0.08);
+    border-color: #d8b4fe !important;
+}

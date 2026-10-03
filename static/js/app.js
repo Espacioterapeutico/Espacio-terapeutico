@@ -21998,7 +21998,7 @@ async function loadActiveToolsPatients() {
     if (!container) return;
 
     container.innerHTML = `
-        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+        <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
             <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">⏳</div>
             <p style="margin: 0; font-size: 0.95rem; font-weight: 600;">Cargando consultantes con herramientas activas...</p>
         </div>
@@ -22012,7 +22012,7 @@ async function loadActiveToolsPatients() {
         cachedActiveToolsPatients = data.patients || [];
         renderActiveToolsPatients(cachedActiveToolsPatients);
     } catch (err) {
-        container.innerHTML = `<p class="text-danger p-3 text-center">Error: ${err.message}</p>`;
+        container.innerHTML = `<div style="grid-column: 1 / -1;" class="p-3 text-center"><p class="text-danger">Error: ${err.message}</p></div>`;
     }
 }
 window.loadActiveToolsPatients = loadActiveToolsPatients;
@@ -22049,7 +22049,7 @@ function renderActiveToolsPatients(patients) {
 
     if (!patients || patients.length === 0) {
         container.innerHTML = `
-            <div class="card" style="background: white; border: 1.5px dashed var(--border-color); padding: 3rem 1.5rem; text-align: center; border-radius: var(--radius-md);">
+            <div class="card" style="grid-column: 1 / -1; background: white; border: 1.5px dashed var(--border-color); padding: 3rem 1.5rem; text-align: center; border-radius: var(--radius-md);">
                 <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📭</div>
                 <h4 style="margin: 0 0 0.5rem 0; color: var(--text-dark); font-weight: 700;">No hay consultantes con herramientas activas</h4>
                 <p class="text-secondary" style="margin: 0 0 1.25rem 0; font-size: 0.9rem; max-width: 450px; margin-inline: auto;">
@@ -22071,16 +22071,18 @@ function renderActiveToolsPatients(patients) {
         const toolsRows = tools.map(t => {
             const safeToolName = (t.nombre || '').replace(/'/g, "\\'");
             return `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.85rem; background: #fdfafc; border: 1.5px solid #f3e8ff; border-radius: 8px; flex-wrap: wrap; gap: 0.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 1.25rem; line-height: 1;">${t.icono || '🛠️'}</span>
-                    <strong style="font-size: 0.92rem; color: #4a154b;">${t.nombre}</strong>
+            <div style="background: #fdfafc; border: 1.2px solid #f3e8ff; border-radius: 9px; padding: 0.65rem 0.8rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;">
+                    <div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0;">
+                        <span style="font-size: 1.25rem; line-height: 1; flex-shrink: 0;">${t.icono || '🛠️'}</span>
+                        <strong style="font-size: 0.88rem; color: #4a154b; line-height: 1.3;" title="${t.nombre}">${t.nombre}</strong>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 0.45rem; align-items: center;">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistModuleReport('${t.clave}', '${safeToolName}', ${p.id}, '${safeFullName}')" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; border: 1.5px solid var(--border-color); background: white;">
+                <div style="display: flex; gap: 0.35rem; justify-content: flex-end; align-items: center; margin-top: 0.15rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openTherapistModuleReport('${t.clave}', '${safeToolName}', ${p.id}, '${safeFullName}')" style="font-size: 0.76rem; padding: 0.25rem 0.6rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; border: 1.2px solid var(--border-color); background: white;">
                         📊 Historial
                     </button>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.2);">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="font-size: 0.76rem; padding: 0.25rem 0.65rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; background: linear-gradient(135deg, #702e5e, #984b80); border: none; box-shadow: 0 2px 4px rgba(112,46,94,0.18);">
                         ⚙️ Configurar
                     </button>
                 </div>
@@ -22089,31 +22091,39 @@ function renderActiveToolsPatients(patients) {
         }).join('');
 
         return `
-        <div class="card" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.15rem 1.25rem; box-shadow: var(--shadow-sm); transition: transform 0.15s, box-shadow 0.15s;">
-            <!-- CABECERA CONSULTANTE -->
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.85rem;">
-                <div style="display: flex; align-items: center; gap: 0.85rem;">
-                    <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); color: #7e22ce; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.15rem; flex-shrink: 0; border: 1.5px solid #d8b4fe;">
-                        ${(p.nombres || 'P').charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1e293b; font-family: var(--font-title);">${p.nombre_completo}</h4>
-                        <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; color: #64748b; margin-top: 2px; flex-wrap: wrap;">
-                            <span>🪪 ${p.cedula ? p.cedula : 'Sin cédula'}</span>
-                            ${p.telefono ? `<span>· 📱 ${p.telefono}</span>` : ''}
+        <div class="card active-patient-tool-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.05rem 1.15rem; box-shadow: 0 2px 5px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;">
+            <div>
+                <!-- CABECERA CONSULTANTE -->
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.65rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem; margin-bottom: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); color: #7e22ce; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; flex-shrink: 0; border: 1.5px solid #d8b4fe;">
+                            ${(p.nombres || p.nombre_completo || 'P').charAt(0).toUpperCase()}
+                        </div>
+                        <div style="min-width: 0;">
+                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #1e293b; font-family: var(--font-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.nombre_completo}">${p.nombre_completo}</h4>
+                            <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.76rem; color: #64748b; margin-top: 2px; flex-wrap: wrap;">
+                                <span>🪪 ${p.cedula ? p.cedula : 'Sin cédula'}</span>
+                                ${p.telefono ? `<span>· 📱 ${p.telefono}</span>` : ''}
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div>
-                    <span class="badge" style="background: #faf5ff; color: #702e5e; border: 1px solid #e9d5ff; font-size: 0.8rem; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: 20px;">
-                        ⚡ ${tools.length} herramienta${tools.length === 1 ? '' : 's'} activa${tools.length === 1 ? '' : 's'}
+                    <span class="badge" style="background: #faf5ff; color: #702e5e; border: 1px solid #e9d5ff; font-size: 0.72rem; font-weight: 700; padding: 0.22rem 0.5rem; border-radius: 20px; white-space: nowrap; flex-shrink: 0;">
+                        ⚡ ${tools.length} activa${tools.length === 1 ? '' : 's'}
                     </span>
                 </div>
-            </div>
 
-            <!-- LISTA DE HERRAMIENTAS ACTIVAS CON HISTORIAL Y CONFIGURAR -->
-            <div style="display: flex; flex-direction: column; gap: 0.55rem;">
-                ${toolsRows}
+                <!-- LISTA DE HERRAMIENTAS ACTIVAS CON HISTORIAL Y CONFIGURAR -->
+                <div style="display: flex; flex-direction: column; gap: 0.55rem;">
+                    ${toolsRows}
+                </div>
+            </div>
+            
+            <!-- ACCESO DIRECTO AL FINAL DE LA TARJETA -->
+            <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.73rem; color: #94a3b8;">Supervisión activa</span>
+                <button type="button" onclick="selectPatientForTherapistTools(${p.id}, '${safeFullName}', '${safeCedula}')" style="background: none; border: none; color: #702e5e; font-size: 0.76rem; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline;">
+                    + Gestionar módulos
+                </button>
             </div>
         </div>
         `;
