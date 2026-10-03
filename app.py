@@ -3034,33 +3034,125 @@ def send_psychologist_approved_email(user_email, full_name, username, exp_date_s
     send_email_async(user_email, subject, html_content)
 
 
-def notify_superadmins_new_psychologist(nombres, apellidos, username, federacion):
+def notify_superadmins_new_psychologist(nombres, apellidos, username, federacion=None, estudios=None):
     """
-    Envía notificación Push (FCM) a todos los Superadministradores alertando del registro.
+    Notifica a todos los Superadministradores alertando del registro de un nuevo psicólogo:
+    1. Notificación interna en la BD (campanita / panel).
+    2. Notificación Push multidispositivo (FCM + VAPID WebPush).
+    3. Notificación por Correo Electrónico (SMTP) con botón de revisión.
     """
     try:
         db = get_db()
         cursor = db.cursor()
-        cursor.execute("SELECT id FROM usuarios WHERE role IN ('superadmin', 'admin')")
+        cursor.execute("SELECT id, email FROM usuarios WHERE role IN ('superadmin', 'admin')")
         admin_rows = cursor.fetchall()
         
         full_name = f"Psic. {nombres or ''} {apellidos or ''}".strip() or f"@{username}"
         colegiado_txt = f" (Colegiado: {federacion})" if federacion else ""
         body_text = f"Nuevo profesional registrado: {full_name}{colegiado_txt}. Pendiente de aprobación."
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        # 1. Notificación en Base de Datos e In-App Push para cada Superadmin
         for adm in admin_rows:
             try:
-                send_fcm_notification(
+                # Guardar notificación interna para la campana / centro de alertas
+                cursor.execute("""
+                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                    VALUES (?, 'nuevo_psicologo', '🔔 Nuevo Psicólogo Registrado', ?, ?, 0, 'superadmin')
+                """, (adm['id'], body_text, now_str))
+            except Exception as _ex_db:
+                print(f"[NOTIF ERROR] Error guardando notif interna para admin {adm['id']}: {_ex_db}")
+
+            # Enviar notificación Push (usa FCM con respaldo VAPID automático)
+            try:
+                send_webpush_notification(
                     user_id=adm['id'],
                     title="🔔 Nuevo Psicólogo Registrado",
                     body=body_text,
                     url="/#sec-superadmin"
                 )
             except Exception as _ex_adm:
-                print(f"[PUSH ERROR] Error enviando a admin {adm['id']}: {_ex_adm}")
-    except Exception as e:
-        print(f"[PUSH ERROR] Error notificando a superadministradores: {e}")
+                print(f"[PUSH ERROR] Error enviando webpush a admin {adm['id']}: {_ex_adm}")
 
+        try:
+            db.commit()
+        except Exception:
+            pass
+
+        # 2. Notificación por Correo Electrónico (SMTP)
+        try:
+            admin_emails = set()
+            for adm in admin_rows:
+                em = (adm['email'] or '').strip()
+                if em and '@' in em:
+                    admin_emails.add(em)
+            
+            # Correos administrativos de respaldo por defecto
+            admin_emails.add('espacioterapeuticoapp@gmail.com')
+            admin_emails.add('psic.paulomora@gmail.com')
+
+            email_subject = f"🔔 Nuevo Psicólogo Registrado: {full_name} - Pendiente de Aprobación"
+            superadmin_url = "https://www.espacioterapeutico.net/#sec-superadmin"
+            estudios_html = f'<div style="margin-bottom: 8px;"><strong>Especialidad/Estudios:</strong> {estudios}</div>' if estudios else ''
+            colegiado_html = f'<div style="margin-bottom: 8px;"><strong>Colegio / Federación:</strong> {federacion}</div>' if federacion else ''
+
+            html_email = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #334155; }}
+        .card {{ max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(15,23,42,0.08); border: 1px solid #e2e8f0; }}
+        .header {{ background: linear-gradient(135deg, #702e5e 0%, #3d1e3f 100%); padding: 28px 24px; text-align: center; color: #ffffff; }}
+        .header h1 {{ margin: 0; font-size: 22px; font-weight: 800; }}
+        .content {{ padding: 28px 24px; }}
+        .box {{ background: #fdf4ff; border: 1.5px solid #f5d0fe; border-radius: 12px; padding: 18px; margin: 20px 0; font-size: 14px; color: #475569; }}
+        .btn-wrap {{ text-align: center; margin: 28px 0 10px 0; }}
+        .btn {{ background: linear-gradient(135deg, #702e5e, #984b80); color: #ffffff !important; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; }}
+        .footer {{ background: #f1f5f9; padding: 18px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h1>🌿 Espacio Terapéutico</h1>
+            <p style="margin: 6px 0 0; opacity: 0.9; font-size: 14px;">Solicitud de Registro Profesional</p>
+        </div>
+        <div class="content">
+            <h2 style="font-size: 18px; color: #0f172a; margin-top: 0;">¡Nuevo psicólogo registrado! 👤</h2>
+            <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+                Un nuevo profesional de la salud mental se ha registrado en la plataforma y se encuentra <strong>en espera de validación de documentos y activación</strong>.
+            </p>
+            
+            <div class="box">
+                <div style="font-weight: 800; color: #702e5e; margin-bottom: 10px; font-size: 13px; text-transform: uppercase;">📋 Datos del Solicitante</div>
+                <div style="margin-bottom: 8px;"><strong>Nombre:</strong> {full_name}</div>
+                <div style="margin-bottom: 8px;"><strong>Usuario:</strong> @{username}</div>
+                {colegiado_html}
+                {estudios_html}
+                <div style="margin-bottom: 8px;"><strong>Fecha:</strong> {now_str}</div>
+                <div style="margin-top: 10px; color: #b45309; font-weight: 600;">⏳ Estado: Pendiente de Aprobación</div>
+            </div>
+
+            <div class="btn-wrap">
+                <a href="{superadmin_url}" class="btn">🔍 Revisar y Aprobar en Panel Superadmin</a>
+            </div>
+        </div>
+        <div class="footer">
+            Notificación automática del sistema Espacio Terapéutico para Superadministradores.
+        </div>
+    </div>
+</body>
+</html>"""
+
+            for to_addr in admin_emails:
+                send_email_async(to_addr, email_subject, html_email)
+
+        except Exception as _ex_email:
+            print(f"[EMAIL ERROR] Error enviando correo a superadmin: {_ex_email}")
+
+    except Exception as e:
+        print(f"[NOTIF ERROR] Error notificando a superadministradores: {e}")
 
 def send_subscription_expiring_soon_email(user_email, full_name, days_left, exp_date_str):
     """

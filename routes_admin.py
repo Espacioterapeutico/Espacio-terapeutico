@@ -1622,7 +1622,7 @@ def register():
             # Enviar notificación PUSH (FCM) inmediata al Super Administrador
             try:
                 from app import notify_superadmins_new_psychologist
-                notify_superadmins_new_psychologist(nombres, apellidos, username, federacion)
+                notify_superadmins_new_psychologist(nombres, apellidos, username, federacion, estudios)
             except Exception as _ex_push:
                 print(f"[PUSH] Error al notificar superadmin de nuevo psicólogo: {_ex_push}")
 
