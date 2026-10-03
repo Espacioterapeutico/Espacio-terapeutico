@@ -14851,8 +14851,10 @@ async function validateRegisterCedula() {
     
     statusMsg.classList.add('hide');
     
-    try {
-        const res = await fetch(`/api/register/check-cedula?cedula=${encodeURIComponent(cedula)}`);
+        const urlParams = new URLSearchParams(window.location.search);
+        const refId = urlParams.get('ref_psicologo') || window._refPsicologoId || '';
+        const checkUrl = `/api/register/check-cedula?cedula=${encodeURIComponent(cedula)}${refId ? `&ref_psicologo=${encodeURIComponent(refId)}` : ''}`;
+        const res = await fetch(checkUrl);
         const data = await res.json();
         
         if (data.status === 'registered') {
@@ -14891,6 +14893,17 @@ async function validateRegisterCedula() {
             document.getElementById('reg-security-questions-fields').classList.remove('hide'); // Mostrar preguntas de seguridad
             
             alert(`¡Hola ${data.nombres}! Ya estás registrado en el sistema por tu terapeuta. Por favor crea tu usuario y contraseña de acceso.`);
+        } else if (refId || window.location.pathname.toLowerCase().startsWith('/registro/')) {
+            isPreRegisteredPatient = false;
+            const errText = data.error || "No encontramos tu documento en los registros del profesional. Si eres un consultante nuevo, por favor agenda tu primera cita o comunícate directamente con tu psicólogo";
+            const slug = window._refPsicologoSlug || (window.location.pathname.toLowerCase().startsWith('/registro/') ? window.location.pathname.replace(/^\/registro\//i, '') : '');
+            let agendaBtnHtml = '';
+            if (slug) {
+                agendaBtnHtml = `<div style="margin-top: 0.75rem;"><a href="/agendar/${slug}" class="btn btn-primary btn-sm" style="display: inline-block; padding: 0.45rem 1rem; border-radius: 8px; font-weight: 700; text-decoration: none;">📅 Agendar Primera Cita</a></div>`;
+            }
+            statusMsg.innerHTML = `<div style="line-height: 1.5; font-size: 0.88rem;">${errText}</div>${agendaBtnHtml}`;
+            statusMsg.className = "status-msg error-msg";
+            statusMsg.classList.remove('hide');
         } else {
             isPreRegisteredPatient = false;
             
@@ -14908,19 +14921,8 @@ async function validateRegisterCedula() {
             document.getElementById('reg-psicologo-fields').classList.add('hide');
             document.getElementById('reg-security-questions-fields').classList.add('hide');
             
-            const urlParams = new URLSearchParams(window.location.search);
-            const refId = urlParams.get('ref_psicologo');
-            if (refId) {
-                document.getElementById('reg-tipo-usuario').value = 'paciente';
-                document.getElementById('reg-tipo-usuario-group').classList.add('hide');
-                toggleRegisterFields();
-                document.getElementById('reg-psicologo-id').value = refId;
-                const selectGroup = document.getElementById('reg-psicologo-id').closest('.form-group');
-                if (selectGroup) selectGroup.style.display = 'none';
-            } else {
-                document.getElementById('reg-tipo-usuario').value = '';
-                document.getElementById('reg-tipo-usuario-group').classList.remove('hide');
-            }
+            document.getElementById('reg-tipo-usuario').value = '';
+            document.getElementById('reg-tipo-usuario-group').classList.remove('hide');
             
             document.getElementById('reg-step-cedula').classList.add('hide');
             document.getElementById('reg-step-details').classList.remove('hide');
@@ -14956,6 +14958,15 @@ function toggleRegisterFields() {
         pacienteFields.classList.add('hide');
         document.getElementById('reg-security-questions-fields').classList.remove('hide');
     } else if (role === 'paciente') {
+        if (!isPreRegisteredPatient) {
+            alert("No encontramos tu documento en los registros del profesional. Si eres un consultante nuevo, por favor agenda tu primera cita o comunícate directamente con tu psicólogo");
+            document.getElementById('reg-tipo-usuario').value = '';
+            commonFields.classList.add('hide');
+            pacienteFields.classList.add('hide');
+            document.getElementById('reg-step-details').classList.add('hide');
+            document.getElementById('reg-step-cedula').classList.remove('hide');
+            return;
+        }
         commonFields.classList.remove('hide');
         psicologoFields.classList.add('hide');
         pacienteFields.classList.remove('hide');
@@ -17406,11 +17417,35 @@ async function submitFastBooking(e) {
             const targetTz = document.getElementById('fast-tz-select') ? document.getElementById('fast-tz-select').value : getPatientUserTimeZone();
             const converted = convertTimeFromVETToZone(fecha, hora, targetTz);
             
+            let firstTimeHtml = '';
+            if (data.is_new_patient) {
+                const psychPhone = (data.psych_phone || '').replace(/\D/g, '');
+                const psychName = data.psych_name || therapistTitle || 'el profesional';
+                const waText = encodeURIComponent(`Hola ${psychName}, acabo de agendar mi primera consulta para el ${fecha} a las ${format12h(hora)}. Me comunico para recibir la información del encuadre terapéutico, métodos de pago y el enlace de la sesión.`);
+                const waLink = psychPhone ? `https://wa.me/${psychPhone}?text=${waText}` : '#';
+                
+                firstTimeHtml = `
+                    <div style="margin: 0.85rem 0; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 0.9rem 1rem; text-align: left; box-shadow: 0 2px 5px rgba(30, 64, 175, 0.06);">
+                        <div style="font-weight: 800; font-size: 0.92rem; color: #1e40af; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>👋</span> <span>Consultante de Primera Vez</span>
+                        </div>
+                        <p style="font-size: 0.86rem; color: #1e3a8a; line-height: 1.55; margin: 0 0 0.8rem 0;">
+                            Bienvenido/a. Como eres un consultante de primera vez, es importante que te comuniques vía WhatsApp con el profesional para recibir la información del encuadre terapéutico, métodos de pago y el enlace de la sesión.
+                        </p>
+                        ${psychPhone ? `
+                        <a href="${waLink}" target="_blank" rel="noopener noreferrer" class="btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; background: #25D366; color: white !important; font-weight: 700; font-size: 0.84rem; padding: 0.55rem 1rem; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 4px rgba(37, 211, 102, 0.25);">
+                            <i class="fab fa-whatsapp" style="font-size: 1.1rem;"></i> Contactar a ${psychName} por WhatsApp
+                        </a>` : ''}
+                    </div>
+                `;
+            }
+
             statusMsg.innerHTML = `
                 <div style="padding: 0.5rem 0;">
                     <div style="font-weight: 800; font-size: 1rem; color: #065f46; margin-bottom: 0.35rem;">🎉 ¡Cita agendada con éxito!</div>
                     <div style="font-size: 0.85rem; color: #047857; margin-bottom: 0.25rem;">🕒 <strong>Tu hora local (${targetTz}):</strong> ${format12h(converted.timeStr)}${converted.dayOffsetStr} (${converted.dateStr})</div>
                     <div style="font-size: 0.82rem; color: #065f46; opacity: 0.9; margin-bottom: 0.75rem;">🇻🇪 <strong>Hora Terapeuta (Venezuela):</strong> ${format12h(hora)} (${fecha})</div>
+                    ${firstTimeHtml}
                     <div style="font-size: 0.8rem; color: #047857; margin-bottom: 0.85rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.5rem 0.75rem; font-weight: 600;">
                         ✓ Sincronizada automáticamente con Google Calendar
                     </div>
@@ -25646,6 +25681,8 @@ async function loadDedicatedTherapistProfile(slug) {
         if (window.location.pathname.toLowerCase().startsWith('/registro/') || String(slug).startsWith('/registro/')) {
             openRegisterModal();
             if (t && t.id) {
+                window._refPsicologoId = t.id;
+                window._refPsicologoSlug = t.slug || (t.clean_slug ? `psic.${t.clean_slug}` : '');
                 loadActivePsychologists(t.id);
             }
         }

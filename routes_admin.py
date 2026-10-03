@@ -1505,20 +1505,29 @@ def check_register_cedula():
         
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT id, username, nombres, apellidos, cedula, telefono, email, pais, ciudad, pregunta_seguridad_1, respuesta_seguridad_1_hash FROM pacientes")
+    cursor.execute("SELECT id, username, nombres, apellidos, cedula, telefono, email, pais, ciudad, psicologo_id, pregunta_seguridad_1, respuesta_seguridad_1_hash FROM pacientes")
     rows = cursor.fetchall()
     
     cleaned_input = ''.join(c for c in cedula if c.isdigit())
     row = None
     for r in rows:
         db_cedula = r['cedula'] or ''
-        if db_cedula.strip() == cedula:
+        if cedula and db_cedula.strip() == cedula:
             row = r
             break
         if cleaned_input and ''.join(c for c in db_cedula if c.isdigit()) == cleaned_input:
             row = r
             break
             
+    # Si viene psicólogo de referencia, validar que el consultante pertenezca a ese psicólogo
+    ref_psicologo = request.args.get('ref_psicologo') or request.args.get('psicologo_id')
+    if row and ref_psicologo:
+        from app import get_psychologist_by_id_or_slug
+        psych_obj = get_psychologist_by_id_or_slug(cursor, ref_psicologo)
+        target_id = psych_obj['id'] if psych_obj else None
+        if target_id and row['psicologo_id'] and str(row['psicologo_id']) != str(target_id):
+            row = None
+
     if row:
         if row['pregunta_seguridad_1'] and row['respuesta_seguridad_1_hash']:
             return jsonify({'status': 'registered'})
@@ -1533,7 +1542,10 @@ def check_register_cedula():
                 'ciudad': row['ciudad']
             })
             
-    return jsonify({'status': 'new_patient'})
+    return jsonify({
+        'status': 'not_found',
+        'error': 'No encontramos tu documento en los registros del profesional. Si eres un consultante nuevo, por favor agenda tu primera cita o comunícate directamente con tu psicólogo'
+    })
 
 
 
@@ -1678,6 +1690,10 @@ def register():
             resp_2_hash = generate_password_hash(resp_2) if resp_2 else None
             
             if existing_patient:
+                # Validar que si viene psicologo_id, coincida con el psicólogo del consultante
+                if psicologo_id and existing_patient['psicologo_id'] and str(existing_patient['psicologo_id']) != str(psicologo_id):
+                    return jsonify({'error': 'No encontramos tu documento en los registros del profesional. Si eres un consultante nuevo, por favor agenda tu primera cita o comunícate directamente con tu psicólogo'}), 400
+
                 if existing_patient['pregunta_seguridad_1'] and existing_patient['respuesta_seguridad_1_hash']:
                     return jsonify({'error': 'La cédula ya está registrada con una cuenta activa.'}), 400
                 
@@ -1707,26 +1723,10 @@ def register():
                 pat_name = f"{data.get('nombres') or ex_nom} {data.get('apellidos') or ex_ape}".strip() or username
                 notif_msg = f"El consultante {pat_name} ha completado la creación de su cuenta de acceso."
             else:
-                target_psic = psicologo_id or 1
-                cursor.execute("""
-                    INSERT INTO pacientes (
-                        nombres, apellidos, cedula, telefono, email, pronombre, genero, edad,
-                        lugar_nacimiento, fecha_nacimiento, residencia_actual, pais, ciudad, con_quien_reside,
-                        nivel_academico, ocupacion, estado_civil, contacto_emergencia_nombre,
-                        contacto_emergencia_parentesco, motivo_consulta, expectativas, farmacologia,
-                        username, password_hash, pregunta_seguridad_1, respuesta_seguridad_1_hash,
-                        pregunta_seguridad_2, respuesta_seguridad_2_hash, psicologo_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    nombres, apellidos, cedula, telefono, email, pronombre, genero, edad,
-                    lugar_nacimiento, fecha_nacimiento, residencia_actual, pais, ciudad, con_quien_reside,
-                    nivel_academico, ocupacion, estado_civil, contacto_emergencia_nombre,
-                    contacto_emergencia_parentesco, motivo_consulta, expectativas, farmacologia,
-                    username, password_hash, pregunta_1, resp_1_hash, pregunta_2, resp_2_hash, target_psic
-                ))
-                patient_id = cursor.lastrowid
-                pat_name = f"{nombres} {apellidos}".strip() or username
-                notif_msg = f"El consultante {pat_name} se ha registrado en la plataforma."
+                # Ningún paciente se puede registrar si el psicólogo no lo tiene incluido en su historial
+                return jsonify({
+                    'error': 'No encontramos tu documento en los registros del profesional. Si eres un consultante nuevo, por favor agenda tu primera cita o comunícate directamente con tu psicólogo'
+                }), 400
 
             # Generar notificación interna y push al psicólogo asignado
             from datetime import datetime

@@ -1718,12 +1718,13 @@ def fast_booking_book():
     digits_telefono = re.sub(r'\D', '', telefono) if telefono else ''
 
     cursor.execute("""
-        SELECT id, nombres, apellidos, telefono, email 
+        SELECT id, nombres, apellidos, telefono, email, psicologo_id 
         FROM pacientes 
-        WHERE (LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
+        WHERE ((LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
            OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', '')))
-           OR (LOWER(username) = LOWER(?) AND username != '')
-    """, (digits_cedula, digits_cedula, clean_cedula, clean_cedula.lower()))
+           OR (LOWER(username) = LOWER(?) AND username != ''))
+           AND (psicologo_id = ? OR psicologo_id IS NULL)
+    """, (digits_cedula, digits_cedula, clean_cedula, clean_cedula.lower(), psicologo_id))
     patient = cursor.fetchone()
     
     is_new_patient = False
@@ -1866,7 +1867,14 @@ def fast_booking_book():
         import threading
         threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
         
-        return jsonify({'success': 'Tu consulta ha sido agendada con éxito automáticamente.', 'google_synced': google_event_id is not None})
+        return jsonify({
+            'success': 'Tu consulta ha sido agendada con éxito automáticamente.',
+            'google_synced': google_event_id is not None,
+            'is_new_patient': is_new_patient,
+            'psych_phone': psych.get('whatsapp_publico') or psych.get('telefono') if psych else None,
+            'psych_name': f"Psic. {psych.get('nombres','')} {psych.get('apellidos','')}".strip() if psych else "el profesional",
+            'first_time_message': 'Bienvenido/a. Como eres un consultante de primera vez, es importante que te comuniques vía WhatsApp con el profesional para recibir la información del encuadre terapeútico, métodos de pago y el enlace de la sesión.'
+        })
     except Exception as e:
         db.rollback()
         return jsonify({'error': f'Error al agendar consulta: {str(e)}'}), 500
