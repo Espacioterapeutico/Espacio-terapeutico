@@ -14851,6 +14851,7 @@ async function validateRegisterCedula() {
     
     statusMsg.classList.add('hide');
     
+    try {
         const urlParams = new URLSearchParams(window.location.search);
         const refId = urlParams.get('ref_psicologo') || window._refPsicologoId || '';
         const checkUrl = `/api/register/check-cedula?cedula=${encodeURIComponent(cedula)}${refId ? `&ref_psicologo=${encodeURIComponent(refId)}` : ''}`;
