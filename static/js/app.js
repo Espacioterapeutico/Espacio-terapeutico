@@ -11700,6 +11700,24 @@ function openModal(modalId) {
                 history.pushState({ type: 'modal', modalId: modalId }, '');
             } catch (e) {}
         }
+
+        // Auto-elevación dinámica de z-index: Si ya hay modales abiertos de fondo,
+        // este modal debe colocarse siempre por encima de todos ellos.
+        if (window._activeModalStack.length > 1) {
+            let maxZ = 2000;
+            window._activeModalStack.forEach(id => {
+                if (id !== modalId) {
+                    const mEl = document.getElementById(id);
+                    if (mEl) {
+                        const styleZ = parseInt(window.getComputedStyle(mEl).zIndex, 10);
+                        if (!isNaN(styleZ) && styleZ > maxZ) {
+                            maxZ = styleZ;
+                        }
+                    }
+                }
+            });
+            modal.style.setProperty('z-index', (maxZ + 30).toString(), 'important');
+        }
     }
 }
 window.openModal = openModal;
@@ -11710,6 +11728,7 @@ function closeModal(modalId, triggeredByBack = false) {
     if (modal) {
         modal.classList.add('hide');
         modal.style.removeProperty('display');
+        modal.style.removeProperty('z-index');
         modal.style.display = 'none';
         document.body.style.overflow = '';
         
