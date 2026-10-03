@@ -54,6 +54,20 @@ def sync_patient_to_firebase(patient_id):
     except Exception as _e:
         print(f"[WARN] Error en sync_patient_to_firebase({patient_id}): {_e}")
 
+def send_webpush_notification(*args, **kwargs):
+    try:
+        from app import send_webpush_notification as _send
+        return _send(*args, **kwargs)
+    except Exception as _e:
+        print(f"[WARN] Error en send_webpush_notification: {_e}")
+
+def send_welcome_credentials_email(*args, **kwargs):
+    try:
+        from app import send_welcome_credentials_email as _send
+        return _send(*args, **kwargs)
+    except Exception as _e:
+        print(f"[WARN] Error en send_welcome_credentials_email: {_e}")
+
 def check_is_superadmin():
     return session.get('role') in ['superadmin', 'admin']
 
@@ -1722,18 +1736,24 @@ def register():
                 VALUES (?, 'nuevo_paciente', '👤 Nuevo Registro de Consultante', ?, ?, 0, '/#pacientes')
             """, (target_psic, notif_msg, now_str))
             
-            send_webpush_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
+            try:
+                send_webpush_notification(user_id=target_psic, title="👤 Nuevo Registro de Consultante", body=notif_msg, url="/#pacientes")
+            except Exception as _wp_err:
+                print("Error enviando push de nuevo registro:", _wp_err)
 
             db.commit()
             
             # Enviar correo de bienvenida con credenciales y preguntas de seguridad al consultante
             if email:
-                full_name_pac = pat_name
-                send_welcome_credentials_email(
-                    'paciente', email, full_name_pac, username, password, 
-                    pregunta_1, resp_1, pregunta_2, resp_2, 
-                    login_url="https://www.espacioterapeutico.net/portal"
-                )
+                try:
+                    full_name_pac = pat_name
+                    send_welcome_credentials_email(
+                        'paciente', email, full_name_pac, username, password, 
+                        pregunta_1, resp_1, pregunta_2, resp_2, 
+                        login_url="https://www.espacioterapeutico.net/portal"
+                    )
+                except Exception as _mail_err:
+                    print("Error enviando correo de bienvenida:", _mail_err)
             
             # Sincronización en segundo plano con Firebase
             import threading

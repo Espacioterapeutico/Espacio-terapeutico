@@ -21,6 +21,20 @@ from routes_agenda import generate_dynamic_slots
 
 pacientes_bp = Blueprint('pacientes', __name__)
 
+def sync_patient_to_firebase(patient_id):
+    try:
+        from app import sync_patient_to_firebase as _sync
+        _sync(patient_id)
+    except Exception as _e:
+        print(f"[WARN] Error en sync_patient_to_firebase({patient_id}): {_e}")
+
+def send_webpush_notification(*args, **kwargs):
+    try:
+        from app import send_webpush_notification as _send
+        return _send(*args, **kwargs)
+    except Exception as _e:
+        print(f"[WARN] Error en send_webpush_notification: {_e}")
+
 def normalize_date_str(d_str):
     if not d_str:
         return ""
@@ -2242,7 +2256,10 @@ def accept_patient_terms():
                 INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
                 VALUES (?, 'terminos_aceptados', '📜 Términos Aceptados', ?, ?, 0, '/#pacientes')
             """, (psic_id, notif_msg, now_str))
-            send_webpush_notification(user_id=psic_id, title="📜 Términos Aceptados", body=notif_msg, url="/#pacientes")
+            try:
+                send_webpush_notification(user_id=psic_id, title="📜 Términos Aceptados", body=notif_msg, url="/#pacientes")
+            except Exception as _wp_err:
+                print("Error enviando push terminos aceptados:", _wp_err)
         db.commit()
         return jsonify({'success': 'Términos y condiciones aceptados.', 'fecha': now_str})
     except Exception as e:
