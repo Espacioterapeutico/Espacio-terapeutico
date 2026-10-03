@@ -6267,7 +6267,11 @@ async function loadPatientRescheduleHistory(patientId) {
 // ==========================================
 // GESTIÓN DE SESIONES (EVOLUCIONES)
 // ==========================================
-async function loadPatientsDropdowns() {
+async function loadPatientsDropdowns(forceRefresh = false) {
+    const sessionFormSelect = document.getElementById('s-paciente');
+    if (!forceRefresh && sessionFormSelect && sessionFormSelect.options.length > 1) {
+        return;
+    }
     let patients = [];
     try {
         try {
@@ -6773,8 +6777,6 @@ async function openNewSessionModal() {
     if (mseDrawer) mseDrawer.classList.add('hide');
     if (typeof updateSessionMseButtonVisibility === 'function') updateSessionMseButtonVisibility();
     
-    await loadPatientsDropdowns();
-    
     // Asegurar que todas las opciones estén visibles
     const select = document.getElementById('s-paciente');
     if (select) {
@@ -6788,15 +6790,12 @@ async function openNewSessionModal() {
     // Si estamos en la vista filtrada por un paciente, pre-seleccionar
     const filterSelect = document.getElementById('session-filter-patient');
     const filterVal = filterSelect ? filterSelect.value : '';
-    if (filterVal) {
-        document.getElementById('s-paciente').value = filterVal;
+    if (filterVal && select) {
+        select.value = filterVal;
     }
     
-    const currentPatientId = document.getElementById('s-paciente').value;
-    if (currentPatientId) {
-        await checkSessionPatientPrepayments(currentPatientId);
-        await updateSessionPatientQuickInfo(currentPatientId);
-    } else {
+    const currentPatientId = select ? select.value : '';
+    if (!currentPatientId) {
         const quickInfoDiv = document.getElementById('s-paciente-quick-info');
         if (quickInfoDiv) {
             quickInfoDiv.innerHTML = '';
@@ -6807,6 +6806,7 @@ async function openNewSessionModal() {
         const alertsDiv = document.getElementById('s-paciente-alerts');
         if (alertsDiv) alertsDiv.classList.add('hide');
     }
+    
     // Mostrar campos de liquidación por defecto para el estado "Realizada" (por defecto Dejar pendiente)
     document.getElementById('s-estado').value = 'Realizada';
     toggleSessionFinanceFields('Realizada');
@@ -6818,21 +6818,40 @@ async function openNewSessionModal() {
     const disBtn = document.getElementById('session-dismiss-pending-btn');
     if (disBtn) disBtn.style.display = 'none';
 
+    // ¡ABRIR EL MODAL DE INMEDIATO SIN DELAY!
     openModal('session-modal');
+
+    // Cargas secundarias en segundo plano:
+    if (!select || select.options.length <= 1) {
+        loadPatientsDropdowns().then(() => {
+            if (filterVal && select) select.value = filterVal;
+        }).catch(console.warn);
+    }
+    if (currentPatientId) {
+        checkSessionPatientPrepayments(currentPatientId).catch(console.warn);
+        updateSessionPatientQuickInfo(currentPatientId).catch(console.warn);
+    }
 }
 
 async function openRegisterSessionFromEvent(eventId) {
     try {
         let e = null;
-        try {
-            const res = await fetch(`/api/finance/transactions/${eventId}`);
-            if (res.ok) e = await res.json();
-        } catch(netErr) {}
+        if (window._pendingEvolutionsMap && window._pendingEvolutionsMap[eventId]) {
+            e = window._pendingEvolutionsMap[eventId];
+        } else if (Array.isArray(window._upcomingConsultationsList)) {
+            e = window._upcomingConsultationsList.find(x => x.id == eventId);
+        } else {
+            try {
+                const cachedAgenda = JSON.parse(localStorage.getItem('offline_cache_agenda') || '[]');
+                e = cachedAgenda.find(x => x.id == eventId);
+            } catch(eCache) {}
+        }
         
         if (!e) {
-            let cachedAgenda = [];
-            try { cachedAgenda = JSON.parse(localStorage.getItem('offline_cache_agenda') || '[]'); } catch(eCache){}
-            e = cachedAgenda.find(x => x.id == eventId);
+            try {
+                const res = await fetch(`/api/finance/transactions/${eventId}`);
+                if (res.ok) e = await res.json();
+            } catch(netErr) {}
         }
         if (!e) throw new Error("Cita no encontrada en el dispositivo.");
         
@@ -6856,24 +6875,24 @@ async function openRegisterSessionFromEvent(eventId) {
         if (mseDrawer) mseDrawer.classList.add('hide');
         if (typeof updateSessionMseButtonVisibility === 'function') updateSessionMseButtonVisibility();
         
-        await loadPatientsDropdowns();
-        
         const select = document.getElementById('s-paciente');
         if (select) {
+            let hasOpt = false;
             for (let i = 0; i < select.options.length; i++) {
                 select.options[i].style.display = '';
+                if (select.options[i].value == e.paciente_id) hasOpt = true;
             }
+            if (!hasOpt && e.paciente_id) {
+                const opt = document.createElement('option');
+                opt.value = e.paciente_id;
+                opt.textContent = `${e.nombres || ''} ${e.apellidos || ''}`.trim() || `Paciente #${e.paciente_id}`;
+                select.appendChild(opt);
+            }
+            select.value = e.paciente_id;
         }
         
-        document.getElementById('s-paciente').value = e.paciente_id;
-        document.getElementById('s-fecha').value = e.fecha;
-        document.getElementById('s-modalidad').value = e.tipo_consulta;
-        
-        // Cargar alertas de prepagos y deudas y ficha rápida
-        try {
-            await checkSessionPatientPrepayments(e.paciente_id);
-            await updateSessionPatientQuickInfo(e.paciente_id);
-        } catch(eAlerts){}
+        document.getElementById('s-fecha').value = e.fecha || new Date().toISOString().split('T')[0];
+        document.getElementById('s-modalidad').value = e.tipo_consulta || 'Online';
         
         // Estado por defecto
         document.getElementById('s-estado').value = 'Realizada';
@@ -6888,7 +6907,20 @@ async function openRegisterSessionFromEvent(eventId) {
         
         restoreSessionDraft(e.paciente_id);
         
+        // ¡ABRIR EL MODAL DE INMEDIATO!
         openModal('session-modal');
+
+        // Cargar en segundo plano sin demorar la apertura del modal:
+        if (!select || select.options.length <= 1) {
+            loadPatientsDropdowns().then(() => {
+                if (select && e) select.value = e.paciente_id;
+            }).catch(console.warn);
+        }
+        
+        if (e.paciente_id) {
+            checkSessionPatientPrepayments(e.paciente_id).catch(console.warn);
+            updateSessionPatientQuickInfo(e.paciente_id).catch(console.warn);
+        }
     } catch (err) {
         alert(err.message);
     }
