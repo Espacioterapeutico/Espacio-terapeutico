@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS agenda_finanzas (
     fecha_liquidacion TEXT,
     confirmada INTEGER DEFAULT 0,
     token_confirmacion TEXT UNIQUE,
+    descartar_evolucion INTEGER DEFAULT 0,
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
 );
 

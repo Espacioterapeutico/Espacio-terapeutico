@@ -1429,6 +1429,28 @@ def delete_agenda_event(event_id):
 
     return jsonify({'success': 'Cita eliminada correctamente de la agenda y Google Calendar.'})
 
+@agenda_bp.route('/api/agenda/events/<int:event_id>/dismiss-evolution', methods=['POST'])
+@login_required
+def dismiss_pending_evolution(event_id):
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("PRAGMA table_info(agenda_finanzas)")
+        cols = [r[1] for r in cursor.fetchall()]
+        if 'descartar_evolucion' not in cols:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN descartar_evolucion INTEGER DEFAULT 0")
+    except Exception as e:
+        print("Error checking descartar_evolucion column:", e)
+        
+    cursor.execute("SELECT id, paciente_id, fecha, hora FROM agenda_finanzas WHERE id = ?", (event_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Cita no encontrada.'}), 404
+        
+    cursor.execute("UPDATE agenda_finanzas SET descartar_evolucion = 1 WHERE id = ?", (event_id,))
+    db.commit()
+    return jsonify({'success': True, 'message': 'Cita eliminada de la lista de evoluciones pendientes.'})
+
 @agenda_bp.route('/api/admin/availability', methods=['GET', 'POST'])
 @login_required
 def admin_availability():

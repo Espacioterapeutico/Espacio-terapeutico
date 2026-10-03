@@ -6815,6 +6815,9 @@ async function openNewSessionModal() {
     
     restoreSessionDraft(currentPatientId);
     
+    const disBtn = document.getElementById('session-dismiss-pending-btn');
+    if (disBtn) disBtn.style.display = 'none';
+
     openModal('session-modal');
 }
 
@@ -6833,6 +6836,12 @@ async function openRegisterSessionFromEvent(eventId) {
         }
         if (!e) throw new Error("Cita no encontrada en el dispositivo.");
         
+        window._pendingEvolutionsMap = window._pendingEvolutionsMap || {};
+        window._pendingEvolutionsMap[eventId] = e;
+
+        const disBtn = document.getElementById('session-dismiss-pending-btn');
+        if (disBtn) disBtn.style.display = 'inline-flex';
+
         document.getElementById('session-form').reset();
         document.getElementById('session-form-id').value = '';
         document.getElementById('s-agenda-id').value = eventId;
@@ -7315,7 +7324,15 @@ async function loadAgendaCompact() {
 
         // 2. Renderizar Evoluciones Clínicas Pendientes
         try {
-            let pendingEvolutions = (events || []).filter(e => !e.has_session && e.estado_pago !== 'Prepagada' && e.fecha <= todayStr);
+            window._pendingEvolutionsMap = window._pendingEvolutionsMap || {};
+            let pendingEvolutions = (events || []).filter(e => {
+                if (e.has_session) return false;
+                if (e.descartar_evolucion == 1 || e.descartar_evolucion === true) return false;
+                if (e.estado_pago === 'Prepagada') return false;
+                const est = String(e.estado_pago || '').toLowerCase();
+                if (est.includes('cancelada')) return false;
+                return e.fecha <= todayStr;
+            });
 
             // Deduplicar eventos por id y combinacion de paciente, fecha y hora
             const seenEvKeys = new Set();
@@ -7336,6 +7353,7 @@ async function loadAgendaCompact() {
             } else {
                 pendingEvolutions.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
                 pendingEvolutions.forEach(e => {
+                    window._pendingEvolutionsMap[e.id] = e;
                     const item = document.createElement('div');
                     item.className = 'agenda-compact-item';
 
@@ -7348,9 +7366,10 @@ async function loadAgendaCompact() {
                             <span class="agenda-compact-patient">${e.nombres} ${e.apellidos}</span>
                             <span class="agenda-compact-type" style="color: var(--danger-color); font-weight: 500;">Pendiente por Evolucionar</span>
                         </div>
-                        <div style="display: flex; gap: 0.35rem;">
+                        <div style="display: flex; gap: 0.35rem; align-items: center;">
                             <button class="btn btn-primary btn-sm" onclick="openRegisterSessionFromEvent(${e.id})">Evolucionar</button>
                             <button class="btn btn-secondary btn-sm" onclick="openSummaryModal(${e.paciente_id})">Ficha</button>
+                            <button class="btn btn-sm" onclick="openDismissPendingEvolutionModal(${e.id})" title="Eliminar de pendientes" style="background: transparent; border: 1.5px solid #ef4444; color: #ef4444; border-radius: 6px; padding: 0.25rem 0.55rem; font-size: 0.85rem; font-weight: 700; line-height: 1; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='#fff';" onmouseout="this.style.background='transparent'; this.style.color='#ef4444';">✕</button>
                         </div>
                     `;
                     listContainer.appendChild(item);
@@ -7729,6 +7748,76 @@ async function deleteAgendaEventFromDashboard(citaId) {
     }
 }
 window.deleteAgendaEventFromDashboard = deleteAgendaEventFromDashboard;
+
+// =======================================================
+// GESTIÓN DE QUITAR / DESCARTAR EVOLUCIONES PENDIENTES
+// =======================================================
+window._pendingEvolutionsMap = window._pendingEvolutionsMap || {};
+
+function openDismissPendingEvolutionModal(eventId) {
+    const e = window._pendingEvolutionsMap[eventId] || {};
+    const modal = document.getElementById('modal-dismiss-pending-evolution');
+    if (!modal) return;
+    
+    document.getElementById('dismiss-pending-event-id').value = eventId;
+    const nameEl = document.getElementById('dismiss-pending-patient-name');
+    const dtEl = document.getElementById('dismiss-pending-datetime');
+    if (nameEl) nameEl.textContent = `${e.nombres || ''} ${e.apellidos || ''}`.trim() || 'Consultante';
+    if (dtEl) dtEl.textContent = `${e.fecha || ''} a las ${e.hora || ''}`;
+    
+    openModal('modal-dismiss-pending-evolution');
+}
+window.openDismissPendingEvolutionModal = openDismissPendingEvolutionModal;
+
+function dismissPendingEvolutionFromSessionModal() {
+    const agendaId = document.getElementById('s-agenda-id').value;
+    if (!agendaId) return;
+    closeModal('session-modal');
+    openDismissPendingEvolutionModal(agendaId);
+}
+window.dismissPendingEvolutionFromSessionModal = dismissPendingEvolutionFromSessionModal;
+
+async function executeDismissPendingEvolution() {
+    const eventId = document.getElementById('dismiss-pending-event-id').value;
+    if (!eventId) return;
+    
+    try {
+        const res = await fetch(`/api/agenda/events/${eventId}/dismiss-evolution`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            closeModal('modal-dismiss-pending-evolution');
+            
+            // Actualizar caché offline de agenda
+            try {
+                let cached = JSON.parse(localStorage.getItem('offline_cache_agenda') || '[]');
+                const item = cached.find(x => x.id == eventId);
+                if (item) {
+                    item.descartar_evolucion = 1;
+                    localStorage.setItem('offline_cache_agenda', JSON.stringify(cached));
+                }
+            } catch(e) {}
+            
+            if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
+            alert('Cita eliminada de la lista de evoluciones pendientes con éxito.');
+        } else {
+            alert(data.error || 'Error al descartar la evolución pendiente.');
+        }
+    } catch (err) {
+        console.error('Error al descartar evolución pendiente:', err);
+        alert('Error de conexión al descartar la evolución.');
+    }
+}
+window.executeDismissPendingEvolution = executeDismissPendingEvolution;
+
+function executeDeletePendingAppointment() {
+    const eventId = document.getElementById('dismiss-pending-event-id').value;
+    closeModal('modal-dismiss-pending-evolution');
+    if (eventId && typeof deleteAgendaEventFromDashboard === 'function') {
+        deleteAgendaEventFromDashboard(parseInt(eventId));
+    }
+}
+window.executeDeletePendingAppointment = executeDeletePendingAppointment;
 
 // ==========================================
 // CONTROL FINANCIERO Y BALANCE MULTIMONEDA

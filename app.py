@@ -1142,6 +1142,8 @@ def init_db():
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN consultorio_nombre TEXT")
         if 'hora_paciente' not in cols_fin:
             cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN hora_paciente TEXT")
+        if 'descartar_evolucion' not in cols_fin:
+            cursor.execute("ALTER TABLE agenda_finanzas ADD COLUMN descartar_evolucion INTEGER DEFAULT 0")
         db.commit()
         
     # Crear tabla de tarifas por país
