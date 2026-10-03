@@ -170,34 +170,38 @@ def api_carpetas():
     ensure_estimulacion_tables(db)
 
     if request.method == 'GET':
-        if is_super:
-            cursor.execute("""
-                SELECT c.*, 
-                       (SELECT COUNT(*) FROM cat_ejercicios_cognitivos e WHERE e.carpeta_id = c.id) as total_ejercicios,
-                       u.nombre_completo as autor_nombre
-                FROM cat_carpetas_cognitivas c
-                LEFT JOIN usuarios u ON c.psicologo_id = u.id
-                ORDER BY c.es_publica DESC, c.fecha_creacion DESC
-            """)
-        else:
-            cursor.execute("""
-                SELECT c.*, 
-                       (SELECT COUNT(*) FROM cat_ejercicios_cognitivos e WHERE e.carpeta_id = c.id) as total_ejercicios,
-                       u.nombre_completo as autor_nombre
-                FROM cat_carpetas_cognitivas c
-                LEFT JOIN usuarios u ON c.psicologo_id = u.id
-                WHERE c.psicologo_id = ? OR c.es_publica = 1 OR c.psicologo_id IS NULL
-                ORDER BY c.es_publica DESC, c.fecha_creacion DESC
-            """, (user_id,))
-        rows = []
-        for r in cursor.fetchall():
-            d = dict(r)
-            d['es_publica'] = 1 if d.get('es_publica') else 0
-            d['es_propia'] = (d.get('psicologo_id') == user_id)
-            d['puede_editar'] = is_super or (d.get('psicologo_id') == user_id and not d['es_publica'])
-            d['puede_publicar'] = is_super
-            rows.append(d)
-        return jsonify({'carpetas': rows, 'is_superadmin': is_super})
+        try:
+            if is_super:
+                cursor.execute("""
+                    SELECT c.*, 
+                           (SELECT COUNT(*) FROM cat_ejercicios_cognitivos e WHERE e.carpeta_id = c.id) as total_ejercicios,
+                           TRIM(COALESCE(u.nombres, '') || ' ' || COALESCE(u.apellidos, '')) as autor_nombre
+                    FROM cat_carpetas_cognitivas c
+                    LEFT JOIN usuarios u ON c.psicologo_id = u.id
+                    ORDER BY c.es_publica DESC, c.fecha_creacion DESC
+                """)
+            else:
+                cursor.execute("""
+                    SELECT c.*, 
+                           (SELECT COUNT(*) FROM cat_ejercicios_cognitivos e WHERE e.carpeta_id = c.id) as total_ejercicios,
+                           TRIM(COALESCE(u.nombres, '') || ' ' || COALESCE(u.apellidos, '')) as autor_nombre
+                    FROM cat_carpetas_cognitivas c
+                    LEFT JOIN usuarios u ON c.psicologo_id = u.id
+                    WHERE c.psicologo_id = ? OR c.es_publica = 1 OR c.psicologo_id IS NULL
+                    ORDER BY c.es_publica DESC, c.fecha_creacion DESC
+                """, (user_id,))
+            rows = []
+            for r in cursor.fetchall():
+                d = dict(r)
+                d['es_publica'] = 1 if d.get('es_publica') else 0
+                d['es_propia'] = (d.get('psicologo_id') == user_id)
+                d['puede_editar'] = is_super or (d.get('psicologo_id') == user_id and not d['es_publica'])
+                d['puede_publicar'] = is_super
+                rows.append(d)
+            return jsonify({'carpetas': rows, 'is_superadmin': is_super})
+        except Exception as e:
+            print("Error al obtener carpetas de estimulacion:", e)
+            return jsonify({'error': str(e), 'carpetas': []}), 500
 
     elif request.method == 'POST':
         data = request.get_json() or {}

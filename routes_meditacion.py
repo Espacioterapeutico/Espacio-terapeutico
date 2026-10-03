@@ -120,14 +120,14 @@ def get_catalogo():
     
     if is_super:
         cursor.execute("""
-            SELECT m.*, u.nombre_completo as autor_nombre
+            SELECT m.*, TRIM(COALESCE(u.nombres, '') || ' ' || COALESCE(u.apellidos, '')) as autor_nombre
             FROM cat_meditaciones m
             LEFT JOIN usuarios u ON m.psicologo_id = u.id
             ORDER BY m.es_publica DESC, m.fecha_creacion DESC
         """)
     else:
         cursor.execute("""
-            SELECT m.*, u.nombre_completo as autor_nombre
+            SELECT m.*, TRIM(COALESCE(u.nombres, '') || ' ' || COALESCE(u.apellidos, '')) as autor_nombre
             FROM cat_meditaciones m
             LEFT JOIN usuarios u ON m.psicologo_id = u.id
             WHERE m.psicologo_id = ? OR m.es_publica = 1 OR m.psicologo_id IS NULL
