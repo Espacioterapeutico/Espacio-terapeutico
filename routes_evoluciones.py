@@ -611,18 +611,20 @@ def delete_session_detail(session_id):
     cursor = db.cursor()
     try:
         cursor.execute("SELECT * FROM sesiones WHERE id = ?", (session_id,))
-        ses = cursor.fetchone()
-        if not ses:
+        ses_raw = cursor.fetchone()
+        if not ses_raw:
             return jsonify({'error': 'Evolución no encontrada.'}), 404
+        ses = dict(ses_raw)
             
-        agenda_id = ses['agenda_id']
-        patient_id = ses['paciente_id']
+        agenda_id = ses.get('agenda_id')
+        patient_id = ses.get('paciente_id')
         ses_estado = str(ses.get('estado') or '').strip().lower()
         
         if agenda_id:
             cursor.execute("SELECT id, estado_pago, metodo_pago, fecha, confirmada FROM agenda_finanzas WHERE id = ?", (agenda_id,))
-            af_row = cursor.fetchone()
-            if af_row:
+            af_raw = cursor.fetchone()
+            if af_raw:
+                af_row = dict(af_raw)
                 af_estado = str(af_row.get('estado_pago') or '').strip().lower()
                 
                 # REGLA CRÍTICA:
