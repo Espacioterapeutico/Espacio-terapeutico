@@ -22846,6 +22846,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
 
             let detailHeaders = '';
             let detailTableRows = '';
+            let detailCardsHtml = '';
 
             if (moduloClave === 'sobriedad') {
                 detailHeaders = `<th>📅 Fecha</th><th>Estado</th><th>Craving (1-10)</th><th>Disparador Emocional</th><th>Notas</th>`;
@@ -22858,6 +22859,33 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         <td style="padding: 0.6rem;">${r.notas || '-'}</td>
                     </tr>
                 `).join('');
+
+                detailCardsHtml = recs.map(r => `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${r.fecha}</span>
+                            <span class="badge" style="background:${r.sobrio ? '#f0fdf4' : '#fef2f2'}; color:${r.sobrio ? '#15803d' : '#b91c1c'}; font-weight:700;">
+                                ${r.sobrio ? '🟢 Libre de consumo' : '⚠️ Consumo / Recaída'}
+                            </span>
+                        </div>
+                        ${r.nivel_ansiedad !== null && r.nivel_ansiedad !== undefined ? `
+                        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem;">
+                            <strong style="color: #64748b;">Nivel de Craving (Deseo):</strong>
+                            <span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span>
+                        </div>` : ''}
+                        ${r.disparador_emocional ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #702e5e; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Disparador Emocional:</span>
+                            <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.disparador_emocional}</p>
+                        </div>` : ''}
+                        ${r.notas ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas / Observaciones:</span>
+                            <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
+                        </div>` : ''}
+                    </div>
+                `).join('');
+
             } else if (moduloClave === 'sueno') {
                 detailHeaders = `<th>📅 Fecha</th><th>Horario Sueño</th><th>Horas Dormidas</th><th>¿Descansó?</th><th>Despertares</th><th>Síntomas Día</th><th>Detalles Día & Conciliación</th>`;
                 detailTableRows = recs.map(r => {
@@ -22881,6 +22909,44 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                     </tr>
                     `;
                 }).join('');
+
+                detailCardsHtml = recs.map(r => {
+                    const durHours = calculateSleepHours(r.hora_dormi, r.hora_desperto);
+                    const durText = durHours !== null ? `${durHours.toFixed(1)} hrs` : '-';
+                    return `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${r.fecha}</span>
+                            <div style="display: flex; gap: 0.35rem; align-items: center;">
+                                <span class="badge" style="background:#eff6ff; color:#1e40af; font-weight:800; padding:0.2rem 0.5rem; border: 1px solid #bfdbfe;">⏱️ ${durText}</span>
+                                <span class="badge" style="background:${r.senti_descanso ? '#f0fdf4' : '#fef2f2'}; color:${r.senti_descanso ? '#15803d' : '#b91c1c'}; font-weight:700;">
+                                    ${r.senti_descanso ? '🟢 Reparador' : '🔴 No reparador'}
+                                </span>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.82rem; color: #475569;">
+                            <span><strong>Horario:</strong> ${r.hora_dormi || '--:--'} a ${r.hora_desperto || '--:--'}</span>
+                            <span><strong>Despertares:</strong> ${r.desperto_noche ? `Sí (${r.cant_despertares || 1} veces)` : 'No'}</span>
+                        </div>
+                        ${(r.somnolencia_dia || r.pesadez_dia || r.agotamiento_dia) ? `
+                        <div style="font-size: 0.82rem; color: #334155;">
+                            <strong>Síntomas en el día:</strong> ${r.somnolencia_dia ? '🥱 Somnolencia ' : ''}${r.pesadez_dia ? '🪨 Pesadez ' : ''}${r.agotamiento_dia ? '🔋 Agotamiento' : ''}
+                        </div>` : ''}
+                        ${r.proceso_dormir ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #1e40af; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Conciliación del sueño:</span>
+                            <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.proceso_dormir}</p>
+                        </div>` : ''}
+                        ${(r.situaciones_dia || r.emociones_dia) ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #6b21a8; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Situaciones & Emociones del día:</span>
+                            ${r.situaciones_dia ? `<p style="margin: 0 0 0.2rem 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;"><strong>Situaciones:</strong> ${r.situaciones_dia}</p>` : ''}
+                            ${r.emociones_dia ? `<p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;"><strong>Emociones:</strong> ${r.emociones_dia}</p>` : ''}
+                        </div>` : ''}
+                    </div>
+                    `;
+                }).join('');
+
             } else if (moduloClave === 'adherencia') {
                 detailHeaders = `<th>📅 Fecha</th><th>Medicamento</th><th>Dosis / Prescripción</th><th>Estado Toma</th><th>Hora Real</th><th>Notas</th>`;
                 detailTableRows = recs.map(r => `
@@ -22893,6 +22959,31 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         <td style="padding: 0.6rem;">${r.notas || '-'}</td>
                     </tr>
                 `).join('');
+
+                detailCardsHtml = recs.map(r => `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${r.fecha}</span>
+                            <span class="badge" style="background:${r.tomado ? '#f0fdf4' : '#fef2f2'}; color:${r.tomado ? '#15803d' : '#b91c1c'}; font-weight:700;">
+                                ${r.tomado ? '🟢 Tomado' : '🔴 No tomado'}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.88rem; color: #1e293b; font-weight: 700;">
+                            💊 ${r.nombre_medicamento}
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.82rem; color: #475569;">
+                            <span><strong>Dosis:</strong> ${r.dosis || '-'}</span>
+                            <span><strong>Hora prescrita:</strong> ${r.hora_prescrita || '-'}</span>
+                            <span><strong>Hora real de toma:</strong> ${r.hora_tomado || '-'}</span>
+                        </div>
+                        ${r.notas ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas:</span>
+                            <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
+                        </div>` : ''}
+                    </div>
+                `).join('');
+
             } else if (moduloClave === 'activacion') {
                 detailHeaders = `<th>📅 Fecha</th><th>Categoría</th><th>Actividad</th><th>Estado</th><th>Notas</th>`;
                 detailTableRows = recs.map(r => {
@@ -22907,6 +22998,32 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         </tr>
                     `;
                 }).join('');
+
+                detailCardsHtml = recs.map(r => {
+                    let catLabel = r.categoria === 'necesaria' ? '📌 Necesaria' : (r.categoria === 'placer' ? '🎉 Disfrute/Placer' : '🏠 Cotidiana');
+                    return `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${r.fecha}</span>
+                            <div style="display: flex; gap: 0.35rem; align-items: center;">
+                                <span class="badge" style="background:#f3e8ff; color:#7e22ce; font-weight:700;">${catLabel}</span>
+                                <span class="badge" style="background:${r.completada ? '#f0fdf4' : '#f8fafc'}; color:${r.completada ? '#15803d' : '#64748b'}; font-weight:700;">
+                                    ${r.completada ? '🟢 Completada' : '⚪ Pendiente'}
+                                </span>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.88rem; color: #1e293b; font-weight: 700;">
+                            🎯 ${r.nombre_actividad}
+                        </div>
+                        ${r.notas ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas / Reflexión:</span>
+                            <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
+                        </div>` : ''}
+                    </div>
+                    `;
+                }).join('');
+
             } else if (moduloClave === 'ansiedad') {
                 detailHeaders = `<th>📅 Fecha</th><th>Nivel Ansiedad</th><th>Síntomas Registrados</th><th>Situación Desencadenante</th>`;
                 detailTableRows = recs.map(r => {
@@ -22921,6 +23038,30 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         </tr>
                     `;
                 }).join('');
+
+                detailCardsHtml = recs.map(r => {
+                    let sints = [];
+                    try { sints = JSON.parse(r.sintomas_json || '[]'); } catch(e){}
+                    const sintsBadges = sints.length > 0 ? sints.map(s => `<span class="badge" style="background:#f3f4f6; color:#374151; margin:2px; font-size:0.75rem;">${s}</span>`).join(' ') : '<em style="color:#94a3b8; font-size:0.8rem;">Sin síntomas marcados</em>';
+                    return `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${r.fecha}</span>
+                            <span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800; font-size:0.82rem; border:1px solid #fed7aa;">⚡ Nivel Ansiedad: ${r.nivel_ansiedad} / 10</span>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #9a3412; text-transform: uppercase; display: block; margin-bottom: 0.2rem;">Síntomas Registrados:</span>
+                            <div>${sintsBadges}</div>
+                        </div>
+                        ${r.situacion_desencadenante ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Situación Desencadenante:</span>
+                            <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.situacion_desencadenante}</p>
+                        </div>` : ''}
+                    </div>
+                    `;
+                }).join('');
+
             } else if (moduloClave === 'meditacion') {
                 detailHeaders = `<th>📅 Fecha</th><th>Meditación</th><th>Estado</th><th>Ánimo Antes / Después</th><th>Notas</th>`;
                 detailTableRows = recs.map(r => `
@@ -22932,6 +23073,30 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         <td style="padding: 0.6rem;">${r.notas || '-'}</td>
                     </tr>
                 `).join('');
+
+                detailCardsHtml = recs.map(r => `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #f5d0fe; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${r.fecha}</span>
+                            <span class="badge" style="background:${r.completada ? '#f0fdf4' : '#fef2f2'}; color:${r.completada ? '#15803d' : '#b91c1c'}; font-weight:700;">
+                                ${r.completada ? '🟢 Completada' : '⚪ Pendiente'}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.88rem; color: #1e293b; font-weight: 700;">
+                            🧘 ${r.nombre_meditacion || 'Meditación'}
+                        </div>
+                        ${(r.animo_antes || r.animo_despues) ? `
+                        <div style="font-size: 0.82rem; color: #475569;">
+                            <strong>Estado de Ánimo:</strong> ${r.animo_antes || '-'} ➔ ${r.animo_despues || '-'}
+                        </div>` : ''}
+                        ${r.notas ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas:</span>
+                            <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
+                        </div>` : ''}
+                    </div>
+                `).join('');
+
             } else if (moduloClave === 'mood_tracker') {
                 detailHeaders = `<th>📅 Fecha</th><th>Emociones Sentidas</th><th>Intensidad</th><th>Situaciones Detonantes</th><th>¿Qué Hizo con la Emoción?</th>`;
                 detailTableRows = recs.map(r => {
@@ -22951,6 +23116,78 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         </tr>
                     `;
                 }).join('');
+
+                detailCardsHtml = recs.map(r => {
+                    let emos = [];
+                    try {
+                        emos = typeof r.emociones_json === 'string' ? JSON.parse(r.emociones_json) : (r.emociones_json || []);
+                    } catch(e){}
+                    const chips = emos.map(e => `<span class="badge" style="background:#f3e8ff; color:#6b21a8; font-weight:700; border:1px solid #d8b4fe; border-radius:12px; padding:0.2rem 0.5rem; margin:2px; font-size:0.78rem;">${e}</span>`).join(' ');
+                    const intVal = parseInt(r.intensidad || 3, 10);
+                    return `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #d8b4fe; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${r.fecha}</span>
+                            <span class="badge" style="background:#faf5ff; color:#7e22ce; font-weight:800; font-size:0.82rem; border:1px solid #d8b4fe;">Intensidad: ${intVal} / 5</span>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #702e5e; text-transform: uppercase; display: block; margin-bottom: 0.2rem;">Emociones Sentidas:</span>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">${chips || '<em style="color:#94a3b8; font-size:0.8rem;">Sin emociones marcadas</em>'}</div>
+                        </div>
+                        ${r.situaciones_detonantes ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.5rem 0.65rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.2rem;">⚡ Situaciones Detonantes:</span>
+                            <p style="margin: 0; font-size: 0.85rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-word;">${r.situaciones_detonantes}</p>
+                        </div>` : ''}
+                        ${r.accion_conducta ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.5rem 0.65rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.2rem;">💡 ¿Qué hizo con la emoción?:</span>
+                            <p style="margin: 0; font-size: 0.85rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-word;">${r.accion_conducta}</p>
+                        </div>` : ''}
+                    </div>
+                    `;
+                }).join('');
+
+            } else if (moduloClave === 'pantalla') {
+                detailHeaders = `<th>📅 Fecha</th><th>Tiempo de Uso</th><th>Apps Principales</th><th>Estado Posterior</th><th>Notas</th>`;
+                detailTableRows = recs.map(r => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.6rem;"><strong>📅 ${r.fecha}</strong></td>
+                        <td style="padding: 0.6rem;">${r.tiempo_uso || '-'}</td>
+                        <td style="padding: 0.6rem;">${r.apps_usadas || '-'}</td>
+                        <td style="padding: 0.6rem;">${r.estado_emocional_posterior || '-'}</td>
+                        <td style="padding: 0.6rem;">${r.notas || '-'}</td>
+                    </tr>
+                `).join('');
+
+                detailCardsHtml = recs.map(r => `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${r.fecha}</span>
+                            <span class="badge" style="background:#faf5ff; color:#7e22ce; font-weight:700;">${r.tiempo_uso || 'Sin tiempo'}</span>
+                        </div>
+                        ${r.apps_usadas ? `<div style="font-size:0.83rem; color:#475569;"><strong>Apps:</strong> ${r.apps_usadas}</div>` : ''}
+                        ${r.estado_emocional_posterior ? `<div style="font-size:0.83rem; color:#475569;"><strong>Estado posterior:</strong> ${r.estado_emocional_posterior}</div>` : ''}
+                        ${r.notas ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas:</span>
+                            <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
+                        </div>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            if (!detailCardsHtml && recs.length > 0) {
+                detailCardsHtml = recs.map(r => `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                            📅 ${r.fecha || 'Sin fecha'}
+                        </div>
+                        <div style="font-size: 0.84rem; color: #475569; line-height: 1.4;">
+                            ${r.notas || r.descripcion || r.registro || '-'}
+                        </div>
+                    </div>
+                `).join('');
             }
 
             // Desplegar siempre abierto el historial por consultante
@@ -22973,17 +23210,24 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             ${summaryBadgesHtml}
                         </div>
                     </div>
-                    <div id="ttr-patient-body-${p.id}" style="padding: 0.75rem; display: block; overflow-x: auto;">
-                        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: #f9fafb;">
-                                    ${detailHeaders}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${detailTableRows}
-                            </tbody>
-                        </table>
+                    <div id="ttr-patient-body-${p.id}" style="padding: 0.75rem; display: block;">
+                        <!-- Vista Tabla para Pantallas Grandes / Desktop -->
+                        <div class="ttr-table-view">
+                            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: #f9fafb;">
+                                        ${detailHeaders}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${detailTableRows}
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Vista Tarjetas Apiladas para Pantallas Móviles -->
+                        <div class="ttr-cards-view">
+                            ${detailCardsHtml}
+                        </div>
                     </div>
                 </div>
             `;
@@ -22992,10 +23236,60 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
         html += `</div>`;
         container.innerHTML = html;
 
+        // Inicializar modo de vista según ancho de pantalla
+        if (window.innerWidth <= 768) {
+            setTtrViewMode('cards');
+        } else {
+            setTtrViewMode(window._ttrCurrentViewMode || 'table');
+        }
+
     } catch (err) {
         if (container) container.innerHTML = `<p class="text-danger">Error al cargar reporte: ${err.message}</p>`;
     }
 }
+
+window.setTtrViewMode = function(mode) {
+    window._ttrCurrentViewMode = mode;
+    const body = document.getElementById('ttr-modal-body-content');
+    const btnCards = document.getElementById('ttr-toggle-cards');
+    const btnTable = document.getElementById('ttr-toggle-table');
+    
+    if (mode === 'cards') {
+        if (body) {
+            body.classList.add('force-cards-view');
+            body.classList.remove('force-table-view');
+        }
+        if (btnCards) {
+            btnCards.style.background = 'white';
+            btnCards.style.color = '#702e5e';
+            btnCards.style.fontWeight = '700';
+            btnCards.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+        }
+        if (btnTable) {
+            btnTable.style.background = 'transparent';
+            btnTable.style.color = '#64748b';
+            btnTable.style.fontWeight = '600';
+            btnTable.style.boxShadow = 'none';
+        }
+    } else {
+        if (body) {
+            body.classList.add('force-table-view');
+            body.classList.remove('force-cards-view');
+        }
+        if (btnTable) {
+            btnTable.style.background = 'white';
+            btnTable.style.color = '#702e5e';
+            btnTable.style.fontWeight = '700';
+            btnTable.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+        }
+        if (btnCards) {
+            btnCards.style.background = 'transparent';
+            btnCards.style.color = '#64748b';
+            btnCards.style.fontWeight = '600';
+            btnCards.style.boxShadow = 'none';
+        }
+    }
+};
 
 window.toggleTtrPatientDetails = function(patId) {
     const el = document.getElementById(`ttr-patient-body-${patId}`);
@@ -32893,8 +33187,54 @@ async function openEstimulacionHistoryModal(patientId, patientName) {
             `;
         }).join('');
 
+        const cardsContainer = document.getElementById('cog-history-cards');
+        if (cardsContainer) {
+            if (historial.length === 0) {
+                cardsContainer.innerHTML = '<p class="text-center py-4 text-muted">Aún no se han enviado fichas a este consultante.</p>';
+            } else {
+                cardsContainer.innerHTML = historial.map(h => {
+                    const fechaEnvio = (h.fecha_envio || '') + (h.hora_envio ? ` ${h.hora_envio}` : '');
+                    const isCompletado = h.completado === 1;
+                    const estadoBadge = isCompletado
+                        ? '<span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;">✓ Realizado</span>'
+                        : (h.descargado === 1
+                            ? '<span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;">📥 Descargado</span>'
+                            : '<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;">⏳ Enviado</span>');
+
+                    const diffBadge = h.dificultad ? (diffMap[h.dificultad] || h.dificultad) : '<span style="color: #94a3b8;">-</span>';
+                    const tiempoStr = h.tiempo_minutos ? `${h.tiempo_minutos} min` : '<span style="color: #94a3b8;">-</span>';
+                    const respLink = h.archivo_respuesta_url
+                        ? `<a href="${h.archivo_respuesta_url}" target="_blank" style="font-weight: 700; color: #702e5e; text-decoration: underline; font-size: 0.8rem;">📷 Ver Evidencia</a>`
+                        : (h.observaciones ? `<span title="${h.observaciones.replace(/"/g, '&quot;')}" style="color: #475569; font-size: 0.8rem;">💬 ${h.observaciones}</span>` : '<span style="color: #94a3b8;">Sin respuesta</span>');
+
+                    return `
+                    <div class="ttr-record-card" style="background: white; border: 1.5px solid #e9d5ff; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">📅 ${fechaEnvio || 'N/A'}</span>
+                            ${estadoBadge}
+                        </div>
+                        <div style="font-size: 0.9rem; font-weight: 800; color: #1e293b;">
+                            🧩 ${h.ejercicio_titulo || 'Ficha'}
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.82rem; color: #475569;">
+                            <span><strong>Carpeta:</strong> ${h.carpeta_titulo || '-'}</span>
+                            <span><strong>Dificultad:</strong> ${diffBadge}</span>
+                            <span><strong>Tiempo:</strong> ${tiempoStr}</span>
+                        </div>
+                        ${(h.archivo_respuesta_url || h.observaciones) ? `
+                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                            <strong>Respuesta / Evidencia:</strong> ${respLink}
+                        </div>` : ''}
+                    </div>
+                    `;
+                }).join('');
+            }
+        }
+
     } catch (err) {
         if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">Error: ${err.message}</td></tr>`;
+        const cardsContainer = document.getElementById('cog-history-cards');
+        if (cardsContainer) cardsContainer.innerHTML = `<p class="text-center py-4 text-danger">Error: ${err.message}</p>`;
     }
 }
 

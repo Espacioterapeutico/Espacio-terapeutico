@@ -3610,3 +3610,72 @@ body.is-patient .main-content {
     box-shadow: 0 6px 16px rgba(112, 46, 94, 0.08);
     border-color: #d8b4fe !important;
 }
+
+/* =========================================================================
+   HISTORIAL DE HERRAMIENTAS: VISTA ADAPTABLE (TABLA EN PC / TARJETAS EN MÓVIL)
+   ========================================================================= */
+.ttr-cards-view {
+    display: none;
+    flex-direction: column;
+    gap: 0.85rem;
+    width: 100%;
+}
+
+.ttr-table-view {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* En móviles y pantallas pequeñas (<= 768px): ocultar tabla y mostrar tarjetas apiladas */
+@media (max-width: 768px) {
+    .ttr-table-view {
+        display: none !important;
+    }
+    .ttr-cards-view {
+        display: flex !important;
+    }
+}
+
+/* En pantallas de escritorio (> 768px): mostrar tabla horizontal por defecto */
+@media (min-width: 769px) {
+    .ttr-table-view {
+        display: block !important;
+    }
+    .ttr-cards-view {
+        display: none !important;
+    }
+}
+
+/* Forzado de vista mediante botones del encabezado */
+#ttr-modal-body-content.force-cards-view .ttr-table-view {
+    display: none !important;
+}
+#ttr-modal-body-content.force-cards-view .ttr-cards-view {
+    display: flex !important;
+}
+
+#ttr-modal-body-content.force-table-view .ttr-cards-view {
+    display: none !important;
+}
+#ttr-modal-body-content.force-table-view .ttr-table-view {
+    display: block !important;
+}
+
+/* Estilos de las tarjetas individuales de registro */
+.ttr-record-card {
+    background: #ffffff;
+    border: 1.5px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: border-color var(--transition-fast, 0.15s ease);
+}
+
+.ttr-record-card:hover {
+    border-color: #c084fc;
+}
+
