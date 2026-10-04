@@ -22874,12 +22874,12 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             <span class="badge" style="background:#fff7ed; color:#c2410c; font-weight:800;">${r.nivel_ansiedad} / 10</span>
                         </div>` : ''}
                         ${r.disparador_emocional ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #702e5e; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Disparador Emocional:</span>
                             <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.disparador_emocional}</p>
                         </div>` : ''}
                         ${r.notas ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas / Observaciones:</span>
                             <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
                         </div>` : ''}
@@ -22933,12 +22933,12 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             <strong>Síntomas en el día:</strong> ${r.somnolencia_dia ? '🥱 Somnolencia ' : ''}${r.pesadez_dia ? '🪨 Pesadez ' : ''}${r.agotamiento_dia ? '🔋 Agotamiento' : ''}
                         </div>` : ''}
                         ${r.proceso_dormir ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #1e40af; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Conciliación del sueño:</span>
                             <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.proceso_dormir}</p>
                         </div>` : ''}
                         ${(r.situaciones_dia || r.emociones_dia) ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #6b21a8; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Situaciones & Emociones del día:</span>
                             ${r.situaciones_dia ? `<p style="margin: 0 0 0.2rem 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;"><strong>Situaciones:</strong> ${r.situaciones_dia}</p>` : ''}
                             ${r.emociones_dia ? `<p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;"><strong>Emociones:</strong> ${r.emociones_dia}</p>` : ''}
@@ -22977,7 +22977,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             <span><strong>Hora real de toma:</strong> ${r.hora_tomado || '-'}</span>
                         </div>
                         ${r.notas ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas:</span>
                             <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
                         </div>` : ''}
@@ -23016,7 +23016,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             🎯 ${r.nombre_actividad}
                         </div>
                         ${r.notas ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas / Reflexión:</span>
                             <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
                         </div>` : ''}
@@ -23054,7 +23054,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             <div>${sintsBadges}</div>
                         </div>
                         ${r.situacion_desencadenante ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Situación Desencadenante:</span>
                             <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.situacion_desencadenante}</p>
                         </div>` : ''}
@@ -23090,7 +23090,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             <strong>Estado de Ánimo:</strong> ${r.animo_antes || '-'} ➔ ${r.animo_despues || '-'}
                         </div>` : ''}
                         ${r.notas ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas:</span>
                             <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
                         </div>` : ''}
@@ -23135,12 +23135,12 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">${chips || '<em style="color:#94a3b8; font-size:0.8rem;">Sin emociones marcadas</em>'}</div>
                         </div>
                         ${r.situaciones_detonantes ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.5rem 0.65rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.5rem 0.65rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.2rem;">⚡ Situaciones Detonantes:</span>
                             <p style="margin: 0; font-size: 0.85rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-word;">${r.situaciones_detonantes}</p>
                         </div>` : ''}
                         ${r.accion_conducta ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.5rem 0.65rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.5rem 0.65rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.2rem;">💡 ¿Qué hizo con la emoción?:</span>
                             <p style="margin: 0; font-size: 0.85rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-word;">${r.accion_conducta}</p>
                         </div>` : ''}
@@ -23169,7 +23169,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                         ${r.apps_usadas ? `<div style="font-size:0.83rem; color:#475569;"><strong>Apps:</strong> ${r.apps_usadas}</div>` : ''}
                         ${r.estado_emocional_posterior ? `<div style="font-size:0.83rem; color:#475569;"><strong>Estado posterior:</strong> ${r.estado_emocional_posterior}</div>` : ''}
                         ${r.notas ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 0.15rem;">Notas:</span>
                             <p style="margin: 0; font-size: 0.84rem; color: #1e293b; line-height: 1.4;">${r.notas}</p>
                         </div>` : ''}
@@ -23194,8 +23194,8 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
             const isExpanded = true;
 
             html += `
-                <div class="card" style="border: 1.5px solid var(--border-color); border-radius: 8px; overflow: hidden; background: white; margin-bottom: 1rem;">
-                    <div style="padding: 1rem; background: var(--bg-light); display: flex; flex-direction: column; gap: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                <div class="card ttr-patient-card-wrapper" style="border: 1.5px solid var(--border-color); border-radius: 8px; overflow: hidden; background: white; margin-bottom: 1rem;">
+                    <div class="ttr-patient-card-header" style="padding: 0.85rem 1rem; background: var(--bg-light); display: flex; flex-direction: column; gap: 0.5rem; border-bottom: 1px solid var(--border-color);">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                             <div>
                                 <h4 style="margin: 0; color: var(--text-dark); font-family: var(--font-title); font-size: 1.05rem;">
@@ -23210,7 +23210,7 @@ async function openTherapistModuleReport(moduloClave, moduloNombre, targetPatien
                             ${summaryBadgesHtml}
                         </div>
                     </div>
-                    <div id="ttr-patient-body-${p.id}" style="padding: 0.75rem; display: block;">
+                    <div id="ttr-patient-body-${p.id}" class="ttr-patient-card-body" style="padding: 0.75rem; display: block;">
                         <!-- Vista Tabla para Pantallas Grandes / Desktop -->
                         <div class="ttr-table-view">
                             <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
@@ -33222,7 +33222,7 @@ async function openEstimulacionHistoryModal(patientId, patientName) {
                             <span><strong>Tiempo:</strong> ${tiempoStr}</span>
                         </div>
                         ${(h.archivo_respuesta_url || h.observaciones) ? `
-                        <div style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                        <div class="ttr-card-subbox" style="background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.82rem;">
                             <strong>Respuesta / Evidencia:</strong> ${respLink}
                         </div>` : ''}
                     </div>

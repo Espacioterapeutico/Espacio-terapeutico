@@ -2909,13 +2909,12 @@ body.is-patient .main-content {
     }
 }
 
-/* ── Modales Ampliados en Móvil: Evolución, Registro Rápido, Ficha Clínica, Previsualización y Reportes (98% ancho y 96% alto) ── */
+/* ── Modales Ampliados en Móvil: Evolución, Registro Rápido, Ficha Clínica y Previsualización (98% ancho y 96% alto) ── */
 @media (max-width: 850px) {
     #session-modal,
     #patient-modal,
     #quick-add-patient-modal,
-    #modal-tool-patient-preview,
-    #therapist-tool-report-modal {
+    #modal-tool-patient-preview {
         padding: 0.25rem !important;
         align-items: center !important;
         justify-content: center !important;
@@ -2924,8 +2923,7 @@ body.is-patient .main-content {
     .modal-session-content,
     #patient-modal .modal-content,
     #quick-add-patient-modal .modal-content,
-    #modal-tool-patient-preview .modal-content,
-    #therapist-tool-report-modal .modal-content {
+    #modal-tool-patient-preview .modal-content {
         width: 98% !important;
         max-width: 98% !important;
         margin: 0.25rem auto !important;
@@ -2939,8 +2937,7 @@ body.is-patient .main-content {
     #session-modal .modal-body,
     #patient-modal .modal-body,
     #quick-add-patient-modal .modal-body,
-    #modal-tool-patient-preview .modal-body,
-    #therapist-tool-report-modal .modal-body {
+    #modal-tool-patient-preview .modal-body {
         padding: 0.65rem 0.5rem !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch;
@@ -2949,16 +2946,14 @@ body.is-patient .main-content {
     #session-modal .modal-header,
     #patient-modal .modal-header,
     #quick-add-patient-modal .modal-header,
-    #modal-tool-patient-preview .modal-header,
-    #therapist-tool-report-modal .modal-header {
+    #modal-tool-patient-preview .modal-header {
         padding: 0.75rem 0.85rem !important;
         flex-shrink: 0 !important;
     }
     #session-modal .modal-footer,
     #patient-modal .modal-footer,
     #quick-add-patient-modal .modal-footer,
-    #modal-tool-patient-preview .modal-footer,
-    #therapist-tool-report-modal .modal-footer {
+    #modal-tool-patient-preview .modal-footer {
         padding: 0.6rem 0.75rem !important;
         flex-shrink: 0 !important;
     }
@@ -3612,12 +3607,20 @@ body.is-patient .main-content {
 }
 
 /* =========================================================================
-   HISTORIAL DE HERRAMIENTAS: VISTA ADAPTABLE (TABLA EN PC / TARJETAS EN MÓVIL)
+   HISTORIAL DE HERRAMIENTAS: VISTA ADAPTABLE Y MÁXIMO APROVECHAMIENTO DE ANCHO
    ========================================================================= */
+#therapist-tool-report-modal .modal-content,
+#modal-estimulacion-history .modal-content {
+    width: 96% !important;
+    max-width: 1400px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+}
+
 .ttr-cards-view {
     display: none;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.75rem;
     width: 100%;
 }
 
@@ -3627,16 +3630,6 @@ body.is-patient .main-content {
     overflow-x: auto;
 }
 
-/* En móviles y pantallas pequeñas (<= 768px): ocultar tabla y mostrar tarjetas apiladas */
-@media (max-width: 768px) {
-    .ttr-table-view {
-        display: none !important;
-    }
-    .ttr-cards-view {
-        display: flex !important;
-    }
-}
-
 /* En pantallas de escritorio (> 768px): mostrar tabla horizontal por defecto */
 @media (min-width: 769px) {
     .ttr-table-view {
@@ -3644,6 +3637,74 @@ body.is-patient .main-content {
     }
     .ttr-cards-view {
         display: none !important;
+    }
+}
+
+/* En móviles y pantallas pequeñas (<= 768px): pantalla súper ancha (edge-to-edge), cero padding desperdiciado */
+@media (max-width: 768px) {
+    #therapist-tool-report-modal,
+    #modal-estimulacion-history {
+        padding: 0.15rem !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    #therapist-tool-report-modal .modal-content,
+    #modal-estimulacion-history .modal-content {
+        width: 99.5% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        max-height: 98vh !important;
+        height: auto !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    #therapist-tool-report-modal .modal-header,
+    #modal-estimulacion-history .modal-header {
+        padding: 0.65rem 0.75rem !important;
+        flex-shrink: 0 !important;
+    }
+    #therapist-tool-report-modal .modal-body,
+    #modal-estimulacion-history .modal-body {
+        padding: 0.45rem 0.3rem !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        flex: 1 1 auto !important;
+    }
+    #therapist-tool-report-modal .modal-footer,
+    #modal-estimulacion-history .modal-footer {
+        padding: 0.45rem 0.75rem !important;
+        flex-shrink: 0 !important;
+    }
+
+    .ttr-table-view {
+        display: none !important;
+    }
+    .ttr-cards-view {
+        display: flex !important;
+        gap: 0.65rem !important;
+    }
+
+    .ttr-patient-card-wrapper {
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px !important;
+        margin-bottom: 0.65rem !important;
+    }
+    .ttr-patient-card-header {
+        padding: 0.55rem 0.65rem !important;
+    }
+    .ttr-patient-card-body {
+        padding: 0.35rem 0.2rem !important;
+    }
+    .ttr-record-card {
+        padding: 0.65rem 0.65rem !important;
+        border-radius: 8px !important;
+        gap: 0.4rem !important;
+    }
+    .ttr-card-subbox {
+        padding: 0.45rem 0.55rem !important;
+        border-radius: 6px !important;
     }
 }
 
@@ -3673,6 +3734,8 @@ body.is-patient .main-content {
     flex-direction: column;
     gap: 0.5rem;
     transition: border-color var(--transition-fast, 0.15s ease);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .ttr-record-card:hover {
