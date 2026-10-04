@@ -1292,6 +1292,210 @@ def process_ders_scoring(answers, patient_info=None):
     )
     return float(total_score), subscales_dict, classification, interpretation
 # =========================================================================
+# 36. CAST (Cannabis Abuse Screening Test)
+# =========================================================================
+def process_cast_scoring(answers):
+    """
+    CAST - Cannabis Abuse Screening Test (Legleye et al., 2007)
+    6 ítems con escala Likert de 5 puntos (0=Nunca, 1=Raramente, 2=De vez en cuando, 3=Bastante a menudo, 4=Muy a menudo).
+    
+    Baremos validados (EMCDDA / OEDA / DEVIDA):
+    1. Puntuación Aditiva Continua (0 a 24 puntos):
+       - 0 a 2 pts: Consumo No Problemático (Bajo Riesgo)
+       - 3 a 6 pts: Consumo Problemático Moderado
+       - 7 a 24 pts: Consumo Problemático de Alto Riesgo / Posible Dependencia
+    2. Puntuación Dicotomizada Oficial (0 a 6 puntos):
+       - Ítems 1 y 2: umbral >= 2 (1 punto)
+       - Ítems 3, 4, 5, 6: umbral >= 1 (1 punto)
+       - 0 a 1 pt: No problemático
+       - 2 a 3 pts: Problemático bajo/medio riesgo
+       - 4 a 6 pts: Problemático alto riesgo (alta sensibilidad para abuso/dependencia DSM)
+    """
+    ans_map = _extract_answer_map(answers)
+    
+    # Puntuación aditiva (0-24)
+    item_scores = [ans_map.get(i, 0) for i in range(1, 7)]
+    total_score = sum(item_scores)
+    
+    # Puntuación dicotomizada (0-6)
+    dichot_items = {}
+    dichot_items[1] = 1 if ans_map.get(1, 0) >= 2 else 0
+    dichot_items[2] = 1 if ans_map.get(2, 0) >= 2 else 0
+    dichot_items[3] = 1 if ans_map.get(3, 0) >= 1 else 0
+    dichot_items[4] = 1 if ans_map.get(4, 0) >= 1 else 0
+    dichot_items[5] = 1 if ans_map.get(5, 0) >= 1 else 0
+    dichot_items[6] = 1 if ans_map.get(6, 0) >= 1 else 0
+    dichot_score = sum(dichot_items.values())
+    
+    # Subdimensiones clínicas
+    solitario_score = ans_map.get(1, 0) + ans_map.get(2, 0)
+    control_score = ans_map.get(3, 0) + ans_map.get(5, 0)
+    social_score = ans_map.get(4, 0) + ans_map.get(6, 0)
+    
+    # Clasificación clínica según baremo dual
+    if total_score <= 2 and dichot_score <= 1:
+        classification = "Consumo No Problemático (Bajo Riesgo)"
+        alerta = "normal"
+        desc_global = "El patrón de consumo de cannabis no presenta signos de interferencia, compulsión ni consecuencias negativas relevantes en las actividades cotidianas."
+    elif total_score <= 6 and dichot_score <= 3:
+        classification = "Consumo Problemático Moderado"
+        alerta = "moderado"
+        desc_global = "Se evidencian signos incipientes de uso problemático de cannabis. El consumo ha comenzado a interferir ocasionalmente en la memoria, el estado de ánimo o las relaciones interpersonales."
+    else:
+        classification = "Consumo Problemático de Alto Riesgo"
+        alerta = "severo"
+        desc_global = "El paciente presenta un patrón de consumo de alto riesgo con alta probabilidad de dependencia o abuso clínico (criterios DSM-5 / CIE-11). Se observan dificultades de control, consecuencias psicosociales o consumo en solitario/matutino consolidado."
+        
+    subscales_dict = {
+        "Puntuación Aditiva Directa": {
+            "pd": f"{total_score} / 24",
+            "nivel": classification,
+            "alerta": alerta,
+            "criterio": "Rango 0-2 (Bajo riesgo), 3-6 (Moderado), 7-24 (Alto riesgo)"
+        },
+        "Puntuación Dicotomizada (EMCDDA / OEDA)": {
+            "pd": f"{dichot_score} / 6",
+            "nivel": "Alto Riesgo" if dichot_score >= 4 else ("Riesgo Moderado" if dichot_score >= 2 else "No Problemático"),
+            "alerta": "severo" if dichot_score >= 4 else ("moderado" if dichot_score >= 2 else "normal"),
+            "criterio": "Umbral Oficial: 0-1 (No prob.), 2-3 (Bajo riesgo), 4-6 (Alto riesgo)"
+        },
+        "Consumo Matutino y en Solitario": {
+            "pd": f"{solitario_score} / 8",
+            "nivel": "Elevado" if solitario_score >= 5 else ("Moderado" if solitario_score >= 2 else "Bajo"),
+            "alerta": "severo" if solitario_score >= 5 else ("moderado" if solitario_score >= 2 else "normal"),
+            "criterio": "Ítems 1 y 2 (Consumo antes del mediodía y en soledad)"
+        },
+        "Problemas Cognitivos e Intentos Fallidos": {
+            "pd": f"{control_score} / 8",
+            "nivel": "Elevado" if control_score >= 5 else ("Moderado" if control_score >= 2 else "Bajo"),
+            "alerta": "severo" if control_score >= 5 else ("moderado" if control_score >= 2 else "normal"),
+            "criterio": "Ítems 3 y 5 (Fallas de memoria e intentos infructuosos de reducir)"
+        },
+        "Consecuencias Negativas y Quejas Familiares": {
+            "pd": f"{social_score} / 8",
+            "nivel": "Elevado" if social_score >= 5 else ("Moderado" if social_score >= 2 else "Bajo"),
+            "alerta": "severo" if social_score >= 5 else ("moderado" if social_score >= 2 else "normal"),
+            "criterio": "Ítems 4 y 6 (Advertencias familiares y problemas/conflictos)"
+        }
+    }
+    
+    interpretation = (
+        f"INFORME PSICOMÉTRICO: ESCALA DE DESPISTAJE DE CONSUMO PROBLEMÁTICO DE CANNABIS (CAST)\n\n"
+        f"• Puntuación Directa Aditiva: {total_score}/24 pts\n"
+        f"• Puntuación Dicotomizada (EMCDDA): {dichot_score}/6 criterios positivos\n"
+        f"• Clasificación Clínica: {classification}\n\n"
+        f"Interpretación Diagnóstica:\n{desc_global}\n\n"
+        f"Análisis Dimensional:\n"
+        f"1. Consumo Matutino y en Soledad: {solitario_score}/8 pts — Nivel {subscales_dict['Consumo Matutino y en Solitario']['nivel']}.\n"
+        f"2. Pérdida de Control y Fallas de Memoria: {control_score}/8 pts — Nivel {subscales_dict['Problemas Cognitivos e Intentos Fallidos']['nivel']}.\n"
+        f"3. Repercusión Social y Conflictos: {social_score}/8 pts — Nivel {subscales_dict['Consecuencias Negativas y Quejas Familiares']['nivel']}.\n\n"
+        f"Pautas de Intervención Recomendadas: " + (
+            "Se aconseja intervención psicoterapéutica formal basada en TCC y prevención de recaídas, trabajo en estresores desencadenantes del consumo en solitario y evaluación médica/psiquiátrica integral."
+            if (total_score >= 7 or dichot_score >= 4) else (
+                "Se sugiere intervención breve motivacional (modelo de Miller & Rollnick), clarificación de valores, establecimiento de metas de reducción de daños y psicoeducación sobre riesgos cognitivos."
+                if (total_score >= 3 or dichot_score >= 2) else
+                "Reforzar pautas de autocuidado, estilos de vida saludables y psicoeducación preventiva."
+            )
+        )
+    )
+    return float(total_score), subscales_dict, classification, interpretation
+
+
+# =========================================================================
+# 37. CUDIT-R (Cannabis Use Disorders Identification Test - Revised)
+# =========================================================================
+def process_cudit_r_scoring(answers):
+    """
+    CUDIT-R - Cannabis Use Disorders Identification Test - Revised (Adamson et al., 2010)
+    8 ítems (Ítems 1-7: escala 0-4; Ítem 8: 0, 2 o 4).
+    Rango total: 0 a 32 puntos.
+    
+    Puntos de corte oficiales (DSM-5 / CIE-11):
+    - 0 a 7 pts: Consumo de Bajo Riesgo / No Problemático
+    - 8 a 11 pts: Consumo de Riesgo / Uso Peligroso (Hazardous Use)
+    - 12 a 32 pts: Probable Trastorno por Consumo de Cannabis (TCC)
+      (Sensibilidad > 91% en punto de corte >= 13 para dependencia)
+    """
+    ans_map = _extract_answer_map(answers)
+    
+    total_score = sum(ans_map.get(i, 0) for i in range(1, 9))
+    
+    # Subdimensiones
+    patron_score = ans_map.get(1, 0) + ans_map.get(2, 0)
+    dependencia_score = ans_map.get(3, 0) + ans_map.get(5, 0) + ans_map.get(8, 0)
+    psicosocial_score = ans_map.get(4, 0) + ans_map.get(6, 0)
+    riesgo_fisico_score = ans_map.get(7, 0)
+    
+    if total_score <= 7:
+        classification = "Consumo de Bajo Riesgo / No Problemático"
+        alerta = "normal"
+        desc_global = "El patrón de consumo de los últimos 6 meses se encuentra dentro de niveles no peligrosos, sin signos de dependencia psicológica o fisiológica ni deterioro funcional sustancial."
+    elif total_score <= 11:
+        classification = "Consumo de Riesgo / Uso Peligroso (Hazardous Use)"
+        alerta = "moderado"
+        desc_global = "El paciente presenta un nivel de consumo que incrementa significativamente el riesgo de consecuencias adversas para la salud física, mental y el funcionamiento ocupacional o social."
+    else:
+        classification = "Probable Trastorno por Consumo de Cannabis (TCC)"
+        alerta = "severo"
+        desc_global = "Puntuación en rango clínico altamente sugestiva de Trastorno por Consumo de Cannabis (DSM-5 / CIE-11). Se observan signos de dependencia, compulsión por la sustancia y persistencia del uso a pesar de consecuencias negativas evidentes."
+
+    subscales_dict = {
+        "Puntuación Global CUDIT-R": {
+            "pd": f"{total_score} / 32",
+            "nivel": classification,
+            "alerta": alerta,
+            "criterio": "Corte Clínico: 0-7 (Bajo riesgo), 8-11 (Riesgo/Peligroso), 12-32 (Probable TCC)"
+        },
+        "Frecuencia e Intensidad de Intoxicación": {
+            "pd": f"{patron_score} / 8",
+            "nivel": "Elevado" if patron_score >= 5 else ("Moderado" if patron_score >= 3 else "Bajo"),
+            "alerta": "severo" if patron_score >= 5 else ("moderado" if patron_score >= 3 else "normal"),
+            "criterio": "Ítems 1 y 2 (Frecuencia semanal y horas bajo efecto al día)"
+        },
+        "Dependencia y Pérdida de Control": {
+            "pd": f"{dependencia_score} / 12",
+            "nivel": "Elevado" if dependencia_score >= 7 else ("Moderado" if dependencia_score >= 4 else "Bajo"),
+            "alerta": "severo" if dependencia_score >= 7 else ("moderado" if dependencia_score >= 4 else "normal"),
+            "criterio": "Ítems 3, 5 y 8 (Incapacidad de frenar, tiempo invertido e intentos de cese)"
+        },
+        "Consecuencias Negativas y Afectación Cognitiva": {
+            "pd": f"{psicosocial_score} / 8",
+            "nivel": "Elevado" if psicosocial_score >= 5 else ("Moderado" if psicosocial_score >= 3 else "Bajo"),
+            "alerta": "severo" if psicosocial_score >= 5 else ("moderado" if psicosocial_score >= 3 else "normal"),
+            "criterio": "Ítems 4 y 6 (Incumplimiento de obligaciones y fallas de memoria)"
+        },
+        "Consumo en Situaciones de Riesgo Físico": {
+            "pd": f"{riesgo_fisico_score} / 4",
+            "nivel": "Elevado" if riesgo_fisico_score >= 3 else ("Moderado" if riesgo_fisico_score >= 1 else "Nulo"),
+            "alerta": "severo" if riesgo_fisico_score >= 3 else ("moderado" if riesgo_fisico_score >= 1 else "normal"),
+            "criterio": "Ítem 7 (Conducir o realizar actividades peligrosas bajo intoxicación)"
+        }
+    }
+    
+    interpretation = (
+        f"INFORME PSICOMÉTRICO: TEST DE IDENTIFICACIÓN DE TRASTORNOS POR CONSUMO DE CANNABIS (CUDIT-R)\n\n"
+        f"• Puntuación Total Global: {total_score}/32 pts\n"
+        f"• Clasificación Diagnóstica: {classification}\n"
+        f"• Sensibilidad / Especificidad: 91% / 90% para TCC (DSM-5 / CIE-11)\n\n"
+        f"Interpretación Clínica:\n{desc_global}\n\n"
+        f"Perfil Dimensional:\n"
+        f"1. Frecuencia e Intensidad: {patron_score}/8 pts — Nivel {subscales_dict['Frecuencia e Intensidad de Intoxicación']['nivel']}.\n"
+        f"2. Dependencia y Pérdida de Control: {dependencia_score}/12 pts — Nivel {subscales_dict['Dependencia y Pérdida de Control']['nivel']}.\n"
+        f"3. Consecuencias Negativas y Memoria: {psicosocial_score}/8 pts — Nivel {subscales_dict['Consecuencias Negativas y Afectación Cognitiva']['nivel']}.\n"
+        f"4. Riesgo Físico / Peligrosidad: {riesgo_fisico_score}/4 pts — Nivel {subscales_dict['Consumo en Situaciones de Riesgo Físico']['nivel']}.\n\n"
+        f"Plan Terapéutico e Indicaciones: " + (
+            "Se requiere evaluación clínica estructurada para Trastorno por Consumo de Cannabis. Se recomienda iniciar protocolo TCC enfocado en manejo de contingencias, reestructuración cognitiva de creencias sobre la sustancia, desarrollo de repertorios alternativos de gratificación y psicoeducación familiar."
+            if total_score >= 12 else (
+                "Se recomienda intervención breve motivacional (FRAMES), exploración de ambivalencia, establecimiento de límites claros de consumo o periodo de abstinencia de prueba, y monitoreo psicométrico a 3 meses."
+                if total_score >= 8 else
+                "El perfil actual no denota consumo problemático. Mantener psicoeducación preventiva y pautas de autocuidado general."
+            )
+        )
+    )
+    return float(total_score), subscales_dict, classification, interpretation
+
+
+# =========================================================================
 def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     """
     Dispatcher maestro para calcular el baremo psicométrico oficial de cualquier test.
@@ -1462,6 +1666,14 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     elif code in ('DERS-E', 'DERS', 'DERS-28', 'DERS28'):
         return process_ders_scoring(answers, patient_info=patient_info)
         
+    # 36. CAST (Cannabis Abuse Screening Test)
+    elif code in ('CAST', 'CANNA-CAST', 'TEST-CAST') or 'CAST' in code:
+        return process_cast_scoring(answers)
+        
+    # 37. CUDIT-R (Cannabis Use Disorders Identification Test - Revised)
+    elif code in ('CUDIT-R', 'CUDITR', 'CUDIT', 'CUDIT-REVISED') or 'CUDIT' in code:
+        return process_cudit_r_scoring(answers)
+        
     # Fallback genérico
     else:
         try:
@@ -1472,3 +1684,4 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
         except Exception:
             total_score, subscales_dict, classification, interpretation = 0.0, {}, "Completado", "Respuestas registradas exitosamente."
         return total_score, subscales_dict, classification, interpretation
+

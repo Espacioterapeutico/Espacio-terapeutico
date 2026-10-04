@@ -30,7 +30,9 @@ from psychometric_scoring import (
     process_tas20_scoring,
     process_erq_scoring,
     process_tmms24_scoring,
-    process_ders_scoring
+    process_ders_scoring,
+    process_cast_scoring,
+    process_cudit_r_scoring
 )
 
 tests_bp = Blueprint('tests', __name__)
@@ -143,6 +145,7 @@ def ensure_tests_tables(db):
     ensure_new_sexology_and_cognitive_tests_definitions(db)
     ensure_violence_and_psychotic_tests_definitions(db)
     ensure_emotional_management_tests_definitions(db)
+    ensure_substance_abuse_tests_definitions(db)
     ensure_barsit_definition(db)
     sync_existing_completed_tests_to_evoluciones(db)
 
@@ -3270,3 +3273,233 @@ def ensure_emotional_management_tests_definitions(db):
 
     db.commit()
 
+
+def ensure_substance_abuse_tests_definitions(db):
+    """
+    Registra y sincroniza las definiciones oficiales de los tests de Abuso de Sustancias / Adicciones:
+    1. CAST (Cannabis Abuse Screening Test - Legleye et al., 2007; OFDT / EMCDDA / OEDA)
+    2. CUDIT-R (Cannabis Use Disorders Identification Test - Revised - Adamson et al., 2010; DSM-5 / CIE-11)
+    """
+    cursor = db.cursor()
+
+    # =========================================================================
+    # 1. CAST (Cannabis Abuse Screening Test)
+    # =========================================================================
+    opciones_cast = [
+        {"val": 0, "text": "0 - Nunca", "txt": "0 - Nunca"},
+        {"val": 1, "text": "1 - Raramente / Rara vez", "txt": "1 - Raramente / Rara vez"},
+        {"val": 2, "text": "2 - De vez en cuando", "txt": "2 - De vez en cuando"},
+        {"val": 3, "text": "3 - Bastante a menudo", "txt": "3 - Bastante a menudo"},
+        {"val": 4, "text": "4 - Muy a menudo", "txt": "4 - Muy a menudo"}
+    ]
+
+    items_cast = [
+        {"id": 1, "num": 1, "texto": "¿Ha fumado o consumido cannabis antes del mediodía?", "txt": "¿Ha fumado o consumido cannabis antes del mediodía?"},
+        {"id": 2, "num": 2, "texto": "¿Ha fumado o consumido cannabis cuando estaba solo(a)?", "txt": "¿Ha fumado o consumido cannabis cuando estaba solo(a)?"},
+        {"id": 3, "num": 3, "texto": "¿Ha tenido problemas de memoria cuando fuma o consume cannabis?", "txt": "¿Ha tenido problemas de memoria cuando fuma o consume cannabis?"},
+        {"id": 4, "num": 4, "texto": "¿Le han dicho sus amigos, familiares o conocidos que debería reducir o dejar de consumir cannabis?", "txt": "¿Le han dicho sus amigos, familiares o conocidos que debería reducir o dejar de consumir cannabis?"},
+        {"id": 5, "num": 5, "texto": "¿Ha intentado reducir o dejar de consumir cannabis sin conseguirlo?", "txt": "¿Ha intentado reducir o dejar de consumir cannabis sin conseguirlo?"},
+        {"id": 6, "num": 6, "texto": "¿Ha tenido problemas derivados de su consumo de cannabis (discusiones, peleas, accidentes, bajo rendimiento escolar o laboral)?", "txt": "¿Ha tenido problemas derivados de su consumo de cannabis (discusiones, peleas, accidentes, bajo rendimiento escolar o laboral)?"}
+    ]
+
+    cast_desc = (
+        "Instrumento psicométrico de despistaje rápido desarrollado por el Observatorio Francés de Drogas y Toxicomanías (OFDT) "
+        "y validado internacionalmente (Legleye et al., 2007; EMCDDA). Evalúa patrones de consumo de riesgo y problemático de cannabis "
+        "en los últimos 12 meses mediante baremo aditivo continuo (0-24) y baremo dicotomizado europeo (0-6)."
+    )
+    cast_instruc = (
+        "Las siguientes preguntas se refieren a su consumo de cannabis (marihuana, hachís u otros derivados) durante los últimos 12 meses. "
+        "Por favor, marque la opción que mejor describa la frecuencia con la que le ha ocurrido cada una de las siguientes situaciones."
+    )
+
+    for cast_code in ['CAST']:
+        cursor.execute("SELECT code FROM tests_definiciones WHERE code = ?", (cast_code,))
+        if not cursor.fetchone():
+            cursor.execute("""
+                INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                cast_code,
+                'CAST — Cannabis Abuse Screening Test (Despistaje de Consumo Problemático de Cannabis)',
+                'CAST',
+                'Abuso de Sustancias / Adicciones',
+                cast_desc,
+                cast_instruc,
+                json.dumps(opciones_cast, ensure_ascii=False),
+                json.dumps(items_cast, ensure_ascii=False)
+            ))
+        else:
+            cursor.execute("""
+                UPDATE tests_definiciones
+                SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+                WHERE code = ?
+            """, (
+                'CAST — Cannabis Abuse Screening Test (Despistaje de Consumo Problemático de Cannabis)',
+                'CAST',
+                'Abuso de Sustancias / Adicciones',
+                cast_desc,
+                cast_instruc,
+                json.dumps(opciones_cast, ensure_ascii=False),
+                json.dumps(items_cast, ensure_ascii=False),
+                cast_code
+            ))
+
+    # =========================================================================
+    # 2. CUDIT-R (Cannabis Use Disorders Identification Test - Revised)
+    # =========================================================================
+    opciones_cudit_gral = [
+        {"val": 0, "text": "0 - Nunca", "txt": "0 - Nunca"},
+        {"val": 1, "text": "1 - Menos de una vez al mes", "txt": "1 - Menos de una vez al mes"},
+        {"val": 2, "text": "2 - Mensualmente", "txt": "2 - Mensualmente"},
+        {"val": 3, "text": "3 - Semanalmente", "txt": "3 - Semanalmente"},
+        {"val": 4, "text": "4 - A diario o casi a diario", "txt": "4 - A diario o casi a diario"}
+    ]
+
+    items_cudit_r = [
+        {
+            "id": 1,
+            "num": 1,
+            "texto": "¿Con qué frecuencia consume cannabis (marihuana, hachís, extractos)?",
+            "txt": "¿Con qué frecuencia consume cannabis (marihuana, hachís, extractos)?",
+            "opciones": [
+                {"val": 0, "text": "Nunca (0)", "txt": "Nunca"},
+                {"val": 1, "text": "Mensualmente o menos (1)", "txt": "Mensualmente o menos"},
+                {"val": 2, "text": "De 2 a 4 veces al mes (2)", "txt": "De 2 a 4 veces al mes"},
+                {"val": 3, "text": "De 2 a 3 veces por semana (3)", "txt": "De 2 a 3 veces por semana"},
+                {"val": 4, "text": "4 o más veces por semana (4)", "txt": "4 o más veces por semana"}
+            ]
+        },
+        {
+            "id": 2,
+            "num": 2,
+            "texto": "¿Cuántas horas estuvo «colocado/a», «volado/a» o bajo los efectos del cannabis en un día típico en que consumió?",
+            "txt": "¿Cuántas horas estuvo «colocado/a», «volado/a» o bajo los efectos del cannabis en un día típico en que consumió?",
+            "opciones": [
+                {"val": 0, "text": "Menos de 1 hora (0)", "txt": "Menos de 1 hora"},
+                {"val": 1, "text": "De 1 a 2 horas (1)", "txt": "De 1 a 2 horas"},
+                {"val": 2, "text": "De 3 a 4 horas (2)", "txt": "De 3 a 4 horas"},
+                {"val": 3, "text": "De 5 a 6 horas (3)", "txt": "De 5 a 6 horas"},
+                {"val": 4, "text": "7 o más horas (4)", "txt": "7 o más horas"}
+            ]
+        },
+        {
+            "id": 3,
+            "num": 3,
+            "texto": "¿Con qué frecuencia durante los últimos 6 meses se encontró con que no podía parar de consumir cannabis una vez que había empezado?",
+            "txt": "¿Con qué frecuencia durante los últimos 6 meses se encontró con que no podía parar de consumir cannabis una vez que había empezado?",
+            "opciones": [
+                {"val": 0, "text": "Nunca (0)", "txt": "Nunca"},
+                {"val": 1, "text": "Menos de una vez al mes (1)", "txt": "Menos de una vez al mes"},
+                {"val": 2, "text": "Mensualmente (2)", "txt": "Mensualmente"},
+                {"val": 3, "text": "Semanalmente (3)", "txt": "Semanalmente"},
+                {"val": 4, "text": "A diario o casi a diario (4)", "txt": "A diario o casi a diario"}
+            ]
+        },
+        {
+            "id": 4,
+            "num": 4,
+            "texto": "¿Con qué frecuencia durante los últimos 6 meses dejó de hacer lo que se esperaba de usted debido al consumo de cannabis?",
+            "txt": "¿Con qué frecuencia durante los últimos 6 meses dejó de hacer lo que se esperaba de usted debido al consumo de cannabis?",
+            "opciones": [
+                {"val": 0, "text": "Nunca (0)", "txt": "Nunca"},
+                {"val": 1, "text": "Menos de una vez al mes (1)", "txt": "Menos de una vez al mes"},
+                {"val": 2, "text": "Mensualmente (2)", "txt": "Mensualmente"},
+                {"val": 3, "text": "Semanalmente (3)", "txt": "Semanalmente"},
+                {"val": 4, "text": "A diario o casi a diario (4)", "txt": "A diario o casi a diario"}
+            ]
+        },
+        {
+            "id": 5,
+            "num": 5,
+            "texto": "¿Con qué frecuencia durante los últimos 6 meses dedicó una gran cantidad de tiempo a conseguir, consumir o recuperarse de los efectos del cannabis?",
+            "txt": "¿Con qué frecuencia durante los últimos 6 meses dedicó una gran cantidad de tiempo a conseguir, consumir o recuperarse de los efectos del cannabis?",
+            "opciones": [
+                {"val": 0, "text": "Nunca (0)", "txt": "Nunca"},
+                {"val": 1, "text": "Menos de una vez al mes (1)", "txt": "Menos de una vez al mes"},
+                {"val": 2, "text": "Mensualmente (2)", "txt": "Mensualmente"},
+                {"val": 3, "text": "Semanalmente (3)", "txt": "Semanalmente"},
+                {"val": 4, "text": "A diario o casi a diario (4)", "txt": "A diario o casi a diario"}
+            ]
+        },
+        {
+            "id": 6,
+            "num": 6,
+            "texto": "¿Con qué frecuencia durante los últimos 6 meses tuvo problemas de memoria o concentración después de haber consumido cannabis?",
+            "txt": "¿Con qué frecuencia durante los últimos 6 meses tuvo problemas de memoria o concentración después de haber consumido cannabis?",
+            "opciones": [
+                {"val": 0, "text": "Nunca (0)", "txt": "Nunca"},
+                {"val": 1, "text": "Menos de una vez al mes (1)", "txt": "Menos de una vez al mes"},
+                {"val": 2, "text": "Mensualmente (2)", "txt": "Mensualmente"},
+                {"val": 3, "text": "Semanalmente (3)", "txt": "Semanalmente"},
+                {"val": 4, "text": "A diario o casi a diario (4)", "txt": "A diario o casi a diario"}
+            ]
+        },
+        {
+            "id": 7,
+            "num": 7,
+            "texto": "¿Con qué frecuencia durante los últimos 6 meses consumió cannabis en situaciones que implicaban peligro físico (por ejemplo, al conducir un vehículo o manejar maquinaria peligrosa)?",
+            "txt": "¿Con qué frecuencia durante los últimos 6 meses consumió cannabis en situaciones que implicaban peligro físico (por ejemplo, al conducir un vehículo o manejar maquinaria peligrosa)?",
+            "opciones": [
+                {"val": 0, "text": "Nunca (0)", "txt": "Nunca"},
+                {"val": 1, "text": "Menos de una vez al mes (1)", "txt": "Menos de una vez al mes"},
+                {"val": 2, "text": "Mensualmente (2)", "txt": "Mensualmente"},
+                {"val": 3, "text": "Semanalmente (3)", "txt": "Semanalmente"},
+                {"val": 4, "text": "A diario o casi a diario (4)", "txt": "A diario o casi a diario"}
+            ]
+        },
+        {
+            "id": 8,
+            "num": 8,
+            "texto": "¿Ha intentado alguna vez reducir o dejar de consumir cannabis sin tener éxito?",
+            "txt": "¿Ha intentado alguna vez reducir o dejar de consumir cannabis sin tener éxito?",
+            "opciones": [
+                {"val": 0, "text": "Nunca (0)", "txt": "Nunca"},
+                {"val": 2, "text": "Sí, pero no en los últimos 6 meses (2)", "txt": "Sí, pero no en los últimos 6 meses"},
+                {"val": 4, "text": "Sí, durante los últimos 6 meses (4)", "txt": "Sí, durante los últimos 6 meses"}
+            ]
+        }
+    ]
+
+    cudit_desc = (
+        "Cuestionario psicométrico de 8 ítems adaptado del AUDIT de la OMS por Adamson et al. (2010). "
+        "Evalúa consumo de riesgo y probable Trastorno por Consumo de Cannabis (TCC según criterios DSM-5 y CIE-11) "
+        "en los últimos 6 meses, identificando patrones de uso, pérdida de control y consecuencias negativas."
+    )
+    cudit_instruc = (
+        "Las siguientes preguntas indagan sobre su consumo de cannabis durante los últimos 6 meses. "
+        "Por favor, seleccione para cada pregunta la alternativa que describa con mayor exactitud su situación."
+    )
+
+    for cudit_code in ['CUDIT-R', 'CUDIT']:
+        cursor.execute("SELECT code FROM tests_definiciones WHERE code = ?", (cudit_code,))
+        if not cursor.fetchone():
+            cursor.execute("""
+                INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                cudit_code,
+                'CUDIT-R — Test de Identificación de Trastornos por Consumo de Cannabis (Revisado)',
+                'CUDIT-R',
+                'Abuso de Sustancias / Adicciones',
+                cudit_desc,
+                cudit_instruc,
+                json.dumps(opciones_cudit_gral, ensure_ascii=False),
+                json.dumps(items_cudit_r, ensure_ascii=False)
+            ))
+        else:
+            cursor.execute("""
+                UPDATE tests_definiciones
+                SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+                WHERE code = ?
+            """, (
+                'CUDIT-R — Test de Identificación de Trastornos por Consumo de Cannabis (Revisado)',
+                'CUDIT-R',
+                'Abuso de Sustancias / Adicciones',
+                cudit_desc,
+                cudit_instruc,
+                json.dumps(opciones_cudit_gral, ensure_ascii=False),
+                json.dumps(items_cudit_r, ensure_ascii=False),
+                cudit_code
+            ))
+
+    db.commit()
