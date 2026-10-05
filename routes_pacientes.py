@@ -1303,9 +1303,23 @@ def patient_add_appointment():
         except:
             pass
 
-        cursor.execute("SELECT nombres, apellidos, cedula, email, psicologo_id FROM pacientes WHERE id = ?", (patient_id,))
+        cursor.execute("SELECT nombres, apellidos, cedula, email, psicologo_id, zona_horaria FROM pacientes WHERE id = ?", (patient_id,))
         paciente = cursor.fetchone()
         psicologo_id = paciente['psicologo_id'] if paciente else 1
+
+        hora_paciente = (data.get('hora_paciente') or '').strip() or None
+        zona_horaria = (data.get('zona_horaria') or '').strip() or (paciente['zona_horaria'] if paciente and paciente['zona_horaria'] else None)
+        
+        from routes_agenda import convert_time_vet_to_tz
+        if not hora_paciente and zona_horaria and zona_horaria != 'America/Caracas':
+            hora_paciente = convert_time_vet_to_tz(fecha_norm, hora_norm, zona_horaria)
+
+        if zona_horaria and paciente and zona_horaria != (paciente['zona_horaria'] or '').strip():
+            try:
+                cursor.execute("UPDATE pacientes SET zona_horaria = ? WHERE id = ?", (zona_horaria, patient_id))
+                db.commit()
+            except Exception:
+                pass
 
         from routes_admin import is_user_subscription_expired
         if is_user_subscription_expired(cursor, psicologo_id):
@@ -1328,11 +1342,11 @@ def patient_add_appointment():
         
         cursor.execute("""
             INSERT INTO agenda_finanzas (
-                paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
+                paciente_id, fecha, hora, hora_paciente, tipo_consulta, monto, moneda, 
                 estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia,
                 creado_por_user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?)
-        """, (patient_id, fecha_norm, hora_norm, tipo_consulta, monto, moneda, f"Auto-agendada por paciente. Nota: {nota}", psicologo_id))
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?)
+        """, (patient_id, fecha_norm, hora_norm, hora_paciente, tipo_consulta, monto, moneda, f"Auto-agendada por paciente. Nota: {nota}", psicologo_id))
         agenda_id = cursor.lastrowid
         
         pac_nombre = f"{paciente['nombres']} {paciente['apellidos']}"

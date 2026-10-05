@@ -1014,9 +1014,16 @@ def add_agenda_event():
     cantidad_sesiones = int(data.get('cantidad_sesiones', 1) or 1)
     referencia = data.get('referencia')
     metodo_pago = data.get('metodo_pago')
-    fecha_pago = data.get('fecha_pago')
     confirmada = int(data.get('confirmada', 0) or 0)
     hora_paciente = (data.get('hora_paciente') or '').strip() or None  # Hora en zona horaria del paciente (calculada en frontend)
+    if not hora_paciente and paciente_id:
+        try:
+            cursor.execute("SELECT zona_horaria FROM pacientes WHERE id = ?", (paciente_id,))
+            _p_tz_row = cursor.fetchone()
+            if _p_tz_row and _p_tz_row['zona_horaria'] and _p_tz_row['zona_horaria'] != 'America/Caracas':
+                hora_paciente = convert_time_vet_to_tz(fecha, hora, _p_tz_row['zona_horaria'])
+        except Exception:
+            pass
 
     google_event_id = None
     try:

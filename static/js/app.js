@@ -3600,7 +3600,9 @@ async function fetchAvailableHours(dateStr) {
                     btn.style.color = 'white';
                     
                     document.getElementById('pat-req-fecha').value = slot.valFecha;
-                    document.getElementById('pat-req-hora').value = slot.valHora;
+                    const patHoraInput = document.getElementById('pat-req-hora');
+                    patHoraInput.value = slot.valHora;
+                    patHoraInput.dataset.horaPaciente = converted.timeStr;
                     document.getElementById('pat-submit-req-btn').disabled = false;
                     
                     // Actualizar dinámicamente las opciones de modalidad permitidas para esta hora
@@ -3649,7 +3651,13 @@ async function handlePatientAppointmentRequest(e) {
     if (statusMsg) statusMsg.classList.add('hide');
     
     const fecha = document.getElementById('pat-req-fecha').value;
-    const hora = document.getElementById('pat-req-hora').value;
+    const horaEl = document.getElementById('pat-req-hora');
+    const hora = horaEl ? horaEl.value : '';
+    const horaPaciente = (horaEl && horaEl.dataset.horaPaciente) ? horaEl.dataset.horaPaciente : null;
+    let tzName = 'America/Caracas';
+    try {
+        tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Caracas';
+    } catch (e) {}
     const modalidad = document.getElementById('pat-req-modalidad').value;
     const nota = document.getElementById('pat-req-nota').value;
     
@@ -3657,6 +3665,8 @@ async function handlePatientAppointmentRequest(e) {
         const payload = {
             fecha,
             hora,
+            hora_paciente: horaPaciente,
+            zona_horaria: tzName,
             modalidad,
             nota
         };
