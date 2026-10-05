@@ -2073,7 +2073,7 @@ def auto_cancel_unconfirmed_sessions(db):
         
         # Obtener citas no confirmadas en estado 'Agendada'
         cursor.execute("""
-            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.tipo_consulta, af.google_event_id, af.token_confirmacion, p.nombres, p.apellidos, p.psicologo_id, p.telefono
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.google_event_id, af.token_confirmacion, p.nombres, p.apellidos, p.psicologo_id, p.telefono, p.zona_horaria
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.confirmada = 0 
@@ -2226,15 +2226,19 @@ def auto_cancel_unconfirmed_sessions(db):
                     
                     cursor.execute("SELECT nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (target_psic,))
                     psic_row = cursor.fetchone()
-                    psic_data = dict(psic_row) if psic_row else {}
-                    
+                    from routes_agenda import convert_time_vet_to_tz
+                    hora_paciente_calc = appt.get('hora_paciente')
+                    if not hora_paciente_calc and appt.get('zona_horaria'):
+                        hora_paciente_calc = convert_time_vet_to_tz(fecha_cita, hora_cita, appt.get('zona_horaria'))
+                    hora_final = hora_paciente_calc or hora_cita
+
                     patient_dict = {'nombres': appt['nombres'], 'apellidos': appt['apellidos'], 'telefono': clean_phone}
-                    cita_dict = {'fecha': fecha_cita, 'hora': hora_cita, 'modalidad': appt['tipo_consulta']}
+                    cita_dict = {'fecha': fecha_cita, 'hora': hora_final, 'modalidad': appt['tipo_consulta']}
                     
                     from routes_notificaciones import format_whatsapp_message, make_wa_http_request
                     msg_wa = format_whatsapp_message(tmpl, patient_dict, cita_dict, psic_data)
                     
-                    res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': target_psic}, timeout=15, user_id=target_psic)
+                    res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': target_psic}, timeout=45, user_id=target_psic)
                     print(f"[AUTO-CANCEL-WA] Mensaje enviado a {clean_phone} cita {appt_id}: {res_wa.status_code if res_wa else 'No res'}")
                 except Exception as we:
                     print(f"[AUTO-CANCEL-WA] Error enviando WhatsApp al paciente:", we)
@@ -3634,12 +3638,13 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
         _tool_reminders_lock.release()
 
 _last_cleanup_timestamp = 0
+_last_wa_cron_timestamp = 0
 import threading
 _cleanup_lock = threading.Lock()
 
 @app.before_request
 def before_request_cleanup():
-    global _last_cleanup_timestamp
+    global _last_cleanup_timestamp, _last_wa_cron_timestamp
     # Evitar ejecutar en llamadas de archivos estáticos
     if request.path.startswith('/static/'):
         return
@@ -3669,6 +3674,18 @@ def before_request_cleanup():
                 fn(db)
             except Exception as task_err:
                 print(f"Aviso en tarea de segundo plano {fn_name}: {task_err}")
+
+        # Disparar recordatorios y confirmaciones WhatsApp en segundo plano (asíncrono para mantener respuesta inmediata al usuario)
+        if now_ts - _last_wa_cron_timestamp >= 120:
+            _last_wa_cron_timestamp = now_ts
+            def _bg_wa_worker():
+                with app.app_context():
+                    try:
+                        from routes_notificaciones import execute_whatsapp_reminders
+                        execute_whatsapp_reminders()
+                    except Exception as _ex_bg_wa:
+                        print("Aviso en bg execute_whatsapp_reminders:", _ex_bg_wa)
+            threading.Thread(target=_bg_wa_worker, daemon=True).start()
     except Exception as e_bg:
         print("Aviso en ejecutor en segundo plano before_request_cleanup:", e_bg)
     finally:
@@ -3679,7 +3696,8 @@ def cron_process_notifications():
     """
     Endpoint dedicado para disparadores de cron externos (cron-job.org, uptime bots, etc.)
     Procesa todas las alertas y notificaciones periódicas (citas 24h para psicólogo,
-    cumpleaños, meditaciones, tareas terapéuticas) y mantiene despierto el servidor de forma confiable.
+    confirmaciones y recordatorios por WhatsApp, cumpleaños, meditaciones, tareas terapéuticas)
+    y mantiene despierto el servidor de forma confiable.
     """
     CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
     provided_key = request.args.get('key') or request.headers.get('X-Cron-Key', '')
@@ -3701,7 +3719,9 @@ def cron_process_notifications():
 
     db = get_db()
     
+    from routes_notificaciones import execute_whatsapp_reminders
     tasks = [
+        ('auto_send_whatsapp_reminders', lambda d: execute_whatsapp_reminders(d)),
         ('auto_cancel_unconfirmed_sessions', auto_cancel_unconfirmed_sessions),
         ('auto_send_appointment_reminders', auto_send_appointment_reminders),
         ('auto_send_confirmation_requests', auto_send_confirmation_requests),
@@ -3714,8 +3734,8 @@ def cron_process_notifications():
     
     for task_name, task_func in tasks:
         try:
-            task_func(db)
-            results[task_name] = 'ok'
+            r = task_func(db)
+            results[task_name] = r if isinstance(r, dict) else 'ok'
         except Exception as err:
             results[task_name] = f"error: {str(err)}"
 

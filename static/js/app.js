@@ -17445,6 +17445,10 @@ async function submitFastBooking(e) {
         isSubmittingFastBooking = true;
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Agendando..."; }
         
+        const targetTz = document.getElementById('fast-tz-select') ? document.getElementById('fast-tz-select').value : getPatientUserTimeZone();
+        const converted = convertTimeFromVETToZone(fecha, hora, targetTz);
+        const horaPaciente = converted ? converted.timeStr : hora;
+
         const res = await fetch('/api/fast-booking/book', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -17452,6 +17456,8 @@ async function submitFastBooking(e) {
                 psicologo_id: fastBookingTherapistId,
                 fecha,
                 hora,
+                hora_paciente: horaPaciente,
+                zona_horaria: targetTz,
                 modalidad,
                 cedula,
                 nombres,
@@ -17466,8 +17472,6 @@ async function submitFastBooking(e) {
         if (res.ok) {
             const therapistTitle = document.getElementById('fast-booking-therapist-name') ? document.getElementById('fast-booking-therapist-name').textContent : "Psicólogo";
             const gcalUrl = generateGoogleCalendarUrl(`Sesión de Terapia - ${therapistTitle}`, `Consulta Terapéutica (${modalidad})`, fecha, hora, 60);
-            const targetTz = document.getElementById('fast-tz-select') ? document.getElementById('fast-tz-select').value : getPatientUserTimeZone();
-            const converted = convertTimeFromVETToZone(fecha, hora, targetTz);
             
             let firstTimeHtml = '';
             if (data.is_new_patient) {

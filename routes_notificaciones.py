@@ -509,7 +509,8 @@ def admin_message_templates_render():
     cursor = db.cursor()
     try:
         cursor.execute("""
-            SELECT a.id, a.paciente_id, a.fecha, a.hora, a.tipo_consulta, p.nombres, p.apellidos, p.telefono
+            SELECT a.id, a.paciente_id, a.fecha, a.hora, a.hora_paciente, a.tipo_consulta,
+                   p.nombres, p.apellidos, p.telefono, p.zona_horaria
             FROM agenda_finanzas a
             JOIN pacientes p ON a.paciente_id = p.id
             WHERE a.id = ?
@@ -517,6 +518,7 @@ def admin_message_templates_render():
         appt = cursor.fetchone()
         if not appt:
             return jsonify({'error': 'Cita no encontrada.'}), 404
+        appt = dict(appt)
             
         key = f"msg_{template_type}"
         psic_key = f"{key}_{user_id}"
@@ -537,7 +539,13 @@ def admin_message_templates_render():
         
         nombre = f"{appt['nombres']} {appt['apellidos']}"
         fecha = appt['fecha']
-        hora = appt['hora']
+
+        hora_paciente_val = (appt.get('hora_paciente') or '').strip()
+        if not hora_paciente_val and appt.get('zona_horaria') and appt.get('zona_horaria') != 'America/Caracas':
+            from routes_agenda import convert_time_vet_to_tz
+            hora_paciente_val = convert_time_vet_to_tz(appt['fecha'], appt['hora'], appt['zona_horaria'])
+
+        hora = hora_paciente_val or appt['hora']
         modalidad = appt['tipo_consulta']
         
         try:
@@ -620,11 +628,11 @@ def send_manual_whatsapp_reminder(cita_id):
     cursor = db.cursor()
 
     cursor.execute("""
-        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.zona_horaria as pat_zona_horaria
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
-        WHERE af.id = ? AND p.psicologo_id = ?
-    """, (cita_id, user_id))
+        WHERE af.id = ? AND (p.psicologo_id = ? OR af.creado_por_user_id = ? OR ? = 1)
+    """, (cita_id, user_id, user_id, user_id))
     cita = cursor.fetchone()
 
     if not cita:
@@ -641,16 +649,22 @@ def send_manual_whatsapp_reminder(cita_id):
     cfg_row = cursor.fetchone()
     template = cfg_row['valor'] if cfg_row and cfg_row['valor'] else None
 
+    from routes_agenda import convert_time_vet_to_tz
+    hora_paciente_calc = cita.get('hora_paciente')
+    if not hora_paciente_calc or hora_paciente_calc == '00:00':
+        hora_paciente_calc = convert_time_vet_to_tz(cita['fecha'], cita['hora'], cita.get('pat_zona_horaria'))
+    hora_final = hora_paciente_calc or cita['hora']
+
     cita_dict = {
         'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
         'fecha': cita['fecha'],
-        'hora': cita.get('hora_paciente') or cita['hora'],
+        'hora': hora_final,
         'modalidad': cita['tipo_consulta'] or 'Presencial'
     }
     mensaje_texto = format_whatsapp_message(template, cita_dict, cita_dict, psicologo)
 
     try:
-        r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15)
+        r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=45, user_id=user_id)
         if r and r.status_code == 200:
             cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita_id,))
             db.commit()
@@ -669,18 +683,11 @@ def send_manual_whatsapp_reminder(cita_id):
 
 
 
-@notificaciones_bp.route('/api/whatsapp/cron-send-reminders', methods=['GET', 'POST'])
-def cron_send_whatsapp_reminders():
-    import os, sys, traceback
-    from flask import has_request_context, jsonify
-    CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
-    if has_request_context():
-        provided = request.args.get('key') or request.headers.get('X-Cron-Key', '')
-        user_agent = (request.headers.get('User-Agent') or '').lower()
-        is_known_cron = 'cron-job.org' in user_agent or 'pythonanywhere' in user_agent
-        if provided != CRON_SECRET and not is_known_cron and 'user_id' not in session:
-            return jsonify({'error': 'No autorizado. Se requiere ?key=espacioterapeutico_cron_2024'}), 401
-
+def execute_whatsapp_reminders(db=None):
+    """
+    Función centralizada y reutilizable para procesar y enviar recordatorios y confirmaciones
+    de WhatsApp tanto desde endpoints de cron externos como desde ciclos periódicos internos.
+    """
     from datetime import datetime, timedelta
     try:
         import zoneinfo
@@ -691,23 +698,26 @@ def cron_send_whatsapp_reminders():
         now_local = datetime.utcnow() - timedelta(hours=4)
 
     current_hour = now_local.hour
-    print(f"[CRON] === Inicio cron_send_whatsapp_reminders === Hora local: {now_local.strftime('%Y-%m-%d %H:%M:%S')} (hour={current_hour})", flush=True)
+    print(f"[CRON-WA] === Inicio execute_whatsapp_reminders === Hora local: {now_local.strftime('%Y-%m-%d %H:%M:%S')} (hour={current_hour})", flush=True)
     
     # Delimitar horario de envíos automáticos: NO enviar entre las 10:00 PM (22:00) y las 6:59 AM (06:59)
     if current_hour < 7 or current_hour >= 22:
-        print(f"[CRON] Skipped: fuera de horario de servicio (hour={current_hour})", flush=True)
-        return jsonify({
+        print(f"[CRON-WA] Skipped: fuera de horario de servicio (hour={current_hour})", flush=True)
+        return {
             'status': 'skipped',
             'message': f'Filtro de horario de servicio activo (10:00 PM - 6:59 AM). Hora actual: {current_hour:02d}:00. Los envíos automáticos están pausados hasta las 7:00 AM.',
             'confirmaciones_enviadas': 0,
             'recordatorios_enviados': 0
-        })
+        }
 
     today_str = now_local.strftime('%Y-%m-%d')
     tomorrow_str = (now_local + timedelta(days=1)).strftime('%Y-%m-%d')
     
-    db = get_db()
+    if db is None:
+        db = get_db()
     cursor = db.cursor()
+
+    from routes_agenda import convert_time_vet_to_tz
 
     # Actualizar o asegurar plantilla con SI/NO si la existente es muy antigua o genérica
     cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo')")
@@ -731,7 +741,7 @@ def cron_send_whatsapp_reminders():
 
     # 1. ENVIAR CONFIRMACIONES PARA CITAS PRÓXIMAS (Citas no confirmadas en la ventana día previo)
     cursor.execute("""
-        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.zona_horaria as pat_zona_horaria, p.psicologo_id,
                COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
@@ -739,7 +749,7 @@ def cron_send_whatsapp_reminders():
         WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0 AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
     """, (today_str, future_3days_str))
     citas_confirmar = cursor.fetchall()
-    print(f"[CRON] Citas pendientes de confirmación encontradas: {len(citas_confirmar)} (rango {today_str} a {future_3days_str})", flush=True)
+    print(f"[CRON-WA] Citas pendientes de confirmación encontradas: {len(citas_confirmar)} (rango {today_str} a {future_3days_str})", flush=True)
 
     psych_configs = {}
     for cita_raw in citas_confirmar:
@@ -748,7 +758,7 @@ def cron_send_whatsapp_reminders():
             phone = cita.get('pat_telefono')
             pat_name = f"{cita.get('pat_nombres', '')} {cita.get('pat_apellidos', '')}".strip()
             if not phone or not phone.strip():
-                print(f"[CRON]   Saltando {pat_name}: sin teléfono", flush=True)
+                print(f"[CRON-WA]   Saltando {pat_name}: sin teléfono", flush=True)
                 continue
             
             try:
@@ -756,11 +766,11 @@ def cron_send_whatsapp_reminders():
                 diff_hours = (cita_dt - now_local.replace(tzinfo=None)).total_seconds() / 3600.0
                 dia_previo_str = (cita_dt.date() - timedelta(days=1)).strftime('%Y-%m-%d')
             except Exception as e_parse:
-                print(f"[CRON]   Error parseando fecha/hora para {pat_name}: {e_parse}", flush=True)
+                print(f"[CRON-WA]   Error parseando fecha/hora para {pat_name}: {e_parse}", flush=True)
                 diff_hours = 12.0
                 dia_previo_str = today_str
 
-            psych_id = cita.get('psicologo_id') or 1
+            psych_id = cita.get('psicologo_id') or cita.get('creado_por_user_id') or 1
             if isinstance(psych_id, str) and not psych_id.isdigit():
                 from app import get_psychologist_by_id_or_slug
                 p_obj = get_psychologist_by_id_or_slug(cursor, psych_id)
@@ -786,18 +796,24 @@ def cron_send_whatsapp_reminders():
 
             should_send_confirmation = (now_naive >= trigger_dt) and (cita_dt > now_naive)
 
-            print(f"[CRON]   Evaluando {pat_name} | cita={cita['fecha']} {cita['hora']} | regla={conf_rule_type}:{conf_rule_val} | trigger={trigger_dt} | now={now_naive} | enviar={should_send_confirmation}", flush=True)
+            print(f"[CRON-WA]   Evaluando {pat_name} | cita={cita['fecha']} {cita['hora']} | regla={conf_rule_type}:{conf_rule_val} | trigger={trigger_dt} | now={now_naive} | enviar={should_send_confirmation}", flush=True)
 
             if not should_send_confirmation:
-                print(f"[CRON]   Saltando {pat_name}: aún no cumple momento de disparo ({trigger_dt})", flush=True)
+                print(f"[CRON-WA]   Saltando {pat_name}: aún no cumple momento de disparo ({trigger_dt})", flush=True)
                 continue
             
-            print(f"[CRON]   >>> ENVIANDO confirmación a {pat_name} ({phone})...", flush=True)
+            print(f"[CRON-WA]   >>> ENVIANDO confirmación a {pat_name} ({phone})...", flush=True)
             psicologo_data = {'nombres': cita.get('psic_nombres'), 'apellidos': cita.get('psic_apellidos')}
+            
+            hora_paciente_calc = cita.get('hora_paciente')
+            if not hora_paciente_calc or hora_paciente_calc == '00:00':
+                hora_paciente_calc = convert_time_vet_to_tz(cita['fecha'], cita['hora'], cita.get('pat_zona_horaria'))
+            hora_final = hora_paciente_calc or cita['hora']
+
             cita_dict = {
                 'nombre': pat_name,
                 'fecha': cita['fecha'],
-                'hora': cita.get('hora_paciente') or cita['hora'],  # Usar hora en zona horaria del paciente
+                'hora': hora_final,  # Usar hora en zona horaria del paciente
                 'modalidad': cita.get('tipo_consulta') or 'Presencial'
             }
             patient_dict = {
@@ -821,7 +837,6 @@ def cron_send_whatsapp_reminders():
             cita_dict['link_confirmacion'] = link_confirmacion
             patient_dict['link_confirmacion'] = link_confirmacion
 
-            psych_id = cita.get('psicologo_id') or 1
             tmpl_conf = cfg_rows.get(f'msg_confirmacion_{psych_id}') or msg_conf_db or tmpl_conf_default
 
             mensaje_texto = format_whatsapp_message(tmpl_conf, patient_dict, cita_dict, psicologo_data)
@@ -830,31 +845,31 @@ def cron_send_whatsapp_reminders():
 
             from routes_herramientas import clean_phone_number
             c_phone = clean_phone_number(phone)
-            print(f"[CRON]   Llamando make_wa_http_request POST /send phone={c_phone} user_id={psych_id} url={WHATSAPP_SERVICE_URL}", flush=True)
-            r = make_wa_http_request('POST', '/send', json_data={'phone': c_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
-            print(f"[CRON]   Respuesta de Render: status_code={r.status_code if r else 'None'}, body={r.text[:300] if r else 'None'}", flush=True)
+            print(f"[CRON-WA]   Llamando make_wa_http_request POST /send phone={c_phone} user_id={psych_id} url={WHATSAPP_SERVICE_URL}", flush=True)
+            r = make_wa_http_request('POST', '/send', json_data={'phone': c_phone, 'text': mensaje_texto}, timeout=45, user_id=psych_id)
+            print(f"[CRON-WA]   Respuesta de Render: status_code={r.status_code if r else 'None'}, body={r.text[:300] if r else 'None'}", flush=True)
             if r and r.status_code == 200:
                 cursor.execute("UPDATE agenda_finanzas SET confirmacion_enviada_wa = 1 WHERE id = ?", (cita['id'],))
                 db.commit()
                 enviados_confirmaciones.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'tipo': 'confirmacion'})
-                print(f"[CRON]   OK: Confirmación ENVIADA con éxito a {pat_name}", flush=True)
+                print(f"[CRON-WA]   OK: Confirmación ENVIADA con éxito a {pat_name}", flush=True)
             else:
                 err_msg = f'HTTP {r.status_code if r else "None"}'
                 if r:
                     try: err_msg = r.json().get('error', r.text[:200])
                     except: err_msg = r.text[:200]
                 errores.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'error': err_msg})
-                print(f"[CRON]   ERROR enviando a {pat_name}: {err_msg}", flush=True)
+                print(f"[CRON-WA]   ERROR enviando a {pat_name}: {err_msg}", flush=True)
         except Exception as e:
             c_id = cita_raw['id'] if ('id' in cita_raw.keys()) else None
             p_n = f"{cita_raw['pat_nombres']} {cita_raw['pat_apellidos']}" if ('pat_nombres' in cita_raw.keys()) else ''
             p_t = cita_raw['pat_telefono'] if ('pat_telefono' in cita_raw.keys()) else ''
             errores.append({'cita_id': c_id, 'paciente': p_n, 'phone': p_t, 'error': str(e)})
-            print(f"[CRON]   EXCEPCION enviando confirmación a cita {c_id}: {e}", flush=True)
+            print(f"[CRON-WA]   EXCEPCION enviando confirmación a cita {c_id}: {e}", flush=True)
 
     # 2. ENVIAR RECORDATORIOS (Citas CONFIRMADAS que cumplan el criterio de recordatorio)
     cursor.execute("""
-        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+        SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.zona_horaria as pat_zona_horaria, p.psicologo_id,
                COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
@@ -871,7 +886,7 @@ def cron_send_whatsapp_reminders():
                 continue
             pat_name = f"{cita.get('pat_nombres', '')} {cita.get('pat_apellidos', '')}".strip()
 
-            psych_id = cita.get('psicologo_id') or 1
+            psych_id = cita.get('psicologo_id') or cita.get('creado_por_user_id') or 1
             if isinstance(psych_id, str) and not psych_id.isdigit():
                 from app import get_psychologist_by_id_or_slug
                 p_obj = get_psychologist_by_id_or_slug(cursor, psych_id)
@@ -905,10 +920,16 @@ def cron_send_whatsapp_reminders():
                 continue
 
             psicologo_data = {'nombres': cita.get('psic_nombres'), 'apellidos': cita.get('psic_apellidos')}
+            
+            hora_paciente_calc = cita.get('hora_paciente')
+            if not hora_paciente_calc or hora_paciente_calc == '00:00':
+                hora_paciente_calc = convert_time_vet_to_tz(cita['fecha'], cita['hora'], cita.get('pat_zona_horaria'))
+            hora_final = hora_paciente_calc or cita['hora']
+
             cita_dict = {
                 'nombre': pat_name,
                 'fecha': cita['fecha'],
-                'hora': cita.get('hora_paciente') or cita['hora'],  # Usar hora en zona horaria del paciente
+                'hora': hora_final,  # Usar hora en zona horaria del paciente
                 'modalidad': cita.get('tipo_consulta') or 'Presencial'
             }
             patient_dict = {
@@ -916,14 +937,13 @@ def cron_send_whatsapp_reminders():
                 'apellidos': cita.get('pat_apellidos', ''),
                 'pais': cita.get('pat_pais') or ''
             }
-            psych_id = cita.get('psicologo_id') or 1
             tmpl_rec = cfg_rows.get(f'msg_recordatorio_{psych_id}') or tmpl_rec_default
             mensaje_texto = format_whatsapp_message(tmpl_rec, patient_dict, cita_dict, psicologo_data)
 
             try:
                 from routes_herramientas import clean_phone_number
                 c_phone = clean_phone_number(phone)
-                r = make_wa_http_request('POST', '/send', json_data={'phone': c_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+                r = make_wa_http_request('POST', '/send', json_data={'phone': c_phone, 'text': mensaje_texto}, timeout=45, user_id=psych_id)
                 if r and r.status_code == 200:
                     cursor.execute("UPDATE agenda_finanzas SET recordatorio_enviado_wa = 1 WHERE id = ?", (cita['id'],))
                     db.commit()
@@ -937,7 +957,7 @@ def cron_send_whatsapp_reminders():
             except Exception as e:
                 errores.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'error': str(e)})
         except Exception as e_rec:
-            print(f"[CRON] Error procesando recordatorio cita {cita_raw['id'] if 'id' in cita_raw.keys() else '?'}: {e_rec}", flush=True)
+            print(f"[CRON-WA] Error procesando recordatorio cita {cita_raw['id'] if 'id' in cita_raw.keys() else '?'}: {e_rec}", flush=True)
 
     # 3. ENVIAR MENSAJES DE CIERRE Y REAGENDAMIENTO AL FINAL DEL HORARIO LABORAL (18:00 a 21:59)
     enviados_reagendamientos = []
@@ -950,7 +970,7 @@ def cron_send_whatsapp_reminders():
             tmpl_reag_default = cfg_rows.get('msg_reagendamiento') or "Hola {nombre}, notamos que no pudimos realizar tu sesión agendada para el *{fecha}*. Te invitamos a agendar un nuevo espacio ingresando a nuestra plataforma o respondiendo a este mensaje. ¡Estamos para acompañarte!"
 
             cursor.execute("""
-                SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+                SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.zona_horaria as pat_zona_horaria, p.psicologo_id,
                        COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
@@ -979,10 +999,16 @@ def cron_send_whatsapp_reminders():
                         continue
                     pat_name = f"{cita.get('pat_nombres', '')} {cita.get('pat_apellidos', '')}".strip()
                     psicologo_data = {'nombres': cita.get('psic_nombres'), 'apellidos': cita.get('psic_apellidos')}
+                    
+                    hora_paciente_calc = cita.get('hora_paciente')
+                    if not hora_paciente_calc or hora_paciente_calc == '00:00':
+                        hora_paciente_calc = convert_time_vet_to_tz(cita['fecha'], cita['hora'], cita.get('pat_zona_horaria'))
+                    hora_final = hora_paciente_calc or cita['hora']
+
                     cita_dict = {
                         'nombre': pat_name,
                         'fecha': cita['fecha'],
-                        'hora': cita.get('hora_paciente') or cita['hora'],
+                        'hora': hora_final,
                         'modalidad': cita.get('tipo_consulta') or 'Presencial'
                     }
                     patient_dict = {
@@ -990,7 +1016,7 @@ def cron_send_whatsapp_reminders():
                         'apellidos': cita.get('pat_apellidos', ''),
                         'pais': cita.get('pat_pais') or ''
                     }
-                    psych_id = cita.get('psicologo_id') or 1
+                    psych_id = cita.get('psicologo_id') or cita.get('creado_por_user_id') or 1
                     tmpl_reag = cfg_rows.get(f'msg_reagendamiento_{psych_id}') or tmpl_reag_default
                     mensaje_texto = format_whatsapp_message(tmpl_reag, patient_dict, cita_dict, psicologo_data)
 
@@ -999,13 +1025,13 @@ def cron_send_whatsapp_reminders():
                     db.commit()
 
                     try:
-                        r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+                        r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=45, user_id=psych_id)
                         if r and r.status_code == 200:
                             enviados_reagendamientos.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'tipo': 'reagendamiento'})
                     except Exception as e:
                         pass
                 except Exception as e_reag:
-                    print(f"[CRON] Error procesando reagendamiento cita: {e_reag}", flush=True)
+                    print(f"[CRON-WA] Error procesando reagendamiento cita: {e_reag}", flush=True)
 
         # B) Cierre de Sesión (Citas de Hoy finalizadas para invitar a volver a agendar)
         tmpl_cierre_default = cfg_rows.get('msg_cierre') or (
@@ -1016,7 +1042,7 @@ def cron_send_whatsapp_reminders():
         )
 
         cursor.execute("""
-            SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+            SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.zona_horaria as pat_zona_horaria, p.psicologo_id,
                    s.tareas_asignadas,
                    COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
             FROM agenda_finanzas af
@@ -1039,10 +1065,16 @@ def cron_send_whatsapp_reminders():
                     continue
                 pat_name = f"{cita.get('pat_nombres', '')} {cita.get('pat_apellidos', '')}".strip()
                 psicologo_data = {'nombres': cita.get('psic_nombres'), 'apellidos': cita.get('psic_apellidos')}
+                
+                hora_paciente_calc = cita.get('hora_paciente')
+                if not hora_paciente_calc or hora_paciente_calc == '00:00':
+                    hora_paciente_calc = convert_time_vet_to_tz(cita['fecha'], cita['hora'], cita.get('pat_zona_horaria'))
+                hora_final = hora_paciente_calc or cita['hora']
+
                 cita_dict = {
                     'nombre': pat_name,
                     'fecha': cita['fecha'],
-                    'hora': cita.get('hora_paciente') or cita['hora'],
+                    'hora': hora_final,
                     'modalidad': cita.get('tipo_consulta') or 'Presencial',
                     'tareas': (cita.get('tareas_asignadas') or '').strip()
                 }
@@ -1051,7 +1083,7 @@ def cron_send_whatsapp_reminders():
                     'apellidos': cita.get('pat_apellidos', ''),
                     'pais': cita.get('pat_pais') or ''
                 }
-                psych_id = cita.get('psicologo_id') or 1
+                psych_id = cita.get('psicologo_id') or cita.get('creado_por_user_id') or 1
                 tmpl_cierre = cfg_rows.get(f'msg_cierre_{psych_id}') or tmpl_cierre_default
                 mensaje_texto = format_whatsapp_message(tmpl_cierre, patient_dict, cita_dict, psicologo_data)
 
@@ -1060,13 +1092,13 @@ def cron_send_whatsapp_reminders():
                 db.commit()
 
                 try:
-                    r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+                    r = make_wa_http_request('POST', '/send', json_data={'phone': phone, 'text': mensaje_texto}, timeout=45, user_id=psych_id)
                     if r and r.status_code == 200:
                         enviados_cierres.append({'cita_id': cita['id'], 'paciente': pat_name, 'phone': phone, 'tipo': 'cierre'})
                 except Exception as e:
                     pass
             except Exception as e_cierre:
-                print(f"[CRON] Error procesando cierre cita: {e_cierre}", flush=True)
+                print(f"[CRON-WA] Error procesando cierre cita: {e_cierre}", flush=True)
 
     # 4. ENVIAR RECORDATORIOS DE HERRAMIENTAS TERAPÉUTICAS DIARIAS
     herramientas_enviadas = 0
@@ -1101,7 +1133,7 @@ def cron_send_whatsapp_reminders():
 
     db.commit()
 
-    return jsonify({
+    return {
         'success': True,
         'confirmaciones_enviadas': len(enviados_confirmaciones),
         'recordatorios_enviados': len(enviados_recordatorios),
@@ -1124,7 +1156,23 @@ def cron_send_whatsapp_reminders():
             'cierres': enviados_cierres,
             'errores': errores
         }
-    })
+    }
+
+
+@notificaciones_bp.route('/api/whatsapp/cron-send-reminders', methods=['GET', 'POST'])
+def cron_send_whatsapp_reminders():
+    import os
+    from flask import has_request_context, jsonify
+    CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
+    if has_request_context():
+        provided = request.args.get('key') or request.headers.get('X-Cron-Key', '')
+        user_agent = (request.headers.get('User-Agent') or '').lower()
+        is_known_cron = 'cron-job.org' in user_agent or 'pythonanywhere' in user_agent
+        if provided != CRON_SECRET and not is_known_cron and 'user_id' not in session:
+            return jsonify({'error': 'No autorizado. Se requiere ?key=espacioterapeutico_cron_2024'}), 401
+
+    res = execute_whatsapp_reminders()
+    return jsonify(res)
 
 @notificaciones_bp.route('/api/whatsapp/send-queue-item-now/<item_id>', methods=['POST'])
 @login_required
@@ -1251,7 +1299,7 @@ def send_queue_item_now(item_id):
             # Es una cita regular de agenda_finanzas
             appt_id = int(item_id)
             cursor.execute("""
-                SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.psicologo_id,
+                SELECT af.*, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.pais as pat_pais, p.zona_horaria as pat_zona_horaria, p.psicologo_id,
                        COALESCE(u.nombres, 'Paulo') as psic_nombres, COALESCE(u.apellidos, 'Mora') as psic_apellidos
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
@@ -1269,12 +1317,19 @@ def send_queue_item_now(item_id):
             if not phone:
                 return jsonify({'error': 'El paciente no tiene teléfono registrado'}), 400
 
-            psych_id = cita['psicologo_id'] or user_id or 1
+            psych_id = cita.get('psicologo_id') or cita.get('creado_por_user_id') or user_id or 1
             psicologo_data = {'nombres': cita['psic_nombres'], 'apellidos': cita['psic_apellidos']}
+            
+            from routes_agenda import convert_time_vet_to_tz
+            hora_paciente_calc = cita.get('hora_paciente')
+            if not hora_paciente_calc or hora_paciente_calc == '00:00':
+                hora_paciente_calc = convert_time_vet_to_tz(cita['fecha'], cita['hora'], cita.get('pat_zona_horaria'))
+            hora_final = hora_paciente_calc or cita['hora']
+
             cita_dict = {
                 'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}",
                 'fecha': cita['fecha'],
-                'hora': cita.get('hora_paciente') or cita['hora'],
+                'hora': hora_final,
                 'modalidad': cita['tipo_consulta'] or 'Presencial'
             }
             patient_dict = {
@@ -1373,7 +1428,7 @@ def send_queue_item_now(item_id):
             
             from routes_herramientas import clean_phone_number
             clean_phone = clean_phone_number(phone)
-            res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': mensaje_texto}, timeout=15, user_id=psych_id)
+            res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': mensaje_texto}, timeout=45, user_id=psych_id)
 
             if res_wa and res_wa.status_code == 200:
                 if msg_stage == 'confirmacion':
@@ -1563,13 +1618,13 @@ def get_whatsapp_queue_status():
         user_id = session.get('user_id', 1)
         if user_id == 1:
             sql = f"""
-                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago,
+                SELECT af.id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.confirmada, af.estado_pago,
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
                        COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
                        COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
                        COALESCE(af.cierre_enviado_wa, 0) as cierre_enviado_wa,
                        {estado_col},
-                       p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+                       p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.zona_horaria as pat_zona_horaria
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
                 {join_clause}
@@ -1580,13 +1635,13 @@ def get_whatsapp_queue_status():
             cursor.execute(sql, (yesterday_str,))
         else:
             sql = f"""
-                SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.confirmada, af.estado_pago,
+                SELECT af.id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.confirmada, af.estado_pago,
                        COALESCE(af.confirmacion_enviada_wa, 0) as confirmacion_enviada,
                        COALESCE(af.recordatorio_enviado_wa, 0) as recordatorio_enviado,
                        COALESCE(af.reagendamiento_enviado_wa, 0) as reagendamiento_enviado,
                        COALESCE(af.cierre_enviado_wa, 0) as cierre_enviado_wa,
                        {estado_col},
-                       p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono
+                       p.id as paciente_id, p.nombres as pat_nombres, p.apellidos as pat_apellidos, p.telefono as pat_telefono, p.zona_horaria as pat_zona_horaria
                 FROM agenda_finanzas af
                 JOIN pacientes p ON af.paciente_id = p.id
                 {join_clause}
@@ -1597,6 +1652,8 @@ def get_whatsapp_queue_status():
             cursor.execute(sql, (user_id, yesterday_str))
         
         rows = cursor.fetchall()
+
+        from routes_agenda import convert_time_vet_to_tz
 
         for raw_r in rows:
             r = dict(raw_r)
@@ -1615,12 +1672,18 @@ def get_whatsapp_queue_status():
             is_tomorrow = fecha_cita == tomorrow_str
             is_future = fecha_cita > today_str
 
+            hora_paciente_calc = r.get('hora_paciente')
+            if not hora_paciente_calc or hora_paciente_calc == '00:00':
+                hora_paciente_calc = convert_time_vet_to_tz(fecha_cita, hora_cita, r.get('pat_zona_horaria'))
+            hora_display = hora_paciente_calc or hora_cita
+
             base_item = {
                 'cita_id': r['id'],
                 'paciente_nombre': pat_name,
                 'telefono': phone,
                 'fecha': fecha_cita,
-                'hora': hora_cita,
+                'hora': hora_display,
+                'hora_paciente': hora_display,
                 'tipo_consulta': r['tipo_consulta'] or 'Presencial',
             }
 

@@ -158,6 +158,27 @@ def normalize_time_str(t_str):
     except:
         return "00:00"
 
+def convert_time_vet_to_tz(fecha_str, hora_str, target_tz_str):
+    """
+    Convierte una fecha y hora dada en zona de Venezuela (America/Caracas, GMT-4)
+    a la zona horaria del paciente (target_tz_str). Retorna la hora en formato HH:MM.
+    """
+    if not hora_str:
+        return "00:00"
+    if not target_tz_str or target_tz_str == 'America/Caracas':
+        return normalize_time_str(hora_str)
+    try:
+        import zoneinfo
+        norm_f = normalize_date_str(fecha_str) if fecha_str else datetime.now().strftime("%Y-%m-%d")
+        norm_h = normalize_time_str(hora_str)
+        tz_vet = zoneinfo.ZoneInfo("America/Caracas")
+        tz_target = zoneinfo.ZoneInfo(target_tz_str)
+        dt_vet = datetime.strptime(f"{norm_f} {norm_h}", "%Y-%m-%d %H:%M").replace(tzinfo=tz_vet)
+        dt_target = dt_vet.astimezone(tz_target)
+        return dt_target.strftime("%H:%M")
+    except Exception:
+        return normalize_time_str(hora_str)
+
 def get_appointment_fee(cursor, patient_id, psicologo_id=None, modalidad=None):
     """Calcula la tarifa (monto y moneda) para una consulta."""
     monto = 0.0
@@ -1699,8 +1720,16 @@ def fast_booking_book():
     if is_user_subscription_expired(cursor, psicologo_id):
         return jsonify({'error': 'El especialista no está disponible para recibir nuevas citas en este momento.'}), 400
 
+    hora_paciente = (data.get('hora_paciente') or '').strip() or None
+    zona_horaria = (data.get('zona_horaria') or '').strip() or None
+
     fecha_norm = normalize_date_str(fecha)
     hora_norm = normalize_time_str(hora)
+
+    # Si no vino hora_paciente explícita pero hay zona_horaria diferente a Caracas, calcularla
+    if not hora_paciente and zona_horaria and zona_horaria != 'America/Caracas':
+        hora_paciente = convert_time_vet_to_tz(fecha_norm, hora_norm, zona_horaria)
+
     alt_fecha = fecha_norm
     try:
         dt_tmp = datetime.strptime(fecha_norm, "%Y-%m-%d")
@@ -1718,7 +1747,7 @@ def fast_booking_book():
     digits_telefono = re.sub(r'\D', '', telefono) if telefono else ''
 
     cursor.execute("""
-        SELECT id, nombres, apellidos, telefono, email, psicologo_id 
+        SELECT id, nombres, apellidos, telefono, email, psicologo_id, zona_horaria
         FROM pacientes 
         WHERE ((LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
            OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', '')))
@@ -1732,9 +1761,9 @@ def fast_booking_book():
         is_new_patient = True
         try:
             cursor.execute("""
-                INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (nombres, apellidos, cedula, telefono, email, psicologo_id))
+                INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id, zona_horaria)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (nombres, apellidos, cedula, telefono, email, psicologo_id, zona_horaria or 'America/Caracas'))
             patient_id = cursor.lastrowid
             pac_nombre = f"{nombres} {apellidos}"
         except Exception as ex:
@@ -1745,8 +1774,7 @@ def fast_booking_book():
         # 1. Nombres y apellidos guardados por el psicólogo SIEMPRE prevalecen
         pac_nombre = f"{patient['nombres']} {patient['apellidos']}".strip() or f"{nombres} {apellidos}".strip()
         
-        # 2. Contacto: solo actualizar si el consultante ingresó un dato no vacío y diferente
-        # Si el consultante dejó el teléfono vacío, NUNCA se borra el del psicólogo
+        # 2. Contacto y zona horaria
         updates = []
         params = []
         clean_new_tel = telefono.strip() if telefono else ''
@@ -1758,21 +1786,31 @@ def fast_booking_book():
         if clean_new_email and clean_new_email != (patient['email'] or '').strip():
             updates.append("email = ?")
             params.append(clean_new_email)
+
+        if zona_horaria and zona_horaria != (patient['zona_horaria'] or '').strip():
+            updates.append("zona_horaria = ?")
+            params.append(zona_horaria)
             
         if updates:
             params.append(patient_id)
             cursor.execute(f"UPDATE pacientes SET {', '.join(updates)} WHERE id = ?", params)
             db.commit()
+
+        # Si aún no tenemos hora_paciente, verificar si el paciente existente tiene zona horaria
+        if not hora_paciente:
+            p_tz = (patient['zona_horaria'] or '').strip()
+            if p_tz and p_tz != 'America/Caracas':
+                hora_paciente = convert_time_vet_to_tz(fecha_norm, hora_norm, p_tz)
         
     try:
         monto, moneda = get_appointment_fee(cursor, patient_id, psicologo_id, modalidad)
         
         cursor.execute("""
             INSERT INTO agenda_finanzas (
-                paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
+                paciente_id, fecha, hora, hora_paciente, tipo_consulta, monto, moneda, 
                 estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia, creado_por_user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?)
-        """, (patient_id, fecha, hora, modalidad, monto, moneda, f"Auto-agendada rápida por paciente. Cédula: {cedula}", psicologo_id))
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?)
+        """, (patient_id, fecha_norm, hora_norm, hora_paciente, modalidad, monto, moneda, f"Auto-agendada rápida por paciente. Cédula: {cedula}", psicologo_id))
         agenda_id = cursor.lastrowid
         
         if patient_id and psicologo_id:

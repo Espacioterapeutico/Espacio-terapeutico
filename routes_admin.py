@@ -1898,6 +1898,7 @@ def superadmin_approve_therapist(user_id):
     row = cursor.fetchone()
     if not row:
         return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+    row = dict(row)
         
     import datetime
     now_dt = datetime.datetime.now()
@@ -2926,6 +2927,7 @@ def update_transaction(trans_id):
         row = cursor.fetchone()
         if not row:
             return jsonify({'error': 'Transacción no encontrada.'}), 404
+        row = dict(row)
             
         original_estado_pago = row['estado_pago']
         estado_pago = data.get('estado_pago') if 'estado_pago' in data else row['estado_pago']
