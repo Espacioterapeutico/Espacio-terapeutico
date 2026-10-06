@@ -3618,8 +3618,11 @@ async function fetchAvailableHours(dateStr) {
                         }
                         modSelect.appendChild(opt);
                     });
-                    if (prevVal && slot.modalidades.includes(prevVal)) {
-                        modSelect.value = prevVal;
+                    if (prevVal) {
+                        const match = slot.modalidades.find(m => m.trim().toLowerCase() === prevVal.trim().toLowerCase());
+                        if (match) {
+                            modSelect.value = match;
+                        }
                     }
                     if (typeof updatePatientBookingModalityDescription === 'function') {
                         updatePatientBookingModalityDescription();
