@@ -787,8 +787,10 @@ def execute_whatsapp_reminders(db=None):
                 psych_configs[psych_id] = cfg_p
             cfg_p = psych_configs[psych_id]
 
-            conf_rule_type = cfg_p.get('alerta_confirmacion_tipo', 'horas')
-            conf_rule_val = cfg_p.get('alerta_confirmacion_valor', cfg_p.get('alerta_confirmacion', 24))
+            conf_rule_type = cfg_p.get('alerta_confirmacion_tipo') or 'previo'
+            conf_rule_val = cfg_p.get('alerta_confirmacion_valor')
+            if conf_rule_val is None:
+                conf_rule_val = '08:00' if conf_rule_type in ('previo', 'dia_previo', 'mismo_dia') else cfg_p.get('alerta_confirmacion', 24)
 
             from routes_pacientes import get_confirmation_trigger_datetime
             trigger_dt = get_confirmation_trigger_datetime(cita['fecha'], cita['hora'], conf_rule_type, conf_rule_val)
@@ -1654,6 +1656,18 @@ def get_whatsapp_queue_status():
         rows = cursor.fetchall()
 
         from routes_agenda import convert_time_vet_to_tz
+        from routes_pacientes import get_confirmation_trigger_datetime
+
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (user_id,))
+        u_cfg_row = cursor.fetchone()
+        u_cfg = {}
+        if u_cfg_row and u_cfg_row[0]:
+            try: u_cfg = json.loads(u_cfg_row[0])
+            except: pass
+        q_conf_tipo = u_cfg.get('alerta_confirmacion_tipo') or 'previo'
+        q_conf_val = u_cfg.get('alerta_confirmacion_valor')
+        if q_conf_val is None:
+            q_conf_val = '08:00' if q_conf_tipo in ('previo', 'dia_previo', 'mismo_dia') else u_cfg.get('alerta_confirmacion', 24)
 
         for raw_r in rows:
             r = dict(raw_r)
@@ -1689,6 +1703,10 @@ def get_whatsapp_queue_status():
 
             # TOKEN 1: Confirmacion
             if not is_past:
+                q_trigger_dt = get_confirmation_trigger_datetime(fecha_cita, hora_cita, q_conf_tipo, q_conf_val)
+                now_naive_q = now_local.replace(tzinfo=None)
+                ya_toca_enviar = (now_naive_q >= q_trigger_dt)
+
                 if r['confirmacion_enviada'] == 1:
                     lbl = 'Enviado ✅ (Respondido Sí)' if is_confirmada else ('Enviado ⚠️ (Respondido No)' if is_cancelada else 'Enviado 🚀 (Esperando Respuesta)')
                     status = 'confirmado' if is_confirmada else 'enviado_conf'
@@ -1698,14 +1716,12 @@ def get_whatsapp_queue_status():
                 elif is_cancelada:
                     lbl = '❌ Cancelado'
                     status = 'cancelado'
-                elif is_today or (is_tomorrow and now_local.hour >= 8):
+                elif ya_toca_enviar:
                     lbl = '📥 En Cola (Envío Inmediato)'
                     status = 'en_cola_conf'
-                elif is_tomorrow:
-                    lbl = '📥 En Cola (08:00 AM Día Previo)'
-                    status = 'en_cola_conf'
                 else:
-                    lbl = '⏳ Programado (Día previo)'
+                    hora_disp_fmt = q_trigger_dt.strftime('%d/%m a las %I:%M %p')
+                    lbl = f'⏳ Programado ({hora_disp_fmt})'
                     status = 'esperando_fecha'
                 queue.append({**base_item, 'token_name': 'Fase 1: Confirmación', 'pipeline_status': status, 'pipeline_label': lbl, 'can_cancel': status in ('en_cola_conf', 'esperando_fecha'), 'token_type': 'confirmacion', 'priority': 1})
             

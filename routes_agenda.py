@@ -1417,15 +1417,12 @@ def delete_agenda_event(event_id):
         elif str(psych_id).isdigit():
             psych_id = int(psych_id)
         try:
-            from routes_admin import get_calendar_service, update_calendar_event_status
+            from routes_admin import get_calendar_service, delete_calendar_event
             service = get_calendar_service(psych_id, db=db)
             if service:
-                update_calendar_event_status(
-                    service, cita['google_event_id'], 'cancelada',
-                    motivo="Eliminada de la agenda de la clínica"
-                )
+                delete_calendar_event(service, cita['google_event_id'])
         except Exception as ge:
-            print("Error al actualizar evento en Google Calendar al borrar cita:", ge)
+            print("Error al eliminar evento en Google Calendar al borrar cita:", ge)
 
     if cita and cita.get('token_confirmacion'):
         try:
@@ -1495,8 +1492,8 @@ def admin_availability():
         "receso": 15,
         "antelacion": 24,
         "alerta_confirmacion": 24,
-        "alerta_confirmacion_tipo": "horas",
-        "alerta_confirmacion_valor": 24,
+        "alerta_confirmacion_tipo": "previo",
+        "alerta_confirmacion_valor": "08:00",
         "alerta_recordatorio": 2,
         "alerta_recordatorio_tipo": "horas",
         "alerta_recordatorio_valor": 2,
@@ -1557,6 +1554,10 @@ def admin_availability():
 
         if not isinstance(config, dict):
             config = {}
+
+        if 'alerta_confirmacion_tipo' not in config:
+            config['alerta_confirmacion_tipo'] = 'previo'
+            config['alerta_confirmacion_valor'] = '08:00'
 
         perfiles = config.get('perfiles', [])
         if not isinstance(perfiles, list) or len(perfiles) == 0:
@@ -2017,16 +2018,13 @@ def delete_admin_consultation_history_event(event_id):
         paciente_id = row['paciente_id']
 
         if google_event_id:
-            from routes_admin import get_calendar_service, update_calendar_event_status
+            from routes_admin import get_calendar_service, delete_calendar_event
             service = get_calendar_service(user_id, db=db)
             if service:
                 try:
-                    update_calendar_event_status(
-                        service, google_event_id, 'cancelada',
-                        motivo="Eliminada por el psicólogo desde panel"
-                    )
+                    delete_calendar_event(service, google_event_id)
                 except Exception as ge:
-                    print("Error al actualizar evento en Google Calendar:", ge)
+                    print("Error al eliminar evento en Google Calendar:", ge)
 
         cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
         cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))

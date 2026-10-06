@@ -1669,19 +1669,24 @@ def patient_confirm_appointment():
         
         cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id or appt['creado_por_user_id'] or 1,))
         u_row = cursor.fetchone()
-        alerta_confirmacion = 24
+        conf_rule_type = 'previo'
+        conf_rule_val = '08:00'
         if u_row and u_row[0]:
             try:
                 config = json.loads(u_row[0])
-                alerta_confirmacion = int(config.get('alerta_confirmacion', 24))
+                conf_rule_type = config.get('alerta_confirmacion_tipo') or 'previo'
+                conf_rule_val = config.get('alerta_confirmacion_valor')
+                if conf_rule_val is None:
+                    conf_rule_val = '08:00' if conf_rule_type in ('previo', 'dia_previo', 'mismo_dia') else config.get('alerta_confirmacion', 24)
             except:
                 pass
-                
-        session_dt = datetime.strptime(f"{appt['fecha']} {appt['hora']}", "%Y-%m-%d %H:%M")
-        diff_hours = (session_dt - datetime.now()).total_seconds() / 3600.0
+
+        trigger_dt = get_confirmation_trigger_datetime(appt['fecha'], appt['hora'], conf_rule_type, conf_rule_val)
+        now_dt = datetime.now()
         
-        if diff_hours > alerta_confirmacion:
-            return jsonify({'error': f'Aún no puedes confirmar esta cita. Estará disponible {alerta_confirmacion} horas antes de la sesión.'}), 400
+        if now_dt < trigger_dt:
+            desc = get_rule_description(conf_rule_type, conf_rule_val)
+            return jsonify({'error': f'Aún no puedes confirmar esta cita. Estará disponible según la política de confirmación ({desc}).'}), 400
             
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt['id'],))
         try:

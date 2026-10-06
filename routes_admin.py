@@ -1279,6 +1279,23 @@ def update_calendar_event_status(service, google_event_id, status, paciente_nomb
         print(f"Error al actualizar estado en Google Calendar (ID: {google_event_id}, Status: {status}):", e)
         return False
 
+def delete_calendar_event(service, google_event_id):
+    """
+    Elimina físicamente un evento de Google Calendar cuando una sesión es eliminada por completo.
+    Si el evento ya no existe (404 / 410 Gone), no genera error.
+    """
+    if not service or not google_event_id:
+        return False
+    try:
+        service.events().delete(calendarId='primary', eventId=google_event_id).execute()
+        return True
+    except Exception as e:
+        err_msg = str(e).lower()
+        if '404' in err_msg or '410' in err_msg or 'not found' in err_msg or 'deleted' in err_msg:
+            return True
+        print(f"Error al eliminar evento en Google Calendar ({google_event_id}):", e)
+        return False
+
 @admin_bp.route('/api/google/status', methods=['GET'])
 @login_required
 def google_status():

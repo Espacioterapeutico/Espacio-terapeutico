@@ -10560,10 +10560,10 @@ function updateRulesSummaryBadges() {
     if (bAnt) bAnt.textContent = `Mínimo ${ant}h de anticipación para agendar`;
 
     // 3. Confirmación
-    const confTipo = document.getElementById('avail-confirmacion-tipo')?.value || 'horas';
+    const confTipo = document.getElementById('avail-confirmacion-tipo')?.value || 'previo';
     const confVal = (confTipo === 'horas' || confTipo === 'minutos')
         ? (document.getElementById('avail-confirmacion-num')?.value || '24')
-        : (document.getElementById('avail-confirmacion-time')?.value || '18:00');
+        : (document.getElementById('avail-confirmacion-time')?.value || '08:00');
     const bConf = document.getElementById('badge-confirmacion-resumen');
     if (bConf) {
         if (confTipo === 'horas') bConf.textContent = `Se envía ${confVal}h antes de la cita`;
@@ -10764,8 +10764,8 @@ async function loadAdminAvailability() {
         document.getElementById('avail-tiempo-cierre').value = data.alerta_cierre !== undefined ? data.alerta_cierre : 2;
         
         // Confirmación personalizada
-        const confTipo = data.alerta_confirmacion_tipo || 'horas';
-        const confVal = data.alerta_confirmacion_valor !== undefined ? data.alerta_confirmacion_valor : (data.alerta_confirmacion !== undefined ? data.alerta_confirmacion : 24);
+        const confTipo = data.alerta_confirmacion_tipo || 'previo';
+        const confVal = data.alerta_confirmacion_valor !== undefined ? data.alerta_confirmacion_valor : (confTipo === 'previo' ? '08:00' : (data.alerta_confirmacion !== undefined ? data.alerta_confirmacion : 24));
         const selConfTipo = document.getElementById('avail-confirmacion-tipo');
         if (selConfTipo) selConfTipo.value = confTipo;
         if (confTipo === 'horas' || confTipo === 'minutos') {
@@ -11182,10 +11182,10 @@ async function handleSaveAvailability(e) {
     const antelacion = parseInt(document.getElementById('avail-antelacion').value);
     
     // Alerta de confirmación personalizada
-    const alerta_confirmacion_tipo = document.getElementById('avail-confirmacion-tipo')?.value || 'horas';
+    const alerta_confirmacion_tipo = document.getElementById('avail-confirmacion-tipo')?.value || 'previo';
     const alerta_confirmacion_valor = (alerta_confirmacion_tipo === 'horas' || alerta_confirmacion_tipo === 'minutos')
         ? parseInt(document.getElementById('avail-confirmacion-num')?.value || 24)
-        : (document.getElementById('avail-confirmacion-time')?.value || '18:00');
+        : (document.getElementById('avail-confirmacion-time')?.value || '08:00');
     
     const alerta_confirmacion = (alerta_confirmacion_tipo === 'horas') 
         ? alerta_confirmacion_valor 

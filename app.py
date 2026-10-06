@@ -2402,27 +2402,33 @@ def auto_send_confirmation_requests(db):
             fecha_cita = appt['fecha']
             hora_cita = appt['hora']
 
-            # Obtener alerta_confirmacion del psicólogo
-            alerta_confirmacion = 24
+            # Obtener regla de confirmación del psicólogo
+            conf_rule_type = 'previo'
+            conf_rule_val = '08:00'
             if psicologo_id:
                 cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
                 u_row = cursor.fetchone()
                 if u_row and u_row[0]:
                     try:
                         config = json.loads(u_row[0])
-                        alerta_confirmacion = int(config.get('alerta_confirmacion', 24))
+                        conf_rule_type = config.get('alerta_confirmacion_tipo') or 'previo'
+                        conf_rule_val = config.get('alerta_confirmacion_valor')
+                        if conf_rule_val is None:
+                            conf_rule_val = '08:00' if conf_rule_type in ('previo', 'dia_previo', 'mismo_dia') else config.get('alerta_confirmacion', 24)
                     except:
                         pass
 
-            # Calcular horas restantes
+            # Calcular si ya se cumplió el momento de disparo
             try:
+                from routes_pacientes import get_confirmation_trigger_datetime
+                trigger_dt = get_confirmation_trigger_datetime(fecha_cita, hora_cita, conf_rule_type, conf_rule_val)
                 session_dt = datetime.strptime(f"{fecha_cita} {hora_cita}", "%Y-%m-%d %H:%M")
-                diff_hours = (session_dt - now_dt).total_seconds() / 3600.0
+                now_naive = now_dt.replace(tzinfo=None) if hasattr(now_dt, 'tzinfo') and now_dt.tzinfo else now_dt
             except:
                 continue
 
-            # Si ya entró en el rango de confirmación (ej: <= 24h antes) y no ha pasado la cita
-            if 0 < diff_hours <= alerta_confirmacion:
+            # Si ya se cumplió el momento de disparo de confirmación y aún no pasa la cita
+            if trigger_dt <= now_naive < session_dt:
                 notif_key = f"req_conf_{appt_id}"
                 
                 # Evitar enviar la notificación repetidamente
