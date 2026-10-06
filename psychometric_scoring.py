@@ -1516,6 +1516,14 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     elif code in ('BAI', 'BAI-BECK') or code == 'BAI':
         return process_bai_scoring(answers)
         
+    # LSAS
+    elif code in ('LSAS', 'LSAS-SR'):
+        return process_lsas_scoring(answers)
+        
+    # SPIN
+    elif code == 'SPIN':
+        return process_spin_scoring(answers)
+        
     # 4. AQ
     elif code in ('AQ', 'AQ-50', 'COCIENTE-AUTISTA'):
         return process_aq_scoring(answers)
@@ -1685,3 +1693,38 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
             total_score, subscales_dict, classification, interpretation = 0.0, {}, "Completado", "Respuestas registradas exitosamente."
         return total_score, subscales_dict, classification, interpretation
 
+
+
+def process_lsas_scoring(answers):
+    ans_map = _extract_answer_map(answers)
+    total_miedo = 0
+    total_evitacion = 0
+    for i in range(1, 49):
+        val = ans_map.get(i, 0)
+        if i % 2 != 0:
+            total_miedo += val
+        else:
+            total_evitacion += val
+    total = total_miedo + total_evitacion
+    
+    if total <= 54: clas = "Ansiedad Social Leve o Inexistente"
+    elif total <= 65: clas = "Ansiedad Social Moderada"
+    elif total <= 80: clas = "Ansiedad Social Marcada"
+    elif total <= 95: clas = "Ansiedad Social Severa"
+    else: clas = "Ansiedad Social Muy Severa"
+    
+    interp = f"Miedo: {total_miedo}/72. Evitación: {total_evitacion}/72. El paciente presenta un cuadro compatible con {clas.lower()}."
+    return total, {"Miedo": total_miedo, "Evitación": total_evitacion}, clas, interp
+
+def process_spin_scoring(answers):
+    ans_map = _extract_answer_map(answers)
+    total = sum(ans_map.get(i, 0) for i in range(1, 18))
+    
+    if total <= 20: clas = "Sin Ansiedad Social Clínica"
+    elif total <= 30: clas = "Ansiedad Social Leve"
+    elif total <= 40: clas = "Ansiedad Social Moderada"
+    elif total <= 50: clas = "Ansiedad Social Severa"
+    else: clas = "Ansiedad Social Muy Severa"
+    
+    interp = f"Puntuación total: {total}/68. El paciente reporta síntomas compatibles con {clas.lower()}."
+    return total, {"Puntuación Total": total}, clas, interp

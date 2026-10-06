@@ -1768,7 +1768,7 @@ def ensure_new_sexology_and_cognitive_tests_definitions(db):
         ))
 
     # 7. BSSC — Lista de Chequeo Breve de Síntomas Sexuales
-    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'BSSC'")
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'BSSC', 'LSAS', 'LSAS-SR', 'SPIN'")
     if not cursor.fetchone():
         bssc_opciones = [
             {"val": 1, "text": "Sí"},
@@ -1784,7 +1784,7 @@ def ensure_new_sexology_and_cognitive_tests_definitions(db):
             INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            'BSSC', 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales', 'BSSC', 'Sexología y Salud Sexual',
+            'BSSC', 'LSAS', 'LSAS-SR', 'SPIN', 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales', 'BSSC', 'LSAS', 'LSAS-SR', 'SPIN', 'Sexología y Salud Sexual',
             'Herramienta de cribado clínico rápido de 4 ítems para la identificación temprana de inquietudes o síntomas sexuales.',
             'Seleccione Sí o No para cada una de las 4 preguntas de tamizaje inicial.',
             json.dumps(bssc_opciones, ensure_ascii=False), json.dumps(bssc_items, ensure_ascii=False)
@@ -2574,11 +2574,11 @@ def api_export_test_pdf(assignment_id):
             'MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II',
             'MMPI-2', 'MMPI2', 'MMPI', 'ZUNG-SDS', 'HAMILTON-D', 'IDARE-STAI', 'IDARE',
             'SCL-90-R', 'BSI', 'BSI-53', 'BECK-BHS', 'BHS', 'BARSIT', 'SWLS', 'SHIM', 'IIEF-5',
-            'FSFI', 'MMSE', 'ATAS', 'CUVINO', 'ABUSO-COERCITIVO', 'VIOLENCIA-ECON', 'BPRS', 'PANSS-POS', 'JUICIO-REALIDAD', 'BSSC'
+            'FSFI', 'MMSE', 'ATAS', 'CUVINO', 'ABUSO-COERCITIVO', 'VIOLENCIA-ECON', 'BPRS', 'PANSS-POS', 'JUICIO-REALIDAD', 'BSSC', 'LSAS', 'LSAS-SR', 'SPIN'
         }
 
         should_recalc = False
-        is_known_baremo = test_code in tests_with_baremo or any(k in test_code for k in ('ADHD', 'TDAH', 'BDI', 'BAI', 'AQ', 'CAT', 'RAADS', 'MILLON', 'MMPI', 'HOLLAND', 'ZUNG', 'HAM'))
+        is_known_baremo = test_code in tests_with_baremo or any(k in test_code for k in ('ADHD', 'TDAH', 'BDI', 'BAI', 'AQ', 'CAT', 'RAADS', 'MILLON', 'MMPI', 'HOLLAND', 'ZUNG', 'HAM', 'LSAS', 'SPIN'))
         if respuestas and is_known_baremo:
             if not subescalas or list(subescalas.keys()) == ['Puntuación Total'] or not data.get('clasificacion_resultado') or data.get('clasificacion_resultado') == 'Completado':
                 should_recalc = True
@@ -3502,4 +3502,100 @@ def ensure_substance_abuse_tests_definitions(db):
                 cudit_code
             ))
 
+    db.commit()
+
+
+def ensure_social_anxiety_tests_definitions(db):
+    import json
+    cursor = db.cursor()
+    # SPIN
+    spin_opciones = [
+        {"val": 0, "text": "Nada"},
+        {"val": 1, "text": "Un poco"},
+        {"val": 2, "text": "Algo"},
+        {"val": 3, "text": "Mucho"},
+        {"val": 4, "text": "Extremadamente"}
+    ]
+    spin_items = [
+        {"id": 1, "texto": "Tengo miedo de las personas que tienen autoridad.", "reverse": False},
+        {"id": 2, "texto": "Me molesta ruborizarme frente a las personas.", "reverse": False},
+        {"id": 3, "texto": "Las fiestas y eventos sociales me asustan.", "reverse": False},
+        {"id": 4, "texto": "Evito hablar con personas que no conozco.", "reverse": False},
+        {"id": 5, "texto": "Me da mucho miedo que me critiquen.", "reverse": False},
+        {"id": 6, "texto": "Evito hacer cosas o hablar con personas por miedo a avergonzarme.", "reverse": False},
+        {"id": 7, "texto": "Transpirar frente a las personas me causa angustia.", "reverse": False},
+        {"id": 8, "texto": "Evito ir a fiestas.", "reverse": False},
+        {"id": 9, "texto": "Evito hacer actividades en las que sea el centro de atencin.", "reverse": False},
+        {"id": 10, "texto": "Me da miedo hablar con extraos.", "reverse": False},
+        {"id": 11, "texto": "Evito tener que dar discursos.", "reverse": False},
+        {"id": 12, "texto": "Hara cualquier cosa por evitar que me critiquen.", "reverse": False},
+        {"id": 13, "texto": "Las palpitaciones me molestan cuando estoy con otras personas.", "reverse": False},
+        {"id": 14, "texto": "Tengo miedo de hacer las cosas mal cuando me estn observando.", "reverse": False},
+        {"id": 15, "texto": "Siento miedo de que la gente me mire.", "reverse": False},
+        {"id": 16, "texto": "Evito hablar con cualquier persona que tenga autoridad.", "reverse": False},
+        {"id": 17, "texto": "Temblar frente a los dems me angustia.", "reverse": False}
+    ]
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'SPIN'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'SPIN', 'Inventario de Fobia Social (SPIN)', 'SPIN', 'Ansiedad',
+            'Evala la presencia y severidad de los sntomas de fobia social/ansiedad social.',
+            'Indique cunto le han molestado las siguientes situaciones durante la ltima semana.',
+            json.dumps(spin_opciones), json.dumps(spin_items)
+        ))
+
+    # LSAS
+    lsas_opciones = [
+        {"val": 0, "text": "0 - Ninguno (Miedo) / Nunca (Evitacin)"},
+        {"val": 1, "text": "1 - Leve (Miedo) / Rara vez (Evitacin)"},
+        {"val": 2, "text": "2 - Moderado (Miedo) / A veces (Evitacin)"},
+        {"val": 3, "text": "3 - Severo (Miedo) / Normalmente (Evitacin)"}
+    ]
+    sit = [
+        "Usar el telfono en pblico.",
+        "Participar en grupos pequeos.",
+        "Comer en lugares pblicos.",
+        "Beber con otras personas en lugares pblicos.",
+        "Hablar con alguien que tiene autoridad.",
+        "Actuar, presentarse o hablar frente a una audiencia.",
+        "Ir a una fiesta.",
+        "Trabajar mientras lo observan.",
+        "Escribir mientras lo observan.",
+        "Llamar a alguien que no conoce muy bien.",
+        "Hablar con personas que no conoce muy bien.",
+        "Conocer a personas extraas.",
+        "Orinar en un bao pblico.",
+        "Entrar a una habitacin cuando los dems ya estn sentados.",
+        "Ser el centro de atencin.",
+        "Hablar sin preparacin (improvisar) en una reunin.",
+        "Hacer una prueba o examen.",
+        "Expresar desacuerdo o desaprobacin a personas que no conoce muy bien.",
+        "Mirar a los ojos de personas que no conoce muy bien.",
+        "Dar un informe a un grupo.",
+        "Intentar conocer a alguien con fines romnticos/sexuales.",
+        "Devolver productos a una tienda.",
+        "Dar una fiesta.",
+        "Resistir la presin de un vendedor."
+    ]
+    lsas_items = []
+    idx = 1
+    for s in sit:
+        lsas_items.append({"id": idx, "texto": f"MIEDO: {s}", "reverse": False})
+        lsas_items.append({"id": idx+1, "texto": f"EVITACIN: {s}", "reverse": False})
+        idx += 2
+        
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'LSAS-SR'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'LSAS-SR', 'Escala de Ansiedad Social de Liebowitz (Auto-reporte)', 'LSAS-SR', 'Ansiedad',
+            'Evala el miedo y la evitacin en situaciones sociales y de desempeo.',
+            'Para cada situacin, indique el grado de MIEDO que siente y con qu frecuencia EVITA la situacin.',
+            json.dumps(lsas_opciones), json.dumps(lsas_items)
+        ))
     db.commit()
