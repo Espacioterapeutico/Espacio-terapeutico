@@ -1014,6 +1014,7 @@ def add_agenda_event():
     cantidad_sesiones = int(data.get('cantidad_sesiones', 1) or 1)
     referencia = data.get('referencia')
     metodo_pago = data.get('metodo_pago')
+    fecha_pago = data.get('fecha_pago')
     confirmada = int(data.get('confirmada', 0) or 0)
     hora_paciente = (data.get('hora_paciente') or '').strip() or None  # Hora en zona horaria del paciente (calculada en frontend)
     if not hora_paciente and paciente_id:
