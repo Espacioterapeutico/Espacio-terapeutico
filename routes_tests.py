@@ -146,6 +146,7 @@ def ensure_tests_tables(db):
     ensure_violence_and_psychotic_tests_definitions(db)
     ensure_emotional_management_tests_definitions(db)
     ensure_substance_abuse_tests_definitions(db)
+    ensure_social_anxiety_tests_definitions(db)
     ensure_barsit_definition(db)
     sync_existing_completed_tests_to_evoluciones(db)
 
