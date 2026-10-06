@@ -683,7 +683,19 @@ def send_manual_whatsapp_reminder(cita_id):
 
 
 
+import threading
+_wa_cron_lock = threading.Lock()
+
 def execute_whatsapp_reminders(db=None):
+    if not _wa_cron_lock.acquire(blocking=False):
+        print("[CRON-WA] Skipped: Envío en curso por otro hilo.", flush=True)
+        return {'status': 'skipped', 'message': 'Proceso ya en ejecución'}
+    try:
+        return _execute_whatsapp_reminders_inner(db)
+    finally:
+        _wa_cron_lock.release()
+
+def _execute_whatsapp_reminders_inner(db=None):
     """
     Función centralizada y reutilizable para procesar y enviar recordatorios y confirmaciones
     de WhatsApp tanto desde endpoints de cron externos como desde ciclos periódicos internos.
