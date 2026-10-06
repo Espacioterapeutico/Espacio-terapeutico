@@ -290,15 +290,8 @@ def check_appointment_interval_collision(cursor, psicologo_id, fecha, hora, tipo
     else:
         req_dur, req_rec = get_appointment_duration_and_recess(tipo_consulta, cfg_perfiles, cfg_dur, cfg_rec)
 
-    if req_dur == 60 and req_rec < 15:
-        req_busy_until = req_start + timedelta(minutes=60)
-        req_end = req_busy_until
-    elif req_dur + req_rec == 60:
-        req_end = req_start + timedelta(minutes=req_dur)
-        req_busy_until = req_start + timedelta(minutes=60)
-    else:
-        req_end = req_start + timedelta(minutes=req_dur)
-        req_busy_until = req_end + timedelta(minutes=req_rec)
+    req_end = req_start + timedelta(minutes=req_dur)
+    req_busy_until = req_end + timedelta(minutes=req_rec)
 
     f_norm = normalize_date_str(fecha)
     alt_f = f_norm
@@ -336,15 +329,8 @@ def check_appointment_interval_collision(cursor, psicologo_id, fecha, hora, tipo
             ea_dur, ea_rec = get_appointment_duration_and_recess(ea['tipo_consulta'], cfg_perfiles, cfg_dur, cfg_rec)
             ea_cant = int(ea['cantidad_sesiones'] or 1)
             ea_total_dur = ea_dur * ea_cant
-            if ea_dur == 60 and ea_rec < 15:
-                ea_busy_until = ea_start + timedelta(minutes=60 * ea_cant)
-                ea_end = ea_busy_until
-            elif ea_dur + ea_rec == 60:
-                ea_end = ea_start + timedelta(minutes=ea_total_dur)
-                ea_busy_until = ea_start + timedelta(minutes=60 * ea_cant)
-            else:
-                ea_end = ea_start + timedelta(minutes=ea_total_dur)
-                ea_busy_until = ea_end + timedelta(minutes=ea_rec)
+            ea_end = ea_start + timedelta(minutes=ea_total_dur)
+            ea_busy_until = ea_end + timedelta(minutes=ea_rec)
 
             # Colisión: solapamiento directo del intervalo de sesión y receso
             if req_start < ea_busy_until and req_busy_until > ea_start:
@@ -443,15 +429,8 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
             b_dur, b_rec = get_appointment_duration_and_recess(br['tipo_consulta'], perfiles, duracion, receso)
             b_cant = int(br['cantidad_sesiones'] or 1)
             b_total_dur = b_dur * b_cant
-            if b_dur == 60 and b_rec < 15:
-                b_busy_until = b_start + timedelta(minutes=60 * b_cant)
-                b_end = b_busy_until
-            elif b_dur + b_rec == 60:
-                b_end = b_start + timedelta(minutes=b_total_dur)
-                b_busy_until = b_start + timedelta(minutes=60 * b_cant)
-            else:
-                b_end = b_start + timedelta(minutes=b_total_dur)
-                b_busy_until = b_end + timedelta(minutes=b_rec)
+            b_end = b_start + timedelta(minutes=b_total_dur)
+            b_busy_until = b_end + timedelta(minutes=b_rec)
             base_busy_intervals.append({
                 'start': b_start,
                 'end': b_end,
@@ -575,49 +554,51 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                             if end_time.hour < 12:
                                 end_time = end_time.replace(hour=end_time.hour + 12)
 
-                        # Determinar el paso fijo de la cuadrícula de turnos (Grid Step)
-                        if perf_duracion == 60:
-                            step_minutes = 60 if perf_receso < 15 else (perf_duracion + perf_receso)
-                        elif perf_duracion + perf_receso == 60:
-                            step_minutes = 60
-                        elif perf_duracion + perf_receso > 0:
-                            step_minutes = perf_duracion + perf_receso
-                        else:
-                            step_minutes = perf_duracion
-
-                        step_td = timedelta(minutes=step_minutes)
                         duration_td = timedelta(minutes=perf_duracion)
-                        if perf_duracion == 60 and perf_receso < 15:
-                            slot_busy_td = timedelta(minutes=60)
-                        elif perf_duracion + perf_receso == 60:
-                            slot_busy_td = timedelta(minutes=60)
-                        else:
-                            slot_busy_td = timedelta(minutes=perf_duracion + perf_receso)
+                        recess_td = timedelta(minutes=perf_receso)
 
-                        # Generar turnos en cuadrícula fija regular sin desplazamientos flotantes
-                        curr = start_time
-                        while curr + duration_td <= end_time:
-                            slot_start = curr
-                            slot_end = curr + duration_td
-                            slot_busy_until = curr + slot_busy_td
+                        # Recolectar intervalos ocupados que intersecten con este rango laboral
+                        raw_busy = []
+                        for bi in base_busy_intervals:
+                            if bi['busy_until'] <= start_time or bi['start'] >= end_time:
+                                continue
+                            raw_busy.append({
+                                'start': max(bi['start'], start_time),
+                                'busy_until': min(bi['busy_until'], end_time),
+                                'actual_busy_until': bi['busy_until']
+                            })
+                        for p_b in perf_blocks:
+                            if p_b['busy_until'] <= start_time or p_b['start'] >= end_time:
+                                continue
+                            raw_busy.append({
+                                'start': max(p_b['start'], start_time),
+                                'busy_until': min(p_b['busy_until'], end_time),
+                                'actual_busy_until': p_b['busy_until']
+                            })
 
-                            # Verificar colisión con citas ocupadas
-                            is_busy = False
-                            for bi in base_busy_intervals:
-                                if slot_start < bi['busy_until'] and slot_busy_until > bi['start']:
-                                    is_busy = True
-                                    break
+                        raw_busy.sort(key=lambda x: x['start'])
 
-                            # Verificar colisión con bloqueos específicos
-                            if not is_busy:
-                                for p_b in perf_blocks:
-                                    if slot_start < p_b['busy_until'] and slot_busy_until > p_b['start']:
-                                        is_busy = True
-                                        break
+                        # Fusionar intervalos ocupados superpuestos o contiguos
+                        merged_busy = []
+                        for b in raw_busy:
+                            if not merged_busy:
+                                merged_busy.append(b)
+                            else:
+                                prev = merged_busy[-1]
+                                if b['start'] <= prev['actual_busy_until']:
+                                    prev['actual_busy_until'] = max(prev['actual_busy_until'], b['actual_busy_until'])
+                                    prev['busy_until'] = max(prev['busy_until'], b['busy_until'])
+                                else:
+                                    merged_busy.append(b)
 
-                            if not is_busy:
-                                h_str = slot_start.strftime("%H:%M")
-                                h_fin_str = slot_end.strftime("%H:%M")
+                        # Generar turnos en ventanas libres según duración y receso del perfil
+                        curr_free_start = start_time
+                        for b in merged_busy:
+                            curr = curr_free_start
+                            # En ventana previa a una cita ocupada, la sesión + receso debe culminar antes de la cita
+                            while curr + duration_td + recess_td <= b['start']:
+                                h_str = curr.strftime("%H:%M")
+                                h_fin_str = (curr + duration_td).strftime("%H:%M")
                                 mod_label = perf_nombre or perf_modalidad or 'Online'
                                 slot_key = (h_str, mod_label)
                                 if slot_key not in seen_keys:
@@ -632,8 +613,29 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                                         'duracion': perf_duracion,
                                         'receso': perf_receso
                                     })
+                                curr = curr + duration_td + recess_td
+                            curr_free_start = max(curr_free_start, b['actual_busy_until'])
 
-                            curr = curr + step_td
+                        # Ventana libre final hasta el cierre del rango laboral
+                        curr = curr_free_start
+                        while curr + duration_td <= end_time and curr + duration_td + recess_td <= end_time + timedelta(minutes=5):
+                            h_str = curr.strftime("%H:%M")
+                            h_fin_str = (curr + duration_td).strftime("%H:%M")
+                            mod_label = perf_nombre or perf_modalidad or 'Online'
+                            slot_key = (h_str, mod_label)
+                            if slot_key not in seen_keys:
+                                seen_keys.add(slot_key)
+                                candidate_slots.append({
+                                    'hora_literal': h_str,
+                                    'hora_inicio': h_str,
+                                    'hora_fin': h_fin_str,
+                                    'modalidad': mod_label,
+                                    'perfil': perf_nombre,
+                                    'antelacion': perf_antelacion,
+                                    'duracion': perf_duracion,
+                                    'receso': perf_receso
+                                })
+                            curr = curr + duration_td + recess_td
 
                     except Exception as _re:
                         print("Error calculando rango horario:", _re)
