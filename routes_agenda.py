@@ -289,8 +289,16 @@ def check_appointment_interval_collision(cursor, psicologo_id, fecha, hora, tipo
         req_rec = cfg_rec
     else:
         req_dur, req_rec = get_appointment_duration_and_recess(tipo_consulta, cfg_perfiles, cfg_dur, cfg_rec)
-    req_end = req_start + timedelta(minutes=req_dur)
-    req_busy_until = req_end + timedelta(minutes=req_rec)
+
+    if req_dur == 60 and req_rec < 15:
+        req_busy_until = req_start + timedelta(minutes=60)
+        req_end = req_busy_until
+    elif req_dur + req_rec == 60:
+        req_end = req_start + timedelta(minutes=req_dur)
+        req_busy_until = req_start + timedelta(minutes=60)
+    else:
+        req_end = req_start + timedelta(minutes=req_dur)
+        req_busy_until = req_end + timedelta(minutes=req_rec)
 
     f_norm = normalize_date_str(fecha)
     alt_f = f_norm
@@ -327,17 +335,19 @@ def check_appointment_interval_collision(cursor, psicologo_id, fecha, hora, tipo
             ea_start = datetime.strptime(ea_h_clean, "%H:%M")
             ea_dur, ea_rec = get_appointment_duration_and_recess(ea['tipo_consulta'], cfg_perfiles, cfg_dur, cfg_rec)
             ea_cant = int(ea['cantidad_sesiones'] or 1)
-            ea_end = ea_start + timedelta(minutes=ea_dur * ea_cant)
-            ea_busy_until = ea_end + timedelta(minutes=ea_rec)
+            ea_total_dur = ea_dur * ea_cant
+            if ea_dur == 60 and ea_rec < 15:
+                ea_busy_until = ea_start + timedelta(minutes=60 * ea_cant)
+                ea_end = ea_busy_until
+            elif ea_dur + ea_rec == 60:
+                ea_end = ea_start + timedelta(minutes=ea_total_dur)
+                ea_busy_until = ea_start + timedelta(minutes=60 * ea_cant)
+            else:
+                ea_end = ea_start + timedelta(minutes=ea_total_dur)
+                ea_busy_until = ea_end + timedelta(minutes=ea_rec)
 
-            # 1. Colisión directa de sesión: dos consultantes citados durante el mismo intervalo de tiempo
-            if req_start < ea_end and req_end > ea_start:
-                return True
-            # 2. Inicia durante el receso/descanso de la cita previa
-            if req_start >= ea_start and req_start < ea_busy_until:
-                return True
-            # 3. La cita previa empieza durante el receso de la nueva cita solicitada
-            if ea_start >= req_start and ea_start < req_busy_until:
+            # Colisión: solapamiento directo del intervalo de sesión y receso
+            if req_start < ea_busy_until and req_busy_until > ea_start:
                 return True
         except Exception as _e_ea:
             pass
@@ -432,8 +442,16 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
             b_start = datetime.strptime(h_norm, "%H:%M")
             b_dur, b_rec = get_appointment_duration_and_recess(br['tipo_consulta'], perfiles, duracion, receso)
             b_cant = int(br['cantidad_sesiones'] or 1)
-            b_end = b_start + timedelta(minutes=b_dur * b_cant)
-            b_busy_until = b_end + timedelta(minutes=b_rec)
+            b_total_dur = b_dur * b_cant
+            if b_dur == 60 and b_rec < 15:
+                b_busy_until = b_start + timedelta(minutes=60 * b_cant)
+                b_end = b_busy_until
+            elif b_dur + b_rec == 60:
+                b_end = b_start + timedelta(minutes=b_total_dur)
+                b_busy_until = b_start + timedelta(minutes=60 * b_cant)
+            else:
+                b_end = b_start + timedelta(minutes=b_total_dur)
+                b_busy_until = b_end + timedelta(minutes=b_rec)
             base_busy_intervals.append({
                 'start': b_start,
                 'end': b_end,
@@ -557,48 +575,49 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                             if end_time.hour < 12:
                                 end_time = end_time.replace(hour=end_time.hour + 12)
 
-                        # Recolectar intervalos ocupados que intersecten con este rango laboral
-                        raw_busy = []
-                        for bi in base_busy_intervals:
-                            if bi['busy_until'] <= start_time or bi['start'] >= end_time:
-                                continue
-                            raw_busy.append({
-                                'start': max(bi['start'], start_time),
-                                'busy_until': min(bi['busy_until'], end_time),
-                                'actual_busy_until': bi['busy_until']
-                            })
-                        for p_b in perf_blocks:
-                            if p_b['busy_until'] <= start_time or p_b['start'] >= end_time:
-                                continue
-                            raw_busy.append({
-                                'start': max(p_b['start'], start_time),
-                                'busy_until': min(p_b['busy_until'], end_time),
-                                'actual_busy_until': p_b['busy_until']
-                            })
+                        # Determinar el paso fijo de la cuadrícula de turnos (Grid Step)
+                        if perf_duracion == 60:
+                            step_minutes = 60 if perf_receso < 15 else (perf_duracion + perf_receso)
+                        elif perf_duracion + perf_receso == 60:
+                            step_minutes = 60
+                        elif perf_duracion + perf_receso > 0:
+                            step_minutes = perf_duracion + perf_receso
+                        else:
+                            step_minutes = perf_duracion
 
-                        raw_busy.sort(key=lambda x: x['start'])
+                        step_td = timedelta(minutes=step_minutes)
+                        duration_td = timedelta(minutes=perf_duracion)
+                        if perf_duracion == 60 and perf_receso < 15:
+                            slot_busy_td = timedelta(minutes=60)
+                        elif perf_duracion + perf_receso == 60:
+                            slot_busy_td = timedelta(minutes=60)
+                        else:
+                            slot_busy_td = timedelta(minutes=perf_duracion + perf_receso)
 
-                        # Fusionar intervalos ocupados superpuestos o contiguos
-                        merged_busy = []
-                        for b in raw_busy:
-                            if not merged_busy:
-                                merged_busy.append(b)
-                            else:
-                                prev = merged_busy[-1]
-                                if b['start'] <= prev['actual_busy_until']:
-                                    prev['actual_busy_until'] = max(prev['actual_busy_until'], b['actual_busy_until'])
-                                    prev['busy_until'] = max(prev['busy_until'], b['busy_until'])
-                                else:
-                                    merged_busy.append(b)
+                        # Generar turnos en cuadrícula fija regular sin desplazamientos flotantes
+                        curr = start_time
+                        while curr + duration_td <= end_time:
+                            slot_start = curr
+                            slot_end = curr + duration_td
+                            slot_busy_until = curr + slot_busy_td
 
-                        # Generar turnos en ventanas libres continuas (Floating Slots)
-                        curr_free_start = start_time
-                        for b in merged_busy:
-                            curr = curr_free_start
-                            # En ventana previa a una cita ocupada, la sesión + receso debe culminar antes de la cita
-                            while curr + duration_td + recess_td <= b['start']:
-                                h_str = curr.strftime("%H:%M")
-                                h_fin_str = (curr + duration_td).strftime("%H:%M")
+                            # Verificar colisión con citas ocupadas
+                            is_busy = False
+                            for bi in base_busy_intervals:
+                                if slot_start < bi['busy_until'] and slot_busy_until > bi['start']:
+                                    is_busy = True
+                                    break
+
+                            # Verificar colisión con bloqueos específicos
+                            if not is_busy:
+                                for p_b in perf_blocks:
+                                    if slot_start < p_b['busy_until'] and slot_busy_until > p_b['start']:
+                                        is_busy = True
+                                        break
+
+                            if not is_busy:
+                                h_str = slot_start.strftime("%H:%M")
+                                h_fin_str = slot_end.strftime("%H:%M")
                                 mod_label = perf_nombre or perf_modalidad or 'Online'
                                 slot_key = (h_str, mod_label)
                                 if slot_key not in seen_keys:
@@ -613,29 +632,8 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                                         'duracion': perf_duracion,
                                         'receso': perf_receso
                                     })
-                                curr = curr + duration_td + recess_td
-                            curr_free_start = max(curr_free_start, b['actual_busy_until'])
 
-                        # Ventana libre final hasta el cierre del rango laboral
-                        curr = curr_free_start
-                        while curr + duration_td <= end_time and curr + duration_td + recess_td <= end_time + timedelta(minutes=5):
-                            h_str = curr.strftime("%H:%M")
-                            h_fin_str = (curr + duration_td).strftime("%H:%M")
-                            mod_label = perf_nombre or perf_modalidad or 'Online'
-                            slot_key = (h_str, mod_label)
-                            if slot_key not in seen_keys:
-                                seen_keys.add(slot_key)
-                                candidate_slots.append({
-                                    'hora_literal': h_str,
-                                    'hora_inicio': h_str,
-                                    'hora_fin': h_fin_str,
-                                    'modalidad': mod_label,
-                                    'perfil': perf_nombre,
-                                    'antelacion': perf_antelacion,
-                                    'duracion': perf_duracion,
-                                    'receso': perf_receso
-                                })
-                            curr = curr + duration_td + recess_td
+                            curr = curr + step_td
 
                     except Exception as _re:
                         print("Error calculando rango horario:", _re)
@@ -880,6 +878,13 @@ def manage_agenda_blocks():
         except:
             pass
 
+        cursor.execute("""
+            INSERT INTO bloqueos_agenda_especificos (psicologo_id, fecha, fecha_fin, modalidad, hora_inicio, hora_fin, motivo, todo_el_dia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (target_psic_id, fecha, fecha_fin or None, modalidad, hora_inicio, hora_fin, motivo, todo_el_dia))
+        db.commit()
+        block_id = cursor.lastrowid
+
         google_event_id = None
         sincronizar_google = bool(data.get('sincronizar_google', False))
         if sincronizar_google:
@@ -908,13 +913,6 @@ def manage_agenda_blocks():
                     google_event_id = g_event.get('id')
             except Exception as ge:
                 print("Error sincronizando bloqueo con Google Calendar:", ge)
-
-        cursor.execute("""
-            INSERT INTO bloqueos_agenda_especificos (psicologo_id, fecha, fecha_fin, modalidad, hora_inicio, hora_fin, motivo, todo_el_dia)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (target_psic_id, fecha, fecha_fin or None, modalidad, hora_inicio, hora_fin, motivo, todo_el_dia))
-        db.commit()
-        block_id = cursor.lastrowid
         return jsonify({
             'success': 'Bloqueo de espacio / horario registrado correctamente.',
             'message': 'Bloqueo de espacio / horario registrado correctamente.',
@@ -1026,6 +1024,24 @@ def add_agenda_event():
         except Exception:
             pass
 
+    # 1. Guardar primero en la base de datos local y asegurar la transacción
+    cursor.execute("""
+        INSERT INTO agenda_finanzas (
+            paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
+            estado_pago, control_uso, google_event_id, cantidad_sesiones,
+            referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id,
+            hora_paciente
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        paciente_id, fecha, hora, tipo_consulta, monto, moneda,
+        estado_pago, control_uso, cantidad_sesiones,
+        referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id,
+        hora_paciente
+    ))
+    db.commit()
+    event_id = cursor.lastrowid
+
+    # 2. Una vez guardado con éxito en la app, sincronizar con Google Calendar de forma aislada
     google_event_id = None
     try:
         from routes_admin import get_calendar_service
@@ -1095,24 +1111,11 @@ def add_agenda_event():
                     g_event = service.events().insert(calendarId='primary', body=event_body).execute()
                 
                 google_event_id = g_event.get('id')
+                if google_event_id:
+                    cursor.execute("UPDATE agenda_finanzas SET google_event_id = ? WHERE id = ?", (google_event_id, event_id))
+                    db.commit()
     except Exception as ge:
         print("Error creando cita en Google Calendar:", ge)
-    
-    cursor.execute("""
-        INSERT INTO agenda_finanzas (
-            paciente_id, fecha, hora, tipo_consulta, monto, moneda, 
-            estado_pago, control_uso, google_event_id, cantidad_sesiones,
-            referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id,
-            hora_paciente
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        paciente_id, fecha, hora, tipo_consulta, monto, moneda,
-        estado_pago, control_uso, google_event_id, cantidad_sesiones,
-        referencia, metodo_pago, fecha_pago, confirmada, consultorio_nombre, creado_por_user_id,
-        hora_paciente
-    ))
-    db.commit()
-    event_id = cursor.lastrowid
 
     if paciente_id and creado_por_user_id and creado_por_user_id > 0:
         try:
@@ -1910,19 +1913,34 @@ def fast_booking_book():
             print("Error al enviar WebPush de auto-agendamiento:", wp_ex)
         
         # Sincronización en Firebase
-        import threading
-        threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        try:
+            from app import sync_patient_to_firebase
+            import threading
+            threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+        except Exception as fb_err:
+            print("Error iniciando sync_patient_to_firebase en fast-booking:", fb_err)
         
+        psych_phone = None
+        psych_name = "el profesional"
+        if psych and isinstance(psych, dict):
+            psych_phone = psych.get('whatsapp_publico') or psych.get('telefono')
+            p_nom = psych.get('nombres', '')
+            p_ape = psych.get('apellidos', '')
+            if p_nom or p_ape:
+                psych_name = f"Psic. {p_nom} {p_ape}".strip()
+
         return jsonify({
             'success': 'Tu consulta ha sido agendada con éxito automáticamente.',
             'google_synced': google_event_id is not None,
             'is_new_patient': is_new_patient,
-            'psych_phone': psych.get('whatsapp_publico') or psych.get('telefono') if psych else None,
-            'psych_name': f"Psic. {psych.get('nombres','')} {psych.get('apellidos','')}".strip() if psych else "el profesional",
+            'psych_phone': psych_phone,
+            'psych_name': psych_name,
             'first_time_message': 'Bienvenido/a. Como eres un consultante de primera vez, es importante que te comuniques vía WhatsApp con el profesional para recibir la información del encuadre terapeútico, métodos de pago y el enlace de la sesión.'
         })
     except Exception as e:
-        db.rollback()
+        try:
+            db.rollback()
+        except: pass
         return jsonify({'error': f'Error al agendar consulta: {str(e)}'}), 500
 
 
