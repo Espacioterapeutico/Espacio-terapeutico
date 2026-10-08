@@ -1,4 +1,4 @@
-
+ï»¿
 // ==========================================
 // UTILIDADES GLOBALES DE BÃšSQUEDA Y FILTRADO (ACENTOS, MULTIPALABRA Y TOKENS)
 // ==========================================
@@ -32259,7 +32259,7 @@ function submitMeditacionCreate(e) {
             btn.disabled = false;
             btn.innerHTML = 'Guardar en Biblioteca';
         }
-        if (typeof showToast === 'function') { showToast("Meditación guardada en biblioteca"); } else { alert("Meditación guardada en biblioteca"); }
+        if (typeof showToast === 'function') { showToast("Meditaci\u00f3n guardada en biblioteca"); } else { alert("Meditaci\u00f3n guardada en biblioteca"); }
     })
     .catch(err => {
         alert(err.message);
@@ -32283,7 +32283,7 @@ function deleteMeditacion(id) {
                 selectPatientForTherapistTools(currentMedPatientId, name, code);
             }
             loadTherapistToolsCatalog();
-            if (typeof showToast === 'function') { showToast("Meditación eliminada"); } else { alert("Meditación eliminada"); }
+            if (typeof showToast === 'function') { showToast("Meditaci\u00f3n eliminada"); } else { alert("Meditaci\u00f3n eliminada"); }
         })
         .catch(err => alert("Error al eliminar: " + err.message));
 }
@@ -32478,7 +32478,7 @@ async function submitMeditacionAssign(e) {
         if (!res.ok) throw new Error(data.error || 'Error al guardar asignaciÃ³n');
         
         closeModal('meditacion-assign-modal');
-        if (typeof showToast === 'function') { showToast(asigId ? "Horarios y días actualizados exitosamente" : "Meditación asignada exitosamente con sus días y horarios"); } else { alert(asigId ? "Horarios y días actualizados exitosamente" : "Meditación asignada exitosamente con sus días y horarios"); }
+        if (typeof showToast === 'function') { showToast(asigId ? "Horarios y d\u00edas actualizados exitosamente" : "Meditaci\u00f3n asignada exitosamente con sus d\u00edas y horarios"); } else { alert(asigId ? "Horarios y d\u00edas actualizados exitosamente" : "Meditaci\u00f3n asignada exitosamente con sus d\u00edas y horarios"); }
         
         const name = document.getElementById('mat-patient-name')?.innerText || document.getElementById('tt-selected-patient-name')?.innerText || currentMedPatientName || '';
         const code = (document.getElementById('mat-patient-cedula')?.innerText || document.getElementById('tt-selected-patient-code')?.innerText || '').replace('CÃ©dula: ', '').trim() || currentMedPatientCode || '';
@@ -32504,7 +32504,7 @@ async function unassignMeditacion(asignacionId) {
             const data = await res.json();
             throw new Error(data.error || 'Error al eliminar');
         }
-        if (typeof showToast === 'function') { showToast("Meditación desasignada exitosamente"); } else { alert("Meditación desasignada exitosamente"); }
+        if (typeof showToast === 'function') { showToast("Meditaci\u00f3n desasignada exitosamente"); } else { alert("Meditaci\u00f3n desasignada exitosamente"); }
         
         const name = document.getElementById('mat-patient-name')?.innerText || document.getElementById('tt-selected-patient-name')?.innerText || currentMedPatientName || '';
         const code = (document.getElementById('mat-patient-cedula')?.innerText || document.getElementById('tt-selected-patient-code')?.innerText || '').replace('CÃ©dula: ', '').trim() || currentMedPatientCode || '';
