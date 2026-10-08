@@ -3612,7 +3612,8 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
                         from routes_notificaciones import make_wa_http_request
                         from routes_herramientas import clean_phone_number
                         clean_phone = clean_phone_number(p['telefono'])
-                        res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id}, timeout=15, user_id=psic_id)
+                        payload = {'phone': clean_phone, 'text': msg_wa, 'user_id': psic_id, 'linkPreview': False, 'options': {'linkPreview': False}}
+                        res_wa = make_wa_http_request('POST', '/send', json_data=payload, timeout=15, user_id=psic_id)
                         
                         if res_wa and res_wa.status_code == 200:
                             cursor.execute("""

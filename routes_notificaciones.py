@@ -313,6 +313,11 @@ def make_wa_http_request(method, endpoint, json_data=None, timeout=60, user_id=N
     if json_data is not None and isinstance(json_data, dict):
         if 'user_id' not in json_data:
             json_data['user_id'] = user_id
+        # Desactivar globalmente la vista previa de enlaces para evitar que los mensajes se queden atascados
+        if 'linkPreview' not in json_data:
+            json_data['linkPreview'] = False
+        if 'options' not in json_data:
+            json_data['options'] = {'linkPreview': False}
 
     s = requests.Session()
     s.trust_env = False
