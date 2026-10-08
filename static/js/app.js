@@ -10478,7 +10478,7 @@ function openEditProfileDescModal(cardOrId) {
     const currentDesc = card.querySelector('.profile-descripcion')?.value || '';
 
     const nameInput = document.getElementById('modal-edit-profile-name');
-    const descInput = document.getElementById('modal-edit-profile-desc');
+    const descInput = document.getElementById('modal-edit-profile-desc-input');
 
     if (nameInput) nameInput.value = currentName.trim();
     if (descInput) descInput.value = currentDesc.trim();
@@ -10490,7 +10490,7 @@ function saveEditProfileDescModal() {
     if (!activeEditingProfileCard) return;
 
     const nameInput = document.getElementById('modal-edit-profile-name');
-    const descInput = document.getElementById('modal-edit-profile-desc');
+    const descInput = document.getElementById('modal-edit-profile-desc-input');
 
     const newName = (nameInput?.value || '').trim() || 'Horario';
     const newDesc = (descInput?.value || '').trim();
