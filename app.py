@@ -3668,13 +3668,7 @@ def before_request_cleanup():
 
         db = get_db()
         for fn_name, fn in [
-            ('auto_cancel_unconfirmed_sessions', auto_cancel_unconfirmed_sessions),
-            ('auto_send_appointment_reminders', auto_send_appointment_reminders),
-            ('auto_send_confirmation_requests', auto_send_confirmation_requests),
             ('auto_check_patient_birthdays', auto_check_patient_birthdays),
-            ('auto_send_meditation_reminders', auto_send_meditation_reminders),
-            ('auto_send_cognitive_reminders', auto_send_cognitive_reminders),
-            ('send_hourly_patient_tool_reminders', send_hourly_patient_tool_reminders),
             ('auto_check_subscription_expiration_reminders', auto_check_subscription_expiration_reminders)
         ]:
             try:
