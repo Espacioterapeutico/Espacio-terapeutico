@@ -32259,7 +32259,7 @@ function submitMeditacionCreate(e) {
             btn.disabled = false;
             btn.innerHTML = 'Guardar en Biblioteca';
         }
-        showToast("Meditaci贸n guardada en biblioteca");
+        if (typeof showToast === 'function') { showToast("Meditaci髇 guardada en biblioteca"); } else { alert("Meditaci髇 guardada en biblioteca"); }
     })
     .catch(err => {
         alert(err.message);
@@ -32283,7 +32283,7 @@ function deleteMeditacion(id) {
                 selectPatientForTherapistTools(currentMedPatientId, name, code);
             }
             loadTherapistToolsCatalog();
-            showToast("Meditaci贸n eliminada");
+            if (typeof showToast === 'function') { showToast("Meditaci髇 eliminada"); } else { alert("Meditaci髇 eliminada"); }
         })
         .catch(err => alert("Error al eliminar: " + err.message));
 }
@@ -32478,7 +32478,7 @@ async function submitMeditacionAssign(e) {
         if (!res.ok) throw new Error(data.error || 'Error al guardar asignaci贸n');
         
         closeModal('meditacion-assign-modal');
-        showToast(asigId ? "Horarios y d铆as actualizados exitosamente" : "Meditaci贸n asignada exitosamente con sus d铆as y horarios");
+        if (typeof showToast === 'function') { showToast(asigId ? "Horarios y d韆s actualizados exitosamente" : "Meditaci髇 asignada exitosamente con sus d韆s y horarios"); } else { alert(asigId ? "Horarios y d韆s actualizados exitosamente" : "Meditaci髇 asignada exitosamente con sus d韆s y horarios"); }
         
         const name = document.getElementById('mat-patient-name')?.innerText || document.getElementById('tt-selected-patient-name')?.innerText || currentMedPatientName || '';
         const code = (document.getElementById('mat-patient-cedula')?.innerText || document.getElementById('tt-selected-patient-code')?.innerText || '').replace('C茅dula: ', '').trim() || currentMedPatientCode || '';
@@ -32504,7 +32504,7 @@ async function unassignMeditacion(asignacionId) {
             const data = await res.json();
             throw new Error(data.error || 'Error al eliminar');
         }
-        showToast("Meditaci贸n desasignada exitosamente");
+        if (typeof showToast === 'function') { showToast("Meditaci髇 desasignada exitosamente"); } else { alert("Meditaci髇 desasignada exitosamente"); }
         
         const name = document.getElementById('mat-patient-name')?.innerText || document.getElementById('tt-selected-patient-name')?.innerText || currentMedPatientName || '';
         const code = (document.getElementById('mat-patient-cedula')?.innerText || document.getElementById('tt-selected-patient-code')?.innerText || '').replace('C茅dula: ', '').trim() || currentMedPatientCode || '';
