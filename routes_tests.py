@@ -2311,12 +2311,16 @@ def api_get_tests_historial():
             ORDER BY a.fecha_asignacion DESC LIMIT 100
         """, (user_id,))
 
+    base_h = request.host_url.rstrip('/') if (request and request.host_url and 'localhost' not in request.host_url and '127.0.0.1' not in request.host_url) else 'https://www.espacioterapeutico.net'
+    if base_h.startswith('http://'):
+        base_h = 'https://' + base_h[7:]
+
     rows = cursor.fetchall()
     data_list = []
     for r in rows:
         item = dict(r)
         if item.get('uuid_token'):
-            item['url_test'] = f"/evaluacion/{item['uuid_token']}"
+            item['url_test'] = f"{base_h}/evaluacion/{item['uuid_token']}"
         import json
         if item.get('respuestas_json'):
             try: item['respuestas'] = json.loads(item['respuestas_json'])
@@ -2335,6 +2339,10 @@ def api_get_tests_paciente(patient_id):
     ensure_tests_tables(db)
     cursor = db.cursor()
 
+    base_h = request.host_url.rstrip('/') if (request and request.host_url and 'localhost' not in request.host_url and '127.0.0.1' not in request.host_url) else 'https://www.espacioterapeutico.net'
+    if base_h.startswith('http://'):
+        base_h = 'https://' + base_h[7:]
+
     cursor.execute("""
         SELECT a.*,
                COALESCE(td.nombre, a.test_code) as test_nombre,
@@ -2352,7 +2360,7 @@ def api_get_tests_paciente(patient_id):
     for r in rows:
         item = dict(r)
         if item.get('uuid_token'):
-            item['url_test'] = f"/evaluacion/{item['uuid_token']}"
+            item['url_test'] = f"{base_h}/evaluacion/{item['uuid_token']}"
         import json
         if item.get('respuestas_json'):
             try: item['respuestas'] = json.loads(item['respuestas_json'])
