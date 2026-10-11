@@ -1769,7 +1769,7 @@ def ensure_new_sexology_and_cognitive_tests_definitions(db):
         ))
 
     # 7. BSSC — Lista de Chequeo Breve de Síntomas Sexuales
-    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'BSSC', 'LSAS', 'LSAS-SR', 'SPIN'")
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'BSSC'")
     if not cursor.fetchone():
         bssc_opciones = [
             {"val": 1, "text": "Sí"},
@@ -1785,7 +1785,7 @@ def ensure_new_sexology_and_cognitive_tests_definitions(db):
             INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            'BSSC', 'LSAS', 'LSAS-SR', 'SPIN', 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales', 'BSSC', 'LSAS', 'LSAS-SR', 'SPIN', 'Sexología y Salud Sexual',
+            'BSSC', 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales', 'BSSC', 'Sexología y Salud Sexual',
             'Herramienta de cribado clínico rápido de 4 ítems para la identificación temprana de inquietudes o síntomas sexuales.',
             'Seleccione Sí o No para cada una de las 4 preguntas de tamizaje inicial.',
             json.dumps(bssc_opciones, ensure_ascii=False), json.dumps(bssc_items, ensure_ascii=False)
