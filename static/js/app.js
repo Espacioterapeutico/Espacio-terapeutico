@@ -29250,10 +29250,18 @@ window.closeTestSuccessPanel = closeTestSuccessPanel;
 
 function copyTestLink(linkUrl) {
     if (!linkUrl) return;
-    navigator.clipboard.writeText(linkUrl).then(() => {
-        alert("Enlace copiado al portapapeles con éxito.");
+    let finalUrl = linkUrl;
+    if (finalUrl.startsWith('/')) {
+        finalUrl = window.location.origin + finalUrl;
+    }
+    navigator.clipboard.writeText(finalUrl).then(() => {
+        if (typeof showCustomToast === 'function') {
+            showCustomToast('📋 Enlace copiado', 'El enlace completo ha sido copiado al portapapeles');
+        } else {
+            alert("📋 Enlace de evaluación copiado al portapapeles:\n" + finalUrl);
+        }
     }).catch(err => {
-        console.error("Error al copiar link:", err);
+        prompt("Copia el siguiente enlace:", finalUrl);
     });
 }
 
