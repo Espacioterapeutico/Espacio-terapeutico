@@ -1,4 +1,4 @@
-﻿
+
 // ==========================================
 // UTILIDADES GLOBALES DE BÚSQUEDA Y FILTRADO (ACENTOS, MULTIPALABRA Y TOKENS)
 // ==========================================
@@ -316,6 +316,32 @@ var testsCatalogDatabase = [
         isPhysical: false,
         downloadUrl: '/static/test_materials/beck_desesperanza.pdf',
         instrucciones: 'Indicar verdadero o falso para cada afirmación pensando en la última semana. Evaluar riesgo suicida según puntaje.'
+    },
+    {
+        code: 'SPIN',
+        name: 'SPIN — Inventario de Fobia Social',
+        siglas: 'SPIN',
+        cat: 'Afectividad, Depresión y Ansiedad',
+        desc: 'Evaluación estandarizada de 17 ítems para medir la presencia y severidad de la fobia social y ansiedad social (miedo, evitación y malestar fisiológico).',
+        autor: 'Connor, Davidson et al. (2000)',
+        poblacion: 'Adolescentes y Adultos (14+ años)',
+        validez: 'Corte Clínico ≥ 19 pts | Baremos Validados',
+        itemsCount: 17,
+        isPhysical: false,
+        instrucciones: 'Indique cuánto le han molestado las 17 situaciones descritas durante la última semana (desde Nada hasta Extremadamente).'
+    },
+    {
+        code: 'LSAS-SR',
+        name: 'LSAS-SR — Escala de Ansiedad Social de Liebowitz',
+        siglas: 'LSAS-SR',
+        cat: 'Afectividad, Depresión y Ansiedad',
+        desc: 'Instrumento clínico estándar de oro de 24 situaciones que evalúa por separado las dimensiones de Miedo/Ansiedad y Conductas de Evitación en interacciones y desempeño social.',
+        autor: 'Michael R. Liebowitz / Heimberg et al.',
+        poblacion: 'Adolescentes y Adultos (15+ años)',
+        validez: 'Puntaje Dual (Miedo y Evitación) | 48 Reactivos',
+        itemsCount: 48,
+        isPhysical: false,
+        instrucciones: 'Para cada una de las 24 situaciones sociales, valore del 0 al 3 el grado de miedo o ansiedad que experimenta y con qué frecuencia tiende a evitarla.'
     },
 
     // 3. PSICOPATOLOGÍA Y SÍNTOMAS GENERALES
@@ -28253,6 +28279,20 @@ async function openPatientTestsModal(patientId, patientName) {
     const subtitle = document.getElementById('patient-tests-subtitle');
     if (subtitle) subtitle.textContent = `Paciente: ${currentTestsPatientName}`;
 
+    // Poblar dinámicamente el selector con todos los tests disponibles
+    const selectTestCode = document.getElementById('select-assign-test-code');
+    if (selectTestCode && typeof testsCatalogDatabase !== 'undefined' && Array.isArray(testsCatalogDatabase)) {
+        const currentVal = selectTestCode.value;
+        let optHtml = '';
+        testsCatalogDatabase.forEach(t => {
+            optHtml += `<option value="${t.code}">${t.siglas || t.code} — ${t.name} (${t.itemsCount} ítems)</option>`;
+        });
+        selectTestCode.innerHTML = optHtml;
+        if (currentVal && Array.from(selectTestCode.options).some(o => o.value === currentVal)) {
+            selectTestCode.value = currentVal;
+        }
+    }
+
     openModal('modal-patient-tests');
     await loadPatientTestsHistory(patientId);
 }
@@ -28948,7 +28988,9 @@ function selectTestForApplication(testCode) {
         'FSFI': 'FSFI — Índice de Función Sexual Femenina (Disfunción Sexual - 19 ítems)',
         'MMSE': 'MMSE — Mini-Mental State Examination (Folstein - 30 ítems)',
         'AtAS': 'AtAS — Escala de Adaptación al Envejecimiento (10 ítems)',
-        'BSSC': 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales (4 ítems)'
+        'BSSC': 'BSSC — Lista de Chequeo Breve de Síntomas Sexuales (4 ítems)',
+        'SPIN': 'SPIN — Inventario de Fobia Social (17 ítems)',
+        'LSAS-SR': 'LSAS-SR — Escala de Ansiedad Social de Liebowitz (48 reactivos)'
     };
 
     const testDataFound = (typeof testsCatalogDatabase !== 'undefined' && Array.isArray(testsCatalogDatabase))
