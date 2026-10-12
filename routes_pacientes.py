@@ -1426,6 +1426,13 @@ def patient_add_appointment():
         except Exception as fb_ex:
             print("Error sincronizando Firebase:", fb_ex)
         
+        # Notificación automática e inmediata por WhatsApp al paciente
+        try:
+            from routes_notificaciones import send_booking_notification_wa
+            send_booking_notification_wa(agenda_id, psicologo_id)
+        except Exception as _wa_err:
+            print("[WA-BOOKING] Error al despachar notificación de agendamiento en portal paciente:", _wa_err)
+
         return jsonify({'success': 'Tu consulta ha sido agendada automáticamente con éxito.', 'google_synced': google_event_id is not None})
     except Exception as e:
         return jsonify({'error': f'Error al agendar consulta automáticamente: {str(e)}'}), 500

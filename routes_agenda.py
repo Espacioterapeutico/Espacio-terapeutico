@@ -1155,6 +1155,13 @@ def add_agenda_event():
         except Exception as _ex_pac:
             print("Error notificando al paciente sobre cita creada:", _ex_pac)
     
+    # Notificación automática e inmediata por WhatsApp al paciente
+    try:
+        from routes_notificaciones import send_booking_notification_wa
+        send_booking_notification_wa(event_id, target_psic_id or creado_por_user_id)
+    except Exception as _wa_err:
+        print("[WA-BOOKING] Error al despachar notificación de agendamiento:", _wa_err)
+
     return jsonify({
         'success': 'Cita agendada exitosamente.',
         'message': 'Cita agendada exitosamente.',
@@ -1923,6 +1930,13 @@ def fast_booking_book():
         except Exception as fb_err:
             print("Error iniciando sync_patient_to_firebase en fast-booking:", fb_err)
         
+        # Notificación automática e inmediata por WhatsApp al paciente
+        try:
+            from routes_notificaciones import send_booking_notification_wa
+            send_booking_notification_wa(agenda_id, psicologo_id)
+        except Exception as _wa_err:
+            print("[WA-BOOKING] Error al despachar notificación de agendamiento en fast-booking:", _wa_err)
+
         psych_phone = None
         psych_name = "el profesional"
         if psych and isinstance(psych, dict):

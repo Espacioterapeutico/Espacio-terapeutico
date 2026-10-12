@@ -13342,6 +13342,7 @@ async function loadMessageTemplates() {
         if (!res.ok) return;
         const data = await res.json();
         
+        const ag = document.getElementById('template-agendada');
         const c = document.getElementById('template-confirmacion');
         const cok = document.getElementById('template-confirmacion-ok');
         const caok = document.getElementById('template-cancelacion-ok');
@@ -13355,6 +13356,7 @@ async function loadMessageTemplates() {
         const swCum = document.getElementById('auto-cumpleanos-switch');
         const horaCum = document.getElementById('template-hora-cumpleanos');
         
+        if (ag) ag.value = data.msg_agendada || "Hola {nombre}, se ha agendado exitosamente tu sesión para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*. ¡Nos vemos pronto!";
         if (c) c.value = data.msg_confirmacion || "";
         if (cok) cok.value = data.msg_confirmacion_ok || "¡Gracias por confirmar tu sesión, *{nombre}*! 🌿\n\n📅 *Fecha:* {fecha}\n⏰ *Hora:* {hora}\n\nRecuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo.";
         if (caok) caok.value = data.msg_cancelacion_ok || "Entendido, *{nombre}*. Hemos registrado la cancelación de tu sesión del *{fecha}* a las *{hora}*.\n\nSi deseas reprogramar en otro momento, no dudes en escribirnos o agendar desde tu portal.";
@@ -13400,6 +13402,7 @@ async function executeResetPatientCredentials() {
 
 async function handleSaveMessageTemplates(e) {
     e.preventDefault();
+    const msgAgendada = document.getElementById('template-agendada')?.value || '';
     const msgConfirmacion = document.getElementById('template-confirmacion').value;
     const msgConfirmacionOk = document.getElementById('template-confirmacion-ok')?.value || '';
     const msgCancelacionOk = document.getElementById('template-cancelacion-ok')?.value || '';
@@ -13418,6 +13421,7 @@ async function handleSaveMessageTemplates(e) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                msg_agendada: msgAgendada,
                 msg_confirmacion: msgConfirmacion,
                 msg_confirmacion_ok: msgConfirmacionOk,
                 msg_cancelacion_ok: msgCancelacionOk,

@@ -12,25 +12,34 @@ from flask import Blueprint, request, jsonify, session, g
 
 notificaciones_bp = Blueprint('notificaciones', __name__)
 
+import threading
+
+def get_raw_db():
+    """Obtiene una conexión directa a SQLite sin depender del contexto de Flask."""
+    import sys
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(base_dir, 'clinica.db')
+    db = sqlite3.connect(db_path, timeout=30.0)
+    db.row_factory = sqlite3.Row
+    return db
+
 def get_db():
     """Obtiene la conexión a la base de datos desde el contexto global g de Flask."""
-    db = getattr(g, '_database', None)
-    if db is None:
-        import sys
-        if getattr(sys, 'frozen', False):
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-        db_path = os.path.join(base_dir, 'clinica.db')
-        db = g._database = sqlite3.connect(db_path, timeout=30.0)
-        db.row_factory = sqlite3.Row
-        
-        try:
-            db.execute("ALTER TABLE pacientes ADD COLUMN estado TEXT DEFAULT 'Activo'")
-            db.commit()
-        except:
-            pass
-    return db
+    try:
+        db = getattr(g, '_database', None)
+        if db is None:
+            db = g._database = get_raw_db()
+            try:
+                db.execute("ALTER TABLE pacientes ADD COLUMN estado TEXT DEFAULT 'Activo'")
+                db.commit()
+            except:
+                pass
+        return db
+    except RuntimeError:
+        return get_raw_db()
 
 def login_required(f):
     @wraps(f)
@@ -470,7 +479,7 @@ def admin_message_templates():
     cursor = db.cursor()
     user_id = session.get('user_id')
     
-    keys = ['msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_cancelacion_no_conf', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo', 'hora_cumpleanos', 'msg_herramientas']
+    keys = ['msg_agendada', 'msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_cancelacion_no_conf', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo', 'hora_cumpleanos', 'msg_herramientas']
     
     if request.method == 'GET':
         templates = {}
@@ -483,7 +492,9 @@ def admin_message_templates():
                 cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (key,))
                 row = cursor.fetchone()
             val = row['valor'] if row else ""
-            if not val and key == 'msg_cancelacion_no_conf':
+            if not val and key == 'msg_agendada':
+                val = "Hola {nombre}, se ha agendado exitosamente tu sesión para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*. ¡Nos vemos pronto!"
+            elif not val and key == 'msg_cancelacion_no_conf':
                 val = "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
             templates[key] = val
         return jsonify(templates)
@@ -495,7 +506,7 @@ def admin_message_templates():
                 psic_key = f"{key}_{user_id}"
                 cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", (psic_key, data[key]))
                 cursor.execute("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)", (key, data[key]))
-        db.commit()
+            db.commit()
         return jsonify({'success': 'Plantillas de mensajes actualizadas con éxito.'})
     except Exception as e:
         return jsonify({'error': f'Error al actualizar plantillas: {str(e)}'}), 500
@@ -535,7 +546,9 @@ def admin_message_templates_render():
         template = row['valor'] if row else ""
         
         if not template:
-            if template_type == 'cancelacion_no_conf':
+            if template_type == 'agendada':
+                template = "Hola {nombre}, se ha agendado exitosamente tu sesión para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*. ¡Nos vemos pronto!"
+            elif template_type == 'cancelacion_no_conf':
                 template = "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
             elif template_type == 'confirmacion_ok':
                 template = "¡Gracias por confirmar tu sesión, *{nombre}*! 🌿\n\n📅 *Fecha:* {fecha}\n⏰ *Hora:* {hora}\n\nRecuerda habilitar tu espacio privado, realizar el pago y llegar a tiempo."
@@ -685,10 +698,96 @@ def send_manual_whatsapp_reminder(cita_id):
             return jsonify({'error': res_data.get('error', 'Error al enviar mensaje por WhatsApp.')}), r.status_code if r else 500
     except Exception as e:
         return jsonify({'error': f'Error conectando con microservicio de WhatsApp: {str(e)}'}), 500
+def send_booking_notification_wa(agenda_id, psicologo_id=None):
+    """
+    Envía notificación de WhatsApp automática e inmediata al agendar una nueva cita.
+    Se ejecuta en un hilo de fondo (daemon) para no demorar la respuesta de la API.
+    """
+    def _worker():
+        conn = None
+        try:
+            conn = get_raw_db()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT a.id, a.paciente_id, a.fecha, a.hora, a.hora_paciente, a.tipo_consulta, a.creado_por_user_id,
+                       p.nombres, p.apellidos, p.telefono, p.zona_horaria, p.psicologo_id
+                FROM agenda_finanzas a
+                JOIN pacientes p ON a.paciente_id = p.id
+                WHERE a.id = ?
+            """, (agenda_id,))
+            row = cursor.fetchone()
+            if not row:
+                return
+
+            phone = (row['telefono'] or '').strip()
+            if not phone:
+                return
+
+            phone_cleaned = "".join([c for c in phone if c.isdigit()])
+            if phone_cleaned and not phone_cleaned.startswith("58") and len(phone_cleaned) == 10:
+                phone_cleaned = "58" + phone_cleaned
+
+            if not phone_cleaned or len(phone_cleaned) < 8:
+                return
+
+            # Determinar psicólogo asociado
+            target_psych_id = psicologo_id or row['creado_por_user_id'] or row['psicologo_id'] or 1
+            cursor.execute("SELECT nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (target_psych_id,))
+            usr = cursor.fetchone()
+            usr_data = dict(usr) if usr else None
+
+            # Obtener plantilla msg_agendada (específica de psicólogo o global)
+            psic_key = f"msg_agendada_{target_psych_id}"
+            cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (psic_key,))
+            cfg_row = cursor.fetchone()
+            if not cfg_row or not cfg_row['valor']:
+                cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_agendada'")
+                cfg_row = cursor.fetchone()
+
+            default_tmpl = "Hola {nombre}, se ha agendado exitosamente tu sesión para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*. ¡Nos vemos pronto!"
+            template = (cfg_row['valor'] if cfg_row and cfg_row['valor'] else default_tmpl).strip()
+
+            from routes_agenda import convert_time_vet_to_tz
+            hora_pac = (row['hora_paciente'] or '').strip()
+            if not hora_pac and row['zona_horaria'] and row['zona_horaria'] != 'America/Caracas':
+                hora_pac = convert_time_vet_to_tz(row['fecha'], row['hora'], row['zona_horaria'])
+            hora_final = hora_pac or row['hora']
+
+            pac_dict = {
+                'nombres': row['nombres'],
+                'apellidos': row['apellidos']
+            }
+            cita_dict = {
+                'nombre': f"{row['nombres']} {row['apellidos']}".strip(),
+                'fecha': row['fecha'],
+                'hora': hora_final,
+                'modalidad': row['tipo_consulta'] or 'Presencial'
+            }
+
+            rendered_msg = format_whatsapp_message(template, pac_dict, cita_dict, usr_data)
+
+            # Enviar mensaje vía microservicio WhatsApp
+            res = make_wa_http_request(
+                'POST',
+                '/send',
+                json_data={'phone': phone_cleaned, 'text': rendered_msg, 'user_id': target_psych_id},
+                timeout=30,
+                user_id=target_psych_id
+            )
+            print(f"[WA-BOOKING] Mensaje de cita agendada enviado a {phone_cleaned} para cita {agenda_id}. Status: {res.status_code if res else 'None'}", flush=True)
+        except Exception as e:
+            print(f"[WA-BOOKING] Error enviando mensaje automático de agendamiento para cita {agenda_id}: {e}", flush=True)
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
 
 
-
-import threading
 _wa_cron_lock = threading.Lock()
 
 def execute_whatsapp_reminders(db=None):

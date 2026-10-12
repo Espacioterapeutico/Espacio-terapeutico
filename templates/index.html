@@ -3277,6 +3277,24 @@
                                     
                                     <form id="settings-messages-form" onsubmit="handleSaveMessageTemplates(event)">
 
+                                        <!-- 0. Cita Agendada / Reserva Exitosa -->
+                                        <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid rgba(37, 99, 235, 0.25); border-radius: 12px; overflow: hidden;">
+                                            <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: rgba(37, 99, 235, 0.04); border: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                    <span style="font-size: 1.25rem;">🗓️</span>
+                                                    <div>
+                                                        <span style="font-weight: 700; font-size: 0.92rem; color: #2563eb; display: block;">Cita Agendada / Reserva Exitosa</span>
+                                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Se envía inmediatamente al agendar una nueva cita</span>
+                                                    </div>
+                                                </div>
+                                                <span class="rules-accordion-arrow" style="font-size: 0.85rem; color: var(--text-muted); transition: transform 0.25s ease;">▼</span>
+                                            </button>
+                                            <div class="rules-accordion-body hide" style="padding: 1rem 1.15rem; border-top: 1px solid var(--border-color); background: white;">
+                                                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Variables disponibles: <code>{nombre}</code>, <code>{nombre_completo}</code>, <code>{fecha}</code>, <code>{hora}</code>, <code>{modalidad}</code>, <code>{psicologo}</code>.</p>
+                                                <textarea id="template-agendada" rows="3" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; font-family: inherit; font-size: 0.85rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Hola {nombre}, se ha agendado exitosamente tu sesión para el *{fecha}* a las *{hora}* en modalidad *{modalidad}*. ¡Nos vemos pronto!"></textarea>
+                                            </div>
+                                        </div>
+
                                         <!-- 1. Fase 1: Confirmación -->
                                         <div class="rules-accordion-item mb-2" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden;">
                                             <button type="button" class="rules-accordion-header" onclick="toggleRulesAccordion(this)" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; background: var(--bg-body, #fafafa); border: none; cursor: pointer; text-align: left; font-family: inherit;">
