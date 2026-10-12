@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -31,6 +31,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/static/logo.png">
     
+    {% if not no_og %}
     <!-- Dynamic Open Graph / WhatsApp / Facebook Link Preview Meta Tags -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Espacio Terapéutico">
@@ -44,6 +45,7 @@
     <meta name="twitter:title" content="{{ og_title or 'Espacio Terapéutico | Consultorio Digital' }}">
     <meta name="twitter:description" content="{{ og_description or 'Plataforma integral de gestión clínica y auto-agendamiento para psicólogos y profesionales de la salud mental.' }}">
     <meta name="twitter:image" content="{{ og_image or (request.host_url.rstrip('/') ~ '/static/logo.png') }}">
+    {% endif %}
 </head>
 <body>
 

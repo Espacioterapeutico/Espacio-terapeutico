@@ -1907,44 +1907,8 @@ def process_mmpi2_scoring(answers, patient_info=None):
 
 @tests_bp.route('/evaluacion/<token>', methods=['GET'])
 def render_public_test_page(token):
-    host_url = request.host_url.rstrip('/')
-    if host_url.startswith('http://') and 'localhost' not in host_url and '127.0.0.1' not in host_url:
-        host_url = 'https://' + host_url[7:]
-
-    og_title = "Evaluación Psicológica | Espacio Terapéutico"
-    og_description = "Por favor responde tu evaluación clínica asignada de forma confidencial y segura."
-    og_image = f"{host_url}/static/logo.png"
-
-    try:
-        db = get_db()
-        ensure_tests_tables(db)
-        cursor = db.cursor()
-        raw_token = (token or '').strip().replace('-', '').lower()
-        cursor.execute("""
-            SELECT td.nombre, td.siglas, p.nombres, u.username
-            FROM test_asignaciones a
-            LEFT JOIN tests_definiciones td ON a.test_code = td.code
-            LEFT JOIN pacientes p ON a.patient_id = p.id
-            LEFT JOIN usuarios u ON a.user_id = u.id
-            WHERE LOWER(REPLACE(a.uuid_token, '-', '')) = ?
-        """, (raw_token,))
-        row = cursor.fetchone()
-        if row:
-            t_nombre = row[0] or 'Evaluación Psicológica'
-            t_siglas = row[1] or ''
-            siglas_txt = f" ({t_siglas})" if t_siglas else ""
-            og_title = f"🧪 {t_nombre}{siglas_txt} | Espacio Terapéutico"
-            og_description = "Evaluación psicológica asignada para tu consulta clínica. Ingresa para completarla."
-    except Exception as e:
-        pass
-
-    return render_template(
-        'index.html',
-        og_title=og_title,
-        og_description=og_description,
-        og_image=og_image,
-        og_url=request.url
-    )
+    # Desactivamos previsualización de Open Graph para evitar que WhatsApp cargue tarjetas pesadas
+    return render_template('index.html', no_og=True)
 
 @tests_bp.route('/api/tests/catalogo', methods=['GET'])
 def api_get_tests_catalogo():
