@@ -742,6 +742,30 @@ def ensure_critical_migrations(cursor):
     except Exception as _ex3:
         pass
 
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS citas_canceladas_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                agenda_id INTEGER,
+                token_confirmacion TEXT UNIQUE,
+                paciente_id INTEGER,
+                psicologo_id INTEGER,
+                paciente_nombre TEXT,
+                psicologo_nombre TEXT,
+                psicologo_slug TEXT,
+                psicologo_telefono TEXT,
+                fecha_cita TEXT,
+                hora_cita TEXT,
+                tipo_consulta TEXT,
+                motivo_cancelacion TEXT,
+                fecha_cancelacion DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_citas_canceladas_token ON citas_canceladas_log(token_confirmacion)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_citas_canceladas_agenda ON citas_canceladas_log(agenda_id)")
+    except Exception as _ex4:
+        pass
+
 # Ejecutar migración al inicio para servidores WSGI (PythonAnywhere, Gunicorn)
 try:
     with sqlite3.connect(DATABASE, timeout=30.0) as _db_init:
@@ -2046,13 +2070,35 @@ def create_auto_cancellation_session(db, paciente_id, agenda_id, fecha, modalida
         print("Error al crear evolución automática de cancelación:", e)
 
 def auto_cancel_unconfirmed_sessions(db):
-    import sys, os
-    # En desarrollo local (Windows), no auto-cancelar citas contra Google Calendar ni alterar base con datos locales
-    if sys.platform == 'win32' and not os.environ.get('ENABLE_LOCAL_GOOGLE_SYNC'):
-        return
-
+    import sqlite3
+    try:
+        db.row_factory = sqlite3.Row
+    except Exception:
+        pass
     cursor = db.cursor()
     try:
+        # Garantizar existencia de citas_canceladas_log antes de cualquier consulta
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS citas_canceladas_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                agenda_id INTEGER,
+                token_confirmacion TEXT UNIQUE,
+                paciente_id INTEGER,
+                psicologo_id INTEGER,
+                paciente_nombre TEXT,
+                psicologo_nombre TEXT,
+                psicologo_slug TEXT,
+                psicologo_telefono TEXT,
+                fecha_cita TEXT,
+                hora_cita TEXT,
+                tipo_consulta TEXT,
+                motivo_cancelacion TEXT,
+                fecha_cancelacion DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_citas_canceladas_token ON citas_canceladas_log(token_confirmacion)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_citas_canceladas_agenda ON citas_canceladas_log(agenda_id)")
+
         from datetime import datetime
         import threading
         import requests
@@ -2067,13 +2113,13 @@ def auto_cancel_unconfirmed_sessions(db):
             from datetime import timezone, timedelta
             now_dt = datetime.now(timezone(timedelta(hours=-4))).replace(tzinfo=None)
             
-        # Check from yesterday to 7 days in future
+        # Evaluar citas de los últimos 14 días en adelante
         from datetime import timedelta
-        start_date_str = (now_dt - timedelta(days=2)).strftime("%Y-%m-%d")
+        start_date_str = (now_dt - timedelta(days=14)).strftime("%Y-%m-%d")
         
-        # Obtener citas no confirmadas en estado 'Agendada'
+        # Obtener citas no confirmadas en estado 'Agendada' o 'Pendiente'
         cursor.execute("""
-            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.google_event_id, af.token_confirmacion, p.nombres, p.apellidos, p.psicologo_id, p.telefono, p.zona_horaria
+            SELECT af.id, af.paciente_id, af.fecha, af.hora, af.hora_paciente, af.tipo_consulta, af.google_event_id, af.token_confirmacion, af.creado_por_user_id, p.nombres, p.apellidos, p.psicologo_id, p.telefono, p.zona_horaria
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE af.confirmada = 0 
@@ -2092,7 +2138,7 @@ def auto_cancel_unconfirmed_sessions(db):
         for appt in unconfirmed:
             appt_id = appt['id']
             patient_id = appt['paciente_id']
-            psic_id = appt['psicologo_id'] or 1
+            psic_id = appt['psicologo_id'] or appt['creado_por_user_id'] or 1
             if isinstance(psic_id, str) and not psic_id.isdigit():
                 p_obj = get_psychologist_by_id_or_slug(cursor, psic_id)
                 psic_id = int(p_obj['id']) if p_obj else 1
@@ -2124,8 +2170,10 @@ def auto_cancel_unconfirmed_sessions(db):
             google_event_id = appt['google_event_id']
             target_psic = psic_id
             
-            # 1. Actualizar estado en Google Calendar a Cancelada (NUNCA borrar el evento)
-            if google_event_id:
+            # 1. Actualizar estado en Google Calendar a Cancelada (si no está en Windows local sin sync)
+            import sys, os
+            can_sync_google = not (sys.platform == 'win32' and not os.environ.get('ENABLE_LOCAL_GOOGLE_SYNC'))
+            if google_event_id and can_sync_google:
                 try:
                     from routes_admin import get_calendar_service, update_calendar_event_status
                     service = get_calendar_service(target_psic)
@@ -2150,6 +2198,10 @@ def auto_cancel_unconfirmed_sessions(db):
                 WHERE id = ?
             """, (appt_id,))
             
+            # Verificar SI ya estaba en el log ANTES de insertar para no bloquear el WhatsApp
+            cursor.execute("SELECT id FROM citas_canceladas_log WHERE agenda_id = ?", (appt_id,))
+            ya_cancelada_previa = cursor.fetchone()
+
             # Registrar en citas_canceladas_log para proteger el enlace de confirmación
             token_val = appt['token_confirmacion'] if hasattr(appt, 'keys') and 'token_confirmacion' in appt.keys() else (appt['token_confirmacion'] if isinstance(appt, dict) else None)
             if token_val:
@@ -2201,17 +2253,12 @@ def auto_cancel_unconfirmed_sessions(db):
                 requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=firebase_payload, timeout=2.0)
             except Exception as fe:
                 print("Error al notificar al paciente en Firebase:", fe)
+
             # 5. Notificación WhatsApp al paciente por cancelación por falta de confirmación
-            # Protección: Si esta cita ya figuraba en citas_canceladas_log, NO reenviar WhatsApp
-            cursor.execute("SELECT id FROM citas_canceladas_log WHERE agenda_id = ?", (appt_id,))
-            ya_cancelada = cursor.fetchone()
-            
-            phone_raw = appt['telefono'] or ''
-            clean_phone = "".join([c for c in str(phone_raw) if c.isdigit()])
-            if clean_phone and not clean_phone.startswith("58") and len(clean_phone) == 10:
-                clean_phone = "58" + clean_phone
+            from routes_herramientas import clean_phone_number
+            clean_phone = clean_phone_number(appt['telefono'] or '')
                 
-            if clean_phone and not ya_cancelada:
+            if clean_phone and not ya_cancelada_previa:
                 try:
                     cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_cancelacion_no_conf_{target_psic}",))
                     tmpl_row = cursor.fetchone()
@@ -2226,14 +2273,24 @@ def auto_cancel_unconfirmed_sessions(db):
                     
                     cursor.execute("SELECT nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (target_psic,))
                     psic_row = cursor.fetchone()
+                    psic_data = {
+                        'nombres': psic_row['nombres'] if psic_row and 'nombres' in psic_row.keys() and psic_row['nombres'] else 'Paulo',
+                        'apellidos': psic_row['apellidos'] if psic_row and 'apellidos' in psic_row.keys() and psic_row['apellidos'] else 'Mora',
+                        'slug': psic_row['slug'] if (psic_row and 'slug' in psic_row.keys() and psic_row['slug']) else 'psic.paulomora'
+                    }
+
                     from routes_agenda import convert_time_vet_to_tz
-                    hora_paciente_calc = appt.get('hora_paciente')
-                    if not hora_paciente_calc and appt.get('zona_horaria'):
-                        hora_paciente_calc = convert_time_vet_to_tz(fecha_cita, hora_cita, appt.get('zona_horaria'))
+                    hora_paciente_calc = appt['hora_paciente'] if ('hora_paciente' in appt.keys() and appt['hora_paciente']) else None
+                    if not hora_paciente_calc and appt['zona_horaria']:
+                        hora_paciente_calc = convert_time_vet_to_tz(fecha_cita, hora_cita, appt['zona_horaria'])
                     hora_final = hora_paciente_calc or hora_cita
 
-                    patient_dict = {'nombres': appt['nombres'], 'apellidos': appt['apellidos'], 'telefono': clean_phone}
-                    cita_dict = {'fecha': fecha_cita, 'hora': hora_final, 'modalidad': appt['tipo_consulta']}
+                    domain_host = get_public_base_url()
+                    slug_clean = psic_data.get('slug') or 'psic.paulomora'
+                    link_agendar = f"{domain_host}/agendar/{slug_clean}"
+
+                    patient_dict = {'nombres': appt['nombres'], 'apellidos': appt['apellidos'], 'telefono': clean_phone, 'link_agendar': link_agendar}
+                    cita_dict = {'nombre': pac_nombre, 'fecha': fecha_cita, 'hora': hora_final, 'modalidad': appt['tipo_consulta'], 'link_agendar': link_agendar}
                     
                     from routes_notificaciones import format_whatsapp_message, make_wa_http_request
                     msg_wa = format_whatsapp_message(tmpl, patient_dict, cita_dict, psic_data)

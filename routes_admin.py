@@ -1225,7 +1225,8 @@ def update_calendar_event_status(service, google_event_id, status, paciente_nomb
         'pendiente': {'colorId': '6', 'prefix': '🟠'},
         'esperando': {'colorId': '6', 'prefix': '🟠'},
         'confirmada': {'colorId': '10', 'prefix': '🟢'},
-        'cancelada': {'colorId': '11', 'prefix': '🔴'}
+        'cancelada': {'colorId': '11', 'prefix': '🔴'},
+        'reprogramada': {'colorId': '3', 'prefix': '🟣'}
     }
 
     norm_status = (status or 'pendiente').lower().strip()
@@ -1238,11 +1239,11 @@ def update_calendar_event_status(service, google_event_id, status, paciente_nomb
         # Limpiar cualquier prefijo o emoji previo del resumen
         clean_summary = current_summary
         prefixes_to_clean = [
-            '🟠 [Pendiente] ', '🟢 [Confirmada] ', '🔴 [Cancelada] ',
-            '[Pendiente] ', '[Confirmada] ', '[Cancelada] ',
-            '🟠 [Pendiente]', '🟢 [Confirmada]', '🔴 [Cancelada]',
-            '[Pendiente]', '[Confirmada]', '[Cancelada]',
-            '🟠 ', '🟢 ', '🔴 ', '✅ ', '⛔ '
+            '🟠 [Pendiente] ', '🟢 [Confirmada] ', '🔴 [Cancelada] ', '🟣 [Reprogramada] ',
+            '[Pendiente] ', '[Confirmada] ', '[Cancelada] ', '[Reprogramada] ',
+            '🟠 [Pendiente]', '🟢 [Confirmada]', '🔴 [Cancelada]', '🟣 [Reprogramada]',
+            '[Pendiente]', '[Confirmada]', '[Cancelada]', '[Reprogramada]',
+            '🟠 ', '🟢 ', '🔴 ', '🟣 ', '✅ ', '⛔ '
         ]
         for pfx in prefixes_to_clean:
             clean_summary = clean_summary.replace(pfx, '')
@@ -1264,7 +1265,15 @@ def update_calendar_event_status(service, google_event_id, status, paciente_nomb
         if current_event.get('status') == 'cancelled':
             patch_body['status'] = 'confirmed'
 
-        if norm_status == 'cancelada' or motivo:
+        if norm_status == 'reprogramada':
+            desc = current_event.get('description', '') or ''
+            from datetime import datetime
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+            motivo_txt = motivo or 'Solicitud de reprogramación por el consultante'
+            reason_line = f"\n\n[ESTADO: REPROGRAMADA el {now_str}] Detalle: {motivo_txt}"
+            if "[ESTADO: REPROGRAMADA" not in desc:
+                patch_body['description'] = desc + reason_line
+        elif norm_status == 'cancelada' or motivo:
             desc = current_event.get('description', '') or ''
             from datetime import datetime
             now_str = datetime.now().strftime("%Y-%m-%d %H:%M")

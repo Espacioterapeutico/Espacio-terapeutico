@@ -152,8 +152,10 @@ def normalize_time_str(t_str):
         elif is_am and h == 12:
             h = 0
         elif not is_am and not is_pm and 1 <= h <= 6:
-            # En contexto clínico de consultas, horas entre 1 y 6 sin AM/PM corresponden a la tarde (13:00 a 18:00)
-            h += 12
+            # En contexto clínico de consultas, horas escritas como "2:00" o "4:30" (sin AM/PM y sin cero inicial) corresponden a la tarde (14:00 o 16:30)
+            # Pero horas con cero explícito a la izquierda como "06:00" o "05:00" son formato 24h de la mañana
+            if not parts[0].startswith('0'):
+                h += 12
         return f"{h:02d}:{m:02d}"
     except:
         return "00:00"
@@ -2060,6 +2062,11 @@ def delete_admin_consultation_history_event(event_id):
 @agenda_bp.route('/cita/confirmar/<token>', methods=['GET'])
 def vista_confirmar_cita(token):
     db = get_db()
+    try:
+        import sqlite3
+        db.row_factory = sqlite3.Row
+    except Exception:
+        pass
     cursor = db.cursor()
     import re, urllib.parse
     
@@ -2075,10 +2082,10 @@ def vista_confirmar_cita(token):
     """, (token,))
     cita = cursor.fetchone()
     if cita:
-        cita = dict(cita)
+        cita = dict(cita) if hasattr(cita, 'keys') else dict(zip([col[0] for col in cursor.description], cita))
         estado_pago = str(cita.get('estado_pago') or '').strip()
         referencia = str(cita.get('referencia') or '').strip()
-        is_cancelled = 'cancelad' in estado_pago.lower() or 'cancelad' in referencia.lower() or (cita.get('confirmada') == 0 and ('falta' in referencia.lower() or 'sistema' in referencia.lower()))
+        is_cancelled = 'cancelad' in estado_pago.lower() or 'cancelad' in referencia.lower() or estado_pago == 'Reprogramada' or (cita.get('confirmada') == 0 and ('falta' in referencia.lower() or 'sistema' in referencia.lower()))
 
         psic_nombre = f"{cita.get('psic_nombres') or ''} {cita.get('psic_apellidos') or ''}".strip() or "Tu especialista"
         pac_primer_nombre = (cita.get('nombres') or '').split()[0] if cita.get('nombres') else 'consultante'
@@ -2217,6 +2224,11 @@ def accion_cita_publica():
         return jsonify({'error': 'Datos inválidos.'}), 400
         
     db = get_db()
+    try:
+        import sqlite3
+        db.row_factory = sqlite3.Row
+    except Exception:
+        pass
     cursor = db.cursor()
     
     cursor.execute("""
@@ -2232,7 +2244,7 @@ def accion_cita_publica():
     if not cita:
         cursor.execute("SELECT * FROM citas_canceladas_log WHERE token_confirmacion = ?", (token,))
         log_c = cursor.fetchone()
-        log_dict = dict(log_c) if log_c else {}
+        log_dict = (dict(log_c) if hasattr(log_c, 'keys') else dict(zip([col[0] for col in cursor.description], log_c))) if log_c else {}
         target_slug = log_dict.get('psicologo_slug') or 'psic.paulomora'
         clean_slug = target_slug if str(target_slug).startswith('psic.') else f"psic.{target_slug}"
         return jsonify({
@@ -2241,7 +2253,7 @@ def accion_cita_publica():
             'fast_booking_url': f"https://www.espacioterapeutico.net/agendar/{clean_slug}"
         }), 400
         
-    cita = dict(cita)
+    cita = dict(cita) if hasattr(cita, 'keys') else dict(zip([col[0] for col in cursor.description], cita))
         
     appt_id = cita['id']
     psych_id = cita['psicologo_id'] or cita['creado_por_user_id'] or 1
@@ -2253,7 +2265,7 @@ def accion_cita_publica():
     
     estado_pago = str(cita['estado_pago'] or '').strip()
     referencia = str(cita['referencia'] or '').strip()
-    is_cancelled = 'cancelad' in estado_pago.lower() or 'cancelad' in referencia.lower() or (cita.get('confirmada') == 0 and ('falta' in referencia.lower() or 'sistema' in referencia.lower()))
+    is_cancelled = 'cancelad' in estado_pago.lower() or 'cancelad' in referencia.lower() or estado_pago == 'Reprogramada' or (cita.get('confirmada') == 0 and ('falta' in referencia.lower() or 'sistema' in referencia.lower()))
 
     # Si la consulta ya fue cancelada, rechazar intento de confirmación
     if accion == 'confirmar' and is_cancelled:
@@ -2279,25 +2291,48 @@ def accion_cita_publica():
         'nombre': f"{cita['pat_nombres']} {cita['pat_apellidos']}".strip(),
         'fecha': cita['fecha'],
         'hora': cita['hora_paciente'] or cita['hora'],
-        'modalidad': cita['tipo_consulta'] or 'Presencial'
+        'modalidad': cita['tipo_consulta'] or 'Presencial',
+        'link_agendar': fast_booking_url,
+        'link_reagendar': fast_booking_url,
+        'link_confirmacion': f"https://www.espacioterapeutico.net/cita/{token}" if token else ""
     }
     psicologo_data = {
         'nombres': cita['psic_nombres'],
-        'apellidos': cita['psic_apellidos']
+        'apellidos': cita['psic_apellidos'],
+        'username': cita['psic_username'],
+        'slug': cita['psic_slug']
     }
     
-    cursor.execute("SELECT clave, valor FROM configuracion WHERE clave IN ('msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_reagendamiento')")
+    cursor.execute("""
+        SELECT clave, valor FROM configuracion 
+        WHERE clave IN (
+            'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_cancelacion_tardia', 'msg_reprogramacion', 'msg_reagendamiento',
+            ?, ?, ?, ?, ?
+        )
+    """, (
+        f'msg_confirmacion_ok_{psych_id}',
+        f'msg_cancelacion_ok_{psych_id}',
+        f'msg_cancelacion_tardia_{psych_id}',
+        f'msg_reprogramacion_{psych_id}',
+        f'msg_reagendamiento_{psych_id}'
+    ))
     cfg_rows = {r['clave']: r['valor'] for r in cursor.fetchall()}
     
     template = ""
+    response_data = {'success': True, 'fast_booking_url': fast_booking_url}
     
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     pat_full_name = f"{cita['pat_nombres']} {cita['pat_apellidos']}".strip()
 
     if accion == 'confirmar':
         cursor.execute("UPDATE agenda_finanzas SET confirmada = 1 WHERE id = ?", (appt_id,))
-        template = cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto."
+        template = cfg_rows.get(f'msg_confirmacion_ok_{psych_id}') or cfg_rows.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto."
         _update_google_calendar_status_bg(appt_id, 'confirmada')
+        response_data = {
+            'success': True,
+            'confirmada': True,
+            'fast_booking_url': fast_booking_url
+        }
         
         # 1. Notificación en campana para el psicólogo
         try:
@@ -2460,7 +2495,7 @@ def accion_cita_publica():
             except Exception as _e_clog:
                 print("Error registrando citas_canceladas_log:", _e_clog)
 
-            template = cfg_rows.get('msg_cancelacion_ok') or "Entendido, tu cita ha sido cancelada."
+            template = cfg_rows.get(f'msg_cancelacion_tardia_{psych_id}') or cfg_rows.get('msg_cancelacion_tardia') or cfg_rows.get(f'msg_cancelacion_ok_{psych_id}') or cfg_rows.get('msg_cancelacion_ok') or "Entendido, tu cita ha sido cancelada."
 
             try:
                 cursor.execute("""
@@ -2483,13 +2518,13 @@ def accion_cita_publica():
 
             db.commit()
 
-            return jsonify({
+            response_data = {
                 'success': True,
                 'late_charge': True,
                 'titulo': 'Consulta Cancelada Fuera de Tiempo',
                 'mensaje': 'Has cancelado la consulta fuera del tiempo límite permitido. De acuerdo con las normas de atención, esta sesión debe ser cancelada/abonada.',
                 'fast_booking_url': fast_booking_url
-            })
+            }
 
         else:
             # Cancelación a tiempo (sin cobro) o aún no confirmada
@@ -2520,7 +2555,7 @@ def accion_cita_publica():
             except Exception as _e_clog:
                 print("Error registrando citas_canceladas_log:", _e_clog)
 
-            template = cfg_rows.get('msg_cancelacion_ok') or "Entendido. Tu cita ha sido cancelada."
+            template = cfg_rows.get(f'msg_cancelacion_ok_{psych_id}') or cfg_rows.get('msg_cancelacion_ok') or "Entendido. Tu cita ha sido cancelada."
 
             try:
                 cursor.execute("""
@@ -2543,23 +2578,29 @@ def accion_cita_publica():
 
             db.commit()
 
-            return jsonify({
+            response_data = {
                 'success': True,
                 'late_charge': False,
                 'titulo': 'Cita Cancelada',
                 'mensaje': 'Has cancelado tu sesión exitosamente sin costo. El horario ha sido liberado.',
                 'fast_booking_url': fast_booking_url
-            })
+            }
         
     elif accion == 'reprogramar':
         cursor.execute("""
             UPDATE agenda_finanzas 
-            SET estado_pago = 'Cancelada', confirmada = 0,
+            SET estado_pago = 'Reprogramada', confirmada = 0,
                 referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Solicitud de reprogramación por consultante' ELSE referencia || ' | Solicitud de reprogramación por consultante' END
             WHERE id = ?
         """, (appt_id,))
-        template = cfg_rows.get('msg_reagendamiento') or "Hemos recibido tu solicitud para reprogramar. Pronto nos pondremos en contacto contigo para agendar un nuevo espacio."
-        _update_google_calendar_status_bg(appt_id, 'cancelada')
+        template = cfg_rows.get(f'msg_reprogramacion_{psych_id}') or cfg_rows.get('msg_reprogramacion')
+        if not template:
+            template = (
+                "Hola *{nombre}*, hemos registrado tu solicitud para *reprogramar* tu consulta del *{fecha}* a las *{hora}*. 🔄\n\n"
+                "Por favor selecciona tu nueva fecha y horario disponible aquí:\n{link_agendar}\n\n"
+                "¡Nos vemos pronto!"
+            )
+        _update_google_calendar_status_bg(appt_id, 'reprogramada', motivo='Solicitud de reprogramación por consultante')
         
         try:
             cursor.execute("""
@@ -2596,9 +2637,23 @@ def accion_cita_publica():
             )
         except Exception as _wp_ex:
             print("Error enviando WebPush de reprogramacion publica:", _wp_ex)
+
+        response_data = {
+            'success': True,
+            'reprogramada': True,
+            'titulo': 'Solicitud de Reprogramación',
+            'mensaje': 'Has solicitado reprogramar tu cita. Serás redirigido a la agenda para seleccionar tu nuevo horario.',
+            'fast_booking_url': fast_booking_url
+        }
         
     db.commit()
     
+    try:
+        from flask import current_app
+        app_obj = current_app._get_current_object()
+    except Exception:
+        app_obj = None
+
     import threading
     def _background_tasks():
         if phone:
@@ -2613,7 +2668,7 @@ def accion_cita_publica():
                 db_path = os.path.join(base_dir, 'clinica.db')
                 db_bg = sqlite3.connect(db_path, timeout=30.0)
                 try:
-                    if accion == 'cancelar' or accion == 'reprogramar':
+                    if accion in ('cancelar', 'reprogramar'):
                         db_bg.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (appt_id,))
                     elif accion == 'confirmar':
                         try:
@@ -2633,13 +2688,17 @@ def accion_cita_publica():
                 
         try:
             from app import push_all_data_to_firebase
-            push_all_data_to_firebase()
+            if app_obj:
+                with app_obj.app_context():
+                    push_all_data_to_firebase()
+            else:
+                push_all_data_to_firebase()
         except Exception as e:
             print("Error en push_all_data_to_firebase:", e)
             
     threading.Thread(target=_background_tasks, daemon=True).start()
         
-    return jsonify({'success': True, 'fast_booking_url': fast_booking_url})
+    return jsonify(response_data)
 
 @agenda_bp.route('/api/fast-booking/check-cedula', methods=['POST'])
 def fast_booking_check_cedula():

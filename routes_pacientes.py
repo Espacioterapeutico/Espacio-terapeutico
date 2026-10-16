@@ -1823,7 +1823,7 @@ def patient_reschedule_appointment():
             return jsonify({'error': f'No puedes reprogramar esta cita. Has superado el límite de {limite_cancelacion} horas antes de la sesión.'}), 400
             
         from routes_agenda import check_appointment_interval_collision
-        if check_appointment_interval_collision(cursor, psicologo_id, new_date, new_hour, None, exclude_appt_id=appointment_id):
+        if check_appointment_interval_collision(cursor, psicologo_id, new_date, new_hour, None, exclude_appt_id=appt_id):
             return jsonify({'error': 'El horario seleccionado ya está reservado o coincide con otra consulta programada.'}), 400
             
         if google_event_id:
@@ -1858,15 +1858,17 @@ def patient_reschedule_appointment():
                     u_row3 = cursor.fetchone()
                     therapist_name = u_row3['nombres'] if u_row3 else "Paulo Mora"
                     
+                    event_body = service.events().get(calendarId='primary', eventId=google_event_id).execute()
                     prev_summary = event_body.get('summary', '')
                     clean_prev = prev_summary
-                    for pfx in ['🟠 [Reprogramada] ', '🟠 [Pendiente] ', '🟢 [Confirmada] ', '🔴 [Cancelada] ', '🟠 ', '🟢 ', '🔴 ']:
+                    for pfx in ['🟣 [Reprogramada] ', '🟠 [Reprogramada] ', '🟠 [Pendiente] ', '🟢 [Confirmada] ', '🔴 [Cancelada] ', '🟣 ', '🟠 ', '🟢 ', '🔴 ']:
                         clean_prev = clean_prev.replace(pfx, '')
                     clean_prev = clean_prev.strip()
                     if not clean_prev:
                         mod_desc = event_body.get('description', '').split('Modalidad:')[-1].splitlines()[0].strip() if 'Modalidad:' in event_body.get('description', '') else 'Online'
                         clean_prev = f"Consulta {mod_desc} - {pac_name}"
-                    event_body['summary'] = f"🟠 [Reprogramada] {clean_prev}"
+                    event_body['summary'] = f"🟣 [Reprogramada] {clean_prev}"
+                    event_body['colorId'] = '3'
                     event_body['description'] = f"Modalidad: {event_body.get('description', '').split('Modalidad:')[-1].splitlines()[0] if 'Modalidad:' in event_body.get('description', '') else 'Online'}\nPsicólogo: Psic. {therapist_name}\n[Reprogramada]"
                     event_body['start'] = {'dateTime': start_iso, 'timeZone': 'America/Caracas'}
                     event_body['end'] = {'dateTime': end_iso, 'timeZone': 'America/Caracas'}

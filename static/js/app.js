@@ -7380,7 +7380,7 @@ async function loadAgendaCompact() {
 
         // 1. Renderizar Próximas Consultas
         try {
-            let upcomingEvents = (events || []).filter(e => e.fecha >= todayStr && e.estado_pago !== 'Cancelada' && e.estado_pago !== 'Prepagada' && !e.has_session);
+            let upcomingEvents = (events || []).filter(e => e.fecha >= todayStr && !e.estado_pago.startsWith('Cancelada') && e.estado_pago !== 'Reprogramada' && e.estado_pago !== 'Prepagada' && !e.has_session);
             upcomingEvents.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
 
             _upcomingEventsCache = upcomingEvents;
@@ -8308,10 +8308,15 @@ async function renderFullCalendar() {
             if (!e.fecha || !e.hora || e.estado_pago === 'Prepagada') return null;
             
             let color = '#4f46e5'; // Indigo (Pendiente / Agendada)
+            let confirmText = e.confirmada === 1 ? '✓ Confirmada' : '⏳ Pendiente';
             if (e.has_session) {
                 color = '#6b7280'; // Gris (Evolucionada)
-            } else if (e.estado_pago.startsWith('Cancelada')) {
+            } else if (e.estado_pago && (e.estado_pago === 'Reprogramada' || e.estado_pago.startsWith('Reprogramad'))) {
+                color = '#8b5cf6'; // Morado / Purple (Reprogramada)
+                confirmText = '🔄 Reprogramada';
+            } else if (e.estado_pago && e.estado_pago.startsWith('Cancelada')) {
                 color = '#ef4444'; // Rojo (Cancelada)
+                confirmText = '❌ Cancelada';
             } else if (e.confirmada === 1) {
                 color = '#10b981'; // Verde (Confirmada)
             }
@@ -8320,8 +8325,6 @@ async function renderFullCalendar() {
             const startDt = new Date(startStr);
             if (isNaN(startDt.getTime())) return null;
             const endDt = new Date(startDt.getTime() + 60 * 60 * 1000);
-            
-            const confirmText = e.confirmada === 1 ? '✓ Confirmada' : '? Pendiente';
             
             return {
                 id: e.id.toString(),
@@ -8388,7 +8391,7 @@ async function renderFullCalendar() {
                     return;
                 }
                 const raw = info.event.extendedProps.rawEvent;
-                if (!raw.has_session && !raw.estado_pago.startsWith('Cancelada')) {
+                if (!raw.has_session && !raw.estado_pago.startsWith('Cancelada') && raw.estado_pago !== 'Reprogramada') {
                     openRegisterSessionFromEvent(raw.id);
                 } else {
                     alert(`Consulta de ${raw.nombres} ${raw.apellidos}\nFecha: ${raw.fecha} ${raw.hora}\nModalidad: ${raw.tipo_consulta}\nEstado Pago: ${raw.estado_pago}\nConfirmada: ${raw.confirmada === 1 ? 'Sí' : 'No'}`);
@@ -8650,9 +8653,20 @@ async function loadAgenda() {
         if (e.has_session) return; // Omitir consultas ya atendidas (evolucionadas)
         
         const tr = document.createElement('tr');
-        const paymentBadgeClass = e.estado_pago === 'Paga' ? 'badge-success' : (e.estado_pago === 'Pendiente' ? 'badge-danger' : 'badge-info');
+        let paymentBadgeClass = 'badge-info';
+        let badgeStyle = '';
+        if (e.estado_pago === 'Paga') {
+            paymentBadgeClass = 'badge-success';
+        } else if (e.estado_pago === 'Pendiente') {
+            paymentBadgeClass = 'badge-danger';
+        } else if (e.estado_pago === 'Reprogramada') {
+            paymentBadgeClass = '';
+            badgeStyle = 'style="background-color: #8b5cf6; color: white;"';
+        } else if (e.estado_pago && e.estado_pago.startsWith('Cancelada')) {
+            paymentBadgeClass = 'badge-danger';
+        }
         
-        const btnEvolucionar = !e.has_session 
+        const btnEvolucionar = (!e.has_session && e.estado_pago !== 'Reprogramada' && !e.estado_pago.startsWith('Cancelada'))
             ? `<button class="btn btn-primary btn-sm" onclick="openRegisterSessionFromEvent(${e.id})">Evolucionar</button>` 
             : '';
         const showMonto = e.estado_pago === 'Agendada' ? '-' : `${e.monto} ${e.moneda}`;
@@ -8665,7 +8679,7 @@ async function loadAgenda() {
             <td>${e.nombres} ${e.apellidos}${confirmBadge}</td>
             <td>${e.tipo_consulta}</td>
             <td>${showMonto}</td>
-            <td><span class="badge ${paymentBadgeClass}">${e.estado_pago}</span></td>
+            <td><span class="badge ${paymentBadgeClass}" ${badgeStyle}>${e.estado_pago}</span></td>
             <td class="actions-cell">
                 ${btnEvolucionar}
                 <button class="btn btn-secondary btn-sm" onclick="openEditEventModal(${e.id})">Editar</button>

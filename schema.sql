@@ -261,3 +261,22 @@ CREATE TABLE IF NOT EXISTS examenes_mentales (
     FOREIGN KEY (psicologo_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS citas_canceladas_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agenda_id INTEGER,
+    token_confirmacion TEXT UNIQUE,
+    paciente_id INTEGER,
+    psicologo_id INTEGER,
+    paciente_nombre TEXT,
+    psicologo_nombre TEXT,
+    psicologo_slug TEXT,
+    psicologo_telefono TEXT,
+    fecha_cita TEXT,
+    hora_cita TEXT,
+    tipo_consulta TEXT,
+    motivo_cancelacion TEXT,
+    fecha_cancelacion DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_citas_canceladas_token ON citas_canceladas_log(token_confirmacion);
+CREATE INDEX IF NOT EXISTS idx_citas_canceladas_agenda ON citas_canceladas_log(agenda_id);
