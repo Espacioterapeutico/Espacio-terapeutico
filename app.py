@@ -2284,7 +2284,7 @@ def auto_cancel_unconfirmed_sessions(db):
                     if not hora_paciente_calc and appt['zona_horaria']:
                         hora_paciente_calc = convert_time_vet_to_tz(fecha_cita, hora_cita, appt['zona_horaria'])
                     hora_final = hora_paciente_calc or hora_cita
-
+                    from routes_notificaciones import get_public_base_url, format_whatsapp_message, make_wa_http_request
                     domain_host = get_public_base_url()
                     slug_clean = psic_data.get('slug') or 'psic.paulomora'
                     link_agendar = f"{domain_host}/agendar/{slug_clean}"
@@ -2292,7 +2292,6 @@ def auto_cancel_unconfirmed_sessions(db):
                     patient_dict = {'nombres': appt['nombres'], 'apellidos': appt['apellidos'], 'telefono': clean_phone, 'link_agendar': link_agendar}
                     cita_dict = {'nombre': pac_nombre, 'fecha': fecha_cita, 'hora': hora_final, 'modalidad': appt['tipo_consulta'], 'link_agendar': link_agendar}
                     
-                    from routes_notificaciones import format_whatsapp_message, make_wa_http_request
                     msg_wa = format_whatsapp_message(tmpl, patient_dict, cita_dict, psic_data)
                     
                     res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': target_psic}, timeout=45, user_id=target_psic)
