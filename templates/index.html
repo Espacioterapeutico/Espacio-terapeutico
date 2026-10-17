@@ -6790,6 +6790,9 @@
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-sm" id="session-mse-toggle-all-btn" onclick="toggleAllSessionMseAreas()" style="font-size: 0.76rem; font-weight: 600; padding: 0.25rem 0.6rem; background: #ffffff; border: 1.5px solid #d8b4fe; color: #6b21a8; border-radius: 5px; cursor: pointer;" title="Expandir o colapsar todas las áreas">
+                                    ↕️ Expandir Todo
+                                </button>
                                 <button type="button" class="btn btn-sm" onclick="insertMseSummaryIntoSessionNotes()" style="font-size: 0.76rem; font-weight: 600; padding: 0.25rem 0.6rem; background: white; border: 1px solid #cbd5e1; color: #475569; border-radius: 5px; cursor: pointer;" title="Genera un párrafo sintético de los hallazgos y lo agrega a las observaciones clínicas">
                                     📝 Copiar Síntesis a Observaciones
                                 </button>
@@ -6803,7 +6806,7 @@
                         </div>
 
                         <!-- Lista de áreas colapsables del MSE en la sesión -->
-                        <div id="session-mse-areas-container" style="display: flex; flex-direction: column; gap: 0.55rem; max-height: 55vh; overflow-y: auto; padding-right: 4px;">
+                        <div id="session-mse-areas-container" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 6px; box-sizing: border-box;">
                             <!-- Renderizado dinámicamente -->
                         </div>
 

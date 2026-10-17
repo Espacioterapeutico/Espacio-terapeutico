@@ -26979,17 +26979,17 @@ function renderSessionMseAreas() {
         });
         
         html += `
-        <div class="session-mse-accordion-item" id="session-mse-acc-${area.key}" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; transition: all 0.2s ease;">
-            <div class="session-mse-accordion-header" onclick="toggleSessionMseArea('${area.key}')" style="background: #fdfafc; padding: 0.55rem 0.85rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+        <div class="session-mse-accordion-item" id="session-mse-acc-${area.key}" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; overflow: hidden; flex-shrink: 0; min-height: fit-content; width: 100%; box-sizing: border-box; transition: border-color 0.2s ease;">
+            <div class="session-mse-accordion-header" onclick="toggleSessionMseArea('${area.key}')" style="background: #fdfafc; padding: 0.65rem 0.85rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; min-height: 42px; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; flex-wrap: wrap;">
                     <span style="font-weight: 700; color: #6b21a8; font-size: 0.86rem; white-space: nowrap;">${area.title}</span>
                     <span id="session-mse-summary-${area.key}" style="font-size: 0.75rem; background: rgba(0,0,0,0.04); color: #64748b; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 500; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 320px;">
                         Sin hallazgos
                     </span>
                 </div>
-                <span id="session-mse-arrow-${area.key}" style="font-size: 0.75rem; color: #7e22ce; font-weight: 800; margin-left: 0.4rem;">▼</span>
+                <span id="session-mse-arrow-${area.key}" style="font-size: 0.75rem; color: #7e22ce; font-weight: 800; margin-left: 0.4rem; flex-shrink: 0;">▼</span>
             </div>
-            <div class="session-mse-accordion-body" id="session-mse-body-${area.key}" style="display: none; padding: 0.75rem 0.85rem; background: #fafafa; border-top: 1px solid #f1f5f9;">
+            <div class="session-mse-accordion-body" id="session-mse-body-${area.key}" style="display: none; padding: 0.75rem 0.85rem; background: #fafafa; border-top: 1px solid #f1f5f9; box-sizing: border-box;">
                 <div style="margin-bottom: 0.5rem;">
                     <label style="font-weight: 700; font-size: 0.78rem; color: #475569; display: block; margin-bottom: 0.3rem;">Alteraciones observables (Checklist rápido):</label>
                     <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
@@ -26998,7 +26998,7 @@ function renderSessionMseAreas() {
                 </div>
                 <div>
                     <label style="font-weight: 700; font-size: 0.78rem; color: #475569; display: block; margin-bottom: 0.25rem;">Notas de esta área:</label>
-                    <textarea id="session-mse-obs-${area.key}" rows="2" oninput="updateSessionMseAreaSummary('${area.key}')" placeholder="Detalles de ${area.title.split('.')[1].trim().toLowerCase()}..." style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1.2px solid #cbd5e1; font-size: 0.82rem; font-family: inherit; resize: vertical;"></textarea>
+                    <textarea id="session-mse-obs-${area.key}" rows="2" oninput="updateSessionMseAreaSummary('${area.key}')" placeholder="Detalles de ${area.title.split('.')[1].trim().toLowerCase()}..." style="width: 100%; padding: 0.45rem; border-radius: 6px; border: 1.2px solid #cbd5e1; font-size: 0.82rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
                 </div>
             </div>
         </div>`;
@@ -27028,10 +27028,54 @@ function toggleSessionMseDrawer() {
 function toggleSessionMseArea(key) {
     const body = document.getElementById(`session-mse-body-${key}`);
     const arrow = document.getElementById(`session-mse-arrow-${key}`);
+    const card = document.getElementById(`session-mse-acc-${key}`);
     if (!body || !arrow) return;
     const isHidden = body.style.display === 'none' || !body.style.display;
     body.style.display = isHidden ? 'block' : 'none';
     arrow.textContent = isHidden ? '▲' : '▼';
+    if (card) {
+        card.style.borderColor = isHidden ? '#c084fc' : '#e2e8f0';
+    }
+    
+    const btn = document.getElementById('session-mse-toggle-all-btn');
+    if (btn) {
+        const bodies = document.querySelectorAll('#session-mse-areas-container .session-mse-accordion-body');
+        const anyHidden = Array.from(bodies).some(b => b.style.display === 'none' || !b.style.display);
+        btn.innerHTML = anyHidden ? '↕️ Expandir Todo' : '↕️ Colapsar Todo';
+    }
+}
+
+function toggleAllSessionMseAreas(forceExpand) {
+    const bodies = document.querySelectorAll('#session-mse-areas-container .session-mse-accordion-body');
+    if (!bodies.length) {
+        renderSessionMseAreas();
+    }
+    const currentBodies = document.querySelectorAll('#session-mse-areas-container .session-mse-accordion-body');
+    if (!currentBodies.length) return;
+    
+    let shouldExpand = forceExpand;
+    if (shouldExpand === undefined) {
+        const anyHidden = Array.from(currentBodies).some(b => b.style.display === 'none' || !b.style.display);
+        shouldExpand = anyHidden;
+    }
+    
+    MSE_AREAS_CONFIG.forEach(area => {
+        const body = document.getElementById(`session-mse-body-${area.key}`);
+        const arrow = document.getElementById(`session-mse-arrow-${area.key}`);
+        const card = document.getElementById(`session-mse-acc-${area.key}`);
+        if (body && arrow) {
+            body.style.display = shouldExpand ? 'block' : 'none';
+            arrow.textContent = shouldExpand ? '▲' : '▼';
+            if (card) {
+                card.style.borderColor = shouldExpand ? '#c084fc' : '#e2e8f0';
+            }
+        }
+    });
+    
+    const btn = document.getElementById('session-mse-toggle-all-btn');
+    if (btn) {
+        btn.innerHTML = shouldExpand ? '↕️ Colapsar Todo' : '↕️ Expandir Todo';
+    }
 }
 
 function toggleSessionMseChip(btn) {
@@ -27124,6 +27168,10 @@ function clearSessionMseForm() {
             sumEl.style.fontWeight = '500';
             sumEl.style.background = 'rgba(0,0,0,0.04)';
         }
+        const card = document.getElementById(`session-mse-acc-${area.key}`);
+        if (card) {
+            card.style.borderColor = '#e2e8f0';
+        }
     });
     
     const genObs = document.getElementById('session-mse-general-obs');
@@ -27131,6 +27179,11 @@ function clearSessionMseForm() {
     
     const linkedId = document.getElementById('session-mse-linked-id');
     if (linkedId) linkedId.value = '';
+    
+    const toggleBtn = document.getElementById('session-mse-toggle-all-btn');
+    if (toggleBtn) {
+        toggleBtn.innerHTML = '↕️ Expandir Todo';
+    }
     
     updateSessionMseOverallBadge();
 }
