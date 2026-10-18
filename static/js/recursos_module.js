@@ -137,11 +137,23 @@
         const selectModal = document.getElementById('asig-rec-paciente');
         if (!selectFilter && !selectModal) return;
 
-        try {
-            const res = await fetch('/api/pacientes');
-            if (!res.ok) return;
-            const pacientes = await res.json();
+        let pacientes = [];
+        if (typeof patients !== 'undefined' && Array.isArray(patients) && patients.length > 0) {
+            pacientes = patients;
+        } else if (window.patients && Array.isArray(window.patients) && window.patients.length > 0) {
+            pacientes = window.patients;
+        } else {
+            try {
+                const res = await fetch('/api/patients');
+                if (res.ok) {
+                    pacientes = await res.json();
+                }
+            } catch (e) {
+                console.error("Error al cargar pacientes para recursos:", e);
+            }
+        }
 
+        if (Array.isArray(pacientes) && pacientes.length > 0) {
             let optionsHtml = '<option value="">-- Elige un consultante --</option>';
             pacientes.forEach(p => {
                 const nombreCompleto = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || p.nombre || 'Consultante';
@@ -149,10 +161,16 @@
                 optionsHtml += `<option value="${p.id}">${nombreCompleto}${cedula}</option>`;
             });
 
-            if (selectFilter) selectFilter.innerHTML = optionsHtml;
-            if (selectModal) selectModal.innerHTML = optionsHtml;
-        } catch (e) {
-            console.error("Error al cargar pacientes para recursos:", e);
+            if (selectFilter) {
+                const cur = selectFilter.value;
+                selectFilter.innerHTML = optionsHtml;
+                if (cur) selectFilter.value = cur;
+            }
+            if (selectModal) {
+                const cur = selectModal.value;
+                selectModal.innerHTML = optionsHtml;
+                if (cur) selectModal.value = cur;
+            }
         }
     }
     window.populateRecursosPatientSelector = populateRecursosPatientSelector;
@@ -255,9 +273,8 @@
     // 2. MODAL ASIGNAR RECURSO
     // =========================================================================
 
-    function openAsignarRecursoModal(preselectedTipo) {
-        const modal = document.getElementById('modal-asignar-recurso');
-        if (!modal) return;
+    async function openAsignarRecursoModal(preselectedTipo) {
+        await populateRecursosPatientSelector();
 
         if (preselectedTipo) {
             const selectTipo = document.getElementById('asig-rec-tipo');
@@ -272,7 +289,15 @@
         const inputTit = document.getElementById('asig-rec-titulo');
         if (inputTit) inputTit.value = '';
 
-        modal.classList.remove('hide');
+        if (typeof openModal === 'function') {
+            openModal('modal-asignar-recurso');
+        } else {
+            const modal = document.getElementById('modal-asignar-recurso');
+            if (modal) {
+                modal.classList.remove('hide');
+                modal.style.setProperty('display', 'flex', 'important');
+            }
+        }
     }
     window.openAsignarRecursoModal = openAsignarRecursoModal;
 
@@ -343,7 +368,12 @@
         if (!modal || !dynamicContent) return;
 
         dynamicContent.innerHTML = '<p class="text-muted text-center py-5">Cargando pizarra colaborativa...</p>';
-        modal.classList.remove('hide');
+        if (typeof openModal === 'function') {
+            openModal('modal-recurso-pizarra');
+        } else {
+            modal.classList.remove('hide');
+            modal.style.setProperty('display', 'flex', 'important');
+        }
 
         try {
             const res = await fetch(`/api/recursos/pizarra/${recursoId}`);
@@ -1466,7 +1496,12 @@
         if (!modal || !list) return;
 
         list.innerHTML = '<p class="text-muted text-center py-4">Cargando versiones...</p>';
-        modal.classList.remove('hide');
+        if (typeof openModal === 'function') {
+            openModal('modal-recurso-historial');
+        } else {
+            modal.classList.remove('hide');
+            modal.style.setProperty('display', 'flex', 'important');
+        }
 
         try {
             const res = await fetch(`/api/recursos/pizarra/${board.id}/historial`);
@@ -1501,6 +1536,20 @@
         }
     }
     window.openRecursoHistorialModal = openRecursoHistorialModal;
+
+    function closeRecursoPizarra() {
+        stopPizarraLiveSync();
+        if (typeof closeModal === 'function') {
+            closeModal('modal-recurso-pizarra');
+        } else {
+            const modal = document.getElementById('modal-recurso-pizarra');
+            if (modal) {
+                modal.classList.add('hide');
+                modal.style.removeProperty('display');
+            }
+        }
+    }
+    window.closeRecursoPizarra = closeRecursoPizarra;
 
     async function deleteRecursoPizarra(recursoId) {
         if (!confirm("¿Estás seguro de que deseas eliminar esta pizarra de recurso?")) return;

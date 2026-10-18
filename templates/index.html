@@ -9468,7 +9468,7 @@
     <!-- ========================================================================= -->
 
     <!-- 1. MODAL ASIGNAR / CREAR NUEVA PIZARRA DE RECURSO -->
-    <div id="modal-asignar-recurso" class="modal hide" style="z-index: 3750; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+    <div id="modal-asignar-recurso" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('modal-asignar-recurso')" style="z-index: 3750; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
         <div class="modal-content" style="max-width: 600px; width: 92%; border-radius: 18px; padding: 1.75rem; background: #ffffff; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1.5px solid #e2e8f0; margin: 2rem auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
                 <div style="display: flex; align-items: center; gap: 0.65rem;">
@@ -9529,7 +9529,7 @@
     </div>
 
     <!-- 2. MODAL PIZARRA INTERACTIVA COLABORATIVA (FULLSCREEN RESPONSIVO) -->
-    <div id="modal-recurso-pizarra" class="modal hide" style="z-index: 3800; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px);">
+    <div id="modal-recurso-pizarra" class="modal hide" role="dialog" onclick="if(event.target === this) closeRecursoPizarra()" style="z-index: 3800; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px);">
         <div class="modal-content" style="max-width: 1100px; width: 95%; max-height: 94vh; overflow: hidden; border-radius: 20px; padding: 0; background: #ffffff; box-shadow: 0 25px 60px rgba(0,0,0,0.3); border: 1.5px solid #cbd5e1; display: flex; flex-direction: column; margin: 1.5rem auto;">
             
             <!-- ENCABEZADO DE LA PIZARRA -->
@@ -9566,7 +9566,7 @@
                     <button type="button" class="btn btn-sm btn-secondary" onclick="openRecursoHistorialModal()" title="Ver historial de ediciones" style="font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: white; border: 1.5px solid #cbd5e1;">
                         🕒 Historial
                     </button>
-                    <button type="button" class="btn btn-sm" onclick="closeModal('modal-recurso-pizarra')" style="font-size: 0.85rem; background: #e2e8f0; color: #334155; border: none; padding: 0.35rem 0.65rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
+                    <button type="button" class="btn btn-sm" onclick="closeRecursoPizarra()" style="font-size: 0.85rem; background: #e2e8f0; color: #334155; border: none; padding: 0.35rem 0.65rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
                         ✕ Cerrar
                     </button>
                 </div>
@@ -9587,7 +9587,7 @@
                     <span>Autoguardado inteligente activado (los cambios se respaldan automáticamente al escribir).</span>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-recurso-pizarra')" style="font-weight: 600; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="closeRecursoPizarra()" style="font-weight: 600; padding: 0.4rem 0.9rem; border-radius: 6px;">
                         Salir
                     </button>
                     <button type="button" class="btn btn-sm btn-primary" onclick="forceSaveRecursoPizarra()" style="font-weight: 700; padding: 0.4rem 1.1rem; border-radius: 6px; background: #702e5e; border: none;">
@@ -9599,7 +9599,7 @@
     </div>
 
     <!-- 3. MODAL HISTORIAL DE VERSIONES DEL RECURSO -->
-    <div id="modal-recurso-historial" class="modal hide" style="z-index: 3850; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+    <div id="modal-recurso-historial" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('modal-recurso-historial')" style="z-index: 3850; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
         <div class="modal-content" style="max-width: 650px; width: 92%; max-height: 85vh; border-radius: 18px; padding: 1.5rem; background: #ffffff; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1.5px solid #e2e8f0; display: flex; flex-direction: column; margin: 2rem auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1rem;">
                 <div>
