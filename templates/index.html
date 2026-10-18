@@ -4601,13 +4601,24 @@
                     <div id="rec-subview-pizarras" class="hide">
                         <div class="card mb-3" style="background: #ffffff; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 1rem;">
                             <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                                <div style="flex: 1; min-width: 260px; position: relative;">
-                                    <label for="rec-patient-filter-select" style="font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-dark);">
-                                        👤 Seleccionar Consultante Registrado:
+                                <div style="flex: 1; min-width: 280px; position: relative;">
+                                    <label for="rec-patient-filter-search" style="font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-dark);">
+                                        👤 Buscar Consultante Registrado (Cédula, Nombres o Apellidos):
                                     </label>
-                                    <select id="rec-patient-filter-select" onchange="onRecursoPatientSelected(this.value)" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem; cursor: pointer; background: white;">
-                                        <option value="">-- Elige un consultante --</option>
-                                    </select>
+                                    <div style="position: relative;">
+                                        <input type="text" id="rec-patient-filter-search" placeholder="🔍 Escribe cédula, nombre o apellido..." autocomplete="off" oninput="onRecursoFilterSearchInput(this.value)" onfocus="onRecursoFilterSearchFocus()" style="width: 100%; padding: 0.55rem 2.2rem 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem; outline: none; background: #ffffff;">
+                                        <span id="rec-filter-clear-patient-btn" onclick="clearRecursoFilterPatient()" class="hide" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; font-size: 1.1rem; font-weight: 700; padding: 2px 6px;">✕</span>
+                                    </div>
+                                    <input type="hidden" id="rec-patient-filter-select" value="">
+                                    <div id="rec-patient-filter-dropdown" class="hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 2000; background: #ffffff; border: 1.5px solid #702e5e; border-radius: 12px; margin-top: 4px; max-height: 240px; overflow-y: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.18);"></div>
+                                    
+                                    <div id="rec-filter-selected-badge" class="hide" style="margin-top: 0.4rem; background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 8px; padding: 0.4rem 0.75rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+                                        <div>
+                                            <strong id="rec-filter-badge-name" style="color: #702e5e;"></strong>
+                                            <span id="rec-filter-badge-cedula" style="color: #64748b; margin-left: 0.35rem;"></span>
+                                        </div>
+                                        <button type="button" onclick="clearRecursoFilterPatient()" style="background: none; border: none; color: #9333ea; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-decoration: underline;">Cambiar</button>
+                                    </div>
                                 </div>
                                 <button type="button" class="btn btn-primary" onclick="openAsignarRecursoModal()" style="font-weight: 700; padding: 0.55rem 1.25rem; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 0.4rem;">
                                     <span>➕</span> Nueva Pizarra
@@ -9484,13 +9495,33 @@
             </div>
 
             <form id="form-asignar-recurso" onsubmit="handleCrearRecursoSubmit(event)" style="display: flex; flex-direction: column; gap: 1rem;">
-                <div>
-                    <label for="asig-rec-paciente" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">
-                        Consultante Registrado *
+                <div style="position: relative;">
+                    <label for="asig-rec-paciente-search" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">
+                        Consultante Registrado * (Búsqueda por Cédula, Nombres o Apellidos)
                     </label>
-                    <select id="asig-rec-paciente" required style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 600; font-size: 0.9rem; background: #ffffff;">
-                        <option value="">-- Selecciona un consultante --</option>
-                    </select>
+                    <div style="position: relative;">
+                        <input type="text" id="asig-rec-paciente-search" placeholder="🔍 Escribe cédula, nombre o apellido..." autocomplete="off" oninput="onRecursoPatientSearchInput(this.value)" onfocus="onRecursoPatientSearchFocus()" style="width: 100%; padding: 0.65rem 2.2rem 0.65rem 0.85rem; border-radius: 10px; border: 1.5px solid #cbd5e1; font-weight: 600; font-size: 0.9rem; background: #ffffff; outline: none; transition: border-color 0.2s;">
+                        <span id="asig-rec-clear-patient-btn" onclick="clearRecursoSelectedPatient()" class="hide" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; font-size: 1.1rem; font-weight: 700; padding: 2px 6px;">✕</span>
+                    </div>
+
+                    <!-- Hidden input que guarda el ID del paciente seleccionado para crear la pizarra -->
+                    <input type="hidden" id="asig-rec-paciente" required value="">
+
+                    <!-- Dropdown flotante con resultados coincidentes -->
+                    <div id="asig-rec-patient-dropdown" class="hide" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 4000; background: #ffffff; border: 1.5px solid #702e5e; border-radius: 12px; margin-top: 4px; max-height: 220px; overflow-y: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.18);">
+                    </div>
+
+                    <!-- Badge informativo del paciente seleccionado -->
+                    <div id="asig-rec-selected-badge" class="hide" style="margin-top: 0.5rem; background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 10px; padding: 0.55rem 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.15rem;">👤</span>
+                            <div>
+                                <strong id="asig-rec-badge-name" style="color: #702e5e; font-size: 0.88rem;"></strong>
+                                <span id="asig-rec-badge-cedula" style="font-size: 0.78rem; color: #64748b; margin-left: 0.4rem;"></span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="clearRecursoSelectedPatient()" style="background: none; border: none; color: #9333ea; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-decoration: underline;">Cambiar</button>
+                    </div>
                 </div>
 
                 <div>

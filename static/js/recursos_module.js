@@ -133,10 +133,6 @@
     }
 
     async function populateRecursosPatientSelector() {
-        const selectFilter = document.getElementById('rec-patient-filter-select');
-        const selectModal = document.getElementById('asig-rec-paciente');
-        if (!selectFilter && !selectModal) return;
-
         let pacientes = [];
         if (typeof patients !== 'undefined' && Array.isArray(patients) && patients.length > 0) {
             pacientes = patients;
@@ -152,28 +148,263 @@
                 console.error("Error al cargar pacientes para recursos:", e);
             }
         }
-
-        if (Array.isArray(pacientes) && pacientes.length > 0) {
-            let optionsHtml = '<option value="">-- Elige un consultante --</option>';
-            pacientes.forEach(p => {
-                const nombreCompleto = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || p.nombre || 'Consultante';
-                const cedula = p.cedula ? ` (C.I. ${p.cedula})` : '';
-                optionsHtml += `<option value="${p.id}">${nombreCompleto}${cedula}</option>`;
-            });
-
-            if (selectFilter) {
-                const cur = selectFilter.value;
-                selectFilter.innerHTML = optionsHtml;
-                if (cur) selectFilter.value = cur;
-            }
-            if (selectModal) {
-                const cur = selectModal.value;
-                selectModal.innerHTML = optionsHtml;
-                if (cur) selectModal.value = cur;
-            }
-        }
+        window._recursosPatientsCache = pacientes;
     }
     window.populateRecursosPatientSelector = populateRecursosPatientSelector;
+
+    function getRecursosPatientsCache() {
+        if (typeof patients !== 'undefined' && Array.isArray(patients) && patients.length > 0) {
+            return patients;
+        }
+        if (window.patients && Array.isArray(window.patients) && window.patients.length > 0) {
+            return window.patients;
+        }
+        return window._recursosPatientsCache || [];
+    }
+
+    function searchPatientsCombined(query) {
+        const list = getRecursosPatientsCache();
+        if (!query || !query.trim()) return list;
+
+        const normalizedTokens = query.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .split(/\s+/)
+            .filter(Boolean);
+
+        return list.filter(p => {
+            const combinedText = `${p.cedula || ''} ${p.nombres || ''} ${p.apellidos || ''} ${p.telefono || ''} ${p.email || ''}`
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return normalizedTokens.every(tok => combinedText.includes(tok));
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // BÚSQUEDA COMBINADA EN MODAL NUEVA PIZARRA (#modal-asignar-recurso)
+    // -------------------------------------------------------------------------
+
+    function onRecursoPatientSearchFocus() {
+        const input = document.getElementById('asig-rec-paciente-search');
+        onRecursoPatientSearchInput(input ? input.value : '');
+    }
+    window.onRecursoPatientSearchFocus = onRecursoPatientSearchFocus;
+
+    function onRecursoPatientSearchInput(query) {
+        const dropdown = document.getElementById('asig-rec-patient-dropdown');
+        const clearBtn = document.getElementById('asig-rec-clear-patient-btn');
+        if (!dropdown) return;
+
+        if (clearBtn) {
+            if (query && query.trim()) clearBtn.classList.remove('hide');
+            else clearBtn.classList.add('hide');
+        }
+
+        const matches = searchPatientsCombined(query);
+
+        if (matches.length === 0) {
+            dropdown.innerHTML = `
+            <div style="padding: 0.85rem 1rem; color: #94a3b8; font-size: 0.88rem; text-align: center;">
+                No se encontraron consultantes con "${escapeHtml(query)}"
+            </div>`;
+            dropdown.classList.remove('hide');
+            return;
+        }
+
+        let html = '';
+        matches.slice(0, 30).forEach(p => {
+            const nombreCompleto = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || p.nombre || 'Consultante';
+            const cedulaTxt = p.cedula ? `C.I. ${p.cedula}` : 'Sin cédula';
+            const telTxt = p.telefono ? ` • 📞 ${p.telefono}` : '';
+            html += `
+            <div onclick="selectRecursoPatient(${p.id})" 
+                 style="padding: 0.65rem 0.9rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s ease;" 
+                 onmouseover="this.style.background='#fdf4ff'" 
+                 onmouseout="this.style.background='#ffffff'">
+                <div>
+                    <strong style="color: #1e293b; font-size: 0.88rem; display: block;">${nombreCompleto}</strong>
+                    <span style="font-size: 0.76rem; color: #64748b;">${cedulaTxt}${telTxt}</span>
+                </div>
+                <span style="font-size: 0.75rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 0.2rem 0.55rem; border-radius: 8px;">
+                    Seleccionar ➔
+                </span>
+            </div>`;
+        });
+
+        dropdown.innerHTML = html;
+        dropdown.classList.remove('hide');
+    }
+    window.onRecursoPatientSearchInput = onRecursoPatientSearchInput;
+
+    function selectRecursoPatient(patientId) {
+        const patientsList = getRecursosPatientsCache();
+        const p = patientsList.find(x => x.id === parseInt(patientId));
+        if (!p) return;
+
+        const hiddenInput = document.getElementById('asig-rec-paciente');
+        const searchInput = document.getElementById('asig-rec-paciente-search');
+        const dropdown = document.getElementById('asig-rec-patient-dropdown');
+        const badge = document.getElementById('asig-rec-selected-badge');
+        const badgeName = document.getElementById('asig-rec-badge-name');
+        const badgeCedula = document.getElementById('asig-rec-badge-cedula');
+        const clearBtn = document.getElementById('asig-rec-clear-patient-btn');
+
+        const nombreCompleto = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || p.nombre || 'Consultante';
+        const cedulaTxt = p.cedula ? `(C.I. ${p.cedula})` : '';
+
+        if (hiddenInput) hiddenInput.value = p.id;
+        if (searchInput) {
+            searchInput.value = `${nombreCompleto} ${cedulaTxt}`.trim();
+        }
+        if (dropdown) dropdown.classList.add('hide');
+        if (clearBtn) clearBtn.classList.remove('hide');
+
+        if (badge && badgeName) {
+            badgeName.textContent = nombreCompleto;
+            if (badgeCedula) badgeCedula.textContent = cedulaTxt;
+            badge.classList.remove('hide');
+        }
+    }
+    window.selectRecursoPatient = selectRecursoPatient;
+
+    function clearRecursoSelectedPatient() {
+        const hiddenInput = document.getElementById('asig-rec-paciente');
+        const searchInput = document.getElementById('asig-rec-paciente-search');
+        const dropdown = document.getElementById('asig-rec-patient-dropdown');
+        const badge = document.getElementById('asig-rec-selected-badge');
+        const clearBtn = document.getElementById('asig-rec-clear-patient-btn');
+
+        if (hiddenInput) hiddenInput.value = '';
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        if (dropdown) dropdown.classList.add('hide');
+        if (clearBtn) clearBtn.classList.add('hide');
+        if (badge) badge.classList.add('hide');
+    }
+    window.clearRecursoSelectedPatient = clearRecursoSelectedPatient;
+
+    // -------------------------------------------------------------------------
+    // BÚSQUEDA COMBINADA EN PESTAÑA PIZARRAS POR CONSULTANTE
+    // -------------------------------------------------------------------------
+
+    function onRecursoFilterSearchFocus() {
+        const input = document.getElementById('rec-patient-filter-search');
+        onRecursoFilterSearchInput(input ? input.value : '');
+    }
+    window.onRecursoFilterSearchFocus = onRecursoFilterSearchFocus;
+
+    function onRecursoFilterSearchInput(query) {
+        const dropdown = document.getElementById('rec-patient-filter-dropdown');
+        const clearBtn = document.getElementById('rec-filter-clear-patient-btn');
+        if (!dropdown) return;
+
+        if (clearBtn) {
+            if (query && query.trim()) clearBtn.classList.remove('hide');
+            else clearBtn.classList.add('hide');
+        }
+
+        const matches = searchPatientsCombined(query);
+
+        if (matches.length === 0) {
+            dropdown.innerHTML = `
+            <div style="padding: 0.85rem 1rem; color: #94a3b8; font-size: 0.88rem; text-align: center;">
+                No se encontraron consultantes con "${escapeHtml(query)}"
+            </div>`;
+            dropdown.classList.remove('hide');
+            return;
+        }
+
+        let html = '';
+        matches.slice(0, 30).forEach(p => {
+            const nombreCompleto = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || p.nombre || 'Consultante';
+            const cedulaTxt = p.cedula ? `C.I. ${p.cedula}` : 'Sin cédula';
+            const telTxt = p.telefono ? ` • 📞 ${p.telefono}` : '';
+            html += `
+            <div onclick="selectRecursoFilterPatient(${p.id})" 
+                 style="padding: 0.65rem 0.9rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s ease;" 
+                 onmouseover="this.style.background='#fdf4ff'" 
+                 onmouseout="this.style.background='#ffffff'">
+                <div>
+                    <strong style="color: #1e293b; font-size: 0.88rem; display: block;">${nombreCompleto}</strong>
+                    <span style="font-size: 0.76rem; color: #64748b;">${cedulaTxt}${telTxt}</span>
+                </div>
+                <span style="font-size: 0.75rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 0.2rem 0.55rem; border-radius: 8px;">
+                    Ver Pizarras ➔
+                </span>
+            </div>`;
+        });
+
+        dropdown.innerHTML = html;
+        dropdown.classList.remove('hide');
+    }
+    window.onRecursoFilterSearchInput = onRecursoFilterSearchInput;
+
+    function selectRecursoFilterPatient(patientId) {
+        const patientsList = getRecursosPatientsCache();
+        const p = patientsList.find(x => x.id === parseInt(patientId));
+        if (!p) return;
+
+        const hiddenSelect = document.getElementById('rec-patient-filter-select');
+        const searchInput = document.getElementById('rec-patient-filter-search');
+        const dropdown = document.getElementById('rec-patient-filter-dropdown');
+        const badge = document.getElementById('rec-filter-selected-badge');
+        const badgeName = document.getElementById('rec-filter-badge-name');
+        const badgeCedula = document.getElementById('rec-filter-badge-cedula');
+        const clearBtn = document.getElementById('rec-filter-clear-patient-btn');
+
+        const nombreCompleto = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || p.nombre || 'Consultante';
+        const cedulaTxt = p.cedula ? `(C.I. ${p.cedula})` : '';
+
+        if (hiddenSelect) hiddenSelect.value = p.id;
+        if (searchInput) {
+            searchInput.value = `${nombreCompleto} ${cedulaTxt}`.trim();
+        }
+        if (dropdown) dropdown.classList.add('hide');
+        if (clearBtn) clearBtn.classList.remove('hide');
+
+        if (badge && badgeName) {
+            badgeName.textContent = nombreCompleto;
+            if (badgeCedula) badgeCedula.textContent = cedulaTxt;
+            badge.classList.remove('hide');
+        }
+
+        onRecursoPatientSelected(p.id);
+    }
+    window.selectRecursoFilterPatient = selectRecursoFilterPatient;
+
+    function clearRecursoFilterPatient() {
+        const hiddenSelect = document.getElementById('rec-patient-filter-select');
+        const searchInput = document.getElementById('rec-patient-filter-search');
+        const dropdown = document.getElementById('rec-patient-filter-dropdown');
+        const badge = document.getElementById('rec-filter-selected-badge');
+        const clearBtn = document.getElementById('rec-filter-clear-patient-btn');
+
+        if (hiddenSelect) hiddenSelect.value = '';
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        if (dropdown) dropdown.classList.add('hide');
+        if (clearBtn) clearBtn.classList.add('hide');
+        if (badge) badge.classList.add('hide');
+
+        onRecursoPatientSelected('');
+    }
+    window.clearRecursoFilterPatient = clearRecursoFilterPatient;
+
+    // Cierre de dropdowns al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        const modalDropdown = document.getElementById('asig-rec-patient-dropdown');
+        const modalInput = document.getElementById('asig-rec-paciente-search');
+        if (modalDropdown && modalInput && !modalInput.contains(e.target) && !modalDropdown.contains(e.target)) {
+            modalDropdown.classList.add('hide');
+        }
+
+        const filterDropdown = document.getElementById('rec-patient-filter-dropdown');
+        const filterInput = document.getElementById('rec-patient-filter-search');
+        if (filterDropdown && filterInput && !filterInput.contains(e.target) && !filterDropdown.contains(e.target)) {
+            filterDropdown.classList.add('hide');
+        }
+    });
 
     async function onRecursoPatientSelected(patientId) {
         window.selectedRecursoPatientId = patientId;
@@ -184,7 +415,7 @@
             container.innerHTML = `
             <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
                 <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">📁</span>
-                <p style="margin: 0; font-size: 0.95rem;">Selecciona un consultante para ver sus pizarras interactivas de recursos o crear una nueva.</p>
+                <p style="margin: 0; font-size: 0.95rem;">Busca y selecciona un consultante para ver sus pizarras interactivas de recursos o crear una nueva.</p>
             </div>`;
             return;
         }
@@ -281,9 +512,11 @@
             if (selectTipo) selectTipo.value = preselectedTipo;
         }
 
-        const selectPac = document.getElementById('asig-rec-paciente');
-        if (selectPac && window.selectedRecursoPatientId) {
-            selectPac.value = window.selectedRecursoPatientId;
+        // Si ya hay un consultante seleccionado en la pestaña, autoseleccionarlo
+        if (window.selectedRecursoPatientId) {
+            selectRecursoPatient(window.selectedRecursoPatientId);
+        } else {
+            clearRecursoSelectedPatient();
         }
 
         const inputTit = document.getElementById('asig-rec-titulo');
@@ -314,7 +547,7 @@
         const btn = document.getElementById('btn-crear-pizarra-submit');
 
         if (!pacienteId || !recursoTipo) {
-            alert("Por favor selecciona consultante y tipo de recurso.");
+            alert("Por favor busca y selecciona un consultante registrado.");
             return;
         }
 
@@ -339,11 +572,7 @@
             closeModal('modal-asignar-recurso');
 
             // Actualizar vista de pizarras del paciente
-            const selectFilter = document.getElementById('rec-patient-filter-select');
-            if (selectFilter) {
-                selectFilter.value = pacienteId;
-                onRecursoPatientSelected(pacienteId);
-            }
+            selectRecursoFilterPatient(pacienteId);
 
             // Abrir de inmediato la pizarra creada para trabajar
             openRecursoPizarra(data.recurso_id);
