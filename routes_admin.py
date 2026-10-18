@@ -236,7 +236,8 @@ def login():
                     'herramientas': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_herramientas') or 0),
                     'confirmaciones': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_confirmaciones') or 0),
                     'examen_mental': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_examen_mental') or 0),
-                    'tests': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0)
+                    'tests': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0),
+                    'recursos': 0 if user['role'] == 'admin' else (u_dict.get('bloqueo_recursos') or 0)
                 }
             })
         
@@ -311,7 +312,8 @@ def check_session():
                 'herramientas': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_herramientas') or 0),
                 'confirmaciones': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_confirmaciones') or 0),
                 'examen_mental': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_examen_mental') or 0),
-                'tests': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_tests') or 0)
+                'tests': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_tests') or 0),
+                'recursos': 0 if r_dict.get('role') == 'admin' else (r_dict.get('bloqueo_recursos') or 0)
             }
         })
     elif 'patient_id' in session:
@@ -421,7 +423,8 @@ def auth_google():
                 'herramientas': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_herramientas') or 0),
                 'confirmaciones': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_confirmaciones') or 0),
                 'examen_mental': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_examen_mental') or 0),
-                'tests': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0)
+                'tests': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0),
+                'recursos': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_recursos') or 0)
             }
         })
         
@@ -517,7 +520,8 @@ def auth_google_link():
                     'herramientas': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_herramientas') or 0),
                     'confirmaciones': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_confirmaciones') or 0),
                     'examen_mental': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_examen_mental') or 0),
-                    'tests': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0)
+                    'tests': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_tests') or 0),
+                    'recursos': 0 if u_dict['role'] == 'admin' else (u_dict.get('bloqueo_recursos') or 0)
                 }
             })
         else:
@@ -1472,17 +1476,18 @@ def superadmin_save_therapist_settings(user_id):
     bloqueo_confirmaciones = 1 if data.get('bloqueo_confirmaciones') else 0
     bloqueo_examen_mental = 1 if data.get('bloqueo_examen_mental') else 0
     bloqueo_tests = 1 if data.get('bloqueo_tests') else 0
+    bloqueo_recursos = 1 if data.get('bloqueo_recursos') else 0
     
     cursor.execute("""
         UPDATE usuarios 
         SET mostrar_en_directorio = ?, aviso_pago = ?,
             bloqueo_registro = ?, bloqueo_registro_rapido = ?, bloqueo_evoluciones = ?, bloqueo_finanzas = ?,
             bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?, bloqueo_confirmaciones = ?,
-            bloqueo_examen_mental = ?, bloqueo_tests = ?
+            bloqueo_examen_mental = ?, bloqueo_tests = ?, bloqueo_recursos = ?
         WHERE id = ?
     """, (mostrar_en_directorio, aviso_pago, bloqueo_registro, bloqueo_registro_rapido, bloqueo_evoluciones, bloqueo_finanzas,
           bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, bloqueo_confirmaciones,
-          bloqueo_examen_mental, bloqueo_tests, user_id))
+          bloqueo_examen_mental, bloqueo_tests, bloqueo_recursos, user_id))
     db.commit()
     return jsonify({'success': '¡Cambios guardados con éxito en la base de datos!'})
 
@@ -1496,7 +1501,7 @@ def superadmin_toggle_feature(user_id):
     feature = data.get('feature')
     status = data.get('status')
     
-    if feature not in ['registro', 'evoluciones', 'finanzas', 'agenda', 'mensajes', 'pizarra', 'herramientas']:
+    if feature not in ['registro', 'evoluciones', 'finanzas', 'agenda', 'mensajes', 'pizarra', 'herramientas', 'confirmaciones', 'examen_mental', 'tests', 'recursos']:
         return jsonify({'error': 'Función no válida.'}), 400
         
     if status not in [0, 1]:

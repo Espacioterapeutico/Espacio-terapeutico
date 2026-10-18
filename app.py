@@ -102,6 +102,13 @@ try:
 except Exception as _e:
     print("Aviso al registrar Blueprint de Examen Mental:", _e)
 
+# Registrar Blueprint de Recursos Terapéuticos
+try:
+    from routes_recursos import recursos_bp
+    app.register_blueprint(recursos_bp)
+except Exception as _e:
+    print("Aviso al registrar Blueprint de Recursos:", _e)
+
 # Registrar Blueprint de Herramientas Terapéuticas
 try:
     from routes_herramientas import herramientas_bp
@@ -914,11 +921,14 @@ def init_db():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_examen_mental INTEGER DEFAULT 0")
         if 'bloqueo_tests' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_tests INTEGER DEFAULT 0")
+        if 'bloqueo_recursos' not in cols_usr:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN bloqueo_recursos INTEGER DEFAULT 0")
         
         cursor.execute("UPDATE usuarios SET bloqueo_tests = 0 WHERE bloqueo_tests IS NULL OR bloqueo_tests = 1")
         cursor.execute("UPDATE usuarios SET bloqueo_examen_mental = 0 WHERE bloqueo_examen_mental IS NULL OR bloqueo_examen_mental = 1")
         cursor.execute("UPDATE usuarios SET bloqueo_herramientas = 0 WHERE bloqueo_herramientas IS NULL OR bloqueo_herramientas = 1")
         cursor.execute("UPDATE usuarios SET bloqueo_confirmaciones = 0 WHERE bloqueo_confirmaciones IS NULL OR bloqueo_confirmaciones = 1")
+        cursor.execute("UPDATE usuarios SET bloqueo_recursos = 0 WHERE bloqueo_recursos IS NULL")
         if 'terminos_condiciones' not in cols_usr:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN terminos_condiciones TEXT")
         if 'nomenclatura' not in cols_usr:

@@ -1304,6 +1304,13 @@ function switchView(viewId, fromPopState = false) {
         alert("La función de Herramientas Terapéuticas está suspendida por administración.");
         return;
     }
+    if (viewId === 'recursos' && isFeatureBlocked('recursos')) {
+        alert("La función de Recursos está suspendida por administración.");
+        return;
+    }
+    if (viewId === 'recursos' && typeof initRecursosView === 'function') {
+        initRecursosView();
+    }
 
     if (viewId === 'tests-psicologicos' && typeof renderTestsCatalog === 'function') {
         renderTestsCatalog();
@@ -3860,6 +3867,10 @@ function switchPatientView(viewName, fromPopState = false) {
         checkPatientActiveModulesNav();
         if (viewName === 'patient-home') {
             switchPatientHomeSubView('next');
+        } else if (viewName === 'patient-recursos') {
+            if (typeof loadPatientPortalRecursos === 'function') {
+                loadPatientPortalRecursos();
+            }
         } else if (viewName === 'patient-diary') {
             loadPizarraHistory();
         } else if (viewName === 'patient-sleep') {
@@ -15947,6 +15958,7 @@ function renderSuperadminTherapistsTable() {
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-herramientas" ${p.bloqueo_herramientas === 1 ? 'checked' : ''}> Bloquear Herramientas Terapéuticas</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-examen-mental" ${p.bloqueo_examen_mental === 1 ? 'checked' : ''}> Bloquear Examen Mental</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-tests" ${p.bloqueo_tests === 1 ? 'checked' : ''}> Bloquear Tests Psicológicos</label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" class="chk-bloqueo-recursos" ${p.bloqueo_recursos === 1 ? 'checked' : ''}> Bloquear Recursos</label>
                         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.6rem; margin-top: 0.25rem;">
                             <input type="checkbox" class="chk-aviso-pago" ${p.aviso_pago === 1 ? 'checked' : ''}> ⚠️ Activar Aviso de Pago (Marcar No Solvente)
                         </label>
@@ -16124,6 +16136,7 @@ function openSuperadminManageTherapistModal(userId) {
     setChk('sa-chk-bloqueo-herramientas', p.bloqueo_herramientas);
     setChk('sa-chk-bloqueo-examen-mental', p.bloqueo_examen_mental);
     setChk('sa-chk-bloqueo-tests', p.bloqueo_tests);
+    setChk('sa-chk-bloqueo-recursos', p.bloqueo_recursos);
     setChk('sa-chk-aviso-pago', p.aviso_pago);
 
     switchSuperadminManageTab('ficha');
@@ -16279,7 +16292,8 @@ async function saveSuperadminModalPermissions() {
         bloqueo_pizarra: isChecked('sa-chk-bloqueo-pizarra'),
         bloqueo_herramientas: isChecked('sa-chk-bloqueo-herramientas'),
         bloqueo_examen_mental: isChecked('sa-chk-bloqueo-examen-mental'),
-        bloqueo_tests: isChecked('sa-chk-bloqueo-tests')
+        bloqueo_tests: isChecked('sa-chk-bloqueo-tests'),
+        bloqueo_recursos: isChecked('sa-chk-bloqueo-recursos')
     };
     try {
         const res = await fetch(`/api/superadmin/therapists/${userId}/save-settings`, {
@@ -16867,7 +16881,8 @@ async function saveTherapistRowSettings(userId) {
         bloqueo_herramientas: container.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0,
         bloqueo_confirmaciones: container.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0,
         bloqueo_examen_mental: container.querySelector('.chk-bloqueo-examen-mental')?.checked ? 1 : 0,
-        bloqueo_tests: container.querySelector('.chk-bloqueo-tests')?.checked ? 1 : 0
+        bloqueo_tests: container.querySelector('.chk-bloqueo-tests')?.checked ? 1 : 0,
+        bloqueo_recursos: container.querySelector('.chk-bloqueo-recursos')?.checked ? 1 : 0
     };
     
     try {
@@ -16910,7 +16925,8 @@ async function saveAllTherapistsSettings() {
             bloqueo_herramientas: row.querySelector('.chk-bloqueo-herramientas')?.checked ? 1 : 0,
             bloqueo_confirmaciones: row.querySelector('.chk-bloqueo-confirmaciones')?.checked ? 1 : 0,
             bloqueo_examen_mental: row.querySelector('.chk-bloqueo-examen-mental')?.checked ? 1 : 0,
-            bloqueo_tests: row.querySelector('.chk-bloqueo-tests')?.checked ? 1 : 0
+            bloqueo_tests: row.querySelector('.chk-bloqueo-tests')?.checked ? 1 : 0,
+            bloqueo_recursos: row.querySelector('.chk-bloqueo-recursos')?.checked ? 1 : 0
         };
         
         try {

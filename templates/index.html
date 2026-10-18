@@ -1371,6 +1371,10 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
                     <span>Herramientas Terapéuticas</span>
                 </a>
+                <a href="javascript:void(0)" class="nav-item" id="nav-item-recursos" data-view="recursos" onclick="switchView('recursos')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    <span>Recursos</span>
+                </a>
                 <a href="javascript:void(0)" class="nav-item" data-view="finance" onclick="switchView('finance')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span>Control de Finanzas</span>
@@ -1423,6 +1427,10 @@
                 <a href="javascript:void(0)" class="pat-menu-item" data-pat-view="patient-diary" onclick="selectPatientMenuItem('patient-diary')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     <span>Pizarra Terapéutica</span>
+                </a>
+                <a href="javascript:void(0)" class="pat-menu-item" id="pat-nav-recursos" data-pat-view="patient-recursos" onclick="selectPatientMenuItem('patient-recursos')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
+                    <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    <span>Recursos</span>
                 </a>
                 <a href="javascript:void(0)" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-sleep" data-mod-key="sueno" onclick="selectPatientMenuItem('patient-sleep')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <span style="font-size: 1.2rem;">🌙</span>
@@ -4563,6 +4571,60 @@
                     </div>
                 </section>
 
+                <!-- 4d. VISTA RECURSOS TERAPÉUTICOS (PIZARRAS VIVAS) -->
+                <section id="view-recursos" class="app-view hide">
+                    <div class="view-header-row mb-2">
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700;">📚 Recursos</h2>
+                            <p class="text-secondary text-sm" style="margin-top: 2px; font-size: 0.82rem; line-height: 1.3;">Pizarras interactivas de trabajo terapéutico (TCC, ACT y Solución de Problemas) con edición colaborativa en vivo con el consultante.</p>
+                        </div>
+                    </div>
+
+                    <!-- PESTAÑAS DE NAVEGACIÓN SUB-MENÚ -->
+                    <div class="sub-nav-pills mb-3" style="display: flex; gap: 0.4rem; background: rgba(0,0,0,0.03); padding: 4px; border-radius: 10px; width: 100%; max-width: 520px; box-sizing: border-box;">
+                        <button type="button" id="rec-tab-btn-catalogo" onclick="switchRecursosTab('catalogo')" class="btn-pill-sub active" style="flex: 1 1 0%; min-width: 0; padding: 0.45rem 0.5rem; font-weight: 700; font-size: 0.78rem; border-radius: 8px; border: none; background: var(--primary-color); color: #ffffff; cursor: pointer; transition: all 0.25s ease; box-shadow: 0 4px 12px rgba(169, 89, 147, 0.25); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            🗂️ Catálogo de Recursos
+                        </button>
+                        <button type="button" id="rec-tab-btn-pizarras" onclick="switchRecursosTab('pizarras')" class="btn-pill-sub" style="flex: 1 1 0%; min-width: 0; padding: 0.45rem 0.5rem; font-weight: 600; font-size: 0.78rem; border-radius: 8px; border: 1.5px solid var(--border-color); background: #ffffff; color: var(--text-dark); cursor: pointer; transition: all 0.25s ease; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            📋 Pizarras por Consultante
+                        </button>
+                    </div>
+
+                    <!-- SUB-VISTA 1: CATÁLOGO DE RECURSOS -->
+                    <div id="rec-subview-catalogo">
+                        <div id="recursos-catalogo-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem;">
+                            <!-- Renderizado dinámicamente con JS -->
+                        </div>
+                    </div>
+
+                    <!-- SUB-VISTA 2: PIZARRAS POR CONSULTANTE -->
+                    <div id="rec-subview-pizarras" class="hide">
+                        <div class="card mb-3" style="background: #ffffff; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 1rem;">
+                            <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 260px; position: relative;">
+                                    <label for="rec-patient-filter-select" style="font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-dark);">
+                                        👤 Seleccionar Consultante Registrado:
+                                    </label>
+                                    <select id="rec-patient-filter-select" onchange="onRecursoPatientSelected(this.value)" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-weight: 600; font-size: 0.88rem; cursor: pointer; background: white;">
+                                        <option value="">-- Elige un consultante --</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary" onclick="openAsignarRecursoModal()" style="font-weight: 700; padding: 0.55rem 1.25rem; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 0.4rem;">
+                                    <span>➕</span> Nueva Pizarra
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- LISTADO DE PIZARRAS DEL PACIENTE -->
+                        <div id="rec-patient-pizarras-container">
+                            <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+                                <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">📁</span>
+                                <p style="margin: 0; font-size: 0.95rem;">Selecciona un consultante para ver sus pizarras interactivas de recursos o crear una nueva.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 
                 <!-- ==========================================
                      PORTAL DE PACIENTES (VISTAS DE CONSULTANTE)
@@ -5975,6 +6037,27 @@
                             <div id="pat-pizarra-history-list" style="display: flex; flex-direction: column; gap: 1.25rem;">
                                 <span class="text-secondary text-sm">Cargando historial de la pizarra...</span>
                             </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- VISTA: RECURSOS (PORTAL PACIENTE) -->
+                <section id="view-patient-recursos" class="app-view hide">
+                    <div class="view-header-row mb-3" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.3rem; font-family: var(--font-title); font-weight: 800; color: var(--text-dark);">📚 Recursos</h2>
+                            <p class="text-secondary text-sm" style="margin: 3px 0 0; font-size: 0.85rem;">Pizarras y herramientas interactivas asignadas por tu terapeuta para trabajar en consulta o reflexionar a tu propio ritmo.</p>
+                        </div>
+                        <button type="button" onclick="loadPatientPortalRecursos()" class="btn btn-secondary btn-sm" style="padding: 0.4rem 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; border-radius: var(--radius-sm); background: white; border: 1.5px solid var(--border-color); cursor: pointer;">
+                            🔄 Actualizar
+                        </button>
+                    </div>
+
+                    <div id="patient-recursos-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1.25rem;">
+                        <!-- Cargado dinámicamente con JS -->
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                            <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">⏳</span>
+                            <p>Cargando tus recursos asignados...</p>
                         </div>
                     </div>
                 </section>
@@ -9285,6 +9368,7 @@
                     <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-herramientas"> Bloquear Herramientas</label>
                     <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-examen-mental"> Bloquear Examen Mental</label>
                     <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-tests"> Bloquear Tests</label>
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input type="checkbox" id="sa-chk-bloqueo-recursos"> Bloquear Recursos</label>
                     <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; color: #b91c1c; font-weight: 700; grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 0.5rem; margin-top: 0.25rem;">
                         <input type="checkbox" id="sa-chk-aviso-pago"> ⚠️ Activar Aviso de Pago (Marcar No Solvente)
                     </label>
@@ -9375,6 +9459,157 @@
 
             <div id="test-detail-body" style="display: flex; flex-direction: column; gap: 1.25rem;">
                 <!-- Contenido dinámico del reporte de resultados -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODALES DEL MÓDULO RECURSOS TERAPÉUTICOS                                 -->
+    <!-- ========================================================================= -->
+
+    <!-- 1. MODAL ASIGNAR / CREAR NUEVA PIZARRA DE RECURSO -->
+    <div id="modal-asignar-recurso" class="modal hide" style="z-index: 3750; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-content" style="max-width: 600px; width: 92%; border-radius: 18px; padding: 1.75rem; background: #ffffff; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1.5px solid #e2e8f0; margin: 2rem auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <div style="width: 42px; height: 42px; background: linear-gradient(135deg, #702e5e 0%, #9333ea 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.3rem;">
+                        📚
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #1e293b;">Nueva Pizarra de Recurso</h3>
+                        <p style="margin: 0; font-size: 0.82rem; color: #64748b;">Asigna una herramienta interactiva a un consultante registrado</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-asignar-recurso')" style="border-radius: 8px; font-weight: 700;">✖ Cerrar</button>
+            </div>
+
+            <form id="form-asignar-recurso" onsubmit="handleCrearRecursoSubmit(event)" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label for="asig-rec-paciente" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">
+                        Consultante Registrado *
+                    </label>
+                    <select id="asig-rec-paciente" required style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 600; font-size: 0.9rem; background: #ffffff;">
+                        <option value="">-- Selecciona un consultante --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="asig-rec-tipo" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">
+                        Herramienta / Recurso Terapéutico *
+                    </label>
+                    <select id="asig-rec-tipo" required onchange="onAsigRecTipoChange(this.value)" style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-size: 0.9rem; background: #ffffff;">
+                        <option value="pros_contras">⚖️ Pros y Contras (Toma de Decisiones Ponderada)</option>
+                        <option value="cuestionando_creencias">🔍 Cuestionando Creencias (Diálogo Socrático)</option>
+                        <option value="diversificando_pensamiento">🧠 Diversificando el Pensamiento (Lentes Cognitivos)</option>
+                        <option value="pensamientos_negativos">🛡️ Pensamientos Negativos (Real vs. Imaginario)</option>
+                        <option value="segmentacion_objetivos">🎯 Segmentación de Objetivos (Plan de Acción)</option>
+                        <option value="sobrepensamiento">🚀 Sobre-pensamiento (De la Rumiación a la Acción)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="asig-rec-titulo" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">
+                        Título o Tema del Recurso (Ej: "Decisión de cambio de carrera", "Ansiedad social"):
+                    </label>
+                    <input type="text" id="asig-rec-titulo" placeholder="Opcional. Si lo dejas vacío se genera automáticamente." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                </div>
+
+                <div style="background: #faf5ff; border: 1.5px solid #e9d5ff; border-radius: 10px; padding: 0.85rem; font-size: 0.82rem; color: #6b21a8; line-height: 1.4;">
+                    💡 <strong>Colaboración en vivo:</strong> La pizarra se creará en el expediente del consultante y estará visible en su portal. Ambos podrán trabajar y guardar cambios de forma coordinada.
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-asignar-recurso')" style="font-weight: 600; padding: 0.55rem 1.15rem; border-radius: 8px;">Cancelar</button>
+                    <button type="submit" id="btn-crear-pizarra-submit" class="btn btn-primary" style="font-weight: 700; padding: 0.55rem 1.35rem; border-radius: 8px; background: linear-gradient(135deg, #702e5e 0%, #9333ea 100%); border: none;">
+                        🚀 Crear y Abrir Pizarra
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. MODAL PIZARRA INTERACTIVA COLABORATIVA (FULLSCREEN RESPONSIVO) -->
+    <div id="modal-recurso-pizarra" class="modal hide" style="z-index: 3800; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px);">
+        <div class="modal-content" style="max-width: 1100px; width: 95%; max-height: 94vh; overflow: hidden; border-radius: 20px; padding: 0; background: #ffffff; box-shadow: 0 25px 60px rgba(0,0,0,0.3); border: 1.5px solid #cbd5e1; display: flex; flex-direction: column; margin: 1.5rem auto;">
+            
+            <!-- ENCABEZADO DE LA PIZARRA -->
+            <div style="padding: 1rem 1.35rem; background: #fdfafc; border-bottom: 1.5px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
+                    <span id="pizarra-rec-icon" style="font-size: 1.6rem; line-height: 1;">⚖️</span>
+                    <div style="min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <h3 id="pizarra-rec-title" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 450px;">
+                                Pros y Contras
+                            </h3>
+                            <span id="pizarra-rec-patient-badge" style="font-size: 0.75rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 0.15rem 0.55rem; border-radius: 12px;">
+                                Consultante: ...
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 3px; font-size: 0.76rem; color: #64748b; flex-wrap: wrap;">
+                            <span id="pizarra-save-status-badge" style="font-weight: 700; color: #16a34a; background: #dcfce7; padding: 0.15rem 0.5rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 3px;">
+                                ✓ Sincronizado
+                            </span>
+                            <span id="pizarra-last-edited-text">Última edición: Hoy</span>
+                            <span style="color: #9333ea; font-weight: 600;">• Modo colaborativo activo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACCIONES RÁPIDAS DEL ENCABEZADO -->
+                <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="exportRecursoWord()" title="Descargar documento Word (.docx) editable" style="font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: white; border: 1.5px solid #cbd5e1; display: inline-flex; align-items: center; gap: 4px;">
+                        📥 Descargar Word
+                    </button>
+                    <button type="button" id="btn-pizarra-share-wa" class="btn btn-sm" onclick="shareRecursoWhatsApp()" title="Enviar enlace o mensaje por WhatsApp" style="font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: #dcfce7; color: #15803d; border: 1px solid #86efac; display: inline-flex; align-items: center; gap: 4px;">
+                        📲 WhatsApp
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openRecursoHistorialModal()" title="Ver historial de ediciones" style="font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: white; border: 1.5px solid #cbd5e1;">
+                        🕒 Historial
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="closeModal('modal-recurso-pizarra')" style="font-size: 0.85rem; background: #e2e8f0; color: #334155; border: none; padding: 0.35rem 0.65rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
+                        ✕ Cerrar
+                    </button>
+                </div>
+            </div>
+
+            <!-- CUERPO DE LA PIZARRA (SCROLLABLE) -->
+            <div id="recurso-pizarra-scroll-body" style="flex: 1; overflow-y: auto; overflow-x: hidden; padding: 1.25rem 1.5rem; background: #f8fafc;">
+                <!-- RENDERIZADO ESPECÍFICO DINÁMICO SEGÚN TIPO DE RECURSO -->
+                <div id="recurso-pizarra-dynamic-content">
+                    <!-- JS inyecta la plantilla interactiva -->
+                </div>
+            </div>
+
+            <!-- PIE DE LA PIZARRA (ESTADO DE GUARDADO Y BOTONES) -->
+            <div style="padding: 0.75rem 1.35rem; background: #ffffff; border-top: 1.5px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #64748b;">
+                    <span style="display: inline-block; width: 8px; height: 8px; background: #22c55e; border-radius: 50%;"></span>
+                    <span>Autoguardado inteligente activado (los cambios se respaldan automáticamente al escribir).</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-recurso-pizarra')" style="font-weight: 600; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                        Salir
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="forceSaveRecursoPizarra()" style="font-weight: 700; padding: 0.4rem 1.1rem; border-radius: 6px; background: #702e5e; border: none;">
+                        💾 Guardar Todo Ahora
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MODAL HISTORIAL DE VERSIONES DEL RECURSO -->
+    <div id="modal-recurso-historial" class="modal hide" style="z-index: 3850; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-content" style="max-width: 650px; width: 92%; max-height: 85vh; border-radius: 18px; padding: 1.5rem; background: #ffffff; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1.5px solid #e2e8f0; display: flex; flex-direction: column; margin: 2rem auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1rem;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #1e293b;">🕒 Historial de Guardados</h3>
+                    <p style="margin: 0; font-size: 0.82rem; color: #64748b;">Registros y momentos en los que se editó esta pizarra</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('modal-recurso-historial')" style="border-radius: 8px; font-weight: 700;">✖ Cerrar</button>
+            </div>
+            <div id="recurso-historial-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; padding-right: 4px;">
+                <p class="text-muted text-center py-3">Cargando versiones...</p>
             </div>
         </div>
     </div>
@@ -9482,6 +9717,7 @@
 
     <script src="/static/js/app.js?v={{ asset_v or '1789838000' }}"></script>
     <script src="/static/js/tests_module.js?v={{ asset_v or '1789838000' }}"></script>
+    <script src="/static/js/recursos_module.js?v={{ asset_v or '1789838000' }}"></script>
     <!-- Modal Superadmin: Configurar Métodos de Pago de Suscripción -->
     <div id="superadmin-payment-modal" class="modal hide">
         <div class="modal-content" style="max-width: 650px; border-radius: 14px; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
