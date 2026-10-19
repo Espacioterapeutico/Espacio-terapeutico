@@ -147,6 +147,7 @@ def ensure_tests_tables(db):
     ensure_emotional_management_tests_definitions(db)
     ensure_substance_abuse_tests_definitions(db)
     ensure_social_anxiety_tests_definitions(db)
+    ensure_hypersexuality_tests_definitions(db)
     ensure_barsit_definition(db)
     sync_existing_completed_tests_to_evoluciones(db)
 
@@ -2584,11 +2585,12 @@ def api_export_test_pdf(assignment_id):
             'MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II',
             'MMPI-2', 'MMPI2', 'MMPI', 'ZUNG-SDS', 'HAMILTON-D', 'IDARE-STAI', 'IDARE',
             'SCL-90-R', 'BSI', 'BSI-53', 'BECK-BHS', 'BHS', 'BARSIT', 'SWLS', 'SHIM', 'IIEF-5',
-            'FSFI', 'MMSE', 'ATAS', 'CUVINO', 'ABUSO-COERCITIVO', 'VIOLENCIA-ECON', 'BPRS', 'PANSS-POS', 'JUICIO-REALIDAD', 'BSSC', 'LSAS', 'LSAS-SR', 'SPIN'
+            'FSFI', 'MMSE', 'ATAS', 'CUVINO', 'ABUSO-COERCITIVO', 'VIOLENCIA-ECON', 'BPRS', 'PANSS-POS', 'JUICIO-REALIDAD', 'BSSC', 'LSAS', 'LSAS-SR', 'SPIN',
+            'HBI-19', 'HBI', 'SAST', 'SAST-25'
         }
 
         should_recalc = False
-        is_known_baremo = test_code in tests_with_baremo or any(k in test_code for k in ('ADHD', 'TDAH', 'BDI', 'BAI', 'AQ', 'CAT', 'RAADS', 'MILLON', 'MMPI', 'HOLLAND', 'ZUNG', 'HAM', 'LSAS', 'SPIN'))
+        is_known_baremo = test_code in tests_with_baremo or any(k in test_code for k in ('ADHD', 'TDAH', 'BDI', 'BAI', 'AQ', 'CAT', 'RAADS', 'MILLON', 'MMPI', 'HOLLAND', 'ZUNG', 'HAM', 'LSAS', 'SPIN', 'HBI', 'SAST'))
         if respuestas and is_known_baremo:
             if not subescalas or list(subescalas.keys()) == ['Puntuación Total'] or not data.get('clasificacion_resultado') or data.get('clasificacion_resultado') == 'Completado':
                 should_recalc = True
@@ -3609,3 +3611,129 @@ def ensure_social_anxiety_tests_definitions(db):
             json.dumps(lsas_opciones), json.dumps(lsas_items)
         ))
     db.commit()
+
+
+# =========================================================================
+# EVALUACIONES: HIPERSEXUALIDAD Y ADICCIÓN SEXUAL (HBI-19 Y SAST)
+# =========================================================================
+
+def ensure_hypersexuality_tests_definitions(db):
+    """
+    Asegura las definiciones psicométricas en tests_definiciones:
+    1. HBI-19: Inventario de Comportamiento Hipersexual (Reid et al.)
+    2. SAST: Test de Detección de Adicción Sexual (Patrick Carnes)
+    """
+    import json
+    cursor = db.cursor()
+
+    # 1. HBI-19
+    hbi_opciones = [
+        {"val": 1, "text": "1 - Nunca"},
+        {"val": 2, "text": "2 - Raramente"},
+        {"val": 3, "text": "3 - A veces"},
+        {"val": 4, "text": "4 - A menudo"},
+        {"val": 5, "text": "5 - Muy a menudo"}
+    ]
+    hbi_items = [
+        {"id": 1, "num": 1, "texto": "Utilizo el sexo para olvidarme de las preocupaciones de la vida diaria.", "subescala": "Afrontamiento", "reverse": False},
+        {"id": 2, "num": 2, "texto": "Aunque me prometo a mí mismo/a que no volveré a repetir una conducta sexual, vuelvo a caer en ella una y otra vez.", "subescala": "Control", "reverse": False},
+        {"id": 3, "num": 3, "texto": "Hacer algo de naturaleza sexual me ayuda a sentirme menos solo/a.", "subescala": "Afrontamiento", "reverse": False},
+        {"id": 4, "num": 4, "texto": "Me involucro en actividades sexuales de las que sé que luego me arrepentiré.", "subescala": "Control", "reverse": False},
+        {"id": 5, "num": 5, "texto": "Sacrifico cosas que realmente quiero en la vida con tal de tener actividad sexual.", "subescala": "Consecuencias", "reverse": False},
+        {"id": 6, "num": 6, "texto": "Recurro a actividades sexuales cuando experimento sentimientos desagradables (ej. frustración, tristeza o enojo).", "subescala": "Afrontamiento", "reverse": False},
+        {"id": 7, "num": 7, "texto": "Mis intentos por cambiar mi conducta sexual fracasan.", "subescala": "Control", "reverse": False},
+        {"id": 8, "num": 8, "texto": "Cuando me siento inquieto/a o intranquilo/a, recurro al sexo para calmarme.", "subescala": "Afrontamiento", "reverse": False},
+        {"id": 9, "num": 9, "texto": "Mis pensamientos y fantasías sexuales me distraen de cumplir tareas importantes.", "subescala": "Consecuencias", "reverse": False},
+        {"id": 10, "num": 10, "texto": "Hago cosas sexuales que van en contra de mis propios valores y creencias.", "subescala": "Control", "reverse": False},
+        {"id": 11, "num": 11, "texto": "Aunque sé que mi conducta sexual es irresponsable o arriesgada, me resulta muy difícil parar.", "subescala": "Control", "reverse": False},
+        {"id": 12, "num": 12, "texto": "Siento que mi conducta sexual me está llevando en una dirección a la que no deseo ir.", "subescala": "Control", "reverse": False},
+        {"id": 13, "num": 13, "texto": "Hacer algo sexual me ayuda a sobrellevar el estrés.", "subescala": "Afrontamiento", "reverse": False},
+        {"id": 14, "num": 14, "texto": "Mi conducta sexual controla mi vida.", "subescala": "Consecuencias", "reverse": False},
+        {"id": 15, "num": 15, "texto": "Mis deseos e impulsos sexuales son más fuertes que mi autodisciplina.", "subescala": "Control", "reverse": False},
+        {"id": 16, "num": 16, "texto": "El sexo es una vía para lidiar con el dolor emocional que siento.", "subescala": "Afrontamiento", "reverse": False},
+        {"id": 17, "num": 17, "texto": "En el plano sexual, me comporto de formas que considero incorrectas.", "subescala": "Control", "reverse": False},
+        {"id": 18, "num": 18, "texto": "Utilizo el sexo como una forma de intentar resolver mis problemas.", "subescala": "Afrontamiento", "reverse": False},
+        {"id": 19, "num": 19, "texto": "Mis actividades sexuales interfieren con aspectos importantes de mi vida, como el trabajo o los estudios.", "subescala": "Consecuencias", "reverse": False}
+    ]
+
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'HBI-19'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'HBI-19', 'HBI-19 — Inventario de Comportamiento Hipersexual (Reid et al.)', 'HBI-19', 'Sexología y Salud Sexual',
+            'Evaluación clínica psicométrica de 19 reactivos para medir el comportamiento sexual compulsivo y la hipersexualidad en dimensiones de Control, Afrontamiento y Consecuencias.',
+            'A continuación encontrará una serie de afirmaciones sobre pensamientos, sentimientos y conductas sexuales. Por favor, seleccione la opción que mejor describa la frecuencia con la que ha experimentado cada una durante los últimos 6 meses.',
+            json.dumps(hbi_opciones, ensure_ascii=False), json.dumps(hbi_items, ensure_ascii=False)
+        ))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'HBI-19'
+        """, (
+            'HBI-19 — Inventario de Comportamiento Hipersexual (Reid et al.)', 'HBI-19', 'Sexología y Salud Sexual',
+            'Evaluación clínica psicométrica de 19 reactivos para medir el comportamiento sexual compulsivo y la hipersexualidad en dimensiones de Control, Afrontamiento y Consecuencias.',
+            'A continuación encontrará una serie de afirmaciones sobre pensamientos, sentimientos y conductas sexuales. Por favor, seleccione la opción que mejor describa la frecuencia con la que ha experimentado cada una durante los últimos 6 meses.',
+            json.dumps(hbi_opciones, ensure_ascii=False), json.dumps(hbi_items, ensure_ascii=False)
+        ))
+
+    # 2. SAST (Patrick Carnes)
+    sast_opciones = [
+        {"val": 1, "text": "Sí (1 punto)"},
+        {"val": 0, "text": "No (0 puntos)"}
+    ]
+    sast_items = [
+        {"id": 1, "num": 1, "texto": "¿Fue usted víctima de abuso sexual durante su infancia o adolescencia?", "subescala": "Antecedentes", "reverse": False},
+        {"id": 2, "num": 2, "texto": "¿Tuvieron sus padres problemas con comportamientos sexuales inadecuados o adictivos?", "subescala": "Antecedentes", "reverse": False},
+        {"id": 3, "num": 3, "texto": "¿Se encuentra a menudo preocupado/a o pensando de forma obsesiva en temas sexuales?", "subescala": "Preocupación", "reverse": False},
+        {"id": 4, "num": 4, "texto": "¿Siente que su comportamiento sexual no es normal?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 5, "num": 5, "texto": "¿Alguna vez se siente mal, avergonzado/a o culpable por su conducta sexual?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 6, "num": 6, "texto": "¿Su comportamiento sexual le ha generado problemas a usted o a su familia?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 7, "num": 7, "texto": "¿Ha buscado alguna vez ayuda profesional para frenar una conducta sexual que no le gustaba?", "subescala": "Control", "reverse": False},
+        {"id": 8, "num": 8, "texto": "¿Alguien ha salido lastimado/a emocionalmente debido a su comportamiento sexual?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 9, "num": 9, "texto": "¿Alguna de sus actividades o conductas sexuales está al margen de la ley?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 10, "num": 10, "texto": "¿Ha intentado dejar algún tipo de actividad sexual y ha fracasado en el intento?", "subescala": "Control", "reverse": False},
+        {"id": 11, "num": 11, "texto": "¿Oculta o mantiene en secreto parte de sus conductas sexuales ante los demás?", "subescala": "Secretismo", "reverse": False},
+        {"id": 12, "num": 12, "texto": "¿Ha intentado detener o controlar ciertas partes de su vida sexual sin éxito?", "subescala": "Control", "reverse": False},
+        {"id": 13, "num": 13, "texto": "¿Alguna vez se ha sentido degradado/a o humillado/a por sus propias conductas sexuales?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 14, "num": 14, "texto": "Cuando tiene relaciones o actividad sexual, ¿se siente deprimido/a o vacío/a después?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 15, "num": 15, "texto": "¿Siente que está controlado/a por sus deseos sexuales?", "subescala": "Control", "reverse": False},
+        {"id": 16, "num": 16, "texto": "¿Ha descuidado partes importantes de su vida (trabajo, familia, amigos) por dedicar demasiado tiempo al sexo?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 17, "num": 17, "texto": "¿Llega a pensar que su deseo o apetito sexual es más fuerte que usted?", "subescala": "Control", "reverse": False},
+        {"id": 18, "num": 18, "texto": "¿Es el sexo prácticamente lo único en lo que piensa a lo largo del día?", "subescala": "Preocupación", "reverse": False},
+        {"id": 19, "num": 19, "texto": "¿Ha sido el sexo (o las fantasías románticas) una vía para escapar de sus problemas cotidianos?", "subescala": "Secretismo", "reverse": False},
+        {"id": 20, "num": 20, "texto": "¿Se ha convertido el sexo en lo más importante de su vida?", "subescala": "Preocupación", "reverse": False},
+        {"id": 21, "num": 21, "texto": "¿Se encuentra actualmente en un estado de crisis personal o de pareja por cuestiones sexuales?", "subescala": "Consecuencias", "reverse": False},
+        {"id": 22, "num": 22, "texto": "¿Siente que su impulso sexual le domina por completo?", "subescala": "Secretismo", "reverse": False},
+        {"id": 23, "num": 23, "texto": "¿Ha llegado a poner en riesgo su salud, trabajo o economía debido a sus actividades sexuales?", "subescala": "Secretismo", "reverse": False},
+        {"id": 24, "num": 24, "texto": "¿Siente que es incapaz de decir 'no' cuando se le presenta una oportunidad sexual?", "subescala": "Control", "reverse": False},
+        {"id": 25, "num": 25, "texto": "¿Dedica una cantidad excesiva de energía mental a planificar o buscar encuentros sexuales?", "subescala": "Preocupación", "reverse": False}
+    ]
+
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'SAST'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'SAST', 'SAST — Test de Detección de Adicción Sexual (Patrick Carnes)', 'SAST', 'Sexología y Salud Sexual',
+            'Cuestionario clásico de cribado de 25 reactivos dicotómicos (Sí/No) para la detección temprana de indicadores de adicción al sexo, compulsividad y pérdida de control.',
+            'Por favor responda a cada una de las siguientes 25 afirmaciones seleccionando Sí o No según corresponda a su experiencia de vida.',
+            json.dumps(sast_opciones, ensure_ascii=False), json.dumps(sast_items, ensure_ascii=False)
+        ))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones 
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'SAST'
+        """, (
+            'SAST — Test de Detección de Adicción Sexual (Patrick Carnes)', 'SAST', 'Sexología y Salud Sexual',
+            'Cuestionario clásico de cribado de 25 reactivos dicotómicos (Sí/No) para la detección temprana de indicadores de adicción al sexo, compulsividad y pérdida de control.',
+            'Por favor responda a cada una de las siguientes 25 afirmaciones seleccionando Sí o No según corresponda a su experiencia de vida.',
+            json.dumps(sast_opciones, ensure_ascii=False), json.dumps(sast_items, ensure_ascii=False)
+        ))
+
+    db.commit()
+

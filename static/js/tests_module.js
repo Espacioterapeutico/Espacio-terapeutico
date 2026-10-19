@@ -697,6 +697,32 @@ var testsCatalogDatabase = [
         isPhysical: false,
         instrucciones: 'Responder las 4 preguntas de forma breve. Ideal como cribado inicial en consulta. Tiempo estimado: 1-2 minutos.'
     },
+    {
+        code: 'HBI-19',
+        name: 'HBI-19 — Inventario de Comportamiento Hipersexual (Reid et al.)',
+        siglas: 'HBI-19',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Evaluación clínica psicométrica estándar de oro de 19 reactivos para medir hipersexualidad y conducta sexual compulsiva en dimensiones de Control, Afrontamiento y Consecuencias.',
+        autor: 'Reid, Garos & Carpenter (2011) / Adaptación Ballester-Arnal et al.',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'α = 0.91 | Punto de corte clínico ≥ 53',
+        itemsCount: 19,
+        isPhysical: false,
+        instrucciones: 'Seleccione con qué frecuencia ha experimentado cada situación en los últimos 6 meses (de Nunca a Muy a menudo). Tiempo estimado: 5-8 minutos.'
+    },
+    {
+        code: 'SAST',
+        name: 'SAST — Test de Detección de Adicción Sexual (Patrick Carnes)',
+        siglas: 'SAST',
+        cat: 'Sexología y Salud Sexual',
+        desc: 'Cuestionario clásico de cribado de 25 reactivos dicotómicos (Sí/No) para la detección temprana de patrones de adicción al sexo, compulsividad, secretismo y pérdida de control.',
+        autor: 'Dr. Patrick Carnes (1983)',
+        poblacion: 'Adultos (18+ años)',
+        validez: 'Cribado Clínico | Punto de corte estándar ≥ 13',
+        itemsCount: 25,
+        isPhysical: false,
+        instrucciones: 'Responda a cada una de las 25 preguntas marcando Sí o No con sinceridad. Tiempo estimado: 5-7 minutos.'
+    },
 
     // 10. ADULTO MAYOR / PSICOGERONTOLOGÍA
     {

@@ -1682,6 +1682,14 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     elif code in ('CUDIT-R', 'CUDITR', 'CUDIT', 'CUDIT-REVISED') or 'CUDIT' in code:
         return process_cudit_r_scoring(answers)
         
+    # 38. HBI-19 (Inventario de Comportamiento Hipersexual)
+    elif code in ('HBI-19', 'HBI', 'HBI19', 'HIPERSEXUALIDAD'):
+        return process_hbi_scoring(answers)
+
+    # 39. SAST (Test de Detección de Adicción Sexual - Patrick Carnes)
+    elif code in ('SAST', 'SAST-25', 'SAST25', 'SAST-CARNES', 'ADICCION-SEXUAL'):
+        return process_sast_scoring(answers)
+
     # Fallback genérico
     else:
         try:
@@ -1728,3 +1736,159 @@ def process_spin_scoring(answers):
     
     interp = f"Puntuación total: {total}/68. El paciente reporta síntomas compatibles con {clas.lower()}."
     return total, {"Puntuación Total": total}, clas, interp
+
+
+# =========================================================================
+# 38. HBI-19 (INVENTARIO DE COMPORTAMIENTO HIPERSEXUAL - REID ET AL.)
+# =========================================================================
+def process_hbi_scoring(answers):
+    """
+    HBI-19: Inventario de Comportamiento Hipersexual (Reid, Garos & Carpenter, 2011).
+    19 reactivos con escala Likert de 1 a 5 (1=Nunca a 5=Muy a menudo). Rango total: 19 a 95 puntos.
+    
+    Subescalas Oficiales:
+    - Control (8 ítems): 2, 4, 7, 10, 11, 12, 15, 17 (Rango: 8-40)
+    - Afrontamiento / Coping (7 ítems): 1, 3, 6, 8, 13, 16, 18 (Rango: 7-35)
+    - Consecuencias (4 ítems): 5, 9, 14, 19 (Rango: 4-20)
+    
+    Punto de corte clínico oficial: Total >= 53 pts.
+    """
+    ans_map = _extract_answer_map(answers)
+    
+    control_items = [2, 4, 7, 10, 11, 12, 15, 17]
+    coping_items = [1, 3, 6, 8, 13, 16, 18]
+    consequences_items = [5, 9, 14, 19]
+    
+    control_score = sum(ans_map.get(i, 1) for i in control_items)
+    coping_score = sum(ans_map.get(i, 1) for i in coping_items)
+    consequences_score = sum(ans_map.get(i, 1) for i in consequences_items)
+    
+    total_score = control_score + coping_score + consequences_score
+    
+    is_clinical = total_score >= 53
+    if is_clinical:
+        classification = "Conducta Hipersexual Clínicamente Significativa (Riesgo Alto de Trastorno por Conducta Sexual Compulsiva)"
+        alerta_global = "severo"
+        interp_resumen = f"Puntuación total obtenida: {total_score}/95 pts (>= 53, umbral clínico superado). Los resultados indican un patrón marcado de conducta sexual compulsiva/hipersexualidad caracterizado por descontrol en los impulsos eróticos, uso del sexo como estrategia desadaptativa de regulación emocional e interferencia negativa en el funcionamiento personal, laboral o social."
+    else:
+        classification = "Comportamiento Sexual No Clínico / Dentro de Límites Normativos"
+        alerta_global = "normal"
+        interp_resumen = f"Puntuación total obtenida: {total_score}/95 pts (< 53). Los resultados se ubican dentro del rango esperado para población general, sugiriendo un nivel adecuado de autocontrol sobre los impulsos sexuales y ausencia de interferencia severa en áreas vitales."
+        
+    subscales_dict = {
+        "Control": {
+            "nombre": "Falta de Control sobre la Conducta Sexual",
+            "pd": control_score,
+            "baremo": "Rango: 8-40 (Corte orientativo: >= 22)",
+            "nivel": "Elevado / Descontrol Marcado" if control_score >= 22 else "Normal / Control Preservado",
+            "criterio": "Dificultad recurrente para detener o regular impulsos sexuales a pesar de compromisos o valores personales.",
+            "alerta": "severo" if control_score >= 22 else "normal"
+        },
+        "Afrontamiento": {
+            "nombre": "Afrontamiento / Regulación Emocional Disfuncional",
+            "pd": coping_score,
+            "baremo": "Rango: 7-35 (Corte orientativo: >= 20)",
+            "nivel": "Elevado / Regulación Disfuncional" if coping_score >= 20 else "Normal / Afrontamiento Adaptativo",
+            "criterio": "Uso del sexo como vía de escape o alivio inmediato ante ansiedad, tristeza, soledad o estrés.",
+            "alerta": "severo" if coping_score >= 20 else "normal"
+        },
+        "Consecuencias": {
+            "nombre": "Consecuencias Negativas e Interferencia Vital",
+            "pd": consequences_score,
+            "baremo": "Rango: 4-20 (Corte orientativo: >= 11)",
+            "nivel": "Elevado / Interferencia Significativa" if consequences_score >= 11 else "Normal / Sin Interferencia Marcada",
+            "criterio": "Impacto adverso en el trabajo, estudios, metas vitales o responsabilidades cotidianas.",
+            "alerta": "severo" if consequences_score >= 11 else "normal"
+        }
+    }
+    
+    return total_score, subscales_dict, classification, interp_resumen
+
+
+# =========================================================================
+# 39. SAST (TEST DE DETECCIÓN DE ADICCIÓN SEXUAL - PATRICK CARNES)
+# =========================================================================
+def process_sast_scoring(answers):
+    """
+    SAST: Test de Detección de Adicción Sexual (Patrick Carnes, 1983).
+    25 reactivos dicotómicos (Sí=1, No=0). Rango total: 0 a 25 puntos.
+    
+    Punto de corte clínico estándar de Patrick Carnes:
+    - 0 a 5 pts: Bajo Riesgo / Comportamiento No Adictivo.
+    - 6 a 12 pts: Riesgo Moderado / Indicadores de Compulsividad.
+    - 13 a 25 pts: Alto Riesgo / Adicción Sexual Probable (Punto de Corte Clínico Carnes >= 13).
+    """
+    ans_map = _extract_answer_map(answers)
+    
+    antec_items = [1, 2]
+    preoc_items = [3, 18, 20, 25]
+    control_items = [7, 10, 12, 15, 17, 24]
+    consec_items = [4, 5, 6, 8, 9, 13, 14, 16, 21]
+    secr_items = [11, 19, 22, 23]
+    
+    antec_score = sum(1 for i in antec_items if ans_map.get(i, 0) == 1)
+    preoc_score = sum(1 for i in preoc_items if ans_map.get(i, 0) == 1)
+    control_score = sum(1 for i in control_items if ans_map.get(i, 0) == 1)
+    consec_score = sum(1 for i in consec_items if ans_map.get(i, 0) == 1)
+    secr_score = sum(1 for i in secr_items if ans_map.get(i, 0) == 1)
+    
+    total_score = sum(1 for i in range(1, 26) if ans_map.get(i, 0) == 1)
+    
+    if total_score >= 13:
+        classification = "Alto Riesgo / Compatible con Adicción Sexual o Compulsividad Severa (Punto de Corte de Carnes >= 13)"
+        alerta_global = "severo"
+        interp_resumen = f"Puntuación total obtenida: {total_score}/25 respuestas afirmativas (>= 13, umbral clínico de Carnes alcanzado). El perfil sugiere alta probabilidad de trastorno por adicción sexual / comportamiento sexual compulsivo. Se evidencian indicadores clínicos de descontrol de impulsos, rumiación sexual obsesiva, afecto depresivo o culpa poscoital y desatención de responsabilidades vitales."
+    elif total_score >= 6:
+        classification = "Riesgo Moderado / Indicadores Significativos de Compulsividad Sexual"
+        alerta_global = "moderado"
+        interp_resumen = f"Puntuación total obtenida: {total_score}/25 respuestas afirmativas. Se observan rasgos moderados de compulsividad sexual o preocupación erótica recurrente sin cumplir necesariamente el criterio completo de adicción grave. Se recomienda exploración clínica complementaria."
+    else:
+        classification = "Bajo Riesgo / Comportamiento Sexual No Adictivo"
+        alerta_global = "normal"
+        interp_resumen = f"Puntuación total obtenida: {total_score}/25 respuestas afirmativas (<= 5). No se identifican indicadores significativos de adicción al sexo ni pérdida de control desadaptativa en el funcionamiento personal."
+        
+    subscales_dict = {
+        "Antecedentes": {
+            "nombre": "Antecedentes y Vulnerabilidad Temprana",
+            "pd": antec_score,
+            "baremo": "Rango: 0-2",
+            "nivel": "Presente" if antec_score > 0 else "Ausente",
+            "criterio": "Historia de trauma o dinámicas familiares relacionadas con la sexualidad.",
+            "alerta": "moderado" if antec_score > 0 else "normal"
+        },
+        "Preocupación": {
+            "nombre": "Obsesión y Preocupación Sexual",
+            "pd": preoc_score,
+            "baremo": "Rango: 0-4 (Punto crítico: >= 2)",
+            "nivel": "Elevado" if preoc_score >= 2 else "Normal",
+            "criterio": "Pensamientos e impulsos sexuales recurrentes e invasivos.",
+            "alerta": "severo" if preoc_score >= 2 else "normal"
+        },
+        "Control": {
+            "nombre": "Pérdida de Control e Impulsividad",
+            "pd": control_score,
+            "baremo": "Rango: 0-6 (Punto crítico: >= 3)",
+            "nivel": "Elevado / Descontrol" if control_score >= 3 else "Preservado",
+            "criterio": "Fracaso reiterado para frenar conductas sexuales a pesar del deseo de parar.",
+            "alerta": "severo" if control_score >= 3 else "normal"
+        },
+        "Consecuencias": {
+            "nombre": "Consecuencias Negativas, Culpa y Depresión",
+            "pd": consec_score,
+            "baremo": "Rango: 0-9 (Punto crítico: >= 4)",
+            "nivel": "Significativo / Culpa Marcada" if consec_score >= 4 else "Bajo / Sin Impacto",
+            "criterio": "Afectación en relaciones, sentimientos de degradación, vacío poscoital o problemas legales.",
+            "alerta": "severo" if consec_score >= 4 else "normal"
+        },
+        "Secretismo": {
+            "nombre": "Secretismo, Evasión y Doble Vida",
+            "pd": secr_score,
+            "baremo": "Rango: 0-4 (Punto crítico: >= 2)",
+            "nivel": "Elevado" if secr_score >= 2 else "Normal",
+            "criterio": "Ocultamiento de conductas y uso del sexo para evadir problemas.",
+            "alerta": "severo" if secr_score >= 2 else "normal"
+        }
+    }
+    
+    return total_score, subscales_dict, classification, interp_resumen
+
