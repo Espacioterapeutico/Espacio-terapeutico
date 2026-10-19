@@ -833,6 +833,18 @@ def init_db():
                 token_id INTEGER
             )
         """)
+        try:
+            cursor.execute("""
+                DELETE FROM cola_recordatorios_herramientas 
+                WHERE id NOT IN (
+                    SELECT MIN(id) 
+                    FROM cola_recordatorios_herramientas 
+                    GROUP BY paciente_id, herramienta_tipo, fecha_programada
+                )
+            """)
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_cola_tool_pac_fecha_tipo ON cola_recordatorios_herramientas(paciente_id, herramienta_tipo, fecha_programada)")
+        except Exception:
+            pass
         db.commit()
     except Exception as _e:
         print("Aviso al asegurar tablas de clínica/herramientas:", _e)
@@ -2547,6 +2559,7 @@ def auto_send_meditation_reminders(db):
     today_str = now_dt.strftime("%Y-%m-%d")
     now_full_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
 
+    meditaciones_enviadas = 0
     cursor = db.cursor()
     try:
         cursor.execute("""
@@ -2584,10 +2597,11 @@ def auto_send_meditation_reminders(db):
                 continue
 
             # Check if notification was already sent today for this assignment
+            notif_link = f"med_wa_{asig['asignacion_id']}_{today_str}"
             cursor.execute("""
                 SELECT id FROM notificaciones 
-                WHERE tipo = 'meditacion_wa' AND user_id = ? AND mensaje LIKE ? AND fecha LIKE ?
-            """, (asig['psicologo_id'], f"%ID_ASIG:{asig['asignacion_id']}%", f"{today_str}%"))
+                WHERE link = ? OR (tipo = 'meditacion_wa' AND user_id = ? AND mensaje LIKE ? AND fecha LIKE ?)
+            """, (notif_link, asig['psicologo_id'], f"%ID_ASIG:{asig['asignacion_id']}%", f"{today_str}%"))
             
             if not cursor.fetchone() and asig['telefono']:
                 from routes_notificaciones import make_wa_http_request
@@ -2604,20 +2618,31 @@ def auto_send_meditation_reminders(db):
                 
                 msg_wa = f"Hola *{first_name}* 👋\n\nTe recuerdo hacer tu sesión de meditación el día de hoy: *{asig['titulo']}*\n\nHaz clic en el siguiente enlace para escucharla y registrar tu progreso:\n{link}"
                 
+                log_msg = f"Recordatorio de meditación enviado a {first_name} para {asig['titulo']} (ID_ASIG:{asig['asignacion_id']})"
+                
+                # Pre-insertar registro con link único para bloquear llamadas concurrentes
+                cursor.execute("""
+                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                    VALUES (?, 'meditacion_wa', '🧘 Recordatorio de Meditación Enviado', ?, ?, 1, ?)
+                """, (asig['psicologo_id'], log_msg, now_full_str, notif_link))
+                db.commit()
+                notif_id = cursor.lastrowid
+
                 try:
                     res = make_wa_http_request('POST', '/send', json_data={'phone': asig['telefono'], 'text': msg_wa, 'user_id': asig['psicologo_id']}, timeout=15, user_id=asig['psicologo_id'])
                     if res and res.status_code == 200:
-                        log_msg = f"Recordatorio de meditación enviado a {first_name} para {asig['titulo']} (ID_ASIG:{asig['asignacion_id']})"
-                        cursor.execute("""
-                            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                            VALUES (?, 'meditacion_wa', '🧘 Recordatorio de Meditación Enviado', ?, ?, 1, '')
-                        """, (asig['psicologo_id'], log_msg, now_full_str))
+                        meditaciones_enviadas += 1
+                    else:
+                        cursor.execute("DELETE FROM notificaciones WHERE id = ?", (notif_id,))
                         db.commit()
                 except Exception as ex_wa:
                     print("Error al enviar recordatorio de meditación:", ex_wa)
+                    cursor.execute("DELETE FROM notificaciones WHERE id = ?", (notif_id,))
+                    db.commit()
                     
     except Exception as e:
         print("Error en auto_send_meditation_reminders:", e)
+    return meditaciones_enviadas
 
 def auto_check_patient_birthdays(db, force=False, target_patient_id=None):
     """
@@ -3611,13 +3636,23 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
                         db.commit()
                         queue_id = q_dict['id']
                 else:
-                    cursor.execute("""
-                        INSERT INTO cola_recordatorios_herramientas (
-                            psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, pausado, token_id
-                        ) VALUES (?, ?, ?, ?, ?, 'programado', 0, 0, ?)
-                    """, (psic_id, p_id, mod_clave, patient_today_str, target_hora_str, token_id))
-                    db.commit()
-                    queue_id = cursor.lastrowid
+                    try:
+                        cursor.execute("""
+                            INSERT INTO cola_recordatorios_herramientas (
+                                psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, pausado, token_id
+                            ) VALUES (?, ?, ?, ?, ?, 'programado', 0, 0, ?)
+                        """, (psic_id, p_id, mod_clave, patient_today_str, target_hora_str, token_id))
+                        db.commit()
+                        queue_id = cursor.lastrowid
+                    except sqlite3.IntegrityError:
+                        cursor.execute("""
+                            SELECT id, estado, enviado, pausado FROM cola_recordatorios_herramientas
+                            WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?
+                        """, (p_id, mod_clave, patient_today_str))
+                        q_existing = cursor.fetchone()
+                        if not q_existing or q_existing['enviado'] == 1 or q_existing['pausado'] == 1 or q_existing['estado'] in ('completado', 'enviando', 'enviado'):
+                            continue
+                        queue_id = q_existing['id']
 
                 if not should_dispatch_wa:
                     continue
@@ -3789,13 +3824,9 @@ def cron_process_notifications():
     from routes_notificaciones import execute_whatsapp_reminders
     tasks = [
         ('auto_send_whatsapp_reminders', lambda d: execute_whatsapp_reminders(d)),
-        ('auto_cancel_unconfirmed_sessions', auto_cancel_unconfirmed_sessions),
         ('auto_send_appointment_reminders', auto_send_appointment_reminders),
         ('auto_send_confirmation_requests', auto_send_confirmation_requests),
         ('auto_check_patient_birthdays', auto_check_patient_birthdays),
-        ('auto_send_meditation_reminders', auto_send_meditation_reminders),
-        ('auto_send_cognitive_reminders', auto_send_cognitive_reminders),
-        ('send_hourly_patient_tool_reminders', send_hourly_patient_tool_reminders),
         ('auto_check_subscription_expiration_reminders', auto_check_subscription_expiration_reminders)
     ]
     

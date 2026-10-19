@@ -6,6 +6,10 @@ suscripciones WebPush VAPID y marcado de notificaciones leídas.
 """
 
 import os
+import re
+import json
+import hashlib
+from datetime import datetime, timedelta
 import sqlite3
 from functools import wraps
 from flask import Blueprint, request, jsonify, session, g
@@ -302,11 +306,124 @@ try:
 except Exception:
     pass
 
-def make_wa_http_request(method, endpoint, json_data=None, timeout=60, user_id=None):
+class MockDeduplicatedResponse:
+    """Respuesta simulada exitosa cuando un mensaje duplicado es bloqueado por el candado."""
+    def __init__(self, message="Mensaje idéntico bloqueado por candado de deduplicación"):
+        self.status_code = 200
+        self.ok = True
+        self.text = json.dumps({'status': 'duplicate_blocked', 'message': message, 'success': True})
+    def json(self):
+        return {'status': 'duplicate_blocked', 'message': 'Mensaje idéntico bloqueado por candado de deduplicación', 'success': True}
+
+def ensure_wa_dedup_table(db=None):
+    close_at_end = False
+    if db is None:
+        db = get_raw_db()
+        close_at_end = True
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS whatsapp_dedup_locks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                lock_key TEXT UNIQUE NOT NULL,
+                phone TEXT NOT NULL,
+                resumen TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL
+            )
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_wa_dedup_expires ON whatsapp_dedup_locks(expires_at)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_wa_dedup_phone ON whatsapp_dedup_locks(phone)")
+        db.commit()
+    except Exception as e:
+        print("[WA-DEDUPLICATOR] Aviso asegurando tabla whatsapp_dedup_locks:", e)
+    finally:
+        if close_at_end:
+            try: db.close()
+            except: pass
+
+def check_and_acquire_wa_lock(endpoint, json_data, bypass_dedup=False):
+    """
+    🔒 CANDADO UNIVERSAL EN EL EMISOR:
+    Evalúa si el mensaje saliente es candidato a deduplicación.
+    Si otro worker o hilo ya lo envió o lo está enviando en los últimos 10 minutos,
+    retorna (False, lock_key) bloqueando el envío redundante.
+    Si es nuevo, adquiere el candado atómico en SQLite y retorna (True, lock_key).
+    """
+    if bypass_dedup:
+        return True, None
+
+    clean_endpoint = (endpoint or '').lstrip('/').lower()
+    if clean_endpoint not in ('send', 'send-file', 'send-audio', 'send-image'):
+        return True, None
+
+    if not isinstance(json_data, dict):
+        return True, None
+
+    raw_phone = json_data.get('phone') or ''
+    phone = re.sub(r'[^0-9]', '', str(raw_phone))
+    if not phone:
+        return True, None
+
+    text = str(json_data.get('text') or json_data.get('caption') or '').strip()
+    if not text:
+        return True, None
+
+    # Quitar URLs dinámicas (tokens únicos) y espacios superfluos para normalizar el hash
+    clean_text = re.sub(r'https?://\S+', '', text).strip()
+    clean_text = re.sub(r'\s+', ' ', clean_text).lower()
+
+    if not clean_text:
+        return True, None
+
+    lock_key = hashlib.sha256(f"{phone}:{clean_text[:140]}".encode('utf-8')).hexdigest()
+
+    ensure_wa_dedup_table()
+    db = get_raw_db()
+    try:
+        from datetime import timezone
+        now_utc = datetime.now(timezone.utc)
+        now_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
+        expires = (now_utc + timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Purgar bloqueos expirados con la misma referencia temporal
+        db.execute("DELETE FROM whatsapp_dedup_locks WHERE expires_at < ?", (now_str,))
+        db.commit()
+
+        # Intentar adquirir el candado atómico para los próximos 10 minutos
+        resumen = text[:100]
+
+        try:
+            db.execute("""
+                INSERT INTO whatsapp_dedup_locks (lock_key, phone, resumen, created_at, expires_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (lock_key, phone, resumen, now_str, expires))
+            db.commit()
+            return True, lock_key
+        except sqlite3.IntegrityError:
+            # Candado ya existe y no ha expirado: BLOQUEAR SOLICITUD DUPLICADA
+            try:
+                print(f"[WA-DEDUPLICATOR] [CANDADO ACTIVO] Se bloqueo un mensaje identico duplicado para {phone} (clave={lock_key[:12]}). Texto: {resumen[:60]}...", flush=True)
+            except Exception:
+                pass
+            return False, lock_key
+    except Exception as e_lock:
+        print("[WA-DEDUPLICATOR] Error al evaluar candado:", e_lock)
+        return True, None
+    finally:
+        try: db.close()
+        except: pass
+
+def make_wa_http_request(method, endpoint, json_data=None, timeout=60, user_id=None, bypass_dedup=False):
     import requests
     _start_wa_keepalive_thread()
     url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}/{endpoint.lstrip('/')}"
     
+    # 🔒 CANDADO UNIVERSAL DE DEDUPLICACIÓN
+    if method.upper() == 'POST':
+        acquired, _ = check_and_acquire_wa_lock(endpoint, json_data, bypass_dedup=bypass_dedup)
+        if not acquired:
+            return MockDeduplicatedResponse("Mensaje idéntico bloqueado por candado de deduplicación")
+
     if not user_id:
         try:
             user_id = session.get('user_id')

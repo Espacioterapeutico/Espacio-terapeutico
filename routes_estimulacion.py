@@ -146,6 +146,10 @@ def ensure_estimulacion_tables(db=None):
             FOREIGN KEY (ejercicio_id) REFERENCES cat_ejercicios_cognitivos(id)
         )
     """)
+    try:
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_cognitivo_asig_fecha ON registro_estimulacion_cognitiva(asignacion_id, fecha_envio)")
+    except Exception as _idx_err:
+        print("[ESTIMULACION] Aviso creando índice único de asignación y fecha:", _idx_err)
     db.commit()
 
     # Limpieza preventiva: evitar que cola_recordatorios_herramientas guarde registros erróneos de estimulación
@@ -963,7 +967,25 @@ def auto_send_cognitive_reminders(db, target_patient_id=None, force=False):
                     f"_Al terminarlo, presiona 'Marcar como realizado' en ese mismo enlace._"
                 )
 
-                # 5. Enviar por WhatsApp primero; sólo registrar en base de datos si la entrega es exitosa
+                # 5. CANDADO DE BASE DE DATOS: Reclamo atómico del ejercicio de hoy antes de llamar a WhatsApp
+                # Gracias al índice UNIQUE(asignacion_id, fecha_envio), cualquier worker paralelo es bloqueado en el acto
+                reg_inserted_id = None
+                try:
+                    cursor.execute("""
+                        INSERT INTO registro_estimulacion_cognitiva (
+                            asignacion_id, paciente_id, ejercicio_id, token_acceso, fecha_envio, hora_envio
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    """, (asig['id'], asig['paciente_id'], siguiente_ejercicio['id'], token_entrega, today_str, now_time_str))
+                    db.commit()
+                    reg_inserted_id = cursor.lastrowid
+                except (sqlite3.IntegrityError, Exception):
+                    try:
+                        print(f"[COGNITIVE-REMINDERS] [CANDADO BD ACTIVO] Asignacion {asig['id']} ({first_name}) ya fue tomada hoy por otro proceso/worker. Saltando envio duplicado.", flush=True)
+                    except Exception:
+                        pass
+                    continue
+
+                # 6. Enviar por WhatsApp con candado de deduplicación universal en make_wa_http_request
                 send_ok = False
                 if clean_phone:
                     from routes_notificaciones import make_wa_http_request
@@ -986,15 +1008,12 @@ def auto_send_cognitive_reminders(db, target_patient_id=None, force=False):
                     send_ok = True
 
                 if not send_ok:
+                    if reg_inserted_id:
+                        cursor.execute("DELETE FROM registro_estimulacion_cognitiva WHERE id = ?", (reg_inserted_id,))
+                        db.commit()
                     continue
 
-                # 6. Registrar entrega y actualizar estado en base de datos
-                cursor.execute("""
-                    INSERT INTO registro_estimulacion_cognitiva (
-                        asignacion_id, paciente_id, ejercicio_id, token_acceso, fecha_envio, hora_envio
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                """, (asig['id'], asig['paciente_id'], siguiente_ejercicio['id'], token_entrega, today_str, now_time_str))
-
+                # 7. Actualizar asignación al siguiente ejercicio o culminar
                 if es_ultimo_ejercicio:
                     cursor.execute("""
                         UPDATE paciente_estimulacion_cognitiva
