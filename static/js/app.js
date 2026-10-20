@@ -22145,6 +22145,33 @@ function filterActiveToolsPatients(query) {
 }
 window.filterActiveToolsPatients = filterActiveToolsPatients;
 
+function formatToolRecordTime(dtStr) {
+    if (!dtStr) return 'Sin registros';
+    try {
+        const d = new Date(dtStr.replace(' ', 'T'));
+        if (isNaN(d.getTime())) return dtStr;
+        const now = new Date();
+        const diffMs = now - d;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffMins < 1) return 'Reciente (ahora)';
+        if (diffMins < 60) return `Hace ${diffMins} min`;
+        if (diffHours < 24 && d.getDate() === now.getDate()) {
+            return `Hoy ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        if (diffDays === 1) {
+            return `Ayer ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        if (diffDays < 7) return `Hace ${diffDays} días`;
+        return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+    } catch {
+        return dtStr;
+    }
+}
+window.formatToolRecordTime = formatToolRecordTime;
+
 function renderActiveToolsPatients(patients) {
     const container = document.getElementById('tt-active-tools-container');
     const badge = document.getElementById('tt-activas-count-badge');
@@ -22214,9 +22241,18 @@ function renderActiveToolsPatients(patients) {
                             </div>
                         </div>
                     </div>
-                    <span class="badge" style="background: #faf5ff; color: #702e5e; border: 1px solid #e9d5ff; font-size: 0.72rem; font-weight: 700; padding: 0.22rem 0.5rem; border-radius: 20px; white-space: nowrap; flex-shrink: 0;">
-                        ⚡ ${tools.length} activa${tools.length === 1 ? '' : 's'}
-                    </span>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+                        <span class="badge" style="background: #faf5ff; color: #702e5e; border: 1px solid #e9d5ff; font-size: 0.72rem; font-weight: 700; padding: 0.22rem 0.5rem; border-radius: 20px; white-space: nowrap;">
+                            ⚡ ${tools.length} activa${tools.length === 1 ? '' : 's'}
+                        </span>
+                        ${p.ultima_actualizacion ? `
+                        <span style="font-size: 0.69rem; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.15rem 0.45rem; border-radius: 12px; font-weight: 600; white-space: nowrap;" title="Último registro guardado: ${p.ultima_actualizacion}">
+                            🕒 ${formatToolRecordTime(p.ultima_actualizacion)}
+                        </span>` : `
+                        <span style="font-size: 0.67rem; color: #94a3b8; font-weight: 500; white-space: nowrap;">
+                            Sin registros
+                        </span>`}
+                    </div>
                 </div>
 
                 <!-- LISTA DE HERRAMIENTAS ACTIVAS CON HISTORIAL Y CONFIGURAR -->

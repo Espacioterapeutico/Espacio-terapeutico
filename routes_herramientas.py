@@ -838,7 +838,49 @@ def get_therapist_patients_active_tools():
             })
 
     patients_list = list(patients_map.values())
+    # Obtener fecha del último registro de cada paciente en cualquiera de sus herramientas
+    last_update_map = {}
+    try:
+        cursor.execute("""
+            SELECT paciente_id, MAX(fecha_act) as ultima_actualizacion FROM (
+                SELECT paciente_id, COALESCE(fecha_registro, fecha) as fecha_act FROM registros_mood_tracker
+                UNION ALL
+                SELECT paciente_id, COALESCE(created_at, fecha) as fecha_act FROM registros_sueno
+                UNION ALL
+                SELECT paciente_id, COALESCE(created_at, fecha) as fecha_act FROM registros_ansiedad
+                UNION ALL
+                SELECT paciente_id, COALESCE(created_at, fecha) as fecha_act FROM registros_sobriedad
+                UNION ALL
+                SELECT paciente_id, COALESCE(created_at, fecha) as fecha_act FROM adherencia_registros
+                UNION ALL
+                SELECT paciente_id, COALESCE(created_at, fecha) as fecha_act FROM activacion_registros
+                UNION ALL
+                SELECT paciente_id, COALESCE(created_at, fecha) as fecha_act FROM registros_ingesta
+                UNION ALL
+                SELECT paciente_id, COALESCE(created_at, fecha) as fecha_act FROM registros_cognitivos
+                UNION ALL
+                SELECT paciente_id, fecha_registro as fecha_act FROM registro_consumo_pantalla
+                UNION ALL
+                SELECT paciente_id, COALESCE(fecha_registro, fecha) as fecha_act FROM registro_meditaciones
+                UNION ALL
+                SELECT paciente_id, COALESCE(fecha_completado, fecha_descarga, fecha_envio) as fecha_act FROM registro_estimulacion_cognitiva
+                UNION ALL
+                SELECT paciente_id, COALESCE(fecha_ultima_edicion, fecha_creacion) as fecha_act FROM paciente_recursos
+            ) GROUP BY paciente_id
+        """)
+        for r_up in cursor.fetchall():
+            if r_up['paciente_id'] and r_up['ultima_actualizacion']:
+                last_update_map[r_up['paciente_id']] = str(r_up['ultima_actualizacion'])
+    except Exception as e_up:
+        print("Aviso obteniendo fechas de última actualización de herramientas:", e_up)
+
+    for pid in patients_map:
+        patients_map[pid]['ultima_actualizacion'] = last_update_map.get(pid, '')
+
+    patients_list = list(patients_map.values())
+    # Orden dinámico: primero la última persona que actualizó su registro (fecha desc), y luego por nombre
     patients_list.sort(key=lambda x: x['nombre_completo'].lower())
+    patients_list.sort(key=lambda x: x.get('ultima_actualizacion') or '', reverse=True)
 
     return jsonify({'patients': patients_list, 'total': len(patients_list)})
 
