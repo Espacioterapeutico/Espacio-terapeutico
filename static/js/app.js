@@ -13403,6 +13403,7 @@ async function loadMessageTemplates() {
         const ci = document.getElementById('template-cierre');
         const cum = document.getElementById('template-cumpleanos');
         const her = document.getElementById('template-herramientas');
+        const piz = document.getElementById('template-pizarra');
         const swReag = document.getElementById('auto-reagendamiento-switch');
         const swCum = document.getElementById('auto-cumpleanos-switch');
         const horaCum = document.getElementById('template-hora-cumpleanos');
@@ -13418,6 +13419,7 @@ async function loadMessageTemplates() {
         if (cum) cum.value = data.msg_cumpleanos || "¡Feliz cumpleaños, *{nombre}*! 🎉🎂\n\nDesde Espacio Terapéutico te deseamos un excelente día lleno de bienestar, paz y alegría. ¡Gracias por confiar en nosotros en tu proceso!";
         if (horaCum) horaCum.value = data.hora_cumpleanos || "09:00";
         if (her) her.value = data.msg_herramientas || "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\nTe recuerdo completar tu *{herramienta}* programada para las *{hora}*. Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n👉 {link}\n\n¡Gracias por tu constancia!";
+        if (piz) piz.value = data.msg_pizarra || "Hola *{nombre}* 👋\n\nTe comparto tu pizarra de trabajo interactivo: *{titulo}*.\n\nPuedes abrirla, escribir y reflexionar en ella directamente desde este enlace:\n👉 {link}\n\nLos cambios que realices se guardan automáticamente en tiempo real. ¡Nos vemos en nuestra próxima sesión!";
         if (swReag) swReag.checked = (data.auto_reagendamiento_activo === '1');
         if (swCum) swCum.checked = (data.auto_cumpleanos_activo === '1');
     } catch (err) {
@@ -13464,6 +13466,7 @@ async function handleSaveMessageTemplates(e) {
     const msgCumpleanos = document.getElementById('template-cumpleanos')?.value || '';
     const horaCumpleanos = document.getElementById('template-hora-cumpleanos')?.value || '09:00';
     const msgHerramientas = document.getElementById('template-herramientas')?.value || '';
+    const msgPizarra = document.getElementById('template-pizarra')?.value || '';
     const autoReagActivo = document.getElementById('auto-reagendamiento-switch')?.checked ? '1' : '0';
     const autoCumActivo = document.getElementById('auto-cumpleanos-switch')?.checked ? '1' : '0';
     
@@ -13483,6 +13486,7 @@ async function handleSaveMessageTemplates(e) {
                 msg_cumpleanos: msgCumpleanos,
                 hora_cumpleanos: horaCumpleanos,
                 msg_herramientas: msgHerramientas,
+                msg_pizarra: msgPizarra,
                 auto_reagendamiento_activo: autoReagActivo,
                 auto_cumpleanos_activo: autoCumActivo
             })

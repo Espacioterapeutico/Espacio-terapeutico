@@ -1704,12 +1704,17 @@
     window.shareRecursoWhatsApp = shareRecursoWhatsApp;
 
     function shareRecursoWhatsAppById(recursoId) {
-        let r = window.activeRecursoPizarra;
-        if (!r || r.id !== recursoId) {
-            if (window.currentPatientRecursosList && Array.isArray(window.currentPatientRecursosList)) {
-                r = window.currentPatientRecursosList.find(x => x.id === recursoId) || r;
-            }
+        let r = (window.activeRecursoPizarra && window.activeRecursoPizarra.id === recursoId) ? window.activeRecursoPizarra : null;
+        if (!r && window.currentPatientRecursosList && Array.isArray(window.currentPatientRecursosList)) {
+            r = window.currentPatientRecursosList.find(x => x.id === recursoId) || null;
         }
+        if (!r) r = window.activeRecursoPizarra;
+        if (r && r.wa_url) {
+            window.open(r.wa_url, '_blank');
+            return;
+        }
+
+
 
         const pacNombre = (r && r.pac_nombres) ? r.pac_nombres.trim() : ((r && r.nombres) ? r.nombres.trim() : 'Consultante');
         let rawPhone = (r && r.pac_telefono) ? r.pac_telefono : ((r && r.telefono) ? r.telefono : '');
