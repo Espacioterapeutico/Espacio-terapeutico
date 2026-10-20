@@ -7399,7 +7399,10 @@ async function loadTherapistTasks(showLoader = true) {
 
     try {
         const res = await fetch('/api/therapist/tasks?_t=' + Date.now());
-        if (!res.ok) throw new Error("Error cargando tareas del terapeuta.");
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || "Error al conectar con el servidor.");
+        }
         const data = await res.json();
         _therapistTasksCache = Array.isArray(data.tasks) ? data.tasks : [];
 
@@ -7410,7 +7413,8 @@ async function loadTherapistTasks(showLoader = true) {
         if (container && _therapistTasksCache.length === 0) {
             container.innerHTML = `
                 <div class="empty-state" style="padding: 2rem 1rem; text-align: center;">
-                    <p style="color: #ef4444; margin: 0; font-size: 0.88rem;">No fue posible cargar tus tareas. Intenta nuevamente.</p>
+                    <p style="color: #ef4444; margin: 0; font-size: 0.88rem;">No fue posible cargar tus tareas. ${(err && err.message) ? '(' + err.message + ')' : ''}</p>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadTherapistTasks()" style="margin-top: 0.65rem; font-size: 0.78rem; font-weight: 600;">🔄 Reintentar</button>
                 </div>
             `;
         }

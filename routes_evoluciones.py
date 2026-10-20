@@ -716,15 +716,26 @@ def get_therapist_tasks():
     from app import decrypt_clinical_text
     
     try:
-        cursor.execute("""
-            SELECT s.id as session_id, s.paciente_id, s.fecha, s.modalidad, s.compromisos_psicologo,
-                   COALESCE(s.compromiso_completado, 0) as compromiso_completado,
-                   p.nombres, p.apellidos, p.foto
-            FROM sesiones s
-            JOIN pacientes p ON s.paciente_id = p.id
-            WHERE p.psicologo_id = ? AND s.compromisos_psicologo IS NOT NULL AND TRIM(s.compromisos_psicologo) != ''
-            ORDER BY s.fecha DESC, s.id DESC
-        """, (psic_id,))
+        if psic_id is not None and psic_id != -1:
+            cursor.execute("""
+                SELECT s.id as session_id, s.paciente_id, s.fecha, s.modalidad, s.compromisos_psicologo,
+                       COALESCE(s.compromiso_completado, 0) as compromiso_completado,
+                       p.nombres, p.apellidos
+                FROM sesiones s
+                JOIN pacientes p ON s.paciente_id = p.id
+                WHERE p.psicologo_id = ? AND s.compromisos_psicologo IS NOT NULL AND TRIM(s.compromisos_psicologo) != ''
+                ORDER BY s.fecha DESC, s.id DESC
+            """, (psic_id,))
+        else:
+            cursor.execute("""
+                SELECT s.id as session_id, s.paciente_id, s.fecha, s.modalidad, s.compromisos_psicologo,
+                       COALESCE(s.compromiso_completado, 0) as compromiso_completado,
+                       p.nombres, p.apellidos
+                FROM sesiones s
+                JOIN pacientes p ON s.paciente_id = p.id
+                WHERE s.compromisos_psicologo IS NOT NULL AND TRIM(s.compromisos_psicologo) != ''
+                ORDER BY s.fecha DESC, s.id DESC
+            """)
         
         rows = cursor.fetchall()
         tasks = []
@@ -749,12 +760,19 @@ def toggle_therapist_task(session_id):
     psic_id = get_psicologo_id_filter()
     
     try:
-        cursor.execute("""
-            SELECT s.id, COALESCE(s.compromiso_completado, 0) as completado
-            FROM sesiones s
-            JOIN pacientes p ON s.paciente_id = p.id
-            WHERE s.id = ? AND p.psicologo_id = ?
-        """, (session_id, psic_id))
+        if psic_id is not None and psic_id != -1:
+            cursor.execute("""
+                SELECT s.id, COALESCE(s.compromiso_completado, 0) as completado
+                FROM sesiones s
+                JOIN pacientes p ON s.paciente_id = p.id
+                WHERE s.id = ? AND p.psicologo_id = ?
+            """, (session_id, psic_id))
+        else:
+            cursor.execute("""
+                SELECT s.id, COALESCE(s.compromiso_completado, 0) as completado
+                FROM sesiones s
+                WHERE s.id = ?
+            """, (session_id,))
         
         row = cursor.fetchone()
         if not row:
