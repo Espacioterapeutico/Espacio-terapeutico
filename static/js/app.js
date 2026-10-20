@@ -3471,23 +3471,25 @@ async function renderBookingCalendar() {
     grid.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 1rem;"><span class="text-secondary text-sm">Cargando disponibilidad...</span></div>';
     
     const modalitySelect = document.getElementById('pat-req-modalidad');
-    let modality = modalitySelect ? modalitySelect.value : '';
+    const selectedOpt = modalitySelect ? modalitySelect.options[modalitySelect.selectedIndex] : null;
+    let modality = (selectedOpt && selectedOpt.dataset.profileId) ? selectedOpt.dataset.profileId : (modalitySelect ? modalitySelect.value : '');
     if (!modality && modalitySelect && modalitySelect.options.length > 0) {
         for (let opt of modalitySelect.options) {
-            if (opt.value) {
-                modality = opt.value;
-                modalitySelect.value = modality;
+            if (opt.value || opt.dataset.profileId) {
+                modality = opt.dataset.profileId || opt.value;
+                modalitySelect.value = opt.value;
                 break;
             }
         }
     }
     if (!modality) modality = 'all';
+    const profIdParam = (selectedOpt && selectedOpt.dataset.profileId) ? `&profile_id=${encodeURIComponent(selectedOpt.dataset.profileId)}` : '';
     
     let availableDates = [];
     try {
         const monthForApi = bookingMonth + 1;
         const psicParam = (typeof currentPatientPsicologoId !== 'undefined' && currentPatientPsicologoId) ? `&psicologo_id=${currentPatientPsicologoId}` : (typeof fastBookingTherapistId !== 'undefined' && fastBookingTherapistId ? `&psicologo_id=${fastBookingTherapistId}` : '');
-        const res = await fetch(`/api/patient/available-dates?year=${bookingYear}&month=${monthForApi}&modalidad=${encodeURIComponent(modality)}${psicParam}`);
+        const res = await fetch(`/api/patient/available-dates?year=${bookingYear}&month=${monthForApi}&modalidad=${encodeURIComponent(modality)}${profIdParam}${psicParam}`);
         if (res.ok) {
             const data = await res.json();
             availableDates = data.dates || [];
@@ -3592,9 +3594,11 @@ async function fetchAvailableHours(dateStr) {
     
     try {
         const modalitySelect = document.getElementById('pat-req-modalidad');
-        const modality = modalitySelect ? modalitySelect.value : 'all';
+        const selectedOpt = modalitySelect ? modalitySelect.options[modalitySelect.selectedIndex] : null;
+        const modality = (selectedOpt && selectedOpt.dataset.profileId) ? selectedOpt.dataset.profileId : (modalitySelect ? modalitySelect.value : 'all');
+        const profIdParam = (selectedOpt && selectedOpt.dataset.profileId) ? `&profile_id=${encodeURIComponent(selectedOpt.dataset.profileId)}` : '';
         const psicParam = (typeof currentPatientPsicologoId !== 'undefined' && currentPatientPsicologoId) ? `&psicologo_id=${currentPatientPsicologoId}` : (typeof fastBookingTherapistId !== 'undefined' && fastBookingTherapistId ? `&psicologo_id=${fastBookingTherapistId}` : '');
-        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}${psicParam}`);
+        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}${profIdParam}${psicParam}`);
         const data = await res.json();
         
         hoursGrid.innerHTML = '';
@@ -3720,7 +3724,10 @@ async function handlePatientAppointmentRequest(e) {
     try {
         tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Caracas';
     } catch (e) {}
-    const modalidad = document.getElementById('pat-req-modalidad').value;
+    const patModEl = document.getElementById('pat-req-modalidad');
+    const selectedOpt = patModEl ? patModEl.options[patModEl.selectedIndex] : null;
+    const modalidad = patModEl ? patModEl.value : 'Online';
+    const profileId = selectedOpt ? (selectedOpt.dataset.profileId || '') : '';
     const nota = document.getElementById('pat-req-nota').value;
     
     try {
@@ -3730,6 +3737,7 @@ async function handlePatientAppointmentRequest(e) {
             hora_paciente: horaPaciente,
             zona_horaria: tzName,
             modalidad,
+            profile_id: profileId,
             nota
         };
         
@@ -4173,9 +4181,11 @@ async function loadPatientPortalData(patientId) {
                     const val = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
                     const text = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
                     const desc = typeof m === 'object' ? (m.descripcion || '') : '';
+                    const profId = typeof m === 'object' ? (m.id || m.profile_id || '') : '';
                     opt.value = val;
                     opt.textContent = text;
                     opt.dataset.desc = desc;
+                    if (profId) opt.dataset.profileId = profId;
                     selectElement.appendChild(opt);
                 });
                 if (currentVal && Array.from(selectElement.options).some(o => o.value === currentVal)) {
@@ -17231,9 +17241,11 @@ async function checkFastBookingQuery() {
                             const val = typeof m === 'object' ? (m.modalidad || m.nombre) : m;
                             const label = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
                             const desc = typeof m === 'object' ? (m.descripcion || '') : '';
+                            const profId = typeof m === 'object' ? (m.id || m.profile_id || '') : '';
                             opt.value = val;
                             opt.textContent = label;
                             opt.dataset.desc = desc;
+                            if (profId) opt.dataset.profileId = profId;
                             selectElement.appendChild(opt);
                         });
                         if (currentSelectedVal && Array.from(selectElement.options).some(o => o.value.toLowerCase() === currentSelectedVal.toLowerCase())) {
@@ -17319,12 +17331,15 @@ async function renderFastCalendar() {
     const grid = document.getElementById('fast-cal-days-grid');
     grid.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 1rem;"><span class="text-secondary text-sm">Cargando disponibilidad...</span></div>';
     
-    const modality = document.getElementById('fast-modalidad').value;
+    const fastModEl = document.getElementById('fast-modalidad');
+    const selectedOpt = fastModEl ? fastModEl.options[fastModEl.selectedIndex] : null;
+    const modality = (selectedOpt && selectedOpt.dataset.profileId) ? selectedOpt.dataset.profileId : (fastModEl ? fastModEl.value : 'all');
+    const profIdParam = (selectedOpt && selectedOpt.dataset.profileId) ? `&profile_id=${encodeURIComponent(selectedOpt.dataset.profileId)}` : '';
     
     let availableDates = [];
     try {
         const monthForApi = fastBookingMonth + 1;
-        const res = await fetch(`/api/patient/available-dates?year=${fastBookingYear}&month=${monthForApi}&modalidad=${modality}&psicologo_id=${fastBookingTherapistId}`);
+        const res = await fetch(`/api/patient/available-dates?year=${fastBookingYear}&month=${monthForApi}&modalidad=${encodeURIComponent(modality)}${profIdParam}&psicologo_id=${fastBookingTherapistId}`);
         if (res.ok) {
             const data = await res.json();
             availableDates = data.dates || [];
@@ -17434,8 +17449,11 @@ async function fetchFastAvailableHours(dateStr) {
     hoursContainer.classList.remove('hide');
     
     try {
-        const modality = document.getElementById('fast-modalidad') ? document.getElementById('fast-modalidad').value : 'all';
-        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}&psicologo_id=${fastBookingTherapistId}`);
+        const fastModEl = document.getElementById('fast-modalidad');
+        const selectedOpt = fastModEl ? fastModEl.options[fastModEl.selectedIndex] : null;
+        const modality = (selectedOpt && selectedOpt.dataset.profileId) ? selectedOpt.dataset.profileId : (fastModEl ? fastModEl.value : 'all');
+        const profIdParam = (selectedOpt && selectedOpt.dataset.profileId) ? `&profile_id=${encodeURIComponent(selectedOpt.dataset.profileId)}` : '';
+        const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}${profIdParam}&psicologo_id=${fastBookingTherapistId}`);
         const data = await res.json();
         
         hoursGrid.innerHTML = '';
@@ -17531,7 +17549,10 @@ async function submitFastBooking(e) {
     
     const fecha = document.getElementById('fast-req-fecha').value;
     const hora = document.getElementById('fast-req-hora').value;
-    const modalidad = document.getElementById('fast-modalidad').value;
+    const fastModEl = document.getElementById('fast-modalidad');
+    const selectedOpt = fastModEl ? fastModEl.options[fastModEl.selectedIndex] : null;
+    const modalidad = fastModEl ? fastModEl.value : 'Online';
+    const profileId = selectedOpt ? (selectedOpt.dataset.profileId || '') : '';
     const cedula = document.getElementById('fast-cedula').value.trim();
     const nombres = document.getElementById('fast-nombres').value.trim();
     const apellidos = document.getElementById('fast-apellidos').value.trim();
@@ -17562,6 +17583,7 @@ async function submitFastBooking(e) {
                 hora_paciente: horaPaciente,
                 zona_horaria: targetTz,
                 modalidad,
+                profile_id: profileId,
                 cedula,
                 nombres,
                 apellidos,

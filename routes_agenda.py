@@ -235,11 +235,12 @@ def get_appointment_duration_and_recess(tipo_consulta, perfiles, default_duracio
     if not tipo_clean:
         return default_duracion, default_receso
 
-    # 1. Coincidencia exacta
+    # 1. Coincidencia exacta (por ID único de perfil, nombre o modalidad)
     for p in perfiles:
+        p_id = str(p.get('id') or '').strip().lower()
         p_name = (p.get('nombre') or p.get('modalidad') or '').strip().lower()
         p_mod = (p.get('modalidad') or p.get('nombre') or '').strip().lower()
-        if tipo_clean == p_name or tipo_clean == p_mod:
+        if (p_id and tipo_clean == p_id) or tipo_clean == p_name or tipo_clean == p_mod:
             try:
                 dur = int(p.get('duracion')) if p.get('duracion') is not None and str(p.get('duracion')).strip() != '' else default_duracion
             except: dur = default_duracion
@@ -250,6 +251,7 @@ def get_appointment_duration_and_recess(tipo_consulta, perfiles, default_duracio
 
     # 2. Coincidencia secundaria si no hubo exacta
     for p in perfiles:
+        p_id = str(p.get('id') or '').strip().lower()
         p_name = (p.get('nombre') or p.get('modalidad') or '').strip().lower()
         p_mod = (p.get('modalidad') or p.get('nombre') or '').strip().lower()
         if (tipo_clean in p_name or p_name in tipo_clean or tipo_clean in p_mod or p_mod in tipo_clean):
@@ -376,17 +378,19 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     u_row = cursor.fetchone()
     
     config = {}
-    if u_row and u_row['configuracion_horarios_visual']:
+    raw_u_cfg = (u_row['configuracion_horarios_visual'] if hasattr(u_row, 'keys') else u_row[0]) if u_row else None
+    if raw_u_cfg:
         try:
-            config = json.loads(u_row['configuracion_horarios_visual'])
+            config = json.loads(raw_u_cfg)
         except: pass
 
     if not config:
         cursor.execute("SELECT valor FROM configuracion WHERE clave = 'configuracion_horarios_visual'")
         row = cursor.fetchone()
-        if row and row['valor']:
+        raw_val = (row['valor'] if hasattr(row, 'keys') else row[0]) if row else None
+        if raw_val:
             try:
-                config = json.loads(row['valor'])
+                config = json.loads(raw_val)
             except: pass
 
     try:
@@ -408,6 +412,12 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                 perfiles.append(v_copy)
     elif isinstance(raw_perfiles, list):
         perfiles = raw_perfiles
+
+    # Auto-healing runtime: asegurar que cada perfil tenga su ID único con prefijo de psicólogo
+    for idx, p in enumerate(perfiles):
+        p_id = str(p.get('id') or '').strip()
+        if not p_id or (not p_id.startswith(f"p_{psic_id_int}_") and not p.get('es_horario_clinica')):
+            p['id'] = f"p_{psic_id_int}_{idx + 1}"
 
     try:
         target_dt = datetime.strptime(target_date_str, "%Y-%m-%d")
@@ -483,14 +493,21 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     seen_keys = set()
     now_dt = datetime.now()
 
-    # 3. Determinar si existe coincidencia EXACTA para la modalidad solicitada
-    exact_matches = []
+    # 3. Determinar si existe coincidencia para la modalidad o perfil solicitado
+    # Prioridad 1: Coincidencia EXACTA por ID único e inconmutable de perfil (ej. p_1_3)
+    id_matches = []
+    exact_name_matches = []
     if req_mod_clean not in ('all', ''):
         for perf in perfiles:
+            perf_id = str(perf.get('id') or '').strip().lower()
             perf_modalidad = str(perf.get('modalidad') or perf.get('nombre') or '').strip().lower()
             perf_nombre = str(perf.get('nombre') or perf.get('modalidad') or '').strip().lower()
-            if req_mod_clean == perf_modalidad or req_mod_clean == perf_nombre:
-                exact_matches.append(perf)
+            if perf_id and req_mod_clean == perf_id:
+                id_matches.append(perf)
+            elif req_mod_clean == perf_modalidad or req_mod_clean == perf_nombre:
+                exact_name_matches.append(perf)
+
+    exact_matches = id_matches if id_matches else exact_name_matches
 
     # Iterar cada perfil configurado
     for perf in perfiles:
@@ -656,6 +673,8 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                                 if slot_key not in seen_keys:
                                     seen_keys.add(slot_key)
                                     candidate_slots.append({
+                                        'id': perf.get('id'),
+                                        'perfil_id': perf.get('id'),
                                         'hora_literal': h_str,
                                         'hora_inicio': h_str,
                                         'hora_fin': h_fin_str,
@@ -678,6 +697,8 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
                             if slot_key not in seen_keys:
                                 seen_keys.add(slot_key)
                                 candidate_slots.append({
+                                    'id': perf.get('id'),
+                                    'perfil_id': perf.get('id'),
                                     'hora_literal': h_str,
                                     'hora_inicio': h_str,
                                     'hora_fin': h_fin_str,
@@ -777,7 +798,8 @@ def get_psychologist_by_id_or_slug(cursor, identifier):
 def get_agenda_disponibilidad():
     psicologo_id = request.args.get('psicologo_id')
     fecha_str = request.args.get('fecha')
-    modalidad = request.args.get('modalidad', 'all')
+    profile_id = request.args.get('profile_id')
+    modalidad = profile_id or request.args.get('modalidad', 'all')
     
     db = get_db()
     cursor = db.cursor()
@@ -1624,6 +1646,14 @@ def admin_availability():
         if not isinstance(perfiles, list) or len(perfiles) == 0:
             perfiles = list(default_visual['perfiles'])
 
+        user_id = session.get('user_id')
+        needs_save_ids = False
+        for idx, p in enumerate(perfiles):
+            p_id = str(p.get('id') or '').strip()
+            if not p_id or (not p_id.startswith(f"p_{user_id}_") and not p.get('es_horario_clinica')):
+                p['id'] = f"p_{user_id}_{idx + 1}"
+                needs_save_ids = True
+
         # Si el usuario pertenece a una clínica/organización, garantizar que el perfil de clínica esté presente al inicio
         if u_row and u_row['organizacion_id']:
             org_id = u_row['organizacion_id']
@@ -1676,6 +1706,12 @@ def admin_availability():
                 perfiles.append(default_visual['perfiles'][1])
 
         config['perfiles'] = perfiles
+        if needs_save_ids and user_id:
+            try:
+                cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (json.dumps(config), user_id))
+                db.commit()
+            except Exception: pass
+
         config['tipo_clinica'] = u_row['tipo_clinica'] if u_row else 0
         config['suscripcion_paga'] = u_row['suscripcion_paga'] if u_row else 0
         config['organizacion_nombre'] = org_name
@@ -1683,8 +1719,14 @@ def admin_availability():
         return jsonify(config)
     else:
         data = request.json or {}
+        user_id = session.get('user_id')
+        if isinstance(data.get('perfiles'), list):
+            for idx, p in enumerate(data['perfiles']):
+                p_id = str(p.get('id') or '').strip()
+                if not p_id or (not p_id.startswith(f"p_{user_id}_") and not p.get('es_horario_clinica')):
+                    p['id'] = f"p_{user_id}_{idx + 1}"
         try:
-            cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (json.dumps(data), session.get('user_id')))
+            cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (json.dumps(data), user_id))
             db.commit()
 
             # HOOK (Alternativa 2): Sincronizar inmediatamente las citas activas/futuras con las nuevas reglas
@@ -1731,8 +1773,8 @@ def get_psychologist_modalities(identifier):
     cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
     u_row = cursor.fetchone()
     modalities = [
-        {"nombre": "Online", "modalidad": "Online", "descripcion": "Consultas a través de WhatsApp y Google Meet videollamadas"},
-        {"nombre": "Presencial", "modalidad": "Presencial", "descripcion": "Consultas presenciales en consultorio físico"}
+        {"id": f"p_{psic_id}_1", "profile_id": f"p_{psic_id}_1", "nombre": "Online", "modalidad": "Online", "descripcion": "Consultas a través de WhatsApp y Google Meet videollamadas"},
+        {"id": f"p_{psic_id}_2", "profile_id": f"p_{psic_id}_2", "nombre": "Presencial", "modalidad": "Presencial", "descripcion": "Consultas presenciales en consultorio físico"}
     ]
     if u_row and u_row[0]:
         try:
@@ -1742,13 +1784,16 @@ def get_psychologist_modalities(identifier):
             if isinstance(raw_perfiles, dict):
                 m_names = list(raw_perfiles.keys())
                 if m_names:
-                    modalities = [{"nombre": k, "modalidad": k, "descripcion": ""} for k in m_names]
+                    modalities = [{"id": raw_perfiles[k].get('id') or f"p_{psic_id}_{i+1}", "profile_id": raw_perfiles[k].get('id') or f"p_{psic_id}_{i+1}", "nombre": k, "modalidad": k, "descripcion": ""} for i, k in enumerate(m_names)]
             elif isinstance(raw_perfiles, list) and len(raw_perfiles) > 0:
                 result = []
-                for p in raw_perfiles:
+                for idx, p in enumerate(raw_perfiles):
                     nom = p.get('nombre') or p.get('modalidad')
                     if nom:
+                        p_id = p.get('id') or f"p_{psic_id}_{idx+1}"
                         result.append({
+                            "id": p_id,
+                            "profile_id": p_id,
                             "nombre": nom,
                             "modalidad": p.get('modalidad') or nom,
                             "descripcion": p.get('descripcion') or '',
@@ -1789,6 +1834,20 @@ def fast_booking_book():
         first_u = cursor.fetchone()
         psicologo_id = int(first_u['id'] if hasattr(first_u, 'keys') else first_u[0]) if first_u else 1
 
+    profile_id_used = data.get('profile_id') or (modalidad if str(modalidad).startswith('p_') else None)
+    # Si modalidad viene como ID de perfil (ej. p_1_3), resolver al nombre legible del perfil
+    if str(modalidad).startswith('p_'):
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+        _u_cfg = cursor.fetchone()
+        if _u_cfg and _u_cfg[0]:
+            try:
+                _cfg_json = json.loads(_u_cfg[0])
+                for _pf in _cfg_json.get('perfiles', []):
+                    if _pf.get('id') == modalidad:
+                        modalidad = _pf.get('nombre') or _pf.get('modalidad') or modalidad
+                        break
+            except Exception: pass
+
     from routes_admin import is_user_subscription_expired
     if is_user_subscription_expired(cursor, psicologo_id):
         return jsonify({'error': 'El especialista no está disponible para recibir nuevas citas en este momento.'}), 400
@@ -1811,7 +1870,7 @@ def fast_booking_book():
         pass
 
     # 0. Verificar si el horario seleccionado ya está reservado o colisiona con otra cita en ese psicólogo
-    if check_appointment_interval_collision(cursor, psicologo_id, fecha_norm, hora_norm, modalidad):
+    if check_appointment_interval_collision(cursor, psicologo_id, fecha_norm, hora_norm, profile_id_used or modalidad):
         return jsonify({'error': 'El horario seleccionado ya fue reservado o coincide con otra consulta programada del psicólogo. Por favor elige otro horario.'}), 400
     
     # 1. Verificar si el paciente existe por cédula limpia (dígitos), usuario o teléfono

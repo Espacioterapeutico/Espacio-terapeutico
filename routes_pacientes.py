@@ -1185,7 +1185,8 @@ def get_psychologist_by_id_or_slug(cursor, identifier):
 def get_available_dates():
     year = request.args.get('year')
     month = request.args.get('month')
-    modalidad = request.args.get('modalidad', 'all')
+    profile_id = request.args.get('profile_id')
+    modalidad = profile_id or request.args.get('modalidad', 'all')
     exclude_appt_id = request.args.get('exclude_appt_id')
     
     if not year or not month:
@@ -1239,7 +1240,8 @@ def get_available_dates():
 @pacientes_bp.route('/api/patient/available-slots', methods=['GET'])
 def get_available_slots():
     date_str = request.args.get('date')
-    modalidad = request.args.get('modalidad', 'all')
+    profile_id = request.args.get('profile_id')
+    modalidad = profile_id or request.args.get('modalidad', 'all')
     exclude_appt_id = request.args.get('exclude_appt_id')
     
     if not date_str:
@@ -1288,6 +1290,7 @@ def patient_add_appointment():
     fecha = data.get('fecha')
     hora = data.get('hora')
     tipo_consulta = data.get('modalidad') # 'Presencial', 'Online'
+    profile_id_used = data.get('profile_id')
     nota = data.get('nota', '').strip()
     
     if not fecha or not hora or not tipo_consulta:
@@ -1326,8 +1329,22 @@ def patient_add_appointment():
             return jsonify({'error': 'El especialista no está disponible para recibir nuevas citas en este momento.'}), 400
 
         # Verificar si el horario ya está reservado o colisiona por solapamiento de intervalos
+        # Si tipo_consulta vino como ID de perfil (ej. p_1_3), resolver al nombre legible
+        if str(tipo_consulta).startswith('p_'):
+            cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+            _u_cfg = cursor.fetchone()
+            if _u_cfg and _u_cfg[0]:
+                try:
+                    import json as _json
+                    _cfg_json = _json.loads(_u_cfg[0])
+                    for _pf in _cfg_json.get('perfiles', []):
+                        if _pf.get('id') == tipo_consulta:
+                            tipo_consulta = _pf.get('nombre') or _pf.get('modalidad') or tipo_consulta
+                            break
+                except Exception: pass
+
         from routes_agenda import check_appointment_interval_collision
-        if check_appointment_interval_collision(cursor, psicologo_id, fecha_norm, hora_norm, tipo_consulta):
+        if check_appointment_interval_collision(cursor, psicologo_id, fecha_norm, hora_norm, profile_id_used or tipo_consulta):
             return jsonify({'error': 'El horario seleccionado ya ha sido reservado o coincide con otra consulta programada. Por favor elige otro horario.'}), 400
 
         google_event_id = None
@@ -2067,10 +2084,13 @@ def get_patient_portal_data_dict(patient_id):
         if u_vis and u_vis[0]:
             try:
                 c_vis = json.loads(u_vis[0])
-                for p in c_vis.get('perfiles', []):
+                for idx, p in enumerate(c_vis.get('perfiles', [])):
                     nom = p.get('nombre') or p.get('modalidad')
                     if nom:
+                        p_id = p.get('id') or f"p_{psicologo_id}_{idx + 1}"
                         modalidades_detalladas.append({
+                            'id': p_id,
+                            'profile_id': p_id,
                             'nombre': nom,
                             'modalidad': p.get('modalidad') or nom,
                             'descripcion': p.get('descripcion') or '',

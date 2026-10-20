@@ -253,12 +253,40 @@ def m_0004_propagate_all_psychologist_rules(cursor, db):
         sync_psychologist_rules_to_appointments(cursor, db, uid, cfg)
 
 
+def m_0005_assign_profile_ids_to_schedules(cursor, db):
+    """Asigna identificadores únicos e inconmutables por psicólogo (p_{user_id}_{idx}) a todos los perfiles de horarios existentes."""
+    cursor.execute("SELECT id, configuracion_horarios_visual FROM usuarios WHERE configuracion_horarios_visual IS NOT NULL")
+    users = cursor.fetchall()
+    for u in users:
+        uid = u['id'] if hasattr(u, 'keys') else u[0]
+        cfg_raw = u['configuracion_horarios_visual'] if hasattr(u, 'keys') else u[1]
+        if not cfg_raw:
+            continue
+        try:
+            cfg = json.loads(cfg_raw)
+            perfiles = cfg.get('perfiles', [])
+            if not isinstance(perfiles, list) or len(perfiles) == 0:
+                continue
+            modified = False
+            for idx, p in enumerate(perfiles):
+                p_id = str(p.get('id') or '').strip()
+                if not p_id or (not p_id.startswith(f"p_{uid}_") and not p.get('es_horario_clinica')):
+                    p['id'] = f"p_{uid}_{idx + 1}"
+                    modified = True
+            if modified:
+                cursor.execute("UPDATE usuarios SET configuracion_horarios_visual = ? WHERE id = ?", (json.dumps(cfg), uid))
+        except Exception as e:
+            print(f"[MIGRATION 0005] Error migrando perfiles para usuario {uid}: {e}")
+    db.commit()
+
+
 # LISTA MAESTRA DE MIGRACIONES EN ORDEN CRONOLÓGICO
 MIGRATIONS = [
     ("0001_heal_slugs_and_times", "Cura de slugs huérfanos y normalización de horarios 24h", m_0001_heal_slugs_and_times),
     ("0002_ensure_clinical_tools_and_patients", "Asegurar tablas de herramientas clínicas y consistencia en pacientes viejos", m_0002_ensure_clinical_tools_and_existing_patients),
     ("0003_restore_aiverson_appointment", "Restauración de cita y log de confirmación para Aiverson", m_0003_restore_aiverson_and_cancelled_log),
     ("0004_propagate_all_psychologist_rules", "Propagación retroactiva de reglas a todas las citas activas", m_0004_propagate_all_psychologist_rules),
+    ("0005_assign_profile_ids_to_schedules", "Asignación de IDs únicos e inconmutables por psicólogo para perfiles de horarios", m_0005_assign_profile_ids_to_schedules),
 ]
 
 
