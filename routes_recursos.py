@@ -268,6 +268,10 @@ def get_recursos_paciente(paciente_id):
             d['contenido'] = json.loads(d['contenido_json'])
         except Exception:
             d['contenido'] = {}
+        if not d.get('token_compartido'):
+            d['token_compartido'] = uuid.uuid4().hex
+            cursor.execute("UPDATE paciente_recursos SET token_compartido = ? WHERE id = ?", (d['token_compartido'], d['id']))
+            db.commit()
         # Metadata del tipo de recurso
         meta = next((r for r in RECURSOS_CATALOGO if r['id'] == d['recurso_tipo']), None)
         d['meta'] = meta
@@ -411,6 +415,11 @@ def get_pizarra(recurso_id):
         d['contenido'] = json.loads(d['contenido_json'])
     except Exception:
         d['contenido'] = {}
+
+    if not d.get('token_compartido'):
+        d['token_compartido'] = uuid.uuid4().hex
+        cursor.execute("UPDATE paciente_recursos SET token_compartido = ? WHERE id = ?", (d['token_compartido'], recurso_id))
+        db.commit()
 
     meta = next((r for r in RECURSOS_CATALOGO if r['id'] == d['recurso_tipo']), None)
     d['meta'] = meta

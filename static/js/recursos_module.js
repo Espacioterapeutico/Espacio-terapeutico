@@ -1703,170 +1703,33 @@
     }
     window.shareRecursoWhatsApp = shareRecursoWhatsApp;
 
-    async function shareRecursoWhatsAppById(recursoId) {
+    function shareRecursoWhatsAppById(recursoId) {
         let r = window.activeRecursoPizarra;
         if (!r || r.id !== recursoId) {
-            try {
-                const res = await fetch(`/api/recursos/pizarra/${recursoId}`);
-                if (res.ok) {
-                    r = await res.json();
-                }
-            } catch (e) {
-                console.error("Error al obtener datos de la pizarra:", e);
+            if (window.currentPatientRecursosList && Array.isArray(window.currentPatientRecursosList)) {
+                r = window.currentPatientRecursosList.find(x => x.id === recursoId) || r;
             }
         }
 
-        if (!r) {
-            if (window.Swal) Swal.fire('Error', 'No se pudieron cargar los datos de la pizarra.', 'error');
-            else alert('No se pudieron cargar los datos de la pizarra.');
-            return;
+        const pacNombre = (r && r.pac_nombres) ? r.pac_nombres.trim() : ((r && r.nombres) ? r.nombres.trim() : 'Consultante');
+        let rawPhone = (r && r.pac_telefono) ? r.pac_telefono : ((r && r.telefono) ? r.telefono : '');
+        let cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('0')) {
+            cleanPhone = '58' + cleanPhone.substring(1);
+        } else if (cleanPhone && !cleanPhone.startsWith('58') && cleanPhone.length === 10) {
+            cleanPhone = '58' + cleanPhone;
         }
 
-        const pacNombre = (r.pac_nombres || '').trim() || 'Consultante';
-        const pacTelefono = (r.pac_telefono || '').replace(/[^0-9+]/g, '');
-        const titulo = r.titulo || 'Pizarra de Trabajo';
-        const token = r.token_compartido || '';
+        const titulo = (r && r.titulo) ? r.titulo : 'Recurso Terapéutico';
+        const token = (r && r.token_compartido) ? r.token_compartido : '';
         const hostUrl = window.location.origin;
         const linkDirecto = token ? `${hostUrl}/pizarra/compartida/${token}` : `${hostUrl}/portal/paciente`;
 
-        const mensaje = `Hola *${pacNombre}* 👋\n\nTe comparto tu pizarra de trabajo interactivo: *${titulo}*.\n\nPuedes abrirla, escribir y reflexionar en ella directamente desde este enlace colaborativo:\n👉 ${linkDirecto}\n\nLos cambios que realices se guardan automáticamente en tiempo real para nuestra próxima sesión.`;
+        const mensaje = `Hola *${pacNombre}* 👋\n\nTe comparto tu pizarra de trabajo interactivo: *${titulo}*.\n\nPuedes abrirla, escribir y reflexionar en ella directamente desde este enlace:\n👉 ${linkDirecto}\n\nLos cambios que realices se guardan automáticamente en tiempo real. ¡Nos vemos en nuestra próxima sesión!`;
+        const encoded = encodeURIComponent(mensaje);
+        const url = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://api.whatsapp.com/send?text=${encoded}`;
 
-        if (!pacTelefono) {
-            if (window.Swal) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Sin teléfono registrado',
-                    text: `El consultante ${pacNombre} no tiene un número telefónico asignado en su ficha clínica para enviar mensajes por WhatsApp.`
-                });
-            } else {
-                alert(`El consultante ${pacNombre} no tiene un número telefónico asignado.`);
-            }
-            return;
-        }
-
-        if (!window.Swal) {
-            const encoded = encodeURIComponent(mensaje);
-            window.open(`https://wa.me/${pacTelefono.replace(/[^0-9]/g, '')}?text=${encoded}`, '_blank');
-            return;
-        }
-
-        const result = await Swal.fire({
-            title: '📲 Enviar Pizarra por WhatsApp',
-            html: `
-                <div style="text-align: left; font-size: 0.9rem; color: #334155; line-height: 1.5;">
-                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
-                        <p style="margin: 0; font-weight: 800; color: #0f172a;">📋 ${escapeHtml(titulo)}</p>
-                        <p style="margin: 3px 0 0; font-size: 0.82rem; color: #64748b;">👤 Consultante: <strong>${escapeHtml(pacNombre)}</strong> (${pacTelefono})</p>
-                    </div>
-                    <p style="font-size: 0.84rem; color: #64748b; margin-bottom: 0.4rem;">
-                        El mensaje incluirá el enlace interactivo directo para que el paciente reflexione y complete su pizarra desde su móvil en tiempo real.
-                    </p>
-                </div>
-            `,
-            showCancelButton: true,
-            showDenyButton: true,
-            confirmButtonText: '🚀 Enviar Ahora (Bot)',
-            denyButtonText: '⏰ Programar por Cron',
-            cancelButtonText: '🌐 Abrir en WhatsApp Web',
-            confirmButtonColor: '#16a34a',
-            denyButtonColor: '#7e22ce',
-            cancelButtonColor: '#64748b',
-            focusConfirm: true
-        });
-
-        if (result.isConfirmed) {
-            // Opción 1: Enviar Ahora con Bot
-            Swal.fire({
-                title: 'Enviando por WhatsApp...',
-                text: 'Despachando mensaje con enlace de la pizarra a través del bot...',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-
-            try {
-                const res = await fetch(`/api/recursos/pizarra/${recursoId}/enviar-whatsapp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ modo: 'inmediato' })
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Pizarra Enviada!',
-                        text: `El enlace colaborativo ha sido entregado exitosamente al WhatsApp de ${pacNombre}.`,
-                        confirmButtonColor: '#16a34a'
-                    });
-                } else {
-                    throw new Error(data.error || 'Error al despachar el mensaje.');
-                }
-            } catch (err) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'No se pudo enviar',
-                    text: err.message,
-                    confirmButtonColor: '#dc2626'
-                });
-            }
-        } else if (result.isDenied) {
-            // Opción 2: Programar Envío por Cron Job
-            const { value: horaProg } = await Swal.fire({
-                title: '⏰ Programar Envío por Cron',
-                html: `
-                    <p style="font-size: 0.88rem; color: #475569; margin-bottom: 0.75rem;">
-                        Selecciona la hora a la que deseas que el cron job despache automáticamente la pizarra a <strong>${escapeHtml(pacNombre)}</strong>:
-                    </p>
-                    <input type="time" id="swal-cron-hora" value="20:00" style="padding: 0.6rem; font-size: 1.15rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; outline: none; text-align: center;">
-                `,
-                preConfirm: () => {
-                    const input = document.getElementById('swal-cron-hora');
-                    return input ? input.value : '20:00';
-                },
-                showCancelButton: true,
-                confirmButtonText: 'Agendar en Cron',
-                cancelButtonText: 'Volver',
-                confirmButtonColor: '#7e22ce'
-            });
-
-            if (horaProg) {
-                Swal.fire({
-                    title: 'Agendando en cola...',
-                    didOpen: () => { Swal.showLoading(); }
-                });
-
-                try {
-                    const res = await fetch(`/api/recursos/pizarra/${recursoId}/enviar-whatsapp`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ modo: 'cron', hora: horaProg })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Programado en el Cron Job!',
-                            html: `La pizarra se enviará automáticamente hoy a las <strong>${horaProg}</strong> por WhatsApp a <strong>${escapeHtml(pacNombre)}</strong>.`,
-                            confirmButtonColor: '#7e22ce'
-                        });
-                    } else {
-                        throw new Error(data.error || 'Error al agendar en la cola cron.');
-                    }
-                } catch (err) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al programar',
-                        text: err.message,
-                        confirmButtonColor: '#dc2626'
-                    });
-                }
-            }
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-            // Opción 3: Abrir en WhatsApp Web / App
-            const cleanPhone = pacTelefono.replace(/[^0-9]/g, '');
-            const encoded = encodeURIComponent(mensaje);
-            const url = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://api.whatsapp.com/send?text=${encoded}`;
-            window.open(url, '_blank');
-        }
+        window.open(url, '_blank');
     }
     window.shareRecursoWhatsAppById = shareRecursoWhatsAppById;
 
