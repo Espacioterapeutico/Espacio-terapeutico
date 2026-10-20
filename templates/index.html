@@ -2049,9 +2049,11 @@
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                                     <div class="btn-group" style="display: flex; gap: 3px; background: var(--bg-hover, #f1f5f9); padding: 3px; border-radius: 8px;">
-                                        <button type="button" id="task-filter-all" class="btn btn-sm" onclick="filterTherapistTasks('all')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: none; background: var(--card-bg, #fff); color: var(--text-dark); box-shadow: 0 1px 2px rgba(0,0,0,0.08);">Todas (<span id="count-tasks-all">0</span>)</button>
-                                        <button type="button" id="task-filter-pending" class="btn btn-sm" onclick="filterTherapistTasks('pending')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted);">Pendientes (<span id="count-tasks-pending">0</span>)</button>
-                                        <button type="button" id="task-filter-completed" class="btn btn-sm" onclick="filterTherapistTasks('completed')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted);">Completadas (<span id="count-tasks-completed">0</span>)</button>
+                                        <button type="button" id="task-filter-pending" class="btn btn-sm" onclick="filterTherapistTasks('pending')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 6px; border: none; background: var(--card-bg, #fff); color: var(--text-dark); box-shadow: 0 1px 2px rgba(0,0,0,0.08);">⏳ Pendientes (<span id="count-tasks-pending">0</span>)</button>
+                                        <button type="button" id="task-filter-completed" class="btn btn-sm" onclick="filterTherapistTasks('completed')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted);">📜 Ver Historial (<span id="count-tasks-completed">0</span>)</button>
+                                        <button type="button" id="task-filter-all" class="btn btn-sm" onclick="filterTherapistTasks('all')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted);">Todas (<span id="count-tasks-all">0</span>)</button>
+
+
                                     </div>
                                     <input type="text" id="therapist-task-search" placeholder="Buscar tarea o consultante..." class="form-control" style="font-size: 0.78rem; padding: 0.3rem 0.6rem; width: 180px;" oninput="renderTherapistTasksList()">
                                 </div>

@@ -7358,7 +7358,16 @@ window.handleModalSendSessionCierre = handleModalSendSessionCierre;
 // MIS TAREAS DEL TERAPEUTA (Compromisos)
 // ==========================================
 let _therapistTasksCache = [];
-let _therapistTasksFilter = 'all';
+let _therapistTasksFilter = 'pending';
+let _therapistTasksPage = 1;
+const _therapistTasksPerPage = 8;
+let _sessionCompletedInCurrentView = new Set();
+
+function changeTherapistTasksPage(delta) {
+    _therapistTasksPage += delta;
+    renderTherapistTasksList();
+}
+window.changeTherapistTasksPage = changeTherapistTasksPage;
 
 function _escapeHtmlTask(str) {
     if (!str) return '';
@@ -7388,6 +7397,9 @@ function _formatTaskDate(dateStr) {
 async function loadTherapistTasks(showLoader = true) {
     const container = document.getElementById('therapist-tasks-container');
     if (!container) return;
+
+    // Al recargar o reingresar a la vista, limpiar completadas de sesión previa
+    _sessionCompletedInCurrentView.clear();
 
     if (showLoader && _therapistTasksCache.length === 0) {
         container.innerHTML = `
@@ -7470,7 +7482,9 @@ function updateTherapistTasksCounters() {
 
 function filterTherapistTasks(filter) {
     _therapistTasksFilter = filter;
-    ['all', 'pending', 'completed'].forEach(f => {
+    _therapistTasksPage = 1;
+    _sessionCompletedInCurrentView.clear();
+    ['pending', 'completed', 'all'].forEach(f => {
         const btn = document.getElementById(`task-filter-${f}`);
         if (btn) {
             if (f === filter) {
@@ -7495,11 +7509,22 @@ function renderTherapistTasksList() {
     const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
 
     let list = _therapistTasksCache.filter(t => {
-        // Filtro estado
-        if (_therapistTasksFilter === 'pending' && t.compromiso_completado) return false;
-        if (_therapistTasksFilter === 'completed' && !t.compromiso_completado) return false;
+        // Filtro por estado:
+        // En 'pending': se muestran las no completadas O las completadas recientemente en la sesión actual
+        if (_therapistTasksFilter === 'pending') {
+            const isPending = !t.compromiso_completado;
+            const isJustFinished = _sessionCompletedInCurrentView.has(t.session_id);
+            if (!isPending && !isJustFinished) return false;
+        } else if (_therapistTasksFilter === 'completed') {
+            // En 'completed' (Ver Historial): se muestran las completadas que ya no están activas en sesión actual
+            const isDone = !!t.compromiso_completado;
+            const isJustFinished = _sessionCompletedInCurrentView.has(t.session_id);
+            if (!isDone) return false;
+            // Si fue completada justo ahora en pending, esperar a que salga para archivarla en historial
+            if (isJustFinished) return false;
+        }
 
-        // Filtro búsqueda
+        // Filtro de búsqueda
         if (searchTerm) {
             const pacName = `${t.nombres || ''} ${t.apellidos || ''}`.toLowerCase();
             const compText = (t.compromisos_psicologo || '').toLowerCase();
@@ -7513,11 +7538,11 @@ function renderTherapistTasksList() {
         if (searchTerm) {
             msg = `No se encontraron tareas que coincidan con "${_escapeHtmlTask(searchTerm)}".`;
         } else if (_therapistTasksFilter === 'pending') {
-            msg = "✨ ¡Excelente trabajo! No tienes tareas pendientes.";
+            msg = "✨ ¡Excelente trabajo! No tienes tareas pendientes. Las tareas completadas han sido archivadas en <strong>Ver Historial</strong>.";
         } else if (_therapistTasksFilter === 'completed') {
-            msg = "Aún no has marcado ninguna tarea como completada.";
+            msg = "📜 Aún no hay tareas archivadas en el historial de completadas.";
         } else {
-            msg = "🎉 No tienes tareas registradas. Cuando agregues compromisos en 'Tareas del terapeuta' dentro de la evolución clínica, aparecerán aquí ordenadas cronológicamente.";
+            msg = "🎉 No tienes tareas registradas. Cuando agregues compromisos en 'Tareas del terapeuta' dentro de la evolución clínica, aparecerán aquí.";
         }
 
         container.innerHTML = `
@@ -7536,10 +7561,19 @@ function renderTherapistTasksList() {
         return (b.fecha || '').localeCompare(a.fecha || '');
     });
 
+    // Paginación
+    const totalPages = Math.max(1, Math.ceil(list.length / _therapistTasksPerPage));
+    if (_therapistTasksPage > totalPages) _therapistTasksPage = totalPages;
+    if (_therapistTasksPage < 1) _therapistTasksPage = 1;
+
+    const startIdx = (_therapistTasksPage - 1) * _therapistTasksPerPage;
+    const pageItems = list.slice(startIdx, startIdx + _therapistTasksPerPage);
+
     let html = '<div class="therapist-tasks-list" style="display: flex; flex-direction: column; gap: 0.65rem;">';
 
-    list.forEach(t => {
+    pageItems.forEach(t => {
         const isDone = !!t.compromiso_completado;
+        const isJustFinished = _sessionCompletedInCurrentView.has(t.session_id);
         const dateFormatted = _formatTaskDate(t.fecha);
         const pacFullName = `${t.nombres || ''} ${t.apellidos || ''}`.trim() || 'Consultante';
         const modalLabel = t.modalidad ? `<span style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover, #f1f5f9); color: var(--text-muted);">${_escapeHtmlTask(t.modalidad)}</span>` : '';
@@ -7560,7 +7594,8 @@ function renderTherapistTasksList() {
                             </span>
                             ${modalLabel}
                         </div>
-                        <div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            ${isJustFinished ? '<span style="font-size: 0.68rem; color: #059669; background: #ecfdf5; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Se archivará en Ver Historial al salir</span>' : ''}
                             <span class="badge" style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; ${isDone ? 'background: #dcfce7; color: #15803d;' : 'background: #fef3c7; color: #b45309;'}">
                                 ${isDone ? '✓ Completada' : '⏳ Pendiente'}
                             </span>
@@ -7580,6 +7615,29 @@ function renderTherapistTasksList() {
     });
 
     html += '</div>';
+
+    // Barra de Paginación si hay más de 1 página
+    if (totalPages > 1) {
+        html += `
+            <div class="therapist-tasks-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                <span style="font-size: 0.78rem; color: var(--text-muted);">
+                    Mostrando ${startIdx + 1}–${Math.min(startIdx + _therapistTasksPerPage, list.length)} de ${list.length} tareas
+                </span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="changeTherapistTasksPage(-1)" ${(_therapistTasksPage <= 1) ? 'disabled style="opacity: 0.45; cursor: not-allowed; font-size: 0.75rem; padding: 0.25rem 0.65rem;"' : 'style="font-size: 0.75rem; padding: 0.25rem 0.65rem;"'}>
+                        ← Anterior
+                    </button>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-dark); padding: 0 4px;">
+                        Pág. ${_therapistTasksPage} / ${totalPages}
+                    </span>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="changeTherapistTasksPage(1)" ${(_therapistTasksPage >= totalPages) ? 'disabled style="opacity: 0.45; cursor: not-allowed; font-size: 0.75rem; padding: 0.25rem 0.65rem;"' : 'style="font-size: 0.75rem; padding: 0.25rem 0.65rem;"'}>
+                        Siguiente →
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
     container.innerHTML = html;
 }
 
@@ -7589,6 +7647,11 @@ async function toggleTherapistTask(sessionId, isChecked) {
     const prevStatus = target ? target.compromiso_completado : 0;
     if (target) {
         target.compromiso_completado = isChecked ? 1 : 0;
+        if (isChecked) {
+            _sessionCompletedInCurrentView.add(sessionId);
+        } else {
+            _sessionCompletedInCurrentView.delete(sessionId);
+        }
         updateTherapistTasksCounters();
         renderTherapistTasksList();
     }
