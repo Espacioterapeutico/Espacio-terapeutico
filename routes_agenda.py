@@ -232,10 +232,27 @@ def get_psicologo_id_filter():
 
 def get_appointment_duration_and_recess(tipo_consulta, perfiles, default_duracion=60, default_receso=0):
     tipo_clean = (tipo_consulta or '').strip().lower()
+    if not tipo_clean:
+        return default_duracion, default_receso
+
+    # 1. Coincidencia exacta
     for p in perfiles:
         p_name = (p.get('nombre') or p.get('modalidad') or '').strip().lower()
         p_mod = (p.get('modalidad') or p.get('nombre') or '').strip().lower()
-        if tipo_clean and (tipo_clean in p_name or p_name in tipo_clean or tipo_clean in p_mod or p_mod in tipo_clean):
+        if tipo_clean == p_name or tipo_clean == p_mod:
+            try:
+                dur = int(p.get('duracion')) if p.get('duracion') is not None and str(p.get('duracion')).strip() != '' else default_duracion
+            except: dur = default_duracion
+            try:
+                rec = int(p.get('receso')) if p.get('receso') is not None and str(p.get('receso')).strip() != '' else default_receso
+            except: rec = default_receso
+            return dur, rec
+
+    # 2. Coincidencia secundaria si no hubo exacta
+    for p in perfiles:
+        p_name = (p.get('nombre') or p.get('modalidad') or '').strip().lower()
+        p_mod = (p.get('modalidad') or p.get('nombre') or '').strip().lower()
+        if (tipo_clean in p_name or p_name in tipo_clean or tipo_clean in p_mod or p_mod in tipo_clean):
             try:
                 dur = int(p.get('duracion')) if p.get('duracion') is not None and str(p.get('duracion')).strip() != '' else default_duracion
             except: dur = default_duracion
@@ -466,7 +483,16 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
     seen_keys = set()
     now_dt = datetime.now()
 
-    # 3. Iterar cada perfil configurado
+    # 3. Determinar si existe coincidencia EXACTA para la modalidad solicitada
+    exact_matches = []
+    if req_mod_clean not in ('all', ''):
+        for perf in perfiles:
+            perf_modalidad = str(perf.get('modalidad') or perf.get('nombre') or '').strip().lower()
+            perf_nombre = str(perf.get('nombre') or perf.get('modalidad') or '').strip().lower()
+            if req_mod_clean == perf_modalidad or req_mod_clean == perf_nombre:
+                exact_matches.append(perf)
+
+    # Iterar cada perfil configurado
     for perf in perfiles:
         perf_modalidad = str(perf.get('modalidad') or perf.get('nombre') or '').strip()
         perf_nombre = str(perf.get('nombre') or perf.get('modalidad') or '').strip()
@@ -474,19 +500,43 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
         perf_nom_clean = perf_nombre.lower()
 
         if req_mod_clean not in ('all', ''):
-            is_match = False
-            if (req_mod_clean in perf_mod_clean or perf_mod_clean in req_mod_clean or
-                req_mod_clean in perf_nom_clean or perf_nom_clean in req_mod_clean):
-                is_match = True
-            elif 'online' in req_mod_clean and ('online' in perf_mod_clean or 'online' in perf_nom_clean):
-                is_match = True
-            elif 'presencial' in req_mod_clean and ('presencial' in perf_mod_clean or 'presencial' in perf_nom_clean):
-                is_match = True
-            elif not any(restrictive in perf_nom_clean or restrictive in perf_mod_clean for restrictive in ['online', 'presencial', 'uptaeb']):
-                is_match = True
-            
-            if not is_match:
-                continue
+            if exact_matches:
+                # Si hay coincidencia exacta (ej. 'UPTAEB Online' vs 'UPTAEB' vs 'Online'),
+                # ÚNICAMENTE evaluar ese perfil exacto para evitar mezclas o solapamientos.
+                if perf not in exact_matches:
+                    continue
+            else:
+                # Si ningún perfil coincide exactamente (ej. la solicitud viene como 'Consulta Online' o 'Horario Presencial'):
+                norm_req = req_mod_clean
+                for prefix in ('consulta ', 'horario ', 'sesion ', 'sesión ', 'atencion ', 'atención '):
+                    if norm_req.startswith(prefix):
+                        norm_req = norm_req[len(prefix):].strip()
+
+                norm_perf = perf_nom_clean
+                for prefix in ('consulta ', 'horario ', 'sesion ', 'sesión ', 'atencion ', 'atención '):
+                    if norm_perf.startswith(prefix):
+                        norm_perf = norm_perf[len(prefix):].strip()
+
+                is_match = False
+                if norm_req == norm_perf or norm_req == perf_mod_clean:
+                    is_match = True
+                else:
+                    # Comprobación de palabras clave respetando sub-modalidades:
+                    # Si la solicitud incluye 'uptaeb', SOLO puede coincidir con perfiles 'uptaeb'
+                    req_is_uptaeb = 'uptaeb' in req_mod_clean
+                    perf_is_uptaeb = ('uptaeb' in perf_nom_clean or 'uptaeb' in perf_mod_clean)
+
+                    if req_is_uptaeb != perf_is_uptaeb:
+                        is_match = False
+                    elif 'online' in req_mod_clean and ('online' in perf_mod_clean or 'online' in perf_nom_clean):
+                        is_match = True
+                    elif 'presencial' in req_mod_clean and ('presencial' in perf_mod_clean or 'presencial' in perf_nom_clean):
+                        is_match = True
+                    elif not any(restrictive in perf_nom_clean or restrictive in perf_mod_clean for restrictive in ['online', 'presencial', 'uptaeb']):
+                        is_match = True
+
+                if not is_match:
+                    continue
 
         # Parámetros específicos de la modalidad
         p_dur = perf.get('duracion')
