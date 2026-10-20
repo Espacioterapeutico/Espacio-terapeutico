@@ -838,14 +838,9 @@ def send_booking_notification_wa(agenda_id, psicologo_id=None):
             if not row:
                 return
 
+            from routes_herramientas import clean_phone_number
             phone = (row['telefono'] or '').strip()
-            if not phone:
-                return
-
-            phone_cleaned = "".join([c for c in phone if c.isdigit()])
-            if phone_cleaned and not phone_cleaned.startswith("58") and len(phone_cleaned) == 10:
-                phone_cleaned = "58" + phone_cleaned
-
+            phone_cleaned = clean_phone_number(phone)
             if not phone_cleaned or len(phone_cleaned) < 8:
                 return
 
@@ -902,6 +897,10 @@ def send_booking_notification_wa(agenda_id, psicologo_id=None):
                     conn.close()
                 except Exception:
                     pass
+
+    import threading
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
 
 def auto_send_queued_tool_reminders(db, now_local):
     """
