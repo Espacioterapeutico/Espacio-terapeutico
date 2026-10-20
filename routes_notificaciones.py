@@ -905,23 +905,35 @@ def send_booking_notification_wa(agenda_id, psicologo_id=None):
 
 def auto_send_queued_tool_reminders(db, now_local):
     """
-    Procesa y envía los recordatorios de pizarras de trabajo y herramientas
-    programadas en cola_recordatorios_herramientas que hayan alcanzado su hora de envío.
+    Procesa y envía exclusivamente los recordatorios de pizarras de trabajo
+    programadas en cola_recordatorios_herramientas que hayan alcanzado su hora de envío para el día de hoy.
     """
     from datetime import datetime, timedelta
     cursor = db.cursor()
     today_str = now_local.strftime('%Y-%m-%d')
     domain_host = get_public_base_url()
-    
+
+    # Cancelar registros obsoletos de días anteriores para evitar envíos no deseados de herramientas antiguas
+    try:
+        cursor.execute("""
+            UPDATE cola_recordatorios_herramientas
+            SET estado = 'vencido', pausado = 1
+            WHERE enviado = 0 AND fecha_programada < ?
+        """, (today_str,))
+        db.commit()
+    except Exception:
+        pass
+
     cursor.execute("""
         SELECT c.*, p.nombres, p.apellidos, p.telefono, p.psicologo_id, p.utc_offset
         FROM cola_recordatorios_herramientas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.enviado = 0 AND c.pausado = 0 AND c.estado IN ('programado', 'esperando_wa')
-          AND c.fecha_programada <= ?
+          AND c.herramienta_tipo LIKE 'pizarra%'
+          AND c.fecha_programada = ?
     """, (today_str,))
     rows = cursor.fetchall()
-    
+
     enviados = 0
     now_utc = datetime.utcnow()
 
@@ -932,19 +944,19 @@ def auto_send_queued_tool_reminders(db, now_local):
         phone = row.get('telefono')
         if not phone:
             continue
-            
+
         offset_min = row.get('utc_offset') if row.get('utc_offset') is not None else 240
         patient_local = now_utc - timedelta(minutes=offset_min)
         pat_today_str = patient_local.strftime("%Y-%m-%d")
         pat_time_str = patient_local.strftime("%H:%M")
-        
+
         # Verificar si ya es hora según reloj local del consultante
         if row['fecha_programada'] == pat_today_str:
             if pat_time_str < (row.get('hora_programada') or '20:00'):
                 continue
         elif row['fecha_programada'] > pat_today_str:
             continue
-            
+
         # Reclamo atómico para evitar envíos duplicados
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
@@ -955,49 +967,46 @@ def auto_send_queued_tool_reminders(db, now_local):
         db.commit()
         if cursor.rowcount == 0:
             continue
-            
+
         mod_clave = row['herramienta_tipo']
         first_name = (row['nombres'] or '').strip().split()[0] if row['nombres'] else 'Consultante'
         from routes_herramientas import clean_phone_number
         clean_phone = clean_phone_number(phone)
-        
-        if mod_clave.startswith('pizarra'):
-            recurso_id = row.get('token_id')
-            if not recurso_id and '_' in mod_clave:
-                try: recurso_id = int(mod_clave.split('_')[1])
-                except: pass
-                
-            cursor.execute("SELECT titulo, token_compartido FROM paciente_recursos WHERE id = ?", (recurso_id,))
-            rec_row = cursor.fetchone()
-            if rec_row and rec_row['token_compartido']:
-                token_pizarra = rec_row['token_compartido']
-                direct_link = f"{domain_host}/pizarra/compartida/{token_pizarra}"
-                tool_title = rec_row['titulo'] or 'Pizarra de Trabajo'
-            else:
-                direct_link = f"{domain_host}/portal/paciente"
-                tool_title = 'Pizarra Terapéutica'
-                
-            msg_wa = (
-                f"Hola *{first_name}* 👋\n\n"
-                f"Te comparto tu pizarra de trabajo interactivo: *{tool_title}*.\n\n"
-                f"Puedes abrirla, escribir y reflexionar en ella directamente desde este enlace colaborativo:\n"
-                f"👉 {direct_link}\n\n"
-                f"Los cambios que realices se guardan automáticamente en tiempo real para nuestra próxima sesión."
-            )
-        else:
-            cursor.execute("SELECT token FROM tokens_herramientas WHERE paciente_id = ? AND herramienta_tipo = ? ORDER BY id DESC LIMIT 1", (p_id, mod_clave))
-            t_row = cursor.fetchone()
-            token = t_row['token'] if t_row else ''
-            direct_link = f"{domain_host}/herramienta/directa?token={token}" if token else f"{domain_host}/portal/paciente"
-            tool_title = mod_clave.capitalize()
-            msg_wa = (
-                f"Hola *{first_name}* 👋 Espero te encuentres muy bien.\n\n"
-                f"Te recuerdo completar tu herramienta programada: *{tool_title}*.\n"
-                f"Puedes llenarlo en el siguiente enlace:\n"
-                f"👉 {direct_link}\n\n"
-                f"¡Gracias por tu constancia!"
-            )
-            
+
+        recurso_id = row.get('token_id')
+        if not recurso_id and '_' in mod_clave:
+            try: recurso_id = int(mod_clave.split('_')[1])
+            except: pass
+
+        cursor.execute("SELECT titulo, token_compartido FROM paciente_recursos WHERE id = ?", (recurso_id,))
+        rec_row = cursor.fetchone()
+        if not rec_row:
+            # Si el recurso fue eliminado por el terapeuta, cancelar registro
+            cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'cancelado', pausado = 1 WHERE id = ?", (row['id'],))
+            db.commit()
+            continue
+
+        token_pizarra = rec_row['token_compartido']
+        direct_link = f"{domain_host}/pizarra/compartida/{token_pizarra}" if token_pizarra else f"{domain_host}/portal/paciente"
+        tool_title = rec_row['titulo'] or 'Pizarra de Trabajo'
+
+        # Plantilla personalizada de la pizarra
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_pizarra_{psych_id}",))
+        tmpl_row = cursor.fetchone()
+        if not tmpl_row or not tmpl_row['valor']:
+            cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_pizarra'")
+            tmpl_row = cursor.fetchone()
+
+        default_tmpl = (
+            "Hola *{nombre}* 👋\n\n"
+            "Te comparto tu pizarra de trabajo interactivo: *{titulo}*.\n\n"
+            "Puedes abrirla, escribir y reflexionar en ella directamente desde este enlace:\n"
+            "👉 {link}\n\n"
+            "Los cambios que realices se guardan automáticamente en tiempo real. ¡Nos vemos en nuestra próxima sesión!"
+        )
+        raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
+        msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{titulo}', tool_title).replace('{link}', direct_link)
+
         try:
             res_wa = make_wa_http_request(
                 'POST',
@@ -1017,7 +1026,7 @@ def auto_send_queued_tool_reminders(db, now_local):
             print(f"[CRON-WA] Error enviando recordatorio cola id={row['id']}:", ex_send)
             cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'error_envio', enviado = 0 WHERE id = ?", (row['id'],))
             db.commit()
-            
+
     return enviados
 
 _wa_cron_lock = threading.Lock()

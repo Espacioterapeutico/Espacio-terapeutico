@@ -701,6 +701,8 @@ def enviar_recurso_whatsapp(recurso_id):
                     'link': direct_link
                 })
             else:
+                cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'error_envio', enviado = 0 WHERE paciente_id = ? AND herramienta_tipo = ? AND fecha_programada = ?", (d['paciente_id'], f"pizarra_{recurso_id}", today_str))
+                db.commit()
                 err_msg = 'Error al enviar por microservicio de WhatsApp'
                 try: err_msg = res.json().get('error', res.text)
                 except: pass

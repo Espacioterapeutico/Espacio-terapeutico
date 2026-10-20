@@ -1703,38 +1703,52 @@
     }
     window.shareRecursoWhatsApp = shareRecursoWhatsApp;
 
-    function shareRecursoWhatsAppById(recursoId) {
+    async function shareRecursoWhatsAppById(recursoId) {
         let r = (window.activeRecursoPizarra && window.activeRecursoPizarra.id === recursoId) ? window.activeRecursoPizarra : null;
         if (!r && window.currentPatientRecursosList && Array.isArray(window.currentPatientRecursosList)) {
             r = window.currentPatientRecursosList.find(x => x.id === recursoId) || null;
         }
         if (!r) r = window.activeRecursoPizarra;
-        if (r && r.wa_url) {
-            window.open(r.wa_url, '_blank');
-            return;
+
+        const pacNombre = (r && r.pac_nombres) ? r.pac_nombres.trim() : ((r && r.nombres) ? r.nombres.trim() : 'el consultante');
+
+        // Feedback visual inmediato en los botones de envío
+        const btns = document.querySelectorAll(`button[onclick*="shareRecursoWhatsAppById(${recursoId})"], #btn-pizarra-share-wa`);
+        const originalHtmls = [];
+        btns.forEach(b => {
+            originalHtmls.push(b.innerHTML);
+            b.disabled = true;
+            b.innerHTML = '⏳ Enviando...';
+        });
+
+        try {
+            const res = await fetch(`/api/recursos/pizarra/${recursoId}/enviar-whatsapp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ modo: 'inmediato' })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(`✅ Pizarra enviada exitosamente por WhatsApp a ${pacNombre}.`);
+            } else {
+                const errMsg = data.error || 'No se pudo enviar el mensaje por WhatsApp.';
+                const fallback = confirm(`⚠️ El bot de WhatsApp no pudo entregar el mensaje:\n${errMsg}\n\n¿Deseas abrir WhatsApp Web en tu navegador para enviarlo manualmente?`);
+                if (fallback && r && r.wa_url) {
+                    window.open(r.wa_url, '_blank');
+                }
+            }
+        } catch (err) {
+            console.error('Error enviando recurso por WhatsApp:', err);
+            const fallback = confirm(`⚠️ Error de conexión con el bot de WhatsApp.\n\n¿Deseas abrir WhatsApp Web en tu navegador para enviarlo manualmente?`);
+            if (fallback && r && r.wa_url) {
+                window.open(r.wa_url, '_blank');
+            }
+        } finally {
+            btns.forEach((b, idx) => {
+                b.disabled = false;
+                b.innerHTML = originalHtmls[idx] || '📲';
+            });
         }
-
-
-
-        const pacNombre = (r && r.pac_nombres) ? r.pac_nombres.trim() : ((r && r.nombres) ? r.nombres.trim() : 'Consultante');
-        let rawPhone = (r && r.pac_telefono) ? r.pac_telefono : ((r && r.telefono) ? r.telefono : '');
-        let cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '');
-        if (cleanPhone.startsWith('0')) {
-            cleanPhone = '58' + cleanPhone.substring(1);
-        } else if (cleanPhone && !cleanPhone.startsWith('58') && cleanPhone.length === 10) {
-            cleanPhone = '58' + cleanPhone;
-        }
-
-        const titulo = (r && r.titulo) ? r.titulo : 'Recurso Terapéutico';
-        const token = (r && r.token_compartido) ? r.token_compartido : '';
-        const hostUrl = window.location.origin;
-        const linkDirecto = token ? `${hostUrl}/pizarra/compartida/${token}` : `${hostUrl}/portal/paciente`;
-
-        const mensaje = `Hola *${pacNombre}* 👋\n\nTe comparto tu pizarra de trabajo interactivo: *${titulo}*.\n\nPuedes abrirla, escribir y reflexionar en ella directamente desde este enlace:\n👉 ${linkDirecto}\n\nLos cambios que realices se guardan automáticamente en tiempo real. ¡Nos vemos en nuestra próxima sesión!`;
-        const encoded = encodeURIComponent(mensaje);
-        const url = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://api.whatsapp.com/send?text=${encoded}`;
-
-        window.open(url, '_blank');
     }
     window.shareRecursoWhatsAppById = shareRecursoWhatsAppById;
 
