@@ -280,6 +280,15 @@ def m_0005_assign_profile_ids_to_schedules(cursor, db):
     db.commit()
 
 
+def m_0006_add_compromiso_completado_sesiones(cursor, db):
+    """Añade columna compromiso_completado a la tabla sesiones para seguimiento de tareas del terapeuta."""
+    cursor.execute("PRAGMA table_info(sesiones)")
+    cols = [r[1] for r in cursor.fetchall()]
+    if cols and 'compromiso_completado' not in cols:
+        cursor.execute("ALTER TABLE sesiones ADD COLUMN compromiso_completado INTEGER DEFAULT 0")
+        db.commit()
+
+
 # LISTA MAESTRA DE MIGRACIONES EN ORDEN CRONOLÓGICO
 MIGRATIONS = [
     ("0001_heal_slugs_and_times", "Cura de slugs huérfanos y normalización de horarios 24h", m_0001_heal_slugs_and_times),
@@ -287,6 +296,7 @@ MIGRATIONS = [
     ("0003_restore_aiverson_appointment", "Restauración de cita y log de confirmación para Aiverson", m_0003_restore_aiverson_and_cancelled_log),
     ("0004_propagate_all_psychologist_rules", "Propagación retroactiva de reglas a todas las citas activas", m_0004_propagate_all_psychologist_rules),
     ("0005_assign_profile_ids_to_schedules", "Asignación de IDs únicos e inconmutables por psicólogo para perfiles de horarios", m_0005_assign_profile_ids_to_schedules),
+    ("0006_add_compromiso_completado_sesiones", "Añadir columna compromiso_completado a sesiones", m_0006_add_compromiso_completado_sesiones),
 ]
 
 

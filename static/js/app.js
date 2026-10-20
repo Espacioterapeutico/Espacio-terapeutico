@@ -1465,7 +1465,7 @@ function switchView(viewId, fromPopState = false) {
 }
 
 function switchDashboardTab(tabKey) {
-    const tabs = ['proximas', 'calendario', 'historial'];
+    const tabs = ['proximas', 'calendario', 'tareas', 'historial'];
     tabs.forEach(t => {
         const btn = document.getElementById(`dash-tab-${t}`);
         const content = document.getElementById(`dash-content-${t}`);
@@ -1496,6 +1496,10 @@ function switchDashboardTab(tabKey) {
                 window.calendarObj.updateSize();
             }
         }, 100);
+    } else if (tabKey === 'tareas') {
+        if (typeof loadTherapistTasks === 'function') {
+            loadTherapistTasks();
+        }
     } else if (tabKey === 'historial') {
         if (typeof initTherapistAgendaHistoryFilters === 'function') {
             initTherapistAgendaHistoryFilters();
@@ -7144,6 +7148,7 @@ async function handleSessionSubmit(e) {
             loadDashboardStats();
             loadFinanceData();
             if (activeView === 'dashboard') loadAgendaCompact();
+            if (typeof loadTherapistTasks === 'function') loadTherapistTasks(false);
 
             if (!id && newSessionId && hadTasks) {
                 setTimeout(() => {
@@ -7350,6 +7355,269 @@ function handleModalSendSessionCierre() {
 window.handleModalSendSessionCierre = handleModalSendSessionCierre;
 
 // ==========================================
+// MIS TAREAS DEL TERAPEUTA (Compromisos)
+// ==========================================
+let _therapistTasksCache = [];
+let _therapistTasksFilter = 'all';
+
+function _escapeHtmlTask(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function _formatTaskDate(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        const day = parseInt(parts[2], 10);
+        const mIdx = parseInt(parts[1], 10) - 1;
+        const year = parts[0];
+        if (mIdx >= 0 && mIdx < 12) {
+            return `${day} ${months[mIdx]} ${year}`;
+        }
+    }
+    return dateStr;
+}
+
+async function loadTherapistTasks(showLoader = true) {
+    const container = document.getElementById('therapist-tasks-container');
+    if (!container) return;
+
+    if (showLoader && _therapistTasksCache.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">
+                <p style="color: var(--text-muted); margin: 0; font-size: 0.88rem;">Cargando tus tareas de terapeuta...</p>
+            </div>
+        `;
+    }
+
+    try {
+        const res = await fetch('/api/therapist/tasks?_t=' + Date.now());
+        if (!res.ok) throw new Error("Error cargando tareas del terapeuta.");
+        const data = await res.json();
+        _therapistTasksCache = Array.isArray(data.tasks) ? data.tasks : [];
+
+        updateTherapistTasksCounters();
+        renderTherapistTasksList();
+    } catch (err) {
+        console.error("Error al cargar tareas del terapeuta:", err);
+        if (container && _therapistTasksCache.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="padding: 2rem 1rem; text-align: center;">
+                    <p style="color: #ef4444; margin: 0; font-size: 0.88rem;">No fue posible cargar tus tareas. Intenta nuevamente.</p>
+                </div>
+            `;
+        }
+    }
+}
+
+async function updateTherapistTasksBadge() {
+    try {
+        const res = await fetch('/api/therapist/tasks?_t=' + Date.now());
+        if (res.ok) {
+            const data = await res.json();
+            const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+            const pendingCount = tasks.filter(t => !t.compromiso_completado).length;
+            const badge = document.getElementById('therapist-pending-tasks-badge');
+            if (badge) {
+                if (pendingCount > 0) {
+                    badge.textContent = pendingCount;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+    } catch (e) {
+        // Silencioso
+    }
+}
+
+function updateTherapistTasksCounters() {
+    const total = _therapistTasksCache.length;
+    const completed = _therapistTasksCache.filter(t => !!t.compromiso_completado).length;
+    const pending = total - completed;
+
+    const elAll = document.getElementById('count-tasks-all');
+    if (elAll) elAll.textContent = total;
+
+    const elPending = document.getElementById('count-tasks-pending');
+    if (elPending) elPending.textContent = pending;
+
+    const elCompleted = document.getElementById('count-tasks-completed');
+    if (elCompleted) elCompleted.textContent = completed;
+
+    const badge = document.getElementById('therapist-pending-tasks-badge');
+    if (badge) {
+        if (pending > 0) {
+            badge.textContent = pending;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function filterTherapistTasks(filter) {
+    _therapistTasksFilter = filter;
+    ['all', 'pending', 'completed'].forEach(f => {
+        const btn = document.getElementById(`task-filter-${f}`);
+        if (btn) {
+            if (f === filter) {
+                btn.style.background = 'var(--card-bg, #fff)';
+                btn.style.color = 'var(--text-dark)';
+                btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.color = 'var(--text-muted)';
+                btn.style.boxShadow = 'none';
+            }
+        }
+    });
+    renderTherapistTasksList();
+}
+
+function renderTherapistTasksList() {
+    const container = document.getElementById('therapist-tasks-container');
+    if (!container) return;
+
+    const searchInput = document.getElementById('therapist-task-search');
+    const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+    let list = _therapistTasksCache.filter(t => {
+        // Filtro estado
+        if (_therapistTasksFilter === 'pending' && t.compromiso_completado) return false;
+        if (_therapistTasksFilter === 'completed' && !t.compromiso_completado) return false;
+
+        // Filtro búsqueda
+        if (searchTerm) {
+            const pacName = `${t.nombres || ''} ${t.apellidos || ''}`.toLowerCase();
+            const compText = (t.compromisos_psicologo || '').toLowerCase();
+            return pacName.includes(searchTerm) || compText.includes(searchTerm);
+        }
+        return true;
+    });
+
+    if (list.length === 0) {
+        let msg = "No hay tareas registradas.";
+        if (searchTerm) {
+            msg = `No se encontraron tareas que coincidan con "${_escapeHtmlTask(searchTerm)}".`;
+        } else if (_therapistTasksFilter === 'pending') {
+            msg = "✨ ¡Excelente trabajo! No tienes tareas pendientes.";
+        } else if (_therapistTasksFilter === 'completed') {
+            msg = "Aún no has marcado ninguna tarea como completada.";
+        } else {
+            msg = "🎉 No tienes tareas registradas. Cuando agregues compromisos en 'Tareas del terapeuta' dentro de la evolución clínica, aparecerán aquí ordenadas cronológicamente.";
+        }
+
+        container.innerHTML = `
+            <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">
+                <p style="color: var(--text-muted); margin: 0; font-size: 0.88rem; max-width: 500px; margin: 0 auto; line-height: 1.5;">${msg}</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Ordenar: primero pendientes, luego completadas; dentro de cada grupo, fecha descendente
+    list.sort((a, b) => {
+        const compA = a.compromiso_completado ? 1 : 0;
+        const compB = b.compromiso_completado ? 1 : 0;
+        if (compA !== compB) return compA - compB;
+        return (b.fecha || '').localeCompare(a.fecha || '');
+    });
+
+    let html = '<div class="therapist-tasks-list" style="display: flex; flex-direction: column; gap: 0.65rem;">';
+
+    list.forEach(t => {
+        const isDone = !!t.compromiso_completado;
+        const dateFormatted = _formatTaskDate(t.fecha);
+        const pacFullName = `${t.nombres || ''} ${t.apellidos || ''}`.trim() || 'Consultante';
+        const modalLabel = t.modalidad ? `<span style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover, #f1f5f9); color: var(--text-muted);">${_escapeHtmlTask(t.modalidad)}</span>` : '';
+
+        html += `
+            <div class="therapist-task-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--card-bg, #fff); border: 1.5px solid ${isDone ? 'var(--border-color, #e2e8f0)' : 'var(--primary-light, #c7d2fe)'}; border-left: 4px solid ${isDone ? '#10b981' : 'var(--primary, #4f46e5)'}; border-radius: 8px; transition: all 0.2s ease;">
+                <div style="padding-top: 2px;">
+                    <input type="checkbox" id="task-chk-${t.session_id}" ${isDone ? 'checked' : ''} onchange="toggleTherapistTask(${t.session_id}, this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" title="Marcar como ${isDone ? 'pendiente' : 'completada'}">
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 5px;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <span style="font-weight: 700; font-size: 0.86rem; color: var(--text-dark); cursor: pointer;" onclick="if(typeof openPatientDetailsModal === 'function') openPatientDetailsModal(${t.paciente_id});" title="Ver ficha del consultante">
+                                👤 ${_escapeHtmlTask(pacFullName)}
+                            </span>
+                            <span style="font-size: 0.74rem; color: var(--text-muted); background: var(--bg-hover, #f1f5f9); padding: 2px 7px; border-radius: 6px;">
+                                📅 ${dateFormatted}
+                            </span>
+                            ${modalLabel}
+                        </div>
+                        <div>
+                            <span class="badge" style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; ${isDone ? 'background: #dcfce7; color: #15803d;' : 'background: #fef3c7; color: #b45309;'}">
+                                ${isDone ? '✓ Completada' : '⏳ Pendiente'}
+                            </span>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.85rem; line-height: 1.45; color: ${isDone ? 'var(--text-muted)' : 'var(--text-dark)'}; ${isDone ? 'text-decoration: line-through; opacity: 0.75;' : ''} white-space: pre-wrap; word-break: break-word;">
+                        ${_escapeHtmlTask(t.compromisos_psicologo)}
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; align-self: center; margin-left: 4px;">
+                    <button class="btn btn-secondary btn-sm" onclick="openEditSessionModal(${t.session_id})" style="font-size: 0.74rem; padding: 0.35rem 0.65rem; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Ver o editar evolución clínica donde se asignó esta tarea">
+                        👁️ Ver Evolución
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function toggleTherapistTask(sessionId, isChecked) {
+    // Actualización optimista local
+    const target = _therapistTasksCache.find(t => t.session_id === sessionId);
+    const prevStatus = target ? target.compromiso_completado : 0;
+    if (target) {
+        target.compromiso_completado = isChecked ? 1 : 0;
+        updateTherapistTasksCounters();
+        renderTherapistTasksList();
+    }
+
+    try {
+        const res = await fetch(`/api/therapist/tasks/${sessionId}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completado: isChecked ? 1 : 0 })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || "No se pudo actualizar la tarea.");
+        }
+    } catch (err) {
+        console.error("Error al cambiar estado de tarea:", err);
+        alert("Ocurrió un error al actualizar el estado de la tarea en el servidor.");
+        // Revertir si hubo error
+        if (target) {
+            target.compromiso_completado = prevStatus;
+            updateTherapistTasksCounters();
+            renderTherapistTasksList();
+        }
+    }
+}
+
+window.loadTherapistTasks = loadTherapistTasks;
+window.filterTherapistTasks = filterTherapistTasks;
+window.renderTherapistTasksList = renderTherapistTasksList;
+window.toggleTherapistTask = toggleTherapistTask;
+window.updateTherapistTasksBadge = updateTherapistTasksBadge;
+
+// ==========================================
 // DASHBOARD STATS & EVENTS
 // ==========================================
 async function loadDashboardStats() {
@@ -7395,6 +7663,9 @@ async function loadDashboardStats() {
         }
     } catch (err) {
         console.error("Error al cargar estadísticas del dashboard:", err);
+    }
+    if (typeof updateTherapistTasksBadge === 'function') {
+        updateTherapistTasksBadge();
     }
 }
 
@@ -9311,6 +9582,7 @@ async function handleEventSubmit(e) {
                 loadAgenda();
             }
             if (activeView === 'dashboard') loadAgendaCompact();
+            if (typeof loadTherapistTasks === 'function') loadTherapistTasks(false);
         } else {
             alert(data.error);
         }
@@ -11723,6 +11995,7 @@ async function syncGoogleCalendar() {
             }
             if (activeView === 'agenda') loadAgenda();
             if (activeView === 'dashboard') loadAgendaCompact();
+            if (typeof loadTherapistTasks === 'function') loadTherapistTasks(false);
         } else {
             alert(data.error);
         }

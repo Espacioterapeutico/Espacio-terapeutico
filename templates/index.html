@@ -1989,7 +1989,7 @@
                     <div class="sub-nav-tabs mt-2 mb-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.85rem;">
                         <button type="button" id="dash-tab-proximas" class="btn btn-sm btn-primary" onclick="switchDashboardTab('proximas')" style="font-weight: 600; padding: 0.4rem 0.25rem; font-size: 0.78rem; border-radius: var(--radius-sm); border: none; cursor: pointer; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Próximas Consultas">🗓️ Próximas</button>
                         <button type="button" id="dash-tab-calendario" class="btn btn-sm btn-secondary" onclick="switchDashboardTab('calendario')" style="font-weight: 600; padding: 0.4rem 0.25rem; font-size: 0.78rem; border-radius: var(--radius-sm); border: none; cursor: pointer; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Vista Calendario">📅 Calendario</button>
-                        <button type="button" id="dash-tab-historial" class="btn btn-sm btn-secondary" onclick="switchDashboardTab('historial')" style="font-weight: 600; padding: 0.4rem 0.25rem; font-size: 0.78rem; border-radius: var(--radius-sm); border: none; cursor: pointer; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Historial de Consultas">📜 Historial</button>
+                        <button type="button" id="dash-tab-tareas" class="btn btn-sm btn-secondary" onclick="switchDashboardTab('tareas')" style="font-weight: 600; padding: 0.4rem 0.25rem; font-size: 0.78rem; border-radius: var(--radius-sm); border: none; cursor: pointer; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Mis Tareas (Compromisos del terapeuta)">📝 Mis Tareas <span id="therapist-pending-tasks-badge" class="badge" style="display: none; background: #ef4444; color: white; font-size: 0.65rem; padding: 1px 5px; border-radius: 10px; margin-left: 2px;">0</span></button>
                     </div>
 
                     <!-- Bloque 1: Próximas Consultas & Evoluciones Pendientes -->
@@ -2035,7 +2035,39 @@
                     </div>
 
                     <!-- Bloque 3: Historial de Consultas -->
-                    <div id="dash-content-historial" class="dash-tab-content hide">
+                    <!-- Bloque 3: Mis Tareas del Terapeuta (Compromisos adquiridos en evolución clínica) -->
+                    <div id="dash-content-tareas" class="dash-tab-content hide">
+                        <div class="card mb-4" style="border-radius: 10px;">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color);">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 0.98rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 6px;">
+                                        <span>📝 Mis Tareas como Terapeuta</span>
+                                    </h3>
+                                    <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: var(--text-muted);">
+                                        Compromisos y recordatorios propios registrados en tus evoluciones clínicas.
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                    <div class="btn-group" style="display: flex; gap: 3px; background: var(--bg-hover, #f1f5f9); padding: 3px; border-radius: 8px;">
+                                        <button type="button" id="task-filter-all" class="btn btn-sm" onclick="filterTherapistTasks('all')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: none; background: var(--card-bg, #fff); color: var(--text-dark); box-shadow: 0 1px 2px rgba(0,0,0,0.08);">Todas (<span id="count-tasks-all">0</span>)</button>
+                                        <button type="button" id="task-filter-pending" class="btn btn-sm" onclick="filterTherapistTasks('pending')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted);">Pendientes (<span id="count-tasks-pending">0</span>)</button>
+                                        <button type="button" id="task-filter-completed" class="btn btn-sm" onclick="filterTherapistTasks('completed')" style="font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted);">Completadas (<span id="count-tasks-completed">0</span>)</button>
+                                    </div>
+                                    <input type="text" id="therapist-task-search" placeholder="Buscar tarea o consultante..." class="form-control" style="font-size: 0.78rem; padding: 0.3rem 0.6rem; width: 180px;" oninput="renderTherapistTasksList()">
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 0.85rem 1rem;">
+                                <div id="therapist-tasks-container">
+                                    <div class="empty-state" style="padding: 2rem 1rem; text-align: center;">
+                                        <p style="color: var(--text-muted); margin: 0; font-size: 0.88rem;">Cargando tareas...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloque Oculto: Historial de Consultas (Preservado para compatibilidad) -->
+                    <div id="dash-content-historial" class="dash-tab-content hide" style="display: none !important;">
                         <div class="card mb-4">
                             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                                 <h3>Historial de Consultas por Mes</h3>

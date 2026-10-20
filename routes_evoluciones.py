@@ -52,7 +52,8 @@ def ensure_sesiones_columns(cursor):
                 ('test_aplicados', 'TEXT'),
                 ('archivo_adjunto', 'TEXT'),
                 ('resumen_paciente', 'TEXT'),
-                ('examen_mental_id', 'INTEGER')
+                ('examen_mental_id', 'INTEGER'),
+                ('compromiso_completado', 'INTEGER DEFAULT 0')
             ]:
                 if col_name not in cols_s:
                     try: cursor.execute(f"ALTER TABLE sesiones ADD COLUMN {col_name} {col_type}")
@@ -699,3 +700,77 @@ def remove_session_attachment(session_id):
         return jsonify({'success': 'Archivo adjunto eliminado con éxito de la evolución.'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ==============================================================================
+# MIS TAREAS DEL TERAPEUTA (Compromisos adquiridos en evoluciones clínicas)
+# ==============================================================================
+
+@evoluciones_bp.route('/api/therapist/tasks', methods=['GET'])
+@login_required
+def get_therapist_tasks():
+    db = get_db()
+    cursor = db.cursor()
+    ensure_sesiones_columns(cursor)
+    psic_id = get_psicologo_id_filter()
+    from app import decrypt_clinical_text
+    
+    try:
+        cursor.execute("""
+            SELECT s.id as session_id, s.paciente_id, s.fecha, s.modalidad, s.compromisos_psicologo,
+                   COALESCE(s.compromiso_completado, 0) as compromiso_completado,
+                   p.nombres, p.apellidos, p.foto
+            FROM sesiones s
+            JOIN pacientes p ON s.paciente_id = p.id
+            WHERE p.psicologo_id = ? AND s.compromisos_psicologo IS NOT NULL AND TRIM(s.compromisos_psicologo) != ''
+            ORDER BY s.fecha DESC, s.id DESC
+        """, (psic_id,))
+        
+        rows = cursor.fetchall()
+        tasks = []
+        for r in rows:
+            row_dict = dict(r)
+            decrypted = decrypt_clinical_text(row_dict.get('compromisos_psicologo'))
+            if decrypted and decrypted.strip():
+                row_dict['compromisos_psicologo'] = decrypted.strip()
+                tasks.append(row_dict)
+                
+        return jsonify({'tasks': tasks})
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener tareas del terapeuta: {str(e)}'}), 500
+
+
+@evoluciones_bp.route('/api/therapist/tasks/<int:session_id>/toggle', methods=['POST'])
+@login_required
+def toggle_therapist_task(session_id):
+    db = get_db()
+    cursor = db.cursor()
+    ensure_sesiones_columns(cursor)
+    psic_id = get_psicologo_id_filter()
+    
+    try:
+        cursor.execute("""
+            SELECT s.id, COALESCE(s.compromiso_completado, 0) as completado
+            FROM sesiones s
+            JOIN pacientes p ON s.paciente_id = p.id
+            WHERE s.id = ? AND p.psicologo_id = ?
+        """, (session_id, psic_id))
+        
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'error': 'Evolución no encontrada o sin permisos.'}), 404
+            
+        current_status = row['completado']
+        data = request.get_json(silent=True) or {}
+        if 'completado' in data:
+            new_status = 1 if data['completado'] else 0
+        else:
+            new_status = 0 if current_status == 1 else 1
+            
+        cursor.execute("UPDATE sesiones SET compromiso_completado = ? WHERE id = ?", (new_status, session_id))
+        db.commit()
+        
+        return jsonify({'success': True, 'session_id': session_id, 'compromiso_completado': new_status})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'Error al actualizar tarea del terapeuta: {str(e)}'}), 500

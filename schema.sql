@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS sesiones (
     recursos_entregados TEXT,
     anotaciones_proxima TEXT,
     compromisos_psicologo TEXT,
+    compromiso_completado INTEGER DEFAULT 0,
     diagnostico TEXT,
     test_aplicados TEXT,
     archivo_adjunto TEXT,
