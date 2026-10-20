@@ -901,9 +901,122 @@ def send_booking_notification_wa(agenda_id, psicologo_id=None):
                 except Exception:
                     pass
 
-    t = threading.Thread(target=_worker, daemon=True)
-    t.start()
+def auto_send_queued_tool_reminders(db, now_local):
+    """
+    Procesa y envía los recordatorios de pizarras de trabajo y herramientas
+    programadas en cola_recordatorios_herramientas que hayan alcanzado su hora de envío.
+    """
+    from datetime import datetime, timedelta
+    cursor = db.cursor()
+    today_str = now_local.strftime('%Y-%m-%d')
+    domain_host = get_public_base_url()
+    
+    cursor.execute("""
+        SELECT c.*, p.nombres, p.apellidos, p.telefono, p.psicologo_id, p.utc_offset
+        FROM cola_recordatorios_herramientas c
+        JOIN pacientes p ON c.paciente_id = p.id
+        WHERE c.enviado = 0 AND c.pausado = 0 AND c.estado IN ('programado', 'esperando_wa')
+          AND c.fecha_programada <= ?
+    """, (today_str,))
+    rows = cursor.fetchall()
+    
+    enviados = 0
+    now_utc = datetime.utcnow()
 
+    for r_raw in rows:
+        row = dict(r_raw)
+        p_id = row['paciente_id']
+        psych_id = row['psicologo_id'] or 1
+        phone = row.get('telefono')
+        if not phone:
+            continue
+            
+        offset_min = row.get('utc_offset') if row.get('utc_offset') is not None else 240
+        patient_local = now_utc - timedelta(minutes=offset_min)
+        pat_today_str = patient_local.strftime("%Y-%m-%d")
+        pat_time_str = patient_local.strftime("%H:%M")
+        
+        # Verificar si ya es hora según reloj local del consultante
+        if row['fecha_programada'] == pat_today_str:
+            if pat_time_str < (row.get('hora_programada') or '20:00'):
+                continue
+        elif row['fecha_programada'] > pat_today_str:
+            continue
+            
+        # Reclamo atómico para evitar envíos duplicados
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            UPDATE cola_recordatorios_herramientas
+            SET estado = 'enviando', enviado = 1, fecha_envio = ?
+            WHERE id = ? AND enviado = 0
+        """, (now_str, row['id']))
+        db.commit()
+        if cursor.rowcount == 0:
+            continue
+            
+        mod_clave = row['herramienta_tipo']
+        first_name = (row['nombres'] or '').strip().split()[0] if row['nombres'] else 'Consultante'
+        from routes_herramientas import clean_phone_number
+        clean_phone = clean_phone_number(phone)
+        
+        if mod_clave.startswith('pizarra'):
+            recurso_id = row.get('token_id')
+            if not recurso_id and '_' in mod_clave:
+                try: recurso_id = int(mod_clave.split('_')[1])
+                except: pass
+                
+            cursor.execute("SELECT titulo, token_compartido FROM paciente_recursos WHERE id = ?", (recurso_id,))
+            rec_row = cursor.fetchone()
+            if rec_row and rec_row['token_compartido']:
+                token_pizarra = rec_row['token_compartido']
+                direct_link = f"{domain_host}/pizarra/compartida/{token_pizarra}"
+                tool_title = rec_row['titulo'] or 'Pizarra de Trabajo'
+            else:
+                direct_link = f"{domain_host}/portal/paciente"
+                tool_title = 'Pizarra Terapéutica'
+                
+            msg_wa = (
+                f"Hola *{first_name}* 👋\n\n"
+                f"Te comparto tu pizarra de trabajo interactivo: *{tool_title}*.\n\n"
+                f"Puedes abrirla, escribir y reflexionar en ella directamente desde este enlace colaborativo:\n"
+                f"👉 {direct_link}\n\n"
+                f"Los cambios que realices se guardan automáticamente en tiempo real para nuestra próxima sesión."
+            )
+        else:
+            cursor.execute("SELECT token FROM tokens_herramientas WHERE paciente_id = ? AND herramienta_tipo = ? ORDER BY id DESC LIMIT 1", (p_id, mod_clave))
+            t_row = cursor.fetchone()
+            token = t_row['token'] if t_row else ''
+            direct_link = f"{domain_host}/herramienta/directa?token={token}" if token else f"{domain_host}/portal/paciente"
+            tool_title = mod_clave.capitalize()
+            msg_wa = (
+                f"Hola *{first_name}* 👋 Espero te encuentres muy bien.\n\n"
+                f"Te recuerdo completar tu herramienta programada: *{tool_title}*.\n"
+                f"Puedes llenarlo en el siguiente enlace:\n"
+                f"👉 {direct_link}\n\n"
+                f"¡Gracias por tu constancia!"
+            )
+            
+        try:
+            res_wa = make_wa_http_request(
+                'POST',
+                '/send',
+                json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': psych_id, 'linkPreview': False},
+                timeout=15,
+                user_id=psych_id
+            )
+            if res_wa and res_wa.status_code == 200:
+                cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'enviado', enviado = 1, fecha_envio = ? WHERE id = ?", (now_str, row['id']))
+                db.commit()
+                enviados += 1
+            else:
+                cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'error_envio', enviado = 0 WHERE id = ?", (row['id'],))
+                db.commit()
+        except Exception as ex_send:
+            print(f"[CRON-WA] Error enviando recordatorio cola id={row['id']}:", ex_send)
+            cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'error_envio', enviado = 0 WHERE id = ?", (row['id'],))
+            db.commit()
+            
+    return enviados
 
 _wa_cron_lock = threading.Lock()
 
@@ -1343,6 +1456,13 @@ def _execute_whatsapp_reminders_inner(db=None):
     except Exception as e_tools:
         print("Aviso al ejecutar send_hourly_patient_tool_reminders en cron:", e_tools)
 
+    # 4.1 ENVIAR RECORDATORIOS DE PIZARRAS Y HERRAMIENTAS PROGRAMADAS EN COLA
+    try:
+        pizarras_enviadas = auto_send_queued_tool_reminders(db, now_local)
+        herramientas_enviadas += (pizarras_enviadas or 0)
+    except Exception as e_piz:
+        print("Aviso al ejecutar auto_send_queued_tool_reminders en cron:", e_piz)
+
     # 5. ENVIAR RECORDATORIOS DE ESTIMULACIÓN COGNITIVA PROGRAMADA
     estimulacion_enviada = 0
     try:
@@ -1462,54 +1582,78 @@ def send_queue_item_now(item_id):
                 token_id = q_row['token_id']
 
             domain_host = get_public_base_url()
-            direct_link = f"{domain_host}/herramienta/directa?token={token}"
             first_name = (q_row['nombres'] or '').strip().split()[0] if q_row['nombres'] else 'Consultante'
 
-            TOOL_NAME_MAP = {
-                'mood_tracker': 'Mood Tracker (Registro de Emociones)',
-                'pantalla': 'Registro de Consumo de Pantallas',
-                'cognitivo': 'Registro Cognitivo (TCC)',
-                'ingesta': 'Registro de Ingesta Alimentaria',
-                'activacion': 'Checklist de Activación Conductual',
-                'adherencia': 'Control de Adherencia a Medicamentos',
-                'pizarra': 'Diario / Pizarra Terapéutica',
-                'sueno': 'Higiene del Sueño',
-                'ansiedad': 'Diario de Ansiedad',
-                'sobriedad': 'Registro de Consumo y Sobriedad'
-            }
-            tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')
+            if mod_clave.startswith('pizarra'):
+                recurso_id = q_row.get('token_id')
+                if not recurso_id and '_' in mod_clave:
+                    try: recurso_id = int(mod_clave.split('_')[1])
+                    except: pass
+                
+                cursor.execute("SELECT titulo, token_compartido FROM paciente_recursos WHERE id = ?", (recurso_id,))
+                rec_row = cursor.fetchone()
+                if rec_row and rec_row['token_compartido']:
+                    token_pizarra = rec_row['token_compartido']
+                    direct_link = f"{domain_host}/pizarra/compartida/{token_pizarra}"
+                    tool_title = rec_row['titulo'] or 'Pizarra de Trabajo'
+                else:
+                    direct_link = f"{domain_host}/portal/paciente"
+                    tool_title = 'Pizarra Terapéutica'
+                    
+                msg_wa = (
+                    f"Hola *{first_name}* 👋\n\n"
+                    f"Te comparto tu pizarra de trabajo interactivo: *{tool_title}*.\n\n"
+                    f"Puedes abrirla, escribir y reflexionar en ella directamente desde este enlace colaborativo:\n"
+                    f"👉 {direct_link}\n\n"
+                    f"Los cambios que realices se guardan automáticamente en tiempo real para nuestra próxima sesión."
+                )
+            else:
+                direct_link = f"{domain_host}/herramienta/directa?token={token}"
+                TOOL_NAME_MAP = {
+                    'mood_tracker': 'Mood Tracker (Registro de Emociones)',
+                    'pantalla': 'Registro de Consumo de Pantallas',
+                    'cognitivo': 'Registro Cognitivo (TCC)',
+                    'ingesta': 'Registro de Ingesta Alimentaria',
+                    'activacion': 'Checklist de Activación Conductual',
+                    'adherencia': 'Control de Adherencia a Medicamentos',
+                    'pizarra': 'Diario / Pizarra Terapéutica',
+                    'sueno': 'Higiene del Sueño',
+                    'ansiedad': 'Diario de Ansiedad',
+                    'sobriedad': 'Registro de Consumo y Sobriedad'
+                }
+                tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta Terapéutica')
 
-            cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_herramientas_{psych_id}",))
-            tmpl_row = cursor.fetchone()
-            if not tmpl_row or not tmpl_row['valor']:
-                cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_herramientas'")
+                cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_herramientas_{psych_id}",))
                 tmpl_row = cursor.fetchone()
+                if not tmpl_row or not tmpl_row['valor']:
+                    cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_herramientas'")
+                    tmpl_row = cursor.fetchone()
 
-            try:
-                dt_obj = datetime.strptime(str(today_str), "%Y-%m-%d")
-                fecha_fmt = dt_obj.strftime("%d/%m/%Y")
-            except Exception:
-                fecha_fmt = str(today_str)
+                try:
+                    dt_obj = datetime.strptime(str(today_str), "%Y-%m-%d")
+                    fecha_fmt = dt_obj.strftime("%d/%m/%Y")
+                except Exception:
+                    fecha_fmt = str(today_str)
 
-            hora_prog = q_row.get('hora_programada') or '20:00'
-            try:
-                h_val, m_val = map(int, str(hora_prog).split(':')[:2])
-                ampm_val = "PM" if h_val >= 12 else "AM"
-                h_12 = h_val - 12 if h_val > 12 else (12 if h_val == 0 else h_val)
-                hora_fmt = f"{str(h_12).zfill(2)}:{str(m_val).zfill(2)} {ampm_val}"
-            except Exception:
-                hora_fmt = str(hora_prog or '08:00 PM')
+                hora_prog = q_row.get('hora_programada') or '20:00'
+                try:
+                    h_val, m_val = map(int, str(hora_prog).split(':')[:2])
+                    ampm_val = "PM" if h_val >= 12 else "AM"
+                    h_12 = h_val - 12 if h_val > 12 else (12 if h_val == 0 else h_val)
+                    hora_fmt = f"{str(h_12).zfill(2)}:{str(m_val).zfill(2)} {ampm_val}"
+                except Exception:
+                    hora_fmt = str(hora_prog or '08:00 PM')
 
-            default_tmpl = (
-                "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
-                "Te recuerdo completar tu *{herramienta}* programada para las *{hora}*. "
-                "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
-                "👉 {link}\n\n"
-                "¡Gracias por tu constancia!"
-            )
-            raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
-            msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link).replace('{fecha}', fecha_fmt).replace('{hora}', hora_fmt)
-            msg_wa = msg_wa.replace('del día de hoy', f'del día {fecha_fmt} a las {hora_fmt}')
+                default_tmpl = (
+                    "Hola *{nombre}* 👋 Espero te encuentres muy bien.\n\n"
+                    "Te recuerdo completar tu *{herramienta}* programada para las *{hora}*. "
+                    "Puedes llenarlo en 30 segundos haciendo clic en el siguiente enlace directo (sin iniciar sesión):\n"
+                    "👉 {link}\n\n"
+                    "¡Gracias por tu constancia!"
+                )
+                raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
+                msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link).replace('{fecha}', fecha_fmt).replace('{hora}', hora_fmt)
+                msg_wa = msg_wa.replace('del día de hoy', f'del día {fecha_fmt} a las {hora_fmt}')
 
             from routes_herramientas import clean_phone_number
             clean_phone = clean_phone_number(phone)
@@ -2090,16 +2234,30 @@ def get_whatsapp_queue_status():
                 pat_name = f"{tr['pat_nombres']} {tr['pat_apellidos']}"
                 phone = tr['pat_telefono'] or ''
                 h_tipo = tr['herramienta_tipo']
-                h_nombre = tool_names_map.get(h_tipo, 'Herramienta Terapéutica')
                 tok = tr['token']
 
-                if not tok:
-                    cursor.execute("SELECT token FROM tokens_herramientas WHERE paciente_id = ? AND herramienta_tipo = ? ORDER BY id DESC LIMIT 1", (tr['paciente_id'], h_tipo))
-                    t_row = cursor.fetchone()
-                    if t_row:
-                        tok = t_row['token']
-
-                link_tool = f"{host_url}/herramienta/directa?token={tok}" if tok else ""
+                if h_tipo.startswith('pizarra'):
+                    recurso_id = tr.get('token_id')
+                    if not recurso_id and '_' in h_tipo:
+                        try: recurso_id = int(h_tipo.split('_')[1])
+                        except: pass
+                    cursor.execute("SELECT titulo, token_compartido FROM paciente_recursos WHERE id = ?", (recurso_id,))
+                    rec_row = cursor.fetchone()
+                    if rec_row and rec_row['token_compartido']:
+                        tok = rec_row['token_compartido']
+                        h_nombre = rec_row['titulo'] or 'Pizarra de Trabajo'
+                        link_tool = f"{host_url}/pizarra/compartida/{tok}"
+                    else:
+                        h_nombre = 'Pizarra Terapéutica'
+                        link_tool = f"{host_url}/portal/paciente"
+                else:
+                    h_nombre = tool_names_map.get(h_tipo, 'Herramienta Terapéutica')
+                    if not tok:
+                        cursor.execute("SELECT token FROM tokens_herramientas WHERE paciente_id = ? AND herramienta_tipo = ? ORDER BY id DESC LIMIT 1", (tr['paciente_id'], h_tipo))
+                        t_row = cursor.fetchone()
+                        if t_row:
+                            tok = t_row['token']
+                    link_tool = f"{host_url}/herramienta/directa?token={tok}" if tok else ""
                 
                 st = tr['estado']
                 pausado = tr['pausado']
@@ -2117,7 +2275,9 @@ def get_whatsapp_queue_status():
                 else:
                     pipeline_status = 'en_cola'
                     hora_disp = tr['hora_programada'] or '20:00'
-                    if hora_disp == '08:00':
+                    if h_tipo.startswith('pizarra'):
+                        pipeline_label = f'📋 Pizarra: {h_nombre} ({hora_disp})'
+                    elif hora_disp == '08:00':
                         pipeline_label = '⏳ Recordatorio Sueño (08:00 AM)'
                     else:
                         pipeline_label = '⏳ Recordatorio Herramienta (08:00 PM)'

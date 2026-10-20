@@ -14,7 +14,7 @@ import uuid
 import sqlite3
 from datetime import datetime
 from functools import wraps
-from flask import Blueprint, request, jsonify, session, g, send_file
+from flask import Blueprint, request, jsonify, session, g, send_file, render_template
 
 recursos_bp = Blueprint('recursos', __name__)
 
@@ -525,6 +525,260 @@ def delete_recurso(recurso_id):
     return jsonify({'success': 'Recurso eliminado correctamente.'})
 
 # =========================================================================
+# WHATSAPP Y ENCOLADO CRON DE PIZARRAS DE TRABAJO
+# =========================================================================
+
+@recursos_bp.route('/api/recursos/pizarra/<int:recurso_id>/enviar-whatsapp', methods=['POST'])
+@psychologist_required
+def enviar_recurso_whatsapp(recurso_id):
+    """
+    Envía o programa el enlace directo a la pizarra colaborativa por WhatsApp:
+    - modo 'inmediato': despacha al instante a través del microservicio WhatsApp / Bot.
+    - modo 'cron': agenda en cola_recordatorios_herramientas para que el cron job lo envíe a la hora indicada.
+    """
+    user_id = session.get('user_id')
+    data = request.json or {}
+    modo = data.get('modo', 'inmediato')
+    hora = (data.get('hora') or '20:00').strip()
+    fecha_prog = data.get('fecha') or datetime.now().strftime("%Y-%m-%d")
+
+    db = get_db()
+    cursor = db.cursor()
+    ensure_recursos_tables(cursor)
+
+    cursor.execute("""
+        SELECT r.*, 
+               p.nombres as pac_nombres, p.apellidos as pac_apellidos, p.telefono as pac_telefono,
+               u.nombres as psi_nombres, u.apellidos as psi_apellidos
+        FROM paciente_recursos r
+        JOIN pacientes p ON r.paciente_id = p.id
+        JOIN usuarios u ON r.psicologo_id = u.id
+        WHERE r.id = ?
+    """, (recurso_id,))
+    row = cursor.fetchone()
+
+    if not row:
+        return jsonify({'error': 'Recurso o pizarra no encontrada.'}), 404
+
+    d = dict(row)
+    if d['psicologo_id'] != user_id and session.get('role') != 'admin':
+        return jsonify({'error': 'No autorizado para gestionar este recurso.'}), 403
+
+    phone = d.get('pac_telefono')
+    if not phone or not str(phone).strip():
+        return jsonify({'error': 'El consultante no tiene un número de teléfono registrado en su ficha.'}), 400
+
+    token = d.get('token_compartido')
+    if not token:
+        token = uuid.uuid4().hex
+        cursor.execute("UPDATE paciente_recursos SET token_compartido = ? WHERE id = ?", (token, recurso_id))
+        db.commit()
+
+    from routes_herramientas import get_public_base_url, clean_phone_number
+    host_url = get_public_base_url()
+    direct_link = f"{host_url}/pizarra/compartida/{token}"
+
+    first_name = (d.get('pac_nombres') or '').strip().split()[0] if d.get('pac_nombres') else 'Consultante'
+    titulo = d.get('titulo') or 'Pizarra de Trabajo'
+
+    msg_wa = (
+        f"Hola *{first_name}* 👋\n\n"
+        f"Te comparto tu pizarra de trabajo interactivo: *{titulo}*.\n\n"
+        f"Puedes abrirla, escribir y reflexionar en ella directamente desde este enlace colaborativo:\n"
+        f"👉 {direct_link}\n\n"
+        f"Los cambios que realices se guardan automáticamente en tiempo real para nuestra próxima sesión."
+    )
+
+    clean_phone = clean_phone_number(phone)
+
+    if modo == 'inmediato':
+        try:
+            from routes_notificaciones import make_wa_http_request
+            res = make_wa_http_request(
+                'POST',
+                '/send',
+                json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': user_id, 'linkPreview': False},
+                timeout=15,
+                user_id=user_id
+            )
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            today_str = datetime.now().strftime("%Y-%m-%d")
+
+            # Registrar en cola de recordatorios como enviado para historial y monitor
+            cursor.execute("""
+                INSERT INTO cola_recordatorios_herramientas (
+                    psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, fecha_envio, token_id
+                ) VALUES (?, ?, ?, ?, ?, 'enviado', 1, ?, ?)
+                ON CONFLICT(paciente_id, herramienta_tipo, fecha_programada) DO UPDATE SET
+                    estado = 'enviado', enviado = 1, fecha_envio = ?, token_id = ?
+            """, (user_id, d['paciente_id'], f"pizarra_{recurso_id}", today_str, now_str[11:16], now_str, recurso_id, now_str, recurso_id))
+            db.commit()
+
+            if res and res.status_code == 200:
+                return jsonify({
+                    'success': True,
+                    'modo': 'inmediato',
+                    'message': f'Pizarra enviada exitosamente por WhatsApp a {first_name}.',
+                    'link': direct_link
+                })
+            else:
+                err_msg = 'Error al enviar por microservicio de WhatsApp'
+                try: err_msg = res.json().get('error', res.text)
+                except: pass
+                return jsonify({'error': f'El bot de WhatsApp no pudo entregar el mensaje: {err_msg}'}), 502
+
+        except Exception as ex_wa:
+            return jsonify({'error': f'Error de conexión con WhatsApp: {str(ex_wa)}'}), 500
+
+    elif modo == 'cron':
+        try:
+            cursor.execute("""
+                INSERT INTO cola_recordatorios_herramientas (
+                    psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, pausado, token_id
+                ) VALUES (?, ?, ?, ?, ?, 'programado', 0, 0, ?)
+                ON CONFLICT(paciente_id, herramienta_tipo, fecha_programada) DO UPDATE SET
+                    hora_programada = ?, estado = 'programado', enviado = 0, pausado = 0, token_id = ?
+            """, (user_id, d['paciente_id'], f"pizarra_{recurso_id}", fecha_prog, hora, recurso_id, hora, recurso_id))
+            db.commit()
+
+            return jsonify({
+                'success': True,
+                'modo': 'cron',
+                'message': f'Pizarra programada exitosamente en el cron job para enviarse a las {hora}.',
+                'hora': hora,
+                'fecha': fecha_prog,
+                'link': direct_link
+            })
+        except Exception as ex_cron:
+            return jsonify({'error': f'Error al agendar en la cola cron: {str(ex_cron)}'}), 500
+
+    else:
+        return jsonify({'error': 'Modo no válido. Debe ser "inmediato" o "cron".'}), 400
+
+# =========================================================================
+# VISTA PÚBLICA Y SINCRONIZACIÓN EN TIEMPO REAL (ACCESO CON TOKEN)
+# =========================================================================
+
+@recursos_bp.route('/pizarra/compartida/<token>', methods=['GET'])
+def view_pizarra_compartida(token):
+    """
+    Permite al paciente acceder a su pizarra de trabajo interactivo colaborativo
+    directamente desde el enlace recibido por WhatsApp (sin requerir login previo).
+    """
+    db = get_db()
+    cursor = db.cursor()
+    ensure_recursos_tables(cursor)
+
+    cursor.execute("""
+        SELECT r.*, 
+               p.nombres as pac_nombres, p.apellidos as pac_apellidos, p.email as pac_email, p.telefono as pac_telefono,
+               u.nombres as psi_nombres, u.apellidos as psi_apellidos, u.nomenclatura as psi_nom
+        FROM paciente_recursos r
+        JOIN pacientes p ON r.paciente_id = p.id
+        JOIN usuarios u ON r.psicologo_id = u.id
+        WHERE r.token_compartido = ?
+    """, (token,))
+    row = cursor.fetchone()
+    if not row:
+        return render_template('portal_recurso_pizarra.html', error_msg="La pizarra solicitada no existe o el enlace es inválido.", pizarra={}, token=token, meta={}), 404
+
+    d = dict(row)
+    try:
+        d['contenido'] = json.loads(d['contenido_json'])
+    except Exception:
+        d['contenido'] = {}
+
+    meta = next((r for r in RECURSOS_CATALOGO if r['id'] == d['recurso_tipo']), None)
+    d['meta'] = meta
+
+    return render_template('portal_recurso_pizarra.html', pizarra=d, token=token, meta=meta)
+
+
+@recursos_bp.route('/api/recursos/compartido/<token>', methods=['GET'])
+def api_get_pizarra_compartida(token):
+    """Retorna los datos de la pizarra vía token para sincronización colaborativa."""
+    db = get_db()
+    cursor = db.cursor()
+    ensure_recursos_tables(cursor)
+
+    cursor.execute("""
+        SELECT r.*, 
+               p.nombres as pac_nombres, p.apellidos as pac_apellidos,
+               u.nombres as psi_nombres, u.apellidos as psi_apellidos
+        FROM paciente_recursos r
+        JOIN pacientes p ON r.paciente_id = p.id
+        JOIN usuarios u ON r.psicologo_id = u.id
+        WHERE r.token_compartido = ?
+    """, (token,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Pizarra no encontrada.'}), 404
+
+    d = dict(row)
+    try:
+        d['contenido'] = json.loads(d['contenido_json'])
+    except Exception:
+        d['contenido'] = {}
+
+    meta = next((r for r in RECURSOS_CATALOGO if r['id'] == d['recurso_tipo']), None)
+    d['meta'] = meta
+    return jsonify(d)
+
+
+@recursos_bp.route('/api/recursos/compartido/<token>', methods=['PUT'])
+def api_update_pizarra_compartida(token):
+    """Guarda las modificaciones realizadas por el consultante desde su enlace público."""
+    data = request.json or {}
+    nuevo_contenido = data.get('contenido')
+    if nuevo_contenido is None:
+        return jsonify({'error': 'Contenido requerido.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    ensure_recursos_tables(cursor)
+
+    cursor.execute("SELECT id FROM paciente_recursos WHERE token_compartido = ?", (token,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Pizarra no encontrada.'}), 404
+
+    recurso_id = row['id']
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    cursor.execute("""
+        UPDATE paciente_recursos
+        SET contenido_json = ?,
+            ultima_edicion_por = 'paciente',
+            fecha_ultima_edicion = ?
+        WHERE id = ?
+    """, (json.dumps(nuevo_contenido, ensure_ascii=False), now_str, recurso_id))
+
+    cursor.execute("""
+        INSERT INTO paciente_recursos_historial (recurso_id, contenido_json, editado_por)
+        VALUES (?, ?, 'paciente')
+    """, (recurso_id, json.dumps(nuevo_contenido, ensure_ascii=False)))
+
+    db.commit()
+
+    return jsonify({
+        'success': True,
+        'fecha_ultima_edicion': now_str,
+        'ultima_edicion_por': 'paciente'
+    })
+
+
+@recursos_bp.route('/pizarra/compartida/<token>/export-word', methods=['GET'])
+def export_word_compartida(token):
+    """Permite al consultante descargar su documento Word (.docx) directamente desde el enlace compartido."""
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM paciente_recursos WHERE token_compartido = ?", (token,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Pizarra no encontrada.'}), 404
+    return _generate_word_file(row['id'])
+
+# =========================================================================
 # EXPORTACIÓN A WORD (.DOCX)
 # =========================================================================
 
@@ -532,6 +786,9 @@ def delete_recurso(recurso_id):
 @login_required
 def export_word(recurso_id):
     """Genera y descarga un archivo .docx formateado con los datos de la pizarra."""
+    return _generate_word_file(recurso_id)
+
+def _generate_word_file(recurso_id):
     import docx
     from docx.shared import Inches, Pt, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH

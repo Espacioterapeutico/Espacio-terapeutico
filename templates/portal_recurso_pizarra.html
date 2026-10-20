@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ pizarra.titulo or 'Pizarra de Trabajo Colaborativo' }} | Espacio Terapéutico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #702e5e;
+            --primary-light: #fdf4ff;
+            --primary-hover: #581c87;
+            --border: #e2e8f0;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 3rem;
+        }
+
+        /* BARRA SUPERIOR */
+        .top-navbar {
+            width: 100%;
+            background: #ffffff;
+            border-bottom: 1.5px solid var(--border);
+            padding: 0.85rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+
+        .brand-zone {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #702e5e, #9333ea);
+            color: white;
+            font-weight: 800;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            letter-spacing: 0.3px;
+        }
+
+        /* CONTENEDOR PRINCIPAL */
+        .main-container {
+            width: 100%;
+            max-width: 960px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        /* HEADER DE LA PIZARRA */
+        .pizarra-header-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1.5px solid var(--border);
+            padding: 1.35rem 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .pizarra-title-group {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .pizarra-icon {
+            font-size: 2.2rem;
+            line-height: 1;
+            background: var(--primary-light);
+            padding: 0.5rem;
+            border-radius: 14px;
+            border: 1px solid #f0abfc;
+        }
+
+        .pizarra-title-meta h1 {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: var(--text-dark);
+            margin-bottom: 0.35rem;
+            line-height: 1.25;
+        }
+
+        .meta-badges {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.78rem;
+        }
+
+        .badge-patient {
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            padding: 0.2rem 0.65rem;
+            border-radius: 12px;
+        }
+
+        .badge-status-synced {
+            font-weight: 700;
+            padding: 0.2rem 0.65rem;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-collab {
+            color: #7e22ce;
+            font-weight: 700;
+        }
+
+        /* BOTONES DE ACCIÓN */
+        .btn-word {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            background: #ffffff;
+            color: #1e293b;
+            border: 1.5px solid var(--border);
+            padding: 0.55rem 1rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .btn-word:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        /* CUERPO INTERACTIVO */
+        .whiteboard-canvas {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1.5px solid var(--border);
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            min-height: 480px;
+        }
+
+        /* AVISO DE AUTOGUARDADO */
+        .footer-status-bar {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* RESPONSIVIDAD PARA MÓVILES */
+        @media (max-width: 640px) {
+            .main-container { padding: 0.75rem; }
+            .pizarra-header-card { padding: 1rem; }
+            .whiteboard-canvas { padding: 1rem; border-radius: 14px; }
+            .pizarra-title-meta h1 { font-size: 1.05rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOPBAR -->
+    <header class="top-navbar">
+        <div class="brand-zone">
+            <span style="font-size: 1.25rem;">🌿</span>
+            <strong style="color: var(--primary); font-size: 0.95rem; font-weight: 800;">Espacio Terapéutico</strong>
+            <span class="brand-badge">Pizarra Colaborativa</span>
+        </div>
+        <div>
+            <a href="/pizarra/compartida/{{ token }}/export-word" class="btn-word" title="Descargar como documento editable Word (.docx)">
+                📥 Descargar Word
+            </a>
+        </div>
+    </header>
+
+    {% if error_msg %}
+    <main class="main-container">
+        <div style="background: #ffffff; border-radius: 18px; border: 1.5px solid #fecaca; padding: 2.5rem 1.5rem; text-align: center;">
+            <span style="font-size: 3rem; display: block; margin-bottom: 0.75rem;">🔒</span>
+            <h2 style="color: #991b1b; font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem;">Acceso no disponible</h2>
+            <p style="color: #64748b; font-size: 0.95rem;">{{ error_msg }}</p>
+        </div>
+    </main>
+    {% else %}
+    <main class="main-container">
+
+        <!-- TARJETA ENCABEZADO -->
+        <section class="pizarra-header-card">
+            <div class="pizarra-title-group">
+                <span class="pizarra-icon">{{ meta.icono or '📝' }}</span>
+                <div class="pizarra-title-meta">
+                    <h1>{{ pizarra.titulo or meta.titulo }}</h1>
+                    <div class="meta-badges">
+                        <span class="badge-patient">Consultante: {{ pizarra.pac_nombres }} {{ pizarra.pac_apellidos }}</span>
+                        <span id="save-status-badge" class="badge-status-synced">✓ Sincronizado</span>
+                        <span class="badge-collab">• Modo colaborativo en vivo</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <span id="last-sync-time" style="font-size: 0.76rem; color: #64748b; font-weight: 600;">
+                    Última sincronización: Hoy
+                </span>
+            </div>
+        </section>
+
+        <!-- LIENZO DE LA PIZARRA (HERRAMIENTA ESPECÍFICA) -->
+        <section class="whiteboard-canvas">
+            <div id="whiteboard-dynamic-content">
+                <!-- Inyectado por JS -->
+            </div>
+        </section>
+
+        <div class="footer-status-bar">
+            <span class="pulse-dot"></span>
+            <span>Los cambios que redactas se guardan y sincronizan automáticamente en tiempo real con tu terapeuta.</span>
+        </div>
+
+    </main>
+    {% endif %}
+
+    <!-- JAVASCRIPT DE INTERACTIVIDAD COLABORATIVA Y AUTOGUARDADO -->
+    <script>
+        const PUBLIC_TOKEN = "{{ token }}";
+        const RECURSO_TIPO = "{{ pizarra.recurso_tipo }}";
+        let boardData = {{ pizarra.contenido | tojson if pizarra and pizarra.contenido else '{}' }};
+        let metaData = {{ meta | tojson if meta else '{}' }};
+        let lastSyncedTimestamp = "{{ pizarra.fecha_ultima_edicion or '' }}";
+        let autoSaveTimer = null;
+        let isSaving = false;
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // =========================================================================
+        // RENDERIZADO DE LAS 6 PIZARRAS INTERACTIVAS
+        // =========================================================================
+
+        function renderWhiteboard() {
+            const container = document.getElementById('whiteboard-dynamic-content');
+            if (!container) return;
+
+            switch (RECURSO_TIPO) {
+                case 'pros_contras':
+                    container.innerHTML = getProsContrasHTML(boardData);
+                    recalculateProsContras();
+                    break;
+                case 'cuestionando_creencias':
+                    container.innerHTML = getCuestionandoCreenciasHTML(boardData, metaData);
+                    break;
+                case 'diversificando_pensamiento':
+                    container.innerHTML = getDiversificandoPensamientoHTML(boardData, metaData);
+                    break;
+                case 'pensamientos_negativos':
+                    container.innerHTML = getPensamientosNegativosHTML(boardData);
+                    break;
+                case 'segmentacion_objetivos':
+                    container.innerHTML = getSegmentacionObjetivosHTML(boardData);
+                    break;
+                case 'sobrepensamiento':
+                    container.innerHTML = getSobrepensamientoHTML(boardData);
+                    break;
+                default:
+                    container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 2rem;">Tipo de recurso no reconocido.</p>';
+            }
+        }
+
+        // 1. PROS Y CONTRAS
+        function getProsContrasHTML(c) {
+            const altA = c.alternativa_a || 'Alternativa A';
+            const altB = c.alternativa_b || 'Alternativa B';
+            const prosA = c.pros_a && c.pros_a.length ? c.pros_a : [{ texto: '', pts: 0 }];
+            const contrasA = c.contras_a && c.contras_a.length ? c.contras_a : [{ texto: '', pts: 0 }];
+            const prosB = c.pros_b && c.pros_b.length ? c.pros_b : [{ texto: '', pts: 0 }];
+            const contrasB = c.contras_b && c.contras_b.length ? c.contras_b : [{ texto: '', pts: 0 }];
+
+            return `
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 12px; padding: 0.85rem 1rem; color: #581c87; font-size: 0.85rem; line-height: 1.45;">
+                    ⚖️ <strong>Instrucciones:</strong> Califica cada pro y contra del <strong>1 al 5</strong> según su impacto real en tu vida. 
+                    El sistema calculará automáticamente: <em>Balance = Suma de Pros - Suma de Contras</em>.
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    <div style="background: #ffffff; border: 2px solid #7e22ce; border-radius: 12px; padding: 0.85rem;">
+                        <label style="font-weight: 800; font-size: 0.82rem; color: #7e22ce; display: block; margin-bottom: 0.3rem;">OPCIÓN A:</label>
+                        <input type="text" id="pc-alt-a" value="${escapeHtml(altA)}" oninput="triggerAutoSave(); syncOptionTitles();" placeholder="Nombre de la Alternativa A..." style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-size: 0.95rem;">
+                    </div>
+                    <div style="background: #ffffff; border: 2px solid #2563eb; border-radius: 12px; padding: 0.85rem;">
+                        <label style="font-weight: 800; font-size: 0.82rem; color: #2563eb; display: block; margin-bottom: 0.3rem;">OPCIÓN B:</label>
+                        <input type="text" id="pc-alt-b" value="${escapeHtml(altB)}" oninput="triggerAutoSave(); syncOptionTitles();" placeholder="Nombre de la Alternativa B..." style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-size: 0.95rem;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+                    <!-- COLUMNA A -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <h4 id="pc-lbl-col-a" style="margin: 0; color: #7e22ce; font-weight: 800; font-size: 1rem; border-bottom: 2px solid #f3e8ff; padding-bottom: 0.4rem;">${escapeHtml(altA)}</h4>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                                <span style="font-weight: 700; font-size: 0.82rem; color: #15803d;">➕ PROS (Impacto 1-5):</span>
+                                <button type="button" onclick="addProsContrasRow('pros_a')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: #dcfce7; color: #166534; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">+ Añadir Pro</button>
+                            </div>
+                            <div id="pc-rows-pros-a" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                ${renderProsContrasRowList('pros_a', prosA)}
+                            </div>
+                            <div style="text-align: right; margin-top: 0.4rem; font-size: 0.8rem; font-weight: 700; color: #15803d;">
+                                Subtotal Pros: <span id="pc-sub-pros-a">0</span> pts
+                            </div>
+                        </div>
+                        <div style="border-top: 1px dashed #e2e8f0; padding-top: 0.75rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                                <span style="font-weight: 700; font-size: 0.82rem; color: #b91c1c;">➖ CONTRAS (Impacto 1-5):</span>
+                                <button type="button" onclick="addProsContrasRow('contras_a')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">+ Añadir Contra</button>
+                            </div>
+                            <div id="pc-rows-contras-a" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                ${renderProsContrasRowList('contras_a', contrasA)}
+                            </div>
+                            <div style="text-align: right; margin-top: 0.4rem; font-size: 0.8rem; font-weight: 700; color: #b91c1c;">
+                                Subtotal Contras: <span id="pc-sub-contras-a">0</span> pts
+                            </div>
+                        </div>
+                        <div style="background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 10px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #581c87;">BALANCE TOTAL (A):</span>
+                            <span id="pc-balance-a" style="font-size: 1.25rem; font-weight: 900; color: #7e22ce;">0</span>
+                        </div>
+                    </div>
+
+                    <!-- COLUMNA B -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <h4 id="pc-lbl-col-b" style="margin: 0; color: #2563eb; font-weight: 800; font-size: 1rem; border-bottom: 2px solid #dbeafe; padding-bottom: 0.4rem;">${escapeHtml(altB)}</h4>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                                <span style="font-weight: 700; font-size: 0.82rem; color: #15803d;">➕ PROS (Impacto 1-5):</span>
+                                <button type="button" onclick="addProsContrasRow('pros_b')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: #dcfce7; color: #166534; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">+ Añadir Pro</button>
+                            </div>
+                            <div id="pc-rows-pros-b" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                ${renderProsContrasRowList('pros_b', prosB)}
+                            </div>
+                            <div style="text-align: right; margin-top: 0.4rem; font-size: 0.8rem; font-weight: 700; color: #15803d;">
+                                Subtotal Pros: <span id="pc-sub-pros-b">0</span> pts
+                            </div>
+                        </div>
+                        <div style="border-top: 1px dashed #e2e8f0; padding-top: 0.75rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                                <span style="font-weight: 700; font-size: 0.82rem; color: #b91c1c;">➖ CONTRAS (Impacto 1-5):</span>
+                                <button type="button" onclick="addProsContrasRow('contras_b')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">+ Añadir Contra</button>
+                            </div>
+                            <div id="pc-rows-contras-b" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                ${renderProsContrasRowList('contras_b', contrasB)}
+                            </div>
+                            <div style="text-align: right; margin-top: 0.4rem; font-size: 0.8rem; font-weight: 700; color: #b91c1c;">
+                                Subtotal Contras: <span id="pc-sub-contras-b">0</span> pts
+                            </div>
+                        </div>
+                        <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+                            <span style="font-weight: 800; font-size: 0.88rem; color: #1e3a8a;">BALANCE TOTAL (B):</span>
+                            <span id="pc-balance-b" style="font-size: 1.25rem; font-weight: 900; color: #2563eb;">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REFLEXIÓN Y CONCLUSIÓN -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 0.85rem;">
+                        <label style="font-weight: 800; font-size: 0.82rem; color: #475569; display: block; margin-bottom: 0.3rem;">Validación Emocional (¿Cómo te hace sentir el resultado numérico?):</label>
+                        <textarea id="pc-reflexion" rows="2" oninput="triggerAutoSave()" placeholder="¿Qué emociones despierta ver los números?..." style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">${escapeHtml(c.reflexion_emocional || '')}</textarea>
+                    </div>
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 0.85rem;">
+                        <label style="font-weight: 800; font-size: 0.82rem; color: #475569; display: block; margin-bottom: 0.3rem;">Decisión o Siguiente Paso Concreto:</label>
+                        <textarea id="pc-decision" rows="2" oninput="triggerAutoSave()" placeholder="A la luz del análisis, el paso a tomar es..." style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">${escapeHtml(c.decision_final || '')}</textarea>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderProsContrasRowList(cat, items) {
+            let html = '';
+            items.forEach((item, idx) => {
+                html += `
+                <div class="pc-row-item" data-cat="${cat}" style="display: flex; gap: 0.4rem; align-items: center;">
+                    <input type="text" class="pc-row-txt" value="${escapeHtml(item.texto)}" oninput="triggerAutoSave()" placeholder="Descripción..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                    <select class="pc-row-pts" onchange="triggerAutoSave(); recalculateProsContras();" style="width: 65px; padding: 0.35rem; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.82rem;">
+                        ${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${item.pts === n ? 'selected' : ''}>${n}★</option>`).join('')}
+                    </select>
+                    <button type="button" onclick="this.closest('.pc-row-item').remove(); triggerAutoSave(); recalculateProsContras();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
+                </div>`;
+            });
+            return html;
+        }
+
+        function addProsContrasRow(cat) {
+            const container = document.getElementById(`pc-rows-${cat.replace('_', '-')}`);
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = 'pc-row-item';
+            div.dataset.cat = cat;
+            div.style.cssText = 'display: flex; gap: 0.4rem; align-items: center;';
+            div.innerHTML = `
+                <input type="text" class="pc-row-txt" value="" oninput="triggerAutoSave()" placeholder="Descripción..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                <select class="pc-row-pts" onchange="triggerAutoSave(); recalculateProsContras();" style="width: 65px; padding: 0.35rem; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.82rem;">
+                    ${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${n === 3 ? 'selected' : ''}>${n}★</option>`).join('')}
+                </select>
+                <button type="button" onclick="this.closest('.pc-row-item').remove(); triggerAutoSave(); recalculateProsContras();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
+            `;
+            container.appendChild(div);
+            div.querySelector('input').focus();
+            recalculateProsContras();
+            triggerAutoSave();
+        }
+
+        function recalculateProsContras() {
+            const sumGroup = (cat) => {
+                let total = 0;
+                document.querySelectorAll(`.pc-row-item[data-cat="${cat}"]`).forEach(el => {
+                    const txt = el.querySelector('.pc-row-txt')?.value.trim();
+                    const pts = parseInt(el.querySelector('.pc-row-pts')?.value) || 0;
+                    if (txt) total += pts;
+                });
+                return total;
+            };
+
+            const prosA = sumGroup('pros_a');
+            const contrasA = sumGroup('contras_a');
+            const prosB = sumGroup('pros_b');
+            const contrasB = sumGroup('contras_b');
+
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setVal('pc-sub-pros-a', prosA);
+            setVal('pc-sub-contras-a', contrasA);
+            setVal('pc-balance-a', prosA - contrasA);
+
+            setVal('pc-sub-pros-b', prosB);
+            setVal('pc-sub-contras-b', contrasB);
+            setVal('pc-balance-b', prosB - contrasB);
+        }
+
+        function syncOptionTitles() {
+            const a = document.getElementById('pc-alt-a')?.value || 'Alternativa A';
+            const b = document.getElementById('pc-alt-b')?.value || 'Alternativa B';
+            const elA = document.getElementById('pc-lbl-col-a');
+            const elB = document.getElementById('pc-lbl-col-b');
+            if (elA) elA.textContent = a;
+            if (elB) elB.textContent = b;
+        }
+
+        // 2. CUESTIONANDO CREENCIAS
+        function getCuestionandoCreenciasHTML(c, meta) {
+            const banco = meta.preguntas_banco || [];
+            const selectedQIds = c.preguntas_seleccionadas && c.preguntas_seleccionadas.length ? c.preguntas_seleccionadas : ['p1'];
+            const mainQId = selectedQIds[0];
+            const extraQIds = selectedQIds.slice(1);
+            const respuestas = c.respuestas || {};
+
+            return `
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.2rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #2563eb; display: block; margin-bottom: 0.4rem;">
+                        PENSAMIENTO O CREENCIA CENTRAL A EXAMINAR:
+                    </label>
+                    <textarea id="cc-pensamiento-central" rows="2" oninput="triggerAutoSave()" placeholder="Escribe el pensamiento automático que te genera malestar..." style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; font-weight: 700;">${escapeHtml(c.pensamiento_central || '')}</textarea>
+                </div>
+
+                <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 14px; padding: 1.2rem;">
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="font-weight: 800; font-size: 0.85rem; color: #1e3a8a; display: block; margin-bottom: 0.4rem;">Selecciona una pregunta de examen reflexivo:</label>
+                        <select id="cc-selector-pregunta" onchange="onSelectCuestionandoPregunta(this.value)" style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-size: 0.88rem; background: white;">
+                            ${banco.map(b => `<option value="${b.id}" ${b.id === mainQId ? 'selected' : ''}>[${b.categoria}] ${b.texto}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div id="cc-workspace-pregunta">
+                        <textarea class="cc-q-answer" data-qid="${mainQId}" oninput="triggerAutoSave()" rows="3" placeholder="Redacta tu análisis reflexivo..." style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; background: #ffffff;">${escapeHtml(respuestas[mainQId] || '')}</textarea>
+                    </div>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px solid #16a34a; border-radius: 14px; padding: 1.2rem;">
+                    <h4 style="margin: 0 0 0.3rem 0; color: #15803d; font-size: 0.95rem; font-weight: 800;">Conclusión Adaptativa y Realista:</h4>
+                    <textarea id="cc-conclusion-realista" rows="2" oninput="triggerAutoSave()" placeholder="¿Cómo formularías ahora esta idea de forma más justa y adaptativa?..." style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid #86efac; font-size: 0.92rem; font-weight: 600; background: #f0fdf4;">${escapeHtml(c.conclusion_realista || '')}</textarea>
+                </div>
+            </div>`;
+        }
+
+        function onSelectCuestionandoPregunta(newQId) {
+            const textarea = document.querySelector('#cc-workspace-pregunta .cc-q-answer');
+            if (textarea) {
+                textarea.dataset.qid = newQId;
+                const respuestas = boardData.respuestas || {};
+                textarea.value = respuestas[newQId] || '';
+            }
+            triggerAutoSave();
+        }
+
+        // 3. DIVERSIFICANDO EL PENSAMIENTO (6 SOMBREROS)
+        function getDiversificandoPensamientoHTML(c, meta) {
+            const lentes = meta.lentes || [
+                { key: 'racional', nombre: 'Pensamiento Racional', icono: '⚪', color: '#475569' },
+                { key: 'emocional', nombre: 'Pensamiento Emocional', icono: '🔴', color: '#dc2626' },
+                { key: 'critico', nombre: 'Pensamiento Crítico', icono: '⚫', color: '#1e293b' },
+                { key: 'optimista', nombre: 'Pensamiento Optimista', icono: '🟡', color: '#d97706' },
+                { key: 'creativo', nombre: 'Pensamiento Creativo', icono: '🟢', color: '#16a34a' },
+                { key: 'organizado', nombre: 'Pensamiento Organizado', icono: '🔵', color: '#2563eb' }
+            ];
+
+            return `
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.1rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #0d9488; display: block; margin-bottom: 0.35rem;">SITUACIÓN O PENSAMIENTO A DIVERSIFICAR:</label>
+                    <textarea id="dp-pensamiento" rows="2" oninput="triggerAutoSave()" placeholder="Escribe el pensamiento o dilema central..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; font-weight: 700;">${escapeHtml(c.pensamiento_central || '')}</textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    ${lentes.map(l => `
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-top: 4px solid ${l.color}; border-radius: 12px; padding: 0.9rem;">
+                            <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem;">
+                                <span>${l.icono}</span>
+                                <strong style="color: ${l.color}; font-size: 0.88rem;">${l.nombre}</strong>
+                            </div>
+                            <textarea class="dp-lente-input" data-lente="${l.key}" rows="2" oninput="triggerAutoSave()" placeholder="¿Qué nos dice este enfoque?..." style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">${escapeHtml(c[l.key] || '')}</textarea>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="background: #f0fdfa; border: 1.5px solid #5eead4; border-radius: 14px; padding: 1.1rem;">
+                    <label style="font-weight: 800; font-size: 0.88rem; color: #0f766e; display: block; margin-bottom: 0.35rem;">Síntesis Integradora y Plan de Acción:</label>
+                    <textarea id="dp-sintesis" rows="2" oninput="triggerAutoSave()" placeholder="Integrando las 6 perspectivas, mi conclusión es..." style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid #5eead4; font-size: 0.9rem;">${escapeHtml(c.sintesis || '')}</textarea>
+                </div>
+            </div>`;
+        }
+
+        // 4. PENSAMIENTOS NEGATIVOS (REAL VS IMAGINARIO)
+        function getPensamientosNegativosHTML(c) {
+            const reales = (c.situaciones_reales && c.situaciones_reales.length) ? c.situaciones_reales : [''];
+            const imag = (c.situaciones_imaginarias && c.situaciones_imaginarias.length) ? c.situaciones_imaginarias : [''];
+
+            return `
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #ea580c; display: block; margin-bottom: 0.35rem;">¿Qué estás pensando? (Ideas que generan malestar ahora mismo):</label>
+                    <textarea id="pn-malestar" rows="2" oninput="triggerAutoSave()" placeholder="Escribe las ideas que están generando ansiedad..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.9rem;">${escapeHtml(c.malestar_actual || '')}</textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    <div style="background: #ffffff; border: 1.5px solid #16a34a; border-radius: 12px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <strong style="color: #15803d; font-size: 0.88rem;">SITUACIONES REALES</strong>
+                            <button type="button" onclick="addNegativoItem('reales')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #dcfce7; color: #166534; border: none; border-radius: 4px; cursor: pointer;">+ Añadir</button>
+                        </div>
+                        <p style="margin: 0 0 0.5rem 0; font-size: 0.73rem; color: #64748b;">Hechos observables y comprobables.</p>
+                        <div id="pn-list-reales" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            ${renderNegativosList('reales', reales)}
+                        </div>
+                    </div>
+
+                    <div style="background: #ffffff; border: 1.5px solid #ea580c; border-radius: 12px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <strong style="color: #c2410c; font-size: 0.88rem;">SITUACIONES IMAGINARIAS</strong>
+                            <button type="button" onclick="addNegativoItem('imaginarias')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #ffedd5; color: #9a3412; border: none; border-radius: 4px; cursor: pointer;">+ Añadir</button>
+                        </div>
+                        <p style="margin: 0 0 0.5rem 0; font-size: 0.73rem; color: #64748b;">Suposiciones y anticipaciones catastrofistas.</p>
+                        <div id="pn-list-imaginarias" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            ${renderNegativosList('imaginarias', imag)}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px solid #ea580c; border-radius: 14px; padding: 1rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #c2410c; display: block; margin-bottom: 0.35rem;">Conclusión Discriminativa:</label>
+                    <textarea id="pn-conclusion" rows="2" oninput="triggerAutoSave()" placeholder="¿Cuánto de mi malestar viene de hechos y cuánto de hipótesis creadas por mi mente?..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">${escapeHtml(c.conclusion_discriminativa || '')}</textarea>
+                </div>
+            </div>`;
+        }
+
+        function renderNegativosList(key, items) {
+            return items.map(txt => `
+                <div class="pn-item" data-key="${key}" style="display: flex; gap: 0.35rem; align-items: center;">
+                    <input type="text" class="pn-input" value="${escapeHtml(txt)}" oninput="triggerAutoSave()" placeholder="• Describir..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                    <button type="button" onclick="this.closest('.pn-item').remove(); triggerAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function addNegativoItem(key) {
+            const container = document.getElementById(key === 'reales' ? 'pn-list-reales' : 'pn-list-imaginarias');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = 'pn-item';
+            div.dataset.key = key;
+            div.style.cssText = 'display: flex; gap: 0.35rem; align-items: center;';
+            div.innerHTML = `
+                <input type="text" class="pn-input" value="" oninput="triggerAutoSave()" placeholder="• Describir..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                <button type="button" onclick="this.closest('.pn-item').remove(); triggerAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
+            `;
+            container.appendChild(div);
+            div.querySelector('input').focus();
+            triggerAutoSave();
+        }
+
+        // 5. SEGMENTACIÓN DE OBJETIVOS
+        function getSegmentacionObjetivosHTML(c) {
+            const cpItems = (c.corto_plazo && c.corto_plazo.items) ? c.corto_plazo.items : [''];
+            const mpItems = (c.mediano_plazo && c.mediano_plazo.items) ? c.mediano_plazo.items : [''];
+            const lpItems = (c.largo_plazo && c.largo_plazo.items) ? c.largo_plazo.items : [''];
+
+            return `
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="background: #ffffff; border: 2px solid #702e5e; border-radius: 14px; padding: 1.1rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #702e5e; display: block; margin-bottom: 0.35rem;">🎯 META O DESAFÍO PRINCIPAL:</label>
+                    <input type="text" id="so-meta-principal" value="${escapeHtml(c.meta_principal || '')}" oninput="triggerAutoSave()" placeholder="Ej: Superar el bloqueo para rendir mi examen de grado..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; font-weight: 700;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    <!-- CORTO PLAZO -->
+                    <div style="background: #ffffff; border: 1.5px solid #22c55e; border-radius: 12px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <strong style="color: #15803d; font-size: 0.88rem;">1. Corto Plazo (Hoy y esta semana)</strong>
+                            <button type="button" onclick="addSegmentacionRow('cp')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #dcfce7; color: #166534; border: none; border-radius: 4px; cursor: pointer;">+ Añadir</button>
+                        </div>
+                        <p style="margin: 0 0 0.5rem 0; font-size: 0.73rem; color: #64748b;">Acciones inmediatas con recursos que ya tienes a mano.</p>
+                        <div id="so-list-cp" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            ${renderSegmentacionRows('cp', cpItems)}
+                        </div>
+                    </div>
+
+                    <!-- MEDIANO PLAZO -->
+                    <div style="background: #ffffff; border: 1.5px solid #3b82f6; border-radius: 12px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <strong style="color: #1d4ed8; font-size: 0.88rem;">2. Mediano Plazo (Próximas semanas)</strong>
+                            <button type="button" onclick="addSegmentacionRow('mp')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #dbeafe; color: #1e40af; border: none; border-radius: 4px; cursor: pointer;">+ Añadir</button>
+                        </div>
+                        <p style="margin: 0 0 0.5rem 0; font-size: 0.73rem; color: #64748b;">Pasos que requieren adquirir algún recurso o apoyo.</p>
+                        <div id="so-list-mp" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            ${renderSegmentacionRows('mp', mpItems)}
+                        </div>
+                    </div>
+
+                    <!-- LARGO PLAZO -->
+                    <div style="background: #ffffff; border: 1.5px solid #8b5cf6; border-radius: 12px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <strong style="color: #6d28d9; font-size: 0.88rem;">3. Largo Plazo (Meta Final)</strong>
+                            <button type="button" onclick="addSegmentacionRow('lp')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #ede9fe; color: #5b21b6; border: none; border-radius: 4px; cursor: pointer;">+ Añadir</button>
+                        </div>
+                        <p style="margin: 0 0 0.5rem 0; font-size: 0.73rem; color: #64748b;">Culminación y consolidación de la meta.</p>
+                        <div id="so-list-lp" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            ${renderSegmentacionRows('lp', lpItems)}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 14px; padding: 1.1rem;">
+                    <label style="font-weight: 800; font-size: 0.88rem; color: #702e5e; display: block; margin-bottom: 0.35rem;">⚡ Primera Micro-Acción Concreta (Para hacer hoy mismo en menos de 10 min):</label>
+                    <input type="text" id="so-primera-accion" value="${escapeHtml(c.primera_accion_hoy || '')}" oninput="triggerAutoSave()" placeholder="Ej: Abrir el documento y escribir solo el índice..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #f0abfc; font-size: 0.95rem; font-weight: 700;">
+                </div>
+            </div>`;
+        }
+
+        function renderSegmentacionRows(cat, items) {
+            return items.map(txt => `
+                <div class="so-row-item" data-cat="${cat}" style="display: flex; gap: 0.35rem; align-items: center;">
+                    <span style="color: #64748b; font-size: 0.8rem;">✓</span>
+                    <input type="text" class="so-input" value="${escapeHtml(txt)}" oninput="triggerAutoSave()" placeholder="Paso específico..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                    <button type="button" onclick="this.closest('.so-row-item').remove(); triggerAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function addSegmentacionRow(cat) {
+            const container = document.getElementById(`so-list-${cat}`);
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = 'so-row-item';
+            div.dataset.cat = cat;
+            div.style.cssText = 'display: flex; gap: 0.35rem; align-items: center;';
+            div.innerHTML = `
+                <span style="color: #64748b; font-size: 0.8rem;">✓</span>
+                <input type="text" class="so-input" value="" oninput="triggerAutoSave()" placeholder="Paso específico..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                <button type="button" onclick="this.closest('.so-row-item').remove(); triggerAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
+            `;
+            container.appendChild(div);
+            div.querySelector('input').focus();
+            triggerAutoSave();
+        }
+
+        // 6. SOBREPENSAMIENTO
+        function getSobrepensamientoHTML(c) {
+            return `
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #0284c7; display: block; margin-bottom: 0.35rem;">1. Situación (Ideas dando vueltas en la cabeza):</label>
+                    <textarea id="sp-situaciones" rows="2" oninput="triggerAutoSave()" placeholder="Escribe el torbellino de pensamientos..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">${escapeHtml(c.situaciones_cabeza || '')}</textarea>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #dc2626; display: block; margin-bottom: 0.35rem;">2. Limitaciones (Lo que escapa de mi control actual):</label>
+                    <textarea id="sp-limitaciones" rows="2" oninput="triggerAutoSave()" placeholder="Cosas que no puedo cambiar ni controlar ahora..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">${escapeHtml(c.limitaciones || '')}</textarea>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #16a34a; display: block; margin-bottom: 0.35rem;">3. Ventajas y Recursos (Fortalezas y apoyos presentes hoy):</label>
+                    <textarea id="sp-ventajas" rows="2" oninput="triggerAutoSave()" placeholder="Mis herramientas, personas de apoyo, conocimientos..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">${escapeHtml(c.ventajas_recursos || '')}</textarea>
+                </div>
+
+                <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 1rem;">
+                    <label style="font-weight: 800; font-size: 0.85rem; color: #15803d; display: block; margin-bottom: 0.35rem;">4. Micro-acción Concreta para esta semana:</label>
+                    <textarea id="sp-accion" rows="2" oninput="triggerAutoSave()" placeholder="Una acción simple y enfocada en lo que sí controlo..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #86efac; font-size: 0.88rem;">${escapeHtml(c.accion_concreta_semana || '')}</textarea>
+                </div>
+            </div>`;
+        }
+
+        // =========================================================================
+        // RECOLECCIÓN DE DATOS DEL DOM
+        // =========================================================================
+
+        function collectCurrentBoardData() {
+            const data = {};
+            switch (RECURSO_TIPO) {
+                case 'pros_contras':
+                    data.alternativa_a = document.getElementById('pc-alt-a')?.value || '';
+                    data.alternativa_b = document.getElementById('pc-alt-b')?.value || '';
+                    data.reflexion_emocional = document.getElementById('pc-reflexion')?.value || '';
+                    data.decision_final = document.getElementById('pc-decision')?.value || '';
+                    const getRows = (cat) => Array.from(document.querySelectorAll(`.pc-row-item[data-cat="${cat}"]`)).map(el => ({
+                        texto: el.querySelector('.pc-row-txt')?.value || '',
+                        pts: parseInt(el.querySelector('.pc-row-pts')?.value) || 0
+                    }));
+                    data.pros_a = getRows('pros_a');
+                    data.contras_a = getRows('contras_a');
+                    data.pros_b = getRows('pros_b');
+                    data.contras_b = getRows('contras_b');
+                    break;
+
+                case 'cuestionando_creencias':
+                    data.pensamiento_central = document.getElementById('cc-pensamiento-central')?.value || '';
+                    data.conclusion_realista = document.getElementById('cc-conclusion-realista')?.value || '';
+                    const mainTa = document.querySelector('#cc-workspace-pregunta .cc-q-answer');
+                    const mainQId = mainTa?.dataset.qid || 'p1';
+                    data.preguntas_seleccionadas = [mainQId];
+                    data.respuestas = { [mainQId]: mainTa?.value || '' };
+                    break;
+
+                case 'diversificando_pensamiento':
+                    data.pensamiento_central = document.getElementById('dp-pensamiento')?.value || '';
+                    data.sintesis = document.getElementById('dp-sintesis')?.value || '';
+                    document.querySelectorAll('.dp-lente-input').forEach(el => {
+                        const lente = el.dataset.lente;
+                        if (lente) data[lente] = el.value || '';
+                    });
+                    break;
+
+                case 'pensamientos_negativos':
+                    data.malestar_actual = document.getElementById('pn-malestar')?.value || '';
+                    data.conclusion_discriminativa = document.getElementById('pn-conclusion')?.value || '';
+                    data.situaciones_reales = Array.from(document.querySelectorAll('.pn-item[data-key="reales"] .pn-input')).map(i => i.value);
+                    data.situaciones_imaginarias = Array.from(document.querySelectorAll('.pn-item[data-key="imaginarias"] .pn-input')).map(i => i.value);
+                    break;
+
+                case 'segmentacion_objetivos':
+                    data.meta_principal = document.getElementById('so-meta-principal')?.value || '';
+                    data.primera_accion_hoy = document.getElementById('so-primera-accion')?.value || '';
+                    data.corto_plazo = { items: Array.from(document.querySelectorAll('.so-row-item[data-cat="cp"] .so-input')).map(i => i.value) };
+                    data.mediano_plazo = { items: Array.from(document.querySelectorAll('.so-row-item[data-cat="mp"] .so-input')).map(i => i.value) };
+                    data.largo_plazo = { items: Array.from(document.querySelectorAll('.so-row-item[data-cat="lp"] .so-input')).map(i => i.value) };
+                    break;
+
+                case 'sobrepensamiento':
+                    data.situaciones_cabeza = document.getElementById('sp-situaciones')?.value || '';
+                    data.limitaciones = document.getElementById('sp-limitaciones')?.value || '';
+                    data.ventajas_recursos = document.getElementById('sp-ventajas')?.value || '';
+                    data.accion_concreta_semana = document.getElementById('sp-accion')?.value || '';
+                    break;
+            }
+            return data;
+        }
+
+        // =========================================================================
+        // AUTOGUARDADO INTELIGENTE Y SINCRONIZACIÓN
+        // =========================================================================
+
+        function updateSaveStatusBadge(status) {
+            const badge = document.getElementById('save-status-badge');
+            if (!badge) return;
+            if (status === 'saving') {
+                badge.style.background = '#fef3c7';
+                badge.style.color = '#b45309';
+                badge.textContent = '💾 Guardando...';
+            } else if (status === 'synced') {
+                badge.style.background = '#dcfce7';
+                badge.style.color = '#15803d';
+                badge.textContent = '✓ Sincronizado';
+            }
+        }
+
+        function triggerAutoSave() {
+            updateSaveStatusBadge('saving');
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(performAutoSave, 900);
+        }
+
+        async function performAutoSave() {
+            if (isSaving) return;
+            isSaving = true;
+            const updated = collectCurrentBoardData();
+
+            try {
+                const res = await fetch(`/api/recursos/compartido/${PUBLIC_TOKEN}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contenido: updated })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    lastSyncedTimestamp = data.fecha_ultima_edicion;
+                    updateSaveStatusBadge('synced');
+                    const syncEl = document.getElementById('last-sync-time');
+                    if (syncEl) syncEl.textContent = `Última sincronización: ${data.fecha_ultima_edicion.substring(11, 16)}`;
+                } else {
+                    console.warn("Fallo guardado:", data.error);
+                }
+            } catch (err) {
+                console.error("Error guardando pizarra colaborativa:", err);
+            } finally {
+                isSaving = false;
+            }
+        }
+
+        // Polling para sincronización colaborativa si el psicólogo modifica la pizarra
+        setInterval(async () => {
+            // No refrescar si el paciente está actualmente escribiendo o guardando
+            if (isSaving || document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT') {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/recursos/compartido/${PUBLIC_TOKEN}`);
+                if (!res.ok) return;
+                const d = await res.json();
+                if (d.fecha_ultima_edicion && d.fecha_ultima_edicion !== lastSyncedTimestamp) {
+                    lastSyncedTimestamp = d.fecha_ultima_edicion;
+                    boardData = d.contenido || {};
+                    renderWhiteboard();
+                    updateSaveStatusBadge('synced');
+                    const syncEl = document.getElementById('last-sync-time');
+                    if (syncEl) syncEl.textContent = `Última sincronización: ${d.fecha_ultima_edicion.substring(11, 16)} (${d.ultima_edicion_por === 'psicologo' ? 'Terapeuta' : 'Tú'})`;
+                }
+            } catch (e) {
+                // silencioso
+            }
+        }, 4000);
+
+        // Inicializar render
+        document.addEventListener('DOMContentLoaded', () => {
+            renderWhiteboard();
+        });
+    </script>
+</body>
+</html>
