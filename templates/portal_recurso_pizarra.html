@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>{{ pizarra.titulo or 'Pizarra de Trabajo Colaborativo' }} | Espacio Terapéutico</title>
+    <title>{{ pizarra.display_titulo or pizarra.titulo or 'Pizarra de Trabajo' }} | Espacio Terapéutico</title>
+    <!-- Metatags Open Graph para previsualización en WhatsApp y redes sociales -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ pizarra.display_titulo or pizarra.titulo or meta.titulo or 'Pizarra Terapéutica' }} | Espacio Terapéutico">
+    <meta property="og:description" content="Espacio interactivo colaborativo de trabajo terapéutico para {{ pizarra.short_pac_name or 'tu sesión' }}.">
+    <meta property="og:site_name" content="Espacio Terapéutico">
+    <meta property="og:image" content="{{ request.url_root.rstrip('/') }}/static/img/logo.png">
+    <meta property="og:url" content="{{ request.base_url }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -77,75 +84,152 @@
             gap: 1.25rem;
         }
 
-        /* HEADER DE LA PIZARRA */
+        /* HEADER DE LA PIZARRA COMPACTO Y ORDENADO */
         .pizarra-header-card {
             background: #ffffff;
-            border-radius: 18px;
+            border-radius: 14px;
             border: 1.5px solid var(--border);
-            padding: 1.35rem 1.5rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            padding: 0.85rem 1.15rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.03);
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
+            flex-direction: column;
+            gap: 0.65rem;
+            width: 100%;
         }
 
-        .pizarra-title-group {
+        .pizarra-top-row {
             display: flex;
             align-items: center;
-            gap: 0.85rem;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        .pizarra-icon {
+            font-size: 1.45rem;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary-light);
+            border-radius: 10px;
+            border: 1px solid #f0abfc;
+            box-shadow: 0 1px 3px rgba(112, 46, 94, 0.08);
+            line-height: 1;
+        }
+
+        .pizarra-heading-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
             min-width: 0;
             flex: 1;
         }
 
-        .pizarra-icon {
-            font-size: 2.2rem;
-            line-height: 1;
-            background: var(--primary-light);
-            padding: 0.5rem;
-            border-radius: 14px;
-            border: 1px solid #f0abfc;
-        }
-
-        .pizarra-title-meta h1 {
-            font-size: 1.25rem;
-            font-weight: 900;
-            color: var(--text-dark);
-            margin-bottom: 0.35rem;
-            line-height: 1.25;
-        }
-
-        .meta-badges {
+        .pizarra-title-line {
             display: flex;
-            flex-wrap: wrap;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .pizarra-main-title {
+            font-size: 1.12rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin: 0;
+            line-height: 1.25;
+            letter-spacing: -0.2px;
+        }
+
+        .pizarra-tag-pill {
+            display: inline-block;
+            background: #fdf2f8;
+            color: #be185d;
+            border: 1px solid #fbcfe8;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.1rem 0.45rem;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .pizarra-date-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Fila de Metadatos y Chips */
+        .pizarra-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
             gap: 0.5rem;
-            font-size: 0.78rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #f1f5f9;
+            width: 100%;
         }
 
-        .badge-patient {
-            background: #f1f5f9;
-            color: #334155;
-            font-weight: 700;
-            padding: 0.2rem 0.65rem;
-            border-radius: 12px;
+        .pizarra-chips-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.4rem;
         }
 
-        .badge-status-synced {
-            font-weight: 700;
-            padding: 0.2rem 0.65rem;
-            border-radius: 12px;
+        .meta-chip {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            background: #dcfce7;
-            color: #15803d;
+            gap: 0.35rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 20px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            line-height: 1;
         }
 
-        .badge-collab {
-            color: #7e22ce;
-            font-weight: 700;
+        .chip-patient {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            max-width: 200px;
+        }
+        .chip-patient .chip-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chip-status-synced {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #16a34a;
+            display: inline-block;
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .meta-sync-time {
+            font-size: 0.73rem;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-left: auto;
         }
 
         /* BOTONES DE ACCIÓN */
@@ -209,10 +293,16 @@
 
         /* RESPONSIVIDAD PARA MÓVILES */
         @media (max-width: 640px) {
-            .main-container { padding: 0.75rem; }
-            .pizarra-header-card { padding: 1rem; }
-            .whiteboard-canvas { padding: 1rem; border-radius: 14px; }
-            .pizarra-title-meta h1 { font-size: 1.05rem; }
+            .main-container { padding: 0.65rem; }
+            .pizarra-header-card { padding: 0.75rem 0.85rem; border-radius: 12px; }
+            .whiteboard-canvas { padding: 0.85rem; border-radius: 14px; }
+            .pizarra-icon { width: 34px; height: 34px; min-width: 34px; font-size: 1.25rem; }
+            .pizarra-main-title { font-size: 0.96rem; }
+            .top-navbar { padding: 0.65rem 0.85rem; }
+            .btn-word { padding: 0.4rem 0.65rem; font-size: 0.78rem; }
+            .btn-word span.btn-label-desktop { display: none; }
+            .brand-badge { display: none; }
+            .chip-patient { max-width: 140px; }
         }
     </style>
 </head>
@@ -227,7 +317,7 @@
         </div>
         <div>
             <a href="/pizarra/compartida/{{ token }}/export-word" class="btn-word" title="Descargar como documento editable Word (.docx)">
-                📥 Descargar Word
+                📥 <span class="btn-label-desktop">Descargar </span>Word
             </a>
         </div>
     </header>
@@ -243,23 +333,39 @@
     {% else %}
     <main class="main-container">
 
-        <!-- TARJETA ENCABEZADO -->
+        <!-- TARJETA ENCABEZADO COMPACTA Y JERARQUIZADA -->
         <section class="pizarra-header-card">
-            <div class="pizarra-title-group">
-                <span class="pizarra-icon">{{ meta.icono or '📝' }}</span>
-                <div class="pizarra-title-meta">
-                    <h1>{{ pizarra.titulo or meta.titulo }}</h1>
-                    <div class="meta-badges">
-                        <span class="badge-patient">Consultante: {{ pizarra.pac_nombres }} {{ pizarra.pac_apellidos }}</span>
-                        <span id="save-status-badge" class="badge-status-synced">✓ Sincronizado</span>
-                        <span class="badge-collab">• Modo colaborativo en vivo</span>
+            <div class="pizarra-top-row">
+                <span class="pizarra-icon">{{ meta.icono or '🎯' }}</span>
+                <div class="pizarra-heading-container">
+                    <div class="pizarra-title-line">
+                        <h1 class="pizarra-main-title">{{ pizarra.display_titulo or pizarra.titulo or meta.titulo }}</h1>
+                        {% if pizarra.subtitulo_tag %}
+                        <span class="pizarra-tag-pill">{{ pizarra.subtitulo_tag }}</span>
+                        {% endif %}
                     </div>
+                    {% if pizarra.subtitulo_fecha %}
+                    <span class="pizarra-date-sub">📅 {{ pizarra.subtitulo_fecha }}</span>
+                    {% endif %}
                 </div>
             </div>
-            <div>
-                <span id="last-sync-time" style="font-size: 0.76rem; color: #64748b; font-weight: 600;">
-                    Última sincronización: Hoy
-                </span>
+
+            <div class="pizarra-meta-row">
+                <div class="pizarra-chips-left">
+                    <span class="meta-chip chip-patient" title="{{ pizarra.pac_nombres }} {{ pizarra.pac_apellidos }}">
+                        <span>👤</span>
+                        <span class="chip-text">{{ pizarra.short_pac_name or (pizarra.pac_nombres ~ ' ' ~ pizarra.pac_apellidos) }}</span>
+                    </span>
+                    <span id="save-status-badge" class="meta-chip chip-status-synced">
+                        <span class="status-dot"></span>
+                        <span class="chip-text">Sincronizado</span>
+                    </span>
+                </div>
+                <div class="pizarra-chips-right">
+                    <span id="last-sync-time" class="meta-sync-time">
+                        Hoy
+                    </span>
+                </div>
             </div>
         </section>
 
@@ -845,14 +951,20 @@
         function updateSaveStatusBadge(status) {
             const badge = document.getElementById('save-status-badge');
             if (!badge) return;
+            const textEl = badge.querySelector('.chip-text') || badge;
+            const dotEl = badge.querySelector('.status-dot');
             if (status === 'saving') {
                 badge.style.background = '#fef3c7';
+                badge.style.borderColor = '#fde68a';
                 badge.style.color = '#b45309';
-                badge.textContent = '💾 Guardando...';
+                if (dotEl) dotEl.style.background = '#d97706';
+                textEl.textContent = 'Guardando...';
             } else if (status === 'synced') {
                 badge.style.background = '#dcfce7';
+                badge.style.borderColor = '#bbf7d0';
                 badge.style.color = '#15803d';
-                badge.textContent = '✓ Sincronizado';
+                if (dotEl) dotEl.style.background = '#16a34a';
+                textEl.textContent = 'Sincronizado';
             }
         }
 
@@ -878,7 +990,7 @@
                     lastSyncedTimestamp = data.fecha_ultima_edicion;
                     updateSaveStatusBadge('synced');
                     const syncEl = document.getElementById('last-sync-time');
-                    if (syncEl) syncEl.textContent = `Última sincronización: ${data.fecha_ultima_edicion.substring(11, 16)}`;
+                    if (syncEl) syncEl.textContent = `Hoy ${data.fecha_ultima_edicion.substring(11, 16)}`;
                 } else {
                     console.warn("Fallo guardado:", data.error);
                 }
@@ -906,7 +1018,7 @@
                     renderWhiteboard();
                     updateSaveStatusBadge('synced');
                     const syncEl = document.getElementById('last-sync-time');
-                    if (syncEl) syncEl.textContent = `Última sincronización: ${d.fecha_ultima_edicion.substring(11, 16)} (${d.ultima_edicion_por === 'psicologo' ? 'Terapeuta' : 'Tú'})`;
+                    if (syncEl) syncEl.textContent = `Hoy ${d.fecha_ultima_edicion.substring(11, 16)} (${d.ultima_edicion_por === 'psicologo' ? 'Terapeuta' : 'Tú'})`;
                 }
             } catch (e) {
                 // silencioso

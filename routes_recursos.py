@@ -772,6 +772,45 @@ def view_pizarra_compartida(token):
     meta = next((r for r in RECURSOS_CATALOGO if r['id'] == d['recurso_tipo']), None)
     d['meta'] = meta
 
+    # Formateo limpio del título y metadatos para optimizar espacio en pantalla
+    import re
+    raw_titulo = d.get('titulo') or (meta['titulo'] if meta and 'titulo' in meta else 'Pizarra de Trabajo')
+    clean_titulo = raw_titulo
+    subtitulo_fecha = ''
+    subtitulo_tag = ''
+    
+    # Extraer fecha final si existe (ej. " - 19/10/2026")
+    date_match = re.search(r'\s*-\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*$', clean_titulo)
+    if date_match:
+        subtitulo_fecha = date_match.group(1)
+        clean_titulo = clean_titulo[:date_match.start()].strip()
+        
+    # Extraer subtítulo entre paréntesis si existe (ej. "(Plan de Acción)")
+    tag_match = re.search(r'\s*\((.*?)\)\s*$', clean_titulo)
+    if tag_match:
+        subtitulo_tag = tag_match.group(1)
+        clean_titulo = clean_titulo[:tag_match.start()].strip()
+
+    # Si no hubo fecha en el título pero el registro tiene fecha_creacion
+    if not subtitulo_fecha and d.get('fecha_creacion'):
+        try:
+            fc = str(d['fecha_creacion'])[:10]
+            dt_c = datetime.strptime(fc, '%Y-%m-%d')
+            subtitulo_fecha = dt_c.strftime('%d/%m/%Y')
+        except: pass
+
+    # Nombre abreviado elegante del paciente (ej. Gabriel Rodríguez)
+    pac_nom = (d.get('pac_nombres') or '').strip()
+    pac_ape = (d.get('pac_apellidos') or '').strip()
+    p_nom1 = pac_nom.split()[0] if pac_nom else ''
+    p_ape1 = pac_ape.split()[0] if pac_ape else ''
+    short_pac = f"{p_nom1} {p_ape1}".strip() or pac_nom or 'Consultante'
+
+    d['display_titulo'] = clean_titulo
+    d['subtitulo_tag'] = subtitulo_tag
+    d['subtitulo_fecha'] = subtitulo_fecha
+    d['short_pac_name'] = short_pac
+
     return render_template('portal_recurso_pizarra.html', pizarra=d, token=token, meta=meta)
 
 
