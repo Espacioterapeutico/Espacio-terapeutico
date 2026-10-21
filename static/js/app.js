@@ -8566,6 +8566,33 @@ function initTherapistAgendaHistoryFilters() {
     }
 }
 
+function openConsultasMesModal() {
+    if (typeof initTherapistAgendaHistoryFilters === 'function') {
+        initTherapistAgendaHistoryFilters();
+    }
+    if (typeof loadTherapistConsultationHistory === 'function') {
+        loadTherapistConsultationHistory();
+    }
+    const searchInput = document.getElementById('consultas-mes-search');
+    if (searchInput) searchInput.value = '';
+    openModal('consultas-mes-modal');
+}
+window.openConsultasMesModal = openConsultasMesModal;
+
+function filterConsultasMesTable() {
+    const term = (document.getElementById('consultas-mes-search')?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#agenda-history-table-body tr');
+    rows.forEach(r => {
+        if (!term) {
+            r.style.display = '';
+        } else {
+            const text = r.textContent.toLowerCase();
+            r.style.display = text.includes(term) ? '' : 'none';
+        }
+    });
+}
+window.filterConsultasMesTable = filterConsultasMesTable;
+
 async function loadTherapistConsultationHistory() {
     const tbody = document.getElementById('agenda-history-table-body');
     if (!tbody) return;
