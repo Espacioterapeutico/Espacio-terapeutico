@@ -1412,6 +1412,7 @@ function switchView(viewId, fromPopState = false) {
         }
     } else if (viewId === 'expedientes-clinicos') {
         loadPatientsDropdowns();
+        if (typeof loadModalityDropdownOptions === 'function') loadModalityDropdownOptions();
         loadPatients();
         loadSessions();
         if (subTabToActivate) {
@@ -6876,6 +6877,7 @@ async function openNewSessionModal() {
     }
     
     document.getElementById('s-fecha').value = new Date().toISOString().split('T')[0];
+    if (typeof loadModalityDropdownOptions === 'function') loadModalityDropdownOptions();
     
     // Si estamos en la vista filtrada por un paciente, pre-seleccionar
     const filterSelect = document.getElementById('session-filter-patient');
@@ -6982,6 +6984,7 @@ async function openRegisterSessionFromEvent(eventId) {
         }
         
         document.getElementById('s-fecha').value = e.fecha || new Date().toISOString().split('T')[0];
+        await loadModalityDropdownOptions(e.tipo_consulta || 'Online');
         document.getElementById('s-modalidad').value = e.tipo_consulta || 'Online';
         
         // Estado por defecto
@@ -7199,6 +7202,7 @@ async function openEditSessionModal(sessionId) {
         }
 
         await loadPatientsDropdowns();
+        await loadModalityDropdownOptions(s.modalidad);
         
         const select = document.getElementById('s-paciente');
         if (select) {
@@ -11769,6 +11773,8 @@ async function handleSaveAvailability(e) {
             statusMsg.className = 'status-msg success-msg';
             statusMsg.classList.remove('hide');
             
+            _psychologistProfilesCache = null;
+            if (typeof loadModalityDropdownOptions === 'function') loadModalityDropdownOptions();
             loadAdminAvailability();
         } else {
             statusMsg.textContent = data.error || 'Error al guardar disponibilidad.';
@@ -19150,33 +19156,89 @@ function refreshPatientPortal() {
     }
 }
 
-async function loadModalityDropdownOptions() {
-    const select = document.getElementById('e-tipo');
-    if (!select) return;
+let _psychologistProfilesCache = null;
+
+async function fetchPsychologistProfiles(forceRefresh = false) {
+    if (_psychologistProfilesCache && !forceRefresh) {
+        return _psychologistProfilesCache;
+    }
     try {
-        const res = await fetch('/api/admin/availability');
+        const res = await fetch('/api/admin/availability?_t=' + Date.now());
         if (res.ok) {
             const data = await res.json();
-            const perfiles = data.perfiles || [];
-            if (perfiles.length > 0) {
-                const currentVal = select.value;
-                select.innerHTML = '';
-                perfiles.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.nombre;
-                    opt.textContent = p.nombre;
-                    select.appendChild(opt);
-                });
-                const hasMatch = Array.from(select.options).some(opt => opt.value === currentVal);
-                if (hasMatch) {
-                    select.value = currentVal;
-                }
-            }
+            _psychologistProfilesCache = data.perfiles || [];
+            return _psychologistProfilesCache;
         }
     } catch (err) {
-        console.error("Error al cargar modalidades dinámicas para el administrador:", err);
+        console.error("Error al consultar perfiles del psicólogo:", err);
+    }
+    return _psychologistProfilesCache || [];
+}
+
+async function populateSelectWithOptions(selectElement, perfiles, currentValue = null, includeAllOption = false) {
+    if (!selectElement) return;
+    const targetVal = (currentValue !== null && currentValue !== undefined && String(currentValue).trim() !== '') 
+        ? String(currentValue).trim() 
+        : selectElement.value;
+    selectElement.innerHTML = '';
+    
+    if (includeAllOption) {
+        const allOpt = document.createElement('option');
+        allOpt.value = '';
+        allOpt.textContent = 'Todas las modalidades';
+        selectElement.appendChild(allOpt);
+    }
+
+    const addedValues = new Set();
+    perfiles.forEach(p => {
+        const name = (p.nombre || p.modalidad || '').trim();
+        if (name && !addedValues.has(name)) {
+            addedValues.add(name);
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            selectElement.appendChild(opt);
+        }
+    });
+
+    // Si el valor actual ya existía en la consulta/sesión (o es histórico) y no está en los perfiles, preservarlo
+    if (targetVal && !addedValues.has(targetVal)) {
+        const extraOpt = document.createElement('option');
+        extraOpt.value = targetVal;
+        extraOpt.textContent = targetVal;
+        selectElement.appendChild(extraOpt);
+    }
+
+    if (targetVal) {
+        selectElement.value = targetVal;
+    } else if (!includeAllOption && selectElement.options.length > 0) {
+        selectElement.selectedIndex = 0;
     }
 }
+
+async function loadModalityDropdownOptions(preferredValue = null) {
+    const perfiles = await fetchPsychologistProfiles();
+    if (!perfiles || perfiles.length === 0) return;
+
+    // 1. Selector de modal de nueva cita / edición de cita (e-tipo)
+    const eTipo = document.getElementById('e-tipo');
+    if (eTipo) {
+        await populateSelectWithOptions(eTipo, perfiles, preferredValue || eTipo.value);
+    }
+
+    // 2. Selector de modal de evolución clínica (s-modalidad)
+    const sMod = document.getElementById('s-modalidad');
+    if (sMod) {
+        await populateSelectWithOptions(sMod, perfiles, preferredValue || sMod.value);
+    }
+
+    // 3. Selector de filtro en vista de expedientes/evoluciones
+    const filterMod = document.getElementById('session-filter-modalidad');
+    if (filterMod) {
+        await populateSelectWithOptions(filterMod, perfiles, filterMod.value, true);
+    }
+}
+window.loadModalityDropdownOptions = loadModalityDropdownOptions;
 
 function togglePatientPkgInputs() {
     const checked = document.getElementById('p-ofrecer-paquete-personalizado').checked;
