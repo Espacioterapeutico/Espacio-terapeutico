@@ -26250,6 +26250,341 @@ function copyInputValue(inputId) {
     }
 }
 
+const PROFILE_COLOR_PALETTES = {
+    violeta: {
+        heroBg: 'linear-gradient(135deg, #3b1940 0%, #17091b 100%)',
+        accent: '#702e5e',
+        accentLight: '#a855f7',
+        soft: '#fdf4ff',
+        border: '#f0abfc',
+        pill: '#fce7f3'
+    },
+    oceano: {
+        heroBg: 'linear-gradient(135deg, #0f2942 0%, #071321 100%)',
+        accent: '#0284c7',
+        accentLight: '#38bdf8',
+        soft: '#f0f9ff',
+        border: '#7dd3fc',
+        pill: '#e0f2fe'
+    },
+    salvia: {
+        heroBg: 'linear-gradient(135deg, #11362c 0%, #071a15 100%)',
+        accent: '#0d9488',
+        accentLight: '#2dd4bf',
+        soft: '#f0fdfa',
+        border: '#5eead4',
+        pill: '#ccfbf1'
+    },
+    terracota: {
+        heroBg: 'linear-gradient(135deg, #431d17 0%, #1f0b08 100%)',
+        accent: '#c2410c',
+        accentLight: '#fb923c',
+        soft: '#fff7ed',
+        border: '#fdba74',
+        pill: '#ffedd5'
+    },
+    indigo: {
+        heroBg: 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)',
+        accent: '#4f46e5',
+        accentLight: '#818cf8',
+        soft: '#eef2ff',
+        border: '#a5b4fc',
+        pill: '#e0e7ff'
+    },
+    rosa: {
+        heroBg: 'linear-gradient(135deg, #4c1d3d 0%, #240b1c 100%)',
+        accent: '#db2777',
+        accentLight: '#f472b6',
+        soft: '#fdf2f8',
+        border: '#f9a8d4',
+        pill: '#fce7f3'
+    }
+};
+
+const SUGGESTED_PROFILE_FAQS = [
+    {
+        pregunta: "¿Cómo se realizan las sesiones online y qué necesito?",
+        respuesta: "Las sesiones online se realizan por videollamada en tiempo real (Google Meet o WhatsApp) con la misma calidez y confidencialidad que una consulta presencial. Solo necesitas un lugar privado donde te sientas cómodo/a y conexión estable a internet."
+    },
+    {
+        pregunta: "¿Cuánto dura cada sesión terapéutica?",
+        respuesta: "Cada consulta tiene una duración aproximada de 45 a 60 minutos, dedicados exclusivamente a tu proceso y objetivos."
+    },
+    {
+        pregunta: "¿Qué métodos de pago aceptas (en Venezuela y desde el exterior)?",
+        respuesta: "Acepto pagos nacionales (Pago Móvil / Transferencia) e internacionales (Zinli, Binance Pay, PayPal o transferencia internacional) para que puedas agendar desde cualquier país."
+    },
+    {
+        pregunta: "¿Cómo es la primera consulta psicológica?",
+        respuesta: "En el primer encuentro conversaremos sobre lo que te motiva a consultar, conoceremos tu contexto actual y definiremos juntos los objetivos terapéuticos en un espacio seguro y libre de juicios."
+    },
+    {
+        pregunta: "¿Con qué frecuencia se recomiendan las sesiones?",
+        respuesta: "Generalmente comenzamos con sesiones semanales o quincenales según tu necesidad y disponibilidad, ajustando el ritmo conforme avances en tu proceso."
+    },
+    {
+        pregunta: "¿Qué pasa si necesito reprogramar o cancelar una cita?",
+        respuesta: "Puedes reprogramar tu cita avisando con al menos 3 horas de anticipación a la hora pautada sin ningún recargo."
+    },
+    {
+        pregunta: "¿Todo lo que hablemos en sesión es confidencial?",
+        respuesta: "Absolutamente. Todo lo conversado está protegido por el secreto profesional y el código de ética psicológica."
+    }
+];
+
+let _profFaqsDraft = [];
+let _profBlogDraft = [];
+
+function applyPaletteToPublicScreen(paletteKey) {
+    const screen = document.getElementById('public-therapist-profile-screen');
+    if (!screen) return;
+    const p = PROFILE_COLOR_PALETTES[paletteKey] || PROFILE_COLOR_PALETTES.violeta;
+    screen.style.setProperty('--prof-hero-bg', p.heroBg);
+    screen.style.setProperty('--prof-accent', p.accent);
+    screen.style.setProperty('--prof-accent-light', p.accentLight);
+    screen.style.setProperty('--prof-soft', p.soft);
+    screen.style.setProperty('--prof-border', p.border);
+    screen.style.setProperty('--prof-pill', p.pill);
+}
+window.applyPaletteToPublicScreen = applyPaletteToPublicScreen;
+
+function selectProfilePalette(paletteKey) {
+    const input = document.getElementById('prof-paleta-colores');
+    if (input) input.value = paletteKey || 'violeta';
+    const p = PROFILE_COLOR_PALETTES[paletteKey] || PROFILE_COLOR_PALETTES.violeta;
+    document.querySelectorAll('.prof-palette-card').forEach(btn => {
+        const isMatch = btn.getAttribute('data-palette') === (paletteKey || 'violeta');
+        btn.classList.toggle('active', isMatch);
+        btn.style.border = isMatch ? `2.5px solid ${p.accent}` : '1.5px solid #cbd5e1';
+        btn.style.background = isMatch ? p.soft : '#ffffff';
+    });
+}
+window.selectProfilePalette = selectProfilePalette;
+
+function renderFaqEditorInSettings() {
+    const chipsBox = document.getElementById('prof-faq-suggestions-chips');
+    const listBox = document.getElementById('prof-faq-editor-list');
+    if (chipsBox) {
+        chipsBox.innerHTML = SUGGESTED_PROFILE_FAQS.map((item, idx) => {
+            const alreadyAdded = _profFaqsDraft.some(f => (f.pregunta || '').trim().toLowerCase() === item.pregunta.toLowerCase());
+            return `<button type="button" onclick="addSuggestedProfileFaq(${idx})" style="padding: 0.4rem 0.8rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border: 1.5px solid ${alreadyAdded ? '#16a34a' : '#d8b4fe'}; background: ${alreadyAdded ? '#dcfce7' : '#fdf4ff'}; color: ${alreadyAdded ? '#166534' : '#702e5e'}; transition: all 0.2s;">
+                ${alreadyAdded ? '✓ ' : '+ '}${item.pregunta}
+            </button>`;
+        }).join('');
+    }
+    if (!listBox) return;
+    if (!_profFaqsDraft || _profFaqsDraft.length === 0) {
+        listBox.innerHTML = `<div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 0.9rem; text-align: center; color: #64748b; font-size: 0.84rem;">
+            Aún no has seleccionado preguntas frecuentes. Toca cualquiera de las sugerencias de arriba para agregarla y editar tu respuesta.
+        </div>`;
+        return;
+    }
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    listBox.innerHTML = _profFaqsDraft.map((faq, idx) => `
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 0.9rem; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.76rem; font-weight: 800; color: #702e5e; text-transform: uppercase;">Pregunta #${idx + 1}</span>
+                <button type="button" onclick="removeProfileFaq(${idx})" style="background: #fee2e2; color: #b91c1c; border: none; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">🗑️ Quitar</button>
+            </div>
+            <input type="text" class="form-control prof-faq-q-input" data-idx="${idx}" value="${esc(faq.pregunta)}" oninput="_profFaqsDraft[${idx}].pregunta = this.value" placeholder="Escribe la pregunta..." style="font-weight: 700; font-size: 0.88rem; margin-bottom: 0.5rem;">
+            <textarea class="form-control prof-faq-a-input" data-idx="${idx}" rows="2" oninput="_profFaqsDraft[${idx}].respuesta = this.value" placeholder="Escribe tu respuesta para los consultantes..." style="font-size: 0.85rem;">${esc(faq.respuesta)}</textarea>
+        </div>
+    `).join('');
+}
+window.renderFaqEditorInSettings = renderFaqEditorInSettings;
+
+function addSuggestedProfileFaq(suggIdx) {
+    const item = SUGGESTED_PROFILE_FAQS[suggIdx];
+    if (!item) return;
+    const existingIdx = _profFaqsDraft.findIndex(f => (f.pregunta || '').trim().toLowerCase() === item.pregunta.toLowerCase());
+    if (existingIdx !== -1) {
+        _profFaqsDraft.splice(existingIdx, 1);
+    } else {
+        _profFaqsDraft.push({ pregunta: item.pregunta, respuesta: item.respuesta });
+    }
+    renderFaqEditorInSettings();
+}
+window.addSuggestedProfileFaq = addSuggestedProfileFaq;
+
+function addCustomProfileFaq() {
+    _profFaqsDraft.push({ pregunta: '', respuesta: '' });
+    renderFaqEditorInSettings();
+}
+window.addCustomProfileFaq = addCustomProfileFaq;
+
+function removeProfileFaq(idx) {
+    _profFaqsDraft.splice(idx, 1);
+    renderFaqEditorInSettings();
+}
+window.removeProfileFaq = removeProfileFaq;
+
+function renderBlogEditorInSettings() {
+    const listBox = document.getElementById('prof-blog-editor-list');
+    if (!listBox) return;
+    if (!_profBlogDraft || _profBlogDraft.length === 0) {
+        listBox.innerHTML = `<div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 0.9rem; text-align: center; color: #64748b; font-size: 0.84rem;">
+            Aún no has publicado artículos en tu Blog. Haz clic en <strong>"+ Redactar Artículo"</strong> para crear el primero.
+        </div>`;
+        return;
+    }
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    listBox.innerHTML = _profBlogDraft.map((post, idx) => `
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 200px;">
+                ${post.imagen ? `<img src="${esc(post.imagen)}" style="width: 54px; height: 54px; border-radius: 10px; object-fit: cover; flex-shrink: 0; border: 1px solid #cbd5e1;">` : `<div style="width: 54px; height: 54px; border-radius: 10px; background: #fae8ff; color: #702e5e; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">✍️</div>`}
+                <div style="overflow: hidden;">
+                    <strong style="display: block; font-size: 0.92rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(post.titulo)}</strong>
+                    <span style="font-size: 0.8rem; color: #64748b; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px;">${esc((post.contenido || '').substring(0, 90))}...</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.4rem;">
+                <button type="button" onclick="editBlogPostFromList(${idx})" style="background: #e0f2fe; color: #0369a1; border: none; border-radius: 8px; padding: 0.35rem 0.7rem; font-size: 0.78rem; font-weight: 700; cursor: pointer;">✏️ Editar</button>
+                <button type="button" onclick="removeBlogPostFromList(${idx})" style="background: #fee2e2; color: #b91c1c; border: none; border-radius: 8px; padding: 0.35rem 0.7rem; font-size: 0.78rem; font-weight: 700; cursor: pointer;">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+window.renderBlogEditorInSettings = renderBlogEditorInSettings;
+
+function toggleNewBlogPostForm() {
+    const box = document.getElementById('prof-blog-form-box');
+    if (!box) return;
+    document.getElementById('prof-blog-edit-index').value = '-1';
+    document.getElementById('prof-blog-title').value = '';
+    document.getElementById('prof-blog-img').value = '';
+    document.getElementById('prof-blog-content').value = '';
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+window.toggleNewBlogPostForm = toggleNewBlogPostForm;
+
+function cancelBlogPostForm() {
+    const box = document.getElementById('prof-blog-form-box');
+    if (box) box.style.display = 'none';
+}
+window.cancelBlogPostForm = cancelBlogPostForm;
+
+async function handleBlogImageUpload(inputEl) {
+    if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
+    const file = inputEl.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok && data.filename) {
+            const imgInput = document.getElementById('prof-blog-img');
+            if (imgInput) imgInput.value = `/uploads/${data.filename}`;
+        } else {
+            alert(data.error || "No se pudo subir la imagen.");
+        }
+    } catch (err) {
+        alert("Error de conexión al subir la imagen.");
+    }
+}
+window.handleBlogImageUpload = handleBlogImageUpload;
+
+function saveBlogPostToList() {
+    const title = (document.getElementById('prof-blog-title')?.value || '').trim();
+    const img = (document.getElementById('prof-blog-img')?.value || '').trim();
+    const content = (document.getElementById('prof-blog-content')?.value || '').trim();
+    const editIdx = parseInt(document.getElementById('prof-blog-edit-index')?.value || '-1', 10);
+
+    if (!title || !content) {
+        alert("Por favor completa al menos el título y el contenido del artículo.");
+        return;
+    }
+    const item = {
+        titulo: title,
+        imagen: img,
+        contenido: content,
+        fecha: new Date().toISOString().split('T')[0]
+    };
+    if (editIdx >= 0 && editIdx < _profBlogDraft.length) {
+        _profBlogDraft[editIdx] = item;
+    } else {
+        _profBlogDraft.unshift(item);
+    }
+    cancelBlogPostForm();
+    renderBlogEditorInSettings();
+}
+window.saveBlogPostToList = saveBlogPostToList;
+
+function editBlogPostFromList(idx) {
+    const post = _profBlogDraft[idx];
+    if (!post) return;
+    const box = document.getElementById('prof-blog-form-box');
+    if (box) box.style.display = 'block';
+    document.getElementById('prof-blog-edit-index').value = String(idx);
+    document.getElementById('prof-blog-title').value = post.titulo || '';
+    document.getElementById('prof-blog-img').value = post.imagen || '';
+    document.getElementById('prof-blog-content').value = post.contenido || '';
+}
+window.editBlogPostFromList = editBlogPostFromList;
+
+function removeBlogPostFromList(idx) {
+    _profBlogDraft.splice(idx, 1);
+    renderBlogEditorInSettings();
+}
+window.removeBlogPostFromList = removeBlogPostFromList;
+
+function switchPublicProfileTab(tabName) {
+    const tabsOrder = ['conoceme', 'servicios', 'blog', 'faq', 'contacto'].filter(k => {
+        if (k === 'blog') {
+            const bBtn = document.getElementById('prof-tab-btn-blog');
+            return !bBtn || bBtn.style.display !== 'none';
+        }
+        return true;
+    });
+    window._currentPublicProfileTab = tabName;
+
+    document.querySelectorAll('#pub-profile-tabs-bar .prof-tab-btn').forEach(btn => {
+        const isMatch = btn.getAttribute('data-prof-tab') === tabName;
+        btn.classList.toggle('active', isMatch);
+        if (isMatch && btn.scrollIntoView) {
+            try { btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } catch(e) {}
+        }
+    });
+
+    document.querySelectorAll('#public-therapist-profile-screen .prof-tab-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.id === `prof-pane-${tabName}`);
+    });
+}
+window.switchPublicProfileTab = switchPublicProfileTab;
+
+function togglePublicFaqItem(idx) {
+    const body = document.getElementById(`pub-faq-body-${idx}`);
+    const icon = document.getElementById(`pub-faq-icon-${idx}`);
+    if (!body) return;
+    const isOpen = body.style.display === 'block';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.textContent = isOpen ? '+' : '−';
+}
+window.togglePublicFaqItem = togglePublicFaqItem;
+
+function openPublicBlogPostModal(idx) {
+    const posts = window._currentPublicBlogPosts || [];
+    const post = posts[idx];
+    if (!post) return;
+    const titleEl = document.getElementById('pub-blog-reader-title');
+    const bodyEl = document.getElementById('pub-blog-reader-body');
+    const imgEl = document.getElementById('pub-blog-reader-img');
+    const authorEl = document.getElementById('pub-blog-reader-author');
+
+    if (titleEl) titleEl.textContent = post.titulo || '';
+    if (bodyEl) bodyEl.textContent = post.contenido || '';
+    if (authorEl) authorEl.textContent = `✍️ Por ${window._currentPublicTherapistName || 'Psicólogo Clínico'}`;
+    if (imgEl) {
+        if (post.imagen) {
+            imgEl.src = post.imagen;
+            imgEl.style.display = 'block';
+        } else {
+            imgEl.style.display = 'none';
+        }
+    }
+    openModal('pub-blog-reader-modal');
+}
+window.openPublicBlogPostModal = openPublicBlogPostModal;
+
 function populateProfileUI(data) {
     if (!data) return;
     if (data.foto && document.getElementById('set-perfil-preview-img')) {
@@ -26273,6 +26608,12 @@ function populateProfileUI(data) {
     if (document.getElementById('prof-linkedin')) document.getElementById('prof-linkedin').value = redes.linkedin || '';
     if (document.getElementById('prof-cta-texto')) document.getElementById('prof-cta-texto').value = redes.cta_texto || '';
     if (document.getElementById('prof-cta-link')) document.getElementById('prof-cta-link').value = redes.cta_link || '';
+
+    selectProfilePalette(data.paleta_colores || 'violeta');
+    _profFaqsDraft = Array.isArray(data.faqs) ? JSON.parse(JSON.stringify(data.faqs)) : [];
+    _profBlogDraft = Array.isArray(data.blog_posts) ? JSON.parse(JSON.stringify(data.blog_posts)) : [];
+    renderFaqEditorInSettings();
+    renderBlogEditorInSettings();
 
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
     const cleanSlug = data.clean_slug || (data.slug ? data.slug.replace(/^psic\./, '') : (window.sessionUser ? `${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : ''));
@@ -26365,6 +26706,10 @@ async function savePublicProfileSettings() {
         poblacionesArr.push(chk.value);
     });
 
+    const cleanedFaqs = (_profFaqsDraft || [])
+        .map(f => ({ pregunta: (f.pregunta || '').trim(), respuesta: (f.respuesta || '').trim() }))
+        .filter(f => f.pregunta && f.respuesta);
+
     const payload = {
         foto: fotoSrc,
         nomenclatura: document.getElementById('prof-nomenclatura').value.trim(),
@@ -26376,7 +26721,10 @@ async function savePublicProfileSettings() {
         modalidades_data: modalidades_data,
         whatsapp_publico: document.getElementById('prof-whatsapp').value.trim(),
         email_publico: document.getElementById('prof-email').value.trim(),
-        redes_sociales: redes
+        redes_sociales: redes,
+        paleta_colores: document.getElementById('prof-paleta-colores')?.value || 'violeta',
+        faqs: cleanedFaqs,
+        blog_posts: _profBlogDraft || []
     };
     
     try {
@@ -26508,6 +26856,10 @@ async function loadDedicatedTherapistProfile(slug) {
         if (document.getElementById('pub-profile-name')) document.getElementById('pub-profile-name').textContent = t.nombre_completo;
         if (document.getElementById('pub-profile-nomenclatura')) document.getElementById('pub-profile-nomenclatura').textContent = t.nomenclatura || 'Psicólogo Clínico';
 
+        window._currentPublicTherapistName = t.nombre_completo || 'Psicólogo Clínico';
+        applyPaletteToPublicScreen(t.paleta_colores || 'violeta');
+        switchPublicProfileTab('conoceme');
+
         const bioBox = document.getElementById('pub-profile-bio');
         if (bioBox) {
             const rawBio = (t.descripcion_biografia || 'Bienvenido a mi espacio terapéutico profesional.').trim();
@@ -26527,22 +26879,22 @@ async function loadDedicatedTherapistProfile(slug) {
                         icon = '🌈';
                     }
                     return `
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.85rem 1.1rem; display: flex; align-items: flex-start; gap: 0.75rem; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);">
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 0.9rem 1.15rem; display: flex; align-items: flex-start; gap: 0.8rem; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);">
                             <span style="font-size: 1.25rem; line-height: 1.2; flex-shrink: 0;">${icon}</span>
                             <span style="color: #1e293b; font-weight: 600; font-size: 0.98rem; line-height: 1.5;">${escapeHtml(line)}</span>
                         </div>`;
                 }).join('');
 
                 bioBox.innerHTML = `
-                    <div style="background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border-left: 4px solid #a855f7; padding: 1rem 1.25rem; border-radius: 0 12px 12px 0; color: #581c87; font-weight: 700; font-size: 1.06rem; line-height: 1.55; margin-bottom: 1rem;">
+                    <div style="background: var(--prof-soft); border-left: 4px solid var(--prof-accent); padding: 1.1rem 1.3rem; border-radius: 0 14px 14px 0; color: #1e293b; font-weight: 700; font-size: 1.06rem; line-height: 1.55; margin-bottom: 1.1rem;">
                         ${leadLine}
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.65rem;">
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.7rem;">
                         ${credItems}
                     </div>`;
             } else {
                 bioBox.innerHTML = `
-                    <div style="background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border-left: 4px solid #a855f7; padding: 1rem 1.25rem; border-radius: 0 12px 12px 0; color: #334155; font-weight: 600; font-size: 1.05rem; line-height: 1.65;">
+                    <div style="background: var(--prof-soft); border-left: 4px solid var(--prof-accent); padding: 1.1rem 1.3rem; border-radius: 0 14px 14px 0; color: #1e293b; font-weight: 600; font-size: 1.05rem; line-height: 1.65;">
                         ${escapeHtml(rawBio)}
                     </div>`;
             }
@@ -26792,6 +27144,82 @@ async function loadDedicatedTherapistProfile(slug) {
                 cHtml = '<p class="text-muted">El profesional no ha agregado información de contacto directo.</p>';
             }
             contactList.innerHTML = cHtml;
+        }
+
+        // 5. Renderizar Blog / Artículos del Psicólogo
+        const blogListEl = document.getElementById('pub-profile-blog-list');
+        const blogTabBtn = document.getElementById('prof-tab-btn-blog');
+        const blogPosts = Array.isArray(t.blog_posts) ? t.blog_posts : [];
+        window._currentPublicBlogPosts = blogPosts;
+
+        if (blogTabBtn) {
+            blogTabBtn.style.display = blogPosts.length > 0 ? 'inline-flex' : 'none';
+        }
+        if (blogListEl) {
+            const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (blogPosts.length > 0) {
+                blogListEl.innerHTML = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">` +
+                    blogPosts.map((post, idx) => `
+                        <article onclick="openPublicBlogPostModal(${idx})" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: transform 0.22s, box-shadow 0.22s; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 24px rgba(15,23,42,0.09)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.04)'">
+                            ${post.imagen ? `<div style="height: 175px; overflow: hidden; background: #f1f5f9;"><img src="${esc(post.imagen)}" alt="${esc(post.titulo)}" style="width: 100%; height: 100%; object-fit: cover;"></div>` : `<div style="height: 110px; background: var(--prof-hero-bg); display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">✍️</div>`}
+                            <div style="padding: 1.15rem; display: flex; flex-direction: column; flex: 1;">
+                                <h4 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.12rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; line-height: 1.35;">${esc(post.titulo)}</h4>
+                                <p style="font-size: 0.9rem; color: #475569; line-height: 1.55; margin: 0 0 1rem 0; flex: 1;">${esc((post.contenido || '').substring(0, 130))}${(post.contenido || '').length > 130 ? '...' : ''}</p>
+                                <span style="font-size: 0.85rem; font-weight: 800; color: var(--prof-accent); display: inline-flex; align-items: center; gap: 4px;">Leer artículo completo →</span>
+                            </div>
+                        </article>
+                    `).join('') + `</div>`;
+            } else {
+                blogListEl.innerHTML = `<p style="color: #64748b; text-align: center; padding: 1.5rem 0;">Próximamente encontrarás artículos y reflexiones en este espacio.</p>`;
+            }
+        }
+
+        // 6. Renderizar Preguntas Frecuentes (FAQ) en Acordeón
+        const faqListEl = document.getElementById('pub-profile-faq-list');
+        if (faqListEl) {
+            const activeFaqs = (Array.isArray(t.faqs) && t.faqs.length > 0) ? t.faqs : SUGGESTED_PROFILE_FAQS.slice(0, 4);
+            const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            faqListEl.innerHTML = activeFaqs.map((item, idx) => `
+                <div style="border: 1.5px solid #e2e8f0; border-radius: 14px; background: #f8fafc; overflow: hidden; transition: border-color 0.2s;">
+                    <button type="button" onclick="togglePublicFaqItem(${idx})" style="width: 100%; background: none; border: none; padding: 1rem 1.2rem; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 1rem; cursor: pointer; font-weight: 700; font-size: 0.98rem; color: #0f172a;">
+                        <span>${esc(item.pregunta)}</span>
+                        <span id="pub-faq-icon-${idx}" style="width: 28px; height: 28px; border-radius: 50%; background: var(--prof-soft); color: var(--prof-accent); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;">${idx === 0 ? '−' : '+'}</span>
+                    </button>
+                    <div id="pub-faq-body-${idx}" style="display: ${idx === 0 ? 'block' : 'none'}; padding: 0 1.2rem 1.1rem 1.2rem; color: #475569; font-size: 0.95rem; line-height: 1.65; border-top: 1px solid #f1f5f9;">
+                        ${esc(item.respuesta)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 7. Habilitar gesto táctil (swipe horizontal) entre pestañas en dispositivos móviles
+        const swipeArea = document.getElementById('pub-profile-swipe-area');
+        if (swipeArea && !swipeArea._swipeBound) {
+            swipeArea._swipeBound = true;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            swipeArea.addEventListener('touchstart', (e) => {
+                if (e.changedTouches && e.changedTouches[0]) {
+                    touchStartX = e.changedTouches[0].screenX;
+                    touchStartY = e.changedTouches[0].screenY;
+                }
+            }, { passive: true });
+            swipeArea.addEventListener('touchend', (e) => {
+                if (!e.changedTouches || !e.changedTouches[0]) return;
+                const dx = e.changedTouches[0].screenX - touchStartX;
+                const dy = e.changedTouches[0].screenY - touchStartY;
+                if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+                    const visibleTabs = Array.from(document.querySelectorAll('#pub-profile-tabs-bar .prof-tab-btn'))
+                        .filter(b => b.style.display !== 'none')
+                        .map(b => b.getAttribute('data-prof-tab'));
+                    const curIdx = visibleTabs.indexOf(window._currentPublicProfileTab || 'conoceme');
+                    if (dx < 0 && curIdx < visibleTabs.length - 1) {
+                        switchPublicProfileTab(visibleTabs[curIdx + 1]);
+                    } else if (dx > 0 && curIdx > 0) {
+                        switchPublicProfileTab(visibleTabs[curIdx - 1]);
+                    }
+                }
+            }, { passive: true });
         }
 
         if (window.location.pathname.toLowerCase().startsWith('/registro/') || String(slug).startsWith('/registro/')) {

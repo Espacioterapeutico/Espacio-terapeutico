@@ -800,7 +800,7 @@ def admin_profile_public():
         cursor.execute("""
             SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo,
                    nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json,
-                   especialidades, poblaciones_json, pais_ubicacion
+                   especialidades, poblaciones_json, pais_ubicacion, paleta_colores, blog_json, faq_json
             FROM usuarios WHERE id = ?
         """, (user_id,))
         u = cursor.fetchone()
@@ -840,6 +840,15 @@ def admin_profile_public():
 
         redes = json.loads(u['redes_sociales_json']) if u['redes_sociales_json'] else {}
         poblaciones = json.loads(u['poblaciones_json']) if u['poblaciones_json'] else ["Adultos", "Adolescentes"]
+        try:
+            blog_posts = json.loads(u['blog_json']) if u['blog_json'] else []
+        except Exception:
+            blog_posts = []
+        try:
+            faqs = json.loads(u['faq_json']) if u['faq_json'] else []
+        except Exception:
+            faqs = []
+        paleta_colores = u['paleta_colores'] or 'violeta'
         
         slug = u['slug'] or generate_default_slug_for_user(u)
         clean_slug = slug.replace('psic.', '') if slug.startswith('psic.') else slug
@@ -861,6 +870,9 @@ def admin_profile_public():
             'whatsapp_publico': u['whatsapp_publico'] or '',
             'email_publico': u['email_publico'] or '',
             'redes_sociales': redes,
+            'paleta_colores': paleta_colores,
+            'blog_posts': blog_posts,
+            'faqs': faqs,
             'foto': u['foto_titulo'] or '/static/logo.png'
         })
     else:
@@ -878,6 +890,9 @@ def admin_profile_public():
         whatsapp = data.get('whatsapp_publico', '').strip()
         email = data.get('email_publico', '').strip()
         redes = data.get('redes_sociales', {})
+        paleta_colores = data.get('paleta_colores', 'violeta').strip() or 'violeta'
+        blog_posts = data.get('blog_posts', [])
+        faqs = data.get('faqs', [])
         foto = data.get('foto', '')
         
         try:
@@ -892,9 +907,12 @@ def admin_profile_public():
                     whatsapp_publico = ?,
                     email_publico = ?,
                     redes_sociales_json = ?,
+                    paleta_colores = ?,
+                    blog_json = ?,
+                    faq_json = ?,
                     foto_titulo = CASE WHEN ? != '' THEN ? ELSE foto_titulo END
                 WHERE id = ?
-            """, (nomenclatura, descripcion, especialidades, pais_ubicacion, json.dumps(poblaciones), json.dumps(mods_data), whatsapp, email, json.dumps(redes), foto, foto, user_id))
+            """, (nomenclatura, descripcion, especialidades, pais_ubicacion, json.dumps(poblaciones), json.dumps(mods_data), whatsapp, email, json.dumps(redes), paleta_colores, json.dumps(blog_posts), json.dumps(faqs), foto, foto, user_id))
             db.commit()
             return jsonify({'success': 'Perfil público actualizado con éxito.'})
         except Exception as e:
@@ -2541,7 +2559,10 @@ def ensure_usuarios_columns(db):
             'redes_sociales_json': 'TEXT',
             'terminos_condiciones': 'TEXT',
             'whatsapp_publico': 'TEXT',
-            'email_publico': 'TEXT'
+            'email_publico': 'TEXT',
+            'paleta_colores': 'TEXT',
+            'blog_json': 'TEXT',
+            'faq_json': 'TEXT'
         }
         for col_name, col_type in needed_columns.items():
             if col_name not in columns:
@@ -2663,6 +2684,20 @@ def get_public_therapist_profile(slug):
         poblaciones = json.loads(poblaciones_raw) if poblaciones_raw else []
     except Exception:
         poblaciones = []
+
+    try:
+        blog_raw = psych.get('blog_json')
+        blog_posts = json.loads(blog_raw) if blog_raw else []
+    except Exception:
+        blog_posts = []
+
+    try:
+        faq_raw = psych.get('faq_json')
+        faqs = json.loads(faq_raw) if faq_raw else []
+    except Exception:
+        faqs = []
+
+    paleta_colores = psych.get('paleta_colores') or 'violeta'
         
     clean_slug = psych.get('slug') or generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
@@ -2684,6 +2719,9 @@ def get_public_therapist_profile(slug):
         'whatsapp_publico': psych.get('whatsapp_publico') or '',
         'email_publico': psych.get('email_publico') or '',
         'redes_sociales': redes,
+        'paleta_colores': paleta_colores,
+        'blog_posts': blog_posts,
+        'faqs': faqs,
         'url_agendar': f"/agendar/{clean_slug}",
         'url_registro': f"/registro/{clean_slug}"
     })

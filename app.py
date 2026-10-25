@@ -3366,6 +3366,12 @@ def ensure_usuarios_columns(db=None):
         ('whatsapp_publico', 'TEXT'),
         ('email_publico', 'TEXT'),
         ('redes_sociales_json', 'TEXT'),
+        ('especialidades', 'TEXT'),
+        ('pais_ubicacion', 'TEXT'),
+        ('poblaciones_json', 'TEXT'),
+        ('paleta_colores', 'TEXT'),
+        ('blog_json', 'TEXT'),
+        ('faq_json', 'TEXT'),
         ('recordatorio_expiracion_enviado', 'TEXT DEFAULT \'\'')
     ]
     for col_name, col_type in columns:

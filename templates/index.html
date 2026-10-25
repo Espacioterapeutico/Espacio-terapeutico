@@ -775,75 +775,217 @@
     </div>
 
     <!-- PÁGINA PÚBLICA DEDICADA DE PERFIL DEL PSICÓLOGO (/psic.tunombre) -->
-    <div id="public-therapist-profile-screen" class="public-landing-container hide" style="display: none;">
-        <nav class="pub-navbar">
+    <div id="public-therapist-profile-screen" class="public-landing-container hide" style="display: none; --prof-hero-bg: linear-gradient(135deg, #3b1940 0%, #17091b 100%); --prof-accent: #702e5e; --prof-accent-light: #a855f7; --prof-soft: #fdf4ff; --prof-border: #f0abfc; --prof-pill: #fce7f3; background: #f8fafc; min-height: 100vh;">
+        <style>
+            #public-therapist-profile-screen .prof-tabs-bar::-webkit-scrollbar { display: none; }
+            #public-therapist-profile-screen .prof-tab-btn {
+                appearance: none;
+                border: none;
+                background: transparent;
+                color: #475569;
+                font-weight: 700;
+                font-size: 0.94rem;
+                padding: 0.7rem 1.25rem;
+                border-radius: 999px;
+                cursor: pointer;
+                white-space: nowrap;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            #public-therapist-profile-screen .prof-tab-btn:hover {
+                color: var(--prof-accent);
+                background: var(--prof-soft);
+            }
+            #public-therapist-profile-screen .prof-tab-btn.active {
+                background: var(--prof-accent);
+                color: #ffffff;
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+                transform: translateY(-1px);
+            }
+            #public-therapist-profile-screen .prof-tab-pane {
+                display: none;
+                animation: profFadeSlide 0.28s ease-out;
+            }
+            #public-therapist-profile-screen .prof-tab-pane.active {
+                display: block;
+            }
+            @keyframes profFadeSlide {
+                from { opacity: 0; transform: translateY(8px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            #public-therapist-profile-screen .prof-glass-card {
+                background: #ffffff;
+                border-radius: 22px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+                padding: 2rem;
+            }
+            @media (max-width: 640px) {
+                #public-therapist-profile-screen .prof-glass-card {
+                    padding: 1.35rem;
+                    border-radius: 18px;
+                }
+            }
+        </style>
+
+        <nav class="pub-navbar" style="background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 90;">
             <div class="pub-navbar-brand">
                 <img src="/static/logo.png" alt="Espacio Terapéutico" class="pub-logo">
-                <a href="/" class="pub-brand-name" style="text-decoration: none;">Espacio Terapéutico</a>
+                <a href="/" class="pub-brand-name" style="text-decoration: none; color: var(--prof-accent);">Espacio Terapéutico</a>
             </div>
-            <div class="pub-navbar-right" style="display: flex; align-items: center; gap: 1rem;">
-                <a href="/" style="text-decoration: none; font-weight: 700; color: #702e5e; padding: 0.55rem 1.25rem; background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 25px;">🏠 Volver al Inicio</a>
-                <button class="pub-btn-login" onclick="openAuthModal()">Iniciar Sesión</button>
+            <div class="pub-navbar-right" style="display: flex; align-items: center; gap: 0.75rem;">
+                <a href="/" style="text-decoration: none; font-weight: 700; color: var(--prof-accent); padding: 0.5rem 1.1rem; background: var(--prof-soft); border: 1.5px solid var(--prof-border); border-radius: 25px; font-size: 0.88rem;">🏠 Inicio</a>
+                <button class="pub-btn-login" onclick="openAuthModal()" style="background: var(--prof-accent); border-color: var(--prof-accent);">Iniciar Sesión</button>
             </div>
         </nav>
 
-        <section style="background: linear-gradient(135deg, #3d1e3f 0%, #1a0b1c 100%); color: white; padding: 4.5rem 1.5rem; text-align: center;">
-            <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
-                <div style="width: 200px; height: 200px; max-width: 80vw; max-height: 80vw; border-radius: 50%; overflow: hidden; border: 5px solid #fbcfe8; box-shadow: 0 12px 32px rgba(0,0,0,0.45); margin-bottom: 1.25rem; transition: transform 0.3s ease;">
+        <!-- HERO MODERNO CON PALETA DINÁMICA -->
+        <section id="pub-profile-hero" style="background: var(--prof-hero-bg); color: white; padding: 3.5rem 1.25rem 4.2rem 1.25rem; text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -90px; right: -90px; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none;"></div>
+            <div style="position: absolute; bottom: -100px; left: -80px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%); pointer-events: none;"></div>
+
+            <div style="max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2;">
+                <div style="width: 156px; height: 156px; max-width: 42vw; max-height: 42vw; border-radius: 50%; overflow: hidden; border: 4px solid var(--prof-pill); box-shadow: 0 14px 34px rgba(0,0,0,0.42); margin-bottom: 1.1rem; background: #fff;">
                     <img id="pub-profile-img" src="/static/logo.png" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
-                <h1 id="pub-profile-name" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 2.3rem; font-weight: 800; margin-bottom: 0.35rem; color: #fce7f3; text-shadow: 0 2px 10px rgba(0,0,0,0.4);">Psic. Cargar Perfil...</h1>
-                <p id="pub-profile-nomenclatura" style="font-size: 1.1rem; color: #fbcfe8; font-weight: 600; margin-bottom: 1.25rem;">Psicólogo Clínico</p>
+                <h1 id="pub-profile-name" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: clamp(1.75rem, 4vw, 2.35rem); font-weight: 800; margin: 0 0 0.25rem 0; color: #ffffff; letter-spacing: -0.4px;">Psic. Cargar Perfil...</h1>
+                <p id="pub-profile-nomenclatura" style="font-size: 1.05rem; color: var(--prof-pill); font-weight: 600; margin: 0 0 1.1rem 0; opacity: 0.95;">Psicólogo Clínico</p>
 
-                <div id="pub-profile-mods" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.75rem;">
-                    <!-- Badges modalidades -->
+                <div id="pub-profile-mods" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.6rem;">
+                    <!-- Badges de Especialidad, Ubicación, Población y Modalidades -->
                 </div>
 
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
-                    <a id="pub-profile-wa-btn" href="#" class="pub-btn-primary" style="font-size: 1.05rem; padding: 0.9rem 2.3rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border-radius: 50px; font-weight: 800; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);">📅 Agendar Sesión</a>
-                    <a id="pub-profile-direct-wa-btn" href="#" target="_blank" class="pub-btn-outline" style="font-size: 1.05rem; padding: 0.9rem 2.2rem; text-decoration: none; display: none; align-items: center; gap: 8px; border-radius: 50px; font-weight: 700; border: 2px solid rgba(255,255,255,0.75); color: #ffffff; background: rgba(37, 211, 102, 0.18);">💬 Conéctate conmigo</a>
+                <div style="display: flex; gap: 0.85rem; flex-wrap: wrap; justify-content: center;">
+                    <a id="pub-profile-wa-btn" href="#" class="pub-btn-primary" style="background: #ffffff; color: #0f172a; font-size: 1.02rem; padding: 0.88rem 2.1rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; font-weight: 800; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); border: none;">📅 Agendar Sesión</a>
+                    <a id="pub-profile-direct-wa-btn" href="#" target="_blank" class="pub-btn-outline" style="font-size: 1.02rem; padding: 0.88rem 2rem; text-decoration: none; display: none; align-items: center; gap: 8px; border-radius: 999px; font-weight: 700; border: 1.5px solid rgba(255,255,255,0.75); color: #ffffff; background: rgba(255, 255, 255, 0.14); backdrop-filter: blur(8px);">💬 Conéctate conmigo</a>
                 </div>
             </div>
         </section>
 
-        <section class="pub-section">
-            <div class="pub-container" style="max-width: 850px;">
-                <!-- Imagen 1: Conóceme -->
-                <div class="pub-card-highlight" style="margin-bottom: 2rem;">
-                    <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; color: #702e5e; margin-bottom: 1rem; border-bottom: 2.5px solid #fbcfe8; padding-bottom: 0.4rem; display: inline-block;">Conóceme</h3>
-                    <div id="pub-profile-bio" style="font-size: 1.05rem; line-height: 1.7; color: #334155;">Cargando información profesional...</div>
-                </div>
+        <!-- BARRA FLOTANTE DESLIZABLE DE PESTAÑAS (CONÓCEME / SERVICIOS / BLOG / PREGUNTAS FRECUENTES / CONTACTO) -->
+        <div style="max-width: 860px; margin: -1.65rem auto 1.75rem auto; padding: 0 1rem; position: relative; z-index: 15;">
+            <div id="pub-profile-tabs-bar" class="prof-tabs-bar" style="background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(12px); border: 1px solid #e2e8f0; border-radius: 999px; padding: 0.4rem; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09); display: flex; align-items: center; justify-content: space-between; gap: 0.3rem; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+                <button type="button" class="prof-tab-btn active" data-prof-tab="conoceme" onclick="switchPublicProfileTab('conoceme')">
+                    <span>👤</span> <span>Conóceme</span>
+                </button>
+                <button type="button" class="prof-tab-btn" data-prof-tab="servicios" onclick="switchPublicProfileTab('servicios')">
+                    <span>🌐</span> <span>Servicios</span>
+                </button>
+                <button type="button" id="prof-tab-btn-blog" class="prof-tab-btn" data-prof-tab="blog" onclick="switchPublicProfileTab('blog')">
+                    <span>✍️</span> <span>Blog</span>
+                </button>
+                <button type="button" id="prof-tab-btn-faq" class="prof-tab-btn" data-prof-tab="faq" onclick="switchPublicProfileTab('faq')">
+                    <span>❓</span> <span>Preguntas Frecuentes</span>
+                </button>
+                <button type="button" class="prof-tab-btn" data-prof-tab="contacto" onclick="switchPublicProfileTab('contacto')">
+                    <span>📲</span> <span>Contacto</span>
+                </button>
+            </div>
+        </div>
 
-                <!-- Imagen 2: Servicios -->
-                <div class="pub-card-highlight" style="margin-bottom: 2rem;">
-                    <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; color: #702e5e; margin-bottom: 1rem; border-bottom: 2.5px solid #fbcfe8; padding-bottom: 0.4rem; display: inline-block;">Servicios y Modalidades</h3>
-                    <div id="pub-profile-mods-detail">
-                        <!-- Detalles dinámicos de modalidades -->
+        <!-- CONTENEDOR DESLIZABLE DE SECCIONES -->
+        <section class="pub-section" style="padding-top: 0.25rem; padding-bottom: 3rem;">
+            <div id="pub-profile-swipe-area" class="pub-container" style="max-width: 860px;">
+                
+                <!-- PESTAÑA 1: CONÓCEME -->
+                <div id="prof-pane-conoceme" class="prof-tab-pane active">
+                    <div class="prof-glass-card">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem;">
+                            <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>👤</span> Sobre mí y mi enfoque
+                            </h3>
+                            <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 600;">Desliza o toca las pestañas arriba ➔</span>
+                        </div>
+                        <div id="pub-profile-bio" style="font-size: 1.04rem; line-height: 1.7; color: #334155;">Cargando información profesional...</div>
                     </div>
                 </div>
 
-                <!-- Imagen 3: Contacto -->
-                <div class="pub-card-highlight" style="margin-bottom: 2rem;">
-                    <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; color: #702e5e; margin-bottom: 1rem; border-bottom: 2.5px solid #fbcfe8; padding-bottom: 0.4rem; display: inline-block;">Contacto</h3>
-                    <div id="pub-profile-contact-list">
-                        <!-- Botones de WhatsApp, Instagram, Correo copiar/pegar -->
+                <!-- PESTAÑA 2: SERVICIOS -->
+                <div id="prof-pane-servicios" class="prof-tab-pane">
+                    <div class="prof-glass-card">
+                        <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; color: var(--prof-accent); margin: 0 0 1.25rem 0; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🌐</span> Modalidades de Atención
+                        </h3>
+                        <div id="pub-profile-mods-detail">
+                            <!-- Detalles dinámicos de modalidades -->
+                        </div>
                     </div>
                 </div>
 
-                <!-- Registro de Consultante al final -->
-                <div class="pub-card-highlight" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border: 1.5px solid #f0abfc; text-align: center; padding: 1.75rem;">
-                    <h4 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.18rem; color: #702e5e; margin-top: 0; margin-bottom: 0.4rem; font-weight: 800;">¿Ya eres consultante o deseas abrir tu expediente clínico?</h4>
-                    <p style="font-size: 0.94rem; color: #475569; margin: 0 auto 1.15rem auto; max-width: 580px;">Si ya agendaste o asistes a consulta con este profesional, regístrate aquí para acceder a tu portal privado, recursos y herramientas terapéuticas.</p>
-                    <button id="pub-profile-reg-btn" type="button" class="pub-btn-primary" style="font-size: 0.98rem; padding: 0.85rem 2.2rem; cursor: pointer; border: none; border-radius: 30px; font-weight: 700;">📝 Registrarme en su Consulta</button>
+                <!-- PESTAÑA 3: BLOG / ARTÍCULOS -->
+                <div id="prof-pane-blog" class="prof-tab-pane">
+                    <div class="prof-glass-card">
+                        <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; color: var(--prof-accent); margin: 0 0 0.4rem 0; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>✍️</span> Artículos y Reflexiones
+                        </h3>
+                        <p style="color: #64748b; font-size: 0.92rem; margin-top: 0; margin-bottom: 1.35rem;">Lecturas y herramientas compartidas por el profesional para tu bienestar emocional.</p>
+                        <div id="pub-profile-blog-list">
+                            <!-- Tarjetas de artículos del blog -->
+                        </div>
+                    </div>
                 </div>
 
-                <div style="text-align: center; margin-top: 2.5rem; margin-bottom: 1rem;">
-                    <a href="/" style="display: inline-flex; align-items: center; gap: 8px; font-size: 1.05rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 2px solid #f0abfc; padding: 0.85rem 2.2rem; border-radius: 30px; text-decoration: none; box-shadow: 0 4px 15px rgba(112, 46, 94, 0.1);">
-                        ⬅️ Volver a Espacio Terapéutico (Inicio)
+                <!-- PESTAÑA 4: PREGUNTAS FRECUENTES (FAQ) -->
+                <div id="prof-pane-faq" class="prof-tab-pane">
+                    <div class="prof-glass-card">
+                        <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; color: var(--prof-accent); margin: 0 0 0.4rem 0; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>❓</span> Preguntas Frecuentes
+                        </h3>
+                        <p style="color: #64748b; font-size: 0.92rem; margin-top: 0; margin-bottom: 1.35rem;">Haz clic sobre cualquier pregunta para desplegar la respuesta.</p>
+                        <div id="pub-profile-faq-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <!-- Acordeón de FAQs -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PESTAÑA 5: CONTACTO -->
+                <div id="prof-pane-contacto" class="prof-tab-pane">
+                    <div class="prof-glass-card">
+                        <h3 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; color: var(--prof-accent); margin: 0 0 0.5rem 0; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>📲</span> Canales de Contacto Directo
+                        </h3>
+                        <p style="color: #64748b; font-size: 0.92rem; margin-top: 0; margin-bottom: 1.25rem;">Puedes comunicarte directamente o seguir mi contenido en redes sociales:</p>
+                        <div id="pub-profile-contact-list">
+                            <!-- Botones de WhatsApp, Instagram, Correo -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REGISTRO DE CONSULTANTE AL FINAL -->
+                <div style="margin-top: 1.75rem; background: var(--prof-soft); border: 1.5px solid var(--prof-border); border-radius: 20px; text-align: center; padding: 1.5rem 1.25rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                    <h4 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.1rem; color: var(--prof-accent); margin: 0; font-weight: 800;">¿Ya eres consultante o deseas abrir tu expediente clínico?</h4>
+                    <p style="font-size: 0.9rem; color: #475569; margin: 0; max-width: 560px;">Si ya asistes a consulta con este profesional, regístrate aquí para entrar a tu portal privado y herramientas terapéuticas.</p>
+                    <button id="pub-profile-reg-btn" type="button" class="pub-btn-primary" style="background: var(--prof-accent); font-size: 0.94rem; padding: 0.75rem 1.9rem; cursor: pointer; border: none; border-radius: 999px; font-weight: 700; margin-top: 0.35rem;">📝 Registrarme en su Consulta</button>
+                </div>
+
+                <div style="text-align: center; margin-top: 2rem;">
+                    <a href="/" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; color: var(--prof-accent); background: #ffffff; border: 1.5px solid #e2e8f0; padding: 0.75rem 1.75rem; border-radius: 999px; text-decoration: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);">
+                        ⬅️ Volver al Directorio de Espacio Terapéutico
                     </a>
                 </div>
             </div>
         </section>
+
+        <!-- MODAL LECTOR DE ARTÍCULO DEL BLOG -->
+        <div id="pub-blog-reader-modal" class="modal hide" role="dialog" onclick="if(event.target === this) closeModal('pub-blog-reader-modal')" style="z-index: 9999;">
+            <div class="modal-content" style="max-width: 680px; width: 94%; max-height: 90vh; overflow-y: auto; border-radius: 22px; padding: 0; border: none; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
+                <div style="position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; z-index: 5;">
+                    <span id="pub-blog-reader-author" style="font-weight: 700; font-size: 0.88rem; color: var(--prof-accent);">✍️ Artículo del Profesional</span>
+                    <button type="button" onclick="closeModal('pub-blog-reader-modal')" style="background: #f1f5f9; border: none; width: 34px; height: 34px; border-radius: 50%; font-size: 1rem; cursor: pointer; color: #334155;">✕</button>
+                </div>
+                <div style="padding: 1.5rem;">
+                    <img id="pub-blog-reader-img" src="" alt="" style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 14px; margin-bottom: 1.25rem; display: none;">
+                    <h2 id="pub-blog-reader-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 0 0 1rem 0; line-height: 1.3;"></h2>
+                    <div id="pub-blog-reader-body" style="font-size: 1.03rem; line-height: 1.8; color: #334155; white-space: pre-wrap;"></div>
+                    <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <span style="font-size: 0.92rem; color: #64748b; font-weight: 600;">¿Te identificas con este tema y deseas trabajarlo en sesión?</span>
+                        <button type="button" onclick="closeModal('pub-blog-reader-modal'); window.openProfileFastBooking();" style="background: var(--prof-accent); color: #fff; border: none; padding: 0.75rem 1.6rem; border-radius: 999px; font-weight: 800; cursor: pointer; font-size: 0.92rem;">📅 Agendar Sesión</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <footer class="pub-footer" style="text-align: center;">
             <p>© Espacio Terapéutico — Todos los derechos reservados.</p>
@@ -3111,6 +3253,93 @@
                                             <input type="text" id="prof-cta-link" class="form-control" placeholder="Vacío = ir a tu WhatsApp automáticamente">
                                             <small style="color: #64748b; font-size: 0.76rem;">Si lo dejas vacío, abrirá tu WhatsApp. También puedes pegar cualquier URL (Instagram, WhatsApp, etc.).</small>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- 1. PALETA DE COLORES DEL PERFIL PÚBLICO -->
+                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 14px; margin-top: 0.75rem;">
+                                    <label style="font-weight: 800; margin-bottom: 0.35rem; display: block; color: #1e293b; font-size: 1rem;">🎨 Paleta de Colores de Mi Perfil Público</label>
+                                    <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.85rem;">Elige la combinación de colores que represente tu estilo profesional (se aplicará al encabezado, pestañas y botones de tu página):</p>
+                                    <input type="hidden" id="prof-paleta-colores" value="violeta">
+                                    <div id="prof-palette-selector" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 0.65rem;">
+                                        <button type="button" class="prof-palette-card active" data-palette="violeta" onclick="selectProfilePalette('violeta')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 2px solid #702e5e; background: #fdf4ff; cursor: pointer; text-align: left;">
+                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #702e5e, #3b1940); flex-shrink: 0; border: 2px solid #fbcfe8;"></span>
+                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Violeta Clínico</span>
+                                        </button>
+                                        <button type="button" class="prof-palette-card" data-palette="oceano" onclick="selectProfilePalette('oceano')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #0f2942); flex-shrink: 0; border: 2px solid #bae6fd;"></span>
+                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Azul Océano</span>
+                                        </button>
+                                        <button type="button" class="prof-palette-card" data-palette="salvia" onclick="selectProfilePalette('salvia')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #0d9488, #13332a); flex-shrink: 0; border: 2px solid #99f6e4;"></span>
+                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Verde Salvia</span>
+                                        </button>
+                                        <button type="button" class="prof-palette-card" data-palette="terracota" onclick="selectProfilePalette('terracota')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #c2410c, #431d17); flex-shrink: 0; border: 2px solid #fed7aa;"></span>
+                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Terracota Cálido</span>
+                                        </button>
+                                        <button type="button" class="prof-palette-card" data-palette="indigo" onclick="selectProfilePalette('indigo')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #1e1b4b); flex-shrink: 0; border: 2px solid #c7d2fe;"></span>
+                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Índigo Nocturno</span>
+                                        </button>
+                                        <button type="button" class="prof-palette-card" data-palette="rosa" onclick="selectProfilePalette('rosa')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #db2777, #4c1d3d); flex-shrink: 0; border: 2px solid #fbcfe8;"></span>
+                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Rosa Cuarzo</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 2. GESTOR DE PREGUNTAS FRECUENTES (FAQ) CON SUGERENCIAS -->
+                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 14px; margin-top: 0.75rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.4rem;">
+                                        <label style="font-weight: 800; color: #1e293b; font-size: 1rem; margin: 0;">❓ Preguntas Frecuentes (FAQ) de Mi Perfil</label>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addCustomProfileFaq()" style="font-weight: 700; font-size: 0.8rem; border-radius: 20px;">+ Añadir Pregunta Propia</button>
+                                    </div>
+                                    <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">Haz clic en cualquiera de estas preguntas sugeridas para agregarla a tu perfil y personalizar tu respuesta:</p>
+                                    <div id="prof-faq-suggestions-chips" style="display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem;">
+                                        <!-- Chips generados por JS -->
+                                    </div>
+                                    <div id="prof-faq-editor-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                        <!-- Lista editable de FAQs seleccionadas -->
+                                    </div>
+                                </div>
+
+                                <!-- 3. GESTOR DE BLOG / ARTÍCULOS DEL PSICÓLOGO -->
+                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 14px; margin-top: 0.75rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.4rem;">
+                                        <label style="font-weight: 800; color: #1e293b; font-size: 1rem; margin: 0;">✍️ Mi Blog / Artículos Publicados</label>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="toggleNewBlogPostForm()" style="font-weight: 700; font-size: 0.82rem; border-radius: 20px; background: #702e5e; border: none;">+ Redactar Artículo</button>
+                                    </div>
+                                    <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.85rem;">Comparte reflexiones o artículos breves con imagen y título para generar confianza en quienes visitan tu perfil:</p>
+
+                                    <!-- Formulario desplegable para crear/editar artículo -->
+                                    <div id="prof-blog-form-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.1rem; margin-bottom: 1rem;">
+                                        <input type="hidden" id="prof-blog-edit-index" value="-1">
+                                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                                            <label style="font-size: 0.84rem; font-weight: 700;">Título del Artículo *</label>
+                                            <input type="text" id="prof-blog-title" class="form-control" placeholder="Ej: ¿Cómo saber cuándo es momento de iniciar terapia?">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                                            <label style="font-size: 0.84rem; font-weight: 700;">Imagen de Portada (Sube una foto o pega un enlace)</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                                <input type="text" id="prof-blog-img" class="form-control" placeholder="URL de imagen o sube archivo al lado ->" style="flex: 1; min-width: 180px;">
+                                                <label class="btn btn-sm btn-outline-secondary" style="margin: 0; cursor: pointer; font-weight: 700; white-space: nowrap;">
+                                                    📷 Subir Foto <input type="file" accept="image/*" style="display: none;" onchange="handleBlogImageUpload(this)">
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0.85rem;">
+                                            <label style="font-size: 0.84rem; font-weight: 700;">Contenido del Artículo *</label>
+                                            <textarea id="prof-blog-content" rows="5" class="form-control" placeholder="Escribe aquí tu artículo o reflexión..."></textarea>
+                                        </div>
+                                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                                            <button type="button" class="btn btn-sm btn-secondary" onclick="cancelBlogPostForm()">Cancelar</button>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="saveBlogPostToList()" style="background: #166534; border: none; font-weight: 700;">✅ Agregar a Mi Lista (Recuerda Guardar Cambios abajo)</button>
+                                        </div>
+                                    </div>
+
+                                    <div id="prof-blog-editor-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
+                                        <!-- Lista de artículos agregados -->
                                     </div>
                                 </div>
 
