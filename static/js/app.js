@@ -26995,55 +26995,72 @@ async function loadDedicatedTherapistProfile(slug) {
             modsBox.innerHTML = html;
         }
 
-        // 2. Sección detallada de Modalidades y sus Descripciones (con botón directo para agendar esa modalidad)
+        // 2. Sección detallada de Modalidades y sus Descripciones (Diseño moderno adaptado a la paleta del psicólogo)
         const modsDetailBox = document.getElementById('pub-profile-mods-detail');
         if (modsDetailBox) {
             const mData = t.modalidades_data || {};
-            let mHtml = '';
+            let mHtml = '<div style="display: flex; flex-direction: column; gap: 1rem;">';
+            let hasAnyMod = false;
             
             if (mData.online || (Array.isArray(t.modalidades) && t.modalidades.includes("Online"))) {
+                hasAnyMod = true;
                 const titleText = mData.online_titulo || "Consulta Online";
-                const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Plataformas / Detalles: <strong>${mData.online_detalle}</strong></p>` : '';
-                mHtml += `<div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 240px;">
-                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #702e5e; font-size: 1.1rem;">🌐 ${titleText}</div>
-                        ${det}
+                const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.94rem; line-height: 1.55; margin: 0.35rem 0 0 0;">${mData.online_detalle}</p>` : '';
+                mHtml += `
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.35rem 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; flex-wrap: wrap; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
+                    <div style="display: flex; align-items: flex-start; gap: 1rem; flex: 1; min-width: 240px;">
+                        <div style="width: 46px; height: 46px; border-radius: 12px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">🌐</div>
+                        <div>
+                            <div style="font-weight: 800; color: #0f172a; font-size: 1.12rem; letter-spacing: -0.2px;">${titleText}</div>
+                            ${det}
+                        </div>
                     </div>
-                    <button type="button" onclick="window.openProfileFastBooking('Online')" style="background: #702e5e; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 25px; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(112, 46, 94, 0.22); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                    <button type="button" onclick="window.openProfileFastBooking('Online')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.68rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
                         📅 Agendar Online →
                     </button>
                 </div>`;
             }
             if (mData.presencial || (Array.isArray(t.modalidades) && t.modalidades.includes("Presencial"))) {
+                hasAnyMod = true;
                 const titleText = mData.presencial_titulo || "Consulta Presencial";
                 const addressVal = mData.presencial_detalle || mData.presencial_direccion;
-                const det = addressVal ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Ubicación / Consultorio: <strong>${addressVal}</strong></p>` : '';
-                mHtml += `<div style="background: #f0fdf4; border: 1.5px solid #86efac; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 240px;">
-                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 1.1rem;">🏢 ${titleText}</div>
-                        ${det}
+                const det = addressVal ? `<p style="color: #475569; font-size: 0.94rem; line-height: 1.55; margin: 0.35rem 0 0 0;">📍 ${addressVal}</p>` : '';
+                mHtml += `
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.35rem 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; flex-wrap: wrap; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
+                    <div style="display: flex; align-items: flex-start; gap: 1rem; flex: 1; min-width: 240px;">
+                        <div style="width: 46px; height: 46px; border-radius: 12px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">🏢</div>
+                        <div>
+                            <div style="font-weight: 800; color: #0f172a; font-size: 1.12rem; letter-spacing: -0.2px;">${titleText}</div>
+                            ${det}
+                        </div>
                     </div>
-                    <button type="button" onclick="window.openProfileFastBooking('Presencial')" style="background: #166534; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 25px; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(22, 101, 52, 0.22); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                    <button type="button" onclick="window.openProfileFastBooking('Presencial')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.68rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
                         📅 Agendar Presencial →
                     </button>
                 </div>`;
             }
             if (mData.domicilio || (Array.isArray(t.modalidades) && t.modalidades.includes("Domicilio"))) {
+                hasAnyMod = true;
                 const titleText = mData.domicilio_titulo || "Atención a Domicilio";
                 const zonesVal = mData.domicilio_detalle || mData.domicilio_zonas;
-                const det = zonesVal ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Zonas de Cobertura: <strong>${zonesVal}</strong></p>` : '';
-                mHtml += `<div style="background: #f0f9ff; border: 1.5px solid #93c5fd; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 240px;">
-                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e40af; font-size: 1.1rem;">🚗 ${titleText}</div>
-                        ${det}
+                const det = zonesVal ? `<p style="color: #475569; font-size: 0.94rem; line-height: 1.55; margin: 0.35rem 0 0 0;">🗺️ ${zonesVal}</p>` : '';
+                mHtml += `
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.35rem 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; flex-wrap: wrap; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
+                    <div style="display: flex; align-items: flex-start; gap: 1rem; flex: 1; min-width: 240px;">
+                        <div style="width: 46px; height: 46px; border-radius: 12px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">🚗</div>
+                        <div>
+                            <div style="font-weight: 800; color: #0f172a; font-size: 1.12rem; letter-spacing: -0.2px;">${titleText}</div>
+                            ${det}
+                        </div>
                     </div>
-                    <button type="button" onclick="window.openProfileFastBooking('Domicilio')" style="background: #1e40af; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 25px; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.22); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                    <button type="button" onclick="window.openProfileFastBooking('Domicilio')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.68rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
                         📅 Agendar Domicilio →
                     </button>
                 </div>`;
             }
+            mHtml += '</div>';
             
-            if (!mHtml) {
+            if (!hasAnyMod) {
                 mHtml = '<p class="text-muted">Modalidades de consulta a convenir con el profesional.</p>';
             }
             modsDetailBox.innerHTML = mHtml;
@@ -27105,36 +27122,57 @@ async function loadDedicatedTherapistProfile(slug) {
             }
         }
 
-        // 4. Sección de Contacto (Solo logos de WhatsApp e Instagram, e ícono de sobre para correo sin "copiar")
+        // 4. Sección de Contacto (Tarjetas modernas con Logo + Dato completo al lado)
         const contactList = document.getElementById('pub-profile-contact-list');
         if (contactList) {
-            let cHtml = '<div style="display: flex; gap: 1.2rem; flex-wrap: wrap; align-items: center; justify-content: flex-start; margin-top: 0.5rem;">';
+            let cHtml = '<div style="display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">';
             
             if (t.whatsapp_publico) {
                 const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
                 const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, me gustaría consultar información sobre tus servicios y disponibilidad.`);
-                cHtml += `<a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" title="WhatsApp (${t.whatsapp_publico})" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                    <img src="/static/logo_whatsapp.png" alt="WhatsApp" style="width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(37, 211, 102, 0.4));">
+                cHtml += `
+                <a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" style="display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.25rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);" onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'; this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.transform='none'">
+                    <img src="/static/logo_whatsapp.png" alt="WhatsApp" style="width: 42px; height: 42px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 3px 8px rgba(37, 211, 102, 0.3));">
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px;">WhatsApp Directo</span>
+                        <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">${t.whatsapp_publico}</span>
+                    </div>
                 </a>`;
             }
             
             if (t.redes_sociales && t.redes_sociales.instagram) {
-                let igUser = t.redes_sociales.instagram.replace('@', '').trim();
-                let igLink = igUser.startsWith('http') ? igUser : `https://instagram.com/${igUser}`;
-                cHtml += `<a href="${igLink}" target="_blank" title="Instagram (@${igUser})" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                    <img src="/static/logo_instagram.png" alt="Instagram" style="width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(225, 48, 108, 0.4));">
+                let rawIg = t.redes_sociales.instagram.trim();
+                let igUser = rawIg.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '').replace(/^@/, '').trim();
+                let igLink = rawIg.startsWith('http') ? rawIg : `https://instagram.com/${igUser}`;
+                cHtml += `
+                <a href="${igLink}" target="_blank" style="display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.25rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);" onmouseover="this.style.borderColor='#ec4899'; this.style.background='#fdf2f8'; this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.transform='none'">
+                    <img src="/static/logo_instagram.png" alt="Instagram" style="width: 42px; height: 42px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 3px 8px rgba(225, 48, 108, 0.3));">
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px;">Instagram</span>
+                        <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">@${igUser}</span>
+                    </div>
                 </a>`;
             }
 
             if (t.email_publico) {
-                cHtml += `<a href="mailto:${t.email_publico}" title="Enviar correo a ${t.email_publico}" style="display: inline-flex; align-items: center; gap: 8px; color: #702e5e; font-weight: 600; font-size: 0.9rem; text-decoration: none; background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 0.6rem 1.1rem; border-radius: 30px; max-width: 100%; word-break: break-word; overflow-wrap: anywhere; box-sizing: border-box; transition: background 0.2s;" onmouseover="this.style.background='#fae8ff'" onmouseout="this.style.background='#fdf4ff'">
-                    ✉️ <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 30px);">${t.email_publico}</span>
+                cHtml += `
+                <a href="mailto:${t.email_publico}" style="display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.25rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);" onmouseover="this.style.borderColor='var(--prof-accent)'; this.style.background='var(--prof-soft)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.transform='none'">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">✉️</div>
+                    <div style="display: flex; flex-direction: column; min-width: 0;">
+                        <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px;">Correo Electrónico</span>
+                        <span style="font-size: 1.02rem; font-weight: 800; color: #0f172a; word-break: break-all;">${t.email_publico}</span>
+                    </div>
                 </a>`;
             }
 
             if (t.redes_sociales && t.redes_sociales.linkedin) {
-                cHtml += `<a href="${t.redes_sociales.linkedin}" target="_blank" title="LinkedIn" style="background: #0a66c2; color: white; width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.35rem; box-shadow: 0 4px 14px rgba(10, 102, 194, 0.4); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                    🔗
+                cHtml += `
+                <a href="${t.redes_sociales.linkedin}" target="_blank" style="display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.25rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);" onmouseover="this.style.borderColor='#0a66c2'; this.style.background='#f0f9ff'; this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.transform='none'">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: #0a66c2; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">🔗</div>
+                    <div style="display: flex; flex-direction: column; min-width: 0;">
+                        <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px;">LinkedIn</span>
+                        <span style="font-size: 1rem; font-weight: 800; color: #0f172a; word-break: break-all;">${t.redes_sociales.linkedin}</span>
+                    </div>
                 </a>`;
             }
 
