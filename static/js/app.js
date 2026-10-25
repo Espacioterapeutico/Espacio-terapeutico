@@ -17591,6 +17591,7 @@ async function checkFastBookingQuery() {
                             const fullname = pData.nombre_completo || `Psic. ${pData.nombres} ${pData.apellidos}`;
                             titleEl.textContent = fullname.startsWith('Psic.') ? fullname : `Psic. ${fullname}`;
                         }
+                        if (pData.slug) window.fastBookingTherapistSlug = pData.slug;
                         if (pData.id) fastBookingTherapistId = pData.id;
                     }
                 }
@@ -26487,10 +26488,108 @@ async function loadDedicatedTherapistProfile(slug) {
         }
         const t = await res.json();
 
+        // Asegurar URL canónica limpia (ej: /psic.paulomora en lugar de /psic.1)
+        if (t && t.slug) {
+            window.fastBookingTherapistSlug = t.slug;
+            const canonicalClean = String(t.slug).replace(/^(psicologo|psic|agendar|registro)\//i, '').replace(/^psic\./i, '');
+            if (canonicalClean && !window.location.pathname.toLowerCase().startsWith('/registro/')) {
+                const canonicalPath = `/psic.${canonicalClean}`;
+                if (window.location.pathname.toLowerCase() !== canonicalPath.toLowerCase() && window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', canonicalPath);
+                }
+            }
+        }
+
         if (document.getElementById('pub-profile-img')) document.getElementById('pub-profile-img').src = t.foto || '/static/logo.png';
         if (document.getElementById('pub-profile-name')) document.getElementById('pub-profile-name').textContent = t.nombre_completo;
         if (document.getElementById('pub-profile-nomenclatura')) document.getElementById('pub-profile-nomenclatura').textContent = t.nomenclatura || 'Psicólogo Clínico';
-        if (document.getElementById('pub-profile-bio')) document.getElementById('pub-profile-bio').textContent = t.descripcion_biografia || 'Bienvenido a mi espacio terapéutico profesional.';
+
+        const bioBox = document.getElementById('pub-profile-bio');
+        if (bioBox) {
+            const rawBio = (t.descripcion_biografia || 'Bienvenido a mi espacio terapéutico profesional.').trim();
+            const lines = rawBio.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            if (lines.length > 1) {
+                const leadLine = escapeHtml(lines[0]);
+                const credItems = lines.slice(1).map(line => {
+                    const low = line.toLowerCase();
+                    let icon = '✨';
+                    if (low.includes('formaci') || low.includes('maestr') || low.includes('licencia') || low.includes('postgrado') || low.includes('universidad')) {
+                        icon = '🎓';
+                    } else if (low.includes('diplomado') || low.includes('certifica') || low.includes('especial')) {
+                        icon = '📜';
+                    } else if (low.includes('lgbt') || low.includes('seguro') || low.includes('afirmativ')) {
+                        icon = '🌈';
+                    }
+                    return `
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.85rem 1.1rem; display: flex; align-items: flex-start; gap: 0.75rem; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);">
+                            <span style="font-size: 1.25rem; line-height: 1.2; flex-shrink: 0;">${icon}</span>
+                            <span style="color: #1e293b; font-weight: 600; font-size: 0.98rem; line-height: 1.5;">${escapeHtml(line)}</span>
+                        </div>`;
+                }).join('');
+
+                bioBox.innerHTML = `
+                    <div style="background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border-left: 4px solid #a855f7; padding: 1rem 1.25rem; border-radius: 0 12px 12px 0; color: #581c87; font-weight: 700; font-size: 1.06rem; line-height: 1.55; margin-bottom: 1rem;">
+                        ${leadLine}
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.65rem;">
+                        ${credItems}
+                    </div>`;
+            } else {
+                bioBox.innerHTML = `
+                    <div style="background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border-left: 4px solid #a855f7; padding: 1rem 1.25rem; border-radius: 0 12px 12px 0; color: #334155; font-weight: 600; font-size: 1.05rem; line-height: 1.65;">
+                        ${escapeHtml(rawBio)}
+                    </div>`;
+            }
+        }
+
+        // Helper para abrir la pantalla de agenda rápida (con opción de preseleccionar modalidad)
+        window.openProfileFastBooking = async function(preferredModality) {
+            const pubLanding = document.getElementById('public-landing-screen');
+            const profScreen = document.getElementById('public-therapist-profile-screen');
+            const authScreen = document.getElementById('auth-screen');
+            const fastScreen = document.getElementById('fast-booking-screen');
+
+            if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
+            if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
+            if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
+            if (fastScreen) { fastScreen.classList.remove('hide'); fastScreen.style.display = 'flex'; }
+
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            fastBookingTherapistId = (t && (t.slug || t.id)) || cleanSlug;
+            const targetSlug = (t && t.slug) || cleanSlug;
+            window.fastBookingTherapistSlug = targetSlug;
+            if (window.history && window.history.pushState) {
+                window.history.pushState(null, '', `/agendar/${targetSlug}`);
+            }
+
+            const selectEl = document.getElementById('fast-modalidad');
+            if (selectEl && preferredModality) {
+                selectEl.value = preferredModality;
+            }
+
+            await checkFastBookingQuery();
+
+            if (selectEl && preferredModality) {
+                const prefLower = String(preferredModality).toLowerCase();
+                let matchedOpt = null;
+                for (let opt of selectEl.options) {
+                    const valLow = (opt.value || '').toLowerCase();
+                    const txtLow = (opt.textContent || '').toLowerCase();
+                    if (valLow === prefLower || valLow.includes(prefLower) || txtLow.includes(prefLower)) {
+                        matchedOpt = opt.value;
+                        break;
+                    }
+                }
+                if (matchedOpt && selectEl.value !== matchedOpt) {
+                    selectEl.value = matchedOpt;
+                    if (typeof onFastModalityChange === 'function') {
+                        onFastModalityChange();
+                    }
+                }
+            }
+        };
 
         // 1. Badges organizados: Especialidad, Ubicación, Población, Modalidades en el banner principal
         const modsBox = document.getElementById('pub-profile-mods');
@@ -26540,7 +26639,7 @@ async function loadDedicatedTherapistProfile(slug) {
             modsBox.innerHTML = html;
         }
 
-        // 2. Sección detallada de Modalidades y sus Descripciones
+        // 2. Sección detallada de Modalidades y sus Descripciones (con botón directo para agendar esa modalidad)
         const modsDetailBox = document.getElementById('pub-profile-mods-detail');
         if (modsDetailBox) {
             const mData = t.modalidades_data || {};
@@ -26549,27 +26648,42 @@ async function loadDedicatedTherapistProfile(slug) {
             if (mData.online || (Array.isArray(t.modalidades) && t.modalidades.includes("Online"))) {
                 const titleText = mData.online_titulo || "Consulta Online";
                 const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Plataformas / Detalles: <strong>${mData.online_detalle}</strong></p>` : '';
-                mHtml += `<div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #702e5e; font-size: 1.1rem;">🌐 ${titleText}</div>
-                    ${det}
+                mHtml += `<div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 240px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #702e5e; font-size: 1.1rem;">🌐 ${titleText}</div>
+                        ${det}
+                    </div>
+                    <button type="button" onclick="window.openProfileFastBooking('Online')" style="background: #702e5e; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 25px; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(112, 46, 94, 0.22); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                        📅 Agendar Online →
+                    </button>
                 </div>`;
             }
             if (mData.presencial || (Array.isArray(t.modalidades) && t.modalidades.includes("Presencial"))) {
                 const titleText = mData.presencial_titulo || "Consulta Presencial";
                 const addressVal = mData.presencial_detalle || mData.presencial_direccion;
                 const det = addressVal ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Ubicación / Consultorio: <strong>${addressVal}</strong></p>` : '';
-                mHtml += `<div style="background: #f0fdf4; border: 1.5px solid #86efac; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 1.1rem;">🏢 ${titleText}</div>
-                    ${det}
+                mHtml += `<div style="background: #f0fdf4; border: 1.5px solid #86efac; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 240px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 1.1rem;">🏢 ${titleText}</div>
+                        ${det}
+                    </div>
+                    <button type="button" onclick="window.openProfileFastBooking('Presencial')" style="background: #166534; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 25px; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(22, 101, 52, 0.22); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                        📅 Agendar Presencial →
+                    </button>
                 </div>`;
             }
             if (mData.domicilio || (Array.isArray(t.modalidades) && t.modalidades.includes("Domicilio"))) {
                 const titleText = mData.domicilio_titulo || "Atención a Domicilio";
                 const zonesVal = mData.domicilio_detalle || mData.domicilio_zonas;
                 const det = zonesVal ? `<p style="color: #475569; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">Zonas de Cobertura: <strong>${zonesVal}</strong></p>` : '';
-                mHtml += `<div style="background: #f0f9ff; border: 1.5px solid #93c5fd; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e40af; font-size: 1.1rem;">🚗 ${titleText}</div>
-                    ${det}
+                mHtml += `<div style="background: #f0f9ff; border: 1.5px solid #93c5fd; padding: 1.25rem; border-radius: 14px; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 240px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e40af; font-size: 1.1rem;">🚗 ${titleText}</div>
+                        ${det}
+                    </div>
+                    <button type="button" onclick="window.openProfileFastBooking('Domicilio')" style="background: #1e40af; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 25px; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.22); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                        📅 Agendar Domicilio →
+                    </button>
                 </div>`;
             }
             
@@ -26597,24 +26711,7 @@ async function loadDedicatedTherapistProfile(slug) {
             agendarBtn.style.display = 'inline-flex';
             agendarBtn.onclick = async (e) => {
                 if (e) e.preventDefault();
-                // Ocultar el perfil y mostrar directamente la pantalla de agenda rápida
-                const pubLanding = document.getElementById('public-landing-screen');
-                const profScreen = document.getElementById('public-therapist-profile-screen');
-                const authScreen = document.getElementById('auth-screen');
-                const fastScreen = document.getElementById('fast-booking-screen');
-
-                if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
-                if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
-                if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
-                if (fastScreen) { fastScreen.classList.remove('hide'); fastScreen.style.display = 'flex'; }
-
-                window.scrollTo({ top: 0, behavior: 'instant' });
-                fastBookingTherapistId = (t && (t.slug || t.id)) || cleanSlug;
-                const targetSlug = (t && t.slug) || cleanSlug;
-                if (window.history && window.history.pushState) {
-                    window.history.pushState(null, '', `/agendar/${targetSlug}`);
-                }
-                await checkFastBookingQuery();
+                await window.openProfileFastBooking();
             };
         }
 
@@ -26748,8 +26845,8 @@ function closeFastBookingScreen(e) {
         return;
     }
 
-    // Determinar si hay un psicólogo asociado (desde fastBookingTherapistId o la URL actual)
-    let targetSlug = typeof fastBookingTherapistId !== 'undefined' ? fastBookingTherapistId : null;
+    // Determinar si hay un psicólogo asociado (desde fastBookingTherapistSlug, fastBookingTherapistId o la URL actual)
+    let targetSlug = (typeof window.fastBookingTherapistSlug !== 'undefined' && window.fastBookingTherapistSlug) ? window.fastBookingTherapistSlug : (typeof fastBookingTherapistId !== 'undefined' ? fastBookingTherapistId : null);
     const path = window.location.pathname;
 
     if (!targetSlug) {
