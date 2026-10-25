@@ -26381,13 +26381,19 @@ function renderFaqEditorInSettings() {
     }
     const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     listBox.innerHTML = _profFaqsDraft.map((faq, idx) => `
-        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 0.9rem; position: relative;">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem;">
-                <span style="font-size: 0.76rem; font-weight: 800; color: #702e5e; text-transform: uppercase;">Pregunta #${idx + 1}</span>
-                <button type="button" onclick="removeProfileFaq(${idx})" style="background: #fee2e2; color: #b91c1c; border: none; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">🗑️ Quitar</button>
+        <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 1.1rem 1.2rem; position: relative; display: flex; flex-direction: column; gap: 0.65rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #702e5e; text-transform: uppercase; letter-spacing: 0.03em;">Pregunta #${idx + 1}</span>
+                <button type="button" onclick="removeProfileFaq(${idx})" style="background: #fee2e2; color: #b91c1c; border: none; border-radius: 8px; padding: 4px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">🗑️ Quitar</button>
             </div>
-            <input type="text" class="form-control prof-faq-q-input" data-idx="${idx}" value="${esc(faq.pregunta)}" oninput="_profFaqsDraft[${idx}].pregunta = this.value" placeholder="Escribe la pregunta..." style="font-weight: 700; font-size: 0.88rem; margin-bottom: 0.5rem;">
-            <textarea class="form-control prof-faq-a-input" data-idx="${idx}" rows="2" oninput="_profFaqsDraft[${idx}].respuesta = this.value" placeholder="Escribe tu respuesta para los consultantes..." style="font-size: 0.85rem;">${esc(faq.respuesta)}</textarea>
+            <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">Pregunta:</label>
+                <input type="text" class="form-control prof-faq-q-input" data-idx="${idx}" value="${esc(faq.pregunta)}" oninput="_profFaqsDraft[${idx}].pregunta = this.value" placeholder="Escribe la pregunta..." style="width: 100%; display: block; box-sizing: border-box; padding: 0.65rem 0.85rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #0f172a; font-weight: 700; font-size: 0.94rem; font-family: inherit;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">Tu respuesta:</label>
+                <textarea class="form-control prof-faq-a-input" data-idx="${idx}" rows="4" oninput="_profFaqsDraft[${idx}].respuesta = this.value" placeholder="Escribe tu respuesta detallada para los consultantes..." style="width: 100%; display: block; box-sizing: border-box; padding: 0.75rem 0.9rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e293b; font-size: 0.93rem; line-height: 1.55; min-height: 96px; resize: vertical; font-family: inherit;">${esc(faq.respuesta)}</textarea>
+            </div>
         </div>
     `).join('');
 }

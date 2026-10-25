@@ -3313,24 +3313,24 @@
                                     <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.85rem;">Comparte reflexiones o artículos breves con imagen y título para generar confianza en quienes visitan tu perfil:</p>
 
                                     <!-- Formulario desplegable para crear/editar artículo -->
-                                    <div id="prof-blog-form-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.1rem; margin-bottom: 1rem;">
+                                    <div id="prof-blog-form-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.15rem; margin-bottom: 1rem;">
                                         <input type="hidden" id="prof-blog-edit-index" value="-1">
-                                        <div class="form-group" style="margin-bottom: 0.75rem;">
-                                            <label style="font-size: 0.84rem; font-weight: 700;">Título del Artículo *</label>
-                                            <input type="text" id="prof-blog-title" class="form-control" placeholder="Ej: ¿Cómo saber cuándo es momento de iniciar terapia?">
+                                        <div class="form-group" style="margin-bottom: 0.85rem;">
+                                            <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Título del Artículo *</label>
+                                            <input type="text" id="prof-blog-title" class="form-control" placeholder="Ej: ¿Cómo saber cuándo es momento de iniciar terapia?" style="width: 100%; display: block; box-sizing: border-box; padding: 0.65rem 0.85rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.94rem; font-weight: 700;">
                                         </div>
-                                        <div class="form-group" style="margin-bottom: 0.75rem;">
-                                            <label style="font-size: 0.84rem; font-weight: 700;">Imagen de Portada (Sube una foto o pega un enlace)</label>
+                                        <div class="form-group" style="margin-bottom: 0.85rem;">
+                                            <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Imagen de Portada (Sube una foto o pega un enlace)</label>
                                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                                <input type="text" id="prof-blog-img" class="form-control" placeholder="URL de imagen o sube archivo al lado ->" style="flex: 1; min-width: 180px;">
-                                                <label class="btn btn-sm btn-outline-secondary" style="margin: 0; cursor: pointer; font-weight: 700; white-space: nowrap;">
+                                                <input type="text" id="prof-blog-img" class="form-control" placeholder="URL de imagen o sube archivo al lado ->" style="flex: 1; min-width: 200px; padding: 0.6rem 0.85rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.9rem;">
+                                                <label class="btn btn-sm btn-outline-secondary" style="margin: 0; cursor: pointer; font-weight: 700; white-space: nowrap; padding: 0.55rem 0.9rem; border-radius: 10px;">
                                                     📷 Subir Foto <input type="file" accept="image/*" style="display: none;" onchange="handleBlogImageUpload(this)">
                                                 </label>
                                             </div>
                                         </div>
-                                        <div class="form-group" style="margin-bottom: 0.85rem;">
-                                            <label style="font-size: 0.84rem; font-weight: 700;">Contenido del Artículo *</label>
-                                            <textarea id="prof-blog-content" rows="5" class="form-control" placeholder="Escribe aquí tu artículo o reflexión..."></textarea>
+                                        <div class="form-group" style="margin-bottom: 0.9rem;">
+                                            <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Contenido del Artículo *</label>
+                                            <textarea id="prof-blog-content" rows="6" class="form-control" placeholder="Escribe aquí tu artículo o reflexión..." style="width: 100%; display: block; box-sizing: border-box; padding: 0.75rem 0.9rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.93rem; line-height: 1.55; min-height: 130px; resize: vertical; font-family: inherit;"></textarea>
                                         </div>
                                         <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
                                             <button type="button" class="btn btn-sm btn-secondary" onclick="cancelBlogPostForm()">Cancelar</button>
