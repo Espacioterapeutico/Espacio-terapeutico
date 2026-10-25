@@ -26271,6 +26271,8 @@ function populateProfileUI(data) {
     const redes = data.redes_sociales || {};
     if (document.getElementById('prof-instagram')) document.getElementById('prof-instagram').value = redes.instagram || '';
     if (document.getElementById('prof-linkedin')) document.getElementById('prof-linkedin').value = redes.linkedin || '';
+    if (document.getElementById('prof-cta-texto')) document.getElementById('prof-cta-texto').value = redes.cta_texto || '';
+    if (document.getElementById('prof-cta-link')) document.getElementById('prof-cta-link').value = redes.cta_link || '';
 
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
     const cleanSlug = data.clean_slug || (data.slug ? data.slug.replace(/^psic\./, '') : (window.sessionUser ? `${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : ''));
@@ -26350,7 +26352,9 @@ async function savePublicProfileSettings() {
 
     const redes = {
         instagram: document.getElementById('prof-instagram') ? document.getElementById('prof-instagram').value.trim() : '',
-        linkedin: document.getElementById('prof-linkedin') ? document.getElementById('prof-linkedin').value.trim() : ''
+        linkedin: document.getElementById('prof-linkedin') ? document.getElementById('prof-linkedin').value.trim() : '',
+        cta_texto: document.getElementById('prof-cta-texto') ? document.getElementById('prof-cta-texto').value.trim() : '',
+        cta_link: document.getElementById('prof-cta-link') ? document.getElementById('prof-cta-link').value.trim() : ''
     };
 
     const previewImg = document.getElementById('set-perfil-preview-img');
@@ -26713,6 +26717,40 @@ async function loadDedicatedTherapistProfile(slug) {
                 if (e) e.preventDefault();
                 await window.openProfileFastBooking();
             };
+        }
+
+        const directWaBtn = document.getElementById('pub-profile-direct-wa-btn');
+        if (directWaBtn) {
+            const customText = (t.redes_sociales && t.redes_sociales.cta_texto) ? String(t.redes_sociales.cta_texto).trim() : '';
+            const customLink = (t.redes_sociales && t.redes_sociales.cta_link) ? String(t.redes_sociales.cta_link).trim() : '';
+
+            directWaBtn.textContent = customText || '💬 Conéctate conmigo';
+
+            let finalHref = '';
+            if (customLink) {
+                if (/^(https?:\/\/|mailto:|tel:)/i.test(customLink)) {
+                    finalHref = customLink;
+                } else if (customLink.startsWith('@')) {
+                    finalHref = `https://instagram.com/${customLink.slice(1)}`;
+                } else if (/^\+?[0-9\s\-]{8,18}$/.test(customLink)) {
+                    const cleanNum = customLink.replace(/[^0-9]/g, '');
+                    const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, vi tu perfil en Espacio Terapéutico y me gustaría hacerte una consulta.`);
+                    finalHref = `https://wa.me/${cleanNum}?text=${waMsg}`;
+                } else {
+                    finalHref = `https://${customLink}`;
+                }
+            } else if (t.whatsapp_publico) {
+                const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
+                const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, vi tu perfil en Espacio Terapéutico y me gustaría hacerte una consulta antes de agendar.`);
+                finalHref = `https://wa.me/${cleanWa}?text=${waMsg}`;
+            }
+
+            if (finalHref) {
+                directWaBtn.href = finalHref;
+                directWaBtn.style.display = 'inline-flex';
+            } else {
+                directWaBtn.style.display = 'none';
+            }
         }
 
         // 4. Sección de Contacto (Solo logos de WhatsApp e Instagram, e ícono de sobre para correo sin "copiar")

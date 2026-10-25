@@ -800,7 +800,8 @@
                 </div>
 
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
-                    <a id="pub-profile-wa-btn" href="#" class="pub-btn-primary" style="font-size: 1.08rem; padding: 0.95rem 2.6rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border-radius: 50px; font-weight: 800; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);">📅 Agendar Sesión</a>
+                    <a id="pub-profile-wa-btn" href="#" class="pub-btn-primary" style="font-size: 1.05rem; padding: 0.9rem 2.3rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border-radius: 50px; font-weight: 800; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);">📅 Agendar Sesión</a>
+                    <a id="pub-profile-direct-wa-btn" href="#" target="_blank" class="pub-btn-outline" style="font-size: 1.05rem; padding: 0.9rem 2.2rem; text-decoration: none; display: none; align-items: center; gap: 8px; border-radius: 50px; font-weight: 700; border: 2px solid rgba(255,255,255,0.75); color: #ffffff; background: rgba(37, 211, 102, 0.18);">💬 Conéctate conmigo</a>
                 </div>
             </div>
         </section>
@@ -3094,6 +3095,22 @@
                                     <div class="form-group">
                                         <label for="prof-linkedin" style="font-weight: 700;">LinkedIn (URL perfil)</label>
                                         <input type="text" id="prof-linkedin" class="form-control" placeholder="Ej: https://linkedin.com/in/...">
+                                    </div>
+                                </div>
+
+                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 1.15rem; border-radius: 12px; margin-top: 0.5rem;">
+                                    <label style="font-weight: 700; margin-bottom: 0.65rem; display: block; color: #702e5e; font-size: 0.98rem;">💬 Personalizar Botón Secundario de tu Encabezado ("Conéctate conmigo")</label>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label for="prof-cta-texto" style="font-size: 0.85rem; font-weight: 700; color: #334155;">Nombre / Texto del Botón</label>
+                                            <input type="text" id="prof-cta-texto" class="form-control" placeholder="💬 Conéctate conmigo">
+                                            <small style="color: #64748b; font-size: 0.76rem;">Por defecto mostrará: 💬 Conéctate conmigo</small>
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label for="prof-cta-link" style="font-size: 0.85rem; font-weight: 700; color: #334155;">Enlace de Destino (Opcional)</label>
+                                            <input type="text" id="prof-cta-link" class="form-control" placeholder="Vacío = ir a tu WhatsApp automáticamente">
+                                            <small style="color: #64748b; font-size: 0.76rem;">Si lo dejas vacío, abrirá tu WhatsApp. También puedes pegar cualquier URL (Instagram, WhatsApp, etc.).</small>
+                                        </div>
                                     </div>
                                 </div>
 
