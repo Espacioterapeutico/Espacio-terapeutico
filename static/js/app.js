@@ -26616,11 +26616,13 @@ function populateProfileUI(data) {
     renderBlogEditorInSettings();
 
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
-    const cleanSlug = data.clean_slug || (data.slug ? data.slug.replace(/^psic\./, '') : (window.sessionUser ? `${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : ''));
+    let cleanSlug = data.clean_slug || (data.slug ? data.slug.replace(/^psic\./, '') : (window.sessionUser ? `${(sessionUser.nombres||'').toLowerCase()}${(sessionUser.apellidos||'').toLowerCase()}`.replace(/\s+/g, '') : ''));
+    if (cleanSlug === 'pamoraro') cleanSlug = 'paulomora';
     if (cleanSlug) {
-        const fullProfileUrl = data.full_profile_url ? `${baseUrl}${data.full_profile_url}` : `${baseUrl}/psic.${cleanSlug}`;
-        const fullRegisterUrl = data.registration_url ? `${baseUrl}${data.registration_url}` : `${baseUrl}/registro/psic.${cleanSlug}`;
-        const fullBookingUrl = data.fast_booking_url ? `${baseUrl}${data.fast_booking_url}` : `${baseUrl}/agendar/psic.${cleanSlug}`;
+        if (document.getElementById('prof-custom-slug')) document.getElementById('prof-custom-slug').value = cleanSlug;
+        const fullProfileUrl = `${baseUrl}/psic.${cleanSlug}`;
+        const fullRegisterUrl = `${baseUrl}/registro/psic.${cleanSlug}`;
+        const fullBookingUrl = `${baseUrl}/agendar/psic.${cleanSlug}`;
         
         if (document.getElementById('prof-link-perfil')) document.getElementById('prof-link-perfil').value = fullProfileUrl;
         if (document.getElementById('prof-link-perfil-btn')) document.getElementById('prof-link-perfil-btn').href = fullProfileUrl;
@@ -26649,6 +26651,22 @@ function populateProfileUI(data) {
     }
     toggleModalityDetailsUI();
 }
+
+function updatePublicProfileLinksPreview(rawVal) {
+    const baseUrl = `${window.location.protocol}//${window.location.host}`;
+    const cleanSlug = String(rawVal || '').trim().toLowerCase()
+        .replace(/^(psicologo|psic|agendar|registro)[/\.]/i, '')
+        .replace(/[^a-z0-9\.\-_]/g, '');
+    if (!cleanSlug) return;
+    const fullProfileUrl = `${baseUrl}/psic.${cleanSlug}`;
+    const fullRegisterUrl = `${baseUrl}/registro/psic.${cleanSlug}`;
+    const fullBookingUrl = `${baseUrl}/agendar/psic.${cleanSlug}`;
+    if (document.getElementById('prof-link-perfil')) document.getElementById('prof-link-perfil').value = fullProfileUrl;
+    if (document.getElementById('prof-link-perfil-btn')) document.getElementById('prof-link-perfil-btn').href = fullProfileUrl;
+    if (document.getElementById('prof-link-registro')) document.getElementById('prof-link-registro').value = fullRegisterUrl;
+    if (document.getElementById('prof-link-agendar')) document.getElementById('prof-link-agendar').value = fullBookingUrl;
+}
+window.updatePublicProfileLinksPreview = updatePublicProfileLinksPreview;
 
 async function loadPublicProfileSettings() {
     const currentUserId = sessionStorage.getItem('user_id') || 'anon';
@@ -26723,6 +26741,7 @@ async function savePublicProfileSettings() {
         email_publico: document.getElementById('prof-email').value.trim(),
         redes_sociales: redes,
         paleta_colores: document.getElementById('prof-paleta-colores')?.value || 'violeta',
+        slug: document.getElementById('prof-custom-slug')?.value.trim() || '',
         faqs: cleanedFaqs,
         blog_posts: _profBlogDraft || []
     };

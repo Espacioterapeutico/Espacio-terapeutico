@@ -735,8 +735,9 @@ def send_support_ticket():
 def generate_default_slug_for_user(u):
     if not u:
         return ""
-    if u['slug'] and u['slug'].strip():
-        return u['slug'].strip()
+    raw_slug = (u['slug'] or '').strip()
+    if raw_slug and raw_slug.lower() not in ('psic.pamoraro', 'pamoraro'):
+        return raw_slug
     
     nom = (u['nombres'] or '').strip()
     ape = (u['apellidos'] or '').strip()
@@ -850,7 +851,13 @@ def admin_profile_public():
             faqs = []
         paleta_colores = u['paleta_colores'] or 'violeta'
         
-        slug = u['slug'] or generate_default_slug_for_user(u)
+        slug = generate_default_slug_for_user(u)
+        if u['slug'] != slug:
+            try:
+                cursor.execute("UPDATE usuarios SET slug = ? WHERE id = ?", (slug, user_id))
+                db.commit()
+            except Exception:
+                pass
         clean_slug = slug.replace('psic.', '') if slug.startswith('psic.') else slug
 
         return jsonify({
@@ -894,6 +901,19 @@ def admin_profile_public():
         blog_posts = data.get('blog_posts', [])
         faqs = data.get('faqs', [])
         foto = data.get('foto', '')
+
+        import re
+        raw_slug_in = str(data.get('slug') or '').strip().lower().replace(" ", "")
+        new_slug_to_save = None
+        if raw_slug_in:
+            clean_part = re.sub(r'^(psicologo|psic|agendar|registro)[/\.]', '', raw_slug_in)
+            clean_part = re.sub(r'[^a-z0-9\.\-_]', '', clean_part)
+            if clean_part:
+                candidate_slug = f"psic.{clean_part}"
+                cursor.execute("SELECT id FROM usuarios WHERE (LOWER(slug) = ? OR LOWER(slug) = ?) AND id != ?", (candidate_slug, clean_part, user_id))
+                if cursor.fetchone():
+                    return jsonify({'error': f'El enlace personalizado "{candidate_slug}" ya está en uso por otro profesional.'}), 400
+                new_slug_to_save = candidate_slug
         
         try:
             cursor.execute("""
@@ -910,11 +930,12 @@ def admin_profile_public():
                     paleta_colores = ?,
                     blog_json = ?,
                     faq_json = ?,
+                    slug = CASE WHEN ? IS NOT NULL AND ? != '' THEN ? ELSE slug END,
                     foto_titulo = CASE WHEN ? != '' THEN ? ELSE foto_titulo END
                 WHERE id = ?
-            """, (nomenclatura, descripcion, especialidades, pais_ubicacion, json.dumps(poblaciones), json.dumps(mods_data), whatsapp, email, json.dumps(redes), paleta_colores, json.dumps(blog_posts), json.dumps(faqs), foto, foto, user_id))
+            """, (nomenclatura, descripcion, especialidades, pais_ubicacion, json.dumps(poblaciones), json.dumps(mods_data), whatsapp, email, json.dumps(redes), paleta_colores, json.dumps(blog_posts), json.dumps(faqs), new_slug_to_save, new_slug_to_save, new_slug_to_save, foto, foto, user_id))
             db.commit()
-            return jsonify({'success': 'Perfil público actualizado con éxito.'})
+            return jsonify({'success': 'Perfil público actualizado con éxito.', 'slug': new_slug_to_save})
         except Exception as e:
             return jsonify({'error': f'Error al actualizar perfil: {str(e)}'}), 500
 
@@ -1456,7 +1477,15 @@ def superadmin_update_therapist_profile(user_id):
         if 'whatsapp_publico' in existing_cols: fields_to_update['whatsapp_publico'] = whatsapp
         if 'telefono' in existing_cols and 'whatsapp_publico' not in existing_cols: fields_to_update['telefono'] = whatsapp
         if 'descripcion_biografia' in existing_cols: fields_to_update['descripcion_biografia'] = bio
-        if 'slug' in existing_cols and username: fields_to_update['slug'] = f"psic.{username.lower()}"
+        cursor.execute("SELECT slug FROM usuarios WHERE id = ?", (user_id,))
+        curr_u_slug = cursor.fetchone()
+        if 'slug' in existing_cols and (not curr_u_slug or not curr_u_slug['slug'] or curr_u_slug['slug'] in ('psic.pamoraro', 'pamoraro')):
+            import unicodedata, re
+            combo = f"psic.{nombres}{apellidos}" if (nombres or apellidos) else f"psic.{username}"
+            norm_s = unicodedata.normalize('NFD', combo)
+            clean_s = re.sub(r'[^a-z0-9\.]', '', re.sub(r'[\u0300-\u036f]', '', norm_s).lower())
+            if clean_s:
+                fields_to_update['slug'] = clean_s
 
         if fields_to_update:
             set_clause = ", ".join([f"{col} = ?" for col in fields_to_update.keys()])
@@ -2699,7 +2728,7 @@ def get_public_therapist_profile(slug):
 
     paleta_colores = psych.get('paleta_colores') or 'violeta'
         
-    clean_slug = psych.get('slug') or generate_default_slug_for_user(psych)
+    clean_slug = generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
     
     resp = jsonify({
