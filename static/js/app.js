@@ -22795,7 +22795,7 @@ async function onTherapistToolPatientSearch(query) {
 }
 window.onTherapistToolPatientSearch = onTherapistToolPatientSearch;
 
-async function selectPatientForTherapistTools(id, name, code) {
+async function selectPatientForTherapistTools(id, name, code, preserveScroll = false) {
     currentMedPatientId = id;
     if (name) currentMedPatientName = name;
     if (code !== undefined) currentMedPatientCode = code;
@@ -22816,8 +22816,11 @@ async function selectPatientForTherapistTools(id, name, code) {
     const matCedula = document.getElementById('mat-patient-cedula');
     if (matCedula) matCedula.textContent = currentMedPatientCode ? `Cédula: ${currentMedPatientCode}` : 'Sin Cédula registrada';
 
+    const modalBody = document.querySelector('#modal-assign-patient-tools .modal-body');
+    const savedScrollTop = (preserveScroll && modalBody) ? modalBody.scrollTop : 0;
+
     const matList = document.getElementById('mat-modules-list');
-    if (matList) {
+    if (matList && !preserveScroll) {
         matList.innerHTML = `
             <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
                 <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">⏳</div>
@@ -23198,6 +23201,11 @@ async function selectPatientForTherapistTools(id, name, code) {
                 </div>
                 `;
             }).join('');
+            if (preserveScroll && modalBody && savedScrollTop > 0) {
+                requestAnimationFrame(() => {
+                    modalBody.scrollTop = savedScrollTop;
+                });
+            }
         }
     } catch (err) {
         if (matList) matList.innerHTML = `<p class="text-danger p-3">Error al cargar módulos: ${err.message}</p>`;
@@ -23214,8 +23222,8 @@ async function togglePatientModuleBackend(patientId, moduloClave, activoState) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al actualizar');
         
-        // Re-renderizar modal inmediatamente con el nuevo estado
-        selectPatientForTherapistTools(patientId, currentMedPatientName, currentMedPatientCode);
+        // Re-renderizar modal inmediatamente con el nuevo estado preservando la posición de scroll
+        await selectPatientForTherapistTools(patientId, currentMedPatientName, currentMedPatientCode, true);
         loadTherapistToolsCatalog();
         loadTherapistToolsPatientsList();
     } catch (err) {

@@ -181,8 +181,12 @@ def get_patient_modules(patient_id):
                 ORDER BY pec.id DESC
             """, (patient_id,))
             cog_asigs = [dict(r) for r in cursor.fetchall()]
-            if len(cog_asigs) > 0 and cog_asigs[0]['activa'] == 1:
+            if 'estimulacion_cognitiva' in active_map:
+                activo = active_map['estimulacion_cognitiva']
+            elif len(cog_asigs) > 0 and cog_asigs[0].get('activa') == 1:
                 activo = 1
+            else:
+                activo = 0
             m_dict = dict(m)
             m_dict['activo'] = activo
             m_dict['token'] = cog_asigs[0].get('token_acceso') if cog_asigs else None
@@ -206,15 +210,21 @@ def get_patient_modules(patient_id):
 
         if clave == 'meditacion':
             cursor.execute("""
-                SELECT pm.id as asignacion_id, pm.meditacion_id, pm.hora_recordatorio, pm.dias_semana_json, pm.token_acceso, cm.titulo, cm.tipo_contenido
+                SELECT pm.id as asignacion_id, pm.meditacion_id, pm.hora_recordatorio, pm.dias_semana_json, pm.token_acceso, cm.titulo, cm.tipo_contenido, pm.activa
                 FROM paciente_meditaciones pm
                 JOIN cat_meditaciones cm ON pm.meditacion_id = cm.id
                 WHERE pm.paciente_id = ?
                 ORDER BY pm.id DESC
             """, (patient_id,))
             med_asigs = [dict(r) for r in cursor.fetchall()]
-            if len(med_asigs) > 0:
+            if 'meditacion' in active_map:
+                activo = active_map['meditacion']
+            elif len(med_asigs) > 0 and med_asigs[0].get('activa') == 1:
                 activo = 1
+            else:
+                activo = 0
+
+            if len(med_asigs) > 0:
                 token_str = med_asigs[0].get('token_acceso')
                 link_str = f"{host_url}/portal/meditacion/{token_str}" if token_str else None
             m_dict = dict(m)
@@ -296,6 +306,8 @@ def toggle_patient_module(patient_id):
     """, (patient_id, modulo_clave, activo))
     if modulo_clave == 'estimulacion_cognitiva':
         cursor.execute("UPDATE paciente_estimulacion_cognitiva SET activa = ? WHERE paciente_id = ?", (activo, patient_id))
+    if modulo_clave == 'meditacion':
+        cursor.execute("UPDATE paciente_meditaciones SET activa = ? WHERE paciente_id = ?", (activo, patient_id))
 
     # Si se desactiva la herramienta, cancelar inmediatamente cualquier envío pendiente en cola y anular tokens no usados
     if activo == 0:
