@@ -7573,53 +7573,49 @@ function renderTherapistTasksList() {
     const startIdx = (_therapistTasksPage - 1) * _therapistTasksPerPage;
     const pageItems = list.slice(startIdx, startIdx + _therapistTasksPerPage);
 
-    let html = '<div class="therapist-tasks-list" style="display: flex; flex-direction: column; gap: 0.65rem;">';
+    let html = '<div class="therapist-tasks-list">';
 
-    pageItems.forEach(t => {
+    pageItems.forEach((t, idx) => {
         const isDone = !!t.compromiso_completado;
         const isJustFinished = _sessionCompletedInCurrentView.has(t.session_id);
         const dateFormatted = _formatTaskDate(t.fecha);
         const pacFullName = `${t.nombres || ''} ${t.apellidos || ''}`.trim() || 'Consultante';
-        const modalLabel = t.modalidad ? `<span style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover, #f1f5f9); color: var(--text-muted);">${_escapeHtmlTask(t.modalidad)}</span>` : '';
+        const modalLabel = t.modalidad ? `<span style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover, #f1f5f9); color: var(--text-muted); border: 1px solid var(--border-color, #e2e8f0); white-space: nowrap;">${_escapeHtmlTask(t.modalidad)}</span>` : '';
 
         html += `
-            <div class="therapist-task-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; background: var(--card-bg, #fff); border: 1.5px solid ${isDone ? 'var(--border-color, #e2e8f0)' : 'var(--primary-light, #c7d2fe)'}; border-left: 4px solid ${isDone ? '#10b981' : 'var(--primary, #4f46e5)'}; border-radius: 8px; transition: all 0.2s ease;">
-                <div style="padding-top: 2px; flex-shrink: 0;">
-                    <input type="checkbox" id="task-chk-${t.session_id}" ${isDone ? 'checked' : ''} onchange="toggleTherapistTask(${t.session_id}, this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" title="Marcar como ${isDone ? 'pendiente' : 'completada'}">
+            <div class="therapist-task-row" style="border-left: 3.5px solid ${isDone ? '#10b981' : 'var(--primary, #702e5e)'}; background: ${isDone ? 'var(--bg-hover, #f8fafc)' : 'var(--card-bg, #fff)'};">
+                <!-- Checkbox + Tarea principal + Paciente entre paréntesis + Fecha -->
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                    <input type="checkbox" id="task-chk-${t.session_id}" ${isDone ? 'checked' : ''} onchange="toggleTherapistTask(${t.session_id}, this.checked)" style="width: 17px; height: 17px; cursor: pointer; accent-color: var(--primary, #702e5e); flex-shrink: 0;" title="Marcar como ${isDone ? 'pendiente' : 'completada'}">
+                    
+                    <div style="flex: 1; min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; line-height: 1.45;">
+                        <!-- Texto de la TAREA (El protagonista) -->
+                        <span style="font-size: 0.88rem; font-weight: ${isDone ? '400' : '600'}; color: ${isDone ? 'var(--text-muted, #94a3b8)' : 'var(--text-dark, #1e293b)'}; ${isDone ? 'text-decoration: line-through; opacity: 0.75;' : ''} word-break: break-word;">
+                            ${_escapeHtmlTask(t.compromisos_psicologo)}
+                        </span>
+                        
+                        <!-- Paciente entre paréntesis -->
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #702e5e; cursor: pointer; white-space: nowrap;" onclick="if(typeof openPatientDetailsModal === 'function') openPatientDetailsModal(${t.paciente_id});" title="Ver ficha del consultante">
+                            (${_escapeHtmlTask(pacFullName)})
+                        </span>
+                        
+                        <!-- Metadatos: Fecha y Modalidad -->
+                        <span style="font-size: 0.73rem; color: var(--text-muted, #64748b); white-space: nowrap;">
+                            • 📅 ${dateFormatted}
+                        </span>
+                        ${modalLabel}
+                        ${isJustFinished ? '<span style="font-size: 0.68rem; color: #059669; background: #ecfdf5; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Se archivará al salir</span>' : ''}
+                    </div>
                 </div>
-                <div style="flex: 1; min-width: 0; width: 100%;">
-                    <!-- Fila superior: Paciente + Fecha + Estado -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0;">
-                            <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); cursor: pointer;" onclick="if(typeof openPatientDetailsModal === 'function') openPatientDetailsModal(${t.paciente_id});" title="Ver ficha del consultante">
-                                👤 ${_escapeHtmlTask(pacFullName)}
-                            </span>
-                            <span style="font-size: 0.72rem; color: var(--text-muted); background: var(--bg-hover, #f1f5f9); padding: 2px 6px; border-radius: 4px; white-space: nowrap;">
-                                📅 ${dateFormatted}
-                            </span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
-                            ${isJustFinished ? '<span style="font-size: 0.68rem; color: #059669; background: #ecfdf5; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Se archivará al salir</span>' : ''}
-                            <span class="badge" style="font-size: 0.7rem; font-weight: 600; padding: 2px 7px; border-radius: 6px; white-space: nowrap; ${isDone ? 'background: #dcfce7; color: #15803d;' : 'background: #fef3c7; color: #b45309;'}">
-                                ${isDone ? '✓ Completada' : '⏳ Pendiente'}
-                            </span>
-                        </div>
-                    </div>
 
-                    <!-- Fila media: Texto completo de la tarea (Aprovecha el 100% del ancho) -->
-                    <div style="font-size: 0.86rem; line-height: 1.48; color: ${isDone ? 'var(--text-muted)' : 'var(--text-dark)'}; ${isDone ? 'text-decoration: line-through; opacity: 0.75;' : ''} white-space: pre-wrap; word-break: break-word; margin-bottom: 8px;">
-                        ${_escapeHtmlTask(t.compromisos_psicologo)}
-                    </div>
-
-                    <!-- Fila inferior: Modalidad y Botón de Acción -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px dashed var(--border-color, #e2e8f0);">
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                            ${modalLabel}
-                        </div>
-                        <button class="btn btn-secondary btn-sm" onclick="openEditSessionModal(${t.session_id})" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; margin-left: auto;" title="Ver o editar evolución clínica donde se asignó esta tarea">
-                            👁️ Ver Evolución
-                        </button>
-                    </div>
+                <!-- Estado + Botón Ver Evolución -->
+                <div class="therapist-task-actions" style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                    <span class="badge" style="font-size: 0.68rem; font-weight: 600; padding: 2px 7px; border-radius: 6px; white-space: nowrap; ${isDone ? 'background: #dcfce7; color: #15803d;' : 'background: #fef3c7; color: #b45309;'}">
+                        ${isDone ? '✓ Completada' : '⏳ Pendiente'}
+                    </span>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openEditSessionModal(${t.session_id})" style="font-size: 0.72rem; padding: 0.22rem 0.5rem; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Ver evolución clínica donde se asignó esta tarea">
+                        👁️ Ver Evolución
+                    </button>
                 </div>
             </div>
         `;
@@ -15333,11 +15329,21 @@ async function loadActivePsychologists(preselectId = null) {
 let isPreRegisteredPatient = false;
 
 function openRegisterModal(e) {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    
+    // Si la pantalla de login/autenticacion esta abierta, ocultarla para que no se superponga
+    const authScreen = document.getElementById('auth-screen');
+    if (authScreen && !authScreen.classList.contains('hide') && authScreen.style.display !== 'none') {
+        authScreen.classList.add('hide');
+        authScreen.style.display = 'none';
+        window._returnToAuthScreenOnClose = true;
+    }
+
     const modal = document.getElementById('register-modal');
     if (modal) {
         modal.classList.remove('hide');
         modal.style.display = 'flex';
+        modal.style.zIndex = '100050';
     }
     document.getElementById('register-form').reset();
     
@@ -15376,6 +15382,16 @@ function closeRegisterModal() {
         modal.classList.add('hide');
         modal.style.display = 'none';
     }
+    
+    // Si se abrio desde la pantalla de login, restaurar el login al cerrar
+    if (window._returnToAuthScreenOnClose) {
+        window._returnToAuthScreenOnClose = false;
+        const authScreen = document.getElementById('auth-screen');
+        if (authScreen) {
+            authScreen.classList.remove('hide');
+            authScreen.style.display = 'flex';
+        }
+    }
 }
 
 async function validateRegisterCedula() {
@@ -15407,9 +15423,9 @@ async function validateRegisterCedula() {
             // Llenar campos y deshabilitar identidad
             document.getElementById('reg-tipo-usuario').value = 'paciente';
             document.getElementById('reg-nombres').value = data.nombres || '';
-            document.getElementById('reg-nombres').disabled = true;
+            document.getElementById('reg-nombres').disabled = false;
             document.getElementById('reg-apellidos').value = data.apellidos || '';
-            document.getElementById('reg-apellidos').disabled = true;
+            document.getElementById('reg-apellidos').disabled = false;
             document.getElementById('reg-cedula').value = cedula;
             document.getElementById('reg-cedula').disabled = true;
 
