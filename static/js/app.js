@@ -2803,6 +2803,12 @@ function applyUserBlocks(bloqueos) {
 }
 window.applyUserBlocks = applyUserBlocks;
 
+function isDedicatedPublicProfileOrBookingRoute() {
+    const p = (window.location.pathname || '').toLowerCase();
+    const s = new URLSearchParams(window.location.search || '');
+    return p.startsWith('/psic.') || p.startsWith('/psicologo/') || p.startsWith('/psic/') || p.startsWith('/registro/') || p.startsWith('/agendar/') || p.endsWith('/agendar') || s.has('fast_booking') || s.has('directorio');
+}
+
 function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, primerInicio, suscripcionPaga, fechaExpiracionPrueba, nombres, apellidos, suscripcionExpirada) {
     if (window.location.pathname.startsWith('/evaluacion/')) {
         const appLayout = document.getElementById('app-layout');
@@ -2813,7 +2819,7 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         const fastBooking = document.getElementById('fast-booking-screen');
         if (appLayout) { appLayout.style.display = 'none'; appLayout.classList.add('hide'); }
         if (sidebar) sidebar.classList.add('hide');
-        if (authScr) { authScr.style.removeProperty('display'); authScr.style.removeProperty('display'); authScr.style.display = 'none'; authScr.classList.add('hide'); }
+        if (authScr) { authScr.style.removeProperty('display'); authScr.style.display = 'none'; authScr.classList.add('hide'); }
         if (pubLanding) { pubLanding.style.display = 'none'; pubLanding.classList.add('hide'); }
         if (pubProfile) { pubProfile.style.display = 'none'; pubProfile.classList.add('hide'); }
         if (fastBooking) { fastBooking.style.display = 'none'; fastBooking.classList.add('hide'); }
@@ -2825,10 +2831,19 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         }
         return;
     }
+    if (isDedicatedPublicProfileOrBookingRoute()) {
+        const appLayout = document.getElementById('app-layout');
+        const sidebar = document.getElementById('sidebar');
+        if (appLayout) { appLayout.style.display = 'none'; appLayout.classList.add('hide'); }
+        if (sidebar) sidebar.classList.add('hide');
+        hideLoadingScreen();
+        return;
+    }
     purgeClientCacheOnLogin();
     document.body.classList.remove('is-patient');
     const authScr = document.getElementById('auth-screen');
     const pubLanding = document.getElementById('public-landing-screen');
+    const pubProfileScr = document.getElementById('public-therapist-profile-screen');
     const fastBookingScr = document.getElementById('fast-booking-screen');
     if (authScr) {
         authScr.style.display = 'none';
@@ -2838,6 +2853,11 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
         pubLanding.classList.add('hide');
         pubLanding.style.removeProperty('display');
         pubLanding.style.display = 'none';
+    }
+    if (pubProfileScr) {
+        pubProfileScr.classList.add('hide');
+        pubProfileScr.style.removeProperty('display');
+        pubProfileScr.style.display = 'none';
     }
     if (fastBookingScr) {
         fastBookingScr.style.display = 'none';
@@ -2917,7 +2937,11 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     document.getElementById('patient-menu').classList.add('hide');
     document.getElementById('patient-menu-overlay').classList.add('hide');
     document.getElementById('sidebar').classList.remove('hide');
-    document.getElementById('app-layout').classList.remove('hide');
+    const appLayoutEl = document.getElementById('app-layout');
+    if (appLayoutEl) {
+        appLayoutEl.style.removeProperty('display');
+        appLayoutEl.classList.remove('hide');
+    }
     
     // Controlar aviso de pago pendiente
     const avisoPagoBanner = document.getElementById('dashboard-aviso-pago');
@@ -3194,10 +3218,22 @@ function showPatientLayout(username, patientId) {
     setAuthItem('patient_id', patientId);
     setAuthItem('patient_username', username);
     setAuthItem('role', 'paciente');
+
+    if (isDedicatedPublicProfileOrBookingRoute()) {
+        const appLayout = document.getElementById('app-layout');
+        const patHeader = document.getElementById('patient-header');
+        const patMenu = document.getElementById('patient-menu');
+        if (appLayout) { appLayout.style.display = 'none'; appLayout.classList.add('hide'); }
+        if (patHeader) patHeader.classList.add('hide');
+        if (patMenu) patMenu.classList.add('hide');
+        hideLoadingScreen();
+        return;
+    }
     
     document.body.classList.add('is-patient');
     const authScr = document.getElementById('auth-screen');
     const pubLanding = document.getElementById('public-landing-screen');
+    const pubProfileScr = document.getElementById('public-therapist-profile-screen');
     if (authScr) {
         authScr.style.display = 'none';
         authScr.classList.add('hide');
@@ -3207,8 +3243,17 @@ function showPatientLayout(username, patientId) {
         pubLanding.style.removeProperty('display');
         pubLanding.style.display = 'none';
     }
+    if (pubProfileScr) {
+        pubProfileScr.classList.add('hide');
+        pubProfileScr.style.removeProperty('display');
+        pubProfileScr.style.display = 'none';
+    }
     document.getElementById('sidebar').classList.add('hide');
-    document.getElementById('app-layout').classList.remove('hide');
+    const appLayoutEl = document.getElementById('app-layout');
+    if (appLayoutEl) {
+        appLayoutEl.style.removeProperty('display');
+        appLayoutEl.classList.remove('hide');
+    }
     document.getElementById('patient-header').classList.remove('hide');
     document.getElementById('patient-menu').classList.remove('hide');
     
@@ -15328,7 +15373,7 @@ async function loadActivePsychologists(preselectId = null) {
 
 let isPreRegisteredPatient = false;
 
-function openRegisterModal(e) {
+function openRegisterModal(e, fromTherapistProfile = false) {
     if (e && e.preventDefault) e.preventDefault();
     
     // Si la pantalla de login/autenticacion esta abierta, ocultarla para que no se superponga
@@ -15337,6 +15382,34 @@ function openRegisterModal(e) {
         authScreen.classList.add('hide');
         authScreen.style.display = 'none';
         window._returnToAuthScreenOnClose = true;
+    }
+
+    const path = (window.location.pathname || '').toLowerCase();
+    const urlParams = new URLSearchParams(window.location.search || '');
+    const isFromProfile = Boolean(
+        fromTherapistProfile ||
+        path.startsWith('/psic.') ||
+        path.startsWith('/psicologo/') ||
+        path.startsWith('/psic/') ||
+        path.startsWith('/registro/') ||
+        urlParams.get('ref_psicologo')
+    );
+    window._isTherapistPatientRegistration = isFromProfile;
+    if (!isFromProfile) {
+        window._refPsicologoId = null;
+        window._refPsicologoSlug = null;
+        window._refPsicologoNombre = null;
+    }
+
+    const titleEl = document.getElementById('register-modal-title');
+    if (titleEl) {
+        if (isFromProfile && window._refPsicologoNombre) {
+            titleEl.textContent = `Registrarme en la Consulta — ${window._refPsicologoNombre}`;
+        } else if (isFromProfile) {
+            titleEl.textContent = 'Registrarme como Consultante';
+        } else {
+            titleEl.textContent = 'Crear Cuenta';
+        }
     }
 
     const modal = document.getElementById('register-modal');
@@ -15358,22 +15431,39 @@ function openRegisterModal(e) {
     document.getElementById('reg-apellidos').disabled = false;
     document.getElementById('reg-cedula').disabled = false;
     
-    // Restablecer visabilidades de sub-campos del formulario
-    document.getElementById('reg-tipo-usuario-group').classList.remove('hide');
+    // Restablecer visibilidades de sub-campos del formulario
+    if (isFromProfile) {
+        document.getElementById('reg-tipo-usuario').value = 'paciente';
+        document.getElementById('reg-tipo-usuario-group').classList.add('hide');
+    } else {
+        document.getElementById('reg-tipo-usuario-group').classList.remove('hide');
+    }
     document.getElementById('reg-common-fields').classList.add('hide');
     document.getElementById('reg-paciente-fields').classList.add('hide');
     document.getElementById('reg-psicologo-fields').classList.add('hide');
     document.getElementById('reg-security-questions-fields').classList.add('hide');
     
-    // Asegurar que el selector de psicólogo esté visible si no hay referral
-    const psicologoSelect = document.getElementById('reg-psicologo-id');
-    if (psicologoSelect) {
-        const selectGroup = psicologoSelect.closest('.form-group');
+    // Asegurar que el selector de psicólogo esté visible solo si no viene desde el perfil de un psicólogo
+    const selectGroup = document.getElementById('reg-psicologo-select-group') || document.getElementById('reg-psicologo-id')?.closest('.form-group');
+    const assignedBanner = document.getElementById('reg-psicologo-assigned-banner');
+    const assignedText = document.getElementById('reg-psicologo-assigned-text');
+    if (isFromProfile) {
+        if (selectGroup) selectGroup.style.display = 'none';
+        if (assignedBanner) {
+            assignedBanner.classList.remove('hide');
+            if (assignedText) {
+                assignedText.textContent = window._refPsicologoNombre
+                    ? `Registrándote como consultante de: ${window._refPsicologoNombre}`
+                    : 'Registrándote automáticamente como consultante de este profesional';
+            }
+        }
+    } else {
         if (selectGroup) selectGroup.style.display = 'block';
+        if (assignedBanner) assignedBanner.classList.add('hide');
     }
     
     isPreRegisteredPatient = false;
-    loadActivePsychologists();
+    loadActivePsychologists(window._refPsicologoId || null);
 }
 
 function closeRegisterModal() {
@@ -15408,7 +15498,17 @@ async function validateRegisterCedula() {
     
     try {
         const urlParams = new URLSearchParams(window.location.search);
+        const path = (window.location.pathname || '').toLowerCase();
         const refId = urlParams.get('ref_psicologo') || window._refPsicologoId || '';
+        const isFromTherapistConsultation = Boolean(
+            window._isTherapistPatientRegistration ||
+            refId ||
+            path.startsWith('/registro/') ||
+            path.startsWith('/psic.') ||
+            path.startsWith('/psicologo/') ||
+            path.startsWith('/psic/')
+        );
+
         const checkUrl = `/api/register/check-cedula?cedula=${encodeURIComponent(cedula)}${refId ? `&ref_psicologo=${encodeURIComponent(refId)}` : ''}`;
         const res = await fetch(checkUrl);
         const data = await res.json();
@@ -15449,21 +15549,46 @@ async function validateRegisterCedula() {
             document.getElementById('reg-security-questions-fields').classList.remove('hide'); // Mostrar preguntas de seguridad
             
             alert(`¡Hola ${data.nombres}! Ya estás registrado en el sistema por tu terapeuta. Por favor crea tu usuario y contraseña de acceso.`);
-        } else if (refId || window.location.pathname.toLowerCase().startsWith('/registro/')) {
+        } else if (isFromTherapistConsultation) {
+            // Registro desde el perfil o enlace directo de un psicólogo: asignar automáticamente rol "paciente" y el psicólogo correspondiente sin preguntar rol
             isPreRegisteredPatient = false;
-            const errText = data.error || "No encontramos tu documento en los registros del profesional. Si eres un consultante nuevo, por favor agenda tu primera cita o comunícate directamente con tu psicólogo";
-            const slug = window._refPsicologoSlug || (window.location.pathname.toLowerCase().startsWith('/registro/') ? window.location.pathname.replace(/^\/registro\//i, '') : '');
-            let agendaBtnHtml = '';
-            if (slug) {
-                agendaBtnHtml = `<div style="margin-top: 0.75rem;"><a href="/agendar/${slug}" class="btn btn-primary btn-sm" style="display: inline-block; padding: 0.45rem 1rem; border-radius: 8px; font-weight: 700; text-decoration: none;">📅 Agendar Primera Cita</a></div>`;
+            document.getElementById('reg-tipo-usuario').value = 'paciente';
+            document.getElementById('reg-tipo-usuario-group').classList.add('hide');
+
+            document.getElementById('reg-cedula').value = cedula;
+            document.getElementById('reg-nombres').value = '';
+            document.getElementById('reg-apellidos').value = '';
+            document.getElementById('reg-nombres').disabled = false;
+            document.getElementById('reg-apellidos').disabled = false;
+            document.getElementById('reg-cedula').disabled = false;
+
+            const selectEl = document.getElementById('reg-psicologo-id');
+            if (selectEl && refId) {
+                selectEl.value = String(refId);
             }
-            statusMsg.innerHTML = `<div style="line-height: 1.5; font-size: 0.88rem;">${errText}</div>${agendaBtnHtml}`;
-            statusMsg.className = "status-msg error-msg";
-            statusMsg.classList.remove('hide');
+            const selectGroup = document.getElementById('reg-psicologo-select-group') || selectEl?.closest('.form-group');
+            const assignedBanner = document.getElementById('reg-psicologo-assigned-banner');
+            const assignedText = document.getElementById('reg-psicologo-assigned-text');
+            if (selectGroup) selectGroup.style.display = 'none';
+            if (assignedBanner) {
+                assignedBanner.classList.remove('hide');
+                if (assignedText) {
+                    assignedText.textContent = window._refPsicologoNombre
+                        ? `Registrándote como consultante de: ${window._refPsicologoNombre}`
+                        : 'Registrándote automáticamente como consultante de este profesional';
+                }
+            }
+
+            document.getElementById('reg-step-cedula').classList.add('hide');
+            document.getElementById('reg-step-details').classList.remove('hide');
+            document.getElementById('reg-common-fields').classList.remove('hide');
+            document.getElementById('reg-paciente-fields').classList.remove('hide');
+            document.getElementById('reg-psicologo-fields').classList.add('hide');
+            document.getElementById('reg-security-questions-fields').classList.remove('hide');
         } else {
             isPreRegisteredPatient = false;
             
-            // Llenar cédula y habilitar selector de rol
+            // Llenar cédula y habilitar selector de rol (solo cuando viene desde el login general de la plataforma)
             document.getElementById('reg-cedula').value = cedula;
             document.getElementById('reg-nombres').value = '';
             document.getElementById('reg-apellidos').value = '';
@@ -15514,15 +15639,6 @@ function toggleRegisterFields() {
         pacienteFields.classList.add('hide');
         document.getElementById('reg-security-questions-fields').classList.remove('hide');
     } else if (role === 'paciente') {
-        if (!isPreRegisteredPatient) {
-            alert("No encontramos tu documento en los registros del profesional. Si eres un consultante nuevo, por favor agenda tu primera cita o comunícate directamente con tu psicólogo");
-            document.getElementById('reg-tipo-usuario').value = '';
-            commonFields.classList.add('hide');
-            pacienteFields.classList.add('hide');
-            document.getElementById('reg-step-details').classList.add('hide');
-            document.getElementById('reg-step-cedula').classList.remove('hide');
-            return;
-        }
         commonFields.classList.remove('hide');
         psicologoFields.classList.add('hide');
         pacienteFields.classList.remove('hide');
@@ -15530,14 +15646,17 @@ function toggleRegisterFields() {
         
         // Restaurar display del selector de psicólogo asignado si no hay referral
         const urlParams = new URLSearchParams(window.location.search);
-        const refId = urlParams.get('ref_psicologo');
-        const selectGroup = document.getElementById('reg-psicologo-id').closest('.form-group');
+        const refId = urlParams.get('ref_psicologo') || window._refPsicologoId;
+        const selectGroup = document.getElementById('reg-psicologo-select-group') || document.getElementById('reg-psicologo-id')?.closest('.form-group');
+        const assignedBanner = document.getElementById('reg-psicologo-assigned-banner');
         if (selectGroup) {
             if (refId) {
                 selectGroup.style.display = 'none';
                 document.getElementById('reg-psicologo-id').value = refId;
+                if (assignedBanner) assignedBanner.classList.remove('hide');
             } else {
                 selectGroup.style.display = 'block';
+                if (assignedBanner) assignedBanner.classList.add('hide');
             }
         }
     } else {
@@ -15651,16 +15770,19 @@ async function submitRegister(e) {
                     alert(msg);
                     return;
                 }
+                if (window._refPsicologoId) {
+                    payload.psicologo_id = parseInt(window._refPsicologoId) || window._refPsicologoId;
+                }
             } else {
-                let targetPsicId = parseInt(getVal('reg-psicologo-id'));
+                let targetPsicId = parseInt(getVal('reg-psicologo-id')) || parseInt(window._refPsicologoId);
                 if (isNaN(targetPsicId) || !targetPsicId) {
                     const urlParams = new URLSearchParams(window.location.search);
-                    const refId = urlParams.get('ref_psicologo');
+                    const refId = urlParams.get('ref_psicologo') || window._refPsicologoId;
                     if (refId) {
                         if (!isNaN(parseInt(refId))) {
                             targetPsicId = parseInt(refId);
                         } else if (typeof regPsychologists !== 'undefined' && regPsychologists && regPsychologists.length) {
-                            const cleanRef = refId.toLowerCase().replace('psic.', '').replace('psic-', '');
+                            const cleanRef = String(refId).toLowerCase().replace('psic.', '').replace('psic-', '');
                             const found = regPsychologists.find(p => 
                                 (p.slug && p.slug.toLowerCase().includes(cleanRef)) || 
                                 (p.username && p.username.toLowerCase().includes(cleanRef))
@@ -26840,7 +26962,16 @@ async function loadDedicatedTherapistProfile(slug) {
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
     const profScreen = document.getElementById('public-therapist-profile-screen');
+    const appLayout = document.getElementById('app-layout');
+    const patHeader = document.getElementById('patient-header');
+    const patMenu = document.getElementById('patient-menu');
     
+    if (appLayout) {
+        appLayout.classList.add('hide');
+        appLayout.style.display = 'none';
+    }
+    if (patHeader) patHeader.classList.add('hide');
+    if (patMenu) patMenu.classList.add('hide');
     if (pubLanding) {
         pubLanding.classList.add('hide');
         pubLanding.style.display = 'none';
@@ -26869,6 +27000,12 @@ async function loadDedicatedTherapistProfile(slug) {
             return;
         }
         const t = await res.json();
+
+        if (t && t.id) {
+            window._refPsicologoId = t.id;
+            window._refPsicologoSlug = t.slug || (t.clean_slug ? `psic.${t.clean_slug}` : '');
+            window._refPsicologoNombre = t.nombre_completo || 'Psicólogo Clínico';
+        }
 
         // Asegurar URL canónica limpia (ej: /psic.paulomora en lugar de /psic.1)
         if (t && t.slug) {
@@ -27103,10 +27240,12 @@ async function loadDedicatedTherapistProfile(slug) {
         if (regBtn) {
             regBtn.onclick = (e) => {
                 if (e) e.preventDefault();
-                openRegisterModal(e);
                 if (t && t.id) {
-                    loadActivePsychologists(t.id);
+                    window._refPsicologoId = t.id;
+                    window._refPsicologoSlug = t.slug || (t.clean_slug ? `psic.${t.clean_slug}` : '');
+                    window._refPsicologoNombre = t.nombre_completo || 'Psicólogo Clínico';
                 }
+                openRegisterModal(e, true);
             };
         }
 
@@ -27293,18 +27432,40 @@ async function loadDedicatedTherapistProfile(slug) {
         }
 
         if (window.location.pathname.toLowerCase().startsWith('/registro/') || String(slug).startsWith('/registro/')) {
-            openRegisterModal();
             if (t && t.id) {
                 window._refPsicologoId = t.id;
                 window._refPsicologoSlug = t.slug || (t.clean_slug ? `psic.${t.clean_slug}` : '');
-                loadActivePsychologists(t.id);
+                window._refPsicologoNombre = t.nombre_completo || 'Psicólogo Clínico';
             }
+            openRegisterModal(null, true);
         }
 
     } catch(e) {
         console.error("Error al cargar perfil de psicólogo:", e);
     }
 }
+
+function openPublicDirectoryLanding(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const pubLanding = document.getElementById('public-landing-screen');
+    const authScreen = document.getElementById('auth-screen');
+    const profScreen = document.getElementById('public-therapist-profile-screen');
+    const fastScreen = document.getElementById('fast-booking-screen');
+    const appLayout = document.getElementById('app-layout');
+
+    if (appLayout) { appLayout.classList.add('hide'); appLayout.style.display = 'none'; }
+    if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
+    if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
+    if (fastScreen) { fastScreen.classList.add('hide'); fastScreen.style.display = 'none'; }
+    if (pubLanding) { pubLanding.classList.remove('hide'); pubLanding.style.display = 'block'; }
+
+    if (window.history && window.history.pushState) {
+        window.history.pushState(null, '', '/?directorio=1');
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    loadLandingPageContent();
+}
+window.openPublicDirectoryLanding = openPublicDirectoryLanding;
 
 function initLandingRouteHandling() {
     const path = window.location.pathname.toLowerCase();
@@ -27316,6 +27477,7 @@ function initLandingRouteHandling() {
     const appLayout = document.getElementById('app-layout');
     
     if (urlParams.has('fast_booking') || path.startsWith('/agendar/') || path.endsWith('/agendar')) {
+        if (appLayout) { appLayout.classList.add('hide'); appLayout.style.display = 'none'; }
         if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
         if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
         if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }
@@ -27324,8 +27486,17 @@ function initLandingRouteHandling() {
         return;
     }
 
+    if (path.startsWith('/psic.') || path.startsWith('/psicologo/') || path.startsWith('/psic/') || path.startsWith('/registro/')) {
+        if (appLayout) { appLayout.classList.add('hide'); appLayout.style.display = 'none'; }
+        if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
+        if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
+        if (profScreen) { profScreen.classList.remove('hide'); profScreen.style.display = 'block'; }
+        loadDedicatedTherapistProfile(path);
+        return;
+    }
+
     // Si la sesión ya está activa y el app-layout está visible, la portada pública DEBE mantenerse oculta
-    if (appLayout && !appLayout.classList.contains('hide')) {
+    if (appLayout && !appLayout.classList.contains('hide') && !urlParams.has('directorio')) {
         if (pubLanding) pubLanding.classList.add('hide');
         if (profScreen) profScreen.classList.add('hide');
         if (authScreen) {
@@ -27333,13 +27504,6 @@ function initLandingRouteHandling() {
             authScreen.classList.add('hide');
         }
         return;
-    }
-
-    if (path.startsWith('/psic.') || path.startsWith('/psicologo/') || path.startsWith('/psic/') || path.startsWith('/registro/')) {
-        if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
-        if (authScreen) { authScreen.classList.add('hide'); authScreen.style.display = 'none'; }
-        if (profScreen) { profScreen.classList.remove('hide'); profScreen.style.display = 'block'; }
-        loadDedicatedTherapistProfile(path);
     } else if (path.includes('/login')) {
         if (pubLanding) { pubLanding.classList.add('hide'); pubLanding.style.display = 'none'; }
         if (profScreen) { profScreen.classList.add('hide'); profScreen.style.display = 'none'; }

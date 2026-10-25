@@ -1801,10 +1801,26 @@ def register():
                 pat_name = f"{data.get('nombres') or ex_nom} {data.get('apellidos') or ex_ape}".strip() or username
                 notif_msg = f"El consultante {pat_name} ha completado la creación de su cuenta de acceso."
             else:
-                # Ningún paciente se puede registrar si el psicólogo no lo tiene incluido en su historial
-                return jsonify({
-                    'error': 'No encontramos tu documento en los registros del profesional. Si eres un consultante nuevo, por favor agenda tu primera cita o comunícate directamente con tu psicólogo'
-                }), 400
+                target_psic = psicologo_id or 1
+                cursor.execute("""
+                    INSERT INTO pacientes (
+                        nombres, apellidos, cedula, telefono, email, pronombre, genero, edad,
+                        lugar_nacimiento, fecha_nacimiento, residencia_actual, pais, ciudad, con_quien_reside,
+                        nivel_academico, ocupacion, estado_civil, contacto_emergencia_nombre,
+                        contacto_emergencia_parentesco, motivo_consulta, expectativas, farmacologia,
+                        username, password_hash, pregunta_seguridad_1, respuesta_seguridad_1_hash,
+                        pregunta_seguridad_2, respuesta_seguridad_2_hash, psicologo_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    nombres, apellidos, cedula, telefono, email, pronombre, genero, edad,
+                    lugar_nacimiento, fecha_nacimiento, residencia_actual, pais, ciudad, con_quien_reside,
+                    nivel_academico, ocupacion, estado_civil, contacto_emergencia_nombre,
+                    contacto_emergencia_parentesco, motivo_consulta, expectativas, farmacologia,
+                    username, password_hash, pregunta_1, resp_1_hash, pregunta_2, resp_2_hash, target_psic
+                ))
+                patient_id = cursor.lastrowid
+                pat_name = f"{nombres} {apellidos}".strip() or username
+                notif_msg = f"El consultante {pat_name} se ha registrado en tu consulta."
 
             # Generar notificación interna y push al psicólogo asignado
             from datetime import datetime
