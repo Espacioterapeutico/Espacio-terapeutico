@@ -26772,6 +26772,7 @@ function populateProfileUI(data) {
         if (document.getElementById('mod-presencial')) document.getElementById('mod-presencial').checked = !!mods.presencial;
         if (document.getElementById('mod-presencial-titulo')) document.getElementById('mod-presencial-titulo').value = mods.presencial_titulo || 'Consulta Presencial';
         if (document.getElementById('mod-presencial-detalle')) document.getElementById('mod-presencial-detalle').value = mods.presencial_detalle || mods.presencial_direccion || '';
+        if (document.getElementById('mod-presencial-maps-url')) document.getElementById('mod-presencial-maps-url').value = mods.presencial_maps_url || '';
         
         if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = !!mods.domicilio;
         if (document.getElementById('mod-domicilio-titulo')) document.getElementById('mod-domicilio-titulo').value = mods.domicilio_titulo || 'Atención a Domicilio';
@@ -26837,6 +26838,7 @@ async function savePublicProfileSettings() {
         presencial: document.getElementById('mod-presencial')?.checked || false,
         presencial_titulo: document.getElementById('mod-presencial-titulo')?.value.trim() || 'Consulta Presencial',
         presencial_detalle: document.getElementById('mod-presencial-detalle')?.value.trim() || '',
+        presencial_maps_url: document.getElementById('mod-presencial-maps-url')?.value.trim() || '',
         domicilio: document.getElementById('mod-domicilio')?.checked || false,
         domicilio_titulo: document.getElementById('mod-domicilio-titulo')?.value.trim() || 'Atención a Domicilio',
         domicilio_detalle: document.getElementById('mod-domicilio-detalle')?.value.trim() || ''
@@ -27190,8 +27192,60 @@ async function loadDedicatedTherapistProfile(slug) {
             if (mData.presencial || (Array.isArray(t.modalidades) && t.modalidades.includes("Presencial"))) {
                 hasAnyMod = true;
                 const titleText = mData.presencial_titulo || "Consulta Presencial";
-                const addressVal = mData.presencial_detalle || mData.presencial_direccion;
+                const addressVal = mData.presencial_detalle || mData.presencial_direccion || '';
+                const rawMapsInput = (mData.presencial_maps_url || '').trim();
+                const cleanAddressQuery = String(addressVal).replace(/^(atenci[oó]n\s+en|ubicado\s+en|direcci[oó]n:?|consultorio\s+en)\s+/i, '').trim();
+
+                let directMapsLink = '';
+                let embedMapUrl = '';
+
+                if (rawMapsInput) {
+                    const iframeMatch = rawMapsInput.match(/src=["']([^"']+)["']/i);
+                    if (iframeMatch && iframeMatch[1]) {
+                        embedMapUrl = iframeMatch[1];
+                        directMapsLink = cleanAddressQuery
+                            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAddressQuery)}`
+                            : embedMapUrl;
+                    } else if (/^https?:\/\/(www\.)?google\.[^/]+\/maps\/embed/i.test(rawMapsInput)) {
+                        embedMapUrl = rawMapsInput;
+                        directMapsLink = cleanAddressQuery
+                            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAddressQuery)}`
+                            : rawMapsInput;
+                    } else if (/^https?:\/\//i.test(rawMapsInput)) {
+                        directMapsLink = rawMapsInput;
+                        const coordMatch = rawMapsInput.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                        const placeMatch = rawMapsInput.match(/\/place\/([^/@?]+)/);
+                        let qForEmbed = cleanAddressQuery;
+                        if (coordMatch) {
+                            qForEmbed = `${coordMatch[1]},${coordMatch[2]}`;
+                        } else if (placeMatch && placeMatch[1]) {
+                            qForEmbed = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
+                        }
+                        if (qForEmbed) {
+                            embedMapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(qForEmbed)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+                        }
+                    } else {
+                        directMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawMapsInput)}`;
+                        embedMapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(rawMapsInput)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+                    }
+                } else if (cleanAddressQuery) {
+                    directMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAddressQuery)}`;
+                    embedMapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(cleanAddressQuery)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+                }
+
+                window._currentTherapistMapsLink = directMapsLink;
+                window._currentTherapistAddress = addressVal;
+
                 const det = addressVal ? `<p style="color: #475569; font-size: 0.92rem; line-height: 1.55; margin: 0; width: 100%; word-break: break-word; overflow-wrap: break-word; text-align: left;">📍 ${addressVal}</p>` : '';
+                const mapIframeHtml = embedMapUrl ? `
+                    <div style="width: 100%; border-radius: 12px; overflow: hidden; border: 1.5px solid #cbd5e1; background: #e2e8f0; margin-top: 0.15rem; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);">
+                        <iframe src="${embedMapUrl}" width="100%" height="185" style="border: 0; display: block;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación del Consultorio en Google Maps"></iframe>
+                    </div>` : '';
+                const mapBtnHtml = directMapsLink ? `
+                    <a href="${directMapsLink}" target="_blank" rel="noopener noreferrer" style="background: #ffffff; color: var(--prof-accent); border: 1.5px solid var(--prof-border); padding: 0.62rem 1.15rem; border-radius: 999px; font-weight: 700; font-size: 0.86rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05); transition: transform 0.2s, background 0.2s;" onmouseover="this.style.background='var(--prof-soft)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#ffffff'; this.style.transform='none'">
+                        🗺️ Abrir en Google Maps ↗
+                    </a>` : '';
+
                 mHtml += `
                 <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.15rem 1.15rem; border-radius: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; width: 100%; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
                     <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%; min-width: 0;">
@@ -27199,9 +27253,13 @@ async function loadDedicatedTherapistProfile(slug) {
                         <div style="font-weight: 800; color: #0f172a; font-size: 1.05rem; letter-spacing: -0.2px; line-height: 1.3; min-width: 0; word-break: break-word; text-align: left;">${titleText}</div>
                     </div>
                     ${det}
-                    <button type="button" onclick="window.openProfileFastBooking('Presencial')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.65rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 0.15rem; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
-                        📅 Agendar Presencial →
-                    </button>
+                    ${mapIframeHtml}
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem; width: 100%; margin-top: 0.15rem;">
+                        <button type="button" onclick="window.openProfileFastBooking('Presencial')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.65rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
+                            📅 Agendar Presencial →
+                        </button>
+                        ${mapBtnHtml}
+                    </div>
                 </div>`;
             }
             if (mData.domicilio || (Array.isArray(t.modalidades) && t.modalidades.includes("Domicilio"))) {
@@ -27330,6 +27388,18 @@ async function loadDedicatedTherapistProfile(slug) {
                 </a>`;
             }
 
+            if (window._currentTherapistMapsLink) {
+                const addrLabel = window._currentTherapistAddress || 'Ver ubicación en Google Maps';
+                cHtml += `
+                <a href="${window._currentTherapistMapsLink}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.25rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);" onmouseover="this.style.borderColor='var(--prof-accent)'; this.style.background='var(--prof-soft)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.transform='none'">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">📍</div>
+                    <div style="display: flex; flex-direction: column; min-width: 0;">
+                        <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px;">Ubicación en Google Maps ↗</span>
+                        <span style="font-size: 0.95rem; font-weight: 700; color: #0f172a; line-height: 1.35; word-break: break-word;">${addrLabel}</span>
+                    </div>
+                </a>`;
+            }
+
             if (t.redes_sociales && t.redes_sociales.linkedin) {
                 cHtml += `
                 <a href="${t.redes_sociales.linkedin}" target="_blank" style="display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.25rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);" onmouseover="this.style.borderColor='#0a66c2'; this.style.background='#f0f9ff'; this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.transform='none'">
@@ -27343,7 +27413,7 @@ async function loadDedicatedTherapistProfile(slug) {
 
             cHtml += '</div>';
 
-            if (!t.whatsapp_publico && (!t.redes_sociales || !t.redes_sociales.instagram) && !t.email_publico) {
+            if (!t.whatsapp_publico && (!t.redes_sociales || !t.redes_sociales.instagram) && !t.email_publico && !window._currentTherapistMapsLink) {
                 cHtml = '<p class="text-muted">El profesional no ha agregado información de contacto directo.</p>';
             }
             contactList.innerHTML = cHtml;
