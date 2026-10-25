@@ -26534,21 +26534,11 @@ function removeBlogPostFromList(idx) {
 window.removeBlogPostFromList = removeBlogPostFromList;
 
 function switchPublicProfileTab(tabName) {
-    const tabsOrder = ['conoceme', 'servicios', 'blog', 'faq', 'contacto'].filter(k => {
-        if (k === 'blog') {
-            const bBtn = document.getElementById('prof-tab-btn-blog');
-            return !bBtn || bBtn.style.display !== 'none';
-        }
-        return true;
-    });
     window._currentPublicProfileTab = tabName;
 
     document.querySelectorAll('#pub-profile-tabs-bar .prof-tab-btn').forEach(btn => {
         const isMatch = btn.getAttribute('data-prof-tab') === tabName;
         btn.classList.toggle('active', isMatch);
-        if (isMatch && btn.scrollIntoView) {
-            try { btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } catch(e) {}
-        }
     });
 
     document.querySelectorAll('#public-therapist-profile-screen .prof-tab-pane').forEach(pane => {
@@ -26556,6 +26546,21 @@ function switchPublicProfileTab(tabName) {
     });
 }
 window.switchPublicProfileTab = switchPublicProfileTab;
+
+function stepPublicProfileTab(dir) {
+    const tabsOrder = ['conoceme', 'servicios', 'blog', 'faq', 'contacto'].filter(k => {
+        if (k === 'blog') {
+            const bBtn = document.getElementById('prof-tab-btn-blog');
+            return !bBtn || bBtn.style.display !== 'none';
+        }
+        return true;
+    });
+    const cur = window._currentPublicProfileTab || 'conoceme';
+    const idx = tabsOrder.indexOf(cur);
+    const nextIdx = (idx + dir + tabsOrder.length) % tabsOrder.length;
+    switchPublicProfileTab(tabsOrder[nextIdx]);
+}
+window.stepPublicProfileTab = stepPublicProfileTab;
 
 function togglePublicFaqItem(idx) {
     const body = document.getElementById(`pub-faq-body-${idx}`);
@@ -26904,22 +26909,22 @@ async function loadDedicatedTherapistProfile(slug) {
                         icon = '🌈';
                     }
                     return `
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 0.9rem 1.15rem; display: flex; align-items: flex-start; gap: 0.8rem; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);">
-                            <span style="font-size: 1.25rem; line-height: 1.2; flex-shrink: 0;">${icon}</span>
-                            <span style="color: #1e293b; font-weight: 600; font-size: 0.98rem; line-height: 1.5;">${escapeHtml(line)}</span>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem 1rem; display: flex; align-items: flex-start; gap: 0.7rem; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02); text-align: left;">
+                            <span style="font-size: 1.1rem; line-height: 1.25; flex-shrink: 0;">${icon}</span>
+                            <span style="color: #1e293b; font-weight: 600; font-size: 0.92rem; line-height: 1.45;">${escapeHtml(line)}</span>
                         </div>`;
                 }).join('');
 
                 bioBox.innerHTML = `
-                    <div style="background: var(--prof-soft); border-left: 4px solid var(--prof-accent); padding: 1.1rem 1.3rem; border-radius: 0 14px 14px 0; color: #1e293b; font-weight: 700; font-size: 1.06rem; line-height: 1.55; margin-bottom: 1.1rem;">
+                    <div style="background: var(--prof-soft); border-left: 4px solid var(--prof-accent); padding: 0.9rem 1.1rem; border-radius: 0 12px 12px 0; color: #1e293b; font-weight: 700; font-size: 0.96rem; line-height: 1.5; margin-bottom: 0.85rem; text-align: left;">
                         ${leadLine}
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.7rem;">
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.55rem;">
                         ${credItems}
                     </div>`;
             } else {
                 bioBox.innerHTML = `
-                    <div style="background: var(--prof-soft); border-left: 4px solid var(--prof-accent); padding: 1.1rem 1.3rem; border-radius: 0 14px 14px 0; color: #1e293b; font-weight: 600; font-size: 1.05rem; line-height: 1.65;">
+                    <div style="background: var(--prof-soft); border-left: 4px solid var(--prof-accent); padding: 0.9rem 1.1rem; border-radius: 0 12px 12px 0; color: #1e293b; font-weight: 600; font-size: 0.95rem; line-height: 1.55; text-align: left;">
                         ${escapeHtml(rawBio)}
                     </div>`;
             }
@@ -26972,52 +26977,54 @@ async function loadDedicatedTherapistProfile(slug) {
             }
         };
 
-        // 1. Badges organizados: Especialidad, Ubicación, Población, Modalidades en el banner principal
+        // 1. Un solo cuadro unificado: Especialidad, Ubicación, Población y Modalidades en el banner principal
         const modsBox = document.getElementById('pub-profile-mods');
         if (modsBox) {
-            let html = `<div style="display: flex; flex-direction: column; align-items: center; gap: 0.6rem; max-width: 680px; width: 100%; margin: 0 auto;">`;
-            
-            // 1. Especialidad
+            const infoRows = [];
             if (t.especialidades) {
-                html += `
-                    <div style="background: rgba(236, 253, 245, 0.14); color: #dcfce7; padding: 6px 18px; border-radius: 20px; font-weight: 600; font-size: 0.95rem; border: 1px solid rgba(167, 243, 208, 0.35); backdrop-filter: blur(4px); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); text-align: center;">
-                        <span>🎯</span> <strong>Especialidad:</strong> ${t.especialidades}
-                    </div>`;
+                infoRows.push(`
+                    <div style="display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
+                        <span style="flex-shrink: 0;">🎯</span>
+                        <div><strong style="color: #fff;">Especialidad:</strong> <span style="color: rgba(255,255,255,0.92);">${t.especialidades}</span></div>
+                    </div>`);
             }
-
-            // 2. Ubicación
             if (t.pais) {
-                html += `
-                    <div style="background: rgba(239, 246, 255, 0.14); color: #e0f2fe; padding: 6px 18px; border-radius: 20px; font-weight: 600; font-size: 0.95rem; border: 1px solid rgba(186, 230, 253, 0.35); backdrop-filter: blur(4px); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); text-align: center;">
-                        <span>📍</span> <strong>Ubicación:</strong> ${t.pais}
-                    </div>`;
+                infoRows.push(`
+                    <div style="display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
+                        <span style="flex-shrink: 0;">📍</span>
+                        <div><strong style="color: #fff;">Ubicación:</strong> <span style="color: rgba(255,255,255,0.92);">${t.pais}</span></div>
+                    </div>`);
             }
-
-            // 3. Población
             if (t.poblaciones && (Array.isArray(t.poblaciones) ? t.poblaciones.length > 0 : t.poblaciones)) {
                 const pobStr = Array.isArray(t.poblaciones) ? t.poblaciones.join(' • ') : t.poblaciones;
-                html += `
-                    <div style="background: rgba(253, 244, 255, 0.14); color: #fce7f3; padding: 6px 18px; border-radius: 20px; font-weight: 600; font-size: 0.95rem; border: 1px solid rgba(240, 171, 252, 0.35); backdrop-filter: blur(4px); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); text-align: center;">
-                        <span>👥</span> <strong>Población:</strong> ${pobStr}
-                    </div>`;
+                infoRows.push(`
+                    <div style="display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
+                        <span style="flex-shrink: 0;">👥</span>
+                        <div><strong style="color: #fff;">Población:</strong> <span style="color: rgba(255,255,255,0.92);">${pobStr}</span></div>
+                    </div>`);
             }
 
-            // 4. Modalidades
             const list = Array.isArray(t.modalidades) ? t.modalidades : ["Online", "Presencial"];
             const modsBadges = list.map(m => {
                 let icon = "🌐";
                 if (m === "Presencial") icon = "🏢";
                 if (m === "Domicilio") icon = "🚗";
-                return `<span class="pub-mod-badge" style="background: rgba(255,255,255,0.18); color: #fff; padding: 5px 16px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 6px;">${icon} ${m}</span>`;
+                return `<span class="pub-mod-badge" style="background: rgba(255,255,255,0.18); color: #fff; padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.3); display: inline-flex; align-items: center; gap: 5px;">${icon} ${m}</span>`;
             }).join(" ");
 
-            html += `
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.35rem; margin-bottom: 0.5rem;">
-                    ${modsBadges}
-                </div>`;
+            const rowsHtml = infoRows.map((row, idx) => `
+                <div style="${idx < infoRows.length - 1 ? 'padding-bottom: 0.45rem; border-bottom: 1px solid rgba(255,255,255,0.13);' : ''}">
+                    ${row}
+                </div>
+            `).join('');
 
-            html += `</div>`;
-            modsBox.innerHTML = html;
+            modsBox.innerHTML = `
+                <div style="background: rgba(255, 255, 255, 0.11); border: 1px solid rgba(255, 255, 255, 0.24); border-radius: 16px; padding: 0.85rem 1.15rem; max-width: 540px; width: 100%; margin: 0.25rem auto 0.5rem auto; backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); text-align: left; font-size: 0.88rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                    ${rowsHtml}
+                    <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; justify-content: center; padding-top: ${infoRows.length ? '0.45rem' : '0'}; ${infoRows.length ? 'border-top: 1px solid rgba(255,255,255,0.13);' : ''}">
+                        ${modsBadges}
+                    </div>
+                </div>`;
         }
 
         // 2. Sección detallada de Modalidades y sus Descripciones (Diseño moderno adaptado a la paleta del psicólogo)
