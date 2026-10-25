@@ -27168,23 +27168,21 @@ async function loadDedicatedTherapistProfile(slug) {
         const modsDetailBox = document.getElementById('pub-profile-mods-detail');
         if (modsDetailBox) {
             const mData = t.modalidades_data || {};
-            let mHtml = '<div style="display: flex; flex-direction: column; gap: 1rem;">';
+            let mHtml = '<div style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">';
             let hasAnyMod = false;
             
             if (mData.online || (Array.isArray(t.modalidades) && t.modalidades.includes("Online"))) {
                 hasAnyMod = true;
                 const titleText = mData.online_titulo || "Consulta Online";
-                const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.94rem; line-height: 1.55; margin: 0.35rem 0 0 0;">${mData.online_detalle}</p>` : '';
+                const det = mData.online_detalle ? `<p style="color: #475569; font-size: 0.92rem; line-height: 1.55; margin: 0; width: 100%; word-break: break-word; overflow-wrap: break-word; text-align: left;">${mData.online_detalle}</p>` : '';
                 mHtml += `
-                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.35rem 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; flex-wrap: wrap; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
-                    <div style="display: flex; align-items: flex-start; gap: 1rem; flex: 1; min-width: 240px;">
-                        <div style="width: 46px; height: 46px; border-radius: 12px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">🌐</div>
-                        <div>
-                            <div style="font-weight: 800; color: #0f172a; font-size: 1.12rem; letter-spacing: -0.2px;">${titleText}</div>
-                            ${det}
-                        </div>
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.15rem 1.15rem; border-radius: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; width: 100%; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%; min-width: 0;">
+                        <div style="width: 40px; height: 40px; border-radius: 11px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">🌐</div>
+                        <div style="font-weight: 800; color: #0f172a; font-size: 1.05rem; letter-spacing: -0.2px; line-height: 1.3; min-width: 0; word-break: break-word; text-align: left;">${titleText}</div>
                     </div>
-                    <button type="button" onclick="window.openProfileFastBooking('Online')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.68rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
+                    ${det}
+                    <button type="button" onclick="window.openProfileFastBooking('Online')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.65rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 0.15rem; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
                         📅 Agendar Online →
                     </button>
                 </div>`;
@@ -27193,17 +27191,15 @@ async function loadDedicatedTherapistProfile(slug) {
                 hasAnyMod = true;
                 const titleText = mData.presencial_titulo || "Consulta Presencial";
                 const addressVal = mData.presencial_detalle || mData.presencial_direccion;
-                const det = addressVal ? `<p style="color: #475569; font-size: 0.94rem; line-height: 1.55; margin: 0.35rem 0 0 0;">📍 ${addressVal}</p>` : '';
+                const det = addressVal ? `<p style="color: #475569; font-size: 0.92rem; line-height: 1.55; margin: 0; width: 100%; word-break: break-word; overflow-wrap: break-word; text-align: left;">📍 ${addressVal}</p>` : '';
                 mHtml += `
-                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.35rem 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; flex-wrap: wrap; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
-                    <div style="display: flex; align-items: flex-start; gap: 1rem; flex: 1; min-width: 240px;">
-                        <div style="width: 46px; height: 46px; border-radius: 12px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">🏢</div>
-                        <div>
-                            <div style="font-weight: 800; color: #0f172a; font-size: 1.12rem; letter-spacing: -0.2px;">${titleText}</div>
-                            ${det}
-                        </div>
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.15rem 1.15rem; border-radius: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; width: 100%; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%; min-width: 0;">
+                        <div style="width: 40px; height: 40px; border-radius: 11px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">🏢</div>
+                        <div style="font-weight: 800; color: #0f172a; font-size: 1.05rem; letter-spacing: -0.2px; line-height: 1.3; min-width: 0; word-break: break-word; text-align: left;">${titleText}</div>
                     </div>
-                    <button type="button" onclick="window.openProfileFastBooking('Presencial')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.68rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
+                    ${det}
+                    <button type="button" onclick="window.openProfileFastBooking('Presencial')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.65rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 0.15rem; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
                         📅 Agendar Presencial →
                     </button>
                 </div>`;
@@ -27212,17 +27208,15 @@ async function loadDedicatedTherapistProfile(slug) {
                 hasAnyMod = true;
                 const titleText = mData.domicilio_titulo || "Atención a Domicilio";
                 const zonesVal = mData.domicilio_detalle || mData.domicilio_zonas;
-                const det = zonesVal ? `<p style="color: #475569; font-size: 0.94rem; line-height: 1.55; margin: 0.35rem 0 0 0;">🗺️ ${zonesVal}</p>` : '';
+                const det = zonesVal ? `<p style="color: #475569; font-size: 0.92rem; line-height: 1.55; margin: 0; width: 100%; word-break: break-word; overflow-wrap: break-word; text-align: left;">🗺️ ${zonesVal}</p>` : '';
                 mHtml += `
-                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.35rem 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; flex-wrap: wrap; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
-                    <div style="display: flex; align-items: flex-start; gap: 1rem; flex: 1; min-width: 240px;">
-                        <div style="width: 46px; height: 46px; border-radius: 12px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">🚗</div>
-                        <div>
-                            <div style="font-weight: 800; color: #0f172a; font-size: 1.12rem; letter-spacing: -0.2px;">${titleText}</div>
-                            ${det}
-                        </div>
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid var(--prof-accent); padding: 1.15rem 1.15rem; border-radius: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; width: 100%; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 24px rgba(15,23,42,0.07)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.03)'">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%; min-width: 0;">
+                        <div style="width: 40px; height: 40px; border-radius: 11px; background: var(--prof-soft); border: 1px solid var(--prof-border); color: var(--prof-accent); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">🚗</div>
+                        <div style="font-weight: 800; color: #0f172a; font-size: 1.05rem; letter-spacing: -0.2px; line-height: 1.3; min-width: 0; word-break: break-word; text-align: left;">${titleText}</div>
                     </div>
-                    <button type="button" onclick="window.openProfileFastBooking('Domicilio')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.68rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
+                    ${det}
+                    <button type="button" onclick="window.openProfileFastBooking('Domicilio')" style="background: var(--prof-accent); color: #ffffff; border: none; padding: 0.65rem 1.35rem; border-radius: 999px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 0.15rem; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14); transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.93'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
                         📅 Agendar Domicilio →
                     </button>
                 </div>`;
