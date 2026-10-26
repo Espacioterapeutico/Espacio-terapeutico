@@ -4366,12 +4366,16 @@ def create_backup():
         if db is not None:
             db.close()
             
-        return send_file(
+        resp = send_file(
             DATABASE,
             as_attachment=True,
             download_name=backup_filename,
             mimetype='application/x-sqlite3'
         )
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
     except Exception as e:
         return jsonify({'error': f'Error al descargar copia de seguridad: {str(e)}'}), 500
 

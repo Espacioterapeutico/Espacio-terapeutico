@@ -10135,41 +10135,8 @@ async function openNuevoBloqueoModal() {
     toggleBloqueoHoras(true);
 
     // Cargar dinámicamente todas las modalidades y perfiles configurados del psicólogo
-    const selectMod = document.getElementById('block-modal-modalidad');
-    if (selectMod) {
-        selectMod.innerHTML = '<option value="Todas">⛔ Todas las modalidades (Cierre total)</option>';
-        try {
-            const perfiles = await fetchPsychologistProfiles();
-            const addedNames = new Set();
-            if (Array.isArray(perfiles) && perfiles.length > 0) {
-                perfiles.forEach(p => {
-                    const name = (p.nombre || p.modalidad || '').trim();
-                    if (name && !addedNames.has(name.toLowerCase())) {
-                        addedNames.add(name.toLowerCase());
-                        let icon = '🏷️';
-                        const lower = name.toLowerCase();
-                        if (lower.includes('online')) icon = '💻';
-                        else if (lower.includes('presencial')) icon = '🏛️';
-
-                        const o = document.createElement('option');
-                        o.value = name;
-                        o.textContent = `${icon} Solo ${name}`;
-                        selectMod.appendChild(o);
-                    }
-                });
-            } else {
-                selectMod.innerHTML += `
-                    <option value="Presencial">🏛️ Solo Presencial (Permite Online)</option>
-                    <option value="Online">💻 Solo Online (Permite Presencial)</option>
-                `;
-            }
-        } catch (err) {
-            console.error("Error al cargar perfiles en modal de bloqueo:", err);
-            selectMod.innerHTML += `
-                <option value="Presencial">🏛️ Solo Presencial (Permite Online)</option>
-                <option value="Online">💻 Solo Online (Permite Presencial)</option>
-            `;
-        }
+    if (window._psychologistProfilesCache && window._psychologistProfilesCache.length > 0) {
+        populateBloqueoModalidadSelect(window._psychologistProfilesCache);
     }
 
     if (typeof openModal === 'function') {
@@ -10177,6 +10144,49 @@ async function openNuevoBloqueoModal() {
     } else {
         const m = document.getElementById('modal-nuevo-bloqueo-espacio');
         if (m) m.classList.remove('hide');
+    }
+
+    // Refrescar perfiles frescos en segundo plano
+    try {
+        const perfiles = await fetchPsychologistProfiles();
+        if (Array.isArray(perfiles) && perfiles.length > 0) {
+            populateBloqueoModalidadSelect(perfiles);
+        }
+    } catch (err) {
+        console.error("Error al cargar perfiles en modal de bloqueo:", err);
+    }
+}
+
+function populateBloqueoModalidadSelect(perfiles) {
+    const selectMod = document.getElementById('block-modal-modalidad');
+    if (!selectMod) return;
+    const currentVal = selectMod.value || 'Todas';
+    selectMod.innerHTML = '<option value="Todas">⛔ Todas las modalidades (Cierre total)</option>';
+    const addedNames = new Set();
+    if (Array.isArray(perfiles) && perfiles.length > 0) {
+        perfiles.forEach(p => {
+            const name = (p.nombre || p.modalidad || '').trim();
+            if (name && !addedNames.has(name.toLowerCase())) {
+                addedNames.add(name.toLowerCase());
+                let icon = '🏷️';
+                const lower = name.toLowerCase();
+                if (lower.includes('online')) icon = '💻';
+                else if (lower.includes('presencial')) icon = '🏛️';
+
+                const o = document.createElement('option');
+                o.value = name;
+                o.textContent = `${icon} Solo ${name}`;
+                selectMod.appendChild(o);
+            }
+        });
+    } else {
+        selectMod.innerHTML += `
+            <option value="Presencial">🏛️ Solo Presencial (Permite Online)</option>
+            <option value="Online">💻 Solo Online (Permite Presencial)</option>
+        `;
+    }
+    if (currentVal && Array.from(selectMod.options).some(o => o.value === currentVal)) {
+        selectMod.value = currentVal;
     }
 }
 
@@ -10299,6 +10309,7 @@ async function handleSaveBloqueoEspacio(e) {
 window.switchHorariosMode = switchHorariosMode;
 window.loadHorariosBloqueos = loadHorariosBloqueos;
 window.openNuevoBloqueoModal = openNuevoBloqueoModal;
+window.populateBloqueoModalidadSelect = populateBloqueoModalidadSelect;
 window.toggleBloqueoTipoPeriodo = toggleBloqueoTipoPeriodo;
 window.toggleBloqueoHoras = toggleBloqueoHoras;
 window.handleSaveBloqueoEspacio = handleSaveBloqueoEspacio;
@@ -11394,6 +11405,11 @@ async function loadAdminAvailability() {
         
         if (typeof updateCustomModalitiesSummary === 'function') {
             updateCustomModalitiesSummary();
+        }
+
+        window._psychologistProfilesCache = perfiles;
+        if (typeof populateBloqueoModalidadSelect === 'function') {
+            populateBloqueoModalidadSelect(perfiles);
         }
         
         if (esMiembroClinica && !tieneSubPersonal) {
@@ -12691,13 +12707,13 @@ function filterEventPatientSelect(query) {
 function downloadBackup() {
     try {
         const link = document.createElement('a');
-        link.href = '/api/backup';
+        link.href = '/api/backup?_t=' + Date.now();
         link.download = '';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     } catch (err) {
-        window.location.href = '/api/backup';
+        window.location.href = '/api/backup?_t=' + Date.now();
     }
 }
 
@@ -19318,23 +19334,23 @@ function refreshPatientPortal() {
     }
 }
 
-let _psychologistProfilesCache = null;
+window._psychologistProfilesCache = null;
 
 async function fetchPsychologistProfiles(forceRefresh = false) {
-    if (_psychologistProfilesCache && !forceRefresh) {
-        return _psychologistProfilesCache;
+    if (window._psychologistProfilesCache && window._psychologistProfilesCache.length > 0 && !forceRefresh) {
+        return window._psychologistProfilesCache;
     }
     try {
         const res = await fetch('/api/admin/availability?_t=' + Date.now());
         if (res.ok) {
             const data = await res.json();
-            _psychologistProfilesCache = data.perfiles || [];
-            return _psychologistProfilesCache;
+            window._psychologistProfilesCache = data.perfiles || [];
+            return window._psychologistProfilesCache;
         }
     } catch (err) {
         console.error("Error al consultar perfiles del psicólogo:", err);
     }
-    return _psychologistProfilesCache || [];
+    return window._psychologistProfilesCache || [];
 }
 
 async function populateSelectWithOptions(selectElement, perfiles, currentValue = null, includeAllOption = false) {
