@@ -18128,6 +18128,9 @@ async function submitFastBooking(e) {
         const data = await res.json();
         
         if (res.ok) {
+            if (typeof window.trackGoogleAdsConversion === 'function') {
+                window.trackGoogleAdsConversion();
+            }
             const therapistTitle = document.getElementById('fast-booking-therapist-name') ? document.getElementById('fast-booking-therapist-name').textContent : "Psicólogo";
             const gcalUrl = generateGoogleCalendarUrl(`Sesión de Terapia - ${therapistTitle}`, `Consulta Terapéutica (${modalidad})`, fecha, hora, 60);
             
