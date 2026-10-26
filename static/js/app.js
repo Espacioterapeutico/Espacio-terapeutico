@@ -9916,12 +9916,18 @@ function renderBloqueoCard(b, isPast = false) {
     // Badge de Modalidad
     const mod = (b.modalidad || 'Todas').trim();
     let modBadge = '';
-    if (mod.toLowerCase() === 'presencial') {
+    const modLower = mod.toLowerCase();
+    if (modLower === 'presencial') {
         modBadge = `<span style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #c7d2fe; display: inline-flex; align-items: center; gap: 0.35rem;">🏛️ Solo Presencial</span>`;
-    } else if (mod.toLowerCase() === 'online') {
+    } else if (modLower === 'online') {
         modBadge = `<span style="background: #ecfdf5; color: #065f46; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 0.35rem;">💻 Solo Online</span>`;
-    } else {
+    } else if (modLower === 'todas' || modLower === 'all') {
         modBadge = `<span style="background: #fee2e2; color: #991b1b; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 0.35rem;">⛔ Todas las modalidades</span>`;
+    } else {
+        let icon = '🏷️';
+        if (modLower.includes('online')) icon = '💻';
+        else if (modLower.includes('presencial')) icon = '🏛️';
+        modBadge = `<span style="background: #fdf4ff; color: #702e5e; font-weight: 700; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid #f5d0fe; display: inline-flex; align-items: center; gap: 0.35rem;">${icon} Solo ${mod}</span>`;
     }
 
     // Badge de Estado Pasado / Activo
@@ -10099,7 +10105,7 @@ async function loadHorariosBloqueos() {
     }
 }
 
-function openNuevoBloqueoModal() {
+async function openNuevoBloqueoModal() {
     const form = document.getElementById('form-nuevo-bloqueo-espacio');
     if (form) form.reset();
 
@@ -10128,33 +10134,41 @@ function openNuevoBloqueoModal() {
     if (chkTodoDia) chkTodoDia.checked = true;
     toggleBloqueoHoras(true);
 
-    // Populate modalities dynamically if there are custom profile names
+    // Cargar dinámicamente todas las modalidades y perfiles configurados del psicólogo
     const selectMod = document.getElementById('block-modal-modalidad');
     if (selectMod) {
-        const standardOptions = [
-            { value: 'Todas', text: '⛔ Todas las modalidades (Cierre total)' },
-            { value: 'Presencial', text: '🏛️ Solo Presencial (Permite Online)' },
-            { value: 'Online', text: '💻 Solo Online (Permite Presencial)' }
-        ];
-        selectMod.innerHTML = '';
-        standardOptions.forEach(opt => {
-            const o = document.createElement('option');
-            o.value = opt.value;
-            o.textContent = opt.text;
-            selectMod.appendChild(o);
-        });
+        selectMod.innerHTML = '<option value="Todas">⛔ Todas las modalidades (Cierre total)</option>';
+        try {
+            const perfiles = await fetchPsychologistProfiles();
+            const addedNames = new Set();
+            if (Array.isArray(perfiles) && perfiles.length > 0) {
+                perfiles.forEach(p => {
+                    const name = (p.nombre || p.modalidad || '').trim();
+                    if (name && !addedNames.has(name.toLowerCase())) {
+                        addedNames.add(name.toLowerCase());
+                        let icon = '🏷️';
+                        const lower = name.toLowerCase();
+                        if (lower.includes('online')) icon = '💻';
+                        else if (lower.includes('presencial')) icon = '🏛️';
 
-        // Add custom profile names if any
-        if (typeof currentAvailabilityProfiles !== 'undefined' && Array.isArray(currentAvailabilityProfiles)) {
-            currentAvailabilityProfiles.forEach(p => {
-                const name = (p.nombre || '').trim();
-                if (name && name.toLowerCase() !== 'presencial' && name.toLowerCase() !== 'online' && name.toLowerCase() !== 'todas') {
-                    const o = document.createElement('option');
-                    o.value = name;
-                    o.textContent = `🏷️ Solo ${name}`;
-                    selectMod.appendChild(o);
-                }
-            });
+                        const o = document.createElement('option');
+                        o.value = name;
+                        o.textContent = `${icon} Solo ${name}`;
+                        selectMod.appendChild(o);
+                    }
+                });
+            } else {
+                selectMod.innerHTML += `
+                    <option value="Presencial">🏛️ Solo Presencial (Permite Online)</option>
+                    <option value="Online">💻 Solo Online (Permite Presencial)</option>
+                `;
+            }
+        } catch (err) {
+            console.error("Error al cargar perfiles en modal de bloqueo:", err);
+            selectMod.innerHTML += `
+                <option value="Presencial">🏛️ Solo Presencial (Permite Online)</option>
+                <option value="Online">💻 Solo Online (Permite Presencial)</option>
+            `;
         }
     }
 

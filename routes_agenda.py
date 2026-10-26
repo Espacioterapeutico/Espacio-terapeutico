@@ -585,7 +585,26 @@ def generate_dynamic_slots(cursor, psicologo_id, target_date_str, requested_moda
             blk_dict = dict(blk)
             blk_mod = (blk_dict.get('modalidad') or 'Todas').strip().lower()
             is_all_mod = blk_mod in ('todas', 'all', '', 'todas las modalidades')
-            mod_match = is_all_mod or (blk_mod in perf_mod_clean or perf_mod_clean in blk_mod or blk_mod in perf_nom_clean or perf_nom_clean in blk_mod)
+            if is_all_mod:
+                mod_match = True
+            elif blk_mod == perf_nom_clean or blk_mod == perf_mod_clean:
+                mod_match = True
+            else:
+                blk_is_online = 'online' in blk_mod
+                blk_is_presencial = 'presencial' in blk_mod
+                perf_is_online = ('online' in perf_mod_clean or 'online' in perf_nom_clean)
+                perf_is_presencial = ('presencial' in perf_mod_clean or 'presencial' in perf_nom_clean)
+
+                if blk_mod == 'online' and not perf_is_online:
+                    mod_match = False
+                elif blk_mod == 'presencial' and not perf_is_presencial:
+                    mod_match = False
+                elif 'uptaeb' in blk_mod and ('uptaeb' not in perf_nom_clean and 'uptaeb' not in perf_mod_clean):
+                    mod_match = False
+                elif blk_is_online != perf_is_online and ('online' in blk_mod or 'online' in perf_nom_clean):
+                    mod_match = False
+                else:
+                    mod_match = (blk_mod in perf_nom_clean or perf_nom_clean in blk_mod or blk_mod in perf_mod_clean or perf_mod_clean in blk_mod)
             if not mod_match:
                 continue
             if blk_dict.get('todo_el_dia') == 1:
