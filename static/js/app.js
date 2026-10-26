@@ -18128,6 +18128,12 @@ async function submitFastBooking(e) {
         const data = await res.json();
         
         if (res.ok) {
+            try {
+                if (window.history && window.history.pushState) {
+                    const cleanPath = window.location.pathname;
+                    window.history.pushState(null, '', cleanPath + '?cita=confirmada');
+                }
+            } catch (e) {}
             if (typeof window.trackGoogleAdsConversion === 'function') {
                 window.trackGoogleAdsConversion();
             }
@@ -33577,6 +33583,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 window.resetFastBookingForm = function() {
+    try {
+        if (window.history && window.history.replaceState && window.location.search.includes('cita=confirmada')) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    } catch (e) {}
     const form = document.getElementById('fast-booking-form');
     if (form) {
         form.reset();
