@@ -1108,7 +1108,15 @@ def add_agenda_event():
     referencia = data.get('referencia')
     metodo_pago = data.get('metodo_pago')
     fecha_pago = data.get('fecha_pago')
-    confirmada = int(data.get('confirmada', 0) or 0)
+    confirmada_raw = data.get('confirmada')
+    from datetime import datetime
+    is_same_day = (fecha == datetime.now().strftime("%Y-%m-%d"))
+    if confirmada_raw is not None and str(confirmada_raw).strip() != '':
+        confirmada = int(confirmada_raw)
+    elif is_same_day:
+        confirmada = 1
+    else:
+        confirmada = 0
     hora_paciente = (data.get('hora_paciente') or '').strip() or None  # Hora en zona horaria del paciente (calculada en frontend)
     if not hora_paciente and paciente_id:
         try:
@@ -1956,12 +1964,18 @@ def fast_booking_book():
     try:
         monto, moneda = get_appointment_fee(cursor, patient_id, psicologo_id, modalidad)
         
+        # Citas agendadas para el mismo día se consideran confirmadas por defecto (coordinación previa directa)
+        from datetime import datetime
+        is_same_day = (fecha_norm == datetime.now().strftime("%Y-%m-%d"))
+        confirmada_val = 1 if is_same_day else 0
+
         cursor.execute("""
             INSERT INTO agenda_finanzas (
                 paciente_id, fecha, hora, hora_paciente, tipo_consulta, monto, moneda, 
-                estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia, creado_por_user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?)
-        """, (patient_id, fecha_norm, hora_norm, hora_paciente, modalidad, monto, moneda, f"Auto-agendada rápida por paciente. Cédula: {cedula}", psicologo_id))
+                estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia, creado_por_user_id,
+                confirmada
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?, ?)
+        """, (patient_id, fecha_norm, hora_norm, hora_paciente, modalidad, monto, moneda, f"Auto-agendada rápida por paciente. Cédula: {cedula}", psicologo_id, confirmada_val))
         agenda_id = cursor.lastrowid
         
         if patient_id and psicologo_id:

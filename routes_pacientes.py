@@ -1361,9 +1361,9 @@ def patient_add_appointment():
             INSERT INTO agenda_finanzas (
                 paciente_id, fecha, hora, hora_paciente, tipo_consulta, monto, moneda, 
                 estado_pago, control_uso, google_event_id, cantidad_sesiones, referencia,
-                creado_por_user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?)
-        """, (patient_id, fecha_norm, hora_norm, hora_paciente, tipo_consulta, monto, moneda, f"Auto-agendada por paciente. Nota: {nota}", psicologo_id))
+                creado_por_user_id, confirmada
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', NULL, 1, ?, ?, ?)
+        """, (patient_id, fecha_norm, hora_norm, hora_paciente, tipo_consulta, monto, moneda, f"Auto-agendada por paciente. Nota: {nota}", psicologo_id, 1 if (fecha_norm == datetime.now().strftime("%Y-%m-%d")) else 0))
         agenda_id = cursor.lastrowid
         
         pac_nombre = f"{paciente['nombres']} {paciente['apellidos']}"
