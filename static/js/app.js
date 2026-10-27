@@ -7938,16 +7938,18 @@ function renderUpcomingConsultationPage(idx) {
         : `<span class="badge" style="background:#f59e0b; color:#fff; padding:2px 6px; font-size:0.7rem; border-radius:4px; font-weight:700;">⏳ Pendiente</span>`;
 
     const btnEvolucionar = !nextE.has_session 
-        ? `<button class="btn btn-primary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: var(--primary-color); border: none;" onclick="openRegisterSessionFromEvent(${nextE.id})">💜 Evolucionar</button>` 
+        ? `<button class="btn btn-primary btn-sm next-patient-btn" style="background: var(--primary-color); border: none;" onclick="openRegisterSessionFromEvent(${nextE.id})">💜 Evolucionar</button>` 
         : '';
 
-    const btnEditar = `<button class="btn btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #6366f1; color: white; border: none; border-radius: 4px;" onclick="openEditEventModal(${nextE.id})">✏️ Editar</button>`;
+    const btnFicha = `<button class="btn btn-secondary btn-sm next-patient-btn" onclick="openSummaryModal(${nextE.paciente_id})">📄 Ficha</button>`;
 
-    const btnConfirmar = `<button class="btn btn-sm ${isConfirmed ? 'btn-outline-success' : 'btn-success'}" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; ${isConfirmed ? 'border: 1px solid #10b981; color: #047857; background: transparent;' : 'background: #10b981; color: white; border: none;'}" onclick="quickMarkApptStatusFromDashboard(${nextE.id}, 'Confirmada')">✅ Confirmar</button>`;
+    const btnEditar = `<button class="btn btn-sm next-patient-btn" style="background: #6366f1; color: white; border: none;" onclick="openEditEventModal(${nextE.id})">✏️ Editar</button>`;
 
-    const btnCancelar = `<button class="btn btn-sm btn-warning" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #f59e0b; color: white; border: none;" onclick="openCancelAppointmentModal(${nextE.id})">🟡 Cancelar</button>`;
+    const btnConfirmar = `<button class="btn btn-sm next-patient-btn ${isConfirmed ? 'btn-outline-success' : 'btn-success'}" style="${isConfirmed ? 'border: 1px solid #10b981; color: #047857; background: transparent;' : 'background: #10b981; color: white; border: none;'}" onclick="quickMarkApptStatusFromDashboard(${nextE.id}, 'Confirmada')">✅ Confirmar</button>`;
 
-    const btnEliminar = `<button class="btn btn-sm btn-danger" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #ef4444; color: white; border: none;" onclick="deleteAgendaEventFromDashboard(${nextE.id})">🗑️ Eliminar</button>`;
+    const btnCancelar = `<button class="btn btn-sm btn-warning next-patient-btn" style="background: #f59e0b; color: white; border: none;" onclick="openCancelAppointmentModal(${nextE.id})">🟡 Cancelar</button>`;
+
+    const btnEliminar = `<button class="btn btn-sm btn-danger next-patient-btn" style="background: #ef4444; color: white; border: none;" onclick="deleteAgendaEventFromDashboard(${nextE.id})">🗑️ Eliminar</button>`;
 
     const paginationControls = totalCount > 1 ? `
         <div class="pagination-capsule-wrapper" style="margin-top: 0; margin-bottom: 0.65rem;">
@@ -7976,9 +7978,9 @@ function renderUpcomingConsultationPage(idx) {
                 </div>
                 <p class="text-secondary" style="margin: 0.25rem 0 0 0; font-size:0.85rem;">${fechaText} | Modalidad: <strong>${nextE.tipo_consulta}</strong></p>
             </div>
-            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
+            <div class="next-patient-btn-grid">
                 ${btnEvolucionar}
-                <button class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem;" onclick="openSummaryModal(${nextE.paciente_id})">📄 Ver Ficha</button>
+                ${btnFicha}
                 ${btnEditar}
                 ${btnConfirmar}
                 ${btnCancelar}

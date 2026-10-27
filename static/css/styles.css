@@ -1085,6 +1085,47 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 0.25rem;
 }
 
+.next-patient-btn-grid {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.next-patient-btn-grid .next-patient-btn {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    cursor: pointer;
+    line-height: 1.2;
+    transition: all 0.15s ease;
+}
+
+@media (max-width: 650px) {
+    .next-patient-btn-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        width: 100% !important;
+        gap: 0.35rem !important;
+        margin-top: 0.75rem !important;
+    }
+    .next-patient-btn-grid .next-patient-btn {
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 0.42rem 0.15rem !important;
+        font-size: 0.72rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        border-radius: 6px !important;
+    }
+}
+
 .recap-box {
     background-color: white;
     border-radius: var(--radius-sm);
