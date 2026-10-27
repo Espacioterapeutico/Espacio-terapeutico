@@ -1010,12 +1010,25 @@
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
                                 <span>👤</span> Sobre mí y mi enfoque
                             </h3>
-                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(-1)" title="Sección anterior">◀</button>
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(1)" title="Siguiente sección">▶</button>
-                            </div>
                         </div>
                         <div id="pub-profile-bio" style="font-size: 0.96rem; line-height: 1.65; color: #334155;">Cargando información profesional...</div>
+
+                        <!-- SECCIÓN DESTACADA DE INSTAGRAM -->
+                        <div id="pub-profile-ig-section" style="margin-top: 1.6rem; padding-top: 1.35rem; border-top: 1.5px dashed #e2e8f0; display: none;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.95rem; flex-wrap: wrap;">
+                                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); color: white; font-size: 0.85rem; box-shadow: 0 2px 6px rgba(214, 36, 159, 0.25);">📸</span>
+                                    <span>Contenido y Reflexiones en Instagram</span>
+                                </h4>
+                                <a id="pub-profile-ig-link" href="#" target="_blank" rel="noopener noreferrer" style="font-size: 0.84rem; font-weight: 700; color: #d6249f; text-decoration: none; display: flex; align-items: center; gap: 0.3rem;">
+                                    <span>Seguir en Instagram</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
+                                </a>
+                            </div>
+                            <div id="pub-profile-ig-posts-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; align-items: start;">
+                                <!-- Post embeds dinámicos de Instagram -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1026,10 +1039,6 @@
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
                                 <span>🌐</span> Modalidades de Atención
                             </h3>
-                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(-1)" title="Sección anterior">◀</button>
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(1)" title="Siguiente sección">▶</button>
-                            </div>
                         </div>
                         <div id="pub-profile-mods-detail">
                             <!-- Detalles dinámicos de modalidades -->
@@ -1044,10 +1053,6 @@
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
                                 <span>✍️</span> Artículos y Reflexiones
                             </h3>
-                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(-1)" title="Sección anterior">◀</button>
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(1)" title="Siguiente sección">▶</button>
-                            </div>
                         </div>
                         <p style="color: #64748b; font-size: 0.88rem; margin-top: 0; margin-bottom: 1.15rem;">Lecturas y herramientas compartidas por el profesional para tu bienestar emocional.</p>
                         <div id="pub-profile-blog-list">
@@ -1063,10 +1068,6 @@
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
                                 <span>❓</span> Preguntas Frecuentes
                             </h3>
-                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(-1)" title="Sección anterior">◀</button>
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(1)" title="Siguiente sección">▶</button>
-                            </div>
                         </div>
                         <p style="color: #64748b; font-size: 0.88rem; margin-top: 0; margin-bottom: 1.15rem;">Toca cualquier pregunta para desplegar la respuesta.</p>
                         <div id="pub-profile-faq-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
@@ -1082,10 +1083,6 @@
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
                                 <span>📲</span> Canales de Contacto Directo
                             </h3>
-                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(-1)" title="Sección anterior">◀</button>
-                                <button type="button" class="prof-step-arrow" onclick="stepPublicProfileTab(1)" title="Siguiente sección">▶</button>
-                            </div>
                         </div>
                         <p style="color: #64748b; font-size: 0.88rem; margin-top: 0; margin-bottom: 1.1rem;">Puedes comunicarte directamente o seguir mi contenido en redes sociales:</p>
                         <div id="pub-profile-contact-list">
@@ -3409,6 +3406,32 @@
                                     <div class="form-group">
                                         <label for="prof-linkedin" style="font-weight: 700;">LinkedIn (URL perfil)</label>
                                         <input type="text" id="prof-linkedin" class="form-control" placeholder="Ej: https://linkedin.com/in/...">
+                                    </div>
+                                </div>
+
+                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.15rem; border-radius: 12px; margin-top: 0.5rem; margin-bottom: 0.85rem;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                                        <label style="font-weight: 700; color: #1e293b; font-size: 0.95rem; display: flex; align-items: center; gap: 0.45rem; margin: 0;">
+                                            <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); color:white; font-size:0.75rem;">📸</span>
+                                            Publicaciones Destacadas de Instagram (Hasta 3)
+                                        </label>
+                                        <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">Se muestran en la pestaña "Conóceme"</span>
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: #64748b; margin-top: 0; margin-bottom: 0.85rem;">Pega el enlace de hasta 3 publicaciones o reels de Instagram para previsualizarlos debajo de tu enfoque (ej: <code>https://www.instagram.com/p/.../</code> o <code>https://www.instagram.com/reel/.../</code>):</p>
+                                    
+                                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.65rem;">
+                                        <div style="display: flex; gap: 0.65rem; align-items: center;">
+                                            <span style="font-size: 0.82rem; font-weight: 700; color: #475569; width: 65px; flex-shrink: 0;">Post 1:</span>
+                                            <input type="url" id="prof-ig-post-1" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.85rem;">
+                                        </div>
+                                        <div style="display: flex; gap: 0.65rem; align-items: center;">
+                                            <span style="font-size: 0.82rem; font-weight: 700; color: #475569; width: 65px; flex-shrink: 0;">Post 2:</span>
+                                            <input type="url" id="prof-ig-post-2" class="form-control" placeholder="https://www.instagram.com/reel/..." style="font-size: 0.85rem;">
+                                        </div>
+                                        <div style="display: flex; gap: 0.65rem; align-items: center;">
+                                            <span style="font-size: 0.82rem; font-weight: 700; color: #475569; width: 65px; flex-shrink: 0;">Post 3:</span>
+                                            <input type="url" id="prof-ig-post-3" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.85rem;">
+                                        </div>
                                     </div>
                                 </div>
 

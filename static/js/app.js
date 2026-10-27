@@ -26792,6 +26792,11 @@ function populateProfileUI(data) {
     if (document.getElementById('prof-cta-texto')) document.getElementById('prof-cta-texto').value = redes.cta_texto || '';
     if (document.getElementById('prof-cta-link')) document.getElementById('prof-cta-link').value = redes.cta_link || '';
 
+    const igPosts = Array.isArray(redes.ig_posts) ? redes.ig_posts : [];
+    if (document.getElementById('prof-ig-post-1')) document.getElementById('prof-ig-post-1').value = igPosts[0] || '';
+    if (document.getElementById('prof-ig-post-2')) document.getElementById('prof-ig-post-2').value = igPosts[1] || '';
+    if (document.getElementById('prof-ig-post-3')) document.getElementById('prof-ig-post-3').value = igPosts[2] || '';
+
     selectProfilePalette(data.paleta_colores || 'violeta');
     _profFaqsDraft = Array.isArray(data.faqs) ? JSON.parse(JSON.stringify(data.faqs)) : [];
     _profBlogDraft = Array.isArray(data.blog_posts) ? JSON.parse(JSON.stringify(data.blog_posts)) : [];
@@ -26894,11 +26899,18 @@ async function savePublicProfileSettings() {
         domicilio_detalle: document.getElementById('mod-domicilio-detalle')?.value.trim() || ''
     };
 
+    const igPosts = [
+        document.getElementById('prof-ig-post-1')?.value.trim() || '',
+        document.getElementById('prof-ig-post-2')?.value.trim() || '',
+        document.getElementById('prof-ig-post-3')?.value.trim() || ''
+    ].filter(Boolean);
+
     const redes = {
         instagram: document.getElementById('prof-instagram') ? document.getElementById('prof-instagram').value.trim() : '',
         linkedin: document.getElementById('prof-linkedin') ? document.getElementById('prof-linkedin').value.trim() : '',
         cta_texto: document.getElementById('prof-cta-texto') ? document.getElementById('prof-cta-texto').value.trim() : '',
-        cta_link: document.getElementById('prof-cta-link') ? document.getElementById('prof-cta-link').value.trim() : ''
+        cta_link: document.getElementById('prof-cta-link') ? document.getElementById('prof-cta-link').value.trim() : '',
+        ig_posts: igPosts
     };
 
     const previewImg = document.getElementById('set-perfil-preview-img');
@@ -27116,6 +27128,68 @@ async function loadDedicatedTherapistProfile(slug) {
                     <div style="background: var(--prof-soft); border-left: 4px solid var(--prof-accent); padding: 0.9rem 1.1rem; border-radius: 0 12px 12px 0; color: #1e293b; font-weight: 600; font-size: 0.95rem; line-height: 1.55; text-align: left;">
                         ${escapeHtml(rawBio)}
                     </div>`;
+            }
+        }
+
+        // Renderizar sección destacada de Instagram debajo de "Conóceme"
+        const igSection = document.getElementById('pub-profile-ig-section');
+        const igContainer = document.getElementById('pub-profile-ig-posts-container');
+        const igFollowLink = document.getElementById('pub-profile-ig-link');
+        
+        const redesObj = (t && t.redes_sociales) || {};
+        const igHandle = (redesObj.instagram || '').replace(/^@/, '').trim();
+        const rawIgPosts = Array.isArray(redesObj.ig_posts) ? redesObj.ig_posts : [];
+        const igPosts = rawIgPosts.map(p => String(p || '').trim()).filter(Boolean);
+
+        if (igFollowLink) {
+            if (igHandle) {
+                igFollowLink.href = `https://instagram.com/${igHandle}`;
+                const handleSpan = igFollowLink.querySelector('span');
+                if (handleSpan) handleSpan.textContent = `@${igHandle} en Instagram`;
+                igFollowLink.style.display = 'inline-flex';
+            } else {
+                igFollowLink.style.display = 'none';
+            }
+        }
+
+        if (igSection && igContainer) {
+            if (igPosts.length > 0) {
+                igSection.style.display = 'block';
+                igContainer.innerHTML = igPosts.map((postUrl, pIdx) => {
+                    let shortcode = '';
+                    const match = postUrl.match(/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+                    if (match && match[1]) {
+                        shortcode = match[1];
+                    }
+
+                    if (shortcode) {
+                        return `
+                            <div class="prof-ig-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,0.03); display:flex; flex-direction:column; min-width:0;">
+                                <iframe src="https://www.instagram.com/p/${shortcode}/embed" width="100%" height="460" frameborder="0" scrolling="no" allowtransparency="true" style="border:none; width:100%; border-radius:14px 14px 0 0; background:#fff;" loading="lazy"></iframe>
+                                <div style="padding:0.65rem 0.95rem; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:0.78rem; font-weight:700; color:#64748b;">Publicación #${pIdx + 1}</span>
+                                    <a href="${postUrl}" target="_blank" rel="noopener noreferrer" style="font-size:0.8rem; font-weight:700; color:#d6249f; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
+                                        Abrir en Instagram ↗
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div class="prof-ig-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.4rem; box-shadow:0 4px 14px rgba(0,0,0,0.03); text-align:center;">
+                                <div style="width:48px; height:48px; margin:0 auto 0.75rem auto; border-radius:12px; background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); display:flex; align-items:center; justify-content:center; color:white; font-size:1.3rem; box-shadow:0 4px 10px rgba(214, 36, 159, 0.25);">📸</div>
+                                <h5 style="margin:0 0 0.4rem 0; font-size:0.96rem; font-weight:800; color:#1e293b;">Ver publicación en Instagram</h5>
+                                <p style="font-size:0.82rem; color:#64748b; margin-bottom:0.95rem;">Contenido del perfil profesional</p>
+                                <a href="${postUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background:#d6249f; color:white; font-weight:700; font-size:0.82rem; border-radius:8px; padding:0.45rem 0.95rem; text-decoration:none; display:inline-block;">
+                                    Ver en Instagram ↗
+                                </a>
+                            </div>
+                        `;
+                    }
+                }).join('');
+            } else {
+                igSection.style.display = 'none';
+                igContainer.innerHTML = '';
             }
         }
 
