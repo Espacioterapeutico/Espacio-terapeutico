@@ -907,7 +907,8 @@ def get_agenda():
             SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,
                    (CASE WHEN EXISTS (
                        SELECT 1 FROM sesiones s 
-                       WHERE s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha)
+                       WHERE (s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha))
+                         AND (s.estado IS NULL OR (s.estado NOT LIKE '%Cancelad%' AND s.estado != 'Reprogramada'))
                    ) THEN 1 ELSE 0 END) as has_session
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
@@ -926,7 +927,8 @@ def get_agenda():
             SELECT af.*, p.nombres, p.apellidos, p.cedula, p.telefono, p.telefono as paciente_telefono,
                    (CASE WHEN EXISTS (
                        SELECT 1 FROM sesiones s 
-                       WHERE s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha)
+                       WHERE (s.agenda_id = af.id OR (s.paciente_id = af.paciente_id AND s.fecha = af.fecha))
+                         AND (s.estado IS NULL OR (s.estado NOT LIKE '%Cancelad%' AND s.estado != 'Reprogramada'))
                    ) THEN 1 ELSE 0 END) as has_session
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
