@@ -7941,6 +7941,8 @@ function renderUpcomingConsultationPage(idx) {
         ? `<button class="btn btn-primary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: var(--primary-color); border: none;" onclick="openRegisterSessionFromEvent(${nextE.id})">💜 Evolucionar</button>` 
         : '';
 
+    const btnEditar = `<button class="btn btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #6366f1; color: white; border: none; border-radius: 4px;" onclick="openEditEventModal(${nextE.id})">✏️ Editar</button>`;
+
     const btnConfirmar = `<button class="btn btn-sm ${isConfirmed ? 'btn-outline-success' : 'btn-success'}" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; ${isConfirmed ? 'border: 1px solid #10b981; color: #047857; background: transparent;' : 'background: #10b981; color: white; border: none;'}" onclick="quickMarkApptStatusFromDashboard(${nextE.id}, 'Confirmada')">✅ Confirmar</button>`;
 
     const btnCancelar = `<button class="btn btn-sm btn-warning" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; background: #f59e0b; color: white; border: none;" onclick="openCancelAppointmentModal(${nextE.id})">🟡 Cancelar</button>`;
@@ -7977,6 +7979,7 @@ function renderUpcomingConsultationPage(idx) {
             <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
                 ${btnEvolucionar}
                 <button class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.78rem;" onclick="openSummaryModal(${nextE.paciente_id})">📄 Ver Ficha</button>
+                ${btnEditar}
                 ${btnConfirmar}
                 ${btnCancelar}
                 ${btnEliminar}
@@ -9348,6 +9351,7 @@ async function openEditEventModal(eventId) {
         alert(err.message);
     }
 }
+window.openEditEventModal = openEditEventModal;
 
 async function openNewEventModalFromSummary(patientId, defaultMode = 'consulta') {
     closeModal('summary-modal');
