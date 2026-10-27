@@ -848,6 +848,47 @@
                 box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
                 padding: 1.85rem 2rem;
             }
+            #public-therapist-profile-screen .pub-profile-ig-grid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 0.85rem;
+                align-items: stretch;
+            }
+            #public-therapist-profile-screen .pub-profile-ig-card {
+                background: #ffffff;
+                border: 1.5px solid #e2e8f0;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+            }
+            #public-therapist-profile-screen .pub-profile-ig-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+                border-color: #cbd5e1;
+            }
+            #public-therapist-profile-screen .pub-profile-ig-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.35rem 0.85rem;
+                border-radius: 999px;
+                background: rgba(214, 36, 159, 0.08);
+                border: 1.2px solid rgba(214, 36, 159, 0.25);
+                color: #d6249f;
+                font-weight: 700;
+                font-size: 0.85rem;
+                text-decoration: none;
+                transition: all 0.2s ease;
+            }
+            #public-therapist-profile-screen .pub-profile-ig-badge:hover {
+                background: #d6249f;
+                color: #ffffff;
+                box-shadow: 0 4px 12px rgba(214, 36, 159, 0.3);
+            }
             #public-therapist-profile-screen .prof-step-arrow {
                 width: 34px;
                 height: 34px;
@@ -941,6 +982,36 @@
                 #public-therapist-profile-screen .prof-pane-title {
                     font-size: 1.08rem !important;
                 }
+                #public-therapist-profile-screen .pub-profile-ig-grid {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    overflow-x: auto !important;
+                    scroll-snap-type: x mandatory !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    gap: 0.85rem !important;
+                    padding-bottom: 0.85rem !important;
+                    margin: 0 -0.5rem !important;
+                    padding-left: 0.5rem !important;
+                    padding-right: 0.5rem !important;
+                }
+                #public-therapist-profile-screen .pub-profile-ig-grid::-webkit-scrollbar {
+                    height: 5px;
+                }
+                #public-therapist-profile-screen .pub-profile-ig-grid::-webkit-scrollbar-track {
+                    background: #f1f5f9;
+                    border-radius: 10px;
+                }
+                #public-therapist-profile-screen .pub-profile-ig-grid::-webkit-scrollbar-thumb {
+                    background: #cbd5e1;
+                    border-radius: 10px;
+                }
+                #public-therapist-profile-screen .pub-profile-ig-card {
+                    flex: 0 0 85% !important;
+                    max-width: 310px !important;
+                    min-width: 250px !important;
+                    scroll-snap-align: start !important;
+                }
             }
         </style>
 
@@ -1015,17 +1086,18 @@
 
                         <!-- SECCIÓN DESTACADA DE INSTAGRAM -->
                         <div id="pub-profile-ig-section" style="margin-top: 1.6rem; padding-top: 1.35rem; border-top: 1.5px dashed #e2e8f0; display: none;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.95rem; flex-wrap: wrap;">
-                                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); color: white; font-size: 0.85rem; box-shadow: 0 2px 6px rgba(214, 36, 159, 0.25);">📸</span>
-                                    <span>Contenido y Reflexiones en Instagram</span>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.05rem; flex-wrap: wrap;">
+                                <h4 style="margin: 0; font-size: 1.08rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-title, 'Outfit', sans-serif);">
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); color: white; font-size: 0.92rem; box-shadow: 0 2px 8px rgba(214, 36, 159, 0.28);">📸</span>
+                                    <span>Ver mi contenido</span>
                                 </h4>
-                                <a id="pub-profile-ig-link" href="#" target="_blank" rel="noopener noreferrer" style="font-size: 0.84rem; font-weight: 700; color: #d6249f; text-decoration: none; display: flex; align-items: center; gap: 0.3rem;">
-                                    <span>Seguir en Instagram</span>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
+                                <a id="pub-profile-ig-link" href="#" target="_blank" rel="noopener noreferrer" class="pub-profile-ig-badge">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                                    <span>@hoymeconecto</span>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
                                 </a>
                             </div>
-                            <div id="pub-profile-ig-posts-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; align-items: start;">
+                            <div id="pub-profile-ig-posts-container" class="pub-profile-ig-grid">
                                 <!-- Post embeds dinámicos de Instagram -->
                             </div>
                         </div>
@@ -3417,23 +3489,52 @@
                                         </label>
                                         <small style="color: #64748b; font-weight: 600;">Se muestran en la pestaña "Conóceme"</small>
                                     </div>
-                                    <small style="color: #64748b; font-size: 0.78rem; display: block; margin-bottom: 0.95rem;">Pega el enlace de hasta 3 publicaciones o reels para previsualizarlos en tu perfil (ej: <code>https://www.instagram.com/p/...</code> o <code>/reel/...</code>):</small>
+                                    <small style="color: #64748b; font-size: 0.78rem; display: block; margin-bottom: 0.95rem;">Puedes asignarle un título o tema personalizado y el enlace de hasta 3 publicaciones o reels:</small>
                                     
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
-                                        <div class="form-group" style="margin-bottom: 0;">
-                                            <label for="prof-ig-post-1" style="font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">Publicación o Reel 1</label>
-                                            <input type="url" id="prof-ig-post-1" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.88rem;">
-                                            <small style="color: #64748b; font-size: 0.76rem;">Ej: Enlace directo al post 1</small>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.85rem;">
+                                        <!-- POST 1 -->
+                                        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <div style="font-size: 0.82rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
+                                                <span style="color: #d6249f;">●</span> Post Destacado 1
+                                            </div>
+                                            <div>
+                                                <label for="prof-ig-title-1" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Título / Tema:</label>
+                                                <input type="text" id="prof-ig-title-1" class="form-control" placeholder="Ej: Discordancia sexual" style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
+                                            </div>
+                                            <div>
+                                                <label for="prof-ig-post-1" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Enlace de Instagram:</label>
+                                                <input type="url" id="prof-ig-post-1" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
+                                            </div>
                                         </div>
-                                        <div class="form-group" style="margin-bottom: 0;">
-                                            <label for="prof-ig-post-2" style="font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">Publicación o Reel 2</label>
-                                            <input type="url" id="prof-ig-post-2" class="form-control" placeholder="https://www.instagram.com/reel/..." style="font-size: 0.88rem;">
-                                            <small style="color: #64748b; font-size: 0.76rem;">Ej: Enlace directo al post 2</small>
+
+                                        <!-- POST 2 -->
+                                        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <div style="font-size: 0.82rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
+                                                <span style="color: #d6249f;">●</span> Post Destacado 2
+                                            </div>
+                                            <div>
+                                                <label for="prof-ig-title-2" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Título / Tema:</label>
+                                                <input type="text" id="prof-ig-title-2" class="form-control" placeholder="Ej: Herramientas para la ansiedad" style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
+                                            </div>
+                                            <div>
+                                                <label for="prof-ig-post-2" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Enlace de Instagram:</label>
+                                                <input type="url" id="prof-ig-post-2" class="form-control" placeholder="https://www.instagram.com/reel/..." style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
+                                            </div>
                                         </div>
-                                        <div class="form-group" style="margin-bottom: 0;">
-                                            <label for="prof-ig-post-3" style="font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">Publicación o Reel 3</label>
-                                            <input type="url" id="prof-ig-post-3" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.88rem;">
-                                            <small style="color: #64748b; font-size: 0.76rem;">Ej: Enlace directo al post 3</small>
+
+                                        <!-- POST 3 -->
+                                        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <div style="font-size: 0.82rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
+                                                <span style="color: #d6249f;">●</span> Post Destacado 3
+                                            </div>
+                                            <div>
+                                                <label for="prof-ig-title-3" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Título / Tema:</label>
+                                                <input type="text" id="prof-ig-title-3" class="form-control" placeholder="Ej: Gestión de emociones" style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
+                                            </div>
+                                            <div>
+                                                <label for="prof-ig-post-3" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Enlace de Instagram:</label>
+                                                <input type="url" id="prof-ig-post-3" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

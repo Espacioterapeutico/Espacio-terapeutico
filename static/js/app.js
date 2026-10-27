@@ -26795,9 +26795,21 @@ function populateProfileUI(data) {
     if (document.getElementById('prof-cta-link')) document.getElementById('prof-cta-link').value = redes.cta_link || '';
 
     const igPosts = Array.isArray(redes.ig_posts) ? redes.ig_posts : [];
-    if (document.getElementById('prof-ig-post-1')) document.getElementById('prof-ig-post-1').value = igPosts[0] || '';
-    if (document.getElementById('prof-ig-post-2')) document.getElementById('prof-ig-post-2').value = igPosts[1] || '';
-    if (document.getElementById('prof-ig-post-3')) document.getElementById('prof-ig-post-3').value = igPosts[2] || '';
+    for (let i = 1; i <= 3; i++) {
+        const item = igPosts[i - 1];
+        let postTitle = '';
+        let postUrl = '';
+        if (item) {
+            if (typeof item === 'object') {
+                postTitle = item.title || '';
+                postUrl = item.url || '';
+            } else {
+                postUrl = String(item || '');
+            }
+        }
+        if (document.getElementById(`prof-ig-title-${i}`)) document.getElementById(`prof-ig-title-${i}`).value = postTitle;
+        if (document.getElementById(`prof-ig-post-${i}`)) document.getElementById(`prof-ig-post-${i}`).value = postUrl;
+    }
 
     selectProfilePalette(data.paleta_colores || 'violeta');
     _profFaqsDraft = Array.isArray(data.faqs) ? JSON.parse(JSON.stringify(data.faqs)) : [];
@@ -26901,11 +26913,17 @@ async function savePublicProfileSettings() {
         domicilio_detalle: document.getElementById('mod-domicilio-detalle')?.value.trim() || ''
     };
 
-    const igPosts = [
-        document.getElementById('prof-ig-post-1')?.value.trim() || '',
-        document.getElementById('prof-ig-post-2')?.value.trim() || '',
-        document.getElementById('prof-ig-post-3')?.value.trim() || ''
-    ].filter(Boolean);
+    const igPosts = [];
+    for (let i = 1; i <= 3; i++) {
+        const postTitle = document.getElementById(`prof-ig-title-${i}`)?.value.trim() || '';
+        const postUrl = document.getElementById(`prof-ig-post-${i}`)?.value.trim() || '';
+        if (postUrl || postTitle) {
+            igPosts.push({
+                title: postTitle,
+                url: postUrl
+            });
+        }
+    }
 
     const redes = {
         instagram: document.getElementById('prof-instagram') ? document.getElementById('prof-instagram').value.trim() : '',
@@ -27141,13 +27159,27 @@ async function loadDedicatedTherapistProfile(slug) {
         const redesObj = (t && t.redes_sociales) || {};
         const igHandle = (redesObj.instagram || '').replace(/^@/, '').trim();
         const rawIgPosts = Array.isArray(redesObj.ig_posts) ? redesObj.ig_posts : [];
-        const igPosts = rawIgPosts.map(p => String(p || '').trim()).filter(Boolean);
+        const igPosts = rawIgPosts.map(p => {
+            if (typeof p === 'object' && p !== null) {
+                return {
+                    title: String(p.title || '').trim(),
+                    url: String(p.url || '').trim()
+                };
+            }
+            return {
+                title: '',
+                url: String(p || '').trim()
+            };
+        }).filter(p => p.url);
 
         if (igFollowLink) {
             if (igHandle) {
                 igFollowLink.href = `https://instagram.com/${igHandle}`;
-                const handleSpan = igFollowLink.querySelector('span');
-                if (handleSpan) handleSpan.textContent = `@${igHandle} en Instagram`;
+                igFollowLink.innerHTML = `
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                    <span>@${igHandle}</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
+                `;
                 igFollowLink.style.display = 'inline-flex';
             } else {
                 igFollowLink.style.display = 'none';
@@ -27157,7 +27189,13 @@ async function loadDedicatedTherapistProfile(slug) {
         if (igSection && igContainer) {
             if (igPosts.length > 0) {
                 igSection.style.display = 'block';
-                igContainer.innerHTML = igPosts.map((postUrl, pIdx) => {
+                const cols = Math.min(igPosts.length, 3);
+                igContainer.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+                const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                
+                igContainer.innerHTML = igPosts.map((postItem) => {
+                    const postUrl = postItem.url;
+                    const postTitle = postItem.title;
                     let shortcode = '';
                     const match = postUrl.match(/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
                     if (match && match[1]) {
@@ -27166,24 +27204,39 @@ async function loadDedicatedTherapistProfile(slug) {
 
                     if (shortcode) {
                         return `
-                            <div class="prof-ig-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,0.03); display:flex; flex-direction:column; min-width:0;">
-                                <iframe src="https://www.instagram.com/p/${shortcode}/embed" width="100%" height="460" frameborder="0" scrolling="no" allowtransparency="true" style="border:none; width:100%; border-radius:14px 14px 0 0; background:#fff;" loading="lazy"></iframe>
-                                <div style="padding:0.65rem 0.95rem; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
-                                    <span style="font-size:0.78rem; font-weight:700; color:#64748b;">Publicación #${pIdx + 1}</span>
-                                    <a href="${postUrl}" target="_blank" rel="noopener noreferrer" style="font-size:0.8rem; font-weight:700; color:#d6249f; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
-                                        Abrir en Instagram ↗
-                                    </a>
-                                </div>
+                            <div class="pub-profile-ig-card">
+                                <iframe src="https://www.instagram.com/p/${shortcode}/embed" width="100%" height="450" frameborder="0" scrolling="no" allowtransparency="true" style="border:none; width:100%; border-radius:14px 14px 0 0; background:#fff;" loading="lazy"></iframe>
+                                ${postTitle ? `
+                                    <div style="padding:0.75rem 0.95rem; background:#ffffff; border-top:1px solid #f1f5f9; display:flex; flex-direction:column; gap:0.35rem; flex:1; justify-content:space-between;">
+                                        <h5 style="margin:0; font-family:var(--font-title, 'Outfit', sans-serif); font-size:0.92rem; font-weight:800; color:#1e293b; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;" title="${esc(postTitle)}">
+                                            ${esc(postTitle)}
+                                        </h5>
+                                        <div style="display:flex; justify-content:flex-end; align-items:center; padding-top:0.25rem;">
+                                            <a href="${postUrl}" target="_blank" rel="noopener noreferrer" style="font-size:0.8rem; font-weight:700; color:#d6249f; text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem;">
+                                                <span>Ver en Instagram</span>
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
+                                            </a>
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <div style="padding:0.65rem 0.95rem; background:#ffffff; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; align-items:center;">
+                                        <a href="${postUrl}" target="_blank" rel="noopener noreferrer" style="font-size:0.82rem; font-weight:700; color:#d6249f; text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem;">
+                                            <span>Ver en Instagram</span>
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
+                                        </a>
+                                    </div>
+                                `}
                             </div>
                         `;
                     } else {
                         return `
-                            <div class="prof-ig-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.4rem; box-shadow:0 4px 14px rgba(0,0,0,0.03); text-align:center;">
-                                <div style="width:48px; height:48px; margin:0 auto 0.75rem auto; border-radius:12px; background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); display:flex; align-items:center; justify-content:center; color:white; font-size:1.3rem; box-shadow:0 4px 10px rgba(214, 36, 159, 0.25);">📸</div>
-                                <h5 style="margin:0 0 0.4rem 0; font-size:0.96rem; font-weight:800; color:#1e293b;">Ver publicación en Instagram</h5>
-                                <p style="font-size:0.82rem; color:#64748b; margin-bottom:0.95rem;">Contenido del perfil profesional</p>
-                                <a href="${postUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background:#d6249f; color:white; font-weight:700; font-size:0.82rem; border-radius:8px; padding:0.45rem 0.95rem; text-decoration:none; display:inline-block;">
-                                    Ver en Instagram ↗
+                            <div class="pub-profile-ig-card" style="padding:1.6rem 1.25rem; text-align:center; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:360px;">
+                                <div style="width:48px; height:48px; margin:0 auto 0.85rem auto; border-radius:12px; background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); display:flex; align-items:center; justify-content:center; color:white; font-size:1.35rem; box-shadow:0 4px 12px rgba(214, 36, 159, 0.28);">📸</div>
+                                ${postTitle ? `<h5 style="margin:0 0 0.45rem 0; font-family:var(--font-title, 'Outfit', sans-serif); font-size:1.02rem; font-weight:800; color:#0f172a; line-height:1.3;">${esc(postTitle)}</h5>` : `<h5 style="margin:0 0 0.45rem 0; font-family:var(--font-title, 'Outfit', sans-serif); font-size:1rem; font-weight:800; color:#0f172a;">Contenido en Instagram</h5>`}
+                                <p style="font-size:0.82rem; color:#64748b; margin-top:0; margin-bottom:1.15rem; line-height:1.5;">Mira este contenido en la app de Instagram</p>
+                                <a href="${postUrl}" target="_blank" rel="noopener noreferrer" style="background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); color:white; font-weight:700; font-size:0.84rem; border-radius:999px; padding:0.55rem 1.2rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; box-shadow:0 4px 12px rgba(214, 36, 159, 0.25);">
+                                    <span>Ver en Instagram</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
                                 </a>
                             </div>
                         `;
