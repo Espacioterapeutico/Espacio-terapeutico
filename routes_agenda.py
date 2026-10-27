@@ -2795,6 +2795,7 @@ def accion_cita_publica():
                 base_dir = os.path.dirname(os.path.abspath(__file__))
                 db_path = os.path.join(base_dir, 'clinica.db')
                 db_bg = sqlite3.connect(db_path, timeout=30.0)
+                should_send_wa = True
                 try:
                     if accion in ('cancelar', 'reprogramar'):
                         db_bg.execute("UPDATE agenda_finanzas SET cierre_enviado_wa = 1 WHERE id = ?", (appt_id,))
@@ -2803,14 +2804,22 @@ def accion_cita_publica():
                             db_bg.execute("ALTER TABLE agenda_finanzas ADD COLUMN respuesta_enviada_wa INTEGER DEFAULT 0")
                         except Exception:
                             pass
-                        db_bg.execute("UPDATE agenda_finanzas SET respuesta_enviada_wa = 1 WHERE id = ?", (appt_id,))
+                        cur_chk = db_bg.cursor()
+                        cur_chk.execute("SELECT respuesta_enviada_wa FROM agenda_finanzas WHERE id = ?", (appt_id,))
+                        r_chk = cur_chk.fetchone()
+                        if r_chk and r_chk[0] == 1:
+                            should_send_wa = False
+                            print(f"[WA] Respuesta de confirmación ya enviada previamente para cita {appt_id}. Omitiendo envío duplicado.")
+                        else:
+                            db_bg.execute("UPDATE agenda_finanzas SET respuesta_enviada_wa = 1 WHERE id = ?", (appt_id,))
                     db_bg.commit()
                 except Exception as _dbe:
                     print("Aviso actualizando flag en DB bg:", _dbe)
                 finally:
                     db_bg.close()
                 
-                make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg, 'user_id': psych_id}, timeout=15, user_id=psych_id)
+                if should_send_wa:
+                    make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg, 'user_id': psych_id}, timeout=15, user_id=psych_id)
             except Exception as e:
                 print("Error enviando confirmacion WA desde public link:", e)
                 

@@ -7817,7 +7817,12 @@ async function loadAgendaCompact() {
 
         // 1. Renderizar Próximas Consultas
         try {
-            let upcomingEvents = (events || []).filter(e => e.fecha >= todayStr && !e.estado_pago.startsWith('Cancelada') && e.estado_pago !== 'Reprogramada' && e.estado_pago !== 'Prepagada' && !e.has_session);
+            let upcomingEvents = (events || []).filter(e => {
+                if (!e.hora || e.hora === '00:00' || e.tipo_consulta === 'Paquete Prepagado' || e.tipo_consulta === 'Prepago') return false;
+                if (e.estado_pago && (e.estado_pago.startsWith('Cancelada') || e.estado_pago === 'Reprogramada')) return false;
+                if (e.has_session) return false;
+                return e.fecha >= todayStr;
+            });
             upcomingEvents.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
 
             _upcomingEventsCache = upcomingEvents;
@@ -7836,7 +7841,7 @@ async function loadAgendaCompact() {
             let pendingEvolutions = (events || []).filter(e => {
                 if (e.has_session) return false;
                 if (e.descartar_evolucion == 1 || e.descartar_evolucion === true) return false;
-                if (e.estado_pago === 'Prepagada') return false;
+                if (!e.hora || e.hora === '00:00' || e.tipo_consulta === 'Paquete Prepagado' || e.tipo_consulta === 'Prepago') return false;
                 const est = String(e.estado_pago || '').toLowerCase();
                 if (est.includes('cancelada')) return false;
                 return e.fecha <= todayStr;
@@ -8769,7 +8774,7 @@ async function renderFullCalendar() {
         }
         
         const events = list.map(e => {
-            if (!e.fecha || !e.hora || e.estado_pago === 'Prepagada') return null;
+            if (!e.fecha || !e.hora || e.hora === '00:00' || e.tipo_consulta === 'Paquete Prepagado' || e.tipo_consulta === 'Prepago') return null;
             
             let color = '#4f46e5'; // Indigo (Pendiente / Agendada)
             let confirmText = e.confirmada === 1 ? '✓ Confirmada' : '⏳ Pendiente';
@@ -8783,6 +8788,8 @@ async function renderFullCalendar() {
                 confirmText = '❌ Cancelada';
             } else if (e.confirmada === 1) {
                 color = '#10b981'; // Verde (Confirmada)
+            } else if (e.estado_pago === 'Prepagada' || e.estado_pago === 'Paga') {
+                color = '#0284c7'; // Azul cielo (Pagada / Prepagada)
             }
             
             const startStr = `${e.fecha}T${e.hora.substring(0, 5)}:00`;
@@ -9113,13 +9120,13 @@ async function loadAgenda() {
     });
     
     list.forEach(e => {
-        if (e.estado_pago === 'Prepagada') return; // Omitir paquetes prepagados en el calendario de citas
+        if (!e.hora || e.hora === '00:00' || e.tipo_consulta === 'Paquete Prepagado' || e.tipo_consulta === 'Prepago') return; // Omitir paquetes prepagados en la tabla de citas
         if (e.has_session) return; // Omitir consultas ya atendidas (evolucionadas)
         
         const tr = document.createElement('tr');
         let paymentBadgeClass = 'badge-info';
         let badgeStyle = '';
-        if (e.estado_pago === 'Paga') {
+        if (e.estado_pago === 'Paga' || e.estado_pago === 'Prepagada') {
             paymentBadgeClass = 'badge-success';
         } else if (e.estado_pago === 'Pendiente') {
             paymentBadgeClass = 'badge-danger';
