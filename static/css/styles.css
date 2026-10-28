@@ -3829,4 +3829,53 @@ body.is-patient .main-content {
     }
 }
 
+/* Subpestañas del editor de perfil del psicólogo en Ajustes */
+.prof-editor-subtabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-bottom: 0.85rem;
+    border-bottom: 1.5px solid #e2e8f0;
+    margin-bottom: 0.75rem;
+}
+.prof-editor-tab-btn {
+    appearance: none;
+    border: 1.5px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.86rem;
+    padding: 0.55rem 1.15rem;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    transition: all 0.2s ease;
+}
+.prof-editor-tab-btn:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #1e293b;
+}
+.prof-editor-tab-btn.active {
+    background: #702e5e;
+    color: #ffffff;
+    border-color: #702e5e;
+    box-shadow: 0 4px 12px rgba(112, 46, 94, 0.22);
+}
+@media (max-width: 640px) {
+    .prof-editor-subtabs-nav {
+        gap: 0.35rem;
+        padding-bottom: 0.65rem;
+    }
+    .prof-editor-tab-btn {
+        font-size: 0.78rem;
+        padding: 0.45rem 0.8rem;
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
 

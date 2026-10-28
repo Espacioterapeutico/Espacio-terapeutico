@@ -26522,6 +26522,22 @@ function applyPaletteToPublicScreen(paletteKey) {
 }
 window.applyPaletteToPublicScreen = applyPaletteToPublicScreen;
 
+function switchProfileEditorSubtab(tabName) {
+    const validTabs = ['identificacion', 'conoceme', 'servicios', 'faq', 'contacto'];
+    if (!validTabs.includes(tabName)) tabName = 'identificacion';
+    validTabs.forEach(t => {
+        const pane = document.getElementById(`prof-subtab-${t}`);
+        if (pane) {
+            pane.style.display = (t === tabName) ? 'flex' : 'none';
+        }
+    });
+    document.querySelectorAll('.prof-editor-tab-btn').forEach(btn => {
+        const isMatch = btn.getAttribute('data-subtab') === tabName;
+        btn.classList.toggle('active', isMatch);
+    });
+}
+window.switchProfileEditorSubtab = switchProfileEditorSubtab;
+
 function selectProfilePalette(paletteKey) {
     const input = document.getElementById('prof-paleta-colores');
     if (input) input.value = paletteKey || 'violeta';
@@ -26853,6 +26869,7 @@ function populateProfileUI(data) {
         if (document.getElementById('mod-domicilio')) document.getElementById('mod-domicilio').checked = list.includes("Domicilio");
     }
     toggleModalityDetailsUI();
+    switchProfileEditorSubtab('identificacion');
 }
 
 function updatePublicProfileLinksPreview(rawVal) {

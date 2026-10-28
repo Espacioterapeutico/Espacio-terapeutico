@@ -3436,356 +3436,398 @@
                                 <p class="text-secondary text-sm">Personaliza la información que verán tus pacientes en tu página pública (/psic.tunombre) y en el directorio institucional.</p>
                             </div>
                             <div class="card-body" style="display: flex; flex-direction: column; gap: 1.2rem;">
-                                <!-- FOTO DE PERFIL PROFESIONAL -->
-                                <div class="form-group" style="background: #f8fafc; padding: 1.25rem; border-radius: 12px; border: 1px dashed #cbd5e1; text-align: center;">
-                                    <label style="font-weight: 700; display: block; margin-bottom: 0.75rem; color: #334155; font-size: 1rem;">📷 Foto de Perfil Profesional</label>
-                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
-                                        <div style="width: 110px; height: 110px; border-radius: 50%; overflow: hidden; border: 3px solid #702e5e; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background-color: #ffffff; position: relative;">
-                                            <img id="set-perfil-preview-img" src="/static/logo.png" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover;">
-                                        </div>
-                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                            <label class="btn btn-sm" style="cursor: pointer; padding: 0.5rem 1.25rem; font-weight: 700; background-color: #702e5e; color: #ffffff; border: none; border-radius: 20px; box-shadow: 0 2px 8px rgba(112,46,94,0.2);">
-                                                Subir Foto de Perfil
-                                                <input type="file" id="set-perfil-file-input" accept="image/*" style="display: none;" onchange="previewPublicProfilePhoto(event)">
-                                            </label>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-size: 0.8rem; padding: 0.45rem 0.9rem;" onclick="removePublicProfilePhoto()">Quitar Foto</button>
-                                        </div>
-                                        <small style="color: #64748b; font-size: 0.82rem;">Esta fotografía aparecerá en tu tarjeta del directorio institucional y en tu perfil público de agendamiento.</small>
-                                    </div>
+                                <!-- BARRA DE PESTAÑAS DEL EDITOR DE PERFIL -->
+                                <div class="prof-editor-subtabs-nav">
+                                    <button type="button" class="prof-editor-tab-btn active" data-subtab="identificacion" onclick="switchProfileEditorSubtab('identificacion')">
+                                        <span>🪪</span> Identificación
+                                    </button>
+                                    <button type="button" class="prof-editor-tab-btn" data-subtab="conoceme" onclick="switchProfileEditorSubtab('conoceme')">
+                                        <span>👤</span> Conóceme
+                                    </button>
+                                    <button type="button" class="prof-editor-tab-btn" data-subtab="servicios" onclick="switchProfileEditorSubtab('servicios')">
+                                        <span>🌐</span> Servicios
+                                    </button>
+                                    <button type="button" class="prof-editor-tab-btn" data-subtab="faq" onclick="switchProfileEditorSubtab('faq')">
+                                        <span>❓</span> Preguntas Frecuentes & Blog
+                                    </button>
+                                    <button type="button" class="prof-editor-tab-btn" data-subtab="contacto" onclick="switchProfileEditorSubtab('contacto')">
+                                        <span>📲</span> Contacto
+                                    </button>
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="prof-nomenclatura" style="font-weight: 700;">Título / Nomenclatura Profesional *</label>
-                                    <input type="text" id="prof-nomenclatura" class="form-control" placeholder="Ej: Psicólogo Clínico - Especialista en Ansiedad y Parejas">
-                                </div>
-                                <div class="form-group">
-                                    <label for="prof-biografia" style="font-weight: 700;">Biografía / Presentación Profesional</label>
-                                    <textarea id="prof-biografia" class="form-control" rows="4" placeholder="Escribe una breve presentación para tus consultantes..."></textarea>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="prof-especialidades" style="font-weight: 700;">🎯 Especialidades o Temas que abordas</label>
-                                    <input type="text" id="prof-especialidades" class="form-control" placeholder="Ej: Gestión emocional, Sexualidad, Ansiedad, Autoestima, Duelo">
-                                    <small style="color: #64748b; font-size: 0.82rem;">Escribe los temas principales separados por comas. Se mostrarán en tu tarjeta del directorio.</small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label style="font-weight: 700; display: block; margin-bottom: 0.4rem; color: #334155;">👥 Población que atiendes</label>
-                                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; background: #f8fafc; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #cbd5e1;">
-                                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
-                                            <input type="checkbox" class="chk-prof-poblacion" value="Adultos" checked> Adultos
-                                        </label>
-                                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
-                                            <input type="checkbox" class="chk-prof-poblacion" value="Adolescentes" checked> Adolescentes
-                                        </label>
-                                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
-                                            <input type="checkbox" class="chk-prof-poblacion" value="Personas LGBTIQA+"> 🌈 Personas LGBTIQA+
-                                        </label>
-                                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
-                                            <input type="checkbox" class="chk-prof-poblacion" value="Niños"> Niños
-                                        </label>
-                                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
-                                            <input type="checkbox" class="chk-prof-poblacion" value="Parejas"> Parejas
-                                        </label>
-                                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
-                                            <input type="checkbox" class="chk-prof-poblacion" value="Familias"> Familias
-                                        </label>
-                                        <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
-                                            <input type="checkbox" class="chk-prof-poblacion" value="Adultos Mayores"> Adultos Mayores
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="prof-pais" style="font-weight: 700;">📍 País / Ubicación Principal</label>
-                                    <input type="text" id="prof-pais" class="form-control" placeholder="Ej: Venezuela 🇻🇪, Argentina 🇦🇷, España 🇪🇸, Chile 🇨🇱, México 🇲🇽">
-                                    <small style="color: #64748b; font-size: 0.82rem;">Indica tu país de residencia o sede de consulta.</small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label style="font-weight: 700; margin-bottom: 0.75rem; display: block; color: #334155; font-size: 1rem;">Modalidades de Atención y Detalles de Consulta *</label>
-                                    <div style="display: flex; flex-direction: column; gap: 1rem; background: #f8fafc; padding: 1.25rem; border-radius: 12px; border: 1px solid #cbd5e1;">
-                                        
-                                        <!-- MODALIDAD ONLINE -->
-                                        <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem;">
-                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
-                                                <input type="checkbox" id="mod-online" value="Online" checked onchange="toggleModalityDetailsUI()"> 🌐 Modalidad Online / Teleconsulta
-                                            </label>
-                                            <div id="box-mod-online-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                                                <div>
-                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
-                                                    <input type="text" id="mod-online-titulo" class="form-control" placeholder="Ej: Consulta Online, Teleterapia, etc." value="Consulta Online" style="font-size: 0.88rem;">
-                                                </div>
-                                                <div>
-                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Plataformas / Detalles:</label>
-                                                    <input type="text" id="mod-online-detalle" class="form-control" placeholder="Ej: Google Meet, Zoom, WhatsApp Video" style="font-size: 0.88rem;">
-                                                </div>
+                                <!-- SUBPESTAÑA 1: IDENTIFICACIÓN -->
+                                <div id="prof-subtab-identificacion" class="prof-editor-pane" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                                    <!-- FOTO DE PERFIL PROFESIONAL -->
+                                    <div class="form-group" style="background: #f8fafc; padding: 1.25rem; border-radius: 16px; border: 1.5px dashed #cbd5e1; text-align: center;">
+                                        <label style="font-weight: 700; display: block; margin-bottom: 0.75rem; color: #334155; font-size: 1rem;">📷 Foto de Perfil Profesional</label>
+                                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+                                            <div style="width: 115px; height: 115px; border-radius: 50%; overflow: hidden; border: 3px solid #702e5e; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background-color: #ffffff; position: relative;">
+                                                <img id="set-perfil-preview-img" src="/static/logo.png" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover;">
                                             </div>
-                                        </div>
-
-                                        <!-- MODALIDAD PRESENCIAL -->
-                                        <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem;">
-                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
-                                                <input type="checkbox" id="mod-presencial" value="Presencial" checked onchange="toggleModalityDetailsUI()"> 🏢 Modalidad Presencial (Consultorio)
-                                            </label>
-                                            <div id="box-mod-presencial-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                                                <div>
-                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
-                                                    <input type="text" id="mod-presencial-titulo" class="form-control" placeholder="Ej: Consulta Presencial en Consultorio" value="Consulta Presencial" style="font-size: 0.88rem;">
-                                                </div>
-                                                <div>
-                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Ubicación / Dirección exacta:</label>
-                                                    <input type="text" id="mod-presencial-detalle" class="form-control" placeholder="Ej: Av. Francisco de Miranda, Centro Profesional Altamira..." style="font-size: 0.88rem;">
-                                                </div>
-                                                <div>
-                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">🗺️ Enlace de tu negocio en Google Maps (Opcional):</label>
-                                                    <input type="text" id="mod-presencial-maps-url" class="form-control" placeholder="Pega el link de Google Maps (ej: https://maps.app.goo.gl/...) o déjalo vacío para usar tu dirección" style="font-size: 0.88rem;">
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- MODALIDAD A DOMICILIO -->
-                                        <div>
-                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
-                                                <input type="checkbox" id="mod-domicilio" value="Domicilio" onchange="toggleModalityDetailsUI()"> 🚗 Modalidad A Domicilio
-                                            </label>
-                                            <div id="box-mod-domicilio-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: none; flex-direction: column; gap: 0.5rem;">
-                                                <div>
-                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
-                                                    <input type="text" id="mod-domicilio-titulo" class="form-control" placeholder="Ej: Atención a Domicilio, Visita Residencial" value="Atención a Domicilio" style="font-size: 0.88rem;">
-                                                </div>
-                                                <div>
-                                                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Zonas de cobertura:</label>
-                                                    <input type="text" id="mod-domicilio-detalle" class="form-control" placeholder="Ej: Municipio Chacao, Baruta y El Hatillo" style="font-size: 0.88rem;">
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                    <div class="form-group">
-                                        <label for="prof-whatsapp" style="font-weight: 700;">WhatsApp Público de Contacto</label>
-                                        <input type="text" id="prof-whatsapp" class="form-control" placeholder="Ej: +584121234567">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="prof-email" style="font-weight: 700;">Correo Electrónico Público</label>
-                                        <input type="email" id="prof-email" class="form-control" placeholder="Ej: consulta@paulomora.com">
-                                    </div>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                    <div class="form-group">
-                                        <label for="prof-instagram" style="font-weight: 700;">Instagram (@usuario)</label>
-                                        <input type="text" id="prof-instagram" class="form-control" placeholder="Ej: @psic.paulomora">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="prof-linkedin" style="font-weight: 700;">LinkedIn (URL perfil)</label>
-                                        <input type="text" id="prof-linkedin" class="form-control" placeholder="Ej: https://linkedin.com/in/...">
-                                    </div>
-                                </div>
-
-                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 1.15rem; border-radius: 12px; margin-top: 0.5rem; margin-bottom: 0.85rem;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                                        <label style="font-weight: 700; color: #702e5e; font-size: 0.98rem; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
-                                            <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); color:white; font-size:0.75rem;">📸</span>
-                                            Publicaciones Destacadas de Instagram (Hasta 3)
-                                        </label>
-                                        <small style="color: #64748b; font-weight: 600;">Se muestran en la pestaña "Conóceme"</small>
-                                    </div>
-                                    <small style="color: #64748b; font-size: 0.78rem; display: block; margin-bottom: 0.95rem;">Puedes asignarle un título o tema personalizado y el enlace de hasta 3 publicaciones o reels:</small>
-                                    
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.85rem;">
-                                        <!-- POST 1 -->
-                                        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                                            <div style="font-size: 0.82rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
-                                                <span style="color: #d6249f;">●</span> Post Destacado 1
-                                            </div>
-                                            <div>
-                                                <label for="prof-ig-title-1" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Título / Tema:</label>
-                                                <input type="text" id="prof-ig-title-1" class="form-control" placeholder="Ej: Discordancia sexual" style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
-                                            </div>
-                                            <div>
-                                                <label for="prof-ig-post-1" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Enlace de Instagram:</label>
-                                                <input type="url" id="prof-ig-post-1" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
-                                            </div>
-                                        </div>
-
-                                        <!-- POST 2 -->
-                                        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                                            <div style="font-size: 0.82rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
-                                                <span style="color: #d6249f;">●</span> Post Destacado 2
-                                            </div>
-                                            <div>
-                                                <label for="prof-ig-title-2" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Título / Tema:</label>
-                                                <input type="text" id="prof-ig-title-2" class="form-control" placeholder="Ej: Herramientas para la ansiedad" style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
-                                            </div>
-                                            <div>
-                                                <label for="prof-ig-post-2" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Enlace de Instagram:</label>
-                                                <input type="url" id="prof-ig-post-2" class="form-control" placeholder="https://www.instagram.com/reel/..." style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
-                                            </div>
-                                        </div>
-
-                                        <!-- POST 3 -->
-                                        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                                            <div style="font-size: 0.82rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
-                                                <span style="color: #d6249f;">●</span> Post Destacado 3
-                                            </div>
-                                            <div>
-                                                <label for="prof-ig-title-3" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Título / Tema:</label>
-                                                <input type="text" id="prof-ig-title-3" class="form-control" placeholder="Ej: Gestión de emociones" style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
-                                            </div>
-                                            <div>
-                                                <label for="prof-ig-post-3" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 0.2rem; display: block;">Enlace de Instagram:</label>
-                                                <input type="url" id="prof-ig-post-3" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.85rem; padding: 0.4rem 0.65rem;">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 1.15rem; border-radius: 12px; margin-top: 0.5rem;">
-                                    <label style="font-weight: 700; margin-bottom: 0.65rem; display: block; color: #702e5e; font-size: 0.98rem;">💬 Personalizar Botón Secundario de tu Encabezado ("Conéctate conmigo")</label>
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
-                                        <div class="form-group" style="margin-bottom: 0;">
-                                            <label for="prof-cta-texto" style="font-size: 0.85rem; font-weight: 700; color: #334155;">Nombre / Texto del Botón</label>
-                                            <input type="text" id="prof-cta-texto" class="form-control" placeholder="💬 Conéctate conmigo">
-                                            <small style="color: #64748b; font-size: 0.76rem;">Por defecto mostrará: 💬 Conéctate conmigo</small>
-                                        </div>
-                                        <div class="form-group" style="margin-bottom: 0;">
-                                            <label for="prof-cta-link" style="font-size: 0.85rem; font-weight: 700; color: #334155;">Enlace de Destino (Opcional)</label>
-                                            <input type="text" id="prof-cta-link" class="form-control" placeholder="Vacío = ir a tu WhatsApp automáticamente">
-                                            <small style="color: #64748b; font-size: 0.76rem;">Si lo dejas vacío, abrirá tu WhatsApp. También puedes pegar cualquier URL (Instagram, WhatsApp, etc.).</small>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 1. PALETA DE COLORES DEL PERFIL PÚBLICO -->
-                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 14px; margin-top: 0.75rem;">
-                                    <label style="font-weight: 800; margin-bottom: 0.35rem; display: block; color: #1e293b; font-size: 1rem;">🎨 Paleta de Colores de Mi Perfil Público</label>
-                                    <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.85rem;">Elige la combinación de colores que represente tu estilo profesional (se aplicará al encabezado, pestañas y botones de tu página):</p>
-                                    <input type="hidden" id="prof-paleta-colores" value="violeta">
-                                    <div id="prof-palette-selector" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 0.65rem;">
-                                        <button type="button" class="prof-palette-card active" data-palette="violeta" onclick="selectProfilePalette('violeta')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 2px solid #702e5e; background: #fdf4ff; cursor: pointer; text-align: left;">
-                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #702e5e, #3b1940); flex-shrink: 0; border: 2px solid #fbcfe8;"></span>
-                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Violeta Clínico</span>
-                                        </button>
-                                        <button type="button" class="prof-palette-card" data-palette="oceano" onclick="selectProfilePalette('oceano')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
-                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #0f2942); flex-shrink: 0; border: 2px solid #bae6fd;"></span>
-                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Azul Océano</span>
-                                        </button>
-                                        <button type="button" class="prof-palette-card" data-palette="salvia" onclick="selectProfilePalette('salvia')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
-                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #0d9488, #13332a); flex-shrink: 0; border: 2px solid #99f6e4;"></span>
-                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Verde Salvia</span>
-                                        </button>
-                                        <button type="button" class="prof-palette-card" data-palette="terracota" onclick="selectProfilePalette('terracota')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
-                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #c2410c, #431d17); flex-shrink: 0; border: 2px solid #fed7aa;"></span>
-                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Terracota Cálido</span>
-                                        </button>
-                                        <button type="button" class="prof-palette-card" data-palette="indigo" onclick="selectProfilePalette('indigo')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
-                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #1e1b4b); flex-shrink: 0; border: 2px solid #c7d2fe;"></span>
-                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Índigo Nocturno</span>
-                                        </button>
-                                        <button type="button" class="prof-palette-card" data-palette="rosa" onclick="selectProfilePalette('rosa')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
-                                            <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #db2777, #4c1d3d); flex-shrink: 0; border: 2px solid #fbcfe8;"></span>
-                                            <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Rosa Cuarzo</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- 2. GESTOR DE PREGUNTAS FRECUENTES (FAQ) CON SUGERENCIAS -->
-                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 14px; margin-top: 0.75rem;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.4rem;">
-                                        <label style="font-weight: 800; color: #1e293b; font-size: 1rem; margin: 0;">❓ Preguntas Frecuentes (FAQ) de Mi Perfil</label>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addCustomProfileFaq()" style="font-weight: 700; font-size: 0.8rem; border-radius: 20px;">+ Añadir Pregunta Propia</button>
-                                    </div>
-                                    <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">Haz clic en cualquiera de estas preguntas sugeridas para agregarla a tu perfil y personalizar tu respuesta:</p>
-                                    <div id="prof-faq-suggestions-chips" style="display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem;">
-                                        <!-- Chips generados por JS -->
-                                    </div>
-                                    <div id="prof-faq-editor-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                                        <!-- Lista editable de FAQs seleccionadas -->
-                                    </div>
-                                </div>
-
-                                <!-- 3. GESTOR DE BLOG / ARTÍCULOS DEL PSICÓLOGO -->
-                                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 14px; margin-top: 0.75rem;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.4rem;">
-                                        <label style="font-weight: 800; color: #1e293b; font-size: 1rem; margin: 0;">✍️ Mi Blog / Artículos Publicados</label>
-                                        <button type="button" class="btn btn-sm btn-primary" onclick="toggleNewBlogPostForm()" style="font-weight: 700; font-size: 0.82rem; border-radius: 20px; background: #702e5e; border: none;">+ Redactar Artículo</button>
-                                    </div>
-                                    <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.85rem;">Comparte reflexiones o artículos breves con imagen y título para generar confianza en quienes visitan tu perfil:</p>
-
-                                    <!-- Formulario desplegable para crear/editar artículo -->
-                                    <div id="prof-blog-form-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.15rem; margin-bottom: 1rem;">
-                                        <input type="hidden" id="prof-blog-edit-index" value="-1">
-                                        <div class="form-group" style="margin-bottom: 0.85rem;">
-                                            <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Título del Artículo *</label>
-                                            <input type="text" id="prof-blog-title" class="form-control" placeholder="Ej: ¿Cómo saber cuándo es momento de iniciar terapia?" style="width: 100%; display: block; box-sizing: border-box; padding: 0.65rem 0.85rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.94rem; font-weight: 700;">
-                                        </div>
-                                        <div class="form-group" style="margin-bottom: 0.85rem;">
-                                            <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Imagen de Portada (Sube una foto o pega un enlace)</label>
-                                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                                <input type="text" id="prof-blog-img" class="form-control" placeholder="URL de imagen o sube archivo al lado ->" style="flex: 1; min-width: 200px; padding: 0.6rem 0.85rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.9rem;">
-                                                <label class="btn btn-sm btn-outline-secondary" style="margin: 0; cursor: pointer; font-weight: 700; white-space: nowrap; padding: 0.55rem 0.9rem; border-radius: 10px;">
-                                                    📷 Subir Foto <input type="file" accept="image/*" style="display: none;" onchange="handleBlogImageUpload(this)">
+                                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                                <label class="btn btn-sm" style="cursor: pointer; padding: 0.5rem 1.25rem; font-weight: 700; background-color: #702e5e; color: #ffffff; border: none; border-radius: 20px; box-shadow: 0 2px 8px rgba(112,46,94,0.2);">
+                                                    Subir Foto de Perfil
+                                                    <input type="file" id="set-perfil-file-input" accept="image/*" style="display: none;" onchange="previewPublicProfilePhoto(event)">
                                                 </label>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-size: 0.8rem; padding: 0.45rem 0.9rem;" onclick="removePublicProfilePhoto()">Quitar Foto</button>
                                             </div>
-                                        </div>
-                                        <div class="form-group" style="margin-bottom: 0.9rem;">
-                                            <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Contenido del Artículo *</label>
-                                            <textarea id="prof-blog-content" rows="6" class="form-control" placeholder="Escribe aquí tu artículo o reflexión..." style="width: 100%; display: block; box-sizing: border-box; padding: 0.75rem 0.9rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.93rem; line-height: 1.55; min-height: 130px; resize: vertical; font-family: inherit;"></textarea>
-                                        </div>
-                                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-                                            <button type="button" class="btn btn-sm btn-secondary" onclick="cancelBlogPostForm()">Cancelar</button>
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="saveBlogPostToList()" style="background: #166534; border: none; font-weight: 700;">✅ Agregar a Mi Lista (Recuerda Guardar Cambios abajo)</button>
+                                            <small style="color: #64748b; font-size: 0.82rem;">Esta fotografía aparecerá en tu tarjeta del directorio institucional y en tu perfil público de agendamiento.</small>
                                         </div>
                                     </div>
 
-                                    <div id="prof-blog-editor-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
-                                        <!-- Lista de artículos agregados -->
+                                    <div class="form-group">
+                                        <label for="prof-nomenclatura" style="font-weight: 700;">Título / Nomenclatura Profesional *</label>
+                                        <input type="text" id="prof-nomenclatura" class="form-control" placeholder="Ej: Psicólogo Clínico - Especialista en Ansiedad y Parejas">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prof-pais" style="font-weight: 700;">📍 País / Ubicación Principal</label>
+                                        <input type="text" id="prof-pais" class="form-control" placeholder="Ej: Venezuela 🇻🇪, Argentina 🇦🇷, España 🇪🇸, Chile 🇨🇱, México 🇲🇽">
+                                        <small style="color: #64748b; font-size: 0.82rem;">Indica tu país de residencia o sede de consulta.</small>
+                                    </div>
+
+                                    <!-- PALETA DE COLORES DEL PERFIL PÚBLICO -->
+                                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 16px; margin-top: 0.25rem;">
+                                        <label style="font-weight: 800; margin-bottom: 0.35rem; display: block; color: #1e293b; font-size: 1rem;">🎨 Paleta de Colores de Mi Perfil Público</label>
+                                        <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.85rem;">Elige la combinación de colores que represente tu estilo profesional (se aplicará al encabezado, pestañas y botones de tu página):</p>
+                                        <input type="hidden" id="prof-paleta-colores" value="violeta">
+                                        <div id="prof-palette-selector" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 0.65rem;">
+                                            <button type="button" class="prof-palette-card active" data-palette="violeta" onclick="selectProfilePalette('violeta')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 2px solid #702e5e; background: #fdf4ff; cursor: pointer; text-align: left;">
+                                                <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #702e5e, #3b1940); flex-shrink: 0; border: 2px solid #fbcfe8;"></span>
+                                                <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Violeta Clínico</span>
+                                            </button>
+                                            <button type="button" class="prof-palette-card" data-palette="oceano" onclick="selectProfilePalette('oceano')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                                <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #0f2942); flex-shrink: 0; border: 2px solid #bae6fd;"></span>
+                                                <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Azul Océano</span>
+                                            </button>
+                                            <button type="button" class="prof-palette-card" data-palette="salvia" onclick="selectProfilePalette('salvia')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                                <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #0d9488, #13332a); flex-shrink: 0; border: 2px solid #99f6e4;"></span>
+                                                <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Verde Salvia</span>
+                                            </button>
+                                            <button type="button" class="prof-palette-card" data-palette="terracota" onclick="selectProfilePalette('terracota')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                                <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #c2410c, #431d17); flex-shrink: 0; border: 2px solid #fed7aa;"></span>
+                                                <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Terracota Cálido</span>
+                                            </button>
+                                            <button type="button" class="prof-palette-card" data-palette="indigo" onclick="selectProfilePalette('indigo')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                                <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #1e1b4b); flex-shrink: 0; border: 2px solid #c7d2fe;"></span>
+                                                <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Índigo Nocturno</span>
+                                            </button>
+                                            <button type="button" class="prof-palette-card" data-palette="rosa" onclick="selectProfilePalette('rosa')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; text-align: left;">
+                                                <span style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #db2777, #4c1d3d); flex-shrink: 0; border: 2px solid #fbcfe8;"></span>
+                                                <span style="font-size: 0.83rem; font-weight: 700; color: #1e293b;">Rosa Cuarzo</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- MIS ENLACES PÚBLICOS PERSONALIZADOS -->
+                                    <div class="form-group" style="margin-top: 0.5rem;">
+                                        <label style="font-weight: 700; margin-bottom: 0.5rem; display: block; color: #702e5e; font-size: 1.05rem;">🔗 Mis Enlaces Públicos Personalizados (Para Compartir)</label>
+                                        <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1.25rem; border-radius: 16px; display: flex; flex-direction: column; gap: 0.85rem;">
+                                            <div style="background: #ffffff; border: 1.5px solid #d8b4fe; border-radius: 12px; padding: 0.85rem 1rem;">
+                                                <label for="prof-custom-slug" style="font-size: 0.88rem; font-weight: 800; color: #581c87; display: block; margin-bottom: 0.3rem;">✏️ Tu Nombre de Enlace Personalizado (Slug):</label>
+                                                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                                                    <span style="font-size: 0.86rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid #cbd5e1; white-space: nowrap;">espacioterapeutico.net/psic.</span>
+                                                    <input type="text" id="prof-custom-slug" class="form-control" placeholder="paulomora" oninput="updatePublicProfileLinksPreview(this.value)" style="flex: 1; min-width: 150px; font-weight: 800; color: #0f172a; font-size: 0.92rem;">
+                                                </div>
+                                                <small style="color: #64748b; font-size: 0.76rem; display: block; margin-top: 0.35rem;">Escribe cómo quieres que aparezca tu enlace (ej. <b>paulomora</b>) y todos tus links de abajo se actualizarán automáticamente.</small>
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 0.85rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">🌐 Tu Dirección Web Personal (Para compartir tu página con pacientes):</label>
+                                                <div style="display: flex; gap: 0.5rem;">
+                                                    <input type="text" id="prof-link-perfil" class="form-control" readonly style="font-size: 0.88rem; background: #ffffff;">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyInputValue('prof-link-perfil')">📋 Copiar Link</button>
+                                                    <a id="prof-link-perfil-btn" href="#" target="_blank" class="btn btn-sm btn-primary" style="text-decoration: none; font-weight: 600;">↗️ Abrir Página</a>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 0.85rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">📝 Enlace Directo para Registro de Nuevos Consultantes:</label>
+                                                <div style="display: flex; gap: 0.5rem;">
+                                                    <input type="text" id="prof-link-registro" class="form-control" readonly style="font-size: 0.88rem; background: #ffffff;">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyInputValue('prof-link-registro')">📋 Copiar Link</button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 0.85rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">📅 Enlace Directo para Agendamiento Rápido de Citas:</label>
+                                                <div style="display: flex; gap: 0.5rem;">
+                                                    <input type="text" id="prof-link-agendar" class="form-control" readonly style="font-size: 0.88rem; background: #ffffff;">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyInputValue('prof-link-agendar')">📋 Copiar Link</button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="form-group" style="margin-top: 1rem;">
-                                    <label style="font-weight: 700; margin-bottom: 0.5rem; display: block; color: #702e5e; font-size: 1.05rem;">🔗 Mis Enlaces Públicos Personalizados (Para Compartir)</label>
-                                    <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; padding: 1.25rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.85rem;">
-                                        <div style="background: #ffffff; border: 1.5px solid #d8b4fe; border-radius: 10px; padding: 0.85rem 1rem;">
-                                            <label for="prof-custom-slug" style="font-size: 0.88rem; font-weight: 800; color: #581c87; display: block; margin-bottom: 0.3rem;">✏️ Tu Nombre de Enlace Personalizado (Slug):</label>
-                                            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-                                                <span style="font-size: 0.86rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid #cbd5e1; white-space: nowrap;">espacioterapeutico.net/psic.</span>
-                                                <input type="text" id="prof-custom-slug" class="form-control" placeholder="paulomora" oninput="updatePublicProfileLinksPreview(this.value)" style="flex: 1; min-width: 150px; font-weight: 800; color: #0f172a; font-size: 0.92rem;">
-                                            </div>
-                                            <small style="color: #64748b; font-size: 0.76rem; display: block; margin-top: 0.35rem;">Escribe cómo quieres que aparezca tu enlace (ej. <b>paulomora</b>) y todos tus links de abajo se actualizarán automáticamente.</small>
+                                <!-- SUBPESTAÑA 2: CONÓCEME -->
+                                <div id="prof-subtab-conoceme" class="prof-editor-pane" style="display: none; flex-direction: column; gap: 1.2rem;">
+                                    <div class="form-group">
+                                        <label for="prof-biografia" style="font-weight: 700;">Biografía / Presentación Profesional</label>
+                                        <textarea id="prof-biografia" class="form-control" rows="4" placeholder="Escribe una breve presentación para tus consultantes..."></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prof-especialidades" style="font-weight: 700;">🎯 Especialidades o Temas que abordas</label>
+                                        <input type="text" id="prof-especialidades" class="form-control" placeholder="Ej: Gestión emocional, Sexualidad, Ansiedad, Autoestima, Duelo">
+                                        <small style="color: #64748b; font-size: 0.82rem;">Escribe los temas principales separados por comas. Se mostrarán en tu tarjeta del directorio.</small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="font-weight: 700; display: block; margin-bottom: 0.4rem; color: #334155;">👥 Población que atiendes</label>
+                                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; background: #f8fafc; padding: 0.85rem 1.1rem; border-radius: 14px; border: 1.5px solid #e2e8f0;">
+                                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
+                                                <input type="checkbox" class="chk-prof-poblacion" value="Adultos" checked> Adultos
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
+                                                <input type="checkbox" class="chk-prof-poblacion" value="Adolescentes" checked> Adolescentes
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
+                                                <input type="checkbox" class="chk-prof-poblacion" value="Personas LGBTIQA+"> 🌈 Personas LGBTIQA+
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
+                                                <input type="checkbox" class="chk-prof-poblacion" value="Niños"> Niños
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
+                                                <input type="checkbox" class="chk-prof-poblacion" value="Parejas"> Parejas
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
+                                                <input type="checkbox" class="chk-prof-poblacion" value="Familias"> Familias
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #334155;">
+                                                <input type="checkbox" class="chk-prof-poblacion" value="Adultos Mayores"> Adultos Mayores
+                                            </label>
                                         </div>
-                                        <div>
-                                            <label style="font-size: 0.85rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">🌐 Tu Dirección Web Personal (Para compartir tu página con pacientes):</label>
-                                            <div style="display: flex; gap: 0.5rem;">
-                                                <input type="text" id="prof-link-perfil" class="form-control" readonly style="font-size: 0.88rem; background: #ffffff;">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyInputValue('prof-link-perfil')">📋 Copiar Link</button>
-                                                <a id="prof-link-perfil-btn" href="#" target="_blank" class="btn btn-sm btn-primary" style="text-decoration: none; font-weight: 600;">↗️ Abrir Página</a>
-                                            </div>
+                                    </div>
+
+                                    <!-- PUBLICACIONES DESTACADAS DE INSTAGRAM CON BORDES CURVOS -->
+                                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 18px; margin-top: 0.25rem; box-shadow: 0 4px 16px rgba(15,23,42,0.02);">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                                            <label style="font-weight: 700; color: #702e5e; font-size: 0.98rem; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:8px; background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); color:white; font-size:0.8rem;">📸</span>
+                                                Publicaciones Destacadas de Instagram (Hasta 3)
+                                            </label>
+                                            <small style="color: #64748b; font-weight: 600;">Se muestran en la pestaña "Conóceme"</small>
                                         </div>
-                                        <div>
-                                            <label style="font-size: 0.85rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">📝 Enlace Directo para Registro de Nuevos Consultantes:</label>
-                                            <div style="display: flex; gap: 0.5rem;">
-                                                <input type="text" id="prof-link-registro" class="form-control" readonly style="font-size: 0.88rem; background: #ffffff;">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyInputValue('prof-link-registro')">📋 Copiar Link</button>
+                                        <small style="color: #64748b; font-size: 0.8rem; display: block; margin-bottom: 1rem;">Puedes asignarle un título o tema personalizado y el enlace de hasta 3 publicaciones o reels:</small>
+                                        
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem;">
+                                            <!-- POST 1 -->
+                                            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.05rem; display: flex; flex-direction: column; gap: 0.65rem; box-shadow: 0 4px 12px rgba(15,23,42,0.03);">
+                                                <div style="font-size: 0.84rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
+                                                    <span style="color: #d6249f;">●</span> Post Destacado 1
+                                                </div>
+                                                <div>
+                                                    <label for="prof-ig-title-1" style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem; display: block;">Título / Tema:</label>
+                                                    <input type="text" id="prof-ig-title-1" class="form-control" placeholder="Ej: Discordancia sexual" style="font-size: 0.86rem; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1;">
+                                                </div>
+                                                <div>
+                                                    <label for="prof-ig-post-1" style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem; display: block;">Enlace de Instagram:</label>
+                                                    <input type="url" id="prof-ig-post-1" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.86rem; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1;">
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 0.85rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">📅 Enlace Directo para Agendamiento Rápido de Citas:</label>
-                                            <div style="display: flex; gap: 0.5rem;">
-                                                <input type="text" id="prof-link-agendar" class="form-control" readonly style="font-size: 0.88rem; background: #ffffff;">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyInputValue('prof-link-agendar')">📋 Copiar Link</button>
+
+                                            <!-- POST 2 -->
+                                            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.05rem; display: flex; flex-direction: column; gap: 0.65rem; box-shadow: 0 4px 12px rgba(15,23,42,0.03);">
+                                                <div style="font-size: 0.84rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
+                                                    <span style="color: #d6249f;">●</span> Post Destacado 2
+                                                </div>
+                                                <div>
+                                                    <label for="prof-ig-title-2" style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem; display: block;">Título / Tema:</label>
+                                                    <input type="text" id="prof-ig-title-2" class="form-control" placeholder="Ej: Herramientas para la ansiedad" style="font-size: 0.86rem; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1;">
+                                                </div>
+                                                <div>
+                                                    <label for="prof-ig-post-2" style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem; display: block;">Enlace de Instagram:</label>
+                                                    <input type="url" id="prof-ig-post-2" class="form-control" placeholder="https://www.instagram.com/reel/..." style="font-size: 0.86rem; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1;">
+                                                </div>
+                                            </div>
+
+                                            <!-- POST 3 -->
+                                            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.05rem; display: flex; flex-direction: column; gap: 0.65rem; box-shadow: 0 4px 12px rgba(15,23,42,0.03);">
+                                                <div style="font-size: 0.84rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.35rem;">
+                                                    <span style="color: #d6249f;">●</span> Post Destacado 3
+                                                </div>
+                                                <div>
+                                                    <label for="prof-ig-title-3" style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem; display: block;">Título / Tema:</label>
+                                                    <input type="text" id="prof-ig-title-3" class="form-control" placeholder="Ej: Gestión de emociones" style="font-size: 0.86rem; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1;">
+                                                </div>
+                                                <div>
+                                                    <label for="prof-ig-post-3" style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem; display: block;">Enlace de Instagram:</label>
+                                                    <input type="url" id="prof-ig-post-3" class="form-control" placeholder="https://www.instagram.com/p/..." style="font-size: 0.86rem; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1;">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="previewPublicProfileLive()" style="font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 25px; cursor: pointer; border: 1px solid #702e5e; color: #702e5e;">👁️ Vista Previa de Mi Perfil</button>
-                                    <button type="button" class="btn btn-primary" onclick="savePublicProfileSettings()" style="font-weight: 700; padding: 0.75rem 2rem; border-radius: 25px; cursor: pointer;">💾 Guardar Mi Perfil Público</button>
+                                <!-- SUBPESTAÑA 3: SERVICIOS -->
+                                <div id="prof-subtab-servicios" class="prof-editor-pane" style="display: none; flex-direction: column; gap: 1.2rem;">
+                                    <div class="form-group">
+                                        <label style="font-weight: 700; margin-bottom: 0.75rem; display: block; color: #334155; font-size: 1rem;">Modalidades de Atención y Detalles de Consulta *</label>
+                                        <div style="display: flex; flex-direction: column; gap: 1rem; background: #f8fafc; padding: 1.25rem; border-radius: 16px; border: 1.5px solid #e2e8f0;">
+                                            
+                                            <!-- MODALIDAD ONLINE -->
+                                            <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem;">
+                                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
+                                                    <input type="checkbox" id="mod-online" value="Online" checked onchange="toggleModalityDetailsUI()"> 🌐 Modalidad Online / Teleconsulta
+                                                </label>
+                                                <div id="box-mod-online-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                                    <div>
+                                                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
+                                                        <input type="text" id="mod-online-titulo" class="form-control" placeholder="Ej: Consulta Online, Teleterapia, etc." value="Consulta Online" style="font-size: 0.88rem;">
+                                                    </div>
+                                                    <div>
+                                                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Plataformas / Detalles:</label>
+                                                        <input type="text" id="mod-online-detalle" class="form-control" placeholder="Ej: Google Meet, Zoom, WhatsApp Video" style="font-size: 0.88rem;">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- MODALIDAD PRESENCIAL -->
+                                            <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem;">
+                                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
+                                                    <input type="checkbox" id="mod-presencial" value="Presencial" checked onchange="toggleModalityDetailsUI()"> 🏢 Modalidad Presencial (Consultorio)
+                                                </label>
+                                                <div id="box-mod-presencial-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                                    <div>
+                                                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
+                                                        <input type="text" id="mod-presencial-titulo" class="form-control" placeholder="Ej: Consulta Presencial en Consultorio" value="Consulta Presencial" style="font-size: 0.88rem;">
+                                                    </div>
+                                                    <div>
+                                                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Ubicación / Dirección exacta:</label>
+                                                        <input type="text" id="mod-presencial-detalle" class="form-control" placeholder="Ej: Av. Francisco de Miranda, Centro Profesional Altamira..." style="font-size: 0.88rem;">
+                                                    </div>
+                                                    <div>
+                                                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">🗺️ Enlace de tu negocio en Google Maps (Opcional):</label>
+                                                        <input type="text" id="mod-presencial-maps-url" class="form-control" placeholder="Pega el link de Google Maps (ej: https://maps.app.goo.gl/...) o déjalo vacío para usar tu dirección" style="font-size: 0.88rem;">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- MODALIDAD A DOMICILIO -->
+                                            <div>
+                                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; color: #702e5e; font-size: 0.95rem;">
+                                                    <input type="checkbox" id="mod-domicilio" value="Domicilio" onchange="toggleModalityDetailsUI()"> 🚗 Modalidad A Domicilio
+                                                </label>
+                                                <div id="box-mod-domicilio-details" style="margin-top: 0.5rem; padding-left: 1.6rem; display: none; flex-direction: column; gap: 0.5rem;">
+                                                    <div>
+                                                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Título personalizado para el perfil público:</label>
+                                                        <input type="text" id="mod-domicilio-titulo" class="form-control" placeholder="Ej: Atención a Domicilio, Visita Residencial" value="Atención a Domicilio" style="font-size: 0.88rem;">
+                                                    </div>
+                                                    <div>
+                                                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Zonas de cobertura:</label>
+                                                        <input type="text" id="mod-domicilio-detalle" class="form-control" placeholder="Ej: Municipio Chacao, Baruta y El Hatillo" style="font-size: 0.88rem;">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+
+                                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 16px; margin-top: 0.25rem;">
+                                        <label style="font-weight: 700; margin-bottom: 0.65rem; display: block; color: #702e5e; font-size: 0.98rem;">💬 Personalizar Botón Secundario de tu Encabezado ("Conéctate conmigo")</label>
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                                            <div class="form-group" style="margin-bottom: 0;">
+                                                <label for="prof-cta-texto" style="font-size: 0.85rem; font-weight: 700; color: #334155;">Nombre / Texto del Botón</label>
+                                                <input type="text" id="prof-cta-texto" class="form-control" placeholder="💬 Conéctate conmigo">
+                                                <small style="color: #64748b; font-size: 0.76rem;">Por defecto mostrará: 💬 Conéctate conmigo</small>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom: 0;">
+                                                <label for="prof-cta-link" style="font-size: 0.85rem; font-weight: 700; color: #334155;">Enlace de Destino (Opcional)</label>
+                                                <input type="text" id="prof-cta-link" class="form-control" placeholder="Vacío = ir a tu WhatsApp automáticamente">
+                                                <small style="color: #64748b; font-size: 0.76rem;">Si lo dejas vacío, abrirá tu WhatsApp. También puedes pegar cualquier URL (Instagram, WhatsApp, etc.).</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SUBPESTAÑA 4: PREGUNTAS FRECUENTES & BLOG -->
+                                <div id="prof-subtab-faq" class="prof-editor-pane" style="display: none; flex-direction: column; gap: 1.2rem;">
+                                    <!-- GESTOR DE PREGUNTAS FRECUENTES (FAQ) CON SUGERENCIAS -->
+                                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 16px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.4rem;">
+                                            <label style="font-weight: 800; color: #1e293b; font-size: 1rem; margin: 0;">❓ Preguntas Frecuentes (FAQ) de Mi Perfil</label>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addCustomProfileFaq()" style="font-weight: 700; font-size: 0.8rem; border-radius: 20px;">+ Añadir Pregunta Propia</button>
+                                        </div>
+                                        <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">Haz clic en cualquiera de estas preguntas sugeridas para agregarla a tu perfil y personalizar tu respuesta:</p>
+                                        <div id="prof-faq-suggestions-chips" style="display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem;">
+                                            <!-- Chips generados por JS -->
+                                        </div>
+                                        <div id="prof-faq-editor-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                            <!-- Lista editable de FAQs seleccionadas -->
+                                        </div>
+                                    </div>
+
+                                    <!-- GESTOR DE BLOG / ARTÍCULOS DEL PSICÓLOGO -->
+                                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; padding: 1.25rem; border-radius: 16px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.4rem;">
+                                            <label style="font-weight: 800; color: #1e293b; font-size: 1rem; margin: 0;">✍️ Mi Blog / Artículos Publicados</label>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="toggleNewBlogPostForm()" style="font-weight: 700; font-size: 0.82rem; border-radius: 20px; background: #702e5e; border: none;">+ Redactar Artículo</button>
+                                        </div>
+                                        <p style="font-size: 0.83rem; color: #64748b; margin-top: 0; margin-bottom: 0.85rem;">Comparte reflexiones o artículos breves con imagen y título para generar confianza en quienes visitan tu perfil:</p>
+
+                                        <!-- Formulario desplegable para crear/editar artículo -->
+                                        <div id="prof-blog-form-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.15rem; margin-bottom: 1rem;">
+                                            <input type="hidden" id="prof-blog-edit-index" value="-1">
+                                            <div class="form-group" style="margin-bottom: 0.85rem;">
+                                                <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Título del Artículo *</label>
+                                                <input type="text" id="prof-blog-title" class="form-control" placeholder="Ej: ¿Cómo saber cuándo es momento de iniciar terapia?" style="width: 100%; display: block; box-sizing: border-box; padding: 0.65rem 0.85rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.94rem; font-weight: 700;">
+                                            </div>
+                                            <div class="form-group" style="margin-bottom: 0.85rem;">
+                                                <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Imagen de Portada (Sube una foto o pega un enlace)</label>
+                                                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                                    <input type="text" id="prof-blog-img" class="form-control" placeholder="URL de imagen o sube archivo al lado ->" style="flex: 1; min-width: 200px; padding: 0.6rem 0.85rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.9rem;">
+                                                    <label class="btn btn-sm btn-outline-secondary" style="margin: 0; cursor: pointer; font-weight: 700; white-space: nowrap; padding: 0.55rem 0.9rem; border-radius: 10px;">
+                                                        📷 Subir Foto <input type="file" accept="image/*" style="display: none;" onchange="handleBlogImageUpload(this)">
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom: 0.9rem;">
+                                                <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.3rem; color: #334155;">Contenido del Artículo *</label>
+                                                <textarea id="prof-blog-content" rows="6" class="form-control" placeholder="Escribe aquí tu artículo o reflexión..." style="width: 100%; display: block; box-sizing: border-box; padding: 0.75rem 0.9rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.93rem; line-height: 1.55; min-height: 130px; resize: vertical; font-family: inherit;"></textarea>
+                                            </div>
+                                            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelBlogPostForm()">Cancelar</button>
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="saveBlogPostToList()" style="background: #166534; border: none; font-weight: 700;">✅ Agregar a Mi Lista (Recuerda Guardar Cambios abajo)</button>
+                                            </div>
+                                        </div>
+
+                                        <div id="prof-blog-editor-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
+                                            <!-- Lista de artículos agregados -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SUBPESTAÑA 5: CONTACTO -->
+                                <div id="prof-subtab-contacto" class="prof-editor-pane" style="display: none; flex-direction: column; gap: 1.2rem;">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                                        <div class="form-group">
+                                            <label for="prof-whatsapp" style="font-weight: 700;">WhatsApp Público de Contacto</label>
+                                            <input type="text" id="prof-whatsapp" class="form-control" placeholder="Ej: +584121234567">
+                                            <small style="color: #64748b; font-size: 0.78rem;">Se utilizará para que los consultantes te escriban directamente.</small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="prof-email" style="font-weight: 700;">Correo Electrónico Público</label>
+                                            <input type="email" id="prof-email" class="form-control" placeholder="Ej: consulta@paulomora.com">
+                                            <small style="color: #64748b; font-size: 0.78rem;">Visible en la sección de contacto de tu perfil.</small>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                                        <div class="form-group">
+                                            <label for="prof-instagram" style="font-weight: 700;">Instagram (@usuario)</label>
+                                            <input type="text" id="prof-instagram" class="form-control" placeholder="Ej: @psic.paulomora">
+                                            <small style="color: #64748b; font-size: 0.78rem;">Tu nombre de usuario en Instagram (con o sin @).</small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="prof-linkedin" style="font-weight: 700;">LinkedIn (URL perfil)</label>
+                                            <input type="text" id="prof-linkedin" class="form-control" placeholder="Ej: https://linkedin.com/in/...">
+                                            <small style="color: #64748b; font-size: 0.78rem;">Enlace a tu perfil profesional en LinkedIn.</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- BARRA INFERIOR DE ACCIONES (SIEMPRE VISIBLE) -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; padding-top: 1.15rem; border-top: 1.5px solid #e2e8f0; flex-wrap: wrap; gap: 0.75rem;">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="previewPublicProfileLive()" style="font-weight: 700; padding: 0.7rem 1.4rem; border-radius: 25px; cursor: pointer; border: 1.5px solid #702e5e; color: #702e5e;">👁️ Vista Previa de Mi Perfil</button>
+                                    <button type="button" class="btn btn-primary" onclick="savePublicProfileSettings()" style="font-weight: 700; padding: 0.7rem 1.85rem; border-radius: 25px; cursor: pointer; background: #702e5e; border: none; box-shadow: 0 4px 14px rgba(112, 46, 94, 0.25);">💾 Guardar Mi Perfil Público</button>
                                 </div>
                             </div>
                         </div>
