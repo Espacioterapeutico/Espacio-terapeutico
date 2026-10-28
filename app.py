@@ -4187,6 +4187,7 @@ def index(slug=None):
     initial_therapist_photo = None
     initial_therapist_nomenclatura = None
     initial_foto_forma = 'curvo'
+    initial_therapist_data_json = None
     is_public_profile_route = False
 
     if path.startswith('psic.') or path.startswith('psicologo/') or path.startswith('psic/'):
@@ -4234,6 +4235,13 @@ def index(slug=None):
                     except Exception:
                         redes_dict = {}
                 initial_foto_forma = psych.get('foto_forma') or (redes_dict.get('foto_forma') if isinstance(redes_dict, dict) else 'curvo') or 'curvo'
+
+                try:
+                    from routes_admin import serialize_public_therapist_dict
+                    t_dict = serialize_public_therapist_dict(psych)
+                    initial_therapist_data_json = json.dumps(t_dict)
+                except Exception:
+                    initial_therapist_data_json = None
                 
                 # Buscar foto de perfil / título del psicólogo
                 foto_usr = psych.get('foto_perfil') or psych.get('foto_titulo')
@@ -4261,6 +4269,7 @@ def index(slug=None):
                            initial_therapist_photo=initial_therapist_photo,
                            initial_therapist_nomenclatura=initial_therapist_nomenclatura,
                            initial_foto_forma=initial_foto_forma,
+                           initial_therapist_data_json=initial_therapist_data_json,
                            is_public_profile_route=is_public_profile_route,
                            has_active_session=has_active_session,
                            session_user_type=session_user_type,

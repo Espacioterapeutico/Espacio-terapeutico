@@ -2678,26 +2678,7 @@ def get_public_landing_content():
 
 
 
-@admin_bp.route('/api/public/therapist/<path:slug>', methods=['GET'])
-def get_public_therapist_profile(slug):
-    db = get_db()
-    ensure_usuarios_columns(db)
-    cursor = db.cursor()
-    from app import get_psychologist_by_id_or_slug
-    
-    clean_slug = str(slug).strip()
-    for prefix in ['psicologo/', 'psic/', 'psic.', 'agendar/', 'registro/']:
-        if clean_slug.lower().startswith(prefix):
-            clean_slug = clean_slug[len(prefix):]
-            
-    psych = get_psychologist_by_id_or_slug(cursor, clean_slug)
-    if not psych:
-        # Re-try with original raw slug just in case
-        psych = get_psychologist_by_id_or_slug(cursor, slug)
-        
-    if not psych:
-        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
-
+def serialize_public_therapist_dict(psych):
     psych = dict(psych) if not isinstance(psych, dict) else psych
 
     modalidades_raw = psych.get('modalidades_json')
@@ -2753,7 +2734,7 @@ def get_public_therapist_profile(slug):
     clean_slug = generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
     
-    resp = jsonify({
+    return {
         'id': psych.get('id'),
         'nombres': psych.get('nombres') or '',
         'apellidos': psych.get('apellidos') or '',
@@ -2776,7 +2757,31 @@ def get_public_therapist_profile(slug):
         'faqs': faqs,
         'url_agendar': f"/agendar/{clean_slug}",
         'url_registro': f"/registro/{clean_slug}"
-    })
+    }
+
+@admin_bp.route('/api/public/therapist/<path:slug>', methods=['GET'])
+def get_public_therapist_profile(slug):
+    """Devuelve los datos públicos del psicólogo para su página y agendamiento."""
+    db = get_db()
+    ensure_usuarios_columns(db)
+    cursor = db.cursor()
+    from app import get_psychologist_by_id_or_slug
+    
+    clean_slug = str(slug).strip()
+    for prefix in ['psicologo/', 'psic/', 'psic.', 'agendar/', 'registro/']:
+        if clean_slug.lower().startswith(prefix):
+            clean_slug = clean_slug[len(prefix):]
+            
+    psych = get_psychologist_by_id_or_slug(cursor, clean_slug)
+    if not psych:
+        # Re-try with original raw slug just in case
+        psych = get_psychologist_by_id_or_slug(cursor, slug)
+        
+    if not psych:
+        return jsonify({'error': 'Psicólogo no encontrado.'}), 404
+
+    t_data = serialize_public_therapist_dict(psych)
+    resp = jsonify(t_data)
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return resp
 

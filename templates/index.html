@@ -75,6 +75,9 @@
         window.__hasActiveSession = {{ 'true' if has_active_session else 'false' }};
         window.__sessionUserType = "{{ session_user_type or '' }}";
     </script>
+    {% if initial_therapist_data_json %}
+    <script id="server-therapist-data" type="application/json">{{ initial_therapist_data_json|safe }}</script>
+    {% endif %}
 </head>
 <body>
 

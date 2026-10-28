@@ -1180,6 +1180,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    const isPublicProfile = window.location.pathname.startsWith('/psic.') || window.location.pathname.startsWith('/psicologo/') || window.location.pathname.startsWith('/psic/');
+    if (isPublicProfile) {
+        initLandingRouteHandling();
+        hideLoadingScreen();
+        return;
+    }
+
     // Garantía absoluta de ocultar pantalla de carga en máximo 1.5s
     setTimeout(() => {
         hideLoadingScreen();
@@ -27168,15 +27175,26 @@ async function loadDedicatedTherapistProfile(slug) {
         let cleanSlug = rawStr.split('?')[0].split('#')[0].replace(/^\/+|\/+$/g, '');
         cleanSlug = cleanSlug.replace(/^(psicologo|psic|agendar|registro)\//i, '').replace(/^psic\./i, '');
         
-        const res = await fetch(`/api/public/therapist/${encodeURIComponent(cleanSlug)}`);
-        if (!res.ok) {
-            if (profScreen) {
-                if (document.getElementById('pub-profile-name')) document.getElementById('pub-profile-name').textContent = "Psicólogo no encontrado";
-                if (document.getElementById('pub-profile-bio')) document.getElementById('pub-profile-bio').textContent = "El perfil solicitado no existe o no se encuentra activo actualmente.";
-            }
-            return;
+        let t = null;
+        const serverDataEl = document.getElementById('server-therapist-data');
+        if (serverDataEl && serverDataEl.textContent.trim()) {
+            try {
+                t = JSON.parse(serverDataEl.textContent);
+                serverDataEl.remove();
+            } catch(e) {}
         }
-        const t = await res.json();
+
+        if (!t) {
+            const res = await fetch(`/api/public/therapist/${encodeURIComponent(cleanSlug)}`);
+            if (!res.ok) {
+                if (profScreen) {
+                    if (document.getElementById('pub-profile-name')) document.getElementById('pub-profile-name').textContent = "Psicólogo no encontrado";
+                    if (document.getElementById('pub-profile-bio')) document.getElementById('pub-profile-bio').textContent = "El perfil solicitado no existe o no se encuentra activo actualmente.";
+                }
+                return;
+            }
+            t = await res.json();
+        }
 
         if (t && t.id) {
             window._refPsicologoId = t.id;
