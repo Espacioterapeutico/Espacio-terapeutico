@@ -2019,7 +2019,7 @@ async function checkSession() {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         const res = await fetch('/api/check-session', { signal: controller.signal });
         clearTimeout(timeoutId);
         if (!res.ok) {
@@ -3434,31 +3434,46 @@ async function showPatientWizard(patientId, username, patientData = null) {
 }
 
 function showAuthScreen() {
-    if (window.location.pathname.startsWith('/evaluacion/')) {
+    const curPath = (window.location.pathname || '').toLowerCase();
+    if (curPath.startsWith('/evaluacion/') || curPath.startsWith('/psic.') || curPath.startsWith('/psicologo/') || curPath.startsWith('/psic/') || curPath.startsWith('/registro/')) {
         hideLoadingScreen();
         return;
     }
+    document.documentElement.classList.remove('is-authenticated-user');
     try { clearAllNotificationIntervals(); } catch(e) {}
     try { sessionStorage.clear(); } catch(e) {}
     try { document.body.classList.remove('is-patient'); } catch(e) {}
-    try { document.getElementById('app-layout')?.classList.add('hide'); } catch(e) {}
+    try { 
+        const aLayout = document.getElementById('app-layout');
+        if (aLayout) {
+            aLayout.classList.add('hide');
+            aLayout.style.display = 'none';
+        }
+    } catch(e) {}
     try { document.getElementById('patient-header')?.classList.add('hide'); } catch(e) {}
     try { document.getElementById('patient-menu')?.classList.add('hide'); } catch(e) {}
     try { document.getElementById('patient-menu-overlay')?.classList.add('hide'); } catch(e) {}
     try { document.getElementById('sidebar')?.classList.remove('hide'); } catch(e) {}
     
-    const path = window.location.pathname.toLowerCase();
+    const path = curPath;
     const pubLanding = document.getElementById('public-landing-screen');
     const authScreen = document.getElementById('auth-screen');
     
     if (path.includes('/login')) {
-        if (pubLanding) pubLanding.classList.add('hide');
+        if (pubLanding) {
+            pubLanding.classList.add('hide');
+            pubLanding.style.display = 'none';
+        }
         if (authScreen) {
             authScreen.classList.remove('hide');
             authScreen.style.setProperty('display', 'flex', 'important');
         }
     } else {
-        if (pubLanding) pubLanding.classList.remove('hide');
+        if (pubLanding) {
+            pubLanding.classList.remove('hide');
+            pubLanding.style.removeProperty('display');
+            pubLanding.style.display = 'block';
+        }
         if (authScreen) {
             authScreen.classList.add('hide');
             authScreen.style.removeProperty('display');
@@ -3466,6 +3481,7 @@ function showAuthScreen() {
         }
         try { loadLandingPageContent(); } catch(e) {}
     }
+    hideLoadingScreen();
     
     const uInput = document.getElementById('auth-username');
     const pInput = document.getElementById('auth-password');
@@ -27797,6 +27813,8 @@ async function loadDedicatedTherapistProfile(slug) {
 
     } catch(e) {
         console.error("Error al cargar perfil de psicólogo:", e);
+    } finally {
+        hideLoadingScreen();
     }
 }
 

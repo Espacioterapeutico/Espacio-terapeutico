@@ -95,7 +95,7 @@
     </div>
     <script>
         (function() {
-            var path = window.location.pathname;
+            var path = (window.location.pathname || '').toLowerCase();
             if (path.startsWith('/evaluacion/')) {
                 document.documentElement.classList.add('is-public-eval-page');
             } else if (path.startsWith('/psic.') || path.startsWith('/psicologo/') || path.startsWith('/psic/') || path.startsWith('/registro/psic.')) {
@@ -106,10 +106,9 @@
                     loader.style.opacity = '0';
                     loader.style.visibility = 'hidden';
                 }
-            } else if (window.__hasActiveSession) {
-                document.documentElement.classList.add('is-authenticated-user');
             }
-            // Garantizar que la pantalla de carga SE OCULTE MÁXIMO a los 2.5 segundos sin importar errores de red o JS
+
+            // Ocultar pantalla de carga en máximo 2.5s
             setTimeout(function() {
                 var loader = document.getElementById('loading-screen');
                 if (loader && loader.style.display !== 'none') {
@@ -118,18 +117,41 @@
                     setTimeout(function() { loader.style.display = 'none'; }, 350);
                 }
             }, 2500);
+
+            // Watchdog de seguridad (Anti-pantalla en blanco en móviles): si a los 3.5s nada está visible, forzar vista
+            setTimeout(function() {
+                var loader = document.getElementById('loading-screen');
+                if (loader) loader.style.display = 'none';
+                
+                var appLayout = document.getElementById('app-layout');
+                var pubLanding = document.getElementById('public-landing-screen');
+                var authScreen = document.getElementById('auth-screen');
+                var profScreen = document.getElementById('public-therapist-profile-screen');
+                var fastScreen = document.getElementById('fast-booking-screen');
+                
+                var isApp = appLayout && !appLayout.classList.contains('hide') && appLayout.style.display !== 'none';
+                var isLanding = pubLanding && !pubLanding.classList.contains('hide') && pubLanding.style.display !== 'none';
+                var isAuth = authScreen && !authScreen.classList.contains('hide') && authScreen.style.display !== 'none';
+                var isProf = profScreen && !profScreen.classList.contains('hide') && profScreen.style.display !== 'none';
+                var isFast = fastScreen && !fastScreen.classList.contains('hide') && fastScreen.style.display !== 'none';
+
+                if (!isApp && !isLanding && !isAuth && !isProf && !isFast) {
+                    var curPath = (window.location.pathname || '').toLowerCase();
+                    if (curPath.startsWith('/psic.') && profScreen) {
+                        profScreen.classList.remove('hide');
+                        profScreen.style.display = 'block';
+                    } else if (curPath.includes('/login') && authScreen) {
+                        authScreen.classList.remove('hide');
+                        authScreen.style.display = 'flex';
+                    } else if (pubLanding) {
+                        pubLanding.classList.remove('hide');
+                        pubLanding.style.display = 'block';
+                    }
+                }
+            }, 3500);
         })();
     </script>
     <style>
-    /* Ocultar portada web si el usuario ya está autenticado para mostrar directamente el consultorio */
-    html.is-authenticated-user #public-landing-screen,
-    html.is-authenticated-user #auth-screen {
-        display: none !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-    }
-
     /* Ocultar pantalla de carga y portada de inmediato al entrar a un perfil de psicólogo para eliminar parpadeo */
     html.is-public-profile-page #loading-screen,
     html.is-public-profile-page #public-landing-screen,
@@ -603,7 +625,7 @@
     }
     </style>
 
-    <div id="public-landing-screen" class="public-landing-container {% if has_active_session or is_public_profile_route %}hide{% endif %}" style="{% if has_active_session or is_public_profile_route %}display: none;{% endif %}">
+    <div id="public-landing-screen" class="public-landing-container {% if is_public_profile_route %}hide{% endif %}" style="{% if is_public_profile_route %}display: none;{% endif %}">
         <!-- BARRA DE NAVEGACIÓN SUPERIOR (NAVBAR) -->
         <nav class="pub-navbar">
             <div class="pub-navbar-brand">
