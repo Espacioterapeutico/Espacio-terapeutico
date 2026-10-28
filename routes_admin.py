@@ -801,7 +801,7 @@ def admin_profile_public():
         cursor.execute("""
             SELECT id, nombres, apellidos, username, slug, estudios, foto_titulo,
                    nomenclatura, descripcion_biografia, modalidades_json, whatsapp_publico, email_publico, redes_sociales_json,
-                   especialidades, poblaciones_json, pais_ubicacion, paleta_colores, blog_json, faq_json
+                   especialidades, poblaciones_json, pais_ubicacion, paleta_colores, blog_json, faq_json, foto_forma
             FROM usuarios WHERE id = ?
         """, (user_id,))
         u = cursor.fetchone()
@@ -878,6 +878,7 @@ def admin_profile_public():
             'email_publico': u['email_publico'] or '',
             'redes_sociales': redes,
             'paleta_colores': paleta_colores,
+            'foto_forma': u['foto_forma'] or (redes.get('foto_forma') if isinstance(redes, dict) else 'curvo') or 'curvo',
             'blog_posts': blog_posts,
             'faqs': faqs,
             'foto': u['foto_titulo'] or '/static/logo.png'
@@ -897,6 +898,9 @@ def admin_profile_public():
         whatsapp = data.get('whatsapp_publico', '').strip()
         email = data.get('email_publico', '').strip()
         redes = data.get('redes_sociales', {})
+        foto_forma = data.get('foto_forma') or (redes.get('foto_forma') if isinstance(redes, dict) else 'curvo') or 'curvo'
+        if isinstance(redes, dict):
+            redes['foto_forma'] = foto_forma
         paleta_colores = data.get('paleta_colores', 'violeta').strip() or 'violeta'
         blog_posts = data.get('blog_posts', [])
         faqs = data.get('faqs', [])
@@ -928,12 +932,13 @@ def admin_profile_public():
                     email_publico = ?,
                     redes_sociales_json = ?,
                     paleta_colores = ?,
+                    foto_forma = ?,
                     blog_json = ?,
                     faq_json = ?,
                     slug = CASE WHEN ? IS NOT NULL AND ? != '' THEN ? ELSE slug END,
                     foto_titulo = CASE WHEN ? != '' THEN ? ELSE foto_titulo END
                 WHERE id = ?
-            """, (nomenclatura, descripcion, especialidades, pais_ubicacion, json.dumps(poblaciones), json.dumps(mods_data), whatsapp, email, json.dumps(redes), paleta_colores, json.dumps(blog_posts), json.dumps(faqs), new_slug_to_save, new_slug_to_save, new_slug_to_save, foto, foto, user_id))
+            """, (nomenclatura, descripcion, especialidades, pais_ubicacion, json.dumps(poblaciones), json.dumps(mods_data), whatsapp, email, json.dumps(redes), paleta_colores, foto_forma, json.dumps(blog_posts), json.dumps(faqs), new_slug_to_save, new_slug_to_save, new_slug_to_save, foto, foto, user_id))
             db.commit()
             return jsonify({'success': 'Perfil público actualizado con éxito.', 'slug': new_slug_to_save})
         except Exception as e:
@@ -2743,6 +2748,7 @@ def get_public_therapist_profile(slug):
         faqs = []
 
     paleta_colores = psych.get('paleta_colores') or 'violeta'
+    foto_forma = psych.get('foto_forma') or (redes.get('foto_forma') if isinstance(redes, dict) else 'curvo') or 'curvo'
         
     clean_slug = generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
@@ -2765,6 +2771,7 @@ def get_public_therapist_profile(slug):
         'email_publico': psych.get('email_publico') or '',
         'redes_sociales': redes,
         'paleta_colores': paleta_colores,
+        'foto_forma': foto_forma,
         'blog_posts': blog_posts,
         'faqs': faqs,
         'url_agendar': f"/agendar/{clean_slug}",

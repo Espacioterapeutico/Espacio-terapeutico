@@ -3376,6 +3376,7 @@ def ensure_usuarios_columns(db=None):
         ('paleta_colores', 'TEXT'),
         ('blog_json', 'TEXT'),
         ('faq_json', 'TEXT'),
+        ('foto_forma', "TEXT DEFAULT 'curvo'"),
         ('recordatorio_expiracion_enviado', 'TEXT DEFAULT \'\'')
     ]
     for col_name, col_type in columns:
@@ -4181,6 +4182,15 @@ def index(slug=None):
 
     # Identificar si la ruta corresponde a un psicólogo específico (agendar, perfil o registro)
     identifier = None
+    prof_palette = None
+    initial_therapist_name = None
+    initial_therapist_photo = None
+    initial_therapist_nomenclatura = None
+    initial_foto_forma = 'curvo'
+    is_public_profile_route = False
+
+    if path.startswith('psic.') or path.startswith('psicologo/') or path.startswith('psic/'):
+        is_public_profile_route = True
     if path.startswith('agendar/'):
         identifier = path.replace('agendar/', '').strip()
     elif path.startswith('psicologo/'):
@@ -4202,9 +4212,33 @@ def index(slug=None):
                 og_title = f"{nom_comp} | Reserva tu Cita en Espacio Terapéutico"
                 og_description = f"Agenda tu consulta psicológica online o presencial con {nom_comp} de forma rápida y segura."
                 
+                # Datos para SSR / carga instantánea sin parpadeo del perfil público
+                paleta_key = psych.get('paleta_colores') or 'violeta'
+                profile_color_palettes = {
+                    'violeta': {'heroBg': 'linear-gradient(135deg, #3b1940 0%, #17091b 100%)', 'accent': '#702e5e', 'accentLight': '#a855f7', 'soft': '#fdf4ff', 'border': '#f0abfc', 'pill': '#fce7f3'},
+                    'oceano': {'heroBg': 'linear-gradient(135deg, #0f2942 0%, #071321 100%)', 'accent': '#0284c7', 'accentLight': '#38bdf8', 'soft': '#f0f9ff', 'border': '#7dd3fc', 'pill': '#e0f2fe'},
+                    'salvia': {'heroBg': 'linear-gradient(135deg, #11362c 0%, #071a15 100%)', 'accent': '#0d9488', 'accentLight': '#2dd4bf', 'soft': '#f0fdfa', 'border': '#5eead4', 'pill': '#ccfbf1'},
+                    'terracota': {'heroBg': 'linear-gradient(135deg, #431d17 0%, #1f0b08 100%)', 'accent': '#c2410c', 'accentLight': '#fb923c', 'soft': '#fff7ed', 'border': '#fdba74', 'pill': '#ffedd5'},
+                    'indigo': {'heroBg': 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)', 'accent': '#4f46e5', 'accentLight': '#818cf8', 'soft': '#eef2ff', 'border': '#a5b4fc', 'pill': '#e0e7ff'},
+                    'rosa': {'heroBg': 'linear-gradient(135deg, #4c1d3d 0%, #240b1c 100%)', 'accent': '#db2777', 'accentLight': '#f472b6', 'soft': '#fdf2f8', 'border': '#f9a8d4', 'pill': '#fce7f3'}
+                }
+                prof_palette = profile_color_palettes.get(paleta_key, profile_color_palettes['violeta'])
+                initial_therapist_name = nom_comp
+                initial_therapist_nomenclatura = psych.get('nomenclatura') or psych.get('estudios') or 'Psicólogo Clínico'
+                
+                redes_raw = psych.get('redes_sociales_json')
+                redes_dict = {}
+                if redes_raw:
+                    try:
+                        redes_dict = json.loads(redes_raw) if isinstance(redes_raw, str) else redes_raw
+                    except Exception:
+                        redes_dict = {}
+                initial_foto_forma = psych.get('foto_forma') or (redes_dict.get('foto_forma') if isinstance(redes_dict, dict) else 'curvo') or 'curvo'
+                
                 # Buscar foto de perfil / título del psicólogo
                 foto_usr = psych.get('foto_perfil') or psych.get('foto_titulo')
                 if foto_usr:
+                    initial_therapist_photo = foto_usr
                     if foto_usr.startswith('http://') or foto_usr.startswith('https://'):
                         og_image = foto_usr
                     elif foto_usr.startswith('/'):
@@ -4219,6 +4253,12 @@ def index(slug=None):
                            og_description=og_description, 
                            og_image=og_image, 
                            og_url=og_url,
+                           prof_palette=prof_palette,
+                           initial_therapist_name=initial_therapist_name,
+                           initial_therapist_photo=initial_therapist_photo,
+                           initial_therapist_nomenclatura=initial_therapist_nomenclatura,
+                           initial_foto_forma=initial_foto_forma,
+                           is_public_profile_route=is_public_profile_route,
                            asset_v=int(time.time()))
 
 @app.route('/.well-known/assetlinks.json')

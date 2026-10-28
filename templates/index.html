@@ -88,8 +88,17 @@
     </div>
     <script>
         (function() {
-            if (window.location.pathname.startsWith('/evaluacion/')) {
+            var path = window.location.pathname;
+            if (path.startsWith('/evaluacion/')) {
                 document.documentElement.classList.add('is-public-eval-page');
+            } else if (path.startsWith('/psic.') || path.startsWith('/psicologo/') || path.startsWith('/psic/') || path.startsWith('/registro/psic.')) {
+                document.documentElement.classList.add('is-public-profile-page');
+                var loader = document.getElementById('loading-screen');
+                if (loader) {
+                    loader.style.display = 'none';
+                    loader.style.opacity = '0';
+                    loader.style.visibility = 'hidden';
+                }
             }
             // Garantizar que la pantalla de carga SE OCULTE MÁXIMO a los 2.5 segundos sin importar errores de red o JS
             setTimeout(function() {
@@ -103,6 +112,20 @@
         })();
     </script>
     <style>
+    /* Ocultar pantalla de carga y portada de inmediato al entrar a un perfil de psicólogo para eliminar parpadeo */
+    html.is-public-profile-page #loading-screen,
+    html.is-public-profile-page #public-landing-screen,
+    html.is-public-profile-page #app-layout,
+    html.is-public-profile-page #auth-screen {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+    html.is-public-profile-page #public-therapist-profile-screen {
+        display: block !important;
+    }
+
     /* Bloqueo estricto por CSS: Notificaciones FCM sólo visibles para Superadministrador */
     body:not(.is-superadmin) #set-tab-firebase,
     body:not(.is-superadmin) #set-card-firebase {
@@ -800,7 +823,7 @@
     </div>
 
     <!-- PÁGINA PÚBLICA DEDICADA DE PERFIL DEL PSICÓLOGO (/psic.tunombre) -->
-    <div id="public-therapist-profile-screen" class="public-landing-container hide" style="display: none; --prof-hero-bg: linear-gradient(135deg, #3b1940 0%, #17091b 100%); --prof-accent: #702e5e; --prof-accent-light: #a855f7; --prof-soft: #fdf4ff; --prof-border: #f0abfc; --prof-pill: #fce7f3; background: #f8fafc; min-height: 100vh;">
+    <div id="public-therapist-profile-screen" class="public-landing-container {% if not is_public_profile_route %}hide{% endif %}" style="{% if is_public_profile_route %}display: block;{% else %}display: none;{% endif %} --prof-hero-bg: {{ prof_palette.heroBg if prof_palette else 'linear-gradient(135deg, #3b1940 0%, #17091b 100%)' }}; --prof-accent: {{ prof_palette.accent if prof_palette else '#702e5e' }}; --prof-accent-light: {{ prof_palette.accentLight if prof_palette else '#a855f7' }}; --prof-soft: {{ prof_palette.soft if prof_palette else '#fdf4ff' }}; --prof-border: {{ prof_palette.border if prof_palette else '#f0abfc' }}; --prof-pill: {{ prof_palette.pill if prof_palette else '#fce7f3' }}; background: #f8fafc; min-height: 100vh;">
         <style>
             #public-therapist-profile-screen .prof-tabs-bar::-webkit-scrollbar { display: none; }
             #public-therapist-profile-screen .prof-tab-btn {
@@ -1132,15 +1155,15 @@
             <div id="pub-profile-hero-content" class="pub-profile-hero-grid">
                 <!-- COLUMNA IZQUIERDA: FOTO DESTACADA -->
                 <div class="pub-profile-hero-left">
-                    <div id="pub-profile-avatar-wrap" class="pub-profile-avatar-wrap">
-                        <img id="pub-profile-img" src="/static/logo.png" alt="Foto de Perfil">
+                    <div id="pub-profile-avatar-wrap" class="pub-profile-avatar-wrap" style="border-radius: {% if initial_foto_forma == 'redondo' %}50%{% elif initial_foto_forma == 'cuadrado' %}8px{% else %}24px{% endif %};">
+                        <img id="pub-profile-img" src="{{ initial_therapist_photo or '/static/logo.png' }}" alt="Foto de Perfil" style="border-radius: inherit;">
                     </div>
                 </div>
 
                 <!-- COLUMNA DERECHA: INFORMACIÓN, MODALIDADES Y BOTONES -->
                 <div class="pub-profile-hero-right">
-                    <h1 id="pub-profile-name" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: clamp(1.65rem, 3.2vw, 2.35rem); font-weight: 800; margin: 0 0 0.2rem 0; color: #ffffff; letter-spacing: -0.4px; line-height: 1.2;">Psic. Cargar Perfil...</h1>
-                    <p id="pub-profile-nomenclatura" style="font-size: 1.02rem; color: var(--prof-pill); font-weight: 600; margin: 0 0 0.85rem 0; opacity: 0.95;">Psicólogo Clínico</p>
+                    <h1 id="pub-profile-name" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: clamp(1.65rem, 3.2vw, 2.35rem); font-weight: 800; margin: 0 0 0.2rem 0; color: #ffffff; letter-spacing: -0.4px; line-height: 1.2;">{{ initial_therapist_name or 'Psic. Cargar Perfil...' }}</h1>
+                    <p id="pub-profile-nomenclatura" style="font-size: 1.02rem; color: var(--prof-pill); font-weight: 600; margin: 0 0 0.85rem 0; opacity: 0.95;">{{ initial_therapist_nomenclatura or 'Psicólogo Clínico' }}</p>
 
                     <div id="pub-profile-mods" style="width: 100%;">
                         <!-- Cuadro unificado de Especialidad, Ubicación, Población y Modalidades -->
@@ -3461,8 +3484,8 @@
                                     <div class="form-group" style="background: #f8fafc; padding: 1.25rem; border-radius: 16px; border: 1.5px dashed #cbd5e1; text-align: center;">
                                         <label style="font-weight: 700; display: block; margin-bottom: 0.75rem; color: #334155; font-size: 1rem;">📷 Foto de Perfil Profesional</label>
                                         <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
-                                            <div style="width: 115px; height: 115px; border-radius: 50%; overflow: hidden; border: 3px solid #702e5e; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background-color: #ffffff; position: relative;">
-                                                <img id="set-perfil-preview-img" src="/static/logo.png" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                                            <div id="set-perfil-preview-wrap" style="width: 115px; height: 115px; border-radius: 24px; overflow: hidden; border: 3px solid #702e5e; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background-color: #ffffff; position: relative; transition: border-radius 0.25s ease;">
+                                                <img id="set-perfil-preview-img" src="/static/logo.png" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;">
                                             </div>
                                             <div style="display: flex; gap: 0.5rem; align-items: center;">
                                                 <label class="btn btn-sm" style="cursor: pointer; padding: 0.5rem 1.25rem; font-weight: 700; background-color: #702e5e; color: #ffffff; border: none; border-radius: 20px; box-shadow: 0 2px 8px rgba(112,46,94,0.2);">
@@ -3472,6 +3495,26 @@
                                                 <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius: 20px; font-size: 0.8rem; padding: 0.45rem 0.9rem;" onclick="removePublicProfilePhoto()">Quitar Foto</button>
                                             </div>
                                             <small style="color: #64748b; font-size: 0.82rem;">Esta fotografía aparecerá en tu tarjeta del directorio institucional y en tu perfil público de agendamiento.</small>
+
+                                            <!-- SELECTOR DE FORMA DE LA FOTO -->
+                                            <div style="margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid #e2e8f0; width: 100%;">
+                                                <label style="font-weight: 700; display: block; margin-bottom: 0.45rem; color: #1e293b; font-size: 0.88rem;">Forma de la Foto en tu Perfil Público:</label>
+                                                <input type="hidden" id="prof-foto-forma" value="curvo">
+                                                <div id="prof-foto-forma-selector" style="display: flex; gap: 0.65rem; justify-content: center; flex-wrap: wrap;">
+                                                    <button type="button" class="prof-shape-card active" data-shape="curvo" onclick="selectProfilePhotoShape('curvo')" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.95rem; border-radius: 12px; border: 2px solid #702e5e; background: #fdf4ff; cursor: pointer; transition: all 0.2s;">
+                                                        <span style="width: 22px; height: 22px; border-radius: 7px; background: #702e5e; border: 1.5px solid #a855f7; display: inline-block;"></span>
+                                                        <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">Bordes Curvos</span>
+                                                    </button>
+                                                    <button type="button" class="prof-shape-card" data-shape="redondo" onclick="selectProfilePhotoShape('redondo')" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.95rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; transition: all 0.2s;">
+                                                        <span style="width: 22px; height: 22px; border-radius: 50%; background: #94a3b8; border: 1.5px solid #cbd5e1; display: inline-block;"></span>
+                                                        <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">Redondo</span>
+                                                    </button>
+                                                    <button type="button" class="prof-shape-card" data-shape="cuadrado" onclick="selectProfilePhotoShape('cuadrado')" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.95rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; transition: all 0.2s;">
+                                                        <span style="width: 22px; height: 22px; border-radius: 2px; background: #94a3b8; border: 1.5px solid #cbd5e1; display: inline-block;"></span>
+                                                        <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">Cuadrado</span>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 

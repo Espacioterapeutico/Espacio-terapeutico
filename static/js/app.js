@@ -26551,6 +26551,54 @@ function selectProfilePalette(paletteKey) {
 }
 window.selectProfilePalette = selectProfilePalette;
 
+function selectProfilePhotoShape(shapeKey) {
+    const validShape = (shapeKey === 'redondo' || shapeKey === 'cuadrado') ? shapeKey : 'curvo';
+    const input = document.getElementById('prof-foto-forma');
+    if (input) input.value = validShape;
+    
+    document.querySelectorAll('.prof-shape-card').forEach(btn => {
+        const isMatch = btn.getAttribute('data-shape') === validShape;
+        btn.classList.toggle('active', isMatch);
+        btn.style.border = isMatch ? '2px solid #702e5e' : '1.5px solid #cbd5e1';
+        btn.style.background = isMatch ? '#fdf4ff' : '#ffffff';
+    });
+
+    const previewWrap = document.getElementById('set-perfil-preview-wrap');
+    if (previewWrap) {
+        if (validShape === 'redondo') {
+            previewWrap.style.borderRadius = '50%';
+        } else if (validShape === 'cuadrado') {
+            previewWrap.style.borderRadius = '8px';
+        } else {
+            previewWrap.style.borderRadius = '24px';
+        }
+    }
+}
+window.selectProfilePhotoShape = selectProfilePhotoShape;
+
+function applyProfilePhotoShapeToScreen(shapeKey) {
+    const validShape = (shapeKey === 'redondo' || shapeKey === 'cuadrado') ? shapeKey : 'curvo';
+    const avatarWrap = document.getElementById('pub-profile-avatar-wrap');
+    const avatarImg = document.getElementById('pub-profile-img');
+    
+    let radius = '24px';
+    if (validShape === 'redondo') {
+        radius = '50%';
+    } else if (validShape === 'cuadrado') {
+        radius = '8px';
+    } else {
+        radius = '24px';
+    }
+
+    if (avatarWrap) {
+        avatarWrap.style.borderRadius = radius;
+    }
+    if (avatarImg) {
+        avatarImg.style.borderRadius = 'inherit';
+    }
+}
+window.applyProfilePhotoShapeToScreen = applyProfilePhotoShapeToScreen;
+
 function renderFaqEditorInSettings() {
     const chipsBox = document.getElementById('prof-faq-suggestions-chips');
     const listBox = document.getElementById('prof-faq-editor-list');
@@ -26828,6 +26876,7 @@ function populateProfileUI(data) {
     }
 
     selectProfilePalette(data.paleta_colores || 'violeta');
+    selectProfilePhotoShape(data.foto_forma || (redes && redes.foto_forma) || 'curvo');
     _profFaqsDraft = Array.isArray(data.faqs) ? JSON.parse(JSON.stringify(data.faqs)) : [];
     _profBlogDraft = Array.isArray(data.blog_posts) ? JSON.parse(JSON.stringify(data.blog_posts)) : [];
     renderFaqEditorInSettings();
@@ -26942,11 +26991,13 @@ async function savePublicProfileSettings() {
         }
     }
 
+    const fotoForma = document.getElementById('prof-foto-forma')?.value || 'curvo';
     const redes = {
         instagram: document.getElementById('prof-instagram') ? document.getElementById('prof-instagram').value.trim() : '',
         linkedin: document.getElementById('prof-linkedin') ? document.getElementById('prof-linkedin').value.trim() : '',
         cta_texto: document.getElementById('prof-cta-texto') ? document.getElementById('prof-cta-texto').value.trim() : '',
         cta_link: document.getElementById('prof-cta-link') ? document.getElementById('prof-cta-link').value.trim() : '',
+        foto_forma: fotoForma,
         ig_posts: igPosts
     };
 
@@ -26964,6 +27015,7 @@ async function savePublicProfileSettings() {
 
     const payload = {
         foto: fotoSrc,
+        foto_forma: fotoForma,
         nomenclatura: document.getElementById('prof-nomenclatura').value.trim(),
         descripcion_biografia: document.getElementById('prof-biografia').value.trim(),
         especialidades: document.getElementById('prof-especialidades')?.value.trim() || '',
@@ -27126,6 +27178,7 @@ async function loadDedicatedTherapistProfile(slug) {
 
         window._currentPublicTherapistName = t.nombre_completo || 'Psicólogo Clínico';
         applyPaletteToPublicScreen(t.paleta_colores || 'violeta');
+        applyProfilePhotoShapeToScreen(t.foto_forma || (t.redes_sociales && t.redes_sociales.foto_forma) || 'curvo');
         switchPublicProfileTab('conoceme');
 
         const bioBox = document.getElementById('pub-profile-bio');
