@@ -4287,6 +4287,9 @@ def serve_assetlinks():
         fp_list = json.loads(fingerprints) if isinstance(fingerprints, str) else fingerprints
     except Exception:
         fp_list = [fingerprints]
+    play_fp = "F3:C0:57:86:79:C3:6D:0C:F7:5D:56:8C:53:6F:EE:EB:83:95:99:79:31:5B:88:C5:47:42:5E:B4:AB:F5:7A:03"
+    if play_fp not in fp_list:
+        fp_list.insert(0, play_fp)
     data = [{
         "relation": ["delegate_permission/common.handle_all_urls"],
         "target": {
