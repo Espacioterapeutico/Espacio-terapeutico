@@ -4281,7 +4281,7 @@ def serve_assetlinks():
     pkg = os.environ.get("ANDROID_PACKAGE_NAME", "net.espacioterapeutico.app")
     fingerprints = os.environ.get(
         "ANDROID_SHA256_FINGERPRINTS",
-        '["14:6D:E9:78:E2:3E:04:D9:6A:B9:94:05:A4:F0:4B:9B:F3:11:36:9C:CE:BD:86:EC:4A:26:A6:6F:E8:4A:8D:70"]'
+        '["B2:16:5F:78:30:3B:23:4F:8F:FC:E4:E4:14:CC:B4:AA:BA:11:AB:9D:31:10:2E:71:73:1D:DF:30:6C:D9:25:6A", "14:6D:E9:78:E2:3E:04:D9:6A:B9:94:05:A4:F0:4B:9B:F3:11:36:9C:CE:BD:86:EC:4A:26:A6:6F:E8:4A:8D:70"]'
     )
     try:
         fp_list = json.loads(fingerprints) if isinstance(fingerprints, str) else fingerprints
