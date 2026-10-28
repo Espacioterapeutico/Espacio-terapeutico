@@ -71,6 +71,10 @@
     <meta name="twitter:description" content="{{ og_description or 'Plataforma integral de gestión clínica y auto-agendamiento para psicólogos y profesionales de la salud mental.' }}">
     <meta name="twitter:image" content="{{ og_image or (request.host_url.rstrip('/') ~ '/static/logo.png') }}">
     {% endif %}
+    <script>
+        window.__hasActiveSession = {{ 'true' if has_active_session else 'false' }};
+        window.__sessionUserType = "{{ session_user_type or '' }}";
+    </script>
 </head>
 <body>
 
@@ -99,6 +103,8 @@
                     loader.style.opacity = '0';
                     loader.style.visibility = 'hidden';
                 }
+            } else if (window.__hasActiveSession) {
+                document.documentElement.classList.add('is-authenticated-user');
             }
             // Garantizar que la pantalla de carga SE OCULTE MÁXIMO a los 2.5 segundos sin importar errores de red o JS
             setTimeout(function() {
@@ -112,6 +118,15 @@
         })();
     </script>
     <style>
+    /* Ocultar portada web si el usuario ya está autenticado para mostrar directamente el consultorio */
+    html.is-authenticated-user #public-landing-screen,
+    html.is-authenticated-user #auth-screen {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
     /* Ocultar pantalla de carga y portada de inmediato al entrar a un perfil de psicólogo para eliminar parpadeo */
     html.is-public-profile-page #loading-screen,
     html.is-public-profile-page #public-landing-screen,
@@ -585,7 +600,7 @@
     }
     </style>
 
-    <div id="public-landing-screen" class="public-landing-container">
+    <div id="public-landing-screen" class="public-landing-container {% if has_active_session or is_public_profile_route %}hide{% endif %}" style="{% if has_active_session or is_public_profile_route %}display: none;{% endif %}">
         <!-- BARRA DE NAVEGACIÓN SUPERIOR (NAVBAR) -->
         <nav class="pub-navbar">
             <div class="pub-navbar-brand">

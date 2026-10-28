@@ -1188,17 +1188,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1500);
 
     try { checkAdminExists(); } catch(e) {}
-    try {
-        checkFastBookingQuery().then(isFast => {
-            if (!isFast) {
+    const isFastRoute = window.location.search.includes('fast_booking') || window.location.pathname.startsWith('/agendar/');
+    if (isFastRoute) {
+        try {
+            checkFastBookingQuery().then(isFast => {
+                if (!isFast) {
+                    checkSession();
+                } else {
+                    hideLoadingScreen();
+                }
+            }).catch(() => {
                 checkSession();
-            } else {
-                hideLoadingScreen();
-            }
-        }).catch(() => {
-            checkSession();
-        });
-    } catch(e) { checkSession(); }
+            });
+        } catch(e) { checkSession(); }
+    } else {
+        checkSession();
+    }
     try { initializeDateFilters(); } catch(e) {}
 
     // Detectar cambios de paciente en modal de citas para mostrar/ocultar prepagos
@@ -1987,6 +1992,24 @@ setInterval(() => {
 }, 30000);
 
 async function checkSession() {
+    // 0. Renderizado Optimista Instantáneo (0 ms): Si ya existe sesión previa o el servidor reportó sesión
+    const cachedSession = localStorage.getItem('offline_last_session');
+    let hasRenderedOptimistic = false;
+    if (cachedSession) {
+        try {
+            const data = JSON.parse(cachedSession);
+            if (data && (data.logged_in || data.authenticated)) {
+                if (data.role === 'paciente' || data.user_type === 'patient') {
+                    showPatientLayout(data.username, data.patient_id);
+                } else {
+                    showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
+                }
+                hasRenderedOptimistic = true;
+                hideLoadingScreen();
+            }
+        } catch (e) {}
+    }
+
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
@@ -1994,7 +2017,10 @@ async function checkSession() {
         clearTimeout(timeoutId);
         if (!res.ok) {
             if (!navigator.onLine || res.status === 503) {
-                const cachedSession = localStorage.getItem('offline_last_session');
+                if (hasRenderedOptimistic) {
+                    updateOfflineStatusUI();
+                    return;
+                }
                 if (cachedSession) {
                     const data = JSON.parse(cachedSession);
                     if (data.role === 'paciente' || data.user_type === 'patient') {
@@ -2006,6 +2032,7 @@ async function checkSession() {
                     return;
                 }
             }
+            localStorage.removeItem('offline_last_session');
             showAuthScreen();
             return;
         }
@@ -2015,18 +2042,19 @@ async function checkSession() {
             try {
                 localStorage.setItem('offline_last_session', JSON.stringify(data));
             } catch (e) {}
-            if (data.role === 'paciente' || data.user_type === 'patient') {
-                showPatientLayout(data.username, data.patient_id);
-            } else {
-                showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
+            if (!hasRenderedOptimistic) {
+                if (data.role === 'paciente' || data.user_type === 'patient') {
+                    showPatientLayout(data.username, data.patient_id);
+                } else {
+                    showAppLayout(data.username, data.role, data.activo, data.bloqueos, data.user_id, data.aviso_pago, data.primer_inicio, data.suscripcion_paga, data.fecha_expiracion_prueba, data.nombres, data.apellidos, data.suscripcion_expirada);
+                }
             }
         } else {
             localStorage.removeItem('offline_last_session');
             showAuthScreen();
         }
     } catch (err) {
-        const cachedSession = localStorage.getItem('offline_last_session');
-        if (cachedSession) {
+        if (!hasRenderedOptimistic && cachedSession) {
             try {
                 const data = JSON.parse(cachedSession);
                 if (data.role === 'paciente' || data.user_type === 'patient') {
@@ -2038,7 +2066,9 @@ async function checkSession() {
                 return;
             } catch (e) {}
         }
-        showAuthScreen();
+        if (!hasRenderedOptimistic) {
+            showAuthScreen();
+        }
     } finally {
         hideLoadingScreen();
         updateOfflineStatusUI();
@@ -2650,14 +2680,8 @@ window.getInitials = getInitials;
 
 function purgeClientCacheOnLogin() {
     try {
-        sessionStorage.clear();
-        if ('caches' in window) {
-            caches.keys().then(names => {
-                names.forEach(name => {
-                    caches.delete(name);
-                });
-            });
-        }
+        sessionStorage.removeItem('cache_profile_public');
+        sessionStorage.removeItem('cuenta_pendiente_aprobacion');
     } catch(e) {}
 }
 
@@ -27808,11 +27832,24 @@ function initLandingRouteHandling() {
         return;
     }
 
-    // Si la sesión ya está activa y el app-layout está visible, la portada pública DEBE mantenerse oculta
-    if (appLayout && !appLayout.classList.contains('hide') && !urlParams.has('directorio')) {
-        if (pubLanding) pubLanding.classList.add('hide');
-        if (profScreen) profScreen.classList.add('hide');
+    // Si la sesión ya está activa (reportada por el servidor, en caché o en DOM), la portada pública NUNCA debe mostrarse
+    const hasActiveSession = (typeof window.__hasActiveSession !== 'undefined' && window.__hasActiveSession) ||
+                             !!localStorage.getItem('offline_last_session') ||
+                             (appLayout && !appLayout.classList.contains('hide'));
+
+    if (hasActiveSession && !urlParams.has('directorio')) {
+        if (pubLanding) {
+            pubLanding.classList.add('hide');
+            pubLanding.style.removeProperty('display');
+            pubLanding.style.display = 'none';
+        }
+        if (profScreen) {
+            profScreen.classList.add('hide');
+            profScreen.style.removeProperty('display');
+            profScreen.style.display = 'none';
+        }
         if (authScreen) {
+            authScreen.style.removeProperty('display');
             authScreen.style.display = 'none';
             authScreen.classList.add('hide');
         }

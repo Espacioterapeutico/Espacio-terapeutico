@@ -4248,6 +4248,9 @@ def index(slug=None):
         except Exception:
             pass
 
+    has_active_session = bool(session.get('user_id') or session.get('patient_id'))
+    session_user_type = 'therapist' if session.get('user_id') else ('patient' if session.get('patient_id') else None)
+
     return render_template('index.html', 
                            og_title=og_title, 
                            og_description=og_description, 
@@ -4259,6 +4262,8 @@ def index(slug=None):
                            initial_therapist_nomenclatura=initial_therapist_nomenclatura,
                            initial_foto_forma=initial_foto_forma,
                            is_public_profile_route=is_public_profile_route,
+                           has_active_session=has_active_session,
+                           session_user_type=session_user_type,
                            asset_v=int(time.time()))
 
 @app.route('/.well-known/assetlinks.json')
