@@ -1951,16 +1951,10 @@ def ensure_db_initialized():
     global _db_initialized_flag
     if not _db_initialized_flag:
         _db_initialized_flag = True
-        import threading
-        def _async_init():
-            try:
-                init_db()
-                restore_patients_from_firebase()
-                # Sincronizar automáticamente los IDs de las sesiones ya existentes hacia Firebase
-                sync_all_psychologist_patients_to_firebase(1)
-            except Exception as _db_err:
-                print(f"Advertencia al inicializar BD: {_db_err}")
-        _async_init()
+        try:
+            init_db()
+        except Exception as _db_err:
+            print(f"Advertencia al inicializar BD: {_db_err}")
 
 FIREBASE_DB_URL = "https://espacio-terapeutico-default-rtdb.firebaseio.com"
 
