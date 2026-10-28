@@ -27337,9 +27337,9 @@ async function loadDedicatedTherapistProfile(slug) {
             `).join('');
 
             modsBox.innerHTML = `
-                <div style="background: rgba(255, 255, 255, 0.11); border: 1px solid rgba(255, 255, 255, 0.24); border-radius: 16px; padding: 0.85rem 1.15rem; max-width: 540px; width: 100%; margin: 0.25rem auto 0.5rem auto; backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); text-align: left; font-size: 0.88rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                <div class="pub-profile-info-card">
                     ${rowsHtml}
-                    <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; justify-content: center; padding-top: ${infoRows.length ? '0.45rem' : '0'}; ${infoRows.length ? 'border-top: 1px solid rgba(255,255,255,0.13);' : ''}">
+                    <div class="pub-profile-mods-row" style="padding-top: ${infoRows.length ? '0.45rem' : '0'}; ${infoRows.length ? 'border-top: 1px solid rgba(255,255,255,0.13);' : ''}">
                         ${modsBadges}
                     </div>
                 </div>`;

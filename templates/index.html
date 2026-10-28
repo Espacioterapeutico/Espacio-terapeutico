@@ -889,6 +889,82 @@
                 color: #ffffff;
                 box-shadow: 0 4px 12px rgba(214, 36, 159, 0.3);
             }
+            /* HERO EN 2 COLUMNAS (DESKTOP) */
+            #public-therapist-profile-screen .pub-profile-hero-grid {
+                max-width: 860px;
+                margin: 0 auto;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                gap: 2.25rem;
+                position: relative;
+                z-index: 2;
+                text-align: left;
+            }
+            #public-therapist-profile-screen .pub-profile-hero-left {
+                flex-shrink: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            #public-therapist-profile-screen .pub-profile-avatar-wrap {
+                width: 235px;
+                height: 260px;
+                border-radius: 24px;
+                overflow: hidden;
+                border: 4px solid var(--prof-pill);
+                box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+                background: #ffffff;
+                transition: transform 0.28s ease, box-shadow 0.28s ease;
+            }
+            #public-therapist-profile-screen .pub-profile-avatar-wrap:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 22px 48px rgba(0, 0, 0, 0.45);
+            }
+            #public-therapist-profile-screen .pub-profile-avatar-wrap img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+            #public-therapist-profile-screen .pub-profile-hero-right {
+                flex: 1;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            #public-therapist-profile-screen .pub-profile-info-card {
+                background: rgba(255, 255, 255, 0.11);
+                border: 1px solid rgba(255, 255, 255, 0.24);
+                border-radius: 16px;
+                padding: 0.85rem 1.15rem;
+                width: 100%;
+                backdrop-filter: blur(8px);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+                text-align: left;
+                font-size: 0.88rem;
+                display: flex;
+                flex-direction: column;
+                gap: 0.45rem;
+                margin: 0.25rem 0 0.85rem 0;
+                box-sizing: border-box;
+            }
+            #public-therapist-profile-screen .pub-profile-mods-row {
+                display: flex;
+                gap: 0.45rem;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: flex-start;
+            }
+            #public-therapist-profile-screen .pub-profile-cta-group {
+                display: flex;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                margin-top: 0.25rem;
+            }
             #public-therapist-profile-screen .prof-step-arrow {
                 width: 34px;
                 height: 34px;
@@ -908,7 +984,7 @@
                 background: var(--prof-accent);
                 color: #ffffff;
             }
-            @media (max-width: 640px) {
+            @media (max-width: 768px) {
                 #public-therapist-profile-screen .pub-navbar {
                     padding: 0.55rem 0.85rem !important;
                 }
@@ -936,31 +1012,53 @@
                 #public-therapist-profile-screen #pub-profile-hero {
                     padding: 1.75rem 0.9rem 2.6rem 0.9rem !important;
                 }
-                #public-therapist-profile-screen #pub-profile-avatar-wrap {
-                    width: 112px !important;
-                    height: 112px !important;
+                #public-therapist-profile-screen .pub-profile-hero-grid {
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    text-align: center !important;
+                    gap: 0.85rem !important;
+                }
+                #public-therapist-profile-screen .pub-profile-hero-right {
+                    align-items: center !important;
+                    width: 100% !important;
+                }
+                #public-therapist-profile-screen #pub-profile-avatar-wrap,
+                #public-therapist-profile-screen .pub-profile-avatar-wrap {
+                    width: 155px !important;
+                    height: 155px !important;
+                    border-radius: 50% !important;
                     margin-bottom: 0.75rem !important;
-                    border-width: 3px !important;
+                    border-width: 4px !important;
+                    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35) !important;
+                }
+                #public-therapist-profile-screen .pub-profile-info-card {
+                    margin: 0.25rem auto 0.75rem auto !important;
+                    max-width: 540px !important;
+                }
+                #public-therapist-profile-screen .pub-profile-mods-row {
+                    justify-content: center !important;
                 }
                 #public-therapist-profile-screen #pub-profile-name {
-                    font-size: 1.4rem !important;
+                    font-size: 1.55rem !important;
                 }
                 #public-therapist-profile-screen #pub-profile-nomenclatura {
-                    font-size: 0.88rem !important;
+                    font-size: 0.92rem !important;
                     margin-bottom: 0.85rem !important;
                 }
-                #public-therapist-profile-screen #pub-profile-cta-group {
+                #public-therapist-profile-screen #pub-profile-cta-group,
+                #public-therapist-profile-screen .pub-profile-cta-group {
                     flex-direction: column !important;
                     width: 100% !important;
-                    max-width: 280px !important;
+                    max-width: 290px !important;
                     gap: 0.55rem !important;
+                    justify-content: center !important;
                 }
                 #public-therapist-profile-screen #pub-profile-wa-btn,
                 #public-therapist-profile-screen #pub-profile-direct-wa-btn {
                     width: 100% !important;
                     justify-content: center !important;
-                    font-size: 0.9rem !important;
-                    padding: 0.72rem 1.2rem !important;
+                    font-size: 0.92rem !important;
+                    padding: 0.75rem 1.2rem !important;
                     box-sizing: border-box !important;
                 }
                 #public-therapist-profile-screen #pub-profile-tabs-bar {
@@ -1026,25 +1124,32 @@
             </div>
         </nav>
 
-        <!-- HERO MODERNO CON PALETA DINÁMICA -->
-        <section id="pub-profile-hero" style="background: var(--prof-hero-bg); color: white; padding: 3rem 1.25rem 3.6rem 1.25rem; text-align: center; position: relative; overflow: hidden;">
+        <!-- HERO MODERNO CON PALETA DINÁMICA (2 COLUMNAS EN PC / VERTICAL EN MÓVIL) -->
+        <section id="pub-profile-hero" style="background: var(--prof-hero-bg); color: white; padding: 2.85rem 1.25rem 3.4rem 1.25rem; position: relative; overflow: hidden;">
             <div style="position: absolute; top: -90px; right: -90px; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none;"></div>
             <div style="position: absolute; bottom: -100px; left: -80px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%); pointer-events: none;"></div>
 
-            <div style="max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2;">
-                <div id="pub-profile-avatar-wrap" style="width: 144px; height: 144px; border-radius: 50%; overflow: hidden; border: 4px solid var(--prof-pill); box-shadow: 0 14px 34px rgba(0,0,0,0.42); margin-bottom: 0.95rem; background: #fff;">
-                    <img id="pub-profile-img" src="/static/logo.png" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <h1 id="pub-profile-name" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: clamp(1.65rem, 4vw, 2.25rem); font-weight: 800; margin: 0 0 0.2rem 0; color: #ffffff; letter-spacing: -0.4px;">Psic. Cargar Perfil...</h1>
-                <p id="pub-profile-nomenclatura" style="font-size: 1rem; color: var(--prof-pill); font-weight: 600; margin: 0 0 1rem 0; opacity: 0.95;">Psicólogo Clínico</p>
-
-                <div id="pub-profile-mods" style="width: 100%; max-width: 560px; margin: 0 auto 1.25rem auto;">
-                    <!-- Cuadro unificado de Especialidad, Ubicación, Población y Modalidades -->
+            <div id="pub-profile-hero-content" class="pub-profile-hero-grid">
+                <!-- COLUMNA IZQUIERDA: FOTO DESTACADA -->
+                <div class="pub-profile-hero-left">
+                    <div id="pub-profile-avatar-wrap" class="pub-profile-avatar-wrap">
+                        <img id="pub-profile-img" src="/static/logo.png" alt="Foto de Perfil">
+                    </div>
                 </div>
 
-                <div id="pub-profile-cta-group" style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
-                    <a id="pub-profile-wa-btn" href="#" class="pub-btn-primary" style="background: #ffffff; color: #0f172a; font-size: 0.98rem; padding: 0.82rem 1.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; font-weight: 800; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); border: none;">📅 Agendar Sesión</a>
-                    <a id="pub-profile-direct-wa-btn" href="#" target="_blank" onclick="if(window.trackGoogleAdsConversion) window.trackGoogleAdsConversion();" class="pub-btn-outline" style="font-size: 0.98rem; padding: 0.82rem 1.85rem; text-decoration: none; display: none; align-items: center; gap: 8px; border-radius: 999px; font-weight: 700; border: 1.5px solid rgba(255,255,255,0.75); color: #ffffff; background: rgba(255, 255, 255, 0.14); backdrop-filter: blur(8px);">💬 Conéctate conmigo</a>
+                <!-- COLUMNA DERECHA: INFORMACIÓN, MODALIDADES Y BOTONES -->
+                <div class="pub-profile-hero-right">
+                    <h1 id="pub-profile-name" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: clamp(1.65rem, 3.2vw, 2.35rem); font-weight: 800; margin: 0 0 0.2rem 0; color: #ffffff; letter-spacing: -0.4px; line-height: 1.2;">Psic. Cargar Perfil...</h1>
+                    <p id="pub-profile-nomenclatura" style="font-size: 1.02rem; color: var(--prof-pill); font-weight: 600; margin: 0 0 0.85rem 0; opacity: 0.95;">Psicólogo Clínico</p>
+
+                    <div id="pub-profile-mods" style="width: 100%;">
+                        <!-- Cuadro unificado de Especialidad, Ubicación, Población y Modalidades -->
+                    </div>
+
+                    <div id="pub-profile-cta-group" class="pub-profile-cta-group">
+                        <a id="pub-profile-wa-btn" href="#" class="pub-btn-primary" style="background: #ffffff; color: #0f172a; font-size: 0.96rem; padding: 0.8rem 1.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; font-weight: 800; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28); border: none;">📅 Agendar Sesión</a>
+                        <a id="pub-profile-direct-wa-btn" href="#" target="_blank" onclick="if(window.trackGoogleAdsConversion) window.trackGoogleAdsConversion();" class="pub-btn-outline" style="font-size: 0.96rem; padding: 0.8rem 1.85rem; text-decoration: none; display: none; align-items: center; gap: 8px; border-radius: 999px; font-weight: 700; border: 1.5px solid rgba(255,255,255,0.75); color: #ffffff; background: rgba(255, 255, 255, 0.14); backdrop-filter: blur(8px);">💬 Conéctate conmigo</a>
+                    </div>
                 </div>
             </div>
         </section>
