@@ -2361,19 +2361,18 @@ def auto_cancel_unconfirmed_sessions(db):
                 'agenda'
             ))
             
-            # 4. Notificación al paciente en Firebase
+            # 4. Notificación al paciente en campanita y Push
             try:
-                firebase_payload = {
-                    "id": int(datetime.now().timestamp() * 1000),
-                    "tipo": "cita",
-                    "titulo": "Consulta Cancelada por Falta de Confirmación",
-                    "mensaje": f"Tu consulta programada para el {fecha_cita} a las {hora_cita} fue cancelada automáticamente por no confirmarse a tiempo.",
-                    "fecha": fecha_notif,
-                    "leida": False
-                }
-                requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=firebase_payload, timeout=2.0)
+                notify_patient(
+                    patient_id=patient_id,
+                    titulo="⚠️ Consulta Cancelada por Falta de Confirmación",
+                    mensaje=f"Tu consulta programada para el {fecha_cita} a las {hora_cita} fue cancelada automáticamente por no confirmarse a tiempo.",
+                    link="/#patient-home",
+                    icon="⚠️",
+                    tipo="cita"
+                )
             except Exception as fe:
-                print("Error al notificar al paciente en Firebase:", fe)
+                print("Error al notificar al paciente sobre cancelación por falta de confirmación:", fe)
 
             # 5. Notificación WhatsApp al paciente por cancelación por falta de confirmación
             from routes_herramientas import clean_phone_number
@@ -2510,28 +2509,16 @@ def auto_send_appointment_reminders(db):
             # 3. Notificación al paciente en Firebase y Push (respetando descanso nocturno del consultante: 8 AM a 10 PM)
             if 8 <= now_dt.hour < 22:
                 try:
-                    fb_payload = {
-                        "id": int(now_dt.timestamp() * 1000),
-                        "tipo": "cita",
-                        "titulo": "⏰ Recordatorio de Consulta Hoy",
-                        "mensaje": f"Hola {appt['nombres']}, te recordamos tu consulta programada para hoy a las {hora_cita_paciente}.",
-                        "fecha": now_str,
-                        "leida": False
-                    }
-                    requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
-                except Exception as fe:
-                    pass
-                
-                # 4. Push al paciente también
-                try:
-                    send_webpush_notification(
+                    notify_patient(
                         patient_id=patient_id,
-                        title="⏰ Recordatorio de Consulta Hoy",
-                        body=f"Hola {appt['nombres']}, tienes consulta hoy a las {hora_cita_paciente}.",
-                        url="/"
+                        titulo="⏰ Recordatorio de Consulta Hoy",
+                        mensaje=f"Hola {appt['nombres']}, te recordamos tu consulta programada para hoy a las {hora_cita_paciente}.",
+                        link="/#patient-home",
+                        icon="⏰",
+                        tipo="cita"
                     )
                 except Exception as wp_pac_ex:
-                    print("Error al enviar WebPush de recordatorio al paciente:", wp_pac_ex)
+                    print("Error al notificar recordatorio al paciente:", wp_pac_ex)
                 
         db.commit()
     except Exception as e:
@@ -2621,20 +2608,18 @@ def auto_send_confirmation_requests(db):
                 except:
                     pass
 
-                # Enviar notificación a Firebase para el paciente
+                # Enviar notificación a campanita y Push para el paciente
                 try:
-                    fb_payload = {
-                        "id": int(now_dt.timestamp() * 1000),
-                        "notif_key": notif_key,
-                        "tipo": "cita",
-                        "titulo": "⚠️ Por favor confirma tu consulta",
-                        "mensaje": f"Tu consulta del {fecha_cita} a las {hora_cita} ya está disponible para confirmar. ¡Por favor confirma tu asistencia!",
-                        "fecha": now_str,
-                        "leida": False
-                    }
-                    requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+                    notify_patient(
+                        patient_id=patient_id,
+                        titulo="⚠️ Por favor confirma tu consulta",
+                        mensaje=f"Tu consulta del {fecha_cita} a las {hora_cita} ya está disponible para confirmar. ¡Por favor confirma tu asistencia!",
+                        link="/#patient-home",
+                        icon="⚠️",
+                        tipo="cita"
+                    )
                 except Exception as fe:
-                    print("Error enviando notif confirmacion a Firebase:", fe)
+                    print("Error enviando notif confirmacion al paciente:", fe)
 
         db.commit()
     except Exception as e:

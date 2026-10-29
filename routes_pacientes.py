@@ -1441,6 +1441,21 @@ def patient_add_appointment():
         except Exception as fb_ex:
             print("Error sincronizando Firebase:", fb_ex)
         
+        # Notificación al consultante en su campanita y Push
+        try:
+            from app import notify_patient
+            hora_display = hora_paciente or hora_norm
+            notify_patient(
+                patient_id=patient_id,
+                titulo="📅 Cita Agendada con Éxito",
+                mensaje=f"Tu consulta para el {fecha_norm} a las {hora_display} ha sido agendada exitosamente.",
+                link="/#patient-home",
+                icon="📅",
+                tipo="cita"
+            )
+        except Exception as _np_err:
+            print("Error notificando al paciente de auto-agendamiento:", _np_err)
+
         # Notificación automática e inmediata por WhatsApp al paciente
         try:
             from routes_notificaciones import send_booking_notification_wa
@@ -1728,15 +1743,15 @@ def patient_confirm_appointment():
         """, (psic_id, f"{pac_nombre} ha confirmado su asistencia a la consulta del {appt['fecha']} a las {appt['hora']}.", now_str))
         
         try:
-            fb_payload = {
-                "id": int(datetime.now().timestamp() * 1000),
-                "tipo": "cita",
-                "titulo": "✅ Cita Confirmada",
-                "mensaje": f"Has confirmado exitosamente tu consulta para el {appt['fecha']} a las {appt['hora']}.",
-                "fecha": now_str,
-                "leida": False
-            }
-            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+            from app import notify_patient
+            notify_patient(
+                patient_id=patient_id,
+                titulo="✅ Cita Confirmada",
+                mensaje=f"Has confirmado exitosamente tu consulta para el {appt['fecha']} a las {appt['hora']}.",
+                link="/#patient-home",
+                icon="✅",
+                tipo="cita"
+            )
         except Exception as fe:
             pass
 
@@ -2311,7 +2326,9 @@ def accept_patient_terms():
 @pacientes_bp.route('/api/patient/notifications', methods=['GET'])
 @patient_login_required
 def get_patient_notifications():
-    patient_id = session.get('patient_id')
+    patient_id = session.get('patient_id') or request.args.get('patient_id')
+    if patient_id:
+        patient_id = int(patient_id)
     db = get_db()
     cursor = db.cursor()
     try:
@@ -2361,8 +2378,10 @@ def get_patient_notifications():
 @pacientes_bp.route('/api/patient/notifications/mark-read', methods=['POST'])
 @patient_login_required
 def mark_patient_notifications_read():
-    patient_id = session.get('patient_id')
     data = request.json or {}
+    patient_id = session.get('patient_id') or request.args.get('patient_id') or data.get('patient_id')
+    if patient_id:
+        patient_id = int(patient_id)
     notif_id = data.get('notification_id')
     db = get_db()
     cursor = db.cursor()
@@ -2380,7 +2399,10 @@ def mark_patient_notifications_read():
 @pacientes_bp.route('/api/patient/notifications/clear', methods=['POST'])
 @patient_login_required
 def clear_patient_notifications():
-    patient_id = session.get('patient_id')
+    data = request.json or {}
+    patient_id = session.get('patient_id') or request.args.get('patient_id') or data.get('patient_id')
+    if patient_id:
+        patient_id = int(patient_id)
     db = get_db()
     cursor = db.cursor()
     try:

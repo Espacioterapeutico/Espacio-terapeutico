@@ -1233,28 +1233,19 @@ def add_agenda_event():
         except Exception:
             pass
 
-    # Notificar al consultante vía WebPush y Firebase si está disponible
+    # Notificar al consultante vía SQLite nativo y WebPush/FCM
     if paciente_id:
         try:
-            from app import send_webpush_notification, FIREBASE_DB_URL
-            import requests
+            from app import notify_patient
             hora_display = hora_paciente or hora  # Mostrar la hora en la zona horaria del paciente
-            send_webpush_notification(
+            notify_patient(
                 patient_id=paciente_id,
-                title="📅 Nueva Cita Agendada",
-                body=f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora_display}.",
-                url="/?view=citas"
+                titulo="📅 Nueva Cita Agendada",
+                mensaje=f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora_display}.",
+                link="/#patient-home",
+                icon="📅",
+                tipo="cita"
             )
-            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            fb_payload = {
-                "id": int(datetime.now().timestamp() * 1000),
-                "tipo": "cita",
-                "titulo": "📅 Nueva Cita Agendada",
-                "mensaje": f"Tu psicólogo ha programado una consulta para el {fecha} a las {hora_display}.",
-                "fecha": now_str,
-                "leida": False
-            }
-            requests.post(f"{FIREBASE_DB_URL}/pacientes/{paciente_id}/notificaciones.json", json=fb_payload, timeout=2.0)
         except Exception as _ex_pac:
             print("Error notificando al paciente sobre cita creada:", _ex_pac)
     
@@ -2548,20 +2539,18 @@ def accion_cita_publica():
         except Exception as _wp_ex:
             print("Error enviando WebPush de confirmacion publica:", _wp_ex)
 
-        # 3. Notificación para el paciente en Firebase
+        # 3. Notificación para el paciente en campanita y Push
         if cita['paciente_id']:
             try:
-                from app import FIREBASE_DB_URL
-                import requests
-                fb_payload = {
-                    "id": int(datetime.now().timestamp() * 1000),
-                    "tipo": "cita",
-                    "titulo": "✅ Cita Confirmada",
-                    "mensaje": f"Has confirmado exitosamente tu consulta para el {cita['fecha']} a las {cita['hora']}.",
-                    "fecha": now_str,
-                    "leida": False
-                }
-                requests.post(f"{FIREBASE_DB_URL}/pacientes/{cita['paciente_id']}/notificaciones.json", json=fb_payload, timeout=2.0)
+                from app import notify_patient
+                notify_patient(
+                    patient_id=cita['paciente_id'],
+                    titulo="✅ Cita Confirmada",
+                    mensaje=f"Has confirmado exitosamente tu consulta para el {cita['fecha']} a las {cita['hora']}.",
+                    link="/#patient-home",
+                    icon="✅",
+                    tipo="cita"
+                )
             except Exception:
                 pass
         

@@ -13630,6 +13630,10 @@ function togglePatientNotificationsDropdown() {
     const dropdown = document.getElementById('pat-notifications-dropdown');
     if (!dropdown) return;
     dropdown.classList.toggle('hide');
+    if (!dropdown.classList.contains('hide')) {
+        const pid = sessionStorage.getItem('patient_id');
+        if (pid) loadPatientNotifications(pid);
+    }
 }
 
 async function loadPatientNotifications(patientId) {
