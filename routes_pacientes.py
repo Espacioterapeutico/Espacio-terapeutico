@@ -11,7 +11,7 @@ import sqlite3
 import json
 import io
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import Blueprint, request, jsonify, session, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -94,7 +94,6 @@ def get_appointment_fee(cursor, patient_id, psicologo_id=None, modalidad=None):
 
 def get_deadline_datetime(fecha_str, hora_str, rule_type, rule_value):
     """Calcula la fecha y hora límite para cancelar/reprogramar una cita según la regla del psicólogo."""
-    from datetime import datetime, timedelta
     try:
         f_norm = normalize_date_str(fecha_str)
         h_norm = normalize_time_str(hora_str)
@@ -1368,7 +1367,6 @@ def patient_add_appointment():
         
         pac_nombre = f"{paciente['nombres']} {paciente['apellidos']}"
         
-        from datetime import datetime
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
             INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
@@ -1380,7 +1378,7 @@ def patient_add_appointment():
         google_event_id = None
         if service:
             from routes_agenda import get_appointment_duration_and_recess
-            from datetime import datetime as _dt3, timedelta as _td3
+            _dt3, _td3 = datetime, timedelta
             import json as _json3
             cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
             _u_row3 = cursor.fetchone()
@@ -1464,7 +1462,6 @@ def patient_cancel_appointment():
     cursor = db.cursor()
     
     try:
-        from datetime import datetime
         import json
         today_str = datetime.now().strftime("%Y-%m-%d")
         now_time_str = datetime.now().strftime("%H:%M")
@@ -1658,7 +1655,6 @@ def patient_confirm_appointment():
     db = get_db()
     cursor = db.cursor()
     try:
-        from datetime import datetime
         import json
         today_str = datetime.now().strftime("%Y-%m-%d")
         now_time_str = datetime.now().strftime("%H:%M")
@@ -1785,7 +1781,6 @@ def patient_reschedule_appointment():
         return jsonify({'error': 'Fecha y hora requeridas.'}), 400
         
     try:
-        from datetime import datetime, timedelta
         import json
         today_str = datetime.now().strftime("%Y-%m-%d")
         now_time_str = datetime.now().strftime("%H:%M")
@@ -1968,7 +1963,6 @@ def patient_add_payment_report():
         
     try:
         import requests
-        from datetime import datetime
         fecha_registro = datetime.now().isoformat()
         
         db = get_db()
@@ -2123,7 +2117,6 @@ def get_patient_portal_data_dict(patient_id):
         metodos = "Contacta a tu psicólogo para conocer los métodos de pago disponibles."
 
     # 1. Citas próximas activas del consultante
-    from datetime import datetime
     today_str = datetime.now().strftime("%Y-%m-%d")
     now_time_str = datetime.now().strftime("%H:%M")
 
@@ -2279,7 +2272,6 @@ def accept_patient_terms():
     patient_id = session['patient_id']
     db = get_db()
     cursor = db.cursor()
-    from datetime import datetime
     now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
     try:
         try:
