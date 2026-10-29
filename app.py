@@ -435,9 +435,11 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
             base_url = request.host_url.rstrip('/') if request else ""
         except:
             base_url = ""
+        if not base_url:
+            base_url = "https://www.espacioterapeutico.net"
 
-        icon_url = f"{base_url}/static/logo.png" if base_url else "/static/logo.png"
-        badge_url = f"{base_url}/static/badge.png" if base_url else "/static/badge.png"
+        icon_url = f"{base_url}/static/logo.png"
+        badge_url = f"{base_url}/static/badge.png"
 
         import hashlib
         tag_id = f"notif-{hashlib.md5((title + body).encode('utf-8')).hexdigest()[:10]}"
@@ -483,7 +485,9 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                             "title": title,
                             "body": body,
                             "sound": "default",
-                            "tag": tag_id
+                            "tag": tag_id,
+                            "color": "#a95993",
+                            "notification_priority": "PRIORITY_HIGH"
                         }
                     },
                     "apns": {
@@ -573,7 +577,8 @@ def send_vapid_notification(user_id=None, patient_id=None, title="Mi Consultorio
             "url": url,
             "tag": tag_id,
             "icon": "/static/logo.png",
-            "badge": "/static/badge.png"
+            "badge": "/static/badge.png",
+            "color": "#a95993"
         })
 
         vapid_claims = {

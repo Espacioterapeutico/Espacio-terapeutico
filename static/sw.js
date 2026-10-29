@@ -1,10 +1,11 @@
-const CACHE_NAME = 'mi-consultorio-v158';
+const CACHE_NAME = 'mi-consultorio-v159';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/styles.css',
   '/static/js/app.js',
   '/static/js/tests_module.js',
   '/static/logo.png',
+  '/static/badge.png',
   '/static/manifest.json',
   '/static/notification.wav',
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js',
