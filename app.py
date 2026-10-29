@@ -4288,13 +4288,42 @@ def index(slug=None):
     elif request.args.get('fast_booking'):
         identifier = request.args.get('fast_booking').strip()
 
+    active_profile_subtab = None
+    if identifier and '/' in identifier:
+        parts = identifier.split('/', 1)
+        identifier = parts[0].strip()
+        sub = parts[1].strip().lower().replace('%20', '-').replace(' ', '-')
+        if 'servicio' in sub:
+            active_profile_subtab = 'servicios'
+        elif 'contact' in sub:
+            active_profile_subtab = 'contacto'
+        elif 'pregunta' in sub or 'faq' in sub:
+            active_profile_subtab = 'faq'
+        elif 'blog' in sub or 'articulo' in sub:
+            active_profile_subtab = 'blog'
+        elif 'conoce' in sub:
+            active_profile_subtab = 'conoceme'
+
     if identifier:
         try:
             psych = get_psychologist_by_id_or_slug(cursor, identifier)
             if psych:
                 nom_comp = f"Psic. {psych.get('nombres') or ''} {psych.get('apellidos') or ''}".strip()
-                og_title = f"{nom_comp} | Reserva tu Cita en Espacio Terapéutico"
-                og_description = f"Agenda tu consulta psicológica online o presencial con {nom_comp} de forma rápida y segura."
+                if active_profile_subtab == 'servicios':
+                    og_title = f"Servicios y Enfoque Clínico | {nom_comp}"
+                    og_description = f"Descubre los servicios de psicoterapia online y presencial ofrecidos por {nom_comp}."
+                elif active_profile_subtab == 'contacto':
+                    og_title = f"Contacto y Agendamiento | {nom_comp}"
+                    og_description = f"Comunícate directamente con {nom_comp} para iniciar tu proceso terapéutico."
+                elif active_profile_subtab == 'faq':
+                    og_title = f"Preguntas Frecuentes | {nom_comp}"
+                    og_description = f"Respuestas a dudas comunes sobre sesiones, honorarios y metodología con {nom_comp}."
+                elif active_profile_subtab == 'blog':
+                    og_title = f"Artículos y Recursos de Psicología | {nom_comp}"
+                    og_description = f"Lecturas y reflexiones sobre bienestar emocional y psicología por {nom_comp}."
+                else:
+                    og_title = f"{nom_comp} | Reserva tu Cita en Espacio Terapéutico"
+                    og_description = f"Agenda tu consulta psicológica online o presencial con {nom_comp} de forma rápida y segura."
                 
                 # Datos para SSR / carga instantánea sin parpadeo del perfil público
                 paleta_key = psych.get('paleta_colores') or 'violeta'
@@ -4343,6 +4372,7 @@ def index(slug=None):
     session_user_type = 'therapist' if session.get('user_id') else ('patient' if session.get('patient_id') else None)
 
     return render_template('index.html', 
+                           initial_profile_tab=active_profile_subtab,
                            og_title=og_title, 
                            og_description=og_description, 
                            og_image=og_image, 

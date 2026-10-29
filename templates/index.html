@@ -1220,19 +1220,19 @@
         <!-- BARRA FLOTANTE DE PESTAÑAS (TODOS LOS BOTONES VISIBLES TANTO EN PC COMO EN MÓVIL) -->
         <div style="max-width: 860px; margin: -1.45rem auto 1.35rem auto; padding: 0 0.85rem; position: relative; z-index: 15;">
             <div id="pub-profile-tabs-bar" class="prof-tabs-bar" style="background: rgba(255, 255, 255, 0.97); backdrop-filter: blur(12px); border: 1px solid #e2e8f0; border-radius: 999px; padding: 0.4rem; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09); display: flex; align-items: center; justify-content: space-between; gap: 0.3rem;">
-                <button type="button" class="prof-tab-btn active" data-prof-tab="conoceme" onclick="switchPublicProfileTab('conoceme')">
+                <button type="button" class="prof-tab-btn {% if not initial_profile_tab or initial_profile_tab == 'conoceme' %}active{% endif %}" data-prof-tab="conoceme" onclick="switchPublicProfileTab('conoceme')">
                     <span>👤</span> <span>Conóceme</span>
                 </button>
-                <button type="button" class="prof-tab-btn" data-prof-tab="servicios" onclick="switchPublicProfileTab('servicios')">
+                <button type="button" class="prof-tab-btn {% if initial_profile_tab == 'servicios' %}active{% endif %}" data-prof-tab="servicios" onclick="switchPublicProfileTab('servicios')">
                     <span>🌐</span> <span>Servicios</span>
                 </button>
-                <button type="button" id="prof-tab-btn-blog" class="prof-tab-btn" data-prof-tab="blog" onclick="switchPublicProfileTab('blog')">
+                <button type="button" id="prof-tab-btn-blog" class="prof-tab-btn {% if initial_profile_tab == 'blog' %}active{% endif %}" data-prof-tab="blog" onclick="switchPublicProfileTab('blog')">
                     <span>✍️</span> <span>Blog</span>
                 </button>
-                <button type="button" id="prof-tab-btn-faq" class="prof-tab-btn" data-prof-tab="faq" onclick="switchPublicProfileTab('faq')">
+                <button type="button" id="prof-tab-btn-faq" class="prof-tab-btn {% if initial_profile_tab == 'faq' %}active{% endif %}" data-prof-tab="faq" onclick="switchPublicProfileTab('faq')">
                     <span>❓</span> <span>Preguntas Frecuentes</span>
                 </button>
-                <button type="button" class="prof-tab-btn" data-prof-tab="contacto" onclick="switchPublicProfileTab('contacto')">
+                <button type="button" class="prof-tab-btn {% if initial_profile_tab == 'contacto' %}active{% endif %}" data-prof-tab="contacto" onclick="switchPublicProfileTab('contacto')">
                     <span>📲</span> <span>Contacto</span>
                 </button>
             </div>
@@ -1243,7 +1243,7 @@
             <div id="pub-profile-swipe-area" class="pub-container" style="max-width: 860px; padding: 0 0.85rem;">
                 
                 <!-- PESTAÑA 1: CONÓCEME -->
-                <div id="prof-pane-conoceme" class="prof-tab-pane active">
+                <div id="prof-pane-conoceme" class="prof-tab-pane {% if not initial_profile_tab or initial_profile_tab == 'conoceme' %}active{% endif %}">
                     <div class="prof-glass-card">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 1rem;">
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
@@ -1273,7 +1273,7 @@
                 </div>
 
                 <!-- PESTAÑA 2: SERVICIOS -->
-                <div id="prof-pane-servicios" class="prof-tab-pane">
+                <div id="prof-pane-servicios" class="prof-tab-pane {% if initial_profile_tab == 'servicios' %}active{% endif %}">
                     <div class="prof-glass-card">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 1rem;">
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
@@ -1287,7 +1287,7 @@
                 </div>
 
                 <!-- PESTAÑA 3: BLOG / ARTÍCULOS -->
-                <div id="prof-pane-blog" class="prof-tab-pane">
+                <div id="prof-pane-blog" class="prof-tab-pane {% if initial_profile_tab == 'blog' %}active{% endif %}">
                     <div class="prof-glass-card">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem;">
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
@@ -1302,7 +1302,7 @@
                 </div>
 
                 <!-- PESTAÑA 4: PREGUNTAS FRECUENTES (FAQ) -->
-                <div id="prof-pane-faq" class="prof-tab-pane">
+                <div id="prof-pane-faq" class="prof-tab-pane {% if initial_profile_tab == 'faq' %}active{% endif %}">
                     <div class="prof-glass-card">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem;">
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
@@ -1317,7 +1317,7 @@
                 </div>
 
                 <!-- PESTAÑA 5: CONTACTO -->
-                <div id="prof-pane-contacto" class="prof-tab-pane">
+                <div id="prof-pane-contacto" class="prof-tab-pane {% if initial_profile_tab == 'contacto' %}active{% endif %}">
                     <div class="prof-glass-card">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem;">
                             <h3 class="prof-pane-title" style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.28rem; color: var(--prof-accent); margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">

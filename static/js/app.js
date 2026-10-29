@@ -26840,7 +26840,8 @@ function removeBlogPostFromList(idx) {
 }
 window.removeBlogPostFromList = removeBlogPostFromList;
 
-function switchPublicProfileTab(tabName) {
+function switchPublicProfileTab(tabName, updateUrl = true) {
+    if (!tabName) tabName = 'conoceme';
     window._currentPublicProfileTab = tabName;
 
     document.querySelectorAll('#pub-profile-tabs-bar .prof-tab-btn').forEach(btn => {
@@ -26851,8 +26852,39 @@ function switchPublicProfileTab(tabName) {
     document.querySelectorAll('#public-therapist-profile-screen .prof-tab-pane').forEach(pane => {
         pane.classList.toggle('active', pane.id === `prof-pane-${tabName}`);
     });
+
+    if (updateUrl && window.history && window.history.pushState) {
+        const baseSlug = window.fastBookingTherapistSlug ? 
+            String(window.fastBookingTherapistSlug).replace(/^(psicologo|psic|agendar|registro)\/i, '').replace(/^psic\./i, '') : 
+            'paulomora';
+        const basePath = `/psic.${baseSlug}`;
+        let subPath = '';
+        if (tabName === 'servicios') subPath = '/servicios';
+        else if (tabName === 'contacto') subPath = '/contacto';
+        else if (tabName === 'faq') subPath = '/preguntas-frecuentes';
+        else if (tabName === 'blog') subPath = '/blog';
+        else if (tabName === 'conoceme') subPath = '';
+
+        const newUrl = `${basePath}${subPath}`;
+        if (window.location.pathname.toLowerCase() !== newUrl.toLowerCase()) {
+            window.history.pushState({ tab: tabName }, '', newUrl);
+        }
+    }
 }
 window.switchPublicProfileTab = switchPublicProfileTab;
+
+window.addEventListener('popstate', (e) => {
+    const profScreen = document.getElementById('public-therapist-profile-screen');
+    if (profScreen && profScreen.style.display !== 'none') {
+        const p = window.location.pathname.toLowerCase();
+        let targetTab = 'conoceme';
+        if (p.includes('/servicios')) targetTab = 'servicios';
+        else if (p.includes('/contacto')) targetTab = 'contacto';
+        else if (p.includes('/pregunta') || p.includes('/faq')) targetTab = 'faq';
+        else if (p.includes('/blog')) targetTab = 'blog';
+        switchPublicProfileTab(targetTab, false);
+    }
+});
 
 function stepPublicProfileTab(dir) {
     const tabsOrder = ['conoceme', 'servicios', 'blog', 'faq', 'contacto'].filter(k => {
@@ -27212,6 +27244,9 @@ async function loadDedicatedTherapistProfile(slug) {
         let rawStr = typeof slug === 'string' ? slug : window.location.pathname;
         let cleanSlug = rawStr.split('?')[0].split('#')[0].replace(/^\/+|\/+$/g, '');
         cleanSlug = cleanSlug.replace(/^(psicologo|psic|agendar|registro)\//i, '').replace(/^psic\./i, '');
+        if (cleanSlug.includes('/')) {
+            cleanSlug = cleanSlug.split('/')[0].trim();
+        }
         
         let t = null;
         const serverDataEl = document.getElementById('server-therapist-data');
@@ -27240,14 +27275,26 @@ async function loadDedicatedTherapistProfile(slug) {
             window._refPsicologoNombre = t.nombre_completo || 'Psicólogo Clínico';
         }
 
-        // Asegurar URL canónica limpia (ej: /psic.paulomora en lugar de /psic.1)
+        // Asegurar URL canónica limpia y respetar subpestaña (servicios, contacto, faq, blog)
         if (t && t.slug) {
             window.fastBookingTherapistSlug = t.slug;
             const canonicalClean = String(t.slug).replace(/^(psicologo|psic|agendar|registro)\//i, '').replace(/^psic\./i, '');
+            
+            let initialTab = 'conoceme';
+            const curPath = window.location.pathname.toLowerCase();
+            if (curPath.includes('/servicios')) initialTab = 'servicios';
+            else if (curPath.includes('/contacto')) initialTab = 'contacto';
+            else if (curPath.includes('/pregunta') || curPath.includes('/faq')) initialTab = 'faq';
+            else if (curPath.includes('/blog')) initialTab = 'blog';
+
             if (canonicalClean && !window.location.pathname.toLowerCase().startsWith('/registro/')) {
-                const canonicalPath = `/psic.${canonicalClean}`;
+                const subPath = initialTab === 'servicios' ? '/servicios' :
+                               (initialTab === 'contacto' ? '/contacto' :
+                               (initialTab === 'faq' ? '/preguntas-frecuentes' :
+                               (initialTab === 'blog' ? '/blog' : '')));
+                const canonicalPath = `/psic.${canonicalClean}${subPath}`;
                 if (window.location.pathname.toLowerCase() !== canonicalPath.toLowerCase() && window.history && window.history.replaceState) {
-                    window.history.replaceState(null, '', canonicalPath);
+                    window.history.replaceState({ tab: initialTab }, '', canonicalPath);
                 }
             }
         }
@@ -27259,7 +27306,14 @@ async function loadDedicatedTherapistProfile(slug) {
         window._currentPublicTherapistName = t.nombre_completo || 'Psicólogo Clínico';
         applyPaletteToPublicScreen(t.paleta_colores || 'violeta');
         applyProfilePhotoShapeToScreen(t.foto_forma || (t.redes_sociales && t.redes_sociales.foto_forma) || 'curvo');
-        switchPublicProfileTab('conoceme');
+        
+        let tabToOpen = 'conoceme';
+        const pCheck = window.location.pathname.toLowerCase();
+        if (pCheck.includes('/servicios')) tabToOpen = 'servicios';
+        else if (pCheck.includes('/contacto')) tabToOpen = 'contacto';
+        else if (pCheck.includes('/pregunta') || pCheck.includes('/faq')) tabToOpen = 'faq';
+        else if (pCheck.includes('/blog')) tabToOpen = 'blog';
+        switchPublicProfileTab(tabToOpen, false);
 
         const bioBox = document.getElementById('pub-profile-bio');
         if (bioBox) {
