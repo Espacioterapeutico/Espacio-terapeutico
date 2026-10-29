@@ -3242,6 +3242,21 @@ def update_transaction(trans_id):
             trans_id
         ))
         db.commit()
+
+        # Si se modificó la fecha o la hora, notificar al consultante sobre la reprogramación
+        if row.get('paciente_id') and (str(fecha).strip() != str(row['fecha']).strip() or str(hora).strip() != str(row['hora']).strip()):
+            try:
+                from app import notify_patient
+                notify_patient(
+                    patient_id=row['paciente_id'],
+                    titulo="🗓️ Cita Reprogramada",
+                    mensaje=f"Tu sesión ha sido reprogramada para el {fecha} a las {hora}.",
+                    link="/#patient-home",
+                    icon="🗓️",
+                    tipo="cita"
+                )
+            except Exception as _e_notif_reprog:
+                print("Error notificando reprogramación al consultante:", _e_notif_reprog)
         
         # Sincronización en segundo plano con Firebase
         import threading

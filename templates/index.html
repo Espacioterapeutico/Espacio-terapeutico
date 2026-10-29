@@ -1984,6 +1984,13 @@
                     <svg class="pat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                     <span>Recursos</span>
                 </a>
+                <a href="javascript:void(0)" class="pat-menu-item" id="pat-nav-tests" data-pat-view="patient-tests" onclick="selectPatientMenuItem('patient-tests')" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
+                    <div style="display: flex; align-items: center; gap: 0.85rem;">
+                        <span style="font-size: 1.2rem;">🧪</span>
+                        <span>Test Psicológico</span>
+                    </div>
+                    <span id="pat-menu-tests-badge" class="hide" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3);">⏳ Pendiente</span>
+                </a>
                 <a href="javascript:void(0)" class="pat-menu-item pat-mod-item hide" data-pat-view="patient-sleep" data-mod-key="sueno" onclick="selectPatientMenuItem('patient-sleep')" style="display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-dark); text-decoration: none; font-weight: 500; transition: all var(--transition-fast);">
                     <span style="font-size: 1.2rem;">🌙</span>
                     <span>Registro de Sueño</span>
@@ -6949,6 +6956,27 @@
                     </div>
                 </section>
                 
+                <!-- VISTA: TESTS PSICOLÓGICOS (PORTAL PACIENTE) -->
+                <section id="view-patient-tests" class="app-view hide">
+                    <div class="view-header-row mb-3" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.3rem; font-family: var(--font-title); font-weight: 800; color: var(--text-dark);">🧪 Tests Psicológicos</h2>
+                            <p class="text-secondary text-sm" style="margin: 3px 0 0; font-size: 0.85rem;">Instrumentos y evaluaciones asignadas por tu terapeuta para tu proceso psicoterapéutico.</p>
+                        </div>
+                        <button type="button" onclick="loadPatientPortalTests()" class="btn btn-secondary btn-sm" style="padding: 0.4rem 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; border-radius: var(--radius-sm); background: white; border: 1.5px solid var(--border-color); cursor: pointer;">
+                            🔄 Actualizar
+                        </button>
+                    </div>
+
+                    <div id="patient-tests-view-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        <!-- Cargado dinámicamente con JS -->
+                        <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); background: white; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+                            <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">🧪</span>
+                            <p>Cargando tus tests psicológicos...</p>
+                        </div>
+                    </div>
+                </section>
+                
                 <!-- 10. VISTA: AJUSTES DE PERFIL (PACIENTE) -->
                 <section id="view-patient-profile" class="app-view hide">
                     <div class="view-header-row">
@@ -8206,6 +8234,19 @@
                                 </div>
                                 <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.35;">
                                     Inasistencia sin previo aviso o fuera de la política de cancelación. <strong>Se registra para cobro / queda como deuda pendiente</strong> (o se descuenta de prepago si ya estaba pagada).
+                                </p>
+                            </div>
+                        </label>
+
+                        <!-- Opción 3: Psicólogo cancela la sesión -->
+                        <label id="lbl-opt-psicologo" style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); background: #fff; cursor: pointer; transition: all 0.2s ease;">
+                            <input type="radio" name="tipo_cancelacion" id="cancel-opt-psicologo" value="Cancelada por el terapeuta" onchange="updateCancelRadioStyles()" style="margin-top: 0.2rem; transform: scale(1.2); accent-color: #3b82f6;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <strong style="font-size: 0.92rem; color: #1d4ed8;">🔵 Psicólogo cancela la sesión (Causa del terapeuta / Sin cargo)</strong>
+                                </div>
+                                <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.35;">
+                                    El terapeuta debe cancelar por motivos de agenda, imprevistos o salud. <strong>No genera cobro</strong> al consultante y, si era prepagada, se devuelve la sesión al paquete. Se le notificará al paciente para reprogramar.
                                 </p>
                             </div>
                         </label>

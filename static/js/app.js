@@ -4024,6 +4024,10 @@ function switchPatientView(viewName, fromPopState = false) {
             if (typeof loadPatientPortalRecursos === 'function') {
                 loadPatientPortalRecursos();
             }
+        } else if (viewName === 'patient-tests') {
+            if (typeof loadPatientPortalTests === 'function') {
+                loadPatientPortalTests();
+            }
         } else if (viewName === 'patient-diary') {
             loadPizarraHistory();
         } else if (viewName === 'patient-sleep') {
@@ -8109,31 +8113,50 @@ window.renderUpcomingConsultationPage = renderUpcomingConsultationPage;
 
 function updateCancelRadioStyles() {
     const optConAviso = document.getElementById('cancel-opt-con-aviso');
+    const optSinAviso = document.getElementById('cancel-opt-sin-aviso');
+    const optPsicologo = document.getElementById('cancel-opt-psicologo');
     const lblConAviso = document.getElementById('lbl-opt-con-aviso');
     const lblSinAviso = document.getElementById('lbl-opt-sin-aviso');
+    const lblPsicologo = document.getElementById('lbl-opt-psicologo');
     const submitBtn = document.getElementById('cancel-modal-submit-btn');
 
     if (!optConAviso || !lblConAviso || !lblSinAviso) return;
 
+    // Reset styles
+    lblConAviso.style.borderColor = 'var(--border-color)';
+    lblConAviso.style.background = '#fff';
+    lblSinAviso.style.borderColor = 'var(--border-color)';
+    lblSinAviso.style.background = '#fff';
+    if (lblPsicologo) {
+        lblPsicologo.style.borderColor = 'var(--border-color)';
+        lblPsicologo.style.background = '#fff';
+    }
+
     if (optConAviso.checked) {
         lblConAviso.style.borderColor = '#10b981';
         lblConAviso.style.background = 'rgba(16, 185, 129, 0.06)';
-        lblSinAviso.style.borderColor = 'var(--border-color)';
-        lblSinAviso.style.background = '#fff';
         if (submitBtn) {
             submitBtn.textContent = 'Confirmar Cancelación con Aviso';
             submitBtn.style.background = '#059669';
             submitBtn.style.borderColor = '#059669';
         }
-    } else {
-        lblConAviso.style.borderColor = 'var(--border-color)';
-        lblConAviso.style.background = '#fff';
+    } else if (optSinAviso && optSinAviso.checked) {
         lblSinAviso.style.borderColor = '#ef4444';
         lblSinAviso.style.background = 'rgba(239, 68, 68, 0.06)';
         if (submitBtn) {
             submitBtn.textContent = 'Confirmar Cancelación sin Aviso';
             submitBtn.style.background = '#dc2626';
             submitBtn.style.borderColor = '#dc2626';
+        }
+    } else if (optPsicologo && optPsicologo.checked) {
+        if (lblPsicologo) {
+            lblPsicologo.style.borderColor = '#3b82f6';
+            lblPsicologo.style.background = 'rgba(59, 130, 246, 0.06)';
+        }
+        if (submitBtn) {
+            submitBtn.textContent = 'Confirmar Cancelación por el Psicólogo';
+            submitBtn.style.background = '#2563eb';
+            submitBtn.style.borderColor = '#2563eb';
         }
     }
 }
@@ -8216,7 +8239,14 @@ async function handleCancelAppointmentSubmit(event) {
     if (!apptId) return;
 
     const optConAviso = document.getElementById('cancel-opt-con-aviso');
-    const tipoCancelacion = (optConAviso && optConAviso.checked) ? 'Cancelada con aviso' : 'Cancelada sin aviso';
+    const optSinAviso = document.getElementById('cancel-opt-sin-aviso');
+    const optPsicologo = document.getElementById('cancel-opt-psicologo');
+    let tipoCancelacion = 'Cancelada con aviso';
+    if (optSinAviso && optSinAviso.checked) {
+        tipoCancelacion = 'Cancelada sin aviso';
+    } else if (optPsicologo && optPsicologo.checked) {
+        tipoCancelacion = 'Cancelada por el terapeuta';
+    }
     const motivo = (document.getElementById('cancel-modal-motivo').value || '').trim();
     const notificarWa = document.getElementById('cancel-modal-notificar-wa')?.checked ?? true;
     const submitBtn = document.getElementById('cancel-modal-submit-btn');
@@ -13348,51 +13378,82 @@ async function loadPatientNotifiedPayments(patientId) {
 async function loadPatientPortalTests() {
     const container = document.getElementById('pat-assigned-tests-list');
     const wrapper = document.getElementById('pat-sec-tests-wrapper');
-    if (!container) return;
+    const viewContainer = document.getElementById('patient-tests-view-container');
+    const badgeMenu = document.getElementById('pat-menu-tests-badge');
     
     try {
         const res = await fetch('/api/patient-portal/tests');
         if (!res.ok) {
             if (wrapper) wrapper.style.display = 'none';
+            if (badgeMenu) badgeMenu.classList.add('hide');
             return;
         }
         const data = await res.json();
         const list = Array.isArray(data) ? data : (data.tests || []);
         const pendingList = list.filter(t => t.estado !== 'completado');
         
-        if (!pendingList || pendingList.length === 0) {
-            if (wrapper) wrapper.style.display = 'none';
-            return;
+        // 1. Actualizar Badge en el Menú Hamburguesa
+        if (badgeMenu) {
+            if (pendingList && pendingList.length > 0) {
+                badgeMenu.textContent = `⏳ ${pendingList.length} Pendiente${pendingList.length > 1 ? 's' : ''}`;
+                badgeMenu.classList.remove('hide');
+            } else {
+                badgeMenu.classList.add('hide');
+            }
         }
-        
-        if (wrapper) wrapper.style.display = 'block';
-        
-        let html = '';
-        pendingList.forEach(t => {
-            const badge = '<span style="background:#fef3c7; color:#b45309; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px;">⏳ Pendiente</span>';
-            const actionBtn = `<a href="${t.url_evaluacion}" target="_blank" class="btn btn-sm btn-primary" style="padding:0.35rem 0.85rem; font-weight:700; font-size:0.8rem; border-radius:6px; text-decoration:none; background:#702e5e; color:white; border:none;">▶ Responder Test</a>`;
-                
-            html += `
-                <div style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 0.65rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                            ${badge}
-                            <strong style="color: var(--text-dark); font-size: 0.92rem;">${t.test_nombre} (${t.test_siglas})</strong>
-                        </div>
-                        <div style="font-size: 0.78rem; color: var(--text-muted);">
-                            Categoría: ${t.test_categoria || 'Psicológica'} | Asignado por: ${t.psicologo_nombre} (${t.fecha_asignacion || ''})
-                        </div>
+
+        // 2. En "Próxima Consulta", mantener limpio el dashboard (ocultar wrapper si se prefiere que esté en el menú de hamburguesa)
+        if (wrapper) {
+            wrapper.style.display = 'none';
+        }
+
+        // 3. Renderizar en la vista dedicada de Tests Psicológicos (view-patient-tests)
+        if (viewContainer) {
+            if (!list || list.length === 0) {
+                viewContainer.innerHTML = `
+                    <div style="text-align: center; padding: 3rem 1.5rem; background: white; border-radius: var(--radius-md); border: 1.5px solid var(--border-color); color: var(--text-muted);">
+                        <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">🧪</span>
+                        <h4 style="font-weight: 700; color: var(--text-dark); margin-bottom: 0.35rem;">No tienes tests asignados</h4>
+                        <p style="font-size: 0.85rem; margin: 0;">Tu terapeuta te notificará cuando te asigne una nueva evaluación psicológica.</p>
                     </div>
-                    <div>
-                        ${actionBtn}
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
+                `;
+            } else {
+                let viewHtml = '';
+                list.forEach(t => {
+                    const isPending = (t.estado !== 'completado');
+                    const badge = isPending 
+                        ? '<span style="background: rgba(239, 68, 68, 0.1); color: #dc2626; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">⏳ Pendiente</span>'
+                        : '<span style="background: rgba(16, 185, 129, 0.1); color: #047857; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">✅ Completado</span>';
+                    
+                    const actionBtn = isPending
+                        ? `<a href="${t.url_evaluacion}" target="_blank" class="btn btn-sm btn-primary" style="padding: 0.5rem 1.15rem; font-weight: 700; font-size: 0.85rem; border-radius: var(--radius-sm); text-decoration: none; background: #702e5e; color: white; border: none; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 4px rgba(112, 46, 94, 0.2);">▶ Comenzar Test</a>`
+                        : `<button disabled class="btn btn-sm btn-secondary" style="padding: 0.45rem 1rem; font-size: 0.8rem; border-radius: var(--radius-sm); background: #f3f4f6; color: #9ca3af; border: 1px solid var(--border-color); cursor: default;">✓ Entregado</button>`;
+
+                    viewHtml += `
+                        <div style="background: white; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="flex: 1; min-width: 240px;">
+                                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+                                    ${badge}
+                                    <h4 style="margin: 0; color: var(--text-dark); font-size: 1.05rem; font-weight: 700;">${t.test_nombre} <span style="color: var(--primary-color); font-weight: 600;">(${t.test_siglas})</span></h4>
+                                </div>
+                                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+                                    <div>📂 Categoría: <strong>${t.test_categoria || 'Evaluación Psicológica'}</strong></div>
+                                    <div style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.2rem;">👤 Asignado por: ${t.psicologo_nombre || 'Tu Psicólogo'} ${t.fecha_asignacion ? '• ' + t.fecha_asignacion : ''}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    `;
+                });
+                viewContainer.innerHTML = viewHtml;
+            }
+        }
     } catch (e) {
         console.error("Error cargando tests asignados al paciente:", e);
         if (wrapper) wrapper.style.display = 'none';
+        if (badgeMenu) badgeMenu.classList.add('hide');
     }
 }
 
@@ -13577,34 +13638,17 @@ async function loadPatientNotifications(patientId) {
     if (!list || !badge) return;
     
     try {
-        const res = await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`);
+        const pid = patientId || sessionStorage.getItem('patient_id');
+        if (!pid) return;
+
+        const res = await fetch(`/api/patient/notifications?patient_id=${pid}`);
         if (!res.ok) return;
         const data = await res.json();
         
         list.innerHTML = '';
         
-        if (!data) {
-            badge.classList.add('hide');
-            list.innerHTML = `
-                <div style="padding: 1.25rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
-                    No tienes notificaciones
-                </div>
-            `;
-            return;
-        }
-        
-        const notifList = [];
-        let unreadCount = 0;
-        Object.keys(data).forEach(key => {
-            const n = data[key];
-            if (!n.leida) {
-                unreadCount++;
-                notifList.push({
-                    key,
-                    ...n
-                });
-            }
-        });
+        const notifList = data.notifications || [];
+        const unreadCount = data.unread_count || 0;
         
         // Actualizar badge
         const headerTitle = document.getElementById('pat-notifications-header-title');
@@ -13615,51 +13659,66 @@ async function loadPatientNotifications(patientId) {
         } else {
             badge.classList.add('hide');
             if (headerTitle) headerTitle.textContent = 'Notificaciones';
+        }
+
+        if (notifList.length === 0) {
             list.innerHTML = `
-                <div style="padding: 1.25rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+                <div style="padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
                     No tienes notificaciones
                 </div>
             `;
             return;
         }
         
-        // Ordenar por fecha desc
-        notifList.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-        
         notifList.forEach(n => {
             const item = document.createElement('div');
-            item.style.padding = '0.65rem 0.85rem';
+            item.style.padding = '0.75rem 0.95rem';
             item.style.borderBottom = '1px solid var(--border-color)';
             item.style.cursor = 'pointer';
             item.style.transition = 'background-color 0.2s';
-            item.style.backgroundColor = 'rgba(169, 89, 147, 0.03)';
+            item.style.backgroundColor = n.leida ? 'transparent' : 'rgba(169, 89, 147, 0.05)';
             item.style.fontSize = '0.8rem';
             
-            let icon = '🔔';
+            let icon = n.icon || '🔔';
             if (n.tipo === 'clinico') icon = '📝';
             if (n.tipo === 'pago') icon = '💵';
             if (n.tipo === 'pizarra') icon = '✏️';
+            if (n.tipo === 'cita') icon = n.icon || '📅';
+            if (n.tipo === 'test') icon = '🧪';
             
             const dateObj = new Date(n.fecha);
-            const dateStr = dateObj.toLocaleDateString([], {day: '2-digit', month: '2-digit'});
-            const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+            const dateStr = !isNaN(dateObj) ? dateObj.toLocaleDateString([], {day: '2-digit', month: '2-digit'}) : '';
+            const timeStr = !isNaN(dateObj) ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
             
             item.innerHTML = `
-                <div style="display: flex; gap: 0.6rem; align-items: flex-start;">
-                    <span style="font-size: 1.1rem; margin-top: 0.1rem;">${icon}</span>
+                <div style="display: flex; gap: 0.65rem; align-items: flex-start;">
+                    <span style="font-size: 1.15rem; margin-top: 0.1rem; line-height: 1;">${icon}</span>
                     <div style="flex: 1;">
-                        <div style="font-weight: 700; color: var(--text-dark); margin-bottom: 0.1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-weight: 700; color: var(--text-dark); margin-bottom: 0.15rem; display: flex; justify-content: space-between; align-items: center;">
                             <span>${n.titulo}</span>
-                            <span style="width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; display: inline-block;"></span>
+                            ${!n.leida ? '<span style="width: 7px; height: 7px; background-color: #ef4444; border-radius: 50%; display: inline-block;"></span>' : ''}
                         </div>
-                        <div style="color: var(--text-muted); line-height: 1.25; margin-bottom: 0.2rem; font-size: 0.75rem;">${n.mensaje}</div>
-                        <div style="color: var(--text-muted); font-size: 0.68rem; font-style: italic;">${dateStr} a las ${timeStr}</div>
+                        <div style="color: var(--text-muted); line-height: 1.3; margin-bottom: 0.25rem; font-size: 0.77rem;">${n.mensaje}</div>
+                        <div style="color: var(--text-muted); font-size: 0.68rem; font-style: italic;">${dateStr} ${timeStr ? 'a las ' + timeStr : ''}</div>
                     </div>
                 </div>
             `;
             
             item.onclick = async () => {
-                await markPatientNotificationAsRead(patientId, n.key);
+                await markPatientNotificationAsRead(pid, n.id);
+                const dropdown = document.getElementById('pat-notifications-dropdown');
+                if (dropdown) dropdown.classList.add('hide');
+                
+                if (n.link && n.link !== '#' && n.link !== '/') {
+                    if (n.link.startsWith('http://') || n.link.startsWith('https://')) {
+                        window.location.href = n.link;
+                    } else if (n.link.startsWith('#')) {
+                        const targetView = n.link.replace('#', '');
+                        if (typeof switchPatientView === 'function') switchPatientView(targetView);
+                    } else {
+                        window.location.href = n.link;
+                    }
+                }
             };
             
             list.appendChild(item);
@@ -13669,16 +13728,16 @@ async function loadPatientNotifications(patientId) {
     }
 }
 
-async function markPatientNotificationAsRead(patientId, key) {
+async function markPatientNotificationAsRead(patientId, notifId) {
     try {
-        await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones/${key}.json`, {
-            method: 'DELETE'
+        const pid = patientId || sessionStorage.getItem('patient_id');
+        await fetch(`/api/patient/notifications/mark-read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ patient_id: pid, notification_id: notifId })
         });
         
-        const dropdown = document.getElementById('pat-notifications-dropdown');
-        if (dropdown) dropdown.classList.add('hide');
-        
-        loadPatientNotifications(patientId);
+        loadPatientNotifications(pid);
     } catch (err) {
         console.error("Error al marcar notificación de paciente:", err);
     }
@@ -13689,8 +13748,10 @@ async function markAllPatientNotificationsAsRead() {
     if (!patientId) return;
     
     try {
-        await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`, {
-            method: 'DELETE'
+        await fetch(`/api/patient/notifications/mark-read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ patient_id: patientId })
         });
         
         loadPatientNotifications(patientId);

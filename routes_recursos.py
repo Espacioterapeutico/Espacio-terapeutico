@@ -565,6 +565,22 @@ def update_pizarra(recurso_id):
 
     db.commit()
 
+    # Si fue editada/respondida por el psicólogo, notificar al consultante en tiempo real y push
+    if editado_por == 'psicologo' and r_dict.get('paciente_id'):
+        try:
+            from app import notify_patient
+            pizarra_url = f"/pizarra/compartida/{r_dict['token_compartido']}"
+            notify_patient(
+                patient_id=r_dict['paciente_id'],
+                titulo="✏️ Pizarra Terapéutica Actualizada",
+                mensaje=f"Tu terapeuta ha respondido o actualizado tu pizarra: '{nuevo_titulo}'.",
+                link=pizarra_url,
+                icon="✏️",
+                tipo="pizarra"
+            )
+        except Exception as _e_notif_pizarra:
+            print("Error al notificar al consultante sobre pizarra actualizada:", _e_notif_pizarra)
+
     return jsonify({
         'success': True,
         'recurso_id': recurso_id,

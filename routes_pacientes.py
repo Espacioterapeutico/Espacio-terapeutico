@@ -2308,6 +2308,89 @@ def accept_patient_terms():
 
 
 
+@pacientes_bp.route('/api/patient/notifications', methods=['GET'])
+@patient_login_required
+def get_patient_notifications():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notificaciones_pacientes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                tipo TEXT,
+                titulo TEXT NOT NULL,
+                mensaje TEXT NOT NULL,
+                link TEXT,
+                icon TEXT,
+                fecha TEXT NOT NULL,
+                leida INTEGER DEFAULT 0
+            )
+        """)
+        cursor.execute("""
+            SELECT id, tipo, titulo, mensaje, link, icon, fecha, leida
+            FROM notificaciones_pacientes
+            WHERE paciente_id = ?
+            ORDER BY id DESC LIMIT 50
+        """, (patient_id,))
+        rows = cursor.fetchall()
+        
+        cursor.execute("SELECT COUNT(id) FROM notificaciones_pacientes WHERE paciente_id = ? AND leida = 0", (patient_id,))
+        unread_count = cursor.fetchone()[0] or 0
+        
+        list_notif = [{
+            'id': r['id'],
+            'tipo': r['tipo'],
+            'titulo': r['titulo'],
+            'mensaje': r['mensaje'],
+            'link': r['link'],
+            'icon': r['icon'] or '🔔',
+            'fecha': r['fecha'],
+            'leida': bool(r['leida'])
+        } for r in rows]
+        
+        return jsonify({
+            'notifications': list_notif,
+            'unread_count': unread_count
+        })
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener notificaciones: {str(e)}'}), 500
+
+
+@pacientes_bp.route('/api/patient/notifications/mark-read', methods=['POST'])
+@patient_login_required
+def mark_patient_notifications_read():
+    patient_id = session.get('patient_id')
+    data = request.json or {}
+    notif_id = data.get('notification_id')
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        if notif_id:
+            cursor.execute("UPDATE notificaciones_pacientes SET leida = 1 WHERE id = ? AND paciente_id = ?", (notif_id, patient_id))
+        else:
+            cursor.execute("UPDATE notificaciones_pacientes SET leida = 1 WHERE paciente_id = ?", (patient_id,))
+        db.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@pacientes_bp.route('/api/patient/notifications/clear', methods=['POST'])
+@patient_login_required
+def clear_patient_notifications():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("DELETE FROM notificaciones_pacientes WHERE paciente_id = ?", (patient_id,))
+        db.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @pacientes_bp.route('/api/patient/payments/notified', methods=['GET'])
 @patient_login_required
 def get_patient_notified_payments_history():

@@ -1427,6 +1427,19 @@ def init_db():
         cursor.execute("ALTER TABLE notificaciones ADD COLUMN user_id INTEGER")
     cursor.execute("UPDATE notificaciones SET user_id = 1 WHERE user_id IS NULL")
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notificaciones_pacientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            tipo TEXT,
+            titulo TEXT NOT NULL,
+            mensaje TEXT NOT NULL,
+            link TEXT,
+            icon TEXT,
+            fecha TEXT NOT NULL,
+            leida INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS registro_cumpleanos_enviados (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             paciente_id INTEGER NOT NULL,
@@ -1982,9 +1995,47 @@ def ensure_db_initialized():
 
 FIREBASE_DB_URL = "https://espacio-terapeutico-default-rtdb.firebaseio.com"
 
-def notify_patient_firebase(patient_id, titulo, mensaje, link='#', icon='🔔'):
-    """Envía una notificación en tiempo real al portal del consultante vía Firebase Realtime DB."""
-    def _send():
+def notify_patient(patient_id, titulo, mensaje, link='#', icon='🔔', tipo='general'):
+    """
+    Registra la notificación en SQLite (notificaciones_pacientes) y la despacha
+    de forma garantizada mediante Push multidispositivo (FCM / WebPush) y Firebase RTDB.
+    """
+    if not patient_id:
+        return
+    try:
+        from datetime import datetime
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        conn = sqlite3.connect(DATABASE, timeout=20.0)
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS notificaciones_pacientes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paciente_id INTEGER NOT NULL,
+                tipo TEXT,
+                titulo TEXT NOT NULL,
+                mensaje TEXT NOT NULL,
+                link TEXT,
+                icon TEXT,
+                fecha TEXT NOT NULL,
+                leida INTEGER DEFAULT 0
+            )
+        """)
+        c.execute("""
+            INSERT INTO notificaciones_pacientes (paciente_id, tipo, titulo, mensaje, link, icon, fecha, leida)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+        """, (int(patient_id), tipo, titulo, mensaje, link, icon, now_str))
+        conn.commit()
+        conn.close()
+    except Exception as _e_db_notif:
+        print(f"Error guardando notificación en BD para paciente #{patient_id}: {_e_db_notif}")
+
+    # Despachar notificación Push Web/FCM y Firebase RTDB en hilo background
+    def _send_push():
+        try:
+            send_webpush_notification(patient_id=int(patient_id), title=titulo, body=mensaje, url=link)
+        except Exception as _ep:
+            print(f"Error enviando WebPush a paciente #{patient_id}: {_ep}")
+        # Intento de respaldo a Firebase RTDB
         try:
             import requests
             from datetime import datetime
@@ -1995,13 +2046,19 @@ def notify_patient_firebase(patient_id, titulo, mensaje, link='#', icon='🔔'):
                 'fecha': now_str,
                 'leida': False,
                 'link': link,
-                'icon': icon
+                'icon': icon,
+                'tipo': tipo
             }
-            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=3.0)
-        except Exception as e:
-            print(f"Error en notify_patient_firebase (paciente #{patient_id}): {e}")
+            requests.post(f"{FIREBASE_DB_URL}/pacientes/{patient_id}/notificaciones.json", json=fb_payload, timeout=2.0)
+        except Exception:
+            pass
+
     import threading
-    threading.Thread(target=_send, daemon=True).start()
+    threading.Thread(target=_send_push, daemon=True).start()
+
+def notify_patient_firebase(patient_id, titulo, mensaje, link='#', icon='🔔'):
+    """Wrapper retrocompatible: guarda en SQLite y despacha Push y RTDB."""
+    notify_patient(patient_id, titulo, mensaje, link=link, icon=icon, tipo='general')
 
 def restore_patients_from_firebase():
     """Restaura y sincroniza consultantes desde Firebase Realtime Database a SQLite."""

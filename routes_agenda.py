@@ -1304,13 +1304,15 @@ def update_agenda_event_status(event_id):
     params = []
     
     target_cancellation = None
-    if estado_pago in ['Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada']:
+    cancellation_options = ['Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada', 'Cancelada por el terapeuta', 'Cancelada por el psicólogo']
+    if estado_pago in cancellation_options:
         target_cancellation = estado_pago
-    elif estado in ['Cancelada con aviso', 'Cancelada sin aviso', 'Cancelada']:
+    elif estado in cancellation_options:
         target_cancellation = estado
 
-    if target_cancellation == 'Cancelada con aviso':
-        updates.append("estado_pago = 'Cancelada con aviso'")
+    if target_cancellation in ['Cancelada con aviso', 'Cancelada por el terapeuta', 'Cancelada por el psicólogo']:
+        updates.append("estado_pago = ?")
+        params.append(target_cancellation)
         updates.append("confirmada = 0")
         if cita['estado_pago'] == 'Prepagada' or cita['tipo_consulta'] == 'Paquete Prepagado' or cita['metodo_pago'] == 'Descontado de Prepago':
             # Si era una sesión descontada de prepago, devolverla al paquete prepagado activo
@@ -1326,16 +1328,17 @@ def update_agenda_event_status(event_id):
         else:
             updates.append("monto = 0.0")
         if motivo:
-            new_ref = f"Cancelada con aviso: {motivo}" if not cita['referencia'] else f"{cita['referencia']} | Cancelada con aviso: {motivo}"
+            new_ref = f"{target_cancellation}: {motivo}" if not cita['referencia'] else f"{cita['referencia']} | {target_cancellation}: {motivo}"
             updates.append("referencia = ?")
             params.append(new_ref)
             
         try:
             from app import create_auto_cancellation_session
-            cancellation_reason = f"Consulta cancelada con aviso por el terapeuta. Motivo: {motivo}" if motivo else "Consulta cancelada con aviso por el terapeuta."
-            create_auto_cancellation_session(db, cita['paciente_id'], event_id, cita['fecha'], cita['tipo_consulta'], 'Cancelada con aviso', cancellation_reason)
+            canc_tag = "por el terapeuta" if ('terapeuta' in target_cancellation.lower() or 'psic' in target_cancellation.lower()) else "con aviso por el terapeuta"
+            cancellation_reason = f"Consulta cancelada {canc_tag}. Motivo: {motivo}" if motivo else f"Consulta cancelada {canc_tag}."
+            create_auto_cancellation_session(db, cita['paciente_id'], event_id, cita['fecha'], cita['tipo_consulta'], target_cancellation, cancellation_reason)
         except Exception as se:
-            print("Error creando sesion de cancelacion con aviso:", se)
+            print(f"Error creando sesion de {target_cancellation}:", se)
             
         _update_google_calendar_status_bg(event_id, 'cancelada')
 
@@ -1480,6 +1483,8 @@ def update_agenda_event_status(event_id):
                 template = templates.get('msg_confirmacion_ok') or "¡Excelente! ✅ Tu cita ha sido confirmada exitosamente. Nos vemos pronto en Espacio Terapéutico."
             elif is_no_conf:
                 template = templates.get('msg_cancelacion_no_conf') or "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
+            elif target_cancellation in ['Cancelada por el terapeuta', 'Cancelada por el psicólogo']:
+                template = templates.get('msg_cancelacion_terapeuta') or "Hola *{nombre}*, te notifico que por causas de fuerza mayor debo cancelar nuestra sesión pautada para el *{fecha}* a las *{hora}*. Te ofrezco disculpas por el inconveniente. Puedes reagendar tu cita en:\n{link_agendar}"
             else:
                 template = templates.get('msg_cancelacion_ok') or "Entendido. ❌ Tu cita ha sido cancelada. Si deseas reagendar o tienes alguna duda, por favor contáctanos."
             
@@ -1487,6 +1492,33 @@ def update_agenda_event_status(event_id):
             make_wa_http_request('POST', '/send', json_data={'phone': phone_clean, 'text': msg, 'user_id': psych_id}, timeout=10, user_id=psych_id)
     except Exception as e:
         print("Error sending manual confirmation WA:", e)
+
+    # Notificar al consultante en su portal (campanita y push multidispositivo)
+    if cita and cita.get('paciente_id'):
+        try:
+            from app import notify_patient
+            if is_confirming:
+                notify_patient(
+                    patient_id=cita['paciente_id'],
+                    titulo="✅ Cita Confirmada",
+                    mensaje=f"Tu sesión del {cita['fecha']} a las {cita['hora']} ha sido confirmada por tu psicólogo.",
+                    link="/#patient-home",
+                    icon="✅",
+                    tipo="cita"
+                )
+            elif is_cancelling:
+                canc_desc = "por el terapeuta" if ('terapeuta' in str(target_cancellation).lower() or 'psic' in str(target_cancellation).lower()) else ""
+                mot_desc = f" Motivo: {motivo}" if motivo else ""
+                notify_patient(
+                    patient_id=cita['paciente_id'],
+                    titulo="⚠️ Sesión Cancelada",
+                    mensaje=f"Tu sesión del {cita['fecha']} a las {cita['hora']} ha sido cancelada {canc_desc}.{mot_desc}".strip(),
+                    link="/#patient-home",
+                    icon="⚠️",
+                    tipo="cita"
+                )
+        except Exception as _nep:
+            print("Error notificando estado de cita al paciente:", _nep)
 
     try:
         if cita and cita['paciente_id']:
@@ -1560,6 +1592,21 @@ def delete_agenda_event(event_id):
     cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
     cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
     db.commit()
+
+    # Notificar al consultante en su portal (campanita y push)
+    if cita and cita.get('paciente_id'):
+        try:
+            from app import notify_patient
+            notify_patient(
+                patient_id=cita['paciente_id'],
+                titulo="🗑️ Cita Eliminada",
+                mensaje=f"Tu cita programada para el {cita.get('fecha')} a las {cita.get('hora')} ha sido eliminada.",
+                link="/#patient-home",
+                icon="🗑️",
+                tipo="cita"
+            )
+        except Exception as _e_del_notif:
+            print("Error notificando cita eliminada al paciente:", _e_del_notif)
 
     if cita and cita['paciente_id']:
         try:
