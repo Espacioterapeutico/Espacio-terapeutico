@@ -985,9 +985,35 @@ def auto_send_cognitive_reminders(db, target_patient_id=None, force=False):
                         pass
                     continue
 
-                # 6. Enviar por WhatsApp con candado de deduplicación universal en make_wa_http_request
+                # 6. Enviar por NotificaciÃ³n Push (si tiene app instalada) o WhatsApp
+                has_app = False
+                try:
+                    from app import patient_has_active_app
+                    has_app = patient_has_active_app(asig['paciente_id'], db)
+                except Exception as _app_err:
+                    print("[WARN] Error verificando app paciente en estimulaciÃ³n:", _app_err)
+
                 send_ok = False
-                if clean_phone:
+                if has_app:
+                    try:
+                        from app import send_webpush_notification, notify_patient_firebase
+                        notify_patient_firebase(
+                            asig['paciente_id'],
+                            f"ðŸ§© EstimulaciÃ³n Cognitiva: {siguiente_ejercicio['titulo']}",
+                            f"Hola {first_name}, tienes un ejercicio cognitivo disponible.",
+                            link=link,
+                            icon="ðŸ§©"
+                        )
+                        send_webpush_notification(
+                            patient_id=asig['paciente_id'],
+                            title=f"ðŸ§© EstimulaciÃ³n Cognitiva",
+                            body=f"Hola {first_name}, te comparto tu ejercicio de hoy: {siguiente_ejercicio['titulo']}.",
+                            url=link
+                        )
+                        send_ok = True
+                    except Exception as _e_push:
+                        print("[WARN] Error enviando push estimulaciÃ³n:", _e_push)
+                elif clean_phone:
                     from routes_notificaciones import make_wa_http_request
                     try:
                         res = make_wa_http_request(

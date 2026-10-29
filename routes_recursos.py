@@ -668,9 +668,55 @@ def enviar_recurso_whatsapp(recurso_id):
     raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
     msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{titulo}', titulo).replace('{link}', direct_link)
 
-    clean_phone = clean_phone_number(phone)
-
-    if modo == 'inmediato':
+    clean_phone = clean_phone_number(phone)
+
+    has_app = False
+    try:
+        from app import patient_has_active_app
+        has_app = patient_has_active_app(d['paciente_id'], db)
+    except Exception as _app_err:
+        print("[WARN] Error verificando app paciente en pizarra:", _app_err)
+
+    if modo == 'inmediato':
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        today_str = datetime.now().strftime("%Y-%m-%d")
+
+        if has_app:
+            # Enviar directamente por Notificacion Push de la app y omitir WhatsApp
+            try:
+                from app import send_webpush_notification, notify_patient_firebase
+                notify_patient_firebase(
+                    d['paciente_id'],
+                    f"ðŸŽ¨ Pizarra TerapÃ©utica: {titulo}",
+                    f"Hola {first_name}, tu psicÃ³logo te ha compartido una nueva pizarra de trabajo.",
+                    link=direct_link,
+                    icon="ðŸŽ¨"
+                )
+                send_webpush_notification(
+                    patient_id=d['paciente_id'],
+                    title=f"ðŸŽ¨ Pizarra: {titulo}",
+                    body=f"Hola {first_name}, tu psicÃ³logo te ha compartido una pizarra de trabajo.",
+                    url=direct_link
+                )
+            except Exception as _ex_push:
+                print("[WARN] Error notificando push pizarra:", _ex_push)
+
+            cursor.execute("""
+                INSERT INTO cola_recordatorios_herramientas (
+                    psicologo_id, paciente_id, herramienta_tipo, fecha_programada, hora_programada, estado, enviado, fecha_envio, token_id
+                ) VALUES (?, ?, ?, ?, ?, 'enviado_app', 1, ?, ?)
+                ON CONFLICT(paciente_id, herramienta_tipo, fecha_programada) DO UPDATE SET
+                    estado = 'enviado_app', enviado = 1, fecha_envio = ?, token_id = ?
+            """, (user_id, d['paciente_id'], f"pizarra_{recurso_id}", today_str, now_str[11:16], now_str, recurso_id, now_str, recurso_id))
+            db.commit()
+
+            return jsonify({
+                'success': True,
+                'modo': 'app_push',
+                'paciente_tiene_app': True,
+                'message': f'Pizarra notificada a la app de {first_name}. Se omitiÃ³ WhatsApp porque tiene la app instalada.',
+                'link': direct_link
+            })
         try:
             from routes_notificaciones import make_wa_http_request
             res = make_wa_http_request(

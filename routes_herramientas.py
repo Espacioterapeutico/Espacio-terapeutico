@@ -1486,8 +1486,30 @@ def generar_link_directo_herramienta():
     mensaje_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', nombre_tool).replace('{link}', link_directo).replace('{fecha}', fecha_fmt).replace('{hora}', hora_fmt)
     mensaje_wa = mensaje_wa.replace('del día de hoy', f'del día {fecha_fmt} a las {hora_fmt}')
     
+    has_app = False
+    try:
+        from app import patient_has_active_app
+        has_app = patient_has_active_app(patient_id, db)
+        if has_app:
+            from app import send_webpush_notification, notify_patient_firebase
+            notify_patient_firebase(
+                patient_id,
+                f"ðŸ“‹ {nombre_tool}",
+                f"Hola {first_name}, tu psicÃ³logo te ha compartido tu {nombre_tool}.",
+                link=link_directo,
+                icon="ðŸ“‹"
+            )
+            send_webpush_notification(
+                patient_id=patient_id,
+                title=f"ðŸ“‹ {nombre_tool}",
+                body=f"Hola {first_name}, tu psicÃ³logo te ha compartido tu {nombre_tool}.",
+                url=link_directo
+            )
+    except Exception as _app_err:
+        print("[WARN] Error verificando app paciente en herramienta:", _app_err)
+
     clean_phone = clean_phone_number(paciente['telefono'])
-    wa_url = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(mensaje_wa)}" if clean_phone else ""
+    wa_url = (f"https://wa.me/{clean_phone}?text={urllib.parse.quote(mensaje_wa)}" if clean_phone else "") if not has_app else ""
     
     return jsonify({
         'success': True,
@@ -1496,7 +1518,9 @@ def generar_link_directo_herramienta():
         'mensaje_wa': mensaje_wa,
         'phone': paciente['telefono'],
         'clean_phone': clean_phone,
-        'wa_url': wa_url
+        'wa_url': wa_url,
+        'paciente_tiene_app': has_app,
+        'whatsapp_omitido': has_app
     })
 
 @herramientas_bp.route('/api/herramientas/programar-recordatorio', methods=['POST'])

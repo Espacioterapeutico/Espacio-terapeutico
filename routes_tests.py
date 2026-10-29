@@ -1992,11 +1992,23 @@ def api_asignar_test():
         except Exception as _ne:
             print("Aviso al notificar test a paciente:", _ne)
 
+        has_app = False
+        try:
+            from app import patient_has_active_app
+            has_app = patient_has_active_app(patient_id, db)
+        except Exception as _app_err:
+            print("[WARN] Error verificando app paciente en test:", _app_err)
+
         whatsapp_url = None
         whatsapp_sent = False
-        if clean_phone:
+        whatsapp_omitted_app = False
+
+        if has_app:
+            whatsapp_omitted_app = True
+            # El paciente tiene la app instalada: se notifica directamente por Push y se omite WhatsApp para no saturar
+        elif clean_phone:
             import urllib.parse
-            msg_text = f"Hola {pac['nombres']}, te comparto el enlace para responder tu evaluación psicológica: {url_test}"
+            msg_text = f"Hola {pac['nombres']}, te comparto el enlace para responder tu evaluaciÃ³n psicolÃ³gica: {url_test}"
             whatsapp_url = f"https://api.whatsapp.com/send?phone={clean_phone}&text={urllib.parse.quote(msg_text)}"
             
             try:
@@ -2007,17 +2019,19 @@ def api_asignar_test():
                     if res_data.get('success'):
                         whatsapp_sent = True
             except Exception as _wa_err:
-                print("Aviso al intentar enviar WhatsApp automático de test:", _wa_err)
+                print("Aviso al intentar enviar WhatsApp automÃ¡tico de test:", _wa_err)
 
         return jsonify({
-            'success': 'Test asignado exitosamente.',
+            'success': 'Test asignado exitosamente.' + (' (Notificado por la App)' if has_app else ''),
             'assignment_id': cursor.lastrowid,
             'token': token,
             'url': url_test,
             'url_test': url_test,
-            'whatsapp_phone': clean_phone,
+            'whatsapp_phone': clean_phone if not has_app else None,
             'whatsapp_url': whatsapp_url,
             'whatsapp_sent': whatsapp_sent,
+            'whatsapp_omitted_app': whatsapp_omitted_app,
+            'paciente_tiene_app': has_app,
             'paciente_nombre': f"{pac['nombres']} {pac['apellidos']}".strip()
         })
     except Exception as e:

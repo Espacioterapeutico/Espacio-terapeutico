@@ -621,6 +621,30 @@ def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultor
         except Exception as vapid_err:
             print("Error al disparar VAPID en send_webpush_notification:", vapid_err)
 
+def patient_has_active_app(patient_id, db=None):
+    """
+    Verifica si un paciente tiene la aplicacion instalada y activa
+    (cuenta con al menos un token de notificacion push / FCM registrado en la base de datos).
+    """
+    if not patient_id:
+        return False
+    try:
+        if db is None:
+            db = get_db()
+        cursor = db.cursor() if hasattr(db, 'cursor') else db
+        cursor.execute("""
+            SELECT COUNT(*) FROM fcm_subscriptions 
+            WHERE patient_id = ? AND token IS NOT NULL AND TRIM(token) != ''
+        """, (patient_id,))
+        row = cursor.fetchone()
+        if not row:
+            return False
+        count = row[0] if isinstance(row, (tuple, list)) else (row['COUNT(*)'] if 'COUNT(*)' in row.keys() else row[0])
+        return bool(count and count > 0)
+    except Exception as ex:
+        print("[WARN] Error en patient_has_active_app:", ex)
+        return False
+
 def clean_digits_only(s):
     if not s:
         return ""
@@ -2628,6 +2652,32 @@ def auto_send_meditation_reminders(db):
                 first_name = asig['nombres'].split()[0] if asig['nombres'] else 'Consultante'
                 app_url = "https://www.espacioterapeutico.net" # O tu dominio real
                 link = f"{app_url}/portal/meditacion/{asig['token_acceso']}"
+
+                # Si el paciente tiene la app instalada, notificar por Push y omitir WhatsApp
+                if patient_has_active_app(asig['paciente_id'], db):
+                    try:
+                        notify_patient_firebase(
+                            asig['paciente_id'],
+                            f"ðŸ§˜ MeditaciÃ³n: {asig['titulo']}",
+                            f"Hola {first_name}, te recordamos tu sesiÃ³n de meditaciÃ³n de hoy.",
+                            link=link,
+                            icon="ðŸ§˜"
+                        )
+                        send_webpush_notification(
+                            patient_id=asig['paciente_id'],
+                            title=f"ðŸ§˜ MeditaciÃ³n: {asig['titulo']}",
+                            body=f"Hola {first_name}, te recordamos tu sesiÃ³n de meditaciÃ³n de hoy.",
+                            url=link
+                        )
+                        cursor.execute("""
+                            INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                            VALUES (?, 'meditacion_app', 'ðŸ§˜ Recordatorio de MeditaciÃ³n Enviado por App', ?, ?, 1, ?)
+                        """, (asig['psicologo_id'], f"Recordatorio de meditaciÃ³n enviado por App a {first_name} para {asig['titulo']} (ID_ASIG:{asig['asignacion_id']})", now_full_str, notif_link))
+                        db.commit()
+                        meditaciones_enviadas += 1
+                    except Exception as _ex_m:
+                        print("Error enviando push meditaciÃ³n:", _ex_m)
+                    continue
                 
                 msg_wa = f"Hola *{first_name}* 👋\n\nTe recuerdo hacer tu sesión de meditación el día de hoy: *{asig['titulo']}*\n\nHaz clic en el siguiente enlace para escucharla y registrar tu progreso:\n{link}"
                 
@@ -3676,6 +3726,45 @@ def send_hourly_patient_tool_reminders(db=None, force=False):
 
                 if not should_dispatch_wa:
                     continue
+
+                # Si el paciente tiene la app instalada, notificar directamente por Push y omitir WhatsApp
+                if patient_has_active_app(p_id, db):
+                    cursor.execute("""
+                        UPDATE cola_recordatorios_herramientas
+                        SET estado = 'enviando', enviado = 1, fecha_envio = ?
+                        WHERE id = ? AND enviado = 0
+                    """, (now_str, queue_id))
+                    db.commit()
+                    if cursor.rowcount > 0:
+                        domain_host = os.environ.get('APP_URL', 'https://www.espacioterapeutico.net').rstrip('/')
+                        direct_link = f"{domain_host}/herramienta/directa?token={token}"
+                        first_name = (p['nombres'] or '').strip().split()[0] if p['nombres'] else 'Consultante'
+                        tool_title = TOOL_NAME_MAP.get(mod_clave, 'Herramienta TerapÃ©utica')
+                        try:
+                            notify_patient_firebase(
+                                p_id,
+                                f"ðŸ“‹ {tool_title}",
+                                f"Hola {first_name}, te recordamos completar tu {tool_title}.",
+                                link=direct_link,
+                                icon="ðŸ“‹"
+                            )
+                            send_webpush_notification(
+                                patient_id=p_id,
+                                title=f"ðŸ“‹ {tool_title}",
+                                body=f"Hola {first_name}, te recordamos completar tu {tool_title}.",
+                                url=direct_link
+                            )
+                        except Exception as _e_push:
+                            print(f"[WARN] Error push herramienta a paciente {p_id}:", _e_push)
+
+                        cursor.execute("""
+                            UPDATE cola_recordatorios_herramientas
+                            SET estado = 'enviado_app', enviado = 1, fecha_envio = ?, token_id = ?
+                            WHERE id = ?
+                        """, (now_str, token_id, queue_id))
+                        db.commit()
+                        reminders_sent += 1
+                        continue
 
                 if not wa_connected:
                     cursor.execute("""

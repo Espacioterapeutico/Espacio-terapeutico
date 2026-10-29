@@ -1006,6 +1006,38 @@ def auto_send_queued_tool_reminders(db, now_local):
         raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
         msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{titulo}', tool_title).replace('{link}', direct_link)
 
+        # Si el paciente tiene la app instalada, notificar por Push y omitir WhatsApp
+        has_app = False
+        try:
+            from app import patient_has_active_app
+            has_app = patient_has_active_app(p_id, db)
+        except Exception as _app_err:
+            pass
+
+        if has_app:
+            try:
+                from app import send_webpush_notification, notify_patient_firebase
+                notify_patient_firebase(
+                    p_id,
+                    f"ðŸŽ¨ {tool_title}",
+                    f"Hola {first_name}, recuerda que tienes disponible tu pizarra interactiva.",
+                    link=direct_link,
+                    icon="ðŸŽ¨"
+                )
+                send_webpush_notification(
+                    patient_id=p_id,
+                    title=f"ðŸŽ¨ {tool_title}",
+                    body=f"Hola {first_name}, tienes disponible tu pizarra interactiva.",
+                    url=direct_link
+                )
+            except Exception as _ep:
+                print(f"[CRON-WA] Error enviando push cola pizarra id={row['id']}:", _ep)
+
+            cursor.execute("UPDATE cola_recordatorios_herramientas SET estado = 'enviado_app', enviado = 1, fecha_envio = ? WHERE id = ?", (now_str, row['id']))
+            db.commit()
+            enviados += 1
+            continue
+
         try:
             res_wa = make_wa_http_request(
                 'POST',
@@ -1664,6 +1696,40 @@ def send_queue_item_now(item_id):
                 raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
                 msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{herramienta}', tool_title).replace('{link}', direct_link).replace('{fecha}', fecha_fmt).replace('{hora}', hora_fmt)
                 msg_wa = msg_wa.replace('del día de hoy', f'del día {fecha_fmt} a las {hora_fmt}')
+
+            from app import patient_has_active_app
+            has_app = patient_has_active_app(p_id, db)
+            if has_app:
+                try:
+                    from app import send_webpush_notification, notify_patient_firebase
+                    notify_patient_firebase(
+                        p_id,
+                        f"ðŸ“‹ {tool_title}",
+                        f"Hola {first_name}, te recordamos tu {tool_title}.",
+                        link=direct_link,
+                        icon="ðŸ“‹"
+                    )
+                    send_webpush_notification(
+                        patient_id=p_id,
+                        title=f"ðŸ“‹ {tool_title}",
+                        body=f"Hola {first_name}, te recordamos tu {tool_title}.",
+                        url=direct_link
+                    )
+                except Exception as _ep:
+                    print(f"[WARN] Error push send_queue_item_now tool_queue_id={tool_queue_id}:", _ep)
+
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cursor.execute("""
+                    UPDATE cola_recordatorios_herramientas
+                    SET estado = 'enviado_app', enviado = 1, fecha_envio = ?, token_id = ?
+                    WHERE id = ?
+                """, (now_str, token_id, tool_queue_id))
+                db.commit()
+                return jsonify({
+                    'success': True,
+                    'paciente_tiene_app': True,
+                    'message': f'Recordatorio notificado a la app mÃ³vil de {q_row["nombres"]} (WhatsApp omitido por tener app instalada).'
+                })
 
             from routes_herramientas import clean_phone_number
             clean_phone = clean_phone_number(phone)
