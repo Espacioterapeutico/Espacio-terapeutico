@@ -26916,7 +26916,7 @@ function switchPublicProfileTab(tabName, updateUrl = true) {
 
     if (updateUrl && window.history && window.history.pushState) {
         const baseSlug = window.fastBookingTherapistSlug ? 
-            String(window.fastBookingTherapistSlug).replace(/^(psicologo|psic|agendar|registro)\/i, '').replace(/^psic\./i, '') : 
+            String(window.fastBookingTherapistSlug).replace(/^(psicologo|psic|agendar|registro)/i, '').replace(/^psic\./i, '') : 
             'paulomora';
         const basePath = `/psic.${baseSlug}`;
         let subPath = '';
