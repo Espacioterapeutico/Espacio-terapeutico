@@ -521,6 +521,33 @@ def api_paciente_estimulacion(patient_id):
         """, (patient_id,))
         db.commit()
 
+        # Notificar al consultante en la campanita y vía Push
+        try:
+            from app import notify_patient_firebase, send_webpush_notification
+            from routes_herramientas import get_public_base_url
+            host_url = get_public_base_url()
+            est_link = f"{host_url}/portal/estimulacion/{token_acceso}"
+            
+            cursor.execute("SELECT titulo FROM cat_carpetas_cognitivas WHERE id = ?", (carpeta_id,))
+            c_row = cursor.fetchone()
+            c_nombre = c_row['titulo'] if c_row else "Estimulación Cognitiva"
+            
+            notify_patient_firebase(
+                patient_id,
+                "🧠 Nueva Carpeta de Estimulación Cognitiva",
+                f"Tu psicólogo te ha asignado la carpeta '{c_nombre}' para ejercitar en tu portal.",
+                link=est_link,
+                icon="🧠"
+            )
+            send_webpush_notification(
+                patient_id=patient_id,
+                title="🧠 Estimulación Cognitiva Asignada",
+                body=f"Tu psicólogo te ha asignado la carpeta '{c_nombre}'.",
+                url=est_link
+            )
+        except Exception as _est_err:
+            print("Aviso al notificar estimulación asignada:", _est_err)
+
         return jsonify({'success': 'Estimulación Cognitiva asignada correctamente.', 'id': asig_id}), 201
 
 @estimulacion_bp.route('/api/pacientes/<int:patient_id>/estimulacion/<int:asig_id>/toggle', methods=['POST'])

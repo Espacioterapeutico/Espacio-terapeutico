@@ -347,8 +347,19 @@ def toggle_patient_module(patient_id):
                 patient_id,
                 "🛠️ Nueva Herramienta Asignada",
                 f"Tu psicólogo te ha asignado la herramienta '{mod_nombre}' en tu portal.",
+                link="/#patient-dashboard",
                 icon="🛠️"
             )
+            try:
+                from app import send_webpush_notification
+                send_webpush_notification(
+                    patient_id=patient_id,
+                    title="🛠️ Nueva Herramienta Asignada",
+                    body=f"Tu psicólogo te ha asignado la herramienta '{mod_nombre}' en tu portal.",
+                    url="/#patient-dashboard"
+                )
+            except Exception as _wp_err:
+                print("Aviso al enviar push de herramienta:", _wp_err)
     except Exception as _fe:
         print("Aviso sync firebase herramientas:", _fe)
     
