@@ -1935,14 +1935,14 @@ _db_initialized_flag = False
 
 @app.before_request
 def enforce_https_and_www_in_prod():
-    """Redirige automáticamente http:// o espacioterapeutico.net sin www hacia https://www.espacioterapeutico.net para evitar el aviso 'No es seguro'."""
+    """Fuerza HTTPS en producción sin rebotar entre dominios para evitar que la app de Android muestre la barra de navegación."""
     try:
         host = (request.host or '').lower().split(':')[0]
         if host in ('espacioterapeutico.net', 'www.espacioterapeutico.net'):
             proto = request.headers.get('X-Forwarded-Proto', request.scheme or 'http').lower()
-            if (proto != 'https' or host == 'espacioterapeutico.net') and request.method in ('GET', 'HEAD'):
+            if proto != 'https' and request.method in ('GET', 'HEAD'):
                 qs = f"?{request.query_string.decode('utf-8', 'ignore')}" if request.query_string else ""
-                return redirect(f"https://www.espacioterapeutico.net{request.path}{qs}", code=301)
+                return redirect(f"https://{host}{request.path}{qs}", code=301)
     except Exception:
         pass
 
