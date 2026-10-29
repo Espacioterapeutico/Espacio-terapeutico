@@ -992,60 +992,82 @@ function saveNotifiedKeys() {
 }
 
 function showOnboardingTutorialIfNeeded() {
-    if (localStorage.getItem('tutorial_notificaciones_visto') !== 'true') {
-        localStorage.setItem('tutorial_notificaciones_visto', 'true');
-        setTimeout(() => {
-            if (typeof openModal === 'function') {
-                openModal('onboarding-notification-modal');
-            } else {
-                const modal = document.getElementById('onboarding-notification-modal');
-                if (modal) modal.classList.remove('hide');
-            }
-        }, 800);
-    }
+    localStorage.setItem('tutorial_notificaciones_visto', 'true');
     try { updateNotificationBannerVisibility(); } catch(e) {}
 }
 window.showOnboardingTutorialIfNeeded = showOnboardingTutorialIfNeeded;
+
+function dismissNotificationBanner(type) {
+    try {
+        localStorage.setItem('notif_banner_dismissed', 'true');
+        const patBanner = document.getElementById('pat-notif-banner');
+        const adminBanner = document.getElementById('admin-notif-banner');
+        if (patBanner) patBanner.style.display = 'none';
+        if (adminBanner) adminBanner.style.display = 'none';
+    } catch(e) {}
+}
+window.dismissNotificationBanner = dismissNotificationBanner;
 
 function updateNotificationBannerVisibility() {
     const patBanner = document.getElementById('pat-notif-banner');
     const adminBanner = document.getElementById('admin-notif-banner');
     const isGranted = 'Notification' in window && Notification.permission === 'granted';
+    const isDismissed = localStorage.getItem('notif_banner_dismissed') === 'true';
     
     if (patBanner) {
-        patBanner.style.display = isGranted ? 'none' : 'flex';
+        patBanner.style.display = (isGranted || isDismissed) ? 'none' : 'flex';
     }
     if (adminBanner) {
-        adminBanner.style.display = isGranted ? 'none' : 'flex';
+        adminBanner.style.display = (isGranted || isDismissed) ? 'none' : 'flex';
     }
 }
 window.updateNotificationBannerVisibility = updateNotificationBannerVisibility;
 
-async function requestNotificationPermission() {
-    if (!('Notification' in window)) return false;
+async function requestNotificationPermission(isUserClick = false) {
+    if (!('Notification' in window)) {
+        if (isUserClick && typeof showToast === 'function') {
+            showToast('Este navegador o dispositivo no soporta notificaciones.', 'warning');
+        }
+        return false;
+    }
+    
     if (Notification.permission === 'granted') {
-        showOnboardingTutorialIfNeeded();
         try { updateNotificationBannerVisibility(); } catch(e) {}
         try { initFirebaseMessagingFlow(); } catch(e) {}
+        if (isUserClick && typeof showToast === 'function') {
+            showToast('🔔 Notificaciones ya están activadas en este dispositivo.', 'success');
+        }
         return true;
     }
+    
     if (Notification.permission !== 'denied') {
         try {
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
-                showOnboardingTutorialIfNeeded();
                 try { updateNotificationBannerVisibility(); } catch(e) {}
                 try { initFirebaseMessagingFlow(); } catch(e) {}
+                if (typeof showToast === 'function') {
+                    showToast('🔔 ¡Notificaciones activadas con éxito!', 'success');
+                }
                 return true;
+            } else {
+                if (isUserClick && typeof showToast === 'function') {
+                    showToast('Permiso no concedido. Puedes activarlo cuando gustes.', 'info');
+                }
+                return false;
             }
-            openNotificationGuideModal();
-            return false;
         } catch(e) {
-            openNotificationGuideModal();
+            console.warn('Error solicitando permisos de notificación:', e);
+            if (isUserClick && typeof openNotificationGuideModal === 'function') {
+                openNotificationGuideModal();
+            }
             return false;
         }
     } else {
-        openNotificationGuideModal();
+        // Si el permiso está bloqueado manualmente
+        if (isUserClick && typeof openNotificationGuideModal === 'function') {
+            openNotificationGuideModal();
+        }
     }
     return false;
 }

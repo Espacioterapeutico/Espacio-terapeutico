@@ -2421,9 +2421,14 @@
                             <span style="font-size: 1.15rem;">🔔</span>
                             <span>¿Recibir notificaciones con la app cerrada?</span>
                         </div>
-                        <button type="button" class="btn btn-sm" onclick="openNotificationGuideModal()" style="background: #10b981; color: white; border: none; font-weight: 700; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.78rem; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
-                            Activar
-                        </button>
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <button type="button" class="btn btn-sm" onclick="requestNotificationPermission(true)" style="background: #10b981; color: white; border: none; font-weight: 700; padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.78rem; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
+                                Activar
+                            </button>
+                            <button type="button" onclick="dismissNotificationBanner('admin')" title="Cerrar aviso" style="background: none; border: none; color: #059669; font-size: 1.25rem; font-weight: bold; cursor: pointer; padding: 0 0.25rem; line-height: 1;">
+                                &times;
+                            </button>
+                        </div>
                     </div>
 
                     <!-- BANNER ALERTA WHATSAPP DESCONECTADO -->
@@ -6400,9 +6405,14 @@
                             <span style="font-size: 1.3rem;">🔔</span>
                             <span>¿Quieres recibir recordatorios de tus citas con la app o el teléfono cerrado?</span>
                         </div>
-                        <button type="button" class="btn btn-sm" onclick="openNotificationGuideModal()" style="background: #10b981; color: white; border: none; font-weight: 700; padding: 0.45rem 0.85rem; border-radius: 20px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
-                            Activar / Ver Instrucciones
-                        </button>
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <button type="button" class="btn btn-sm" onclick="requestNotificationPermission(true)" style="background: #10b981; color: white; border: none; font-weight: 700; padding: 0.45rem 0.85rem; border-radius: 20px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
+                                Activar
+                            </button>
+                            <button type="button" onclick="dismissNotificationBanner('pat')" title="Cerrar aviso" style="background: none; border: none; color: #059669; font-size: 1.25rem; font-weight: bold; cursor: pointer; padding: 0 0.25rem; line-height: 1;">
+                                &times;
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Botones de Navegación Rápida de Mi Sesión -->
