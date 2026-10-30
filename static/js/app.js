@@ -1034,6 +1034,16 @@ async function requestNotificationPermission(isUserClick = false) {
     if (Notification.permission === 'granted') {
         try { updateNotificationBannerVisibility(); } catch(e) {}
         try { initFirebaseMessagingFlow(); } catch(e) {}
+        const curPid = (typeof getAuthItem === 'function' ? getAuthItem('patient_id') : sessionStorage.getItem('patient_id'));
+        const curTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token;
+        const curDev = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : (localStorage.getItem('et_device_id') || '');
+        if (curPid && (curTok || curDev)) {
+            fetch('/api/patient/fcm/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: curTok || null, device_id: curDev || null, patient_id: parseInt(curPid) })
+            }).catch(() => {});
+        }
         if (isUserClick && typeof showToast === 'function') {
             showToast('🔔 Notificaciones ya están activadas en este dispositivo.', 'success');
         }
@@ -1046,6 +1056,16 @@ async function requestNotificationPermission(isUserClick = false) {
             if (permission === 'granted') {
                 try { updateNotificationBannerVisibility(); } catch(e) {}
                 try { initFirebaseMessagingFlow(); } catch(e) {}
+                const curPid = (typeof getAuthItem === 'function' ? getAuthItem('patient_id') : sessionStorage.getItem('patient_id'));
+                const curTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token;
+                const curDev = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : (localStorage.getItem('et_device_id') || '');
+                if (curPid && (curTok || curDev)) {
+                    fetch('/api/patient/fcm/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: curTok || null, device_id: curDev || null, patient_id: parseInt(curPid) })
+                    }).catch(() => {});
+                }
                 if (typeof showToast === 'function') {
                     showToast('🔔 ¡Notificaciones activadas con éxito!', 'success');
                 }
@@ -3338,6 +3358,23 @@ function showPatientLayout(username, patientId) {
     switchPatientView('patient-home');
     loadPatientPortalData(patientId);
     
+    // Auto-vincular token FCM local de forma inmediata (0 ms) al entrar al portal
+    try {
+        const cachedFcmTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token;
+        const curDevId = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : (localStorage.getItem('et_device_id') || '');
+        if (patientId) {
+            fetch('/api/patient/fcm/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    token: cachedFcmTok || null, 
+                    device_id: curDevId || null, 
+                    patient_id: parseInt(patientId) 
+                })
+            }).catch(() => {});
+        }
+    } catch(e) {}
+
     // Iniciar notificaciones de paciente
     clearAllNotificationIntervals();
     loadPatientNotifications(patientId);
@@ -13645,7 +13682,15 @@ async function loadPatientNotifications(patientId) {
         const pid = patientId || sessionStorage.getItem('patient_id');
         if (!pid) return;
 
-        const res = await fetch(`/api/patient/notifications?patient_id=${pid}`);
+        const fcmTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token || '';
+        const devId = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : (localStorage.getItem('et_device_id') || '');
+        const notifHeaders = {};
+        if (fcmTok) notifHeaders['X-FCM-Token'] = fcmTok;
+        if (devId) notifHeaders['X-Device-Id'] = devId;
+
+        const res = await fetch(`/api/patient/notifications?patient_id=${pid}`, {
+            headers: notifHeaders
+        });
         if (!res.ok) return;
         const data = await res.json();
         
@@ -15088,6 +15133,13 @@ async function initFirebaseMessagingFlow(registration, forceRefresh = false) {
             });
             let subData = null;
             try { subData = await subRes.json(); } catch(e) {}
+            if (isPatient && currentPid) {
+                fetch('/api/patient/fcm/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token, device_id: devId, patient_id: parseInt(currentPid) })
+                }).catch(() => {});
+            }
             if (!subRes.ok || !subData || !subData.success) {
                 const errDetail = (subData && subData.error) || `Error del servidor (${subRes.status})`;
                 console.error("Error al registrar suscripción FCM en backend:", errDetail);
@@ -15381,6 +15433,68 @@ async function handleTestPushNotification() {
     }
 }
 window.handleTestPushNotification = handleTestPushNotification;
+
+async function testPatientPushNotification() {
+    try {
+        if ('Notification' in window && Notification.permission !== 'granted') {
+            const perm = await Notification.requestPermission();
+            if (perm !== 'granted') {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Permiso Requerido',
+                        text: 'Debes conceder permiso de notificaciones para poder recibir recordatorios en tu dispositivo.',
+                        confirmButtonColor: '#701a75'
+                    });
+                } else {
+                    alert('Debes conceder permiso de notificaciones para recibir avisos.');
+                }
+                return;
+            }
+        }
+        
+        // Sincronizar token local primero con el backend
+        const curTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token;
+        const curDevId = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : (localStorage.getItem('et_device_id') || '');
+        const pid = (typeof getAuthItem === 'function' ? getAuthItem('patient_id') : sessionStorage.getItem('patient_id'));
+        if (pid) {
+            await fetch('/api/patient/fcm/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: curTok || null, device_id: curDevId || null, patient_id: parseInt(pid) })
+            }).catch(() => {});
+        }
+
+        const res = await fetch('/api/patient/test-push', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Notificación Enviada!',
+                    text: 'Se ha enviado una notificación de prueba a tu dispositivo. Revisa la barra superior de tu teléfono.',
+                    confirmButtonColor: '#701a75'
+                });
+            } else {
+                alert('¡Notificación de prueba enviada con éxito! Revisa tu teléfono.');
+            }
+        } else {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Dispositivo en Proceso de Registro',
+                    text: data.error || 'Asegúrate de conceder permisos de notificación y volver a intentar.',
+                    confirmButtonColor: '#701a75'
+                });
+            } else {
+                alert(data.error || 'Error enviando notificación.');
+            }
+        }
+    } catch(err) {
+        console.error('Error probando push de paciente:', err);
+    }
+}
+window.testPatientPushNotification = testPatientPushNotification;
 
 function cleanAndParseFirebaseConfig(str) {
     if (!str || !str.trim()) return null;

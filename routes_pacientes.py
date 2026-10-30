@@ -2322,6 +2322,87 @@ def accept_patient_terms():
         return jsonify({'error': str(e)}), 500
 
 
+@pacientes_bp.route('/api/patient/fcm/sync', methods=['POST'])
+def sync_patient_fcm():
+    data = request.get_json(silent=True) or {}
+    token = (data.get('token') or '').strip()
+    device_id = (data.get('device_id') or '').strip()
+    
+    patient_id = session.get('patient_id') or data.get('patient_id')
+    if not patient_id:
+        return jsonify({'error': 'No patient session or id'}), 400
+    
+    try:
+        patient_id = int(patient_id)
+    except:
+        return jsonify({'error': 'Invalid patient_id'}), 400
+        
+    db = get_db()
+    cursor = db.cursor()
+    from app import ensure_fcm_table_and_columns
+    ensure_fcm_table_and_columns(cursor)
+    
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    ua = (request.headers.get('User-Agent') or '')[:150]
+    
+    updated = False
+    if token and len(token) > 10:
+        cursor.execute("SELECT id FROM fcm_subscriptions WHERE token = ?", (token,))
+        row = cursor.fetchone()
+        if row:
+            cursor.execute("""
+                UPDATE fcm_subscriptions 
+                SET patient_id = ?, user_id = NULL, device_id = COALESCE(?, device_id),
+                    dispositivo_info = ?, actualizado_en = ?
+                WHERE token = ?
+            """, (patient_id, device_id or None, ua, now_str, token))
+        else:
+            if device_id:
+                cursor.execute("DELETE FROM fcm_subscriptions WHERE device_id = ?", (device_id,))
+            cursor.execute("""
+                INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                VALUES (NULL, ?, ?, ?, ?, ?)
+            """, (patient_id, token, device_id or None, ua, now_str))
+        updated = True
+        
+    if device_id:
+        cursor.execute("""
+            UPDATE fcm_subscriptions 
+            SET patient_id = ?, user_id = NULL, actualizado_en = ?
+            WHERE device_id = ? AND (patient_id IS NULL OR patient_id != ?)
+        """, (patient_id, now_str, device_id, patient_id))
+        if cursor.rowcount > 0:
+            updated = True
+            
+    db.commit()
+    return jsonify({'success': True, 'patient_id': patient_id, 'linked': updated})
+
+
+@pacientes_bp.route('/api/patient/test-push', methods=['POST'])
+@patient_login_required
+def patient_test_push():
+    patient_id = session.get('patient_id')
+    db = get_db()
+    cursor = db.cursor()
+    from app import send_fcm_notification, ensure_fcm_table_and_columns
+    ensure_fcm_table_and_columns(cursor)
+    
+    cursor.execute("SELECT COUNT(*) FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+    cnt = cursor.fetchone()[0] or 0
+    if cnt == 0:
+        return jsonify({
+            'success': False, 
+            'error': 'No hay ningún dispositivo registrado para notificaciones en segundo plano en esta cuenta. Toca en "Activar Notificaciones" y concede los permisos en tu teléfono para vincular este equipo.'
+        }), 400
+        
+    res = send_fcm_notification(
+        patient_id=patient_id,
+        title="🔔 Espacio Terapéutico",
+        body="¡Excelente! Las notificaciones push en segundo plano están funcionando correctamente en tu teléfono.",
+        url="/#patient-home"
+    )
+    return jsonify({'success': True, 'tokens_count': cnt, 'result': res})
+
 
 @pacientes_bp.route('/api/patient/notifications', methods=['GET'])
 @patient_login_required
@@ -2331,6 +2412,35 @@ def get_patient_notifications():
         patient_id = int(patient_id)
     db = get_db()
     cursor = db.cursor()
+    
+    # Auto-vincular tokens FCM de cabeceras si viajan en la petición de notificaciones
+    fcm_tok_header = (request.headers.get('X-FCM-Token') or '').strip()
+    dev_id_header = (request.headers.get('X-Device-Id') or '').strip()
+    if patient_id and (fcm_tok_header or dev_id_header):
+        try:
+            from app import ensure_fcm_table_and_columns
+            ensure_fcm_table_and_columns(cursor)
+            now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            if fcm_tok_header and len(fcm_tok_header) > 10:
+                cursor.execute("""
+                    UPDATE fcm_subscriptions 
+                    SET patient_id = ?, user_id = NULL, actualizado_en = ?
+                    WHERE token = ? AND (patient_id IS NULL OR patient_id != ?)
+                """, (patient_id, now_str, fcm_tok_header, patient_id))
+                if cursor.rowcount == 0:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                        VALUES (NULL, ?, ?, ?, ?, ?)
+                    """, (patient_id, fcm_tok_header, dev_id_header or None, (request.headers.get('User-Agent') or '')[:150], now_str))
+            if dev_id_header:
+                cursor.execute("""
+                    UPDATE fcm_subscriptions 
+                    SET patient_id = ?, user_id = NULL, actualizado_en = ?
+                    WHERE device_id = ? AND (patient_id IS NULL OR patient_id != ?)
+                """, (patient_id, now_str, dev_id_header, patient_id))
+            db.commit()
+        except Exception:
+            pass
     try:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS notificaciones_pacientes (

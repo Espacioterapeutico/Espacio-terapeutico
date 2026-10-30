@@ -3517,12 +3517,9 @@ def subscribe_firebase():
         # 1. Eliminar cualquier registro que ya tuviera este MISMO token exacto
         cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
 
-        # 2. Si se provee device_id, eliminar tokens viejos en ESTE MISMO equipo para este usuario / paciente
+        # 2. Si se provee device_id, eliminar tokens viejos en ESTE MISMO equipo
         if device_id:
-            if patient_id:
-                cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ? AND device_id = ?", (patient_id, device_id))
-            elif user_id:
-                cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ? AND device_id = ?", (user_id, device_id))
+            cursor.execute("DELETE FROM fcm_subscriptions WHERE device_id = ?", (device_id,))
 
         if patient_id:
             cursor.execute("""
@@ -3622,7 +3619,14 @@ def test_firebase_push():
                 dev_id = (data.get('device_id') or '').strip()
                 now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (client_tok,))
-                if user_id:
+                if patient_id:
+                    cursor.execute("""
+                        INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                        VALUES (NULL, ?, ?, ?, ?, ?)
+                    """, (patient_id, client_tok, dev_id or None, (request.headers.get('User-Agent') or '')[:150], now_str))
+                    db.commit()
+                    tokens.append(client_tok)
+                elif user_id:
                     cursor.execute("""
                         INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
                         VALUES (?, NULL, ?, ?, ?, ?)

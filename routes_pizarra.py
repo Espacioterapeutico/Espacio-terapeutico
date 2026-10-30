@@ -289,12 +289,21 @@ def admin_pizarra_reply():
         
         cursor.execute("SELECT paciente_id FROM pizarra_terapeutica WHERE id = ?", (update_id,))
         row = cursor.fetchone()
-        if row:
+        if row and row['paciente_id']:
             patient_id = row['paciente_id']
-            cursor.execute("""
-                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                VALUES (?, ?, ?, ?, ?, 0, ?)
-            """, (patient_id, 'pizarra', '💬 Tu Psicólogo/a respondió en tu Pizarra Terapéutica', f'Tu psicólogo/a ha respondido a tu apunte: "{respuesta[:60]}..."', fecha_actual, 'pizarra-terapeutica'))
+            try:
+                from app import notify_patient
+                snippet = (respuesta[:80] + '...') if len(respuesta) > 80 else respuesta
+                notify_patient(
+                    patient_id=patient_id,
+                    titulo="💬 Respuesta en tu Pizarra Terapéutica",
+                    mensaje=f'Tu psicólogo/a ha respondido a tu apunte: "{snippet}"',
+                    link="/#patient-home",
+                    icon="💬",
+                    tipo="pizarra"
+                )
+            except Exception as _epiz:
+                print("Error notificando respuesta de pizarra al paciente:", _epiz)
             
         db.commit()
         return jsonify({'success': 'Respuesta registrada con éxito.', 'fecha_respuesta': fecha_actual, 'respuesta_psicologo': respuesta})
