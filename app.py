@@ -397,7 +397,11 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
         elif patient_id:
-            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+            try:
+                pid_int = int(patient_id)
+            except (ValueError, TypeError):
+                pid_int = patient_id
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ? OR patient_id = ?", (pid_int, str(patient_id)))
             tokens = [row['token'] for row in cursor.fetchall()]
         else:
             return
@@ -552,7 +556,11 @@ def send_vapid_notification(user_id=None, patient_id=None, title="Mi Consultorio
         if user_id:
             cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ?", (user_id,))
         elif patient_id:
-            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE patient_id = ?", (patient_id,))
+            try:
+                pid_int = int(patient_id)
+            except (ValueError, TypeError):
+                pid_int = patient_id
+            cursor.execute("SELECT id, endpoint, p256dh, auth FROM web_push_subscriptions WHERE patient_id = ? OR patient_id = ?", (pid_int, str(patient_id)))
         else:
             return
 
@@ -699,11 +707,16 @@ def normalize_time_str(t_str):
         return t_str[:5]
 
 def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(DATABASE, timeout=30.0)
-        db.row_factory = sqlite3.Row
-    return db
+    try:
+        db = getattr(g, '_database', None)
+        if db is None:
+            db = g._database = sqlite3.connect(DATABASE, timeout=30.0)
+            db.row_factory = sqlite3.Row
+        return db
+    except RuntimeError:
+        conn = sqlite3.connect(DATABASE, timeout=30.0)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 @app.teardown_appcontext
 def close_connection(exception):
@@ -2037,7 +2050,8 @@ def notify_patient(patient_id, titulo, mensaje, link='#', icon='🔔', tipo='gen
     # Despachar notificación Push Web/FCM y Firebase RTDB en hilo background
     def _send_push():
         try:
-            send_webpush_notification(patient_id=int(patient_id), title=titulo, body=mensaje, url=link)
+            with app.app_context():
+                send_webpush_notification(patient_id=int(patient_id), title=titulo, body=mensaje, url=link)
         except Exception as _ep:
             print(f"Error enviando WebPush a paciente #{patient_id}: {_ep}")
         # Intento de respaldo a Firebase RTDB

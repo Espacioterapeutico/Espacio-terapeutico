@@ -15070,12 +15070,21 @@ async function initFirebaseMessagingFlow(registration, forceRefresh = false) {
             window.__current_fcm_token = token;
             window.__fcm_status = { status: 'registered', token: token };
             const devId = getOrCreateDeviceId();
-            const currentUid = (typeof getAuthItem === 'function' ? getAuthItem('user_id') : localStorage.getItem('user_id')) || null;
-            // Enviar token, device_id y user_id al backend
+            const role = (typeof getAuthItem === 'function' ? getAuthItem('role') : sessionStorage.getItem('role')) || '';
+            const isPatient = role === 'paciente' || !!sessionStorage.getItem('patient_id') || !!(window.currentUser && window.currentUser.is_patient);
+            const currentPid = (typeof getAuthItem === 'function' ? getAuthItem('patient_id') : sessionStorage.getItem('patient_id')) || null;
+            const currentUid = (!isPatient && typeof getAuthItem === 'function' ? getAuthItem('user_id') : (!isPatient ? localStorage.getItem('user_id') : null)) || null;
+
+            // Enviar token, device_id, user_id y patient_id al backend
             const subRes = await fetch('/api/firebase/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: token, device_id: devId, user_id: currentUid })
+                body: JSON.stringify({ 
+                    token: token, 
+                    device_id: devId, 
+                    user_id: currentUid ? parseInt(currentUid) : null,
+                    patient_id: isPatient && currentPid ? parseInt(currentPid) : null
+                })
             });
             let subData = null;
             try { subData = await subRes.json(); } catch(e) {}

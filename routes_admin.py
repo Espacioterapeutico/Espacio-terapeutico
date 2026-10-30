@@ -3496,41 +3496,44 @@ def subscribe_firebase():
         from app import ensure_fcm_table_and_columns
         ensure_fcm_table_and_columns(cursor)
 
-        if not user_id and req_user_id:
-            try:
-                cursor.execute("SELECT id FROM usuarios WHERE id = ?", (req_user_id,))
-                if cursor.fetchone():
-                    user_id = req_user_id
-            except:
-                pass
-        if not patient_id and req_patient_id:
+        if req_patient_id:
             try:
                 cursor.execute("SELECT id FROM pacientes WHERE id = ?", (req_patient_id,))
                 if cursor.fetchone():
-                    patient_id = req_patient_id
+                    patient_id = int(req_patient_id)
+                    user_id = None
+            except:
+                pass
+        elif patient_id:
+            user_id = None
+        elif not user_id and req_user_id:
+            try:
+                cursor.execute("SELECT id FROM usuarios WHERE id = ?", (req_user_id,))
+                if cursor.fetchone():
+                    user_id = int(req_user_id)
             except:
                 pass
 
         # 1. Eliminar cualquier registro que ya tuviera este MISMO token exacto
         cursor.execute("DELETE FROM fcm_subscriptions WHERE token = ?", (token,))
 
-        # 2. Si se provee device_id, eliminar tokens viejos en ESTE MISMO equipo para este usuario.
+        # 2. Si se provee device_id, eliminar tokens viejos en ESTE MISMO equipo para este usuario / paciente
         if device_id:
-            if user_id:
-                cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ? AND device_id = ?", (user_id, device_id))
-            elif patient_id:
+            if patient_id:
                 cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ? AND device_id = ?", (patient_id, device_id))
+            elif user_id:
+                cursor.execute("DELETE FROM fcm_subscriptions WHERE user_id = ? AND device_id = ?", (user_id, device_id))
 
-        if user_id:
-            cursor.execute("""
-                INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
-                VALUES (?, NULL, ?, ?, ?, ?)
-            """, (user_id, token, device_id or None, dispositivo_info, now_str))
-        elif patient_id:
+        if patient_id:
             cursor.execute("""
                 INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
                 VALUES (NULL, ?, ?, ?, ?, ?)
             """, (patient_id, token, device_id or None, dispositivo_info, now_str))
+        elif user_id:
+            cursor.execute("""
+                INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
+                VALUES (?, NULL, ?, ?, ?, ?)
+            """, (user_id, token, device_id or None, dispositivo_info, now_str))
         else:
             cursor.execute("""
                 INSERT INTO fcm_subscriptions (user_id, patient_id, token, device_id, dispositivo_info, actualizado_en)
@@ -3543,7 +3546,8 @@ def subscribe_firebase():
             'message': 'Suscrito a notificaciones FCM con éxito.',
             'device_id': device_id,
             'user_id': user_id,
-            'patient_id': patient_id
+            'patient_id': patient_id,
+            'role': 'paciente' if patient_id else ('psicologo' if user_id else 'anonimo')
         })
     except Exception as e:
         db.rollback()
