@@ -490,7 +490,7 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
                             "body": body,
                             "sound": "default",
                             "tag": tag_id,
-                            "color": "#a95993",
+                            "color": "#ec4899",
                             "notification_priority": "PRIORITY_HIGH"
                         }
                     },
@@ -586,7 +586,7 @@ def send_vapid_notification(user_id=None, patient_id=None, title="Mi Consultorio
             "tag": tag_id,
             "icon": "/static/logo.png",
             "badge": "/static/badge.png",
-            "color": "#a95993"
+            "color": "#ec4899"
         })
 
         vapid_claims = {
