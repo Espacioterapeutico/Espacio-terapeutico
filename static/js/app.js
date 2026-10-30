@@ -1050,44 +1050,76 @@ async function requestNotificationPermission(isUserClick = false) {
         return true;
     }
     
-    if (Notification.permission !== 'denied') {
-        try {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                try { updateNotificationBannerVisibility(); } catch(e) {}
-                try { initFirebaseMessagingFlow(); } catch(e) {}
-                const curPid = (typeof getAuthItem === 'function' ? getAuthItem('patient_id') : sessionStorage.getItem('patient_id'));
-                const curTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token;
-                const curDev = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : (localStorage.getItem('et_device_id') || '');
-                if (curPid && (curTok || curDev)) {
-                    fetch('/api/patient/fcm/sync', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ token: curTok || null, device_id: curDev || null, patient_id: parseInt(curPid) })
-                    }).catch(() => {});
-                }
-                if (typeof showToast === 'function') {
-                    showToast('🔔 ¡Notificaciones activadas con éxito!', 'success');
-                }
-                return true;
-            } else {
-                if (isUserClick && typeof showToast === 'function') {
-                    showToast('Permiso no concedido. Puedes activarlo cuando gustes.', 'info');
-                }
-                return false;
+    if (Notification.permission === 'denied') {
+        if (window.Swal) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Permiso Bloqueado en tu Dispositivo',
+                html: `
+                    <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #374151;">
+                        <p style="margin-bottom: 0.75rem;">
+                            Las notificaciones están en estado <strong>"Bloqueado"</strong> o <strong>"Denegado"</strong>. Por seguridad de Android y el navegador, no se puede abrir la ventana de permisos automáticamente desde esta pantalla.
+                        </p>
+                        <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                            <strong style="color: #701a75;">🌐 Si estás en Chrome / Navegador:</strong>
+                            <ol style="margin: 0.35rem 0 0 1.1rem; padding: 0; font-size: 0.85rem;">
+                                <li>Toca el ícono de <strong>ajustes / candado 🔒</strong> a la izquierda de la dirección web <em>espacioterapeutico.net</em> (arriba a la izquierda).</li>
+                                <li>Toca en <strong>Permisos</strong> o <strong>Configuración de sitios</strong>.</li>
+                                <li>En <strong>Notificaciones</strong>, cambia a <strong>Permitir</strong> ✅.</li>
+                                <li>Recarga la página.</li>
+                            </ol>
+                        </div>
+                        <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 0.75rem;">
+                            <strong style="color: #166534;">📱 Si estás en la App descargada de Google Play:</strong>
+                            <ol style="margin: 0.35rem 0 0 1.1rem; padding: 0; font-size: 0.85rem;">
+                                <li>Ve a los <strong>Ajustes de tu Teléfono &gt; Aplicaciones</strong>.</li>
+                                <li>Busca <strong>Espacio Terapéutico</strong>.</li>
+                                <li>Entra en <strong>Notificaciones</strong> y activa el interruptor <strong>Permitir notificaciones</strong> ✅.</li>
+                            </ol>
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'Entendido, voy a activarlo',
+                confirmButtonColor: '#701a75'
+            });
+        } else if (typeof openNotificationGuideModal === 'function') {
+            openNotificationGuideModal();
+        }
+        return false;
+    }
+
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            try { updateNotificationBannerVisibility(); } catch(e) {}
+            try { initFirebaseMessagingFlow(); } catch(e) {}
+            const curPid = (typeof getAuthItem === 'function' ? getAuthItem('patient_id') : sessionStorage.getItem('patient_id'));
+            const curTok = localStorage.getItem('et_fcm_token') || window.__current_fcm_token;
+            const curDev = typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : (localStorage.getItem('et_device_id') || '');
+            if (curPid && (curTok || curDev)) {
+                fetch('/api/patient/fcm/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: curTok || null, device_id: curDev || null, patient_id: parseInt(curPid) })
+                }).catch(() => {});
             }
-        } catch(e) {
-            console.warn('Error solicitando permisos de notificación:', e);
-            if (isUserClick && typeof openNotificationGuideModal === 'function') {
-                openNotificationGuideModal();
+            if (typeof showToast === 'function') {
+                showToast('🔔 ¡Notificaciones activadas con éxito!', 'success');
+            }
+            return true;
+        } else {
+            if (isUserClick) {
+                // Si el usuario denegó o cerró el diálogo nativo
+                requestNotificationPermission(true);
             }
             return false;
         }
-    } else {
-        // Si el permiso está bloqueado manualmente
+    } catch(e) {
+        console.warn('Error solicitando permisos de notificación:', e);
         if (isUserClick && typeof openNotificationGuideModal === 'function') {
             openNotificationGuideModal();
         }
+        return false;
     }
     return false;
 }
@@ -15437,20 +15469,8 @@ window.handleTestPushNotification = handleTestPushNotification;
 async function testPatientPushNotification() {
     try {
         if ('Notification' in window && Notification.permission !== 'granted') {
-            const perm = await Notification.requestPermission();
-            if (perm !== 'granted') {
-                if (window.Swal) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Permiso Requerido',
-                        text: 'Debes conceder permiso de notificaciones para poder recibir recordatorios en tu dispositivo.',
-                        confirmButtonColor: '#701a75'
-                    });
-                } else {
-                    alert('Debes conceder permiso de notificaciones para recibir avisos.');
-                }
-                return;
-            }
+            const ok = await requestNotificationPermission(true);
+            if (!ok) return;
         }
         
         // Sincronizar token local primero con el backend
