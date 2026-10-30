@@ -1287,9 +1287,10 @@ def update_agenda_event_status(event_id):
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
         WHERE af.id = ?
     """, (event_id,))
-    cita = cursor.fetchone()
-    if not cita:
+    cita_raw = cursor.fetchone()
+    if not cita_raw:
         return jsonify({'error': 'Cita no encontrada.'}), 404
+    cita = dict(cita_raw)
 
     updates = []
     params = []
@@ -1401,12 +1402,13 @@ def update_agenda_event_status(event_id):
     cursor.execute(sql, params)
     db.commit()
     
+    is_confirming = (confirmada == 1 or estado == 'Confirmada')
+    is_cancelling = bool(target_cancellation)
+
     # Enviar mensaje de WhatsApp si corresponde
     try:
         from routes_notificaciones import make_wa_http_request, format_whatsapp_message
         from routes_herramientas import clean_phone_number
-        is_confirming = (confirmada == 1 or estado == 'Confirmada')
-        is_cancelling = bool(target_cancellation)
 
         if is_cancelling and cita and cita.get('token_confirmacion'):
             try:
