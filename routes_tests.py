@@ -2039,7 +2039,7 @@ def api_asignar_test():
             
             try:
                 from routes_notificaciones import make_wa_http_request
-                wa_res = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_text, 'user_id': user_id}, timeout=4, user_id=user_id)
+                wa_res = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_text, 'user_id': user_id}, timeout=25, user_id=user_id)
                 if wa_res and getattr(wa_res, 'status_code', 0) == 200:
                     res_data = wa_res.json()
                     if res_data.get('success'):

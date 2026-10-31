@@ -18,24 +18,72 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
-const FLASK_WEBHOOK_URL = process.env.FLASK_WEBHOOK_URL || 'http://127.0.0.1:5000/api/whatsapp/webhook';
+// Detectar entorno: si se ejecuta en Render o producción y FLASK_WEBHOOK_URL apunta a 127.0.0.1, redirigir al dominio oficial
+let envWebhook = process.env.FLASK_WEBHOOK_URL || '';
+if (!envWebhook || envWebhook.includes('127.0.0.1') || envWebhook.includes('localhost')) {
+    if (process.env.RENDER || process.env.PORT || process.env.NODE_ENV === 'production') {
+        envWebhook = 'https://www.espacioterapeutico.net/api/whatsapp/webhook';
+    } else {
+        envWebhook = 'http://127.0.0.1:5000/api/whatsapp/webhook';
+    }
+}
+const FLASK_WEBHOOK_URL = envWebhook;
 const FLASK_BASE_URL = FLASK_WEBHOOK_URL.replace('/api/whatsapp/webhook', '');
 const AUTH_BASE_DIR = path.join(__dirname, 'auth_info_baileys');
 
 // Mapa de sesiones activas por user_id: key = string(user_id) -> { userId, sock, connectionStatus, currentQR, connectedPhone }
 const sessions = new Map();
 
-// Almacén en memoria de mensajes para responder a solicitudes de reintento de descifrado (Signal Protocol Retries)
+// Almacén de mensajes para responder a solicitudes de reintento de descifrado (Signal Protocol Retries)
+// Persistido en disco en cada carpeta auth_info_baileys/user_{id}/message_store.json para sobrevivir a hibernación/reinicios de Render
 const messageStore = new Map();
-const MAX_STORED_MESSAGES = 1000;
+const MAX_STORED_MESSAGES = 1500;
+let _messageStoreSaveTimers = {};
 
-function storeMessage(id, message) {
+function getMessageStorePath(userId) {
+    return path.join(getUserAuthDir(userId), 'message_store.json');
+}
+
+function loadMessageStoreFromDisk(userId) {
+    try {
+        const filePath = getMessageStorePath(userId);
+        if (fs.existsSync(filePath)) {
+            const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            let count = 0;
+            for (const [k, v] of Object.entries(raw)) {
+                messageStore.set(k, v);
+                count++;
+            }
+            console.log(`[User ${userId}] 🗄️ message_store.json cargado (${count} mensajes disponibles para descifrado E2EE).`);
+        }
+    } catch (_e) {}
+}
+
+function storeMessage(id, message, userId = '1') {
     if (!id || !message) return;
     if (messageStore.size >= MAX_STORED_MESSAGES) {
         const firstKey = messageStore.keys().next().value;
         messageStore.delete(firstKey);
     }
     messageStore.set(String(id), message);
+
+    // Debounce de guardado a disco y sincronización a SQLite
+    const key = String(userId || 1);
+    if (_messageStoreSaveTimers[key]) clearTimeout(_messageStoreSaveTimers[key]);
+    _messageStoreSaveTimers[key] = setTimeout(() => {
+        try {
+            const filePath = getMessageStorePath(key);
+            const dataToSave = {};
+            // Guardar hasta los últimos 1000 mensajes
+            const entries = Array.from(messageStore.entries()).slice(-1000);
+            for (const [k, v] of entries) {
+                dataToSave[k] = v;
+            }
+            fs.writeFileSync(filePath, JSON.stringify(dataToSave), 'utf8');
+            syncSessionToFlask(key, getUserAuthDir(key));
+        } catch (_err) {}
+        delete _messageStoreSaveTimers[key];
+    }, 2500);
 }
 
 // Cache para conteo y control de reintentos de mensajes (persistido en disco)
@@ -207,6 +255,9 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
             await restoreSessionFromFlask(key, userAuthDir);
         }
 
+        // Cargar mensajes previos desde disco para responder de inmediato a reintentos de Signal/E2EE
+        loadMessageStoreFromDisk(key);
+
         const { state, saveCreds } = await useMultiFileAuthState(userAuthDir);
         const { version } = await fetchLatestBaileysVersion();
 
@@ -235,9 +286,22 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
                 return false;
             },
             msgRetryCounterCache,
-            getMessage: async (key) => {
-                if (key && key.id && messageStore.has(String(key.id))) {
-                    return messageStore.get(String(key.id));
+            getMessage: async (msgKey) => {
+                if (msgKey && msgKey.id) {
+                    const idStr = String(msgKey.id);
+                    if (messageStore.has(idStr)) {
+                        return messageStore.get(idStr);
+                    }
+                    try {
+                        const filePath = getMessageStorePath(key);
+                        if (fs.existsSync(filePath)) {
+                            const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                            if (raw && raw[idStr]) {
+                                messageStore.set(idStr, raw[idStr]);
+                                return raw[idStr];
+                            }
+                        }
+                    } catch(_e) {}
                 }
                 return undefined;
             }
@@ -301,7 +365,7 @@ async function connectToWhatsAppUser(userId, forceNew = false) {
                 const rJid = msg.key?.remoteJid;
                 if (!rJid || (!rJid.endsWith('@s.whatsapp.net') && !rJid.endsWith('@lid'))) continue;
                 if (msg.key && msg.key.id && msg.message) {
-                    storeMessage(msg.key.id, msg.message);
+                    storeMessage(msg.key.id, msg.message, key);
                 }
             }
             if (m.type !== 'notify') return;
@@ -499,7 +563,7 @@ app.post('/send', async (req, res) => {
         if (lastSendErr) throw lastSendErr;
 
         if (sentMsg && sentMsg.key && sentMsg.key.id && sentMsg.message) {
-            storeMessage(sentMsg.key.id, sentMsg.message);
+            storeMessage(sentMsg.key.id, sentMsg.message, userId);
         }
         res.json({ success: true, message: `Mensaje enviado a ${phone} (${targetJid}) desde cuenta de usuario ${userId}` });
     } catch (err) {

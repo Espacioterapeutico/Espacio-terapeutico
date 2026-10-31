@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-consultorio-v170';
+const CACHE_NAME = 'mi-consultorio-v171';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/styles.css',
@@ -9,7 +9,8 @@ const ASSETS_TO_CACHE = [
   '/static/manifest.json',
   '/static/notification.wav',
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js',
-  'https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/es.global.min.js'
+  'https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/es.global.min.js',
+  'https://cdn.jsdelivr.net/npm/sweetalert2@11'
 ];
 
 self.addEventListener('install', (event) => {

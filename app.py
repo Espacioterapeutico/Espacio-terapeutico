@@ -3956,7 +3956,12 @@ def before_request_cleanup():
             def _bg_wa_worker():
                 with app.app_context():
                     try:
-                        from routes_notificaciones import execute_whatsapp_reminders
+                        from routes_notificaciones import execute_whatsapp_reminders, WHATSAPP_SERVICE_URL
+                        import requests
+                        try:
+                            requests.get(f"{WHATSAPP_SERVICE_URL.rstrip('/')}/status", params={'user_id': '1'}, timeout=8)
+                        except Exception:
+                            pass
                         execute_whatsapp_reminders()
                     except Exception as _ex_bg_wa:
                         print("Aviso en bg execute_whatsapp_reminders:", _ex_bg_wa)
@@ -3994,8 +3999,17 @@ def cron_process_notifications():
 
     db = get_db()
     
-    from routes_notificaciones import execute_whatsapp_reminders
+    from routes_notificaciones import execute_whatsapp_reminders, WHATSAPP_SERVICE_URL
+    def _ping_render_wa(d=None):
+        try:
+            import requests
+            r = requests.get(f"{WHATSAPP_SERVICE_URL.rstrip('/')}/status", params={'user_id': '1'}, timeout=10)
+            return {'status': 'ok', 'http_code': r.status_code}
+        except Exception as _e:
+            return {'status': 'warning', 'detail': str(_e)}
+
     tasks = [
+        ('whatsapp_render_keepalive', _ping_render_wa),
         ('auto_send_whatsapp_reminders', lambda d: execute_whatsapp_reminders(d)),
         ('auto_send_appointment_reminders', auto_send_appointment_reminders),
         ('auto_send_confirmation_requests', auto_send_confirmation_requests),

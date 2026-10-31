@@ -1558,6 +1558,12 @@ def _execute_whatsapp_reminders_inner(db=None):
 
 @notificaciones_bp.route('/api/whatsapp/cron-send-reminders', methods=['GET', 'POST'])
 def cron_send_whatsapp_reminders():
+    # Mantener despierto el contenedor de Render 24/7 en cada ejecucion de cron
+    try:
+        import requests
+        requests.get(f"{WHATSAPP_SERVICE_URL.rstrip('/')}/status", params={'user_id': '1'}, timeout=8)
+    except Exception:
+        pass
     import os
     from flask import has_request_context, jsonify
     CRON_SECRET = os.environ.get('CRON_SECRET', 'espacioterapeutico_cron_2024')
