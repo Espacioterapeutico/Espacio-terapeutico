@@ -18809,7 +18809,6 @@ async function openSuperadminBroadcastPushModal() {
         }
         return;
     }
-    const defaultBody = "Recuerda entrar a Espacio Terapéutico y chequear tus últimas actualizaciones del proceso terapéutico.";
 
     const { value: formValues } = await Swal.fire({
         title: '📢 Notificación Masiva para la App',
