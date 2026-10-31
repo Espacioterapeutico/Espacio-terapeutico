@@ -2603,6 +2603,61 @@ def get_whatsapp_tokens_history():
         except Exception as ex_af:
             print("Aviso al consultar agenda_finanzas tokens:", ex_af)
 
+    # 4. RECURSOS Y PIZARRAS TERAPÉUTICAS
+    if tipo_filtro in ('todos', 'recurso'):
+        try:
+            cursor.execute("""
+                SELECT 
+                    'recurso' as tipo,
+                    pr.id,
+                    pr.token_compartido as token,
+                    pr.titulo,
+                    pr.paciente_id,
+                    COALESCE(p.nombres, '') || ' ' || COALESCE(p.apellidos, '') as paciente_nombre,
+                    COALESCE(p.telefono, '') as paciente_telefono,
+                    crh.enviado,
+                    crh.estado as cola_estado,
+                    crh.fecha_envio,
+                    COALESCE(crh.fecha_envio, pr.fecha_ultima_edicion, pr.fecha_creacion, '') as fecha_registro_envio
+                FROM paciente_recursos pr
+                LEFT JOIN pacientes p ON pr.paciente_id = p.id
+                LEFT JOIN cola_recordatorios_herramientas crh ON crh.paciente_id = pr.paciente_id AND crh.herramienta_tipo = ('pizarra_' || pr.id)
+                WHERE pr.token_compartido IS NOT NULL AND TRIM(pr.token_compartido) != ''
+                  AND (pr.psicologo_id = ? OR (p.psicologo_id = ? OR p.psicologo_id IS NULL))
+            """, (psic_owner_id, psic_owner_id))
+            for r in cursor.fetchall():
+                link = f"{base_url}/pizarra/compartida/{r['token']}"
+                nombre_item = f"Recurso: {r['titulo'] or 'Pizarra Terapéutica'}"
+
+                if r['enviado'] == 1 and r['cola_estado'] == 'enviado_app':
+                    estado = 'Enviado por App (Push)'
+                    estado_badge = 'success'
+                elif r['enviado'] == 1:
+                    estado = 'Enviado por WhatsApp'
+                    estado_badge = 'info'
+                elif r['enviado'] == 0:
+                    estado = 'Pendiente'
+                    estado_badge = 'warning'
+                else:
+                    estado = 'Enviado por WhatsApp' if r['fecha_envio'] else 'Activo'
+                    estado_badge = 'info' if r['fecha_envio'] else 'secondary'
+
+                items.append({
+                    'tipo': 'recurso',
+                    'tipo_label': 'Recurso / Pizarra',
+                    'id': r['id'],
+                    'token': r['token'],
+                    'nombre_item': nombre_item,
+                    'paciente_nombre': r['paciente_nombre'].strip() or 'Sin Nombre',
+                    'paciente_telefono': r['paciente_telefono'] or '',
+                    'link': link,
+                    'fecha_envio': r['fecha_registro_envio'] or '-',
+                    'estado': estado,
+                    'estado_badge': estado_badge
+                })
+        except Exception as ex_pr:
+            print("Aviso al consultar paciente_recursos tokens:", ex_pr)
+
     # Filtro de búsqueda
     if search:
         s_lower = search.lower()

@@ -1908,8 +1908,34 @@ def process_mmpi2_scoring(answers, patient_info=None):
 
 @tests_bp.route('/evaluacion/<token>', methods=['GET'])
 def render_public_test_page(token):
-    # Desactivamos previsualización de Open Graph para evitar que WhatsApp cargue tarjetas pesadas
-    return render_template('index.html', no_og=True)
+    db = get_db()
+    cursor = db.cursor()
+    clean_token = (token or '').strip().replace('-', '').lower()
+    test_title = "Evaluación Psicológica"
+    try:
+        cursor.execute("""
+            SELECT ta.test_code, td.nombre as test_nombre
+            FROM test_asignaciones ta
+            LEFT JOIN tests_definiciones td ON ta.test_code = td.code
+            WHERE LOWER(REPLACE(ta.uuid_token, '-', '')) = ?
+        """, (clean_token,))
+        row = cursor.fetchone()
+        if row and row['test_nombre']:
+            test_title = f"{row['test_nombre']} ({row['test_code']})"
+        elif row and row['test_code']:
+            test_title = f"Test {row['test_code']}"
+    except Exception as _ex:
+        pass
+
+    base_url = request.host_url.rstrip('/')
+    return render_template(
+        'index.html',
+        og_title=f"📋 {test_title} | Espacio Terapéutico",
+        og_description="Enlace directo y seguro para responder tu evaluación psicológica asignada.",
+        og_image=f"{base_url}/static/logo.png",
+        og_url=request.url,
+        no_og=False
+    )
 
 @tests_bp.route('/api/tests/catalogo', methods=['GET'])
 def api_get_tests_catalogo():

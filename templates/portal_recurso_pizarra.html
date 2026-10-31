@@ -9,7 +9,9 @@
     <meta property="og:title" content="{{ pizarra.display_titulo or pizarra.titulo or meta.titulo or 'Pizarra Terapéutica' }} | Espacio Terapéutico">
     <meta property="og:description" content="Espacio interactivo colaborativo de trabajo terapéutico para {{ pizarra.short_pac_name or 'tu sesión' }}.">
     <meta property="og:site_name" content="Espacio Terapéutico">
-    <meta property="og:image" content="{{ request.url_root.rstrip('/') }}/static/img/logo.png">
+    <meta property="og:image" content="{{ request.url_root.rstrip('/') }}/static/logo.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
     <meta property="og:url" content="{{ request.base_url }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

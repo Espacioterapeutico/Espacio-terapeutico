@@ -3,6 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Espacio Terapéutico">
+    <meta property="og:title" content="{{ tool_title or 'Herramienta Terapéutica' }} | Espacio Terapéutico">
+    <meta property="og:description" content="Registro terapéutico interactivo confidencial asignado para tu proceso en Espacio Terapéutico.">
+    <meta property="og:image" content="{{ request.url_root.rstrip('/') }}/static/logo.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:url" content="{{ request.url }}">
+
     <title>{{ tool_title or 'Herramienta Terapéutica' }} - Espacio Terapéutico</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

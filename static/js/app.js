@@ -14600,6 +14600,8 @@ async function loadWhatsAppTokensHistory(page = 1) {
                 tipoBadgeStyle = 'background: #fdf2f8; color: #9d174d; border: 1px solid #fbcfe8;';
             } else if (item.tipo === 'cita') {
                 tipoBadgeStyle = 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;';
+            } else if (item.tipo === 'recurso') {
+                tipoBadgeStyle = 'background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff;';
             }
 
             let estadoBadgeStyle = 'background: #f1f5f9; color: #475569;';
