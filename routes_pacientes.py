@@ -866,6 +866,13 @@ def patient_login():
     session['patient_username'] = patient['username'] or patient['cedula']
     session['role'] = 'paciente'
 
+    try:
+        now_login_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("UPDATE pacientes SET ultimo_acceso = ? WHERE id = ?", (now_login_str, patient['id']))
+        db.commit()
+    except Exception as _ex_login_acc:
+        pass
+
     # Auto-vincular token FCM del dispositivo al paciente recién autenticado
     fcm_tok = (data.get('fcm_token') or '').strip()
     dev_id = (data.get('device_id') or '').strip()
@@ -2244,6 +2251,15 @@ def get_patient_portal_data_dict(patient_id):
 def get_patient_portal_data():
     patient_id = session['patient_id']
     try:
+        try:
+            db_acc = get_db()
+            cursor_acc = db_acc.cursor()
+            now_portal_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            cursor_acc.execute("UPDATE pacientes SET ultimo_acceso = ? WHERE id = ?", (now_portal_str, patient_id))
+            db_acc.commit()
+        except Exception:
+            pass
+
         data = get_patient_portal_data_dict(patient_id)
         if not data:
             return jsonify({'error': 'Paciente no encontrado'}), 404
@@ -2379,6 +2395,11 @@ def sync_patient_fcm():
         if cursor.rowcount > 0:
             updated = True
             
+    try:
+        cursor.execute("UPDATE pacientes SET ultimo_acceso = ? WHERE id = ?", (now_str, patient_id))
+    except Exception:
+        pass
+
     db.commit()
     return jsonify({'success': True, 'patient_id': patient_id, 'linked': updated})
 

@@ -2449,6 +2449,11 @@
                                         <h3 id="sa-devices-stat-connected" style="margin: 0.25rem 0 0 0; color: #15803d; font-size: 1.8rem; font-weight: 800;">0</h3>
                                         <small id="sa-devices-stat-rate" style="color: #166534; font-weight: 600; font-size: 0.8rem;">0% del total de pacientes</small>
                                     </div>
+                                    <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 1rem; cursor: pointer;" onclick="document.getElementById('sa-devices-filter-status').value='anonymous'; filterSuperadminPatientDevices();" title="Clic para ver testers sin cuenta">
+                                        <span style="font-size: 0.78rem; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px;">Testers (Sin Cuenta) 🚀</span>
+                                        <h3 id="sa-devices-stat-anonymous" style="margin: 0.25rem 0 0 0; color: #1d4ed8; font-size: 1.8rem; font-weight: 800;">0</h3>
+                                        <small style="color: #2563eb; font-size: 0.8rem; font-weight: 600;">Descargas sin login &rarr; Ver</small>
+                                    </div>
                                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem;">
                                         <span style="font-size: 0.78rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Sin App (Web / Solo WA)</span>
                                         <h3 id="sa-devices-stat-unconnected" style="margin: 0.25rem 0 0 0; color: #334155; font-size: 1.8rem; font-weight: 800;">0</h3>
@@ -2472,6 +2477,7 @@
                                             <option value="all">Todos los pacientes</option>
                                             <option value="with_app">Solo con App Vinculada 🟢</option>
                                             <option value="without_app">Solo sin App ⚪</option>
+                                            <option value="anonymous">📱 Testers Sin Cuenta (Descargas) 🚀</option>
                                         </select>
                                     </div>
                                 </div>
@@ -2480,18 +2486,19 @@
                                 <div class="table-responsive" style="border-radius: 12px; border: 1px solid #e2e8f0; overflow-x: auto;">
                                     <table class="table" style="width: 100%; border-collapse: collapse; margin: 0; min-width: 820px;">
                                         <thead>
-                                            <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left; font-size: 0.85rem; color: #0f172a;">
+                                            <tr id="sa-devices-table-head-row" style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left; font-size: 0.85rem; color: #0f172a;">
                                                 <th style="padding: 0.85rem 1rem; font-weight: 700;">Consultante</th>
                                                 <th style="padding: 0.85rem 1rem; font-weight: 700;">Terapeuta Asignado</th>
                                                 <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center;">Estado App</th>
                                                 <th style="padding: 0.85rem 1rem; font-weight: 700;">Dispositivo(s) Vinculado(s)</th>
-                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Última Conexión</th>
-                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center; width: 140px;">Probar Push</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Último Acceso Portal</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Última Conexión Push</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center; width: 130px;">Probar Push</th>
                                             </tr>
                                         </thead>
                                         <tbody id="sa-devices-table-body">
                                             <tr>
-                                                <td colspan="6" class="text-center text-muted" style="padding: 2.5rem;">Cargando registro de dispositivos...</td>
+                                                <td colspan="7" class="text-center text-muted" style="padding: 2.5rem;">Cargando registro de dispositivos...</td>
                                             </tr>
                                         </tbody>
                                     </table>

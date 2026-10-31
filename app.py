@@ -767,7 +767,8 @@ def ensure_critical_migrations(cursor):
             ('fecha_baja', 'TEXT'),
             ('archivo_respaldo_baja', 'TEXT'),
             ('zona_horaria', "TEXT DEFAULT 'America/Caracas'"),
-            ('utc_offset', 'INTEGER DEFAULT 240')
+            ('utc_offset', 'INTEGER DEFAULT 240'),
+            ('ultimo_acceso', 'TEXT')
         ]:
             if col_name not in cols_p:
                 cursor.execute(f"ALTER TABLE pacientes ADD COLUMN {col_name} {col_type}")

@@ -18561,7 +18561,7 @@ window._saPatientDevicesCache = [];
 async function loadSuperadminPatientDevices() {
     const tbody = document.getElementById('sa-devices-table-body');
     if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 2.5rem;">Cargando registro de dispositivos...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding: 2.5rem;">Cargando registro de dispositivos...</td></tr>';
     }
 
     try {
@@ -18575,36 +18575,53 @@ async function loadSuperadminPatientDevices() {
         }
 
         window._saPatientDevicesCache = data.patients || [];
+        window._saAnonymousDevicesCache = data.anonymous_devices || [];
 
         // Actualizar estadísticas del monitor
         const stats = data.stats || {};
         const statConnected = document.getElementById('sa-devices-stat-connected');
+        const statAnonymous = document.getElementById('sa-devices-stat-anonymous');
         const statUnconnected = document.getElementById('sa-devices-stat-unconnected');
         const statTotalDevs = document.getElementById('sa-devices-stat-total-devs');
         const statRate = document.getElementById('sa-devices-stat-rate');
 
         if (statConnected) statConnected.textContent = stats.connected_patients || 0;
+        if (statAnonymous) statAnonymous.textContent = stats.anonymous_devices || (window._saAnonymousDevicesCache.length);
         if (statUnconnected) statUnconnected.textContent = stats.unconnected_patients || 0;
         if (statTotalDevs) statTotalDevs.textContent = stats.total_devices || 0;
         if (statRate) statRate.textContent = `${stats.adoption_rate || 0}% de los pacientes`;
 
-        renderSuperadminPatientDevices(window._saPatientDevicesCache);
+        filterSuperadminPatientDevices();
     } catch (err) {
         console.error("Error cargando dispositivos de pacientes:", err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger" style="padding: 2rem;">❌ Error al cargar dispositivos: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger" style="padding: 2rem;">❌ Error al cargar dispositivos: ${err.message}</td></tr>`;
         }
     }
 }
 window.loadSuperadminPatientDevices = loadSuperadminPatientDevices;
 
 function renderSuperadminPatientDevices(list) {
+    const theadRow = document.getElementById('sa-devices-table-head-row');
     const tbody = document.getElementById('sa-devices-table-body');
     if (!tbody) return;
+
+    if (theadRow) {
+        theadRow.innerHTML = `
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">Consultante</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">Terapeuta Asignado</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center;">Estado App</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">Dispositivo(s) Vinculado(s)</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">Último Acceso Portal</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">Última Conexión Push</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center; width: 130px;">Probar Push</th>
+        `;
+    }
+
     tbody.innerHTML = '';
 
     if (!list || list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 2.5rem;">No se encontraron consultantes con el filtro aplicado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding: 2.5rem;">No se encontraron consultantes con el filtro aplicado.</td></tr>';
         return;
     }
 
@@ -18630,14 +18647,20 @@ function renderSuperadminPatientDevices(list) {
             devsHtml = '<span style="color: #94a3b8; font-size: 0.8rem; font-style: italic;">Sin dispositivos vinculados</span>';
         }
 
-        // Última conexión
+        // Último acceso al portal
+        let portalAccessText = '<span style="color: #94a3b8; font-size: 0.8rem;">Nunca</span>';
+        if (p.ultimo_acceso) {
+            portalAccessText = `<span style="font-weight: 600; font-size: 0.82rem; color: #0369a1; display: inline-flex; align-items: center; gap: 0.25rem;">🌐 ${p.ultimo_acceso}</span>`;
+        }
+
+        // Última conexión Push
         const lastSyncText = p.last_sync
-            ? `<span style="font-weight: 600; font-size: 0.82rem; color: #0f172a;">${p.last_sync}</span>`
+            ? `<span style="font-weight: 600; font-size: 0.82rem; color: #0f172a; display: inline-flex; align-items: center; gap: 0.25rem;">🔔 ${p.last_sync}</span>`
             : `<span style="color: #94a3b8; font-size: 0.8rem;">Nunca</span>`;
 
         // Botón de acción
         const testBtn = p.has_app
-            ? `<button type="button" class="btn btn-sm btn-primary" onclick="sendSuperadminPatientPush(${p.patient_id}, '${(p.nombre_completo || '').replace(/'/g, "\\'")}')" style="font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.75rem; border-radius: 6px; background: #0d9488; border: none; white-space: nowrap;">🔔 Probar Push</button>`
+            ? `<button type="button" class="btn btn-sm btn-primary" onclick="sendSuperadminPatientPush(${p.patient_id}, '${(p.nombre_completo || '').replace(/'/g, "\'")}')" style="font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.75rem; border-radius: 6px; background: #0d9488; border: none; white-space: nowrap;">🔔 Probar Push</button>`
             : `<button type="button" class="btn btn-sm btn-secondary" disabled style="opacity: 0.5; font-size: 0.78rem; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: not-allowed; white-space: nowrap;">Sin App</button>`;
 
         tr.innerHTML = `
@@ -18655,6 +18678,9 @@ function renderSuperadminPatientDevices(list) {
                 ${devsHtml}
             </td>
             <td style="padding: 0.85rem 1rem;">
+                ${portalAccessText}
+            </td>
+            <td style="padding: 0.85rem 1rem;">
                 ${lastSyncText}
             </td>
             <td style="padding: 0.85rem 1rem; text-align: center;">
@@ -18666,9 +18692,78 @@ function renderSuperadminPatientDevices(list) {
 }
 window.renderSuperadminPatientDevices = renderSuperadminPatientDevices;
 
+function renderSuperadminAnonymousDevices(list) {
+    const theadRow = document.getElementById('sa-devices-table-head-row');
+    const tbody = document.getElementById('sa-devices-table-body');
+    if (!tbody) return;
+
+    if (theadRow) {
+        theadRow.innerHTML = `
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">Dispositivo Tester</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">ID de Dispositivo</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">Navegador / Sistema Operativo</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700;">Última Actividad</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center;">Estado</th>
+            <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center; width: 140px;">Probar Push</th>
+        `;
+    }
+
+    tbody.innerHTML = '';
+    if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 2.5rem;">No se encontraron dispositivos testers sin cuenta registrados.</td></tr>';
+        return;
+    }
+
+    list.forEach(dev => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #f1f5f9';
+
+        tr.innerHTML = `
+            <td style="padding: 0.85rem 1rem;">
+                <strong style="color: #1e40af; font-size: 0.92rem;">${dev.device_type}</strong>
+                <div style="color: #64748b; font-size: 0.75rem; margin-top: 0.15rem;">Suscripción #${dev.sub_id}</div>
+            </td>
+            <td style="padding: 0.85rem 1rem; font-size: 0.82rem; font-family: monospace; color: #334155;">
+                ${dev.device_id || 'ID no registrado'}
+            </td>
+            <td style="padding: 0.85rem 1rem; font-size: 0.78rem; color: #475569; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${(dev.raw_ua || '').replace(/"/g, '&quot;')}">
+                ${dev.raw_ua || 'Información no provista'}
+            </td>
+            <td style="padding: 0.85rem 1rem; font-size: 0.82rem; font-weight: 600; color: #0f172a;">
+                ${dev.actualizado_en || 'Desconocida'}
+            </td>
+            <td style="padding: 0.85rem 1rem; text-align: center;">
+                <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: 20px; font-size: 0.78rem;">
+                    🟢 Tester Activo
+                </span>
+            </td>
+            <td style="padding: 0.85rem 1rem; text-align: center;">
+                <button type="button" class="btn btn-sm btn-primary" onclick="sendSuperadminAnonymousPush(${dev.sub_id}, '${dev.device_type}')" style="font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.75rem; border-radius: 6px; background: #2563eb; border: none; white-space: nowrap;">
+                    🔔 Probar Push
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+window.renderSuperadminAnonymousDevices = renderSuperadminAnonymousDevices;
+
 function filterSuperadminPatientDevices() {
     const searchVal = (document.getElementById('sa-devices-search')?.value || '').toLowerCase().trim();
     const statusVal = document.getElementById('sa-devices-filter-status')?.value || 'all';
+
+    if (statusVal === 'anonymous') {
+        let anonList = window._saAnonymousDevicesCache || [];
+        if (searchVal) {
+            anonList = anonList.filter(d => {
+                return (d.device_type || '').toLowerCase().includes(searchVal) ||
+                       (d.device_id || '').toLowerCase().includes(searchVal) ||
+                       (d.raw_ua || '').toLowerCase().includes(searchVal);
+            });
+        }
+        renderSuperadminAnonymousDevices(anonList);
+        return;
+    }
 
     let filtered = window._saPatientDevicesCache || [];
 
@@ -18691,6 +18786,73 @@ function filterSuperadminPatientDevices() {
     renderSuperadminPatientDevices(filtered);
 }
 window.filterSuperadminPatientDevices = filterSuperadminPatientDevices;
+
+async function sendSuperadminAnonymousPush(subId, deviceType) {
+    if (!subId) return;
+    await ensureSwalLoaded();
+
+    if (window.Swal) {
+        const confirmRes = await Swal.fire({
+            title: `¿Enviar Notificación a Tester?`,
+            text: `Se enviará una notificación push de prueba al teléfono móvil del tester (${deviceType || 'Android'}).`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, Enviar Push',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#2563eb'
+        });
+        if (!confirmRes.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Enviando notificación...',
+            text: 'Conectando con Google Firebase Cloud Messaging...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+    } else {
+        const conf = confirm(`¿Enviar notificación de prueba a este dispositivo tester?`);
+        if (!conf) return;
+    }
+
+    try {
+        const res = await fetch(`/api/superadmin/anonymous-devices/${subId}/test-push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Push Entregado!',
+                    text: data.message || 'Notificación enviada con éxito.',
+                    confirmButtonColor: '#2563eb'
+                });
+            } else {
+                alert(data.message || 'Push enviado con éxito.');
+            }
+        } else {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al Enviar Push',
+                    text: data.error || 'El dispositivo no respondió.',
+                    confirmButtonColor: '#2563eb'
+                });
+            } else {
+                alert(data.error || 'Error al enviar push');
+            }
+        }
+    } catch(err) {
+        if (window.Swal) {
+            Swal.fire({ icon: 'error', title: 'Error de Red', text: err.message });
+        } else {
+            alert('Error de red: ' + err.message);
+        }
+    }
+}
+window.sendSuperadminAnonymousPush = sendSuperadminAnonymousPush;
+
 
 async function ensureSwalLoaded() {
     if (typeof window.Swal !== 'undefined') return window.Swal;
@@ -18828,8 +18990,9 @@ async function openSuperadminBroadcastPushModal() {
                 <div style="margin-bottom: 0.5rem;">
                     <label style="font-weight: 700; display: block; margin-bottom: 0.25rem;">Destinatarios:</label>
                     <select id="swal-broadcast-target" class="swal2-select" style="width: 100%; margin: 0; font-size: 0.88rem; padding: 0.45rem;">
-                        <option value="patients">Solo Consultantes / Pacientes con App (Recomendado)</option>
-                        <option value="all">Todos los dispositivos (Pacientes + Psicólogos)</option>
+                        <option value="all">🌟 Todos los dispositivos (Pacientes + Testers) [Recomendado Google Play]</option>
+                        <option value="patients">👥 Solo Consultantes con cuenta vinculada</option>
+                        <option value="testers">📱 Solo Testers sin cuenta iniciada</option>
                     </select>
                 </div>
             </div>

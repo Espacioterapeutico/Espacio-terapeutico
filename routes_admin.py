@@ -2313,6 +2313,7 @@ def superadmin_get_patient_devices():
             p.username,
             p.psicologo_id,
             p.estado,
+            p.ultimo_acceso,
             u.nombres as psic_nombres,
             u.apellidos as psic_apellidos
         FROM pacientes p
@@ -2339,7 +2340,45 @@ def superadmin_get_patient_devices():
             subs_by_patient[pid] = []
         subs_by_patient[pid].append(s)
 
-    # 3. Construir lista final
+    # 3. Obtener suscripciones anónimas (Testers de Google Play / Visitas sin cuenta iniciada)
+    cursor.execute("""
+        SELECT id, device_id, token, dispositivo_info, actualizado_en
+        FROM fcm_subscriptions
+        WHERE patient_id IS NULL AND user_id IS NULL AND token IS NOT NULL AND TRIM(token) != ''
+        ORDER BY actualizado_en DESC, id DESC
+    """)
+    anon_rows = [dict(r) for r in cursor.fetchall()]
+
+    def parse_device_info(ua):
+        ua_str = ua or ''
+        clean_name = "Navegador Web"
+        if 'Android' in ua_str:
+            clean_name = "📱 Android"
+            if 'wv' in ua_str or 'Version/' in ua_str:
+                clean_name = "📱 App Android (Google Play)"
+            elif 'SamsungBrowser' in ua_str:
+                clean_name = "📱 Samsung Android"
+            elif 'Chrome' in ua_str:
+                clean_name = "📱 Chrome Android"
+        elif 'iPhone' in ua_str or 'iPad' in ua_str:
+            clean_name = "🍎 iPhone / iOS"
+        elif 'Windows' in ua_str:
+            clean_name = "💻 Windows PC"
+        elif 'Macintosh' in ua_str:
+            clean_name = "💻 Mac"
+        return clean_name
+
+    anonymous_summary = []
+    for dev in anon_rows:
+        anonymous_summary.append({
+            'sub_id': dev['id'],
+            'device_id': dev.get('device_id') or f"tester_{dev['id']}",
+            'device_type': parse_device_info(dev.get('dispositivo_info')),
+            'raw_ua': dev.get('dispositivo_info') or '',
+            'actualizado_en': dev.get('actualizado_en') or 'Desconocida'
+        })
+
+    # 4. Construir lista final de pacientes
     result_list = []
     connected_count = 0
     total_devices_count = len(sub_rows)
@@ -2356,26 +2395,11 @@ def superadmin_get_patient_devices():
         # Limpiar info de dispositivos para el frontend
         devices_summary = []
         for dev in p_subs:
-            ua = dev.get('dispositivo_info') or ''
-            clean_name = "Navegador Web"
-            if 'Android' in ua:
-                clean_name = "📱 Android"
-                if 'wv' in ua or 'Version/' in ua:
-                    clean_name = "📱 App Android (Google Play)"
-                elif 'Chrome' in ua:
-                    clean_name = "📱 Chrome Android"
-            elif 'iPhone' in ua or 'iPad' in ua:
-                clean_name = "🍎 iPhone / iOS"
-            elif 'Windows' in ua:
-                clean_name = "💻 Windows PC"
-            elif 'Macintosh' in ua:
-                clean_name = "💻 Mac"
-
             devices_summary.append({
                 'sub_id': dev['id'],
                 'device_id': dev.get('device_id') or 'ID no registrado',
-                'device_type': clean_name,
-                'raw_ua': ua,
+                'device_type': parse_device_info(dev.get('dispositivo_info')),
+                'raw_ua': dev.get('dispositivo_info') or '',
                 'actualizado_en': dev.get('actualizado_en') or 'Desconocida'
             })
 
@@ -2392,24 +2416,28 @@ def superadmin_get_patient_devices():
             'has_app': has_app,
             'devices_count': len(p_subs),
             'devices': devices_summary,
-            'last_sync': last_sync
+            'last_sync': last_sync,
+            'ultimo_acceso': p.get('ultimo_acceso')
         })
 
     # Ordenar: primero los que tienen app (más recientes), luego los que no
-    result_list.sort(key=lambda x: (1 if x['has_app'] else 0, x['last_sync'] or ''), reverse=True)
+    result_list.sort(key=lambda x: (1 if x['has_app'] else 0, x['last_sync'] or '', x['ultimo_acceso'] or ''), reverse=True)
 
     stats = {
         'total_patients': len(pacientes_rows),
         'connected_patients': connected_count,
         'unconnected_patients': len(pacientes_rows) - connected_count,
-        'total_devices': total_devices_count,
+        'patient_devices': total_devices_count,
+        'anonymous_devices': len(anonymous_summary),
+        'total_devices': total_devices_count + len(anonymous_summary),
         'adoption_rate': round((connected_count / len(pacientes_rows) * 100), 1) if pacientes_rows else 0
     }
 
     return jsonify({
         'success': True,
         'stats': stats,
-        'patients': result_list
+        'patients': result_list,
+        'anonymous_devices': anonymous_summary
     })
 
 
@@ -2450,6 +2478,53 @@ def superadmin_test_patient_push(patient_id):
         }), 400
 
 
+@admin_bp.route('/api/superadmin/anonymous-devices/<int:sub_id>/test-push', methods=['POST'])
+@login_required
+def superadmin_test_anonymous_push(sub_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, token, dispositivo_info FROM fcm_subscriptions WHERE id = ? AND patient_id IS NULL", (sub_id,))
+    sub = cursor.fetchone()
+    if not sub or not sub['token']:
+        return jsonify({'error': 'Dispositivo no encontrado o sin token push válido.'}), 404
+
+    from app import send_fcm_notification
+    res = send_fcm_notification(
+        tokens_list=[sub['token']],
+        title="🔔 Notificación de Prueba (Espacio Terapéutico)",
+        body="¡Hola Tester! Esta es una prueba de notificación push en tu teléfono para verificar que la app de Espacio Terapéutico está activa.",
+        url="/#patient-home"
+    )
+
+    if res and res.get('success') and res.get('tokens_count', 0) > 0:
+        return jsonify({
+            'success': True,
+            'message': f"Notificación enviada con éxito al dispositivo tester #{sub_id}.",
+            'tokens_count': res.get('tokens_count'),
+            'results': res.get('results', [])
+        })
+    else:
+        err_msg = (res.get('error') if res else None) or "No se pudo entregar el mensaje al dispositivo."
+        return jsonify({'success': False, 'error': err_msg}), 400
+
+
+@admin_bp.route('/api/superadmin/anonymous-devices/<int:sub_id>/delete', methods=['POST'])
+@login_required
+def superadmin_delete_anonymous_device(sub_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM fcm_subscriptions WHERE id = ? AND patient_id IS NULL AND user_id IS NULL", (sub_id,))
+    deleted = cursor.rowcount
+    db.commit()
+    return jsonify({'success': True, 'deleted': deleted})
+
+
 @admin_bp.route('/api/superadmin/patient-devices/<int:patient_id>/unlink', methods=['POST'])
 @login_required
 def superadmin_unlink_patient_devices(patient_id):
@@ -2473,7 +2548,7 @@ def superadmin_broadcast_push():
     data = request.get_json(silent=True) or {}
     title = (data.get('title') or "🌟 Espacio Terapéutico").strip()
     body = (data.get('body') or "Recuerda entrar a Espacio Terapéutico y chequear tus últimas actualizaciones del proceso terapéutico.").strip()
-    target = data.get('target', 'patients')
+    target = data.get('target', 'all')
     url = (data.get('url') or "/#patient-home").strip()
 
     db = get_db()
@@ -2481,10 +2556,16 @@ def superadmin_broadcast_push():
     from app import ensure_fcm_table_and_columns, send_fcm_notification
     ensure_fcm_table_and_columns(cursor)
 
+    target_desc = "todos los dispositivos (Pacientes y Testers)"
     if target == 'all':
         cursor.execute("SELECT DISTINCT token FROM fcm_subscriptions WHERE token IS NOT NULL AND TRIM(token) != ''")
+        target_desc = "todos los dispositivos (Pacientes y Testers)"
+    elif target == 'testers':
+        cursor.execute("SELECT DISTINCT token FROM fcm_subscriptions WHERE patient_id IS NULL AND user_id IS NULL AND token IS NOT NULL AND TRIM(token) != ''")
+        target_desc = "dispositivos de Testers (sin cuenta)"
     else:
         cursor.execute("SELECT DISTINCT token FROM fcm_subscriptions WHERE patient_id IS NOT NULL AND token IS NOT NULL AND TRIM(token) != ''")
+        target_desc = "dispositivos de Pacientes con cuenta"
     
     token_rows = cursor.fetchall()
     tokens = [r[0] if isinstance(r, (tuple, list)) else r['token'] for r in token_rows]
@@ -2493,7 +2574,7 @@ def superadmin_broadcast_push():
     if not tokens:
         return jsonify({
             'success': False,
-            'error': 'No se encontraron dispositivos registrados con app vinculada para enviar la notificación push masiva.'
+            'error': f'No se encontraron dispositivos registrados para el grupo seleccionado ({target_desc}).'
         }), 400
 
     # 1. Enviar el Push masivo mediante FCM v1
