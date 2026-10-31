@@ -18692,8 +18692,28 @@ function filterSuperadminPatientDevices() {
 }
 window.filterSuperadminPatientDevices = filterSuperadminPatientDevices;
 
+async function ensureSwalLoaded() {
+    if (typeof window.Swal !== 'undefined') return window.Swal;
+    try {
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+            script.onload = () => resolve(window.Swal);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+        return window.Swal;
+    } catch(e) {
+        console.warn("No se pudo cargar SweetAlert2 dinámicamente:", e);
+        return null;
+    }
+}
+window.ensureSwalLoaded = ensureSwalLoaded;
+
 async function sendSuperadminPatientPush(patientId, patientName) {
     if (!patientId) return;
+
+    await ensureSwalLoaded();
 
     if (window.Swal) {
         const confirmRes = await Swal.fire({
@@ -18713,6 +18733,9 @@ async function sendSuperadminPatientPush(patientId, patientName) {
             allowOutsideClick: false,
             didOpen: () => { Swal.showLoading(); }
         });
+    } else {
+        const conf = confirm(`¿Enviar notificación de prueba al teléfono de ${patientName}?`);
+        if (!conf) return;
     }
 
     try {
@@ -18762,12 +18785,30 @@ async function sendSuperadminPatientPush(patientId, patientName) {
 window.sendSuperadminPatientPush = sendSuperadminPatientPush;
 
 async function openSuperadminBroadcastPushModal() {
+    const defaultTitle = "🌟 Espacio Terapéutico";
+    const defaultBody = "Recuerda entrar a Espacio Terapéutico y chequear tus últimas actualizaciones del proceso terapéutico.";
+
+    await ensureSwalLoaded();
+
     if (!window.Swal) {
-        alert("SweetAlert2 no está disponible.");
+        const body = prompt("Escribe el mensaje de la notificación masiva para todos los teléfonos con la app vinculada:", defaultBody);
+        if (!body || !body.trim()) return;
+        const conf = confirm(`¿Enviar notificación masiva con el mensaje:\n"${body}"?`);
+        if (!conf) return;
+        try {
+            const res = await fetch('/api/superadmin/broadcast-push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: defaultTitle, body: body.trim(), target: 'patients' })
+            });
+            const data = await res.json();
+            alert(data.message || (data.success ? "¡Notificación enviada con éxito!" : data.error));
+            if (typeof loadSuperadminPatientDevices === 'function') loadSuperadminPatientDevices();
+        } catch(e) {
+            alert("Error al enviar notificación masiva: " + e.message);
+        }
         return;
     }
-
-    const defaultTitle = "🌟 Espacio Terapéutico";
     const defaultBody = "Recuerda entrar a Espacio Terapéutico y chequear tus últimas actualizaciones del proceso terapéutico.";
 
     const { value: formValues } = await Swal.fire({
