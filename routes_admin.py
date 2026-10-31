@@ -2288,6 +2288,182 @@ def superadmin_delete_ticket(ticket_id):
     return jsonify({'success': 'Ticket eliminado.'})
 
 
+# ==========================================
+# SUPERADMIN: MONITOR DE DISPOSITIVOS Y APPS DE PACIENTES
+# ==========================================
+@admin_bp.route('/api/superadmin/patient-devices', methods=['GET'])
+@login_required
+def superadmin_get_patient_devices():
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+
+    db = get_db()
+    cursor = db.cursor()
+    from app import ensure_fcm_table_and_columns
+    ensure_fcm_table_and_columns(cursor)
+
+    # 1. Obtener todos los pacientes con datos de su terapeuta
+    cursor.execute("""
+        SELECT 
+            p.id as patient_id,
+            p.nombres,
+            p.apellidos,
+            p.cedula,
+            p.telefono,
+            p.username,
+            p.psicologo_id,
+            p.estado,
+            u.nombres as psic_nombres,
+            u.apellidos as psic_apellidos
+        FROM pacientes p
+        LEFT JOIN usuarios u ON p.psicologo_id = u.id
+        WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '')
+        ORDER BY p.nombres ASC, p.apellidos ASC
+    """)
+    pacientes_rows = [dict(r) for r in cursor.fetchall()]
+
+    # 2. Obtener todas las suscripciones activas asociadas a pacientes
+    cursor.execute("""
+        SELECT id, patient_id, token, device_id, dispositivo_info, actualizado_en
+        FROM fcm_subscriptions
+        WHERE patient_id IS NOT NULL AND token IS NOT NULL AND TRIM(token) != ''
+        ORDER BY actualizado_en DESC
+    """)
+    sub_rows = [dict(r) for r in cursor.fetchall()]
+
+    # Agrupar suscripciones por patient_id
+    subs_by_patient = {}
+    for s in sub_rows:
+        pid = s['patient_id']
+        if pid not in subs_by_patient:
+            subs_by_patient[pid] = []
+        subs_by_patient[pid].append(s)
+
+    # 3. Construir lista final
+    result_list = []
+    connected_count = 0
+    total_devices_count = len(sub_rows)
+
+    for p in pacientes_rows:
+        pid = p['patient_id']
+        p_subs = subs_by_patient.get(pid, [])
+        has_app = len(p_subs) > 0
+        if has_app:
+            connected_count += 1
+
+        psic_name = f"{p.get('psic_nombres') or ''} {p.get('psic_apellidos') or ''}".strip() or "No asignado"
+        
+        # Limpiar info de dispositivos para el frontend
+        devices_summary = []
+        for dev in p_subs:
+            ua = dev.get('dispositivo_info') or ''
+            clean_name = "Navegador Web"
+            if 'Android' in ua:
+                clean_name = "📱 Android"
+                if 'wv' in ua or 'Version/' in ua:
+                    clean_name = "📱 App Android (Google Play)"
+                elif 'Chrome' in ua:
+                    clean_name = "📱 Chrome Android"
+            elif 'iPhone' in ua or 'iPad' in ua:
+                clean_name = "🍎 iPhone / iOS"
+            elif 'Windows' in ua:
+                clean_name = "💻 Windows PC"
+            elif 'Macintosh' in ua:
+                clean_name = "💻 Mac"
+
+            devices_summary.append({
+                'sub_id': dev['id'],
+                'device_id': dev.get('device_id') or 'ID no registrado',
+                'device_type': clean_name,
+                'raw_ua': ua,
+                'actualizado_en': dev.get('actualizado_en') or 'Desconocida'
+            })
+
+        last_sync = p_subs[0].get('actualizado_en') if p_subs else None
+
+        result_list.append({
+            'patient_id': pid,
+            'nombre_completo': f"{p.get('nombres') or ''} {p.get('apellidos') or ''}".strip(),
+            'cedula': p.get('cedula') or 'S/C',
+            'telefono': p.get('telefono') or '',
+            'username': p.get('username') or '',
+            'psicologo': psic_name,
+            'estado': p.get('estado') or 'activo',
+            'has_app': has_app,
+            'devices_count': len(p_subs),
+            'devices': devices_summary,
+            'last_sync': last_sync
+        })
+
+    # Ordenar: primero los que tienen app (más recientes), luego los que no
+    result_list.sort(key=lambda x: (1 if x['has_app'] else 0, x['last_sync'] or ''), reverse=True)
+
+    stats = {
+        'total_patients': len(pacientes_rows),
+        'connected_patients': connected_count,
+        'unconnected_patients': len(pacientes_rows) - connected_count,
+        'total_devices': total_devices_count,
+        'adoption_rate': round((connected_count / len(pacientes_rows) * 100), 1) if pacientes_rows else 0
+    }
+
+    return jsonify({
+        'success': True,
+        'stats': stats,
+        'patients': result_list
+    })
+
+
+@admin_bp.route('/api/superadmin/patient-devices/<int:patient_id>/test-push', methods=['POST'])
+@login_required
+def superadmin_test_patient_push(patient_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT nombres, apellidos FROM pacientes WHERE id = ?", (patient_id,))
+    pac = cursor.fetchone()
+    if not pac:
+        return jsonify({'error': 'Paciente no encontrado'}), 404
+
+    pac_nombre = f"{pac['nombres']} {pac['apellidos']}".strip()
+    from app import send_fcm_notification
+    res = send_fcm_notification(
+        patient_id=patient_id,
+        title="🔔 Notificación de Prueba (Espacio Terapéutico)",
+        body=f"Hola {pac_nombre}, esta es una prueba enviada desde la administración para verificar la conexión de tu teléfono.",
+        url="/#patient-home"
+    )
+
+    if res and res.get('success') and res.get('tokens_count', 0) > 0:
+        return jsonify({
+            'success': True,
+            'message': f"Notificación enviada con éxito a {res.get('tokens_count')} dispositivo(s) de {pac_nombre}.",
+            'tokens_count': res.get('tokens_count'),
+            'results': res.get('results', [])
+        })
+    else:
+        err_msg = (res.get('error') if res else None) or "No se pudo entregar el mensaje o no hay dispositivos activos registrados."
+        return jsonify({
+            'success': False,
+            'error': err_msg
+        }), 400
+
+
+@admin_bp.route('/api/superadmin/patient-devices/<int:patient_id>/unlink', methods=['POST'])
+@login_required
+def superadmin_unlink_patient_devices(patient_id):
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM fcm_subscriptions WHERE patient_id = ?", (patient_id,))
+    deleted = cursor.rowcount
+    db.commit()
+    return jsonify({'success': True, 'deleted_devices': deleted})
+
+
 
 @admin_bp.route('/api/sync/auto-backup', methods=['POST', 'GET'])
 def auto_backup():

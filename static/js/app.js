@@ -5683,9 +5683,13 @@ function renderPatientsTable(list) {
             ? `<span style="display: inline-block; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px; cursor: pointer; transition: opacity 0.2s;" onclick="togglePatientEstado(${p.id})" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="Haz clic para cambiar a Activo">⚪ De Alta</span>`
             : `<span style="display: inline-block; background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px; cursor: pointer; transition: opacity 0.2s;" onclick="togglePatientEstado(${p.id})" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="Haz clic para dar De Alta">🟢 Activo</span>`;
 
+        const badgeApp = p.has_app 
+            ? `<span style="display: inline-block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: 6px;" title="App instalada y vinculada en su teléfono móvil">📱 App Activa</span>`
+            : `<span style="display: inline-block; background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; font-size: 0.72rem; font-weight: 600; padding: 2px 6px; border-radius: 6px; margin-left: 6px;" title="Sin app móvil vinculada (notificaciones por WhatsApp o Web)">⚪ Sin App</span>`;
+
         tr.innerHTML = `
             <td><strong>${p.cedula || 'N/A'}</strong></td>
-            <td><strong>${p.nombres || ''} ${p.apellidos || ''}</strong> ${badgeOrigen} ${badgeEstado}</td>
+            <td><strong>${p.nombres || ''} ${p.apellidos || ''}</strong> ${badgeOrigen} ${badgeEstado} ${badgeApp}</td>
             <td>${p.edad || 'N/A'}</td>
             <td>${p.genero || 'N/A'}</td>
             <td>${loc}</td>
@@ -18510,12 +18514,14 @@ function switchSuperadminTab(tabId) {
     if (targetCard) targetCard.classList.remove('hide');
     
     const tabTherapists = document.getElementById('sa-tab-therapists');
+    const tabDevices = document.getElementById('sa-tab-devices');
     const tabSupport = document.getElementById('sa-tab-support');
     const tabPayments = document.getElementById('sa-tab-payment-methods');
     const tabLanding = document.getElementById('sa-tab-landing');
     const tabTests = document.getElementById('sa-tab-tests');
     
     if (tabTherapists) tabTherapists.className = (tabId === 'therapists') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (tabDevices) tabDevices.className = (tabId === 'devices') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     if (tabSupport) tabSupport.className = (tabId === 'support') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     if (tabPayments) {
         tabPayments.className = (tabId === 'payment-methods') ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
@@ -18534,6 +18540,8 @@ function switchSuperadminTab(tabId) {
     
     if (tabId === 'therapists') {
         loadSuperadminData();
+    } else if (tabId === 'devices') {
+        loadSuperadminPatientDevices();
     } else if (tabId === 'support') {
         loadSupportTickets();
     } else if (tabId === 'payment-methods') {
@@ -18544,6 +18552,214 @@ function switchSuperadminTab(tabId) {
         loadSuperadminTests();
     }
 }
+
+// ==========================================
+// MONITOR DE DISPOSITIVOS Y APPS DE PACIENTES (SUPERADMIN)
+// ==========================================
+window._saPatientDevicesCache = [];
+
+async function loadSuperadminPatientDevices() {
+    const tbody = document.getElementById('sa-devices-table-body');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 2.5rem;">Cargando registro de dispositivos...</td></tr>';
+    }
+
+    try {
+        const res = await fetch('/api/superadmin/patient-devices');
+        if (!res.ok) {
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
+        const data = await res.json();
+        if (!data || !data.success) {
+            throw new Error(data.error || 'Error al obtener datos');
+        }
+
+        window._saPatientDevicesCache = data.patients || [];
+
+        // Actualizar estadísticas del monitor
+        const stats = data.stats || {};
+        const statConnected = document.getElementById('sa-devices-stat-connected');
+        const statUnconnected = document.getElementById('sa-devices-stat-unconnected');
+        const statTotalDevs = document.getElementById('sa-devices-stat-total-devs');
+        const statRate = document.getElementById('sa-devices-stat-rate');
+
+        if (statConnected) statConnected.textContent = stats.connected_patients || 0;
+        if (statUnconnected) statUnconnected.textContent = stats.unconnected_patients || 0;
+        if (statTotalDevs) statTotalDevs.textContent = stats.total_devices || 0;
+        if (statRate) statRate.textContent = `${stats.adoption_rate || 0}% de los pacientes`;
+
+        renderSuperadminPatientDevices(window._saPatientDevicesCache);
+    } catch (err) {
+        console.error("Error cargando dispositivos de pacientes:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger" style="padding: 2rem;">❌ Error al cargar dispositivos: ${err.message}</td></tr>`;
+        }
+    }
+}
+window.loadSuperadminPatientDevices = loadSuperadminPatientDevices;
+
+function renderSuperadminPatientDevices(list) {
+    const tbody = document.getElementById('sa-devices-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 2.5rem;">No se encontraron consultantes con el filtro aplicado.</td></tr>';
+        return;
+    }
+
+    list.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #f1f5f9';
+
+        // Badge Estado App
+        const badgeApp = p.has_app
+            ? `<span class="badge" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: 20px; font-size: 0.78rem;">🟢 App Activa (${p.devices_count})</span>`
+            : `<span class="badge" style="background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; font-weight: 600; padding: 0.35rem 0.65rem; border-radius: 20px; font-size: 0.78rem;">⚪ Sin App (Solo Web/WA)</span>`;
+
+        // Resumen de dispositivos
+        let devsHtml = '';
+        if (p.devices && p.devices.length > 0) {
+            devsHtml = p.devices.map(d => `
+                <div style="font-size: 0.8rem; margin-bottom: 0.25rem;">
+                    <strong>${d.device_type}</strong>
+                    <span style="color: #64748b; font-size: 0.72rem; display: block;">ID: ${(d.device_id || '').substring(0, 16)}...</span>
+                </div>
+            `).join('');
+        } else {
+            devsHtml = '<span style="color: #94a3b8; font-size: 0.8rem; font-style: italic;">Sin dispositivos vinculados</span>';
+        }
+
+        // Última conexión
+        const lastSyncText = p.last_sync
+            ? `<span style="font-weight: 600; font-size: 0.82rem; color: #0f172a;">${p.last_sync}</span>`
+            : `<span style="color: #94a3b8; font-size: 0.8rem;">Nunca</span>`;
+
+        // Botón de acción
+        const testBtn = p.has_app
+            ? `<button type="button" class="btn btn-sm btn-primary" onclick="sendSuperadminPatientPush(${p.patient_id}, '${(p.nombre_completo || '').replace(/'/g, "\\'")}')" style="font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.75rem; border-radius: 6px; background: #0d9488; border: none; white-space: nowrap;">🔔 Probar Push</button>`
+            : `<button type="button" class="btn btn-sm btn-secondary" disabled style="opacity: 0.5; font-size: 0.78rem; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: not-allowed; white-space: nowrap;">Sin App</button>`;
+
+        tr.innerHTML = `
+            <td style="padding: 0.85rem 1rem;">
+                <strong style="color: #0f172a; font-size: 0.92rem;">${p.nombre_completo}</strong>
+                <div style="color: #64748b; font-size: 0.78rem; margin-top: 0.15rem;">C.I: ${p.cedula} ${p.telefono ? '• 📞 ' + p.telefono : ''}</div>
+            </td>
+            <td style="padding: 0.85rem 1rem; font-size: 0.85rem; color: #334155; font-weight: 500;">
+                ${p.psicologo}
+            </td>
+            <td style="padding: 0.85rem 1rem; text-align: center;">
+                ${badgeApp}
+            </td>
+            <td style="padding: 0.85rem 1rem;">
+                ${devsHtml}
+            </td>
+            <td style="padding: 0.85rem 1rem;">
+                ${lastSyncText}
+            </td>
+            <td style="padding: 0.85rem 1rem; text-align: center;">
+                ${testBtn}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+window.renderSuperadminPatientDevices = renderSuperadminPatientDevices;
+
+function filterSuperadminPatientDevices() {
+    const searchVal = (document.getElementById('sa-devices-search')?.value || '').toLowerCase().trim();
+    const statusVal = document.getElementById('sa-devices-filter-status')?.value || 'all';
+
+    let filtered = window._saPatientDevicesCache || [];
+
+    if (statusVal === 'with_app') {
+        filtered = filtered.filter(p => p.has_app);
+    } else if (statusVal === 'without_app') {
+        filtered = filtered.filter(p => !p.has_app);
+    }
+
+    if (searchVal) {
+        filtered = filtered.filter(p => {
+            const matchName = (p.nombre_completo || '').toLowerCase().includes(searchVal);
+            const matchCed = (p.cedula || '').toLowerCase().includes(searchVal);
+            const matchPsic = (p.psicologo || '').toLowerCase().includes(searchVal);
+            const matchUser = (p.username || '').toLowerCase().includes(searchVal);
+            return matchName || matchCed || matchPsic || matchUser;
+        });
+    }
+
+    renderSuperadminPatientDevices(filtered);
+}
+window.filterSuperadminPatientDevices = filterSuperadminPatientDevices;
+
+async function sendSuperadminPatientPush(patientId, patientName) {
+    if (!patientId) return;
+
+    if (window.Swal) {
+        const confirmRes = await Swal.fire({
+            title: `¿Enviar Notificación Push?`,
+            text: `Se disparará una notificación de prueba en tiempo real al teléfono móvil de ${patientName}.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, Enviar Push',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0d9488'
+        });
+        if (!confirmRes.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Enviando notificación...',
+            text: 'Conectando con los servidores de Firebase FCM y Google Play...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+    }
+
+    try {
+        const res = await fetch(`/api/superadmin/patient-devices/${patientId}/test-push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Push Entregado!',
+                    text: data.message || `Notificación enviada a los dispositivos de ${patientName}.`,
+                    confirmButtonColor: '#0d9488'
+                });
+            } else {
+                alert(`Notificación enviada con éxito a ${patientName}`);
+            }
+        } else {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Fallo al Enviar Push',
+                    text: data.error || 'El dispositivo no respondió o el token es inválido.',
+                    confirmButtonColor: '#0d9488'
+                });
+            } else {
+                alert(data.error || 'Error al enviar push');
+            }
+        }
+    } catch (err) {
+        console.error("Error enviando push de prueba:", err);
+        if (window.Swal) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Red',
+                text: err.message,
+                confirmButtonColor: '#0d9488'
+            });
+        } else {
+            alert("Error de red al enviar push");
+        }
+    }
+}
+window.sendSuperadminPatientPush = sendSuperadminPatientPush;
 
 // ==========================================
 // GESTIÓN DE TESTS PSICOLÓGICOS (SUPERADMIN)

@@ -277,9 +277,13 @@ def get_patients():
         else:
             psic_id = user_id if user_id else 1
     
+    from app import ensure_fcm_table_and_columns
+    ensure_fcm_table_and_columns(cursor)
+
     if psic_id is not None:
         cursor.execute("""
-            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
+            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre,
+                   (SELECT COUNT(*) FROM fcm_subscriptions f WHERE f.patient_id = p.id AND f.token IS NOT NULL AND TRIM(f.token) != '') as has_app
             FROM pacientes p
             LEFT JOIN organizaciones o ON p.organizacion_id = o.id
             WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '') AND (p.psicologo_id = ? OR p.psicologo_id IS NULL) 
@@ -287,7 +291,8 @@ def get_patients():
         """, (psic_id,))
     else:
         cursor.execute("""
-            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre 
+            SELECT p.id, p.nombres, p.apellidos, p.cedula, p.edad, p.genero, p.residencia_actual, p.pais, p.ciudad, p.organizacion_id, p.estado, o.nombre as organizacion_nombre,
+                   (SELECT COUNT(*) FROM fcm_subscriptions f WHERE f.patient_id = p.id AND f.token IS NOT NULL AND TRIM(f.token) != '') as has_app
             FROM pacientes p
             LEFT JOIN organizaciones o ON p.organizacion_id = o.id
             WHERE (p.fecha_baja IS NULL OR p.fecha_baja = '')

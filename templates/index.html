@@ -2202,6 +2202,7 @@
                     <!-- Menú de Sub-módulos Superadmin -->
                     <div class="sub-nav-tabs mt-4" style="display: flex; gap: 0.5rem; border-bottom: 1.5px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
                         <button type="button" id="sa-tab-therapists" class="btn btn-sm btn-primary" onclick="switchSuperadminTab('therapists')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Psicólogos y Suscripciones</button>
+                        <button type="button" id="sa-tab-devices" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('devices')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; color: #065f46; background: #ecfdf5; border: 1.5px solid #a7f3d0;">📱 Apps de Pacientes</button>
                         <button type="button" id="sa-tab-support" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('support')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">Mensajes de Soporte</button>
                         <button type="button" id="sa-tab-payment-methods" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('payment-methods')" style="font-weight: 700; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer; color: #702e5e; background: #fdf4ff; border: 1.5px solid #f0abfc;">💳 Métodos de Pago</button>
                         <button type="button" id="sa-tab-landing" class="btn btn-sm btn-secondary" onclick="switchSuperadminTab('landing')" style="font-weight: 600; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none; cursor: pointer;">🌐 Editar Portada Web</button>
@@ -2412,6 +2413,80 @@
                                         <tbody id="sa-tests-table-body">
                                             <tr>
                                                 <td colspan="7" class="text-center text-muted" style="padding: 2.5rem;">Cargando catálogo de tests...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <!-- Contenedor: Apps y Dispositivos de Pacientes -->
+                    <div id="sa-card-devices" class="superadmin-tab-content hide">
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                                <div>
+                                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; color: #065f46;">
+                                        <span>📱 Monitor de Apps y Dispositivos de Consultantes</span>
+                                    </h3>
+                                    <p class="text-secondary text-sm" style="margin: 0.25rem 0 0 0;">
+                                        Rastreo en tiempo real de qué pacientes tienen instalada la app móvil, equipos vinculados y envío de pruebas push.
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadSuperadminPatientDevices()" style="font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 8px;">🔄 Actualizar Monitor</button>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 1.25rem;">
+                                <!-- Mini Métricas de Adopción de la App -->
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                                    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 1rem;">
+                                        <span style="font-size: 0.78rem; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">Con App Vinculada</span>
+                                        <h3 id="sa-devices-stat-connected" style="margin: 0.25rem 0 0 0; color: #15803d; font-size: 1.8rem; font-weight: 800;">0</h3>
+                                        <small id="sa-devices-stat-rate" style="color: #166534; font-weight: 600; font-size: 0.8rem;">0% del total de pacientes</small>
+                                    </div>
+                                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem;">
+                                        <span style="font-size: 0.78rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Sin App (Web / Solo WA)</span>
+                                        <h3 id="sa-devices-stat-unconnected" style="margin: 0.25rem 0 0 0; color: #334155; font-size: 1.8rem; font-weight: 800;">0</h3>
+                                        <small style="color: #64748b; font-size: 0.8rem;">Reciben recordatorios por WhatsApp</small>
+                                    </div>
+                                    <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 12px; padding: 1rem;">
+                                        <span style="font-size: 0.78rem; font-weight: 700; color: #831843; text-transform: uppercase; letter-spacing: 0.5px;">Total Dispositivos Activos</span>
+                                        <h3 id="sa-devices-stat-total-devs" style="margin: 0.25rem 0 0 0; color: #9d174d; font-size: 1.8rem; font-weight: 800;">0</h3>
+                                        <small style="color: #be185d; font-size: 0.8rem;">Teléfonos Android, tablets y navegadores</small>
+                                    </div>
+                                </div>
+
+                                <!-- Barra de búsqueda y filtros -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                    <div style="flex: 1; min-width: 260px; max-width: 480px;">
+                                        <input type="text" id="sa-devices-search" class="form-control" placeholder="🔍 Buscar por nombre, cédula o psicólogo..." oninput="filterSuperadminPatientDevices()" style="padding: 0.55rem 0.85rem; font-size: 0.88rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 100%;">
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                        <label for="sa-devices-filter-status" style="margin: 0; font-size: 0.85rem; color: #475569; font-weight: 600;">Filtrar:</label>
+                                        <select id="sa-devices-filter-status" onchange="filterSuperadminPatientDevices()" style="padding: 0.45rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 600; background: white; cursor: pointer;">
+                                            <option value="all">Todos los pacientes</option>
+                                            <option value="with_app">Solo con App Vinculada 🟢</option>
+                                            <option value="without_app">Solo sin App ⚪</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Tabla de Dispositivos de Pacientes -->
+                                <div class="table-responsive" style="border-radius: 12px; border: 1px solid #e2e8f0; overflow-x: auto;">
+                                    <table class="table" style="width: 100%; border-collapse: collapse; margin: 0; min-width: 820px;">
+                                        <thead>
+                                            <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left; font-size: 0.85rem; color: #0f172a;">
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Consultante</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Terapeuta Asignado</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center;">Estado App</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Dispositivo(s) Vinculado(s)</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700;">Última Conexión</th>
+                                                <th style="padding: 0.85rem 1rem; font-weight: 700; text-align: center; width: 140px;">Probar Push</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="sa-devices-table-body">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted" style="padding: 2.5rem;">Cargando registro de dispositivos...</td>
                                             </tr>
                                         </tbody>
                                     </table>
