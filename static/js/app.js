@@ -4171,13 +4171,17 @@ function goToWizardStep(stepNum) {
 }
 
 function wizCalculateAge() {
-    const dobStr = document.getElementById('wiz-fecha-nac').value;
+    const dobStr = document.getElementById('wiz-fecha-nac')?.value;
     if (!dobStr) return;
-    const dob = new Date(dobStr);
-    const diff = Date.now() - dob.getTime();
-    const ageDate = new Date(diff);
-    const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-    document.getElementById('wiz-edad').value = age;
+    if (typeof calculateAgeFromBirthdate === 'function') {
+        calculateAgeFromBirthdate(dobStr, 'wiz-edad');
+    } else {
+        const dob = new Date(dobStr);
+        const diff = Date.now() - dob.getTime();
+        const ageDate = new Date(diff);
+        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+        document.getElementById('wiz-edad').value = age;
+    }
 }
 
 async function handlePatientWizardSubmit(e) {

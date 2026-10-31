@@ -7314,7 +7314,7 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Fila 1: Pronombre | Género | Fecha de Nacimiento (3 columnas alineadas) -->
+                                    <!-- Fila 1: Pronombre | Género | Lugar de Nacimiento (3 columnas alineadas) -->
                                     <div class="form-row">
                                         <div class="form-group col-4">
                                             <label for="wiz-pronombre">Pronombre (Ej. Él, Ella, Otro)</label>
@@ -7331,20 +7331,20 @@
                                             </select>
                                         </div>
                                         <div class="form-group col-4">
-                                            <label for="wiz-fecha-nac">Fecha de Nacimiento</label>
-                                            <input type="date" id="wiz-fecha-nac" onchange="wizCalculateAge()">
+                                            <label for="wiz-lugar-nac">Lugar de Nacimiento</label>
+                                            <input type="text" id="wiz-lugar-nac" placeholder="Ciudad / Estado">
                                         </div>
                                     </div>
                                     
-                                    <!-- Fila 2: Edad | Lugar de Nacimiento | País de Residencia (3 columnas alineadas) -->
+                                    <!-- Fila 2: Fecha de Nacimiento | Edad | País de Residencia (3 columnas alineadas) -->
                                     <div class="form-row">
+                                        <div class="form-group col-4">
+                                            <label for="wiz-fecha-nac">Fecha de Nacimiento</label>
+                                            <input type="date" id="wiz-fecha-nac" onchange="wizCalculateAge()" oninput="wizCalculateAge()">
+                                        </div>
                                         <div class="form-group col-4">
                                             <label for="wiz-edad">Edad</label>
                                             <input type="number" id="wiz-edad" min="0" placeholder="0">
-                                        </div>
-                                        <div class="form-group col-4">
-                                            <label for="wiz-lugar-nac">Lugar de Nacimiento</label>
-                                            <input type="text" id="wiz-lugar-nac" placeholder="Ciudad / Estado">
                                         </div>
                                         <div class="form-group col-4">
                                             <label for="wiz-pais">País de Residencia</label>
@@ -7600,22 +7600,22 @@
                                 <input type="text" id="p-cedula">
                             </div>
                             <div class="form-group col-4">
-                                <label for="p-edad">Edad</label>
-                                <input type="number" id="p-edad" min="0">
+                                <label for="p-fecha-nac">Fecha de Nacimiento</label>
+                                <input type="date" id="p-fecha-nac" onchange="calculateAgeFromBirthdate(this.value)" oninput="calculateAgeFromBirthdate(this.value)">
                             </div>
                             <div class="form-group col-4">
-                                <label for="p-genero">Género</label>
-                                <input type="text" id="p-genero" placeholder="Ej. Femenino, Masculino">
+                                <label for="p-edad">Edad</label>
+                                <input type="number" id="p-edad" min="0" placeholder="Auto / manual">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group col-4">
-                                <label for="p-pronombre">Pronombre</label>
-                                <input type="text" id="p-pronombre" placeholder="Ej. Ella, Él, Elle">
+                                <label for="p-genero">Género</label>
+                                <input type="text" id="p-genero" placeholder="Ej. Femenino, Masculino">
                             </div>
                             <div class="form-group col-4">
-                                <label for="p-fecha-nac">Fecha de Nacimiento</label>
-                                <input type="date" id="p-fecha-nac" onchange="calculateAgeFromBirthdate(this.value)" oninput="calculateAgeFromBirthdate(this.value)">
+                                <label for="p-pronombre">Pronombre</label>
+                                <input type="text" id="p-pronombre" placeholder="Ej. Ella, Él, Elle">
                             </div>
                             <div class="form-group col-4">
                                 <label for="p-lugar-nac">Lugar de Nacimiento</label>
@@ -8926,27 +8926,27 @@
                     
                     <div class="form-row">
                         <div class="form-group col-4">
-                            <label for="reg-pronombre">Pronombre</label>
-                            <input type="text" id="reg-pronombre" placeholder="Ej. Ella, Él">
-                        </div>
-                        <div class="form-group col-4">
                             <label for="reg-genero">Género</label>
                             <input type="text" id="reg-genero" placeholder="Ej. Femenino, Masculino">
                         </div>
                         <div class="form-group col-4">
-                            <label for="reg-edad">Edad *</label>
-                            <input type="number" id="reg-edad" placeholder="Edad">
+                            <label for="reg-pronombre">Pronombre</label>
+                            <input type="text" id="reg-pronombre" placeholder="Ej. Ella, Él">
+                        </div>
+                        <div class="form-group col-4">
+                            <label for="reg-lugar-nac">Lugar de Nacimiento</label>
+                            <input type="text" id="reg-lugar-nac" placeholder="Ciudad / Estado">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group col-6">
-                            <label for="reg-lugar-nac">Lugar de Nacimiento</label>
-                            <input type="text" id="reg-lugar-nac" placeholder="Ciudad / Estado">
-                        </div>
-                        <div class="form-group col-6">
                             <label for="reg-fecha-nac">Fecha de Nacimiento</label>
                             <input type="date" id="reg-fecha-nac" onchange="calculateAgeFromBirthdate(this.value, 'reg-edad')" oninput="calculateAgeFromBirthdate(this.value, 'reg-edad')">
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="reg-edad">Edad *</label>
+                            <input type="number" id="reg-edad" placeholder="Se calcula automáticamente" min="0">
                         </div>
                     </div>
 
