@@ -378,7 +378,7 @@ def get_vapid_keys(cursor):
             cfg = {'vapid_public_key': '', 'vapid_private_key': ''}
     return cfg
 
-def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
+def send_fcm_notification(user_id=None, patient_id=None, tokens_list=None, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
     sa_file = get_firebase_sa_file()
     if not sa_file or not os.path.exists(sa_file):
         return
@@ -393,7 +393,9 @@ def send_fcm_notification(user_id=None, patient_id=None, title="Mi Consultorio",
         db = get_db()
         cursor = db.cursor()
         tokens = []
-        if user_id:
+        if tokens_list is not None:
+            tokens = [t for t in tokens_list if t and str(t).strip()]
+        elif user_id:
             cursor.execute("SELECT token FROM fcm_subscriptions WHERE user_id = ?", (user_id,))
             tokens = [row['token'] for row in cursor.fetchall()]
         elif patient_id:

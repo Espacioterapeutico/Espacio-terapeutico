@@ -2464,6 +2464,68 @@ def superadmin_unlink_patient_devices(patient_id):
     return jsonify({'success': True, 'deleted_devices': deleted})
 
 
+@admin_bp.route('/api/superadmin/broadcast-push', methods=['POST'])
+@login_required
+def superadmin_broadcast_push():
+    if not check_is_superadmin():
+        return jsonify({'error': 'Acceso denegado. Se requieren permisos de superadministrador.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    title = (data.get('title') or "🌟 Espacio Terapéutico").strip()
+    body = (data.get('body') or "Recuerda entrar a Espacio Terapéutico y chequear tus últimas actualizaciones del proceso terapéutico.").strip()
+    target = data.get('target', 'patients')
+    url = (data.get('url') or "/#patient-home").strip()
+
+    db = get_db()
+    cursor = db.cursor()
+    from app import ensure_fcm_table_and_columns, send_fcm_notification
+    ensure_fcm_table_and_columns(cursor)
+
+    if target == 'all':
+        cursor.execute("SELECT DISTINCT token FROM fcm_subscriptions WHERE token IS NOT NULL AND TRIM(token) != ''")
+    else:
+        cursor.execute("SELECT DISTINCT token FROM fcm_subscriptions WHERE patient_id IS NOT NULL AND token IS NOT NULL AND TRIM(token) != ''")
+    
+    token_rows = cursor.fetchall()
+    tokens = [r[0] if isinstance(r, (tuple, list)) else r['token'] for r in token_rows]
+    tokens = list(dict.fromkeys([t for t in tokens if t and t.strip()]))
+
+    if not tokens:
+        return jsonify({
+            'success': False,
+            'error': 'No se encontraron dispositivos registrados con app vinculada para enviar la notificación push masiva.'
+        }), 400
+
+    # 1. Enviar el Push masivo mediante FCM v1
+    res = send_fcm_notification(
+        tokens_list=tokens,
+        title=title,
+        body=body,
+        url=url
+    )
+
+    # 2. Registrar en la campanita de todos los pacientes destinatarios
+    try:
+        now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("SELECT DISTINCT patient_id FROM fcm_subscriptions WHERE patient_id IS NOT NULL")
+        patient_ids = [r[0] for r in cursor.fetchall() if r[0]]
+        for pid in patient_ids:
+            cursor.execute("""
+                INSERT INTO notificaciones_pacientes (paciente_id, tipo, titulo, mensaje, link, icon, fecha, leida)
+                VALUES (?, 'general', ?, ?, ?, '🌟', ?, 0)
+            """, (pid, title, body, url, now_str))
+        db.commit()
+    except Exception as _ex_ins:
+        print("Aviso al insertar notificaciones masivas en campanita:", _ex_ins)
+
+    return jsonify({
+        'success': True,
+        'message': f"Notificación masiva enviada con éxito a {len(tokens)} dispositivo(s) activo(s).",
+        'tokens_count': len(tokens),
+        'result': res
+    })
+
+
 
 @admin_bp.route('/api/sync/auto-backup', methods=['POST', 'GET'])
 def auto_backup():

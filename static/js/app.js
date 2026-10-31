@@ -18761,6 +18761,106 @@ async function sendSuperadminPatientPush(patientId, patientName) {
 }
 window.sendSuperadminPatientPush = sendSuperadminPatientPush;
 
+async function openSuperadminBroadcastPushModal() {
+    if (!window.Swal) {
+        alert("SweetAlert2 no está disponible.");
+        return;
+    }
+
+    const defaultTitle = "🌟 Espacio Terapéutico";
+    const defaultBody = "Recuerda entrar a Espacio Terapéutico y chequear tus últimas actualizaciones del proceso terapéutico.";
+
+    const { value: formValues } = await Swal.fire({
+        title: '📢 Notificación Masiva para la App',
+        html: `
+            <div style="text-align: left; font-size: 0.88rem; color: #374151;">
+                <p style="margin-bottom: 0.85rem; line-height: 1.4;">
+                    Esta notificación llegará de inmediato a la barra superior de <strong>todos los teléfonos que tengan la app vinculada</strong> para fomentar el uso activo continuo exigido por Google Play.
+                </p>
+                <div style="margin-bottom: 0.85rem;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 0.25rem;">Título de la Notificación:</label>
+                    <input id="swal-broadcast-title" class="swal2-input" style="width: 100%; margin: 0; font-size: 0.9rem;" value="${defaultTitle}">
+                </div>
+                <div style="margin-bottom: 0.85rem;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 0.25rem;">Mensaje:</label>
+                    <textarea id="swal-broadcast-body" class="swal2-textarea" style="width: 100%; margin: 0; height: 85px; font-size: 0.88rem;">${defaultBody}</textarea>
+                </div>
+                <div style="margin-bottom: 0.5rem;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 0.25rem;">Destinatarios:</label>
+                    <select id="swal-broadcast-target" class="swal2-select" style="width: 100%; margin: 0; font-size: 0.88rem; padding: 0.45rem;">
+                        <option value="patients">Solo Consultantes / Pacientes con App (Recomendado)</option>
+                        <option value="all">Todos los dispositivos (Pacientes + Psicólogos)</option>
+                    </select>
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '🚀 Enviar Notificación Masiva',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0d9488',
+        cancelButtonColor: '#64748b',
+        preConfirm: () => {
+            const title = (document.getElementById('swal-broadcast-title')?.value || '').trim();
+            const body = (document.getElementById('swal-broadcast-body')?.value || '').trim();
+            const target = document.getElementById('swal-broadcast-target')?.value || 'patients';
+            if (!title || !body) {
+                Swal.showValidationMessage('El título y el mensaje no pueden estar vacíos.');
+                return false;
+            }
+            return { title, body, target };
+        }
+    });
+
+    if (!formValues) return;
+
+    Swal.fire({
+        title: 'Despachando notificaciones...',
+        text: 'Conectando con Google Firebase Cloud Messaging...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+        const res = await fetch('/api/superadmin/broadcast-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formValues)
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Notificaciones Despachadas!',
+                html: `
+                    <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">${data.message}</p>
+                    <small style="color: #64748b;">Los teléfonos recibirán la alerta en su barra superior y quedará guardada en su campanita.</small>
+                `,
+                confirmButtonColor: '#0d9488'
+            });
+            if (typeof loadSuperadminPatientDevices === 'function') {
+                loadSuperadminPatientDevices();
+            }
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'No se pudo enviar',
+                text: data.error || 'Ocurrió un error al enviar la notificación masiva.',
+                confirmButtonColor: '#0d9488'
+            });
+        }
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de Red',
+            text: err.message,
+            confirmButtonColor: '#0d9488'
+        });
+    }
+}
+window.openSuperadminBroadcastPushModal = openSuperadminBroadcastPushModal;
+
 // ==========================================
 // GESTIÓN DE TESTS PSICOLÓGICOS (SUPERADMIN)
 // ==========================================
