@@ -508,6 +508,9 @@ def get_pizarra(recurso_id):
     msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{titulo}', titulo).replace('{link}', direct_link)
     clean_phone = clean_phone_number(d.get('pac_telefono') or '')
     import urllib.parse
+    d['link_compartido'] = direct_link
+    d['direct_link'] = direct_link
+    d['link'] = direct_link
     d['wa_message'] = msg_wa
     d['wa_url'] = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(msg_wa)}" if clean_phone else f"https://api.whatsapp.com/send?text={urllib.parse.quote(msg_wa)}"
 

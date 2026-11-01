@@ -487,6 +487,9 @@
                         📥
                     </button>
                     ${!isPatientPortal ? `
+                    <button type="button" class="btn btn-sm" onclick="copyRecursoDirectLinkById(${r.id})" title="Copiar enlace de la pizarra al portapapeles" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; border-radius: 6px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                        📋
+                    </button>
                     <button type="button" class="btn btn-sm" onclick="shareRecursoWhatsAppById(${r.id})" title="Enviar por WhatsApp" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; border-radius: 6px; background: #dcfce7; color: #16a34a; border: 1px solid #86efac;">
                         📲
                     </button>
@@ -1696,6 +1699,91 @@
         window.open(`/api/recursos/pizarra/${recursoId}/export-word`, '_blank');
     }
     window.exportRecursoWordById = exportRecursoWordById;
+
+    async function copyRecursoDirectLink() {
+        const board = window.activeRecursoPizarra;
+        if (!board || !board.id) return;
+        await copyRecursoDirectLinkById(board.id);
+    }
+    window.copyRecursoDirectLink = copyRecursoDirectLink;
+
+    async function copyRecursoDirectLinkById(recursoId) {
+        let r = (window.activeRecursoPizarra && window.activeRecursoPizarra.id === recursoId) ? window.activeRecursoPizarra : null;
+        if (!r && window.currentPatientRecursosList && Array.isArray(window.currentPatientRecursosList)) {
+            r = window.currentPatientRecursosList.find(x => x.id === recursoId) || null;
+        }
+
+        let link = r ? (r.link_compartido || r.direct_link || r.link) : null;
+        if (!link && r && r.token_compartido) {
+            link = `${window.location.origin}/pizarra/compartida/${r.token_compartido}`;
+        }
+
+        // Si no se encuentra en memoria, consultar al servidor
+        if (!link) {
+            try {
+                const res = await fetch(`/api/recursos/pizarra/${recursoId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    link = data.link_compartido || data.direct_link || (data.token_compartido ? `${window.location.origin}/pizarra/compartida/${data.token_compartido}` : null);
+                    if (window.activeRecursoPizarra && window.activeRecursoPizarra.id === recursoId) {
+                        window.activeRecursoPizarra.link_compartido = link;
+                    }
+                }
+            } catch (err) {
+                console.error("Error obteniendo enlace de pizarra:", err);
+            }
+        }
+
+        if (!link) {
+            alert("No se pudo obtener el enlace de la pizarra.");
+            return;
+        }
+
+        // Feedback visual inmediato en el botón del modal si está abierto
+        const btnModal = document.getElementById('btn-copy-pizarra-link');
+        let origHtml = null;
+        if (btnModal) {
+            origHtml = btnModal.innerHTML;
+            btnModal.innerHTML = '✅ ¡Copiado!';
+            btnModal.style.background = '#dcfce7';
+            btnModal.style.color = '#15803d';
+            btnModal.style.borderColor = '#86efac';
+            setTimeout(() => {
+                btnModal.innerHTML = origHtml;
+                btnModal.style.background = '#eff6ff';
+                btnModal.style.color = '#1d4ed8';
+                btnModal.style.borderColor = '#bfdbfe';
+            }, 2500);
+        }
+
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(link);
+            } else {
+                const tempInput = document.createElement("input");
+                tempInput.value = link;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand("copy");
+                document.body.removeChild(tempInput);
+            }
+
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Enlace Copiado!',
+                    text: 'El enlace interactivo de la pizarra ha sido copiado al portapapeles.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                alert(`📋 ¡Enlace copiado al portapapeles!\n\n${link}`);
+            }
+        } catch (copyErr) {
+            prompt("Copia el siguiente enlace interactivo de la pizarra para compartirlo:", link);
+        }
+    }
+    window.copyRecursoDirectLinkById = copyRecursoDirectLinkById;
 
     function shareRecursoWhatsApp() {
         if (!window.activeRecursoPizarra) return;
