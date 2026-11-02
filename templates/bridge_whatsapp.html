@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conectando con WhatsApp | Espacio Terapéutico</title>
+    
+    <!-- Google tag (gtag.js) para Google Ads -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18511826786"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-18511826786');
+
+      // Disparar evento de conversión de contacto en Google Ads
+      try {
+        gtag('event', 'conversion', {
+          'send_to': 'AW-18511826786/JCMcCPel06kdEOKekPtE'
+        });
+      } catch (e) {
+        console.warn('Google Ads tag warning:', e);
+      }
+    </script>
+
+    <!-- Favicon & Styles -->
+    <link rel="icon" type="image/x-icon" href="/static/logo.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #2e1065 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            color: #ffffff;
+        }
+        .bridge-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .brand-logo {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            margin-bottom: 1.25rem;
+            filter: drop-shadow(0 4px 12px rgba(236, 72, 153, 0.3));
+        }
+        .icon-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: #25d366;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+            animation: pulse 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+        .icon-wrap svg {
+            width: 42px;
+            height: 42px;
+            fill: #ffffff;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+            70% { box-shadow: 0 0 0 22px rgba(37, 211, 102, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+        }
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.45rem;
+            font-weight: 800;
+            margin-bottom: 0.65rem;
+            color: #ffffff;
+            line-height: 1.3;
+        }
+        p {
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 1.75rem;
+        }
+        .btn-wa {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: #25d366;
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 800;
+            text-decoration: none;
+            padding: 0.95rem 1.85rem;
+            border-radius: 999px;
+            box-shadow: 0 10px 25px -5px rgba(37, 211, 102, 0.4);
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        .btn-wa:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -5px rgba(37, 211, 102, 0.5);
+            background: #22c55e;
+        }
+        .progress-bar-wrap {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            overflow: hidden;
+            margin: 1.5rem 0 1rem 0;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #25d366, #38bdf8);
+            border-radius: 999px;
+            animation: fillProgress 0.7s forwards ease-in-out;
+        }
+        @keyframes fillProgress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        .helper-text {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bridge-card">
+        <img src="/static/logo.png" alt="Espacio Terapéutico" class="brand-logo" onerror="this.style.display='none'">
+        
+        <div class="icon-wrap">
+            <svg viewBox="0 0 24 24">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.311.045-.633.076-1.922-.454-1.579-.648-2.614-2.26-2.693-2.366-.079-.105-.645-.858-.645-1.637s.408-1.161.554-1.32c.144-.159.314-.198.42-.198.106 0 .211.002.304.007.098.005.231-.037.362.278.131.314.448 1.092.487 1.172.039.079.066.172.013.277-.053.106-.079.172-.158.265-.079.092-.167.205-.238.276-.08.079-.163.165-.07.324.093.159.412.68 0.884 1.101.607.541 1.118.708 1.277.787.159.079.252.066.345-.04.093-.105.397-.462.503-.621.106-.159.211-.132.357-.079.145.053.924.436 1.083.515.159.079.265.119.304.185.039.066.039.383-.105.788z"/>
+            </svg>
+        </div>
+
+        <h1>Conectando con WhatsApp...</h1>
+        <p>Te estamos redirigiendo para conversar directamente con el especialista de <strong>Espacio Terapéutico</strong>.</p>
+
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill"></div>
+        </div>
+
+        <a id="btn-open-wa" href="{{ wa_url }}" class="btn-wa">
+            💬 Abrir WhatsApp Ahora
+        </a>
+
+        <div class="helper-text">
+            Si no se abre automáticamente en unos segundos, pulsa el botón verde superior.
+        </div>
+    </div>
+
+    <script>
+        const targetUrl = {{ wa_url|tojson }};
+        
+        // Redirigir automáticamente tras breve pausa para asegurar el registro del píxel
+        setTimeout(function() {
+            try {
+                window.location.href = targetUrl;
+            } catch (e) {
+                console.error(e);
+            }
+        }, 650);
+    </script>
+</body>
+</html>

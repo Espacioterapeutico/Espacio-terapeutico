@@ -27034,7 +27034,7 @@ function renderTherapistsGrid(therapists) {
             const cleanWa = t.whatsapp.replace(/[^0-9]/g, '');
             const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, te escribo desde la plataforma Espacio Terapéutico para consultar información sobre tus consultas.`);
             whatsappBtnHtml = `
-                <a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" class="pub-btn-wa" title="Escribir por WhatsApp">
+                <a href="/contacto-whatsapp?slug=${encodeURIComponent(t.slug || '')}&phone=${cleanWa}&text=${waMsg}" target="_blank" class="pub-btn-wa" title="Escribir por WhatsApp">
                     💬 WhatsApp
                 </a>
             `;
@@ -28443,14 +28443,14 @@ async function loadDedicatedTherapistProfile(slug) {
                 } else if (/^\+?[0-9\s\-]{8,18}$/.test(customLink)) {
                     const cleanNum = customLink.replace(/[^0-9]/g, '');
                     const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, vi tu perfil en Espacio Terapéutico y me gustaría hacerte una consulta.`);
-                    finalHref = `https://wa.me/${cleanNum}?text=${waMsg}`;
+                    finalHref = `/contacto-whatsapp?slug=${encodeURIComponent(t.slug || '')}&phone=${cleanNum}&text=${waMsg}`;
                 } else {
                     finalHref = `https://${customLink}`;
                 }
             } else if (t.whatsapp_publico) {
                 const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
                 const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, vi tu perfil en Espacio Terapéutico y me gustaría hacerte una consulta antes de agendar.`);
-                finalHref = `https://wa.me/${cleanWa}?text=${waMsg}`;
+                finalHref = `/contacto-whatsapp?slug=${encodeURIComponent(t.slug || '')}&phone=${cleanWa}&text=${waMsg}`;
             }
 
             if (finalHref) {
@@ -28470,7 +28470,7 @@ async function loadDedicatedTherapistProfile(slug) {
                 const cleanWa = t.whatsapp_publico.replace(/[^0-9]/g, '');
                 const waMsg = encodeURIComponent(`Hola ${t.nombre_completo}, me gustaría consultar información sobre tus servicios y disponibilidad.`);
                 cHtml += `
-                <a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" style="display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.25rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);" onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'; this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.transform='none'">
+                <a href="/contacto-whatsapp?slug=${encodeURIComponent(t.slug || '')}&phone=${cleanWa}&text=${waMsg}" target="_blank" style="display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.25rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);" onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'; this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.transform='none'">
                     <img src="/static/logo_whatsapp.png" alt="WhatsApp" style="width: 42px; height: 42px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 3px 8px rgba(37, 211, 102, 0.3));">
                     <div style="display: flex; flex-direction: column;">
                         <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px;">WhatsApp Directo</span>

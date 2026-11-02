@@ -4318,6 +4318,51 @@ def inject_asset_version():
     import time
     return {'asset_v': int(time.time())}
 
+@app.route('/contacto-whatsapp')
+@app.route('/contacto-whatsapp/<path:slug>')
+@app.route('/whatsapp')
+@app.route('/whatsapp/<path:slug>')
+def bridge_contacto_whatsapp(slug=None):
+    import urllib.parse
+    slug_val = slug or request.args.get('slug')
+    phone_param = request.args.get('phone')
+    text_param = request.args.get('text')
+    clean_phone = None
+    therapist_name = 'Espacio Terapéutico'
+    if phone_param:
+        clean_phone = ''.join(ch for ch in phone_param if ch.isdigit())
+    db = get_db()
+    cursor = db.cursor()
+    if not clean_phone and slug_val:
+        clean_slug = slug_val.strip()
+        cursor.execute('SELECT nombres, apellidos, whatsapp_publico FROM usuarios WHERE slug = ? OR slug = ?', (clean_slug, f'psic.{clean_slug.replace("psic.", "")}') )
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute('SELECT nombres, apellidos, whatsapp_publico FROM usuarios WHERE username = ? OR id = ?', (clean_slug, clean_slug))
+            row = cursor.fetchone()
+        if row:
+            therapist_name = f"{row['nombres']} {row['apellidos']}".strip()
+            if row['whatsapp_publico']:
+                clean_phone = ''.join(ch for ch in str(row['whatsapp_publico']) if ch.isdigit())
+    if not clean_phone:
+        cursor.execute('SELECT nombres, apellidos, whatsapp_publico FROM usuarios WHERE id = 1')
+        row1 = cursor.fetchone()
+        if row1 and row1['whatsapp_publico']:
+            therapist_name = f"{row1['nombres']} {row1['apellidos']}".strip()
+            clean_phone = ''.join(ch for ch in str(row1['whatsapp_publico']) if ch.isdigit())
+        else:
+            clean_phone = '584245926114'
+    if not text_param:
+        if therapist_name and therapist_name != 'Espacio Terapéutico':
+            msg_text = f'Hola {therapist_name}, me comunico desde la web de Espacio Terapéutico y me gustaría consultar información sobre tus servicios y disponibilidad.'
+        else:
+            msg_text = 'Hola, me comunico desde la web de Espacio Terapéutico y me gustaría consultar información sobre sus servicios de psicología.'
+    else:
+        msg_text = text_param
+    encoded_text = urllib.parse.quote(msg_text)
+    wa_url = f'https://wa.me/{clean_phone}?text={encoded_text}'
+    return render_template('bridge_whatsapp.html', wa_url=wa_url, therapist_name=therapist_name)
+
 @app.route('/')
 @app.route('/inicio')
 @app.route('/login')
