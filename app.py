@@ -3469,6 +3469,7 @@ def ensure_usuarios_columns(db=None):
         ('bloqueo_mensajes', 'INTEGER DEFAULT 0'),
         ('bloqueo_pizarra', 'INTEGER DEFAULT 0'),
         ('bloqueo_herramientas', 'INTEGER DEFAULT 0'),
+        ('bloqueo_recursos', 'INTEGER DEFAULT 0'),
         ('bloqueo_confirmaciones', 'INTEGER DEFAULT 0'),
         ('cedula', 'TEXT DEFAULT \'\''),
         ('email', 'TEXT DEFAULT \'\''),

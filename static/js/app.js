@@ -17312,8 +17312,13 @@ async function saveSuperadminModalPermissions() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        const data = await res.json();
-        if (res.ok) {
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (jsonErr) {
+            data = { error: `Error del servidor (${res.status})` };
+        }
+        if (res.ok && (data.success || res.status === 200)) {
             alert("✅ Permisos actualizados con éxito.");
             closeModal('modal-superadmin-manage-therapist');
             loadSuperadminData();
@@ -17321,7 +17326,8 @@ async function saveSuperadminModalPermissions() {
             alert("Error: " + (data.error || "No se pudieron guardar los permisos."));
         }
     } catch(err) {
-        alert("Error de conexión al guardar los permisos.");
+        console.error("Error al guardar permisos:", err);
+        alert("Error de conexión al guardar los permisos: " + (err.message || ''));
     }
 }
 window.saveSuperadminModalPermissions = saveSuperadminModalPermissions;

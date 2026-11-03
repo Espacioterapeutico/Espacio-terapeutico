@@ -1532,18 +1532,23 @@ def superadmin_save_therapist_settings(user_id):
     bloqueo_tests = 1 if data.get('bloqueo_tests') else 0
     bloqueo_recursos = 1 if data.get('bloqueo_recursos') else 0
     
-    cursor.execute("""
-        UPDATE usuarios 
-        SET mostrar_en_directorio = ?, aviso_pago = ?,
-            bloqueo_registro = ?, bloqueo_registro_rapido = ?, bloqueo_evoluciones = ?, bloqueo_finanzas = ?,
-            bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?, bloqueo_confirmaciones = ?,
-            bloqueo_examen_mental = ?, bloqueo_tests = ?, bloqueo_recursos = ?
-        WHERE id = ?
-    """, (mostrar_en_directorio, aviso_pago, bloqueo_registro, bloqueo_registro_rapido, bloqueo_evoluciones, bloqueo_finanzas,
-          bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, bloqueo_confirmaciones,
-          bloqueo_examen_mental, bloqueo_tests, bloqueo_recursos, user_id))
-    db.commit()
-    return jsonify({'success': '¡Cambios guardados con éxito en la base de datos!'})
+    try:
+        cursor.execute("""
+            UPDATE usuarios 
+            SET mostrar_en_directorio = ?, aviso_pago = ?,
+                bloqueo_registro = ?, bloqueo_registro_rapido = ?, bloqueo_evoluciones = ?, bloqueo_finanzas = ?,
+                bloqueo_agenda = ?, bloqueo_mensajes = ?, bloqueo_pizarra = ?, bloqueo_herramientas = ?, bloqueo_confirmaciones = ?,
+                bloqueo_examen_mental = ?, bloqueo_tests = ?, bloqueo_recursos = ?
+            WHERE id = ?
+        """, (mostrar_en_directorio, aviso_pago, bloqueo_registro, bloqueo_registro_rapido, bloqueo_evoluciones, bloqueo_finanzas,
+              bloqueo_agenda, bloqueo_mensajes, bloqueo_pizarra, bloqueo_herramientas, bloqueo_confirmaciones,
+              bloqueo_examen_mental, bloqueo_tests, bloqueo_recursos, user_id))
+        db.commit()
+        return jsonify({'success': '¡Cambios guardados con éxito en la base de datos!'})
+    except Exception as ex:
+        db.rollback()
+        print(f"[SUPERADMIN] Error guardando permisos de psicólogo {user_id}:", ex)
+        return jsonify({'error': f'Error al guardar en base de datos: {str(ex)}'}), 500
 
 @admin_bp.route('/api/superadmin/therapists/<int:user_id>/toggle-feature', methods=['POST'])
 @login_required
