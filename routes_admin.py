@@ -6,6 +6,8 @@ Restablecimiento de Contrase√±as, Preguntas de Seguridad y Tickets de Soporte T√
 """
 
 import os
+import re
+import unicodedata
 import json
 import sqlite3
 import datetime
@@ -1671,7 +1673,7 @@ def register():
             now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
             expiry_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-            import unicodedata
+            import unicodedata, re
             clean_name = f"psic.{(nombres or '').strip()}{(apellidos or '').strip()}".lower().replace(" ", "")
             if len(clean_name) <= 5:
                 clean_name = f"psic.{username.lower()}"
