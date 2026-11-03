@@ -15703,7 +15703,88 @@ async function loadActivePsychologists(preselectId = null) {
 
 let isPreRegisteredPatient = false;
 
-function openRegisterModal(e, fromTherapistProfile = false) {
+function saveRegisterDraft() {
+    try {
+        const modal = document.getElementById('register-modal');
+        if (!modal || modal.classList.contains('hide') || modal.style.display === 'none') return;
+        const draft = {
+            cedula_verif: document.getElementById('reg-verif-cedula')?.value || '',
+            tipo_usuario: document.getElementById('reg-tipo-usuario')?.value || '',
+            nombres: document.getElementById('reg-nombres')?.value || '',
+            apellidos: document.getElementById('reg-apellidos')?.value || '',
+            username: document.getElementById('reg-username')?.value || '',
+            cedula: document.getElementById('reg-cedula')?.value || '',
+            telefono: document.getElementById('reg-telefono')?.value || '',
+            email: document.getElementById('reg-email')?.value || '',
+            estudios: document.getElementById('reg-estudios')?.value || '',
+            federacion: document.getElementById('reg-federacion')?.value || '',
+            nombre_clinica: document.getElementById('reg-nombre-clinica')?.value || '',
+            p1: document.getElementById('reg-pregunta-1')?.value || '',
+            r1: document.getElementById('reg-respuesta-1')?.value || '',
+            p2: document.getElementById('reg-pregunta-2')?.value || '',
+            r2: document.getElementById('reg-respuesta-2')?.value || '',
+            step: document.getElementById('reg-step-details')?.classList.contains('hide') ? 'cedula' : 'details',
+            ref_psic_id: window._refPsicologoId || null,
+            ref_psic_nom: window._refPsicologoNombre || null,
+            ts: Date.now()
+        };
+        sessionStorage.setItem('espacio_reg_draft', JSON.stringify(draft));
+    } catch(e) {}
+}
+
+function clearRegisterDraft() {
+    try { sessionStorage.removeItem('espacio_reg_draft'); } catch(e) {}
+}
+
+function restoreRegisterDraft() {
+    try {
+        const raw = sessionStorage.getItem('espacio_reg_draft');
+        if (!raw) return false;
+        const draft = JSON.parse(raw);
+        if (!draft || (Date.now() - (draft.ts || 0) > 3 * 3600 * 1000)) {
+            clearRegisterDraft();
+            return false;
+        }
+        if (!draft.nombres && !draft.cedula && !draft.cedula_verif && !draft.username) return false;
+
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val !== undefined && val !== null && val !== '') el.value = val;
+        };
+
+        setVal('reg-verif-cedula', draft.cedula_verif);
+        setVal('reg-tipo-usuario', draft.tipo_usuario);
+        setVal('reg-nombres', draft.nombres);
+        setVal('reg-apellidos', draft.apellidos);
+        setVal('reg-username', draft.username);
+        setVal('reg-cedula', draft.cedula || draft.cedula_verif);
+        setVal('reg-telefono', draft.telefono);
+        setVal('reg-email', draft.email);
+        setVal('reg-estudios', draft.estudios);
+        setVal('reg-federacion', draft.federacion);
+        setVal('reg-nombre-clinica', draft.nombre_clinica);
+        setVal('reg-pregunta-1', draft.p1);
+        setVal('reg-respuesta-1', draft.r1);
+        setVal('reg-pregunta-2', draft.p2);
+        setVal('reg-respuesta-2', draft.r2);
+
+        if (draft.ref_psic_id) window._refPsicologoId = draft.ref_psic_id;
+        if (draft.ref_psic_nom) window._refPsicologoNombre = draft.ref_psic_nom;
+
+        if (draft.step === 'details' && draft.tipo_usuario) {
+            document.getElementById('reg-step-cedula')?.classList.add('hide');
+            document.getElementById('reg-step-details')?.classList.remove('hide');
+            if (typeof toggleRegisterFields === 'function') {
+                toggleRegisterFields();
+            }
+        }
+        return true;
+    } catch(e) {
+        return false;
+    }
+}
+
+function openRegisterModal(e, fromTherapistProfile = false, shouldRestoreDraft = false) {
     if (e && e.preventDefault) e.preventDefault();
     
     // Si la pantalla de login/autenticacion esta abierta, ocultarla para que no se superponga
@@ -15748,13 +15829,17 @@ function openRegisterModal(e, fromTherapistProfile = false) {
         modal.style.display = 'flex';
         modal.style.zIndex = '100050';
     }
-    document.getElementById('register-form').reset();
     
-    // Configurar visibilidad inicial de los pasos de registro
-    document.getElementById('reg-step-cedula').classList.remove('hide');
-    document.getElementById('reg-step-details').classList.add('hide');
-    document.getElementById('reg-cedula-status-msg').classList.add('hide');
-    document.getElementById('reg-error-msg').classList.add('hide');
+    const hasRestored = shouldRestoreDraft && restoreRegisterDraft();
+    if (!hasRestored) {
+        document.getElementById('register-form').reset();
+        
+        // Configurar visibilidad inicial de los pasos de registro
+        document.getElementById('reg-step-cedula').classList.remove('hide');
+        document.getElementById('reg-step-details').classList.add('hide');
+        document.getElementById('reg-cedula-status-msg').classList.add('hide');
+        document.getElementById('reg-error-msg').classList.add('hide');
+    }
     
     // Restablecer inputs deshabilitados
     document.getElementById('reg-nombres').disabled = false;
@@ -15794,14 +15879,24 @@ function openRegisterModal(e, fromTherapistProfile = false) {
     
     isPreRegisteredPatient = false;
     loadActivePsychologists(window._refPsicologoId || null);
+
+    // Auto-guardar borrador al tipear para prevenir pérdidas si el navegador se reinicia al abrir la cámara
+    const regForm = document.getElementById('register-form');
+    if (regForm && !regForm._hasDraftListeners) {
+        regForm._hasDraftListeners = true;
+        regForm.addEventListener('input', saveRegisterDraft);
+        regForm.addEventListener('change', saveRegisterDraft);
+    }
 }
 
-function closeRegisterModal() {
+function closeRegisterModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
     const modal = document.getElementById('register-modal');
     if (modal) {
         modal.classList.add('hide');
         modal.style.display = 'none';
     }
+    clearRegisterDraft();
     
     // Si se abrio desde la pantalla de login, restaurar el login al cerrar
     if (window._returnToAuthScreenOnClose) {
@@ -16002,12 +16097,12 @@ async function submitRegister(e) {
     e.preventDefault();
     if (isRegisterSubmitting) return;
     
-    const submitBtn = document.querySelector('#reg-form button[type="submit"]') || document.getElementById('reg-submit-btn');
+    const submitBtn = document.querySelector('#register-form button[type="submit"]') || document.querySelector('#reg-form button[type="submit"]') || document.getElementById('reg-submit-btn');
     isRegisterSubmitting = true;
     if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.setAttribute('data-orig-text', submitBtn.textContent);
-        submitBtn.textContent = 'Registrando...';
+        submitBtn.textContent = '⏳ Comprimiendo y preparando documentos...';
     }
 
     const errorMsg = document.getElementById('reg-error-msg');
@@ -16081,8 +16176,25 @@ async function submitRegister(e) {
                     return;
                 }
             }
+            // Validar tamaño si es PDF (máximo 8 MB)
+            const fTit = document.getElementById('reg-foto-titulo')?.files?.[0];
+            const fDoc = document.getElementById('reg-foto-documento')?.files?.[0];
+            if (fTit && fTit.size > 8 * 1024 * 1024) {
+                const msg = "El archivo del título es demasiado pesado (máx 8 MB). Adjunta una foto o comprime el PDF.";
+                if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                alert(msg);
+                return false;
+            }
+            if (fDoc && fDoc.size > 8 * 1024 * 1024) {
+                const msg = "El documento de identidad es demasiado pesado (máx 8 MB). Adjunta una foto o comprime el PDF.";
+                if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                alert(msg);
+                return false;
+            }
+
             payload.estudios = getVal('reg-estudios');
             payload.federacion = getVal('reg-federacion');
+            if (submitBtn) submitBtn.textContent = '⏳ Optimizando fotos de documentos...';
             payload.foto_titulo = await readFileAsBase64(document.getElementById('reg-foto-titulo'));
             payload.foto_documento = await readFileAsBase64(document.getElementById('reg-foto-documento'));
             
@@ -16176,14 +16288,25 @@ async function submitRegister(e) {
             }
         }
         
+        if (submitBtn) submitBtn.textContent = '⏳ Enviando solicitud de registro...';
         const res = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        const data = await res.json();
+        
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (jsonErr) {
+            if (res.status === 413) {
+                throw new Error("Los documentos adjuntados exceden el límite permitido. Por favor adjunta fotos de menor peso.");
+            }
+            throw new Error(`Error en el servidor (${res.status}). Intenta de nuevo.`);
+        }
         
         if (res.ok) {
+            clearRegisterDraft();
             closeRegisterModal();
             if (data.pending_approval) {
                 if (window.Swal) {
@@ -19575,13 +19698,23 @@ function closePreviewModal() {
 }
 
 
-function readFileAsBase64(fileInput) {
-    return new Promise((resolve) => {
-        if (!fileInput || !fileInput.files || !fileInput.files[0]) {
-            resolve('');
-            return;
+async function readFileAsBase64(fileInput) {
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        return '';
+    }
+    const file = fileInput.files[0];
+    
+    // Si es imagen, comprimir a max 1280px para que no pese 10MB y no colapse la memoria ni Nginx
+    const isImg = (file.type && file.type.startsWith('image/')) || /\.(jpe?g|png|webp|heic|bmp)$/i.test(file.name || '');
+    if (isImg && typeof compressAndOptimizeImage === 'function') {
+        try {
+            return await compressAndOptimizeImage(file, 1280, 0.82);
+        } catch (e) {
+            console.warn("Fallo en compresión de imagen, usando lectura directa:", e);
         }
-        const file = fileInput.files[0];
+    }
+    
+    return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
         reader.onerror = () => resolve('');
@@ -28649,6 +28782,20 @@ function openPublicDirectoryLanding(e) {
 }
 window.openPublicDirectoryLanding = openPublicDirectoryLanding;
 
+function checkAndRestoreRegistrationDraft() {
+    try {
+        const hasDraft = sessionStorage.getItem('espacio_reg_draft');
+        if (hasDraft) {
+            const d = JSON.parse(hasDraft);
+            if (d && (d.nombres || d.estudios || d.cedula || d.username || d.telefono)) {
+                setTimeout(() => {
+                    openRegisterModal(null, false, true);
+                }, 400);
+            }
+        }
+    } catch(e) {}
+}
+
 function initLandingRouteHandling() {
     const path = window.location.pathname.toLowerCase();
     const urlParams = new URLSearchParams(window.location.search);
@@ -28719,6 +28866,7 @@ function initLandingRouteHandling() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initLandingRouteHandling();
+    checkAndRestoreRegistrationDraft();
 });
 
 function closeFastBookingScreen(e) {

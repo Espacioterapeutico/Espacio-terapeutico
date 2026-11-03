@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-consultorio-v171';
+const CACHE_NAME = 'mi-consultorio-v172';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/styles.css',
