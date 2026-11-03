@@ -514,7 +514,14 @@ app.post('/send', async (req, res) => {
         try {
             const onWa = await session.sock.onWhatsApp(rawNum);
             if (Array.isArray(onWa) && onWa.length > 0 && onWa[0].exists) {
-                targetJid = onWa[0].jid;
+                const foundJid = onWa[0].jid;
+                // Si onWhatsApp retorna un JID regular (@s.whatsapp.net), usarlo.
+                // Si retorna un LID (@lid), forzar siempre @s.whatsapp.net para evitar 'Esperando el mensaje' por cifrado de identidad
+                if (foundJid && foundJid.endsWith('@s.whatsapp.net')) {
+                    targetJid = foundJid;
+                } else {
+                    targetJid = `${cleanPhone}@s.whatsapp.net`;
+                }
             } else {
                 return res.status(400).json({ error: `El número ${phone} (+${rawNum}) no está registrado en WhatsApp.` });
             }
@@ -569,6 +576,37 @@ app.post('/send', async (req, res) => {
     } catch (err) {
         console.error(`[User ${userId}] Error enviando mensaje por WhatsApp:`, err);
         res.status(500).json({ error: `Error al enviar mensaje: ${err.message}` });
+    }
+});
+
+app.post('/clear-contact-session', async (req, res) => {
+    const { phone, user_id } = req.body || {};
+    const userId = user_id || req.query.user_id || req.headers['x-user-id'] || '1';
+    if (!phone) return res.status(400).json({ error: 'Falta parámetro phone' });
+    try {
+        let cleanPhone = phone.toString().replace(/\D/g, '');
+        if (cleanPhone.startsWith('04') && cleanPhone.length === 11) {
+            cleanPhone = '58' + cleanPhone.substring(1);
+        } else if (cleanPhone.startsWith('4') && cleanPhone.length === 10) {
+            cleanPhone = '58' + cleanPhone;
+        }
+        const userAuthDir = getUserAuthDir(userId);
+        let deleted = 0;
+        if (fs.existsSync(userAuthDir)) {
+            const files = fs.readdirSync(userAuthDir);
+            for (const f of files) {
+                if (f.includes(cleanPhone)) {
+                    try {
+                        fs.unlinkSync(path.join(userAuthDir, f));
+                        deleted++;
+                    } catch(e) {}
+                }
+            }
+        }
+        console.log(`[User ${userId}] 🔄 Sesión E2EE purgada para ${cleanPhone} (${deleted} archivos eliminados).`);
+        res.json({ success: true, message: `Sesión de claves purgada para ${cleanPhone} (${deleted} archivos). El próximo mensaje negociará claves nuevas.` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
