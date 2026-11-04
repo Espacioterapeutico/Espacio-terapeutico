@@ -5340,33 +5340,40 @@ function renderPizarraVisual() {
             card.appendChild(fileDiv);
         }
 
+        card.id = `pizarra-card-${upd.id}`;
+
+        const respContainer = document.createElement('div');
+        respContainer.id = `pizarra-resp-container-${upd.id}`;
         if (upd.respuesta_psicologo) {
-            const respDiv = document.createElement('div');
-            respDiv.style.marginTop = '0.75rem';
-            respDiv.style.padding = '0.65rem 0.85rem';
-            respDiv.style.borderRadius = 'var(--radius-sm)';
-            respDiv.style.backgroundColor = 'rgba(126, 34, 206, 0.06)';
-            respDiv.style.borderLeft = '3px solid var(--primary-color)';
-            respDiv.innerHTML = `
+            respContainer.style.marginTop = '0.75rem';
+            respContainer.style.padding = '0.65rem 0.85rem';
+            respContainer.style.borderRadius = 'var(--radius-sm)';
+            respContainer.style.backgroundColor = 'rgba(126, 34, 206, 0.06)';
+            respContainer.style.borderLeft = '3px solid var(--primary-color)';
+            respContainer.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
-                    <strong style="font-size:0.82rem; color:var(--primary-color);">💬 Tu Respuesta:</strong>
+                    <strong style="font-size:0.82rem; color:var(--primary-color); display:inline-flex; align-items:center; gap:5px;">💬 Tu Respuesta: <span style="font-size:0.68rem; background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:10px; font-weight:700;">✓ Guardada</span></strong>
                     <span style="font-size:0.72rem; color:var(--text-muted);">${upd.fecha_respuesta || ''}</span>
                 </div>
                 <div style="font-size:0.85rem; color:var(--text-dark); line-height:1.4;">${upd.respuesta_psicologo}</div>
             `;
-            card.appendChild(respDiv);
+        } else {
+            respContainer.style.display = 'none';
         }
+        card.appendChild(respContainer);
         
         const replyContainer = document.createElement('div');
+        replyContainer.id = `reply-container-${upd.id}`;
         replyContainer.style.marginTop = '1rem';
         replyContainer.style.borderTop = '1px dashed rgba(0,0,0,0.06)';
         replyContainer.style.paddingTop = '0.75rem';
         
         replyContainer.innerHTML = `
             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <input type="text" placeholder="${upd.respuesta_psicologo ? 'Enviar nueva respuesta...' : 'Escribe un comentario o respuesta...'}" style="flex: 1; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.8rem; background-color: var(--card-bg);" id="reply-input-${upd.id}">
-                <button type="button" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: var(--radius-sm);" onclick="submitPizarraReply(${upd.paciente_id}, ${upd.id})">${upd.respuesta_psicologo ? 'Actualizar' : 'Enviar'}</button>
+                <input type="text" placeholder="${upd.respuesta_psicologo ? 'Enviar nueva respuesta...' : 'Escribe un comentario o respuesta...'}" style="flex: 1; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.8rem; background-color: var(--card-bg);" id="reply-input-${upd.id}" onkeydown="if(event.key==='Enter'){event.preventDefault();submitPizarraReply(${upd.paciente_id}, ${upd.id});}">
+                <button type="button" id="btn-reply-pizarra-${upd.id}" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: var(--radius-sm); white-space: nowrap;" onclick="submitPizarraReply(${upd.paciente_id}, ${upd.id})">${upd.respuesta_psicologo ? 'Actualizar' : 'Enviar'}</button>
             </div>
+            <div id="reply-feedback-${upd.id}" style="font-size: 0.75rem; margin-top: 0.35rem; display: none;"></div>
         `;
         card.appendChild(replyContainer);
         
@@ -13869,6 +13876,21 @@ async function submitPizarraReply(patientId, updateId) {
     if (!input) return;
     const comment = input.value.trim();
     if (!comment) return;
+
+    const btn = document.getElementById(`btn-reply-pizarra-${updateId}`);
+    const feedback = document.getElementById(`reply-feedback-${updateId}`);
+
+    // Estado visual de carga inmediato
+    if (btn) {
+        btn.disabled = true;
+        btn.dataset.origText = btn.textContent;
+        btn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">⏳ Enviando...</span>`;
+    }
+    if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.color = 'var(--text-muted)';
+        feedback.textContent = 'Enviando respuesta en tiempo real...';
+    }
     
     try {
         const res = await fetch('/api/admin/pizarra/reply', {
@@ -13879,9 +13901,66 @@ async function submitPizarraReply(patientId, updateId) {
         const data = await res.json();
         
         if (res.ok && !data.error) {
-            // Notificar también vía Firebase RTDB si está configurado
+            const fechaResp = data.fecha_respuesta || new Date().toLocaleString([], {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+
+            // 1. Actualizar inmediatamente en memoria para que no se pierda al paginar o filtrar
+            if (Array.isArray(window.currentPizarraUpdates)) {
+                const item = window.currentPizarraUpdates.find(u => String(u.id) === String(updateId));
+                if (item) {
+                    item.respuesta_psicologo = comment;
+                    item.fecha_respuesta = fechaResp;
+                }
+            }
+
+            // 2. Actualizar el DOM en TIEMPO REAL sin recargar la pantalla
+            const respContainer = document.getElementById(`pizarra-resp-container-${updateId}`);
+            if (respContainer) {
+                respContainer.style.display = 'block';
+                respContainer.style.marginTop = '0.75rem';
+                respContainer.style.padding = '0.65rem 0.85rem';
+                respContainer.style.borderRadius = 'var(--radius-sm)';
+                respContainer.style.backgroundColor = 'rgba(126, 34, 206, 0.08)';
+                respContainer.style.borderLeft = '3px solid var(--primary-color)';
+                
+                const safeComment = String(comment)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+
+                respContainer.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                        <strong style="font-size:0.82rem; color:var(--primary-color); display:inline-flex; align-items:center; gap:5px;">
+                            💬 Tu Respuesta: <span style="font-size:0.68rem; background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:10px; font-weight:700;">✓ Guardada</span>
+                        </strong>
+                        <span style="font-size:0.72rem; color:var(--text-muted);">${fechaResp}</span>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--text-dark); line-height:1.4;">${safeComment}</div>
+                `;
+            }
+
+            // 3. Limpiar campo y actualizar botón
+            input.value = '';
+            input.placeholder = 'Enviar nueva respuesta...';
+
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Actualizar';
+            }
+
+            if (feedback) {
+                feedback.style.display = 'block';
+                feedback.style.color = '#15803d';
+                feedback.style.fontWeight = '600';
+                feedback.innerHTML = '✅ ¡Respuesta enviada en tiempo real!';
+                setTimeout(() => {
+                    feedback.style.display = 'none';
+                }, 3500);
+            }
+
+            // 4. Notificar a Firebase RTDB en segundo plano sin bloquear la UI
             try {
-                await fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`, {
+                fetch(`https://espacio-terapeutico-default-rtdb.firebaseio.com/pacientes/${patientId}/notificaciones.json`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -13891,21 +13970,33 @@ async function submitPizarraReply(patientId, updateId) {
                         fecha: new Date().toISOString(),
                         leida: false
                     })
-                });
-            } catch (fbErr) {
-                console.warn("Aviso: Notificación Firebase RTDB no enviada:", fbErr);
-            }
+                }).catch(() => {});
+            } catch (_) {}
 
-            alert('Respuesta enviada y registrada con éxito.');
-            input.value = '';
-            if (typeof loadPizarraVisual === 'function') {
-                loadPizarraVisual();
-            }
         } else {
-            alert(data.error || 'Error al enviar el comentario.');
+            const errText = data.error || 'Error al enviar el comentario.';
+            if (feedback) {
+                feedback.style.display = 'block';
+                feedback.style.color = '#dc2626';
+                feedback.textContent = `❌ ${errText}`;
+            }
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.origText || 'Enviar';
+            }
+            alert(errText);
         }
     } catch (err) {
         console.error("Error al enviar comentario de pizarra:", err);
+        if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#dc2626';
+            feedback.textContent = '❌ Error de conexión al enviar respuesta.';
+        }
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = btn.dataset.origText || 'Enviar';
+        }
         alert('Error de conexión al enviar respuesta.');
     }
 }
