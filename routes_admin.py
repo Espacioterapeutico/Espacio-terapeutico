@@ -1813,7 +1813,21 @@ def register():
                 pat_name = f"{data.get('nombres') or ex_nom} {data.get('apellidos') or ex_ape}".strip() or username
                 notif_msg = f"El consultante {pat_name} ha completado la creación de su cuenta de acceso."
             else:
-                target_psic = psicologo_id or 1
+                if not psicologo_id:
+                    return jsonify({'error': 'Debes buscar y seleccionar a tu psicólogo/a tratante para completar el registro de tu cuenta.'}), 400
+                
+                # Validar que el psicólogo seleccionado sea válido y activo
+                cursor.execute("""
+                    SELECT id FROM usuarios 
+                    WHERE id = ? 
+                      AND role IN ('psicologo', 'admin', 'superadmin', 'psicologo_admin') 
+                      AND COALESCE(activo, 1) = 1
+                      AND LOWER(username) NOT IN ('admin', 'superadmin', 'psicologa.valeria')
+                """, (psicologo_id,))
+                if not cursor.fetchone():
+                    return jsonify({'error': 'El psicólogo seleccionado no está disponible o no es válido.'}), 400
+                
+                target_psic = psicologo_id
                 cursor.execute("""
                     INSERT INTO pacientes (
                         nombres, apellidos, cedula, telefono, email, pronombre, genero, edad,

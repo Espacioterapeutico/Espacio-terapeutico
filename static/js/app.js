@@ -15761,36 +15761,154 @@ async function loadActivePsychologists(preselectId = null) {
         if (!res.ok) return;
         regPsychologists = await res.json();
         
-        const select = document.getElementById('reg-psicologo-id');
-        if (select) {
-            const urlParams = new URLSearchParams(window.location.search);
-            let refId = preselectId || select.value || urlParams.get('ref_psicologo');
-            
-            // Si refId es un slug o username, buscar el id numérico correspondiente
-            if (refId && isNaN(parseInt(refId))) {
-                const cleanRef = String(refId).toLowerCase().replace('psic.', '').replace('psic-', '').replace('psicologo/', '');
-                const found = regPsychologists.find(p => 
-                    (p.slug && p.slug.toLowerCase().includes(cleanRef)) || 
-                    (p.username && p.username.toLowerCase().includes(cleanRef))
-                );
-                if (found) refId = found.id;
-            }
+        const urlParams = new URLSearchParams(window.location.search);
+        let refId = preselectId || document.getElementById('reg-psicologo-id')?.value || urlParams.get('ref_psicologo') || window._refPsicologoId;
+        
+        // Si refId es un slug o username, buscar el id numérico correspondiente
+        if (refId && isNaN(parseInt(refId))) {
+            const cleanRef = String(refId).toLowerCase().replace('psic.', '').replace('psic-', '').replace('psicologo/', '');
+            const found = regPsychologists.find(p => 
+                (p.slug && p.slug.toLowerCase().includes(cleanRef)) || 
+                (p.username && p.username.toLowerCase().includes(cleanRef))
+            );
+            if (found) refId = found.id;
+        }
 
-            const currentVal = refId;
-            select.innerHTML = '<option value="" disabled selected>Selecciona tu psicólogo...</option>';
-            regPsychologists.forEach(p => {
-                const isSelected = currentVal && String(p.id) === String(currentVal);
-                select.innerHTML += `<option value="${p.id}" ${isSelected ? 'selected' : ''}>Psic. ${p.nombres} ${p.apellidos}</option>`;
-            });
-
-            if (currentVal) {
-                select.value = currentVal;
+        if (refId && !isNaN(parseInt(refId))) {
+            const numId = parseInt(refId);
+            const found = regPsychologists.find(p => p.id === numId);
+            if (found) {
+                selectPsychologist(found.id, `${found.nombres} ${found.apellidos}`, found.foto_titulo);
             }
         }
     } catch (err) {
         console.error("Error loading active psychologists:", err);
     }
 }
+
+function handlePsychologistSearchInput(rawVal) {
+    const val = (rawVal || '').trim().toLowerCase();
+    const suggestionsBox = document.getElementById('reg-psicologo-search-suggestions');
+    if (!suggestionsBox) return;
+
+    if (!val || val.length < 1) {
+        suggestionsBox.innerHTML = '';
+        suggestionsBox.classList.add('hide');
+        return;
+    }
+
+    if (!Array.isArray(regPsychologists) || regPsychologists.length === 0) {
+        suggestionsBox.innerHTML = '<div style="padding: 0.75rem 1rem; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Cargando psicólogos...</div>';
+        suggestionsBox.classList.remove('hide');
+        return;
+    }
+
+    const normalize = str => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const query = normalize(val);
+
+    const matches = regPsychologists.filter(p => {
+        const fullName = normalize(`${p.nombres || ''} ${p.apellidos || ''}`);
+        const user = normalize(p.username || '');
+        const slug = normalize(p.slug || '');
+        return fullName.includes(query) || user.includes(query) || slug.includes(query);
+    });
+
+    if (matches.length === 0) {
+        suggestionsBox.innerHTML = `
+            <div style="padding: 0.85rem 1rem; font-size: 0.85rem; color: #991b1b; background: #fff5f5; display: flex; align-items: center; gap: 0.5rem;">
+                <span>⚠️</span>
+                <span>No encontramos ningún psicólogo con ese nombre. Verifica la ortografía o consulta con tu profesional.</span>
+            </div>
+        `;
+        suggestionsBox.classList.remove('hide');
+        return;
+    }
+
+    let html = '';
+    matches.forEach(p => {
+        const fullName = `Psic. ${p.nombres || ''} ${p.apellidos || ''}`.trim();
+        const initials = ((p.nombres || 'P')[0] + (p.apellidos || 'M')[0]).toUpperCase();
+        
+        let avatarHtml = `<div style="width: 32px; height: 32px; border-radius: 50%; background: #702e5e; color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; flex-shrink: 0;">${initials}</div>`;
+        if (p.foto_titulo && (p.foto_titulo.startsWith('/') || p.foto_titulo.startsWith('http'))) {
+            avatarHtml = `<img src="${p.foto_titulo}" alt="${fullName}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid #d8b4fe;">`;
+        }
+
+        html += `
+            <div class="psic-search-item" onclick="selectPsychologist(${p.id}, '${fullName.replace(/'/g, "\\'")}', '${p.foto_titulo || ''}')" style="padding: 0.65rem 0.85rem; display: flex; align-items: center; gap: 0.65rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: background 0.15s ease;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">
+                ${avatarHtml}
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 700; font-size: 0.88rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${fullName}</div>
+                    <div style="font-size: 0.72rem; color: #64748b;">Psicólogo Clínico</div>
+                </div>
+                <span style="font-size: 0.75rem; font-weight: 700; color: #7e22ce; background: #f3e8ff; padding: 2px 8px; border-radius: 6px;">Seleccionar</span>
+            </div>
+        `;
+    });
+
+    suggestionsBox.innerHTML = html;
+    suggestionsBox.classList.remove('hide');
+}
+window.handlePsychologistSearchInput = handlePsychologistSearchInput;
+
+function selectPsychologist(id, fullName, fotoUrl = '') {
+    const hiddenInput = document.getElementById('reg-psicologo-id');
+    const searchWrapper = document.getElementById('reg-psicologo-search-wrapper');
+    const suggestionsBox = document.getElementById('reg-psicologo-search-suggestions');
+    const selectedChip = document.getElementById('reg-psicologo-selected-chip');
+    const selectedName = document.getElementById('reg-psicologo-selected-name');
+    const selectedAvatar = document.getElementById('reg-psicologo-selected-avatar');
+
+    if (hiddenInput) hiddenInput.value = String(id);
+    if (selectedName) selectedName.textContent = fullName.startsWith('Psic.') ? fullName : `Psic. ${fullName}`;
+
+    if (selectedAvatar) {
+        if (fotoUrl && (fotoUrl.startsWith('/') || fotoUrl.startsWith('http'))) {
+            selectedAvatar.outerHTML = `<img id="reg-psicologo-selected-avatar" src="${fotoUrl}" alt="${fullName}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid #d8b4fe;">`;
+        } else {
+            const parts = fullName.replace('Psic.', '').trim().split(' ');
+            const init = ((parts[0] || 'P')[0] + (parts[1] || '')[0]).toUpperCase();
+            selectedAvatar.textContent = init || '🩺';
+        }
+    }
+
+    if (suggestionsBox) {
+        suggestionsBox.innerHTML = '';
+        suggestionsBox.classList.add('hide');
+    }
+    if (searchWrapper) searchWrapper.classList.add('hide');
+    if (selectedChip) selectedChip.classList.remove('hide');
+}
+window.selectPsychologist = selectPsychologist;
+
+function clearSelectedPsychologist() {
+    const hiddenInput = document.getElementById('reg-psicologo-id');
+    const searchWrapper = document.getElementById('reg-psicologo-search-wrapper');
+    const searchInput = document.getElementById('reg-psicologo-search-input');
+    const suggestionsBox = document.getElementById('reg-psicologo-search-suggestions');
+    const selectedChip = document.getElementById('reg-psicologo-selected-chip');
+
+    if (hiddenInput) hiddenInput.value = '';
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+    }
+    if (suggestionsBox) {
+        suggestionsBox.innerHTML = '';
+        suggestionsBox.classList.add('hide');
+    }
+    if (selectedChip) selectedChip.classList.add('hide');
+    if (searchWrapper) searchWrapper.classList.remove('hide');
+}
+window.clearSelectedPsychologist = clearSelectedPsychologist;
+
+document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('reg-psicologo-search-wrapper');
+    const suggestionsBox = document.getElementById('reg-psicologo-search-suggestions');
+    if (wrapper && suggestionsBox && !wrapper.contains(e.target)) {
+        suggestionsBox.classList.add('hide');
+    }
+});
 
 let isPreRegisteredPatient = false;
 
@@ -16324,7 +16442,19 @@ async function submitRegister(e) {
                         }
                     }
                 }
-                payload.psicologo_id = targetPsicId || 1;
+                
+                if (!targetPsicId) {
+                    const msg = "Debes buscar y seleccionar a tu psicólogo/a tratante para completar tu registro.";
+                    if (errorMsg) { errorMsg.textContent = msg; errorMsg.classList.remove('hide'); }
+                    alert("⚠️ " + msg);
+                    const sInput = document.getElementById('reg-psicologo-search-input');
+                    if (sInput) {
+                        sInput.focus();
+                        sInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return;
+                }
+                payload.psicologo_id = targetPsicId;
 
                 payload.pronombre = getVal('reg-pronombre');
                 payload.genero = getVal('reg-genero');

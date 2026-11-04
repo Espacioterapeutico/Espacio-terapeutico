@@ -1814,7 +1814,7 @@ def get_active_psychologists():
     db = get_db()
     cursor = db.cursor()
     cursor.execute("""
-        SELECT id, nombres, apellidos, username, slug, role
+        SELECT id, nombres, apellidos, username, slug, role, foto_titulo
         FROM usuarios
         WHERE role IN ('psicologo', 'admin', 'superadmin', 'psicologo_admin')
           AND COALESCE(activo, 1) = 1
@@ -1832,7 +1832,8 @@ def get_active_psychologists():
             'nombres': r_dict['nombres'],
             'apellidos': r_dict['apellidos'],
             'username': r_dict.get('username') or '',
-            'slug': slug
+            'slug': slug,
+            'foto_titulo': r_dict.get('foto_titulo') or ''
         })
     return jsonify(result)
 
