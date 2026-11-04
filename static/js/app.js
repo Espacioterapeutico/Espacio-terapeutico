@@ -30906,7 +30906,7 @@ function renderPublicTestItems(testDef) {
 
             html += `
                 <div id="test-item-card-${itemNum}" style="background: ${cardBg}; border: 1.5px solid ${cardBorder}; border-radius: 12px; padding: 1.25rem; transition: all 0.2s ease;">
-                    ${sectionBadge ? `<div style="font-size: 0.76rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-bottom: 0.5rem;">${sectionBadge}</div>` : ''}
+                    <!-- Ocultar subescala/dimensión al consultante para evitar sesgo de respuesta -->
                     <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
                         <span style="line-height: 1.45;">${itemTitle}</span>
                         ${isAnswered ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap;">✓ Respondida</span>' : ''}
@@ -31047,7 +31047,7 @@ function renderPublicTestItems(testDef) {
                                             ${itemNum} ${isAnswered ? '<span style="color:#10b981; font-size:0.85rem;" title="Respondido">✓</span>' : ''}
                                         </td>
                                         <td style="padding: 12px 14px; font-size: 0.92rem; color: #1e293b; line-height: 1.45; vertical-align: middle; border-bottom: 1px solid #e2e8f0;">
-                                            ${sectionBadge ? `<div style="font-size: 0.72rem; font-weight: 700; color: #702e5e; background: #fdf4ff; border: 1px solid #f0abfc; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">${sectionBadge}</div>` : ''}
+                                            <!-- Ocultar subescala/dimensión al consultante para evitar sesgo de respuesta -->
                                             <div style="font-weight: 500;">${cleanTitle}</div>
                                         </td>
                                         ${parsedOptions.map(op => {
