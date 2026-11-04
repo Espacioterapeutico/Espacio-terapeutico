@@ -177,6 +177,106 @@ RECURSOS_CATALOGO = [
             "ventajas_recursos": "",
             "accion_concreta_semana": ""
         }
+    },
+    {
+        "id": "areas_de_vida",
+        "titulo": "Mis Áreas de Vida (Mapa Mental)",
+        "subtitulo": "Mapa visual y reflexivo para explorar el equilibrio vital, bienestar y metas en 10 dimensiones clave.",
+        "descripcion": "Herramienta terapéutica integral que organiza la vida del consultante en 10 áreas fundamentales con metáfora de nubes interactivas, puntuación de satisfacción (1-10) y reflexiones guiadas.",
+        "icono": "☁️",
+        "categoria": "Autoconocimiento y Valores",
+        "tiempo_estimado": "15-25 min",
+        "color": "#8b5cf6",
+        "color_bg": "#f5f3ff",
+        "areas": [
+            {
+                "key": "emociones",
+                "nombre": "Emociones",
+                "icono": "❤️",
+                "color": "#ec4899",
+                "definicion": "La gestión del mundo afectivo interno y la regulación emocional. Implica el reconocimiento, la aceptación y la expresión saludable de los estados de ánimo, así como la capacidad de sobrellevar el estrés, la frustración y la vulnerabilidad."
+            },
+            {
+                "key": "laboral",
+                "nombre": "Laboral",
+                "icono": "💼",
+                "color": "#f97316",
+                "definicion": "El desempeño, el compromiso y la realización en el ámbito profesional o productivo. Abarca la gestión de responsabilidades, el sentido de logro, el crecimiento de habilidades y la integración equilibrada de las demandas del trabajo con el bienestar general."
+            },
+            {
+                "key": "familiar",
+                "nombre": "Familiar",
+                "icono": "👨‍👩‍👧‍👦",
+                "color": "#eab308",
+                "definicion": "La dinámica, el vínculo y la convivencia con la familia de origen o extendida. Incluye el grado de apoyo mutuo, la resolución de conflictos generacionales, los afectos compartidos y el establecimiento de límites saludables en el núcleo familiar."
+            },
+            {
+                "key": "economia",
+                "nombre": "Economía",
+                "icono": "💰",
+                "color": "#10b981",
+                "definicion": "La gestión autónoma o compartida de los recursos materiales, ingresos, gastos y decisiones financieras. Implica la planificación presupuestaria, la estabilidad, la seguridad material y la relación saludable que se establece en torno al dinero."
+            },
+            {
+                "key": "proyectos_personales",
+                "nombre": "Proyectos personales",
+                "icono": "🚀",
+                "color": "#06b6d4",
+                "definicion": "Las metas, sueños e iniciativas individuales que se construyen a futuro. Implica la planificación, la motivación intrínseca, la constancia y el compromiso con el desarrollo de intereses propios, pasatiempos y propósitos de vida."
+            },
+            {
+                "key": "pareja",
+                "nombre": "Relaciones de pareja",
+                "icono": "💞",
+                "color": "#f43f5e",
+                "definicion": "El vínculo afectivo íntimo con un otro significativo. Incluye la complicidad, la comunicación de necesidades, el proyecto de vida en común, la negociación de acuerdos y la disponibilidad emocional y física para sostener la relación."
+            },
+            {
+                "key": "social",
+                "nombre": "Social",
+                "icono": "👥",
+                "color": "#3b82f6",
+                "definicion": "El entorno de relaciones interpersonales y amistades. Refleja la calidad de la conexión con la comunidad, la participación en grupos de pertenencia, la reciprocidad en el trato y el sentido de pertenencia y respaldo social."
+            },
+            {
+                "key": "sexualidad",
+                "nombre": "Sexualidad",
+                "icono": "🔥",
+                "color": "#d946ef",
+                "definicion": "La expresión del deseo, el placer y la intimidad corporal desde una perspectiva integral. Abarca el auto(conocimiento), la aceptación de la propia identidad, el respeto por los ritmos personales y la vivencia libre de culpas o mandatos restrictivos."
+            },
+            {
+                "key": "salud_fisica",
+                "nombre": "Salud física",
+                "icono": "🩺",
+                "color": "#14b8a6",
+                "definicion": "El cuidado, el bienestar y el funcionamiento integral del cuerpo. Abarca los hábitos de autocuidado, la nutrición, el descanso, la actividad física, la prevención de enfermedades y la atención oportuna a los síntomas o malestares corporales."
+            },
+            {
+                "key": "academica",
+                "nombre": "Académica",
+                "icono": "📖",
+                "color": "#8b5cf6",
+                "definicion": "El desempeño, el aprendizaje y el desarrollo en el ámbito educativo o de formación intelectual. Incluye la adquisición de nuevos conocimientos, la gestión del tiempo de estudio, el cumplimiento de metas académicas y la superación de retos cognitivos."
+            }
+        ],
+        "default_content": {
+            "centro_titulo": "Mis Áreas de Vida",
+            "centro_reflexion": "",
+            "areas": {
+                "emociones": {"texto": "", "puntuacion": 7},
+                "laboral": {"texto": "", "puntuacion": 7},
+                "familiar": {"texto": "", "puntuacion": 7},
+                "economia": {"texto": "", "puntuacion": 7},
+                "proyectos_personales": {"texto": "", "puntuacion": 7},
+                "pareja": {"texto": "", "puntuacion": 7},
+                "social": {"texto": "", "puntuacion": 7},
+                "sexualidad": {"texto": "", "puntuacion": 7},
+                "salud_fisica": {"texto": "", "puntuacion": 7},
+                "academica": {"texto": "", "puntuacion": 7}
+            },
+            "conclusion_general": ""
+        }
     }
 ]
 
@@ -1276,6 +1376,45 @@ def _generate_word_file(recurso_id):
             p_f.add_run(f"{f_tit}:\n").bold = True
             p_f.add_run(f_val if f_val else "Sin registro.")
             doc.add_paragraph()
+
+    elif rtype == 'areas_de_vida':
+        meta_recurso = next((r for r in RECURSOS_CATALOGO if r['id'] == 'areas_de_vida'), {})
+        areas_cfg = meta_recurso.get('areas', [])
+        
+        p_desc = doc.add_paragraph()
+        p_desc.add_run("MAPA MENTAL DE ÁREAS DE VIDA\n").bold = True
+        p_desc.add_run("Evaluación multidimensional de bienestar y satisfacción personal (Escala de 1 a 10).\n")
+        
+        centro_ref = content.get('centro_reflexion', '')
+        if centro_ref:
+            p_cen = doc.add_paragraph()
+            p_cen.add_run("Propósito / Foco Central: ").bold = True
+            p_cen.add_run(centro_ref + "\n")
+            
+        tbl = doc.add_table(rows=1, cols=4)
+        tbl.style = 'Table Grid'
+        hdr = tbl.rows[0].cells
+        hdr[0].paragraphs[0].add_run("Área").bold = True
+        hdr[1].paragraphs[0].add_run("Sat. (1-10)").bold = True
+        hdr[2].paragraphs[0].add_run("Definición Clínica").bold = True
+        hdr[3].paragraphs[0].add_run("Reflexiones / Metas").bold = True
+        
+        areas_dict = content.get('areas', {})
+        for a in areas_cfg:
+            k = a['key']
+            val = areas_dict.get(k, {}) if isinstance(areas_dict.get(k), dict) else {"texto": str(areas_dict.get(k, "")), "puntuacion": "-"}
+            row_c = tbl.add_row().cells
+            row_c[0].paragraphs[0].add_run(f"{a['icono']} {a['nombre']}").bold = True
+            row_c[1].paragraphs[0].add_run(str(val.get('puntuacion', '-')))
+            row_c[2].paragraphs[0].add_run(a.get('definicion', ''))
+            row_c[3].paragraphs[0].add_run(str(val.get('texto', '')))
+            
+        concl = content.get('conclusion_general', '')
+        if concl:
+            doc.add_paragraph()
+            p_concl = doc.add_paragraph()
+            p_concl.add_run("Compromiso y Conclusión Global:\n").bold = True
+            p_concl.add_run(concl)
 
     # Guardar en memoria y enviar
     stream = io.BytesIO()

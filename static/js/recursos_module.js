@@ -676,6 +676,9 @@
             case 'sobrepensamiento':
                 container.innerHTML = getSobrepensamientoHTML(content);
                 break;
+            case 'areas_de_vida':
+                container.innerHTML = getAreasDeVidaHTML(content, meta);
+                break;
             default:
                 container.innerHTML = '<p class="text-muted">Tipo de recurso no reconocido.</p>';
         }
@@ -1580,6 +1583,21 @@
                     accion_concreta_semana: document.getElementById('sp-accion-semana')?.value || ''
                 };
             }
+            case 'areas_de_vida': {
+                const areasObj = {};
+                const keys = ['emociones', 'laboral', 'familiar', 'economia', 'proyectos_personales', 'pareja', 'social', 'sexualidad', 'salud_fisica', 'academica'];
+                keys.forEach(k => {
+                    const txt = document.getElementById(`adv-txt-${k}`)?.value || '';
+                    const pts = parseInt(document.getElementById(`adv-slider-${k}`)?.value) || 7;
+                    areasObj[k] = { texto: txt, puntuacion: pts };
+                });
+                return {
+                    centro_titulo: document.getElementById('adv-centro-titulo')?.innerText || 'Mis Áreas de Vida',
+                    centro_reflexion: document.getElementById('adv-centro-reflexion')?.value || '',
+                    areas: areasObj,
+                    conclusion_general: document.getElementById('adv-conclusion-general')?.value || ''
+                };
+            }
             default:
                 return {};
         }
@@ -1931,3 +1949,166 @@
     }
 
 })();
+
+
+    // --- G. MIS ÁREAS DE VIDA (MAPA MENTAL CON NUBES) ---
+    function getAreasDeVidaHTML(c, meta) {
+        const areasMeta = (meta && meta.areas && meta.areas.length) ? meta.areas : [
+            { key: "emociones", nombre: "Emociones", icono: "❤️", color: "#ec4899", definicion: "La gestión del mundo afectivo interno y la regulación emocional. Implica el reconocimiento, la aceptación y la expresión saludable de los estados de ánimo, así como la capacidad de sobrellevar el estrés, la frustración y la vulnerabilidad." },
+            { key: "laboral", nombre: "Laboral", icono: "💼", color: "#f97316", definicion: "El desempeño, el compromiso y la realización en el ámbito profesional o productivo. Abarca la gestión de responsabilidades, el sentido de logro, el crecimiento de habilidades y la integración equilibrada de las demandas del trabajo con el bienestar general." },
+            { key: "familiar", nombre: "Familiar", icono: "👨‍👩‍👧‍👦", color: "#eab308", definicion: "La dinámica, el vínculo y la convivencia con la familia de origen o extendida. Incluye el grado de apoyo mutuo, la resolución de conflictos generacionales, los afectos compartidos y el establecimiento de límites saludables en el núcleo familiar." },
+            { key: "economia", nombre: "Economía", icono: "💰", color: "#10b981", definicion: "La gestión autónoma o compartida de los recursos materiales, ingresos, gastos y decisiones financieras. Implica la planificación presupuestaria, la estabilidad, la seguridad material y la relación saludable que se establece en torno al dinero." },
+            { key: "proyectos_personales", nombre: "Proyectos personales", icono: "🚀", color: "#06b6d4", definicion: "Las metas, sueños e iniciativas individuales que se construyen a futuro. Implica la planificación, la motivación intrínseca, la constancia y el compromiso con el desarrollo de intereses propios, pasatiempos y propósitos de vida." },
+            { key: "pareja", nombre: "Relaciones de pareja", icono: "💞", color: "#f43f5e", definicion: "El vínculo afectivo íntimo con un otro significativo. Incluye la complicidad, la comunicación de necesidades, el proyecto de vida en común, la negociación de acuerdos y la disponibilidad emocional y física para sostener la relación." },
+            { key: "social", nombre: "Social", icono: "👥", color: "#3b82f6", definicion: "El entorno de relaciones interpersonales y amistades. Refleja la calidad de la conexión con la comunidad, la participación en grupos de pertenencia, la reciprocidad en el trato y el sentido de pertenencia y respaldo social." },
+            { key: "sexualidad", nombre: "Sexualidad", icono: "🔥", color: "#d946ef", definicion: "La expresión del deseo, el placer y la intimidad corporal desde una perspectiva integral. Abarca el auto(conocimiento), la aceptación de la propia identidad, el respeto por los ritmos personales y la vivencia libre de culpas o mandatos restrictivos." },
+            { key: "salud_fisica", nombre: "Salud física", icono: "🩺", color: "#14b8a6", definicion: "El cuidado, el bienestar y el funcionamiento integral del cuerpo. Abarca los hábitos de autocuidado, la nutrición, el descanso, la actividad física, la prevención de enfermedades y la atención oportuna a los síntomas o malestares corporales." },
+            { key: "academica", nombre: "Académica", icono: "📖", color: "#8b5cf6", definicion: "El desempeño, el aprendizaje y el desarrollo en el ámbito educativo o de formación intelectual. Incluye la adquisición de nuevos conocimientos, la gestión del tiempo de estudio, el cumplimiento de metas académicas y la superación de retos cognitivos." }
+        ];
+
+        const savedAreas = c.areas || {};
+        const centroReflexion = c.centro_reflexion || '';
+        const conclusionGeneral = c.conclusion_general || '';
+
+        const cloudsHtml = areasMeta.map((a, idx) => {
+            const areaData = savedAreas[a.key] || {};
+            const textVal = typeof areaData === 'string' ? areaData : (areaData.texto || '');
+            const scoreVal = areaData.puntuacion !== undefined ? areaData.puntuacion : 7;
+
+            return `
+            <div class="adv-cloud-card" style="position: relative; background: #ffffff; border: 2px solid ${a.color}40; border-top: 4px solid ${a.color}; border-radius: 28px; padding: 1.15rem; box-shadow: 0 6px 18px rgba(0,0,0,0.04); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; gap: 0.65rem;">
+                <!-- Header de la Nube -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.45rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.4rem; line-height: 1;">${a.icono}</span>
+                        <strong style="color: #1e293b; font-size: 0.95rem;">${a.nombre}</strong>
+                    </div>
+                    <button type="button" class="btn btn-sm" onclick="toggleAdvDefinition('adv-def-${a.key}')" title="Ver definición clínica" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 0.72rem; padding: 0.2rem 0.55rem; color: #64748b; font-weight: 600;">
+                        ℹ️ Info
+                    </button>
+                </div>
+
+                <!-- Definición Psicoeducativa Desplegable -->
+                <div id="adv-def-${a.key}" class="adv-def-tooltip hide" style="background: #f8fafc; border-left: 3px solid ${a.color}; border-radius: 6px; padding: 0.55rem 0.75rem; font-size: 0.76rem; color: #475569; line-height: 1.4;">
+                    ${escapeHtml(a.definicion)}
+                </div>
+
+                <!-- Slider de Satisfacción 1-10 -->
+                <div style="background: #fdfdfd; border: 1px dashed ${a.color}60; border-radius: 12px; padding: 0.5rem 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Satisfacción actual:</span>
+                        <span id="adv-badge-${a.key}" style="font-size: 0.82rem; font-weight: 800; color: ${a.color}; background: ${a.color}15; padding: 0.15rem 0.55rem; border-radius: 10px;">
+                            ${scoreVal} / 10
+                        </span>
+                    </div>
+                    <input type="range" id="adv-slider-${a.key}" min="1" max="10" value="${scoreVal}" oninput="document.getElementById('adv-badge-${a.key}').innerText = this.value + ' / 10'; triggerRecursoAutoSave();" style="width: 100%; accent-color: ${a.color}; cursor: pointer;">
+                </div>
+
+                <!-- Textarea de Notas dentro de la Nube -->
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                    <label style="font-size: 0.74rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">
+                        Reflexiones, estado actual o metas:
+                    </label>
+                    <textarea id="adv-txt-${a.key}" rows="3" oninput="triggerRecursoAutoSave()" placeholder="Escribe aquí cómo te sientes en esta área, qué te gustaría cambiar o tus metas..." style="width: 100%; flex: 1; padding: 0.55rem 0.75rem; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 0.86rem; font-family: inherit; resize: vertical; line-height: 1.4; background: #ffffff;">${escapeHtml(textVal)}</textarea>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        return `
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <!-- Barra Superior de Control y Modos de Vista -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background: linear-gradient(135deg, #faf5ff, #f3e8ff); border: 1.5px solid #d8b4fe; border-radius: 14px; padding: 0.85rem 1.15rem;">
+                <div>
+                    <h5 style="margin: 0; color: #6b21a8; font-weight: 800; font-size: 1.05rem;">
+                        ☁️ Mapa Mental: Mis Áreas de Vida
+                    </h5>
+                    <p style="margin: 0.2rem 0 0 0; color: #7e22ce; font-size: 0.8rem;">
+                        Explora las 10 dimensiones vitales del consultante. Escribe dentro de cada nube y califica la satisfacción.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    <button type="button" class="btn btn-sm" id="btn-adv-mode-mindmap" onclick="switchAdvViewMode('mindmap')" style="background: #7e22ce; color: #ffffff; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem; border: none; box-shadow: 0 2px 8px rgba(126,34,206,0.25);">
+                        🧠 Vista Mapa Mental
+                    </button>
+                    <button type="button" class="btn btn-sm" id="btn-adv-mode-list" onclick="switchAdvViewMode('list')" style="background: #ffffff; color: #7e22ce; border: 1.5px solid #d8b4fe; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem;">
+                        📱 Vista Lista (Móvil)
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="window.print()" style="background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem;">
+                        🖨️ Imprimir / PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- NODO CENTRAL: Mis Áreas de Vida -->
+            <div id="adv-central-node" style="background: linear-gradient(135deg, #7e22ce, #a855f7); color: white; border-radius: 30px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 25px rgba(126,34,206,0.25); text-align: center; border: 3px solid #f3e8ff;">
+                <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 0.35rem 1.2rem; border-radius: 30px; font-size: 0.8rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem;">
+                    🌟 Núcleo de Bienestar
+                </div>
+                <h4 id="adv-centro-titulo" style="margin: 0; font-weight: 900; font-size: 1.35rem; color: #ffffff;">
+                    MIS ÁREAS DE VIDA
+                </h4>
+                <p style="margin: 0.35rem auto 0.75rem auto; font-size: 0.85rem; color: #f3e8ff; max-width: 650px;">
+                    ¿Cuál es tu propósito, lema vital o sensación de equilibrio general en este momento de tu vida?
+                </p>
+                <textarea id="adv-centro-reflexion" rows="2" oninput="triggerRecursoAutoSave()" placeholder="Escribe aquí tu visión general, lema de vida o foco principal de crecimiento..." style="width: 100%; max-width: 750px; margin: 0 auto; padding: 0.65rem 1rem; border-radius: 14px; border: none; font-size: 0.9rem; font-family: inherit; line-height: 1.45; color: #1e293b; background: #ffffff; box-shadow: inset 0 2px 6px rgba(0,0,0,0.1);">${escapeHtml(centroReflexion)}</textarea>
+            </div>
+
+            <!-- CONTENEDOR DE LAS 10 NUBES (ADAPTABLE) -->
+            <div id="adv-clouds-container" class="adv-grid-mindmap" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1.15rem;">
+                ${cloudsHtml}
+            </div>
+
+            <!-- CONCLUSIÓN / PLAN DE ACCIÓN GLOBAL -->
+            <div class="card" style="background: #ffffff; border: 2px solid #8b5cf6; border-radius: 20px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(139,92,246,0.08);">
+                <label style="font-weight: 800; font-size: 0.95rem; color: #6b21a8; display: block; margin-bottom: 0.35rem;">
+                    🎯 Conclusión Terapéutica y Próximos Pasos:
+                </label>
+                <p style="margin: 0 0 0.55rem 0; font-size: 0.8rem; color: #64748b;">
+                    Sintetiza junto a tu terapeuta: ¿en qué área enfocarás tu energía durante las próximas semanas?
+                </p>
+                <textarea id="adv-conclusion-general" rows="3" oninput="triggerRecursoAutoSave()" placeholder="Plan de acción, compromisos acordados o reflexiones finales..." style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 12px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; font-family: inherit; line-height: 1.45;">${escapeHtml(conclusionGeneral)}</textarea>
+            </div>
+        </div>
+        `;
+    }
+
+    function toggleAdvDefinition(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hide');
+    }
+    window.toggleAdvDefinition = toggleAdvDefinition;
+
+    function switchAdvViewMode(mode) {
+        const container = document.getElementById('adv-clouds-container');
+        const btnMind = document.getElementById('btn-adv-mode-mindmap');
+        const btnList = document.getElementById('btn-adv-mode-list');
+        if (!container) return;
+
+        if (mode === 'list') {
+            container.style.gridTemplateColumns = '1fr';
+            if (btnList) {
+                btnList.style.background = '#7e22ce';
+                btnList.style.color = '#ffffff';
+                btnList.style.border = 'none';
+            }
+            if (btnMind) {
+                btnMind.style.background = '#ffffff';
+                btnMind.style.color = '#7e22ce';
+                btnMind.style.border = '1.5px solid #d8b4fe';
+            }
+        } else {
+            container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(290px, 1fr))';
+            if (btnMind) {
+                btnMind.style.background = '#7e22ce';
+                btnMind.style.color = '#ffffff';
+                btnMind.style.border = 'none';
+            }
+            if (btnList) {
+                btnList.style.background = '#ffffff';
+                btnList.style.color = '#7e22ce';
+                btnList.style.border = '1.5px solid #d8b4fe';
+            }
+        }
+    }
+    window.switchAdvViewMode = switchAdvViewMode;

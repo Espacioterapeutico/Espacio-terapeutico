@@ -2255,22 +2255,21 @@ def auto_cancel_unconfirmed_sessions(db):
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_citas_canceladas_token ON citas_canceladas_log(token_confirmacion)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_citas_canceladas_agenda ON citas_canceladas_log(agenda_id)")
 
-        from datetime import datetime
+        from datetime import datetime, timedelta
         import threading
         import requests
         import json
-        from routes_pacientes import get_deadline_datetime
+        from routes_pacientes import get_deadline_datetime, create_auto_cancellation_session
         
         try:
             import zoneinfo
             tz = zoneinfo.ZoneInfo("America/Caracas")
             now_dt = datetime.now(tz).replace(tzinfo=None)
         except Exception:
-            from datetime import timezone, timedelta
+            from datetime import timezone
             now_dt = datetime.now(timezone(timedelta(hours=-4))).replace(tzinfo=None)
             
         # Evaluar citas de los últimos 14 días en adelante
-        from datetime import timedelta
         start_date_str = (now_dt - timedelta(days=14)).strftime("%Y-%m-%d")
         
         # Obtener citas no confirmadas en estado 'Agendada' o 'Pendiente'
@@ -2293,176 +2292,181 @@ def auto_cancel_unconfirmed_sessions(db):
         psic_configs = {}
         for appt in unconfirmed:
             appt_id = appt['id']
-            patient_id = appt['paciente_id']
-            psic_id = appt['psicologo_id'] or appt['creado_por_user_id'] or 1
-            if isinstance(psic_id, str) and not psic_id.isdigit():
-                p_obj = get_psychologist_by_id_or_slug(cursor, psic_id)
-                psic_id = int(p_obj['id']) if p_obj else 1
-            elif str(psic_id).isdigit():
-                psic_id = int(psic_id)
-            
-            if psic_id not in psic_configs:
-                cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
-                u_row = cursor.fetchone()
-                cfg = {}
-                if u_row and u_row[0]:
-                    try:
-                        cfg = json.loads(u_row[0])
-                    except: pass
-                psic_configs[psic_id] = cfg
-                
-            cfg = psic_configs[psic_id]
-            rule_type = cfg.get('limite_auto_cancelacion_tipo') or cfg.get('limite_cancelacion_tipo', 'horas')
-            # 0. Citas para el mismo dia nunca se auto-cancelan (se consideran previamente coordinadas y confirmadas)
-            if appt['fecha'] == now_dt.strftime("%Y-%m-%d"):
-                continue
-
-            rule_value = cfg.get('limite_auto_cancelacion_valor') if cfg.get('limite_auto_cancelacion_valor') is not None else cfg.get('limite_cancelacion_valor', 24)
-            
-            deadline_dt = get_deadline_datetime(appt['fecha'], appt['hora'], rule_type, rule_value)
-            
-            if now_dt < deadline_dt:
-                continue # Aún no vence el plazo
-
-            fecha_cita = appt['fecha']
-            hora_cita = appt['hora']
-            pac_nombre = f"{appt['nombres']} {appt['apellidos']}"
-            google_event_id = appt['google_event_id']
-            target_psic = psic_id
-            
-            # 1. Actualizar estado en Google Calendar a Cancelada (si no está en Windows local sin sync)
-            import sys, os
-            can_sync_google = not (sys.platform == 'win32' and not os.environ.get('ENABLE_LOCAL_GOOGLE_SYNC'))
-            if google_event_id and can_sync_google:
-                try:
-                    from routes_admin import get_calendar_service, update_calendar_event_status
-                    service = get_calendar_service(target_psic)
-                    if service:
-                        update_calendar_event_status(
-                            service, google_event_id, 'cancelada',
-                            paciente_nombre=pac_nombre,
-                            tipo_consulta=appt['tipo_consulta'],
-                            motivo=f"Cancelada automáticamente por el sistema al no confirmarse a tiempo ({fecha_cita} a las {hora_cita})"
-                        )
-                except Exception as ge:
-                    print("Error al actualizar evento de Google Calendar al auto-cancelar:", ge)
-            
-            # 2. Cancelar la cita en SQLite (preservando google_event_id para trazabilidad)
-            cursor.execute("""
-                UPDATE agenda_finanzas
-                SET estado_pago = 'Cancelada con aviso', confirmada = 0, monto = 0.0,
-                    referencia = CASE 
-                        WHEN referencia IS NULL OR referencia = '' THEN 'Cancelada automáticamente por falta de confirmación'
-                        ELSE referencia || ' | Cancelada automáticamente por falta de confirmación'
-                    END
-                WHERE id = ?
-            """, (appt_id,))
-            
-            # Verificar SI ya estaba en el log ANTES de insertar para no bloquear el WhatsApp
-            cursor.execute("SELECT id FROM citas_canceladas_log WHERE agenda_id = ?", (appt_id,))
-            ya_cancelada_previa = cursor.fetchone()
-
-            # Registrar en citas_canceladas_log para proteger el enlace de confirmación
-            token_val = appt['token_confirmacion'] if hasattr(appt, 'keys') and 'token_confirmacion' in appt.keys() else (appt['token_confirmacion'] if isinstance(appt, dict) else None)
-            if token_val:
-                try:
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO citas_canceladas_log (
-                            agenda_id, token_confirmacion, paciente_id, psicologo_id,
-                            paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        appt_id, token_val, patient_id, target_psic,
-                        pac_nombre, fecha_cita, hora_cita, appt['tipo_consulta'],
-                        'Cancelada por falta de confirmación'
-                    ))
-                except Exception as _e_clog:
-                    print("Error registrando en citas_canceladas_log:", _e_clog)
-            
-            # Auto-generar evolución clínica
-            create_auto_cancellation_session(
-                db, patient_id, appt_id, fecha_cita, appt['tipo_consulta'],
-                'Cancelada con aviso',
-                f"Consulta cancelada automáticamente por el sistema al no confirmarse a tiempo ({fecha_cita} a las {hora_cita})."
-            )
-            
-            # 3. Notificación al psicólogo
-            fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cursor.execute("""
-                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                VALUES (?, ?, ?, ?, ?, 0, ?)
-            """, (
-                target_psic,
-                'cita', 
-                'Cita Auto-Cancelada por Falta de Confirmación', 
-                f"La consulta de {pac_nombre} para el {fecha_cita} a las {hora_cita} fue cancelada automáticamente por no confirmarse a tiempo.",
-                fecha_notif,
-                'agenda'
-            ))
-            
-            # 4. Notificación al paciente en campanita y Push
             try:
-                notify_patient(
-                    patient_id=patient_id,
-                    titulo="⚠️ Consulta Cancelada por Falta de Confirmación",
-                    mensaje=f"Tu consulta programada para el {fecha_cita} a las {hora_cita} fue cancelada automáticamente por no confirmarse a tiempo.",
-                    link="/#patient-home",
-                    icon="⚠️",
-                    tipo="cita"
-                )
-            except Exception as fe:
-                print("Error al notificar al paciente sobre cancelación por falta de confirmación:", fe)
-
-            # 5. Notificación WhatsApp al paciente por cancelación por falta de confirmación
-            from routes_herramientas import clean_phone_number
-            clean_phone = clean_phone_number(appt['telefono'] or '')
+                patient_id = appt['paciente_id']
+                psic_id = appt['psicologo_id'] or appt['creado_por_user_id'] or 1
+                if isinstance(psic_id, str) and not psic_id.isdigit():
+                    p_obj = get_psychologist_by_id_or_slug(cursor, psic_id)
+                    psic_id = int(p_obj['id']) if p_obj else 1
+                elif str(psic_id).isdigit():
+                    psic_id = int(psic_id)
                 
-            if clean_phone and not ya_cancelada_previa:
+                if psic_id not in psic_configs:
+                    cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psic_id,))
+                    u_row = cursor.fetchone()
+                    cfg = {}
+                    if u_row and u_row[0]:
+                        try:
+                            cfg = json.loads(u_row[0])
+                        except: pass
+                    psic_configs[psic_id] = cfg
+                    
+                cfg = psic_configs[psic_id]
+                rule_type = cfg.get('limite_auto_cancelacion_tipo') or cfg.get('limite_cancelacion_tipo', 'horas')
+                rule_value = cfg.get('limite_auto_cancelacion_valor') if cfg.get('limite_auto_cancelacion_valor') is not None else cfg.get('limite_cancelacion_valor', 24)
+                
+                deadline_dt = get_deadline_datetime(appt['fecha'], appt['hora'], rule_type, rule_value)
+                
+                if now_dt < deadline_dt:
+                    continue # Aún no vence el plazo
+
+                fecha_cita = appt['fecha']
+                hora_cita = appt['hora']
+                pac_nombre = f"{appt['nombres']} {appt['apellidos']}"
+                google_event_id = appt['google_event_id']
+                target_psic = psic_id
+                
+                # 1. Actualizar estado en Google Calendar a Cancelada (si no está en Windows local sin sync)
+                import sys, os
+                can_sync_google = not (sys.platform == 'win32' and not os.environ.get('ENABLE_LOCAL_GOOGLE_SYNC'))
+                if google_event_id and can_sync_google:
+                    try:
+                        from routes_admin import get_calendar_service, update_calendar_event_status
+                        service = get_calendar_service(target_psic)
+                        if service:
+                            update_calendar_event_status(
+                                service, google_event_id, 'cancelada',
+                                paciente_nombre=pac_nombre,
+                                tipo_consulta=appt['tipo_consulta'],
+                                motivo=f"Cancelada automáticamente por el sistema al no confirmarse a tiempo ({fecha_cita} a las {hora_cita})"
+                            )
+                    except Exception as ge:
+                        print("Error al actualizar evento de Google Calendar al auto-cancelar:", ge)
+                
+                # 2. Cancelar la cita en SQLite (preservando google_event_id para trazabilidad)
+                cursor.execute("""
+                    UPDATE agenda_finanzas
+                    SET estado_pago = 'Cancelada con aviso', confirmada = 0, monto = 0.0,
+                        referencia = CASE 
+                            WHEN referencia IS NULL OR referencia = '' THEN 'Cancelada automáticamente por falta de confirmación'
+                            ELSE referencia || ' | Cancelada automáticamente por falta de confirmación'
+                        END
+                    WHERE id = ?
+                """, (appt_id,))
+                
+                # Verificar SI ya estaba en el log ANTES de insertar para no bloquear el WhatsApp
+                cursor.execute("SELECT id FROM citas_canceladas_log WHERE agenda_id = ?", (appt_id,))
+                ya_cancelada_previa = cursor.fetchone()
+
+                # Registrar en citas_canceladas_log para proteger el enlace de confirmación
+                token_val = appt['token_confirmacion'] if hasattr(appt, 'keys') and 'token_confirmacion' in appt.keys() else (appt['token_confirmacion'] if isinstance(appt, dict) else None)
+                if token_val:
+                    try:
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO citas_canceladas_log (
+                                agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                                paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            appt_id, token_val, patient_id, target_psic,
+                            pac_nombre, fecha_cita, hora_cita, appt['tipo_consulta'],
+                            'Cancelada por falta de confirmación'
+                        ))
+                    except Exception as _e_clog:
+                        print("Error registrando en citas_canceladas_log:", _e_clog)
+                
+                # Auto-generar evolución clínica
+                create_auto_cancellation_session(
+                    db, patient_id, appt_id, fecha_cita, appt['tipo_consulta'],
+                    'Cancelada con aviso',
+                    f"Consulta cancelada automáticamente por el sistema al no confirmarse a tiempo ({fecha_cita} a las {hora_cita})."
+                )
+                
+                # 3. Notificación al psicólogo
+                fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cursor.execute("""
+                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                    VALUES (?, ?, ?, ?, ?, 0, ?)
+                """, (
+                    target_psic,
+                    'cita', 
+                    'Cita Auto-Cancelada por Falta de Confirmación', 
+                    f"La consulta de {pac_nombre} para el {fecha_cita} a las {hora_cita} fue cancelada automáticamente por no confirmarse a tiempo.",
+                    fecha_notif,
+                    'agenda'
+                ))
+                
+                # 4. Notificación al paciente en campanita y Push
                 try:
-                    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_cancelacion_no_conf_{target_psic}",))
-                    tmpl_row = cursor.fetchone()
-                    if not tmpl_row or not tmpl_row[0]:
-                        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cancelacion_no_conf'")
-                        tmpl_row = cursor.fetchone()
-                    
-                    tmpl = tmpl_row[0] if tmpl_row and tmpl_row[0] else (
-                        "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, "
-                        "por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
+                    notify_patient(
+                        patient_id=patient_id,
+                        titulo="⚠️ Consulta Cancelada por Falta de Confirmación",
+                        mensaje=f"Tu consulta programada para el {fecha_cita} a las {hora_cita} fue cancelada automáticamente por no confirmarse a tiempo.",
+                        link="/#patient-home",
+                        icon="⚠️",
+                        tipo="cita"
                     )
-                    
-                    cursor.execute("SELECT nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (target_psic,))
-                    psic_row = cursor.fetchone()
-                    psic_data = {
-                        'nombres': psic_row['nombres'] if psic_row and 'nombres' in psic_row.keys() and psic_row['nombres'] else 'Paulo',
-                        'apellidos': psic_row['apellidos'] if psic_row and 'apellidos' in psic_row.keys() and psic_row['apellidos'] else 'Mora',
-                        'slug': psic_row['slug'] if (psic_row and 'slug' in psic_row.keys() and psic_row['slug']) else 'psic.paulomora'
-                    }
+                except Exception as fe:
+                    print("Error al notificar al paciente sobre cancelación por falta de confirmación:", fe)
 
-                    from routes_agenda import convert_time_vet_to_tz
-                    hora_paciente_calc = appt['hora_paciente'] if ('hora_paciente' in appt.keys() and appt['hora_paciente']) else None
-                    if not hora_paciente_calc and appt['zona_horaria']:
-                        hora_paciente_calc = convert_time_vet_to_tz(fecha_cita, hora_cita, appt['zona_horaria'])
-                    hora_final = hora_paciente_calc or hora_cita
-                    from routes_notificaciones import get_public_base_url, format_whatsapp_message, make_wa_http_request
-                    domain_host = get_public_base_url()
-                    slug_clean = psic_data.get('slug') or 'psic.paulomora'
-                    link_agendar = f"{domain_host}/agendar/{slug_clean}"
-
-                    patient_dict = {'nombres': appt['nombres'], 'apellidos': appt['apellidos'], 'telefono': clean_phone, 'link_agendar': link_agendar}
-                    cita_dict = {'nombre': pac_nombre, 'fecha': fecha_cita, 'hora': hora_final, 'modalidad': appt['tipo_consulta'], 'link_agendar': link_agendar}
+                # 5. Notificación WhatsApp al paciente por cancelación por falta de confirmación
+                from routes_herramientas import clean_phone_number
+                clean_phone = clean_phone_number(appt['telefono'] or '')
+                is_upcoming_or_today = (appt['fecha'] >= now_dt.strftime("%Y-%m-%d"))
                     
-                    msg_wa = format_whatsapp_message(tmpl, patient_dict, cita_dict, psic_data)
-                    
-                    res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': target_psic}, timeout=45, user_id=target_psic)
-                    print(f"[AUTO-CANCEL-WA] Mensaje enviado a {clean_phone} cita {appt_id}: {res_wa.status_code if res_wa else 'No res'}")
-                except Exception as we:
-                    print(f"[AUTO-CANCEL-WA] Error enviando WhatsApp al paciente:", we)
+                if clean_phone and not ya_cancelada_previa and is_upcoming_or_today:
+                    try:
+                        cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_cancelacion_no_conf_{target_psic}",))
+                        tmpl_row = cursor.fetchone()
+                        if not tmpl_row or not tmpl_row[0]:
+                            cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_cancelacion_no_conf'")
+                            tmpl_row = cursor.fetchone()
+                        
+                        tmpl = tmpl_row[0] if tmpl_row and tmpl_row[0] else (
+                            "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, "
+                            "por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
+                        )
+                        
+                        cursor.execute("SELECT nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (target_psic,))
+                        psic_row = cursor.fetchone()
+                        psic_data = {
+                            'nombres': psic_row['nombres'] if psic_row and 'nombres' in psic_row.keys() and psic_row['nombres'] else 'Paulo',
+                            'apellidos': psic_row['apellidos'] if psic_row and 'apellidos' in psic_row.keys() and psic_row['apellidos'] else 'Mora',
+                            'slug': psic_row['slug'] if (psic_row and 'slug' in psic_row.keys() and psic_row['slug']) else 'psic.paulomora'
+                        }
 
-            # Sincronizar paciente en segundo plano
-            threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
-            
-        db.commit()
-        print(f"[OK] Auto-canceladas {len(unconfirmed)} citas no confirmadas.")
+                        from routes_agenda import convert_time_vet_to_tz
+                        hora_paciente_calc = appt['hora_paciente'] if ('hora_paciente' in appt.keys() and appt['hora_paciente']) else None
+                        if not hora_paciente_calc and appt['zona_horaria']:
+                            hora_paciente_calc = convert_time_vet_to_tz(fecha_cita, hora_cita, appt['zona_horaria'])
+                        hora_final = hora_paciente_calc or hora_cita
+                        from routes_notificaciones import get_public_base_url, format_whatsapp_message, make_wa_http_request
+                        domain_host = get_public_base_url()
+                        slug_clean = psic_data.get('slug') or 'psic.paulomora'
+                        link_agendar = f"{domain_host}/agendar/{slug_clean}"
+
+                        patient_dict = {'nombres': appt['nombres'], 'apellidos': appt['apellidos'], 'telefono': clean_phone, 'link_agendar': link_agendar}
+                        cita_dict = {'nombre': pac_nombre, 'fecha': fecha_cita, 'hora': hora_final, 'modalidad': appt['tipo_consulta'], 'link_agendar': link_agendar}
+                        
+                        msg_wa = format_whatsapp_message(tmpl, patient_dict, cita_dict, psic_data)
+                        
+                        res_wa = make_wa_http_request('POST', '/send', json_data={'phone': clean_phone, 'text': msg_wa, 'user_id': target_psic}, timeout=45, user_id=target_psic, bypass_dedup=True)
+                        print(f"[AUTO-CANCEL-WA] Mensaje enviado a {clean_phone} cita {appt_id}: {res_wa.status_code if res_wa else 'No res'}")
+                    except Exception as we:
+                        print(f"[AUTO-CANCEL-WA] Error enviando WhatsApp al paciente:", we)
+
+                # Sincronizar paciente en segundo plano
+                try:
+                    threading.Thread(target=sync_patient_to_firebase, args=(patient_id,)).start()
+                except Exception:
+                    pass
+                db.commit()
+                print(f"[OK] Cita #{appt_id} auto-cancelada exitosamente por falta de confirmación.")
+            except Exception as appt_cancel_err:
+                db.rollback()
+                print(f"[AUTO-CANCEL] Error procesando cita #{appt_id}: {appt_cancel_err}")
+                
+        print("[OK] Evaluación de citas no confirmadas completada.")
     except Exception as e:
         print("Error en auto_cancel_unconfirmed_sessions:", e)
 
@@ -3515,6 +3519,10 @@ def ensure_usuarios_columns(db=None):
             cursor.execute(f"ALTER TABLE usuarios ADD COLUMN {col_name} {col_type}")
         except Exception:
             pass
+    try:
+        db.commit()
+    except Exception:
+        pass
 
 def auto_check_subscription_expiration_reminders(db):
     """
@@ -3965,6 +3973,7 @@ def before_request_cleanup():
 
         db = get_db()
         for fn_name, fn in [
+            ('auto_cancel_unconfirmed_sessions', auto_cancel_unconfirmed_sessions),
             ('auto_check_patient_birthdays', auto_check_patient_birthdays),
             ('auto_check_subscription_expiration_reminders', auto_check_subscription_expiration_reminders)
         ]:

@@ -13,7 +13,7 @@ import io
 import zipfile
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Blueprint, request, jsonify, session, g, send_file
+from flask import Blueprint, request, jsonify, session, g, send_file, render_template_string, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from routes_finanzas import auto_settle_patient_debts
@@ -2594,35 +2594,42 @@ def get_patient_session_history():
 @pacientes_bp.route('/api/patients/<int:patient_id>/print', methods=['GET'])
 @login_required
 def print_patient_card(patient_id):
-    db = get_db()
-    cursor = db.cursor()
-    
-    # 1. Obtener datos del paciente
-    cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
-    patient_row = cursor.fetchone()
-    if not patient_row:
-        return "Paciente no encontrado", 404
+    try:
+        db = get_db()
+        cursor = db.cursor()
         
-    patient = dict(patient_row)
-    if patient.get('diagnostico'):
-        patient['diagnostico'] = decrypt_clinical_text(patient['diagnostico'])
-        
-    # 2. Obtener sesiones en orden cronológico
-    cursor.execute("""
-        SELECT fecha, modalidad, resumen, test_aplicados 
-        FROM sesiones 
-        WHERE paciente_id = ? AND estado = 'Realizada'
-        ORDER BY fecha ASC, id ASC
-    """, (patient_id,))
-    raw_sessions = cursor.fetchall()
-    sessions = []
-    for s in raw_sessions:
-        s_dict = dict(s)
-        s_dict['resumen'] = decrypt_clinical_text(s_dict.get('resumen')) or ''
-        s_dict['test_aplicados'] = decrypt_clinical_text(s_dict.get('test_aplicados')) or ''
-        sessions.append(s_dict)
+        # 1. Obtener datos del paciente
+        cursor.execute("SELECT * FROM pacientes WHERE id = ?", (patient_id,))
+        patient_row = cursor.fetchone()
+        if not patient_row:
+            return "Paciente no encontrado", 404
+            
+        patient = dict(patient_row)
+        if patient.get('diagnostico'):
+            try:
+                patient['diagnostico'] = decrypt_clinical_text(patient['diagnostico'])
+            except Exception:
+                pass
+            
+        # 2. Obtener sesiones en orden cronológico
+        cursor.execute("""
+            SELECT fecha, modalidad, resumen, test_aplicados 
+            FROM sesiones 
+            WHERE paciente_id = ? AND estado = 'Realizada'
+            ORDER BY fecha ASC, id ASC
+        """, (patient_id,))
+        raw_sessions = cursor.fetchall()
+        sessions = []
+        for s in raw_sessions:
+            s_dict = dict(s)
+            try:
+                s_dict['resumen'] = decrypt_clinical_text(s_dict.get('resumen')) or ''
+                s_dict['test_aplicados'] = decrypt_clinical_text(s_dict.get('test_aplicados')) or ''
+            except Exception:
+                pass
+            sessions.append(s_dict)
     
-    html_template = """
+        html_template = """
     <!DOCTYPE html>
     <html lang="es">
     <head>
@@ -2807,7 +2814,10 @@ def print_patient_card(patient_id):
     </body>
     </html>
     """
-    return render_template_string(html_template, patient=patient, sessions=sessions)
+        return render_template_string(html_template, patient=patient, sessions=sessions)
+    except Exception as ex:
+        print(f"[ERROR] Error al imprimir ficha del paciente {patient_id}: {ex}")
+        return f"<h3>Error al generar ficha de impresión: {str(ex)}</h3><p>Por favor intenta nuevamente o contacta a soporte.</p>", 500
 
 
 # ==========================================

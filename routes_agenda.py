@@ -896,6 +896,13 @@ def get_agenda():
         heal_orphaned_slug_records(cursor, db)
     except Exception:
         pass
+
+    # Auto-evaluar citas expiradas no confirmadas
+    try:
+        from app import auto_cancel_unconfirmed_sessions
+        auto_cancel_unconfirmed_sessions(db)
+    except Exception as e_ac:
+        print("Aviso al auto-evaluar cancelaciones en get_agenda:", e_ac)
         
     psic_id = get_psicologo_id_filter()
     if psic_id is not None:

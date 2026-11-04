@@ -26637,8 +26637,11 @@ async function loadPatientMoodTrackerEmotions() {
         const res = await fetch('/api/patient/mood_tracker/emociones-config');
         if (!res.ok) throw new Error('Error al cargar emociones');
         const data = await res.json();
-        const catalog = data.emotions_catalog || [];
-        if (catalog.length === 0) {
+        let catalog = data.emotions_catalog || data.catalog || [];
+        if (!catalog || catalog.length === 0) {
+            catalog = data.full_catalog || [];
+        }
+        if (!catalog || catalog.length === 0) {
             container.innerHTML = '<p class="text-muted" style="font-size:0.85rem;">No hay emociones configuradas aún.</p>';
             return;
         }

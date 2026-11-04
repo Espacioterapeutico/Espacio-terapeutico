@@ -794,9 +794,24 @@ Al agendar y confirmar tus sesiones a través de la plataforma, declaras haber l
 def admin_profile_public():
     """Permite a cada psicólogo personalizar su perfil público (foto, biografía, modalidades, WhatsApp, redes, especialidades, ubicación)."""
     db = get_db()
-    from app import ensure_usuarios_columns
-    ensure_usuarios_columns(db)
     cursor = db.cursor()
+    try:
+        from app import ensure_usuarios_columns
+        ensure_usuarios_columns(db)
+    except Exception:
+        pass
+    try:
+        cursor.execute("PRAGMA table_info(usuarios)")
+        existing_cols = {col[1] for col in cursor.fetchall()}
+        for col_to_check in ['bloqueo_recursos', 'bloqueo_tests', 'bloqueo_examen_mental', 'bloqueo_registro', 'bloqueo_registro_rapido', 'bloqueo_evoluciones', 'bloqueo_finanzas', 'bloqueo_agenda', 'bloqueo_mensajes', 'bloqueo_pizarra', 'bloqueo_herramientas', 'bloqueo_confirmaciones', 'aviso_pago', 'mostrar_en_directorio']:
+            if col_to_check not in existing_cols:
+                try:
+                    cursor.execute(f"ALTER TABLE usuarios ADD COLUMN {col_to_check} INTEGER DEFAULT 0")
+                except Exception:
+                    pass
+        db.commit()
+    except Exception:
+        pass
     user_id = session['user_id']
     
     if request.method == 'GET':

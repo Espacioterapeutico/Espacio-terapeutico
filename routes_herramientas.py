@@ -442,9 +442,21 @@ def get_patient_mood_tracker_emotions_config():
                     'color': cat['color'],
                     'items': cat_items
                 })
-        return jsonify({'catalog': filtered_catalog, 'allowed_ids': allowed_ids})
+        if not filtered_catalog:
+            filtered_catalog = EMOTIONS_CATALOG
+        return jsonify({
+            'catalog': filtered_catalog,
+            'emotions_catalog': filtered_catalog,
+            'full_catalog': EMOTIONS_CATALOG,
+            'allowed_ids': allowed_ids
+        })
     else:
-        return jsonify({'catalog': EMOTIONS_CATALOG, 'allowed_ids': None})
+        return jsonify({
+            'catalog': EMOTIONS_CATALOG,
+            'emotions_catalog': EMOTIONS_CATALOG,
+            'full_catalog': EMOTIONS_CATALOG,
+            'allowed_ids': None
+        })
 
 @herramientas_bp.route('/api/patient/mood_tracker/log', methods=['POST'])
 @patient_login_required
