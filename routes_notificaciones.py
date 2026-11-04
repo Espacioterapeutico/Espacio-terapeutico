@@ -124,7 +124,7 @@ def get_admin_notifications():
             cursor.execute("""
                 SELECT id, tipo, titulo, mensaje, fecha, leida, link
                 FROM notificaciones
-                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente')
+                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND titulo NOT LIKE '%Tu Psicólogo%' AND mensaje NOT LIKE '%Tu psicólogo%'
                   AND (user_id = ? OR (user_id IS NULL AND ? = 1)) AND leida = 0
                 ORDER BY fecha DESC, id DESC LIMIT 25
             """, (psic_id, psic_id))
@@ -132,7 +132,7 @@ def get_admin_notifications():
             
             cursor.execute("""
                 SELECT COUNT(id) FROM notificaciones 
-                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente')
+                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND titulo NOT LIKE '%Tu Psicólogo%' AND mensaje NOT LIKE '%Tu psicólogo%'
                   AND (user_id = ? OR (user_id IS NULL AND ? = 1)) AND leida = 0
             """, (psic_id, psic_id))
             unread_count = cursor.fetchone()[0] or 0
@@ -140,11 +140,11 @@ def get_admin_notifications():
             cursor.execute("""
                 SELECT id, tipo, titulo, mensaje, fecha, leida, link
                 FROM notificaciones
-                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND leida = 0
+                WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND titulo NOT LIKE '%Tu Psicólogo%' AND mensaje NOT LIKE '%Tu psicólogo%' AND leida = 0
                 ORDER BY fecha DESC, id DESC LIMIT 25
             """)
             rows = cursor.fetchall()
-            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND leida = 0")
+            cursor.execute("SELECT COUNT(id) FROM notificaciones WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND titulo NOT LIKE '%Tu Psicólogo%' AND mensaje NOT LIKE '%Tu psicólogo%' AND leida = 0")
             unread_count = cursor.fetchone()[0] or 0
         
         list_notif = [{
@@ -179,11 +179,11 @@ def admin_notifications_mark_read():
             if psic_id is not None:
                 cursor.execute("""
                     UPDATE notificaciones SET leida = 1 
-                    WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') 
+                    WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND titulo NOT LIKE '%Tu Psicólogo%' AND mensaje NOT LIKE '%Tu psicólogo%' 
                       AND (user_id = ? OR (user_id IS NULL AND ? = 1))
                 """, (psic_id, psic_id))
             else:
-                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente')")
+                cursor.execute("UPDATE notificaciones SET leida = 1 WHERE tipo NOT IN ('herramienta_paciente', 'recordatorio_cita_paciente') AND titulo NOT LIKE '%Tu Psicólogo%' AND mensaje NOT LIKE '%Tu psicólogo%'")
         db.commit()
         return jsonify({'success': 'Notificación marcada como leída.'})
     except Exception as e:

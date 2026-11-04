@@ -835,6 +835,17 @@ def init_db():
     
     # Always ensure demo user is seeded
     try:
+        # Parches de consistencia y desvinculación:
+        # 1. Limpiar notificaciones de respuestas de pizarra dirigidas a pacientes que quedaron históricamente en la tabla de psicólogos
+        cursor.execute("DELETE FROM notificaciones WHERE titulo LIKE '%Tu Psicólogo%' OR mensaje LIKE '%Tu psicólogo%'")
+        
+        # 2. Reasignar a María Prado de la cuenta de prueba Valeria (id 29) a Paulo Mora (id 1)
+        cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE (id = 210 OR cedula = 'V30146043' OR (LOWER(nombres) LIKE '%maría%' AND LOWER(apellidos) LIKE '%prado%')) AND psicologo_id = 29")
+        cursor.execute("UPDATE agenda SET psicologo_id = 1 WHERE paciente_id IN (SELECT id FROM pacientes WHERE id = 210 OR cedula = 'V30146043') AND psicologo_id = 29")
+        
+        # 3. Ocultar cuenta demo psicologa.valeria del directorio público y registro
+        cursor.execute("UPDATE usuarios SET mostrar_en_directorio = 0 WHERE username = 'psicologa.valeria'")
+
         ensure_demo_user(db)
     except Exception as _e:
         print("Aviso al verificar usuario demo:", _e)
@@ -1863,6 +1874,17 @@ def init_db():
         for key_d, val_d in def_landing_defaults:
             cursor.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES (?, ?)", (key_d, val_d))
         
+        # Parches de consistencia y desvinculación:
+        # 1. Limpiar notificaciones de respuestas de pizarra dirigidas a pacientes que quedaron históricamente en la tabla de psicólogos
+        cursor.execute("DELETE FROM notificaciones WHERE titulo LIKE '%Tu Psicólogo%' OR mensaje LIKE '%Tu psicólogo%'")
+        
+        # 2. Reasignar a María Prado de la cuenta de prueba Valeria (id 29) a Paulo Mora (id 1)
+        cursor.execute("UPDATE pacientes SET psicologo_id = 1 WHERE (id = 210 OR cedula = 'V30146043' OR (LOWER(nombres) LIKE '%maría%' AND LOWER(apellidos) LIKE '%prado%')) AND psicologo_id = 29")
+        cursor.execute("UPDATE agenda SET psicologo_id = 1 WHERE paciente_id IN (SELECT id FROM pacientes WHERE id = 210 OR cedula = 'V30146043') AND psicologo_id = 29")
+        
+        # 3. Ocultar cuenta demo psicologa.valeria del directorio público y registro
+        cursor.execute("UPDATE usuarios SET mostrar_en_directorio = 0 WHERE username = 'psicologa.valeria'")
+
         ensure_demo_user(db)
     except Exception as _patch_err:
         print(f"Aviso en parche de datos automático: {_patch_err}")

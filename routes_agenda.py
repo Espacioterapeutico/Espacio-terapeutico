@@ -1816,7 +1816,10 @@ def get_active_psychologists():
     cursor.execute("""
         SELECT id, nombres, apellidos, username, slug, role
         FROM usuarios
-        WHERE role IN ('psicologo', 'admin', 'superadmin', 'psicologo_admin') AND COALESCE(activo, 1) = 1
+        WHERE role IN ('psicologo', 'admin', 'superadmin', 'psicologo_admin')
+          AND COALESCE(activo, 1) = 1
+          AND COALESCE(mostrar_en_directorio, 1) = 1
+          AND LOWER(username) NOT IN ('admin', 'superadmin', 'psicologa.valeria')
         ORDER BY id ASC
     """)
     raw_rows = cursor.fetchall()
