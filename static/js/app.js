@@ -13067,6 +13067,35 @@ function calculateAgeFromBirthdate(birthdateVal, targetId = 'p-edad') {
 window._patientReferenceSessions = [];
 window._patientReferenceSessionIndex = 0;
 
+function setupPatientReferenceSwipe(container) {
+    if (!container || container._swipeBound) return;
+    container._swipeBound = true;
+    let startX = 0;
+    let startY = 0;
+
+    container.addEventListener('touchstart', (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    container.addEventListener('touchend', (e) => {
+        if (!e.changedTouches || e.changedTouches.length === 0) return;
+        const diffX = e.changedTouches[0].clientX - startX;
+        const diffY = e.changedTouches[0].clientY - startY;
+        // Solo deslizar si el gesto horizontal supera 35px y es más pronunciado que el vertical
+        if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY)) {
+            if (diffX < 0) {
+                // Swipe izquierda -> siguiente sesión
+                navigatePatientReferenceSession(1);
+            } else {
+                // Swipe derecha -> sesión anterior
+                navigatePatientReferenceSession(-1);
+            }
+        }
+    }, { passive: true });
+}
+
 function renderPatientReferenceSessionCard() {
     const container = document.getElementById('patient-reference-session-card');
     if (!container) return;
@@ -13091,6 +13120,14 @@ function renderPatientReferenceSessionCard() {
         <div style="margin-bottom: 0.5rem; white-space: pre-wrap;"><strong>Compromisos Terapeuta:</strong> ${ses.compromisos_psicologo}</div>
     ` : '';
 
+    const dotsBottomHtml = total > 1 ? `
+        <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 0.6rem; padding-top: 0.45rem; border-top: 1px dashed rgba(169, 89, 147, 0.18);">
+            ${sessions.map((_, i) => `
+                <span onclick="setPatientReferenceSessionIndex(${i})" style="cursor: pointer; width: ${i === index ? '16px' : '7px'}; height: 7px; border-radius: 4px; background: ${i === index ? 'var(--primary-color)' : 'rgba(169, 89, 147, 0.28)'}; transition: all 0.2s ease;" title="Sesión ${i + 1}"></span>
+            `).join('')}
+        </div>
+    ` : '';
+
     container.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px dashed rgba(169, 89, 147, 0.25); padding-bottom: 0.45rem;">
             <div style="font-weight: 700; color: var(--primary-color); font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
@@ -13098,20 +13135,25 @@ function renderPatientReferenceSessionCard() {
                 <span>${labelSesion} (${dateText}${modalityText}):</span>
             </div>
             ${total > 1 ? `
-            <div style="display: inline-flex; align-items: center; gap: 2px; background: var(--bg-card, #fff); padding: 2px 4px; border-radius: 6px; border: 1px solid var(--border-color, #e2e8f0); box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                <button type="button" class="btn btn-sm" onclick="navigatePatientReferenceSession(1)" 
-                    ${index >= total - 1 ? 'disabled style="opacity: 0.35; cursor: not-allowed; padding: 2px 8px; font-size: 0.75rem; border: none; background: transparent;"' : 'style="padding: 2px 8px; font-size: 0.75rem; color: var(--primary-color); cursor: pointer; border: none; background: transparent; font-weight: 600;"'} 
-                    title="Ver sesión anterior (más antigua)">
-                    <i class="fas fa-chevron-left"></i> <span style="font-size: 0.75rem; margin-left: 2px;">Más antigua</span>
+            <div class="ref-session-desktop-nav">
+                <button type="button" class="btn btn-sm" onclick="navigatePatientReferenceSession(-1)" 
+                    ${index <= 0 ? 'disabled style="opacity: 0.25; cursor: not-allowed; padding: 2px 7px; font-size: 0.75rem; border: none; background: transparent;"' : 'style="padding: 2px 7px; font-size: 0.75rem; color: var(--primary-color); cursor: pointer; border: none; background: transparent; font-weight: 700;"'} 
+                    title="Sesión posterior">
+                    <i class="fas fa-chevron-left"></i>
                 </button>
                 <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-color, #334155); padding: 0 6px; border-left: 1px solid var(--border-color, #e2e8f0); border-right: 1px solid var(--border-color, #e2e8f0); user-select: none;">
-                    ${index + 1} de ${total}
+                    ${index + 1} / ${total}
                 </span>
-                <button type="button" class="btn btn-sm" onclick="navigatePatientReferenceSession(-1)" 
-                    ${index <= 0 ? 'disabled style="opacity: 0.35; cursor: not-allowed; padding: 2px 8px; font-size: 0.75rem; border: none; background: transparent;"' : 'style="padding: 2px 8px; font-size: 0.75rem; color: var(--primary-color); cursor: pointer; border: none; background: transparent; font-weight: 600;"'} 
-                    title="Ver sesión posterior (más reciente)">
-                    <span style="font-size: 0.75rem; margin-right: 2px;">Más reciente</span> <i class="fas fa-chevron-right"></i>
+                <button type="button" class="btn btn-sm" onclick="navigatePatientReferenceSession(1)" 
+                    ${index >= total - 1 ? 'disabled style="opacity: 0.25; cursor: not-allowed; padding: 2px 7px; font-size: 0.75rem; border: none; background: transparent;"' : 'style="padding: 2px 7px; font-size: 0.75rem; color: var(--primary-color); cursor: pointer; border: none; background: transparent; font-weight: 700;"'} 
+                    title="Sesión anterior">
+                    <i class="fas fa-chevron-right"></i>
                 </button>
+            </div>
+            <div class="ref-session-mobile-dots">
+                ${sessions.map((_, i) => `
+                    <span onclick="setPatientReferenceSessionIndex(${i})" style="cursor: pointer; width: ${i === index ? '14px' : '6px'}; height: 6px; border-radius: 3px; background: ${i === index ? 'var(--primary-color)' : 'rgba(169, 89, 147, 0.3)'}; transition: all 0.2s ease;"></span>
+                `).join('')}
             </div>
             ` : ''}
         </div>
@@ -13120,10 +13162,21 @@ function renderPatientReferenceSessionCard() {
         <div style="margin-bottom: 0.5rem; white-space: pre-wrap;"><strong>Tareas Asignadas:</strong> ${ses.tareas_asignadas || '<em>Ninguna</em>'}</div>
         ${compromisosHtml}
         <div style="margin-bottom: 0.25rem; white-space: pre-wrap;"><strong>Anotaciones / Objetivos próxima:</strong> ${ses.anotaciones_proxima || '<em>Ninguna</em>'}</div>
+        ${dotsBottomHtml}
     `;
+    setupPatientReferenceSwipe(container);
 }
 
 window.renderPatientReferenceSessionCard = renderPatientReferenceSessionCard;
+
+window.setPatientReferenceSessionIndex = function(idx) {
+    const sessions = window._patientReferenceSessions || [];
+    if (!sessions.length) return;
+    if (idx >= 0 && idx < sessions.length) {
+        window._patientReferenceSessionIndex = idx;
+        renderPatientReferenceSessionCard();
+    }
+};
 
 window.navigatePatientReferenceSession = function(delta) {
     const sessions = window._patientReferenceSessions || [];
@@ -13173,7 +13226,7 @@ async function updateSessionPatientQuickInfo(patientId) {
                 <strong>${residenciaActualText}</strong>. <br>
                 <strong>Antecedentes:</strong> ${antecedentsText}.
             </p>
-            <div id="patient-reference-session-card" style="background-color: rgba(169, 89, 147, 0.04); padding: 0.6rem 0.8rem; border-radius: 6px; border-left: 3.5px solid var(--primary-color); font-size: 0.85rem; word-break: break-word; color: var(--text-color);">
+            <div id="patient-reference-session-card" class="ref-session-card" style="background-color: rgba(169, 89, 147, 0.04); padding: 0.6rem 0.8rem; border-radius: 6px; border-left: 3.5px solid var(--primary-color); font-size: 0.85rem; word-break: break-word; color: var(--text-color);">
             </div>
         `;
         renderPatientReferenceSessionCard();
