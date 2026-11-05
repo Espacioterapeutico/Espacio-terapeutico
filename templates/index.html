@@ -639,7 +639,6 @@
                     <a href="#section-quienes">¿Quiénes Somos?</a>
                     <a href="#section-mision">Misión y Visión</a>
                     <a href="#section-directorio">Psicólogos</a>
-                    <a href="#section-suscripcion">Suscripción</a>
                 </div>
                 <button class="pub-btn-login" onclick="openAuthModal()">Iniciar Sesión</button>
             </div>
@@ -702,8 +701,8 @@
             </div>
         </section>
 
-        <!-- SECCIÓN 4: SUSCRIPCIÓN PARA PSICÓLOGOS (SAAS) -->
-        <section id="section-suscripcion" class="pub-section pub-bg-dark" style="padding: 5rem 1.5rem; background: linear-gradient(135deg, #2a122c 0%, #150817 100%);">
+        <!-- SECCIÓN 4: SUSCRIPCIÓN PARA PSICÓLOGOS (OCULTA EN PÁGINA PÚBLICA / SOLO DISPONIBLE EN EL PANEL DE PSICÓLOGOS) -->
+        <section id="section-suscripcion" class="pub-section pub-bg-dark hide" style="display: none !important;">
             <div class="pub-container text-center" style="max-width: 1050px; margin: 0 auto;">
                 <h2 style="color: white; font-size: 2.3rem; font-weight: 800; margin-bottom: 0.75rem; font-family: var(--font-title);">Planes de Suscripción para Psicólogos</h2>
                 <p style="color: #fbcfe8; font-size: 1.1rem; line-height: 1.6; max-width: 750px; margin: 0 auto 3rem auto;">
@@ -3378,6 +3377,111 @@
                                             <p id="sub-info-solvency-sub" style="margin: 3px 0 0 0; font-size: 0.78rem; color: #64748b; font-weight: 500;">Acceso clínico total</p>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Catálogo de Planes de Membresía para el Psicólogo -->
+                        <div class="card" style="border-radius: 16px; border: 1.5px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 1.5rem;">
+                            <div class="card-header" style="background: var(--card-bg); border-bottom: 1.5px solid var(--border-color); padding: 1.25rem 1.5rem;">
+                                <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--primary-brand, #702e5e); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                    💎 Catálogo de Planes y Membresías
+                                </h3>
+                                <p class="text-secondary text-sm" style="margin: 4px 0 0 0;">
+                                    Elige o renueva el plan que mejor se adapte al volumen y necesidades de tu consulta clínica.
+                                </p>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; align-items: stretch;">
+                                    
+                                    <!-- PLAN BÁSICO -->
+                                    <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                                        <div>
+                                            <div style="display: inline-block; background: #e0f2fe; color: #0284c7; font-size: 0.74rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 0.75rem;">
+                                                🥉 Plan Inicial
+                                            </div>
+                                            <h4 style="color: #0f172a; font-size: 1.3rem; font-weight: 800; margin: 0 0 0.35rem 0;">Plan Básico</h4>
+                                            <div style="display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 0.85rem;">
+                                                <span style="font-size: 2.1rem; font-weight: 900; color: #702e5e;">$5</span>
+                                                <span style="color: #64748b; font-weight: 600; font-size: 0.88rem;">/ mes</span>
+                                            </div>
+                                            <p style="color: #475569; font-size: 0.82rem; line-height: 1.45; margin-bottom: 1.15rem;">
+                                                Ideal para profesionales que desean organizar su agenda, cobranzas y automatizar mensajes por WhatsApp.
+                                            </p>
+                                            <ul style="list-style: none; padding: 0; margin: 0 0 1.25rem 0; font-size: 0.82rem; color: #334155; display: flex; flex-direction: column; gap: 0.5rem;">
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Agenda interactiva y citas</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Confirmaciones y recordatorios por WhatsApp</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Control de cobranzas y Finanzas</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Sincronización con Google Calendar</span></li>
+                                            </ul>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="selectPlanToRenew('Plan Básico ($5/mes)')" style="width: 100%; font-weight: 700; border-radius: 8px; padding: 0.55rem;">
+                                            Seleccionar Plan Básico
+                                        </button>
+                                    </div>
+
+                                    <!-- PLAN ESTÁNDAR -->
+                                    <div style="background: linear-gradient(180deg, #fdf4ff 0%, #ffffff 100%); border: 2px solid #ec4899; border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 6px 20px rgba(236,72,153,0.12);">
+                                        <div style="position: absolute; top: -12px; right: 14px; background: #ec4899; color: white; font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.75rem; border-radius: 20px; text-transform: uppercase;">
+                                            🎁 1er Mes Gratis
+                                        </div>
+                                        <div>
+                                            <div style="display: inline-block; background: #fce7f3; color: #db2777; font-size: 0.74rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 0.75rem;">
+                                                🥈 Clínico Recomendado
+                                            </div>
+                                            <h4 style="color: #0f172a; font-size: 1.3rem; font-weight: 800; margin: 0 0 0.35rem 0;">Plan Estándar</h4>
+                                            <div style="display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 0.85rem;">
+                                                <span style="font-size: 2.1rem; font-weight: 900; color: #ec4899;">$15</span>
+                                                <span style="color: #64748b; font-weight: 600; font-size: 0.88rem;">/ mes</span>
+                                            </div>
+                                            <p style="color: #475569; font-size: 0.82rem; line-height: 1.45; margin-bottom: 1.15rem;">
+                                                Suite completa para psicólogos clínicos con expedientes, directorio web y herramientas terapéuticas.
+                                            </p>
+                                            <ul style="list-style: none; padding: 0; margin: 0 0 1.25rem 0; font-size: 0.82rem; color: #334155; display: flex; flex-direction: column; gap: 0.5rem;">
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Todo lo del Plan Básico</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Registro de pacientes e historias clínicas</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Evoluciones de sesiones encriptadas</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Pizarra Terapéutica interactiva en vivo</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Herramientas terapéuticas (Mood Tracker, etc.)</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Presencia en el Directorio Web oficial</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Exportación a PDF y Word</span></li>
+                                            </ul>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="selectPlanToRenew('Plan Estándar ($15/mes)')" style="width: 100%; font-weight: 700; border-radius: 8px; padding: 0.55rem; background: #ec4899; border: none;">
+                                            Seleccionar Plan Estándar
+                                        </button>
+                                    </div>
+
+                                    <!-- PLAN PROFESIONAL FULL -->
+                                    <div style="background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%); border: 2px solid #a855f7; border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 6px 20px rgba(168,85,247,0.12);">
+                                        <div style="position: absolute; top: -12px; right: 14px; background: #a855f7; color: white; font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.75rem; border-radius: 20px; text-transform: uppercase;">
+                                            ⭐ Acceso Total
+                                        </div>
+                                        <div>
+                                            <div style="display: inline-block; background: #f3e8ff; color: #7e22ce; font-size: 0.74rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 20px; text-transform: uppercase; margin-bottom: 0.75rem;">
+                                                🥇 Suite + Psicometría
+                                            </div>
+                                            <h4 style="color: #0f172a; font-size: 1.3rem; font-weight: 800; margin: 0 0 0.35rem 0;">Plan Profesional Full</h4>
+                                            <div style="display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 0.85rem;">
+                                                <span style="font-size: 2.1rem; font-weight: 900; color: #7e22ce;">$20</span>
+                                                <span style="color: #64748b; font-weight: 600; font-size: 0.88rem;">/ mes</span>
+                                            </div>
+                                            <p style="color: #475569; font-size: 0.82rem; line-height: 1.45; margin-bottom: 1.15rem;">
+                                                Acceso total para evaluadores con examen mental estructurado y baterías psicométricas automáticas.
+                                            </p>
+                                            <ul style="list-style: none; padding: 0; margin: 0 0 1.25rem 0; font-size: 0.82rem; color: #334155; display: flex; flex-direction: column; gap: 0.5rem;">
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Todo lo del Plan Estándar</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Examen Mental Clínico Estructurado</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Catálogo de Tests Psicométricos completos</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Homologación de pruebas personalizadas</span></li>
+                                                <li style="display: flex; align-items: center; gap: 6px;">✅ <span>Soporte prioritario directo</span></li>
+                                            </ul>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="selectPlanToRenew('Plan Profesional Full ($20/mes)')" style="width: 100%; font-weight: 700; border-radius: 8px; padding: 0.55rem; background: #7e22ce; border: none;">
+                                            Seleccionar Plan Profesional
+                                        </button>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>

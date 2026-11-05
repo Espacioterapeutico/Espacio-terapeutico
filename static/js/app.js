@@ -22350,6 +22350,16 @@ function notifySubscriptionPaymentWhatsApp() {
     window.open(url, '_blank');
 }
 
+function selectPlanToRenew(planName) {
+    const user = (window.currentUser && window.currentUser.username) || sessionStorage.getItem('username') || '';
+    const name = (window.currentUser && (window.currentUser.nombres || window.currentUser.username)) || '';
+    const phone = '584245926114';
+    const msg = encodeURIComponent(`Hola Espacio Terapéutico, deseo activar/renovar mi suscripción en el ${planName} para mi cuenta: ${user} (${name}). ¿Me podrían confirmar los datos de pago vigentes?`);
+    const url = `https://wa.me/${phone}?text=${msg}`;
+    window.open(url, '_blank');
+}
+window.selectPlanToRenew = selectPlanToRenew;
+
 async function saveSuperadminSubscriptionMethodsFromSettings() {
     const textarea = document.getElementById('sub-superadmin-methods-textarea');
     const msgEl = document.getElementById('sub-superadmin-save-msg');
