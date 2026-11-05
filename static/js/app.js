@@ -13064,6 +13064,77 @@ function calculateAgeFromBirthdate(birthdateVal, targetId = 'p-edad') {
     }
 }
 
+window._patientReferenceSessions = [];
+window._patientReferenceSessionIndex = 0;
+
+function renderPatientReferenceSessionCard() {
+    const container = document.getElementById('patient-reference-session-card');
+    if (!container) return;
+
+    const sessions = window._patientReferenceSessions || [];
+    const total = sessions.length;
+
+    if (total === 0) {
+        container.innerHTML = '<strong>Sesión Anterior:</strong> <em>No hay evoluciones previas registradas.</em>';
+        return;
+    }
+
+    const index = Math.max(0, Math.min(window._patientReferenceSessionIndex || 0, total - 1));
+    window._patientReferenceSessionIndex = index;
+    const ses = sessions[index];
+
+    const labelSesion = index === 0 ? 'Última Sesión' : 'Sesión Previa';
+    const dateText = ses.fecha || 'Sin fecha';
+    const modalityText = ses.modalidad ? ` - ${ses.modalidad}` : '';
+
+    const compromisosHtml = ses.compromisos_psicologo ? `
+        <div style="margin-bottom: 0.5rem; white-space: pre-wrap;"><strong>Compromisos Terapeuta:</strong> ${ses.compromisos_psicologo}</div>
+    ` : '';
+
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px dashed rgba(169, 89, 147, 0.25); padding-bottom: 0.45rem;">
+            <div style="font-weight: 700; color: var(--primary-color); font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-history" style="font-size: 0.82rem;"></i>
+                <span>${labelSesion} (${dateText}${modalityText}):</span>
+            </div>
+            ${total > 1 ? `
+            <div style="display: inline-flex; align-items: center; gap: 2px; background: var(--bg-card, #fff); padding: 2px 4px; border-radius: 6px; border: 1px solid var(--border-color, #e2e8f0); box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                <button type="button" class="btn btn-sm" onclick="navigatePatientReferenceSession(1)" 
+                    ${index >= total - 1 ? 'disabled style="opacity: 0.35; cursor: not-allowed; padding: 2px 8px; font-size: 0.75rem; border: none; background: transparent;"' : 'style="padding: 2px 8px; font-size: 0.75rem; color: var(--primary-color); cursor: pointer; border: none; background: transparent; font-weight: 600;"'} 
+                    title="Ver sesión anterior (más antigua)">
+                    <i class="fas fa-chevron-left"></i> <span style="font-size: 0.75rem; margin-left: 2px;">Más antigua</span>
+                </button>
+                <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-color, #334155); padding: 0 6px; border-left: 1px solid var(--border-color, #e2e8f0); border-right: 1px solid var(--border-color, #e2e8f0); user-select: none;">
+                    ${index + 1} de ${total}
+                </span>
+                <button type="button" class="btn btn-sm" onclick="navigatePatientReferenceSession(-1)" 
+                    ${index <= 0 ? 'disabled style="opacity: 0.35; cursor: not-allowed; padding: 2px 8px; font-size: 0.75rem; border: none; background: transparent;"' : 'style="padding: 2px 8px; font-size: 0.75rem; color: var(--primary-color); cursor: pointer; border: none; background: transparent; font-weight: 600;"'} 
+                    title="Ver sesión posterior (más reciente)">
+                    <span style="font-size: 0.75rem; margin-right: 2px;">Más reciente</span> <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            ` : ''}
+        </div>
+        <div style="margin-bottom: 0.5rem; white-space: pre-wrap;"><strong>Resumen (Público):</strong> ${ses.resumen_paciente || '<em>Sin resumen público</em>'}</div>
+        <div style="margin-bottom: 0.5rem; white-space: pre-wrap;"><strong>Obs. Clínicas (Privado):</strong> ${ses.resumen || '<em>Ninguna</em>'}</div>
+        <div style="margin-bottom: 0.5rem; white-space: pre-wrap;"><strong>Tareas Asignadas:</strong> ${ses.tareas_asignadas || '<em>Ninguna</em>'}</div>
+        ${compromisosHtml}
+        <div style="margin-bottom: 0.25rem; white-space: pre-wrap;"><strong>Anotaciones / Objetivos próxima:</strong> ${ses.anotaciones_proxima || '<em>Ninguna</em>'}</div>
+    `;
+}
+
+window.renderPatientReferenceSessionCard = renderPatientReferenceSessionCard;
+
+window.navigatePatientReferenceSession = function(delta) {
+    const sessions = window._patientReferenceSessions || [];
+    if (!sessions.length) return;
+    const newIdx = (window._patientReferenceSessionIndex || 0) + delta;
+    if (newIdx >= 0 && newIdx < sessions.length) {
+        window._patientReferenceSessionIndex = newIdx;
+        renderPatientReferenceSessionCard();
+    }
+};
+
 async function updateSessionPatientQuickInfo(patientId) {
     const quickInfoDiv = document.getElementById('s-paciente-quick-info');
     if (!quickInfoDiv) return;
@@ -13071,6 +13142,8 @@ async function updateSessionPatientQuickInfo(patientId) {
     if (!patientId) {
         quickInfoDiv.innerHTML = '';
         quickInfoDiv.classList.add('hide');
+        window._patientReferenceSessions = [];
+        window._patientReferenceSessionIndex = 0;
         return;
     }
     
@@ -13079,22 +13152,15 @@ async function updateSessionPatientQuickInfo(patientId) {
         if (!res.ok) throw new Error();
         const data = await res.json();
         const p = data.patient;
-        const lastSes = data.last_session;
+        
+        window._patientReferenceSessions = (Array.isArray(data.previous_sessions) && data.previous_sessions.length > 0)
+            ? data.previous_sessions
+            : (data.last_session ? [data.last_session] : []);
+        window._patientReferenceSessionIndex = 0;
         
         const antecedentsText = p.antecedentes_psicologicos_personales || p.antecedentes_medicos_personales || 'Ninguno registrado';
         const residenciaText = p.con_quien_reside ? `Con quién reside: ${p.con_quien_reside}` : 'Con quién reside: N/A';
         const residenciaActualText = `Residencia actual: ${formatPatientLocation(p)}`;
-        
-        let lastSessionSummaryHtml = '<strong>Sesión Anterior:</strong> <em>No hay evoluciones previas registradas.</em>';
-        if (lastSes) {
-            lastSessionSummaryHtml = `
-                <div style="margin-bottom: 0.5rem; font-weight: 700; color: var(--primary-color);">Sesión Anterior (${lastSes.fecha} - ${lastSes.modalidad || ''}):</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Resumen (Público):</strong> ${lastSes.resumen_paciente || '<em>Sin resumen público</em>'}</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Obs. Clínicas (Privado):</strong> ${lastSes.resumen || '<em>Ninguna</em>'}</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Tareas Asignadas:</strong> ${lastSes.tareas_asignadas || '<em>Ninguna</em>'}</div>
-                <div style="margin-bottom: 0.25rem;"><strong>Anotaciones / Objetivos próxima:</strong> ${lastSes.anotaciones_proxima || '<em>Ninguna</em>'}</div>
-            `;
-        }
         
         quickInfoDiv.innerHTML = `
             <div style="font-weight: 600; color: var(--primary-color); margin-bottom: 0.35rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.25rem; font-size: 0.9rem;">
@@ -13107,10 +13173,10 @@ async function updateSessionPatientQuickInfo(patientId) {
                 <strong>${residenciaActualText}</strong>. <br>
                 <strong>Antecedentes:</strong> ${antecedentsText}.
             </p>
-            <div style="background-color: rgba(169, 89, 147, 0.04); padding: 0.6rem 0.8rem; border-radius: 6px; border-left: 3.5px solid var(--primary-color); font-size: 0.85rem; word-break: break-word; color: var(--text-color);">
-                ${lastSessionSummaryHtml}
+            <div id="patient-reference-session-card" style="background-color: rgba(169, 89, 147, 0.04); padding: 0.6rem 0.8rem; border-radius: 6px; border-left: 3.5px solid var(--primary-color); font-size: 0.85rem; word-break: break-word; color: var(--text-color);">
             </div>
         `;
+        renderPatientReferenceSessionCard();
         quickInfoDiv.classList.remove('hide');
     } catch (err) {
         quickInfoDiv.innerHTML = '<span class="text-danger">Error al cargar ficha de referencia.</span>';

@@ -94,12 +94,12 @@ def get_patient_summary(patient_id):
     except Exception: pass
         
     cursor.execute("""
-        SELECT fecha, modalidad, resumen, resumen_paciente, tareas_asignadas, anotaciones_proxima 
+        SELECT id, fecha, modalidad, resumen, resumen_paciente, tareas_asignadas, anotaciones_proxima, compromisos_psicologo 
         FROM sesiones 
         WHERE paciente_id = ? 
-        ORDER BY fecha DESC, id DESC LIMIT 1
+        ORDER BY fecha DESC, id DESC LIMIT 50
     """, (patient_id,))
-    last_session = cursor.fetchone()
+    session_rows = cursor.fetchall()
     
     cursor.execute("""
         SELECT 
@@ -154,15 +154,20 @@ def get_patient_summary(patient_id):
         if k in patient_dict and patient_dict[k]:
             patient_dict[k] = decrypt_clinical_text(patient_dict[k])
             
-    last_session_dict = dict(last_session) if last_session else None
-    if last_session_dict:
-        for k in ['resumen', 'resumen_paciente', 'tareas_asignadas', 'anotaciones_proxima']:
-            if k in last_session_dict and last_session_dict[k]:
-                last_session_dict[k] = decrypt_clinical_text(last_session_dict[k])
+    previous_sessions = []
+    for s_row in session_rows:
+        s_dict = dict(s_row)
+        for k in ['resumen', 'resumen_paciente', 'tareas_asignadas', 'anotaciones_proxima', 'compromisos_psicologo']:
+            if k in s_dict and s_dict[k]:
+                s_dict[k] = decrypt_clinical_text(s_dict[k])
+        previous_sessions.append(s_dict)
+        
+    last_session_dict = previous_sessions[0] if previous_sessions else None
 
     summary = {
         'patient': patient_dict,
         'last_session': last_session_dict,
+        'previous_sessions': previous_sessions,
         'finance': {
             'pagas': finance_stats['pagas'] or 0,
             'pendientes': finance_stats['pendientes'] or 0,
