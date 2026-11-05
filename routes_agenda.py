@@ -2181,14 +2181,32 @@ def get_admin_consultation_history():
         cursor = db.cursor()
         
         cursor.execute("""
-            SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.monto, af.moneda,
-                   af.estado_pago, af.control_uso, af.metodo_pago, af.referencia, af.fecha_liquidacion,
-                   p.id as paciente_id, p.nombres, p.apellidos, p.cedula, p.telefono
-            FROM agenda_finanzas af
-            JOIN pacientes p ON af.paciente_id = p.id
-            WHERE p.psicologo_id = ? AND (af.fecha LIKE ? OR af.fecha_liquidacion LIKE ?)
-            ORDER BY af.fecha DESC, af.hora DESC
-        """, (user_id, date_prefix, date_prefix))
+            SELECT COALESCE(af.id, s.id) as id,
+                   s.id as sesion_id,
+                   s.fecha,
+                   COALESCE(af.hora, '') as hora,
+                   COALESCE(s.modalidad, af.tipo_consulta, 'Consulta') as tipo_consulta,
+                   COALESCE(af.monto, 0) as monto,
+                   COALESCE(af.moneda, 'USD') as moneda,
+                   COALESCE(af.estado_pago, 'Paga') as estado_pago,
+                   af.control_uso,
+                   af.metodo_pago,
+                   af.referencia,
+                   af.fecha_liquidacion,
+                   p.id as paciente_id,
+                   p.nombres,
+                   p.apellidos,
+                   p.cedula,
+                   p.telefono
+            FROM sesiones s
+            JOIN pacientes p ON s.paciente_id = p.id
+            LEFT JOIN agenda_finanzas af ON s.agenda_id = af.id
+            WHERE p.psicologo_id = ?
+              AND s.fecha LIKE ?
+              AND (s.estado IS NULL OR (s.estado != 'Cancelada' AND s.estado NOT LIKE 'Cancelada%' AND s.estado NOT LIKE '%cancelad%'))
+              AND (s.estado = 'Realizada' OR (s.resumen IS NOT NULL AND TRIM(s.resumen) != ''))
+            ORDER BY s.fecha DESC, COALESCE(af.hora, '') DESC
+        """, (user_id, date_prefix))
         
         rows = [dict(r) for r in cursor.fetchall()]
         return jsonify(rows)

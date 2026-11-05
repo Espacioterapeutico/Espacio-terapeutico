@@ -375,27 +375,17 @@ def get_monthly_balance():
             FROM sesiones s
             JOIN pacientes p ON s.paciente_id = p.id
             WHERE s.fecha LIKE ? AND p.psicologo_id = ?
-              AND (s.estado IS NULL OR (s.estado != 'Cancelada' AND s.estado NOT LIKE 'Cancelada%'))
+              AND (s.estado IS NULL OR (s.estado != 'Cancelada' AND s.estado NOT LIKE 'Cancelada%' AND s.estado NOT LIKE '%cancelad%'))
+              AND (s.estado = 'Realizada' OR (s.resumen IS NOT NULL AND TRIM(s.resumen) != ''))
             GROUP BY s.modalidad
         """, (date_prefix, psic_id))
-        ses_counts = {row[0]: row[1] for row in cursor.fetchall() if row[0]}
-
-        cursor.execute("""
-            SELECT af.tipo_consulta, COUNT(af.id)
-            FROM agenda_finanzas af
-            JOIN pacientes p ON af.paciente_id = p.id
-            WHERE af.fecha LIKE ? AND p.psicologo_id = ?
-              AND (af.estado_pago IS NULL OR (af.estado_pago NOT LIKE 'Cancelada%' AND af.estado_pago != 'Reprogramada'))
-            GROUP BY af.tipo_consulta
-        """, (date_prefix, psic_id))
-        af_counts = {row[0]: row[1] for row in cursor.fetchall() if row[0]}
-
-        all_keys = set(ses_counts.keys()).union(set(af_counts.keys()))
         modality_counts = {}
-        for k in all_keys:
-            if k in ['Prepago', 'Paquete Prepagado', 'Paquete Prepagado (Deuda Pago Fraccionado)']:
+        for row in cursor.fetchall():
+            k = row[0]
+            v = row[1]
+            if not k or k in ['Prepago', 'Paquete Prepagado', 'Paquete Prepagado (Deuda Pago Fraccionado)']:
                 continue
-            modality_counts[k] = max(ses_counts.get(k, 0), af_counts.get(k, 0))
+            modality_counts[k] = v
     else:
         cursor.execute("""
             SELECT moneda, tipo_consulta, SUM(monto) as total_monto
@@ -458,10 +448,18 @@ def get_monthly_balance():
         cursor.execute("""
             SELECT modalidad, COUNT(id)
             FROM sesiones
-            WHERE fecha LIKE ? AND (estado IS NULL OR (estado != 'Cancelada' AND estado NOT LIKE 'Cancelada%'))
+            WHERE fecha LIKE ? 
+              AND (estado IS NULL OR (estado != 'Cancelada' AND estado NOT LIKE 'Cancelada%' AND estado NOT LIKE '%cancelad%'))
+              AND (estado = 'Realizada' OR (resumen IS NOT NULL AND TRIM(resumen) != ''))
             GROUP BY modalidad
         """, (date_prefix,))
-        modality_counts = {row[0]: row[1] for row in cursor.fetchall()}
+        modality_counts = {}
+        for row in cursor.fetchall():
+            k = row[0]
+            v = row[1]
+            if not k or k in ['Prepago', 'Paquete Prepagado', 'Paquete Prepagado (Deuda Pago Fraccionado)']:
+                continue
+            modality_counts[k] = v
     
     active_modalities = ["Presencial", "Online"]
     if psic_id is not None and psic_id != -1:
@@ -502,12 +500,18 @@ def get_monthly_balance():
         return False
 
     month_modalities = {}
+    matched_keys = set()
     for m in active_modalities:
         m_count = 0
         for k, v in modality_counts.items():
             if _mod_match(k, m):
                 m_count += v
+                matched_keys.add(k)
         month_modalities[m] = m_count
+
+    for k, v in modality_counts.items():
+        if k not in matched_keys and v > 0:
+            month_modalities[k] = month_modalities.get(k, 0) + v
 
     return jsonify({
         'breakdown': breakdown,
