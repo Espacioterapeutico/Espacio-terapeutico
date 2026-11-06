@@ -18712,10 +18712,12 @@ async function checkFastBookingQuery() {
                 // Control de visualización de sesión fuera de jornada / espacio personalizado
                 const fueraCard = document.getElementById('fast-fuera-jornada-card');
                 if (fueraCard) {
-                    const isExplicitlyDisabled = currentTherapistPublicData && (
+                    const hasPerfiles = currentTherapistPublicData && Array.isArray(currentTherapistPublicData.fuera_jornada_perfiles) && currentTherapistPublicData.fuera_jornada_perfiles.length > 0;
+                    const isExplicitlyDisabled = !currentTherapistPublicData || (
                         currentTherapistPublicData.fuera_jornada_activo === 0 || 
                         currentTherapistPublicData.fuera_jornada_activo === false || 
-                        currentTherapistPublicData.fuera_jornada_activo === '0'
+                        currentTherapistPublicData.fuera_jornada_activo === '0' ||
+                        !hasPerfiles
                     );
                     if (isExplicitlyDisabled) {
                         fueraCard.classList.add('hide');
@@ -37675,22 +37677,36 @@ window.switchFastBookingView = switchFastBookingView;
 function renderFastFueraModalityButtons(modalities, therapistData) {
     const container = document.getElementById('fast-fuera-modality-buttons');
     const inputVal = document.getElementById('fast-fuera-modalidad');
+    const submitBtn = document.getElementById('btn-submit-fast-fuera');
     if (!container) return;
     container.innerHTML = '';
 
     const tData = therapistData || window.currentTherapistPublicData || null;
-    const allowedPerfiles = (tData && Array.isArray(tData.fuera_jornada_perfiles) && tData.fuera_jornada_perfiles.length > 0)
+    const allowedPerfiles = (tData && Array.isArray(tData.fuera_jornada_perfiles))
         ? tData.fuera_jornada_perfiles
-        : (modalities || []).map(m => ({
-            nombre: typeof m === 'object' ? (m.nombre || m.modalidad) : m,
-            modalidad: typeof m === 'object' ? (m.modalidad || m.nombre) : m,
-            costo: 35.0,
-            moneda: 'USD'
-        }));
+        : [];
 
     if (allowedPerfiles.length === 0) {
-        container.innerHTML = '<span class="text-secondary text-sm">No hay modalidades habilitadas para fuera de jornada.</span>';
+        if (inputVal) inputVal.value = '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+        container.innerHTML = `
+            <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1.15rem 1rem; text-align: center; color: #64748b; font-size: 0.85rem; width: 100%; line-height: 1.5;">
+                <span style="font-size: 1.25rem; display: block; margin-bottom: 0.35rem;">ℹ️</span>
+                <strong>No hay modalidades habilitadas</strong><br>
+                El especialista no ha habilitado modalidades para horarios personalizados en este momento.
+            </div>
+        `;
         return;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
     }
 
     let selectedVal = inputVal ? inputVal.value : '';
