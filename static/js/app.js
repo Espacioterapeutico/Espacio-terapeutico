@@ -10067,13 +10067,15 @@ function switchHorariosMode(mode) {
     const btnDias = document.getElementById('btn-mode-horarios-dias');
     const btnBloqueos = document.getElementById('btn-mode-horarios-bloqueos');
     const btnConfig = document.getElementById('btn-mode-horarios-config');
+    const btnFuera = document.getElementById('btn-mode-horarios-fuera-jornada');
     const panelDias = document.getElementById('horarios-panel-dias');
     const panelBloqueos = document.getElementById('horarios-panel-bloqueos');
     const panelConfig = document.getElementById('horarios-panel-config');
+    const panelFuera = document.getElementById('horarios-panel-fuera-jornada');
 
     if (!panelDias || !panelConfig) return;
 
-    [btnDias, btnBloqueos, btnConfig].forEach(btn => {
+    [btnDias, btnBloqueos, btnConfig, btnFuera].forEach(btn => {
         if (!btn) return;
         btn.classList.remove('active', 'active-bloqueo');
         btn.style.background = 'var(--card-bg, #ffffff)';
@@ -10085,6 +10087,7 @@ function switchHorariosMode(mode) {
     if (panelDias) panelDias.classList.add('hide');
     if (panelBloqueos) panelBloqueos.classList.add('hide');
     if (panelConfig) panelConfig.classList.add('hide');
+    if (panelFuera) panelFuera.classList.add('hide');
 
     if (currentHorariosPersonalMode === 'dias') {
         panelDias.classList.remove('hide');
@@ -10105,6 +10108,18 @@ function switchHorariosMode(mode) {
             btnBloqueos.style.boxShadow = '0 2px 8px rgba(225,29,72,0.28)';
         }
         loadHorariosBloqueos();
+    } else if (currentHorariosPersonalMode === 'fuera_jornada') {
+        if (panelFuera) panelFuera.classList.remove('hide');
+        if (btnFuera) {
+            btnFuera.classList.add('active');
+            btnFuera.style.background = 'var(--primary-color, #702e5e)';
+            btnFuera.style.color = '#ffffff';
+            btnFuera.style.borderColor = 'var(--primary-color, #702e5e)';
+            btnFuera.style.boxShadow = '0 2px 8px rgba(152,75,128,0.28)';
+        }
+        if (typeof renderFueraJornadaProfilesList === 'function') {
+            renderFueraJornadaProfilesList();
+        }
     } else {
         panelConfig.classList.remove('hide');
         if (btnConfig) {
@@ -11585,6 +11600,33 @@ async function loadAdminAvailability() {
         togglePoliticaRuleInputs();
         updateRulesSummaryBadges();
 
+        // Configuración Fuera de Jornada
+        const fActivo = !!data.fuera_jornada_activo;
+        const fAdv = data.fuera_jornada_advertencia || '';
+        const fPerfiles = Array.isArray(data.fuera_jornada_perfiles) ? data.fuera_jornada_perfiles : [];
+
+        window.fueraJornadaConfig = {
+            activo: fActivo,
+            advertencia: fAdv,
+            perfiles: fPerfiles
+        };
+
+        const chkFuera = document.getElementById('avail-fuera-jornada-activo');
+        if (chkFuera) chkFuera.checked = fActivo;
+
+        const advFuera = document.getElementById('avail-fuera-jornada-advertencia');
+        if (advFuera) advFuera.value = fAdv;
+
+        if (typeof populateFueraJornadaProfileSelector === 'function') {
+            populateFueraJornadaProfileSelector(perfiles);
+        }
+        if (typeof renderFueraJornadaProfilesList === 'function') {
+            renderFueraJornadaProfilesList();
+        }
+        if (typeof toggleFueraJornadaOptions === 'function') {
+            toggleFueraJornadaOptions();
+        }
+
         switchHorariosMode(currentHorariosPersonalMode);
         
         ['avail-duracion', 'avail-receso', 'avail-antelacion'].forEach(inputId => {
@@ -11984,6 +12026,11 @@ async function handleSaveAvailability(e) {
         ? parseInt(document.getElementById('avail-politica-cancelacion')?.value || 24)
         : (document.getElementById('avail-politica-cancelacion-time')?.value || '18:00');
     
+    // Configuración Fuera de Jornada
+    const fuera_jornada_activo = document.getElementById('avail-fuera-jornada-activo')?.checked ? 1 : 0;
+    const fuera_jornada_advertencia = document.getElementById('avail-fuera-jornada-advertencia')?.value || '';
+    const fuera_jornada_perfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) ? window.fueraJornadaConfig.perfiles : [];
+
     const profileCards = document.querySelectorAll('.avail-profile-card');
     const perfiles = [];
     
