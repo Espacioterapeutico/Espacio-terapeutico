@@ -596,7 +596,7 @@ def admin_message_templates():
     cursor = db.cursor()
     user_id = session.get('user_id')
     
-    keys = ['msg_agendada', 'msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_cancelacion_no_conf', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo', 'hora_cumpleanos', 'msg_herramientas', 'msg_pizarra']
+    keys = ['msg_agendada', 'msg_confirmacion', 'msg_confirmacion_ok', 'msg_cancelacion_ok', 'msg_cancelacion_no_conf', 'msg_recordatorio', 'msg_reagendamiento', 'msg_cierre', 'auto_reagendamiento_activo', 'msg_cumpleanos', 'auto_cumpleanos_activo', 'hora_cumpleanos', 'msg_herramientas', 'msg_pizarra', 'msg_fuera_jornada_aceptada', 'msg_fuera_jornada_declinada']
     
     if request.method == 'GET':
         templates = {}
@@ -615,6 +615,10 @@ def admin_message_templates():
                 val = "Saludos *{nombre}*, espero estés bien. No he recibido tu confirmación de la cita para el *{fecha}* a las *{hora}*, por ende procedemos a cancelarla. En caso de que desees volver a agendar:\n{link_agendar}"
             elif not val and key == 'msg_pizarra':
                 val = "Hola *{nombre}* 👋\n\nTe comparto tu pizarra de trabajo interactivo: *{titulo}*.\n\nPuedes abrirla, escribir y reflexionar en ella directamente desde este enlace:\n👉 {link}\n\nLos cambios que realices se guardan automáticamente en tiempo real. ¡Nos vemos en nuestra próxima sesión!"
+            elif not val and key == 'msg_fuera_jornada_aceptada':
+                val = "Hola {nombre}, he revisado y aceptado tu solicitud de consulta fuera de la jornada para el *{fecha}* a las *{hora}* ({modalidad}). Monto: *{monto} {moneda}*. ¡Nos vemos!"
+            elif not val and key == 'msg_fuera_jornada_declinada':
+                val = "Hola {nombre}, lamentablemente no me es posible atender tu solicitud de cita fuera de jornada para el *{fecha}* a las *{hora}*. Te invito a agendar en mis horarios regulares disponibles en:\n{link_agendar}"
             templates[key] = val
         return jsonify(templates)
         

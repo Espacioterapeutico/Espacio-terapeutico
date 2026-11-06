@@ -1841,6 +1841,34 @@ def init_db():
             UNIQUE(paciente_id, herramienta_tipo, fecha_programada)
         )
     """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS solicitudes_fuera_horario (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        psicologo_id INTEGER NOT NULL,
+        paciente_id INTEGER,
+        nombres TEXT NOT NULL,
+        apellidos TEXT,
+        cedula TEXT,
+        telefono TEXT NOT NULL,
+        email TEXT,
+        tipo_consulta TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        hora_inicio TEXT NOT NULL,
+        hora_fin TEXT NOT NULL,
+        duracion_minutos INTEGER DEFAULT 50,
+        monto REAL NOT NULL DEFAULT 0.0,
+        moneda TEXT NOT NULL DEFAULT 'USD',
+        estado TEXT NOT NULL DEFAULT 'Pendiente',
+        motivo_rechazo TEXT,
+        agenda_id INTEGER,
+        creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+        respondido_en DATETIME,
+        FOREIGN KEY (psicologo_id) REFERENCES usuarios(id),
+        FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
+        FOREIGN KEY (agenda_id) REFERENCES agenda_finanzas(id)
+    )
+    """)
     
     # Parche automático de migración y normalización de datos para bases de datos viejas o restauradas
     try:

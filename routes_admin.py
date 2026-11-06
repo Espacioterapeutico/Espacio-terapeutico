@@ -3089,6 +3089,19 @@ def serialize_public_therapist_dict(psych):
     clean_slug = generate_default_slug_for_user(psych)
     foto_url = psych.get('foto_perfil') or psych.get('foto_titulo') or '/static/logo.png'
     
+    fuera_jornada_activo = False
+    fuera_jornada_advertencia = ""
+    fuera_jornada_perfiles = []
+    duracion_default = 50
+    try:
+        cfg_vis = json.loads(psych.get('configuracion_horarios_visual') or '{}')
+        fuera_jornada_activo = bool(cfg_vis.get('fuera_jornada_activo', False))
+        fuera_jornada_advertencia = cfg_vis.get('fuera_jornada_advertencia', '')
+        fuera_jornada_perfiles = cfg_vis.get('fuera_jornada_perfiles', [])
+        duracion_default = int(cfg_vis.get('duracion', 50))
+    except Exception:
+        pass
+    
     return {
         'id': psych.get('id'),
         'nombres': psych.get('nombres') or '',
@@ -3111,7 +3124,11 @@ def serialize_public_therapist_dict(psych):
         'blog_posts': blog_posts,
         'faqs': faqs,
         'url_agendar': f"/agendar/{clean_slug}",
-        'url_registro': f"/registro/{clean_slug}"
+        'url_registro': f"/registro/{clean_slug}",
+        'fuera_jornada_activo': fuera_jornada_activo,
+        'fuera_jornada_advertencia': fuera_jornada_advertencia,
+        'fuera_jornada_perfiles': fuera_jornada_perfiles,
+        'duracion_default': duracion_default
     }
 
 @admin_bp.route('/api/public/therapist/<path:slug>', methods=['GET'])

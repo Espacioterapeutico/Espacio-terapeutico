@@ -2952,3 +2952,382 @@ def fast_booking_check_cedula():
             'email': row['email']
         })
     return jsonify({'found': False})
+
+
+# ==============================================================================
+# GESTIÓN DE ATENCIÓN FUERA DE LA JORNADA
+# ==============================================================================
+
+@agenda_bp.route('/api/public/solicitar-fuera-horario/<path:slug>', methods=['POST'])
+def solicitar_fuera_horario(slug):
+    """Permite al consultante solicitar una cita fuera del horario habitual."""
+    db = get_db()
+    cursor = db.cursor()
+    from app import get_psychologist_by_id_or_slug
+    import re
+    from datetime import datetime, timedelta
+    
+    clean_slug = str(slug).strip()
+    for prefix in ['psicologo/', 'psic/', 'psic.', 'agendar/', 'registro/']:
+        if clean_slug.lower().startswith(prefix):
+            clean_slug = clean_slug[len(prefix):]
+            
+    psych = get_psychologist_by_id_or_slug(cursor, clean_slug)
+    if not psych:
+        psych = get_psychologist_by_id_or_slug(cursor, slug)
+    if not psych:
+        return jsonify({'error': 'Especialista no encontrado.'}), 404
+        
+    psicologo_id = int(psych['id'])
+    
+    # Verificar si el psicólogo tiene activa la función de fuera de jornada
+    cfg_visual = {}
+    try:
+        if psych['configuracion_horarios_visual']:
+            cfg_visual = json.loads(psych['configuracion_horarios_visual'])
+    except Exception:
+        cfg_visual = {}
+        
+    if not cfg_visual.get('fuera_jornada_activo'):
+        return jsonify({'error': 'El psicólogo no tiene habilitada la recepción de solicitudes fuera de jornada.'}), 400
+
+    data = request.json or {}
+    fecha = (data.get('fecha') or '').strip()
+    hora_inicio = (data.get('hora_inicio') or data.get('hora') or '').strip()
+    tipo_consulta = (data.get('tipo_consulta') or data.get('modalidad') or 'Online').strip()
+    cedula = (data.get('cedula') or '').strip()
+    nombres = (data.get('nombres') or '').strip()
+    apellidos = (data.get('apellidos') or '').strip()
+    telefono = (data.get('telefono') or '').strip()
+    email = (data.get('email') or '').strip()
+    
+    if not fecha or not hora_inicio or not cedula or not nombres or not telefono:
+        return jsonify({'error': 'Todos los campos requeridos deben ser completados.'}), 400
+
+    # Normalizar fecha y hora inicio
+    fecha_norm = normalize_date_str(fecha)
+    hora_inicio_norm = normalize_time_str(hora_inicio)
+    
+    # Determinar duración de la sesión según perfil o global
+    perfiles = cfg_visual.get('perfiles', [])
+    duracion = int(cfg_visual.get('duracion', 50))
+    for p in perfiles:
+        if (p.get('nombre') == tipo_consulta or p.get('modalidad') == tipo_consulta) and p.get('duracion'):
+            try:
+                duracion = int(p['duracion'])
+                break
+            except Exception:
+                pass
+                
+    # Calcular hora fin
+    try:
+        t_start = datetime.strptime(hora_inicio_norm, "%H:%M")
+        t_end = t_start + timedelta(minutes=duracion)
+        hora_fin_norm = t_end.strftime("%H:%M")
+    except Exception:
+        hora_fin_norm = hora_inicio_norm
+        
+    # Obtener tarifa especial definida para este perfil en fuera_jornada_perfiles
+    fuera_perfiles = cfg_visual.get('fuera_jornada_perfiles', [])
+    monto = 0.0
+    moneda = 'USD'
+    profile_found = False
+    for fp in fuera_perfiles:
+        if fp.get('nombre') == tipo_consulta or fp.get('modalidad') == tipo_consulta:
+            monto = float(fp.get('costo') or 0.0)
+            moneda = fp.get('moneda') or 'USD'
+            profile_found = True
+            break
+            
+    if not profile_found and fuera_perfiles:
+        return jsonify({'error': f'La modalidad "{tipo_consulta}" no está habilitada para citas fuera de jornada.'}), 400
+    elif not profile_found:
+        monto, moneda = get_appointment_fee(cursor, 0, psicologo_id, tipo_consulta)
+
+    # Validar que no choque con citas existentes en agenda_finanzas
+    cursor.execute("""
+        SELECT a.id, a.hora, a.tipo_consulta 
+        FROM agenda_finanzas a
+        WHERE a.creado_por_user_id = ? AND a.fecha = ?
+    """, (psicologo_id, fecha_norm))
+    existing_citas = cursor.fetchall()
+    
+    for c in existing_citas:
+        c_hora_str = normalize_time_str(c['hora'])
+        try:
+            c_start = datetime.strptime(c_hora_str, "%H:%M")
+            c_end = c_start + timedelta(minutes=duracion)
+            req_start = datetime.strptime(hora_inicio_norm, "%H:%M")
+            req_end = datetime.strptime(hora_fin_norm, "%H:%M")
+            if max(req_start, c_start) < min(req_end, c_end):
+                return jsonify({'error': 'El especialista ya tiene un compromiso agendado en ese rango de horario. Por favor selecciona otra hora.'}), 400
+        except Exception:
+            pass
+
+    # Validar que no choque con otra solicitud ya aprobada en solicitudes_fuera_horario
+    cursor.execute("""
+        SELECT id, hora_inicio, hora_fin 
+        FROM solicitudes_fuera_horario
+        WHERE psicologo_id = ? AND fecha = ? AND estado IN ('Pendiente', 'Aceptada')
+    """, (psicologo_id, fecha_norm))
+    existing_reqs = cursor.fetchall()
+    for er in existing_reqs:
+        try:
+            er_start = datetime.strptime(normalize_time_str(er['hora_inicio']), "%H:%M")
+            er_end = datetime.strptime(normalize_time_str(er['hora_fin']), "%H:%M")
+            req_start = datetime.strptime(hora_inicio_norm, "%H:%M")
+            req_end = datetime.strptime(hora_fin_norm, "%H:%M")
+            if max(req_start, er_start) < min(req_end, er_end):
+                return jsonify({'error': 'Ya existe una solicitud pendiente o confirmada para ese rango de horario. Por favor selecciona otra hora.'}), 400
+        except Exception:
+            pass
+
+    # Buscar o registrar paciente
+    clean_cedula = cedula.strip()
+    digits_cedula = re.sub(r'\D', '', clean_cedula)
+    cursor.execute("""
+        SELECT id FROM pacientes 
+        WHERE ((LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
+           OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', ''))))
+           AND (psicologo_id = ? OR psicologo_id IS NULL)
+        LIMIT 1
+    """, (digits_cedula, digits_cedula, clean_cedula, psicologo_id))
+    p_row = cursor.fetchone()
+    if p_row:
+        paciente_id = p_row['id']
+    else:
+        cursor.execute("""
+            INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (nombres, apellidos, cedula, telefono, email, psicologo_id))
+        paciente_id = cursor.lastrowid
+        db.commit()
+
+    # Insertar en solicitudes_fuera_horario
+    cursor.execute("""
+        INSERT INTO solicitudes_fuera_horario (
+            psicologo_id, paciente_id, nombres, apellidos, cedula, telefono, email,
+            tipo_consulta, fecha, hora_inicio, hora_fin, duracion_minutos,
+            monto, moneda, estado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente')
+    """, (
+        psicologo_id, paciente_id, nombres, apellidos, cedula, telefono, email,
+        tipo_consulta, fecha_norm, hora_inicio_norm, hora_fin_norm, duracion,
+        monto, moneda
+    ))
+    solicitud_id = cursor.lastrowid
+
+    # Notificación interna al psicólogo
+    try:
+        cursor.execute("""
+            INSERT INTO notificaciones (usuario_id, titulo, mensaje, fecha, leida)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, 0)
+        """, (
+            psicologo_id,
+            "Nueva Solicitud Fuera de Jornada",
+            f"{nombres} {apellidos} ha solicitado consulta ({tipo_consulta}) para el {fecha_norm} de {hora_inicio_norm} a {hora_fin_norm}."
+        ))
+    except Exception:
+        pass
+        
+    db.commit()
+    
+    return jsonify({
+        'success': True,
+        'solicitud_id': solicitud_id,
+        'mensaje': 'Tu solicitud ha sido enviada al especialista. Te responderá a la brevedad vía WhatsApp o llamada.',
+        'fecha': fecha_norm,
+        'hora_inicio': hora_inicio_norm,
+        'hora_fin': hora_fin_norm,
+        'monto': monto,
+        'moneda': moneda
+    })
+
+
+@agenda_bp.route('/api/admin/solicitudes-fuera-horario', methods=['GET'])
+@login_required
+def admin_get_solicitudes_fuera_horario():
+    """Retorna las solicitudes fuera de jornada del psicólogo logueado."""
+    db = get_db()
+    cursor = db.cursor()
+    user_id = session.get('user_id')
+    
+    cursor.execute("""
+        SELECT s.*, p.nombres AS pac_nombres, p.apellidos AS pac_apellidos, p.telefono AS pac_telefono
+        FROM solicitudes_fuera_horario s
+        LEFT JOIN pacientes p ON s.paciente_id = p.id
+        WHERE s.psicologo_id = ?
+        ORDER BY CASE WHEN s.estado = 'Pendiente' THEN 0 ELSE 1 END, s.fecha DESC, s.hora_inicio DESC
+    """, (user_id,))
+    
+    rows = cursor.fetchall()
+    solicitudes = []
+    total_pendientes = 0
+    for r in rows:
+        d = dict(r)
+        if d.get('estado') == 'Pendiente':
+            total_pendientes += 1
+        solicitudes.append(d)
+        
+    return jsonify({
+        'solicitudes': solicitudes,
+        'total_pendientes': total_pendientes
+    })
+
+
+@agenda_bp.route('/api/admin/solicitudes-fuera-horario/<int:req_id>/responder', methods=['POST'])
+@login_required
+def admin_responder_solicitud_fuera_horario(req_id):
+    """Acepta o declina una solicitud fuera de jornada y genera el mensaje de WhatsApp/Push."""
+    db = get_db()
+    cursor = db.cursor()
+    user_id = session.get('user_id')
+    import re
+    import urllib.parse
+    
+    cursor.execute("SELECT * FROM solicitudes_fuera_horario WHERE id = ? AND psicologo_id = ?", (req_id, user_id))
+    req_row = cursor.fetchone()
+    if not req_row:
+        return jsonify({'error': 'Solicitud no encontrada.'}), 404
+        
+    sol = dict(req_row)
+    data = request.json or {}
+    accion = (data.get('accion') or '').strip().lower()
+    motivo = (data.get('motivo') or '').strip()
+    
+    if accion not in ('aceptar', 'declinar'):
+        return jsonify({'error': 'Acción inválida. Debe ser aceptar o declinar.'}), 400
+
+    cursor.execute("SELECT nombres, apellidos, username, slug FROM usuarios WHERE id = ?", (user_id,))
+    u_row = cursor.fetchone()
+    psicologo_nombre = f"Psic. {u_row['nombres']} {u_row['apellidos']}".strip() if u_row else "Psicólogo"
+    from routes_admin import generate_default_slug_for_user
+    psic_slug = generate_default_slug_for_user(dict(u_row)) if u_row else 'psicologo'
+    link_agendar = f"{request.host_url.rstrip('/')}/agendar/{psic_slug}"
+
+    paciente_id = sol.get('paciente_id')
+    pac_telefono = sol.get('telefono', '').strip()
+    clean_phone = re.sub(r'\D', '', pac_telefono)
+    if clean_phone and not clean_phone.startswith(('58', '57', '1', '34', '54', '56', '51', '52', '593')):
+        if clean_phone.startswith('04'):
+            clean_phone = '58' + clean_phone[1:]
+        elif clean_phone.startswith('4'):
+            clean_phone = '58' + clean_phone
+
+    tokens_fcm = []
+    if paciente_id:
+        try:
+            cursor.execute("SELECT token FROM fcm_subscriptions WHERE patient_id = ? OR patient_id = ?", (paciente_id, str(paciente_id)))
+            tokens_fcm = [r['token'] for r in cursor.fetchall() if r['token']]
+        except Exception:
+            pass
+
+    agenda_id = None
+    wa_text = ""
+
+    if accion == 'aceptar':
+        cursor.execute("""
+            INSERT INTO agenda_finanzas (
+                paciente_id, fecha, hora, tipo_consulta, monto, moneda,
+                estado_pago, control_uso, creado_por_user_id, confirmada, referencia
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Pendiente', 'No consumida', ?, 1, ?)
+        """, (
+            paciente_id,
+            sol['fecha'],
+            sol['hora_inicio'],
+            sol['tipo_consulta'],
+            sol['monto'],
+            sol['moneda'],
+            user_id,
+            f"Solicitud fuera de jornada aprobada #SFH-{sol['id']}"
+        ))
+        agenda_id = cursor.lastrowid
+        
+        cursor.execute("""
+            UPDATE solicitudes_fuera_horario
+            SET estado = 'Aceptada', agenda_id = ?, respondido_en = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (agenda_id, req_id))
+        
+        psic_key = f"msg_fuera_jornada_aceptada_{user_id}"
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (psic_key,))
+        cfg_r = cursor.fetchone()
+        if not cfg_r or not cfg_r['valor']:
+            cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_fuera_jornada_aceptada'")
+            cfg_r = cursor.fetchone()
+            
+        raw_tmpl = (cfg_r['valor'] if cfg_r and cfg_r['valor'] else "") or (
+            "Hola {nombre}, he revisado y aceptado tu solicitud de consulta fuera de la jornada para el *{fecha}* a las *{hora}* ({modalidad}). Monto: *{monto} {moneda}*. ¡Nos vemos!"
+        )
+        
+        wa_text = raw_tmpl.replace('{nombre}', sol.get('nombres', '')).replace('{fecha}', sol.get('fecha', '')).replace('{hora}', sol.get('hora_inicio', '')).replace('{modalidad}', sol.get('tipo_consulta', '')).replace('{monto}', str(sol.get('monto', '0'))).replace('{moneda}', sol.get('moneda', 'USD')).replace('{psicologo}', psicologo_nombre)
+
+        if tokens_fcm:
+            try:
+                from app import send_push_notification_to_patient
+                send_push_notification_to_patient(
+                    paciente_id,
+                    "¡Solicitud Fuera de Jornada Aceptada!",
+                    f"Tu cita para el {sol['fecha']} a las {sol['hora_inicio']} ha sido aceptada por {psicologo_nombre}."
+                )
+            except Exception as _pe:
+                print(f"[PUSH] Error al enviar push de aceptación: {_pe}")
+
+    else:
+        cursor.execute("""
+            UPDATE solicitudes_fuera_horario
+            SET estado = 'Declinada', motivo_rechazo = ?, respondido_en = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (motivo, req_id))
+        
+        psic_key = f"msg_fuera_jornada_declinada_{user_id}"
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (psic_key,))
+        cfg_r = cursor.fetchone()
+        if not cfg_r or not cfg_r['valor']:
+            cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_fuera_jornada_declinada'")
+            cfg_r = cursor.fetchone()
+            
+        raw_tmpl = (cfg_r['valor'] if cfg_r and cfg_r['valor'] else "") or (
+            "Hola {nombre}, lamentablemente no me es posible atender tu solicitud de cita fuera de jornada para el *{fecha}* a las *{hora}*. Te invito a agendar en mis horarios regulares disponibles en:\n{link_agendar}"
+        )
+        
+        wa_text = raw_tmpl.replace('{nombre}', sol.get('nombres', '')).replace('{fecha}', sol.get('fecha', '')).replace('{hora}', sol.get('hora_inicio', '')).replace('{motivo}', motivo or '').replace('{psicologo}', psicologo_nombre).replace('{link_agendar}', link_agendar)
+
+        if tokens_fcm:
+            try:
+                from app import send_push_notification_to_patient
+                send_push_notification_to_patient(
+                    paciente_id,
+                    "Solicitud Fuera de Jornada",
+                    f"Tu solicitud para el {sol['fecha']} a las {sol['hora_inicio']} no pudo ser aceptada."
+                )
+            except Exception as _pe:
+                print(f"[PUSH] Error al enviar push de rechazo: {_pe}")
+
+    db.commit()
+
+    wa_enviado_auto = False
+    if clean_phone and wa_text:
+        try:
+            from routes_notificaciones import make_wa_http_request
+            res_wa = make_wa_http_request('POST', '/send', json_data={
+                'phone': clean_phone,
+                'text': wa_text,
+                'user_id': user_id
+            })
+            if res_wa and res_wa.get('status') == 'success':
+                wa_enviado_auto = True
+        except Exception:
+            pass
+
+    wa_url = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(wa_text)}" if clean_phone else ""
+
+    return jsonify({
+        'success': True,
+        'accion': accion,
+        'agenda_id': agenda_id,
+        'has_fcm': len(tokens_fcm) > 0,
+        'wa_enviado_auto': wa_enviado_auto,
+        'wa_text': wa_text,
+        'wa_url': wa_url
+    })

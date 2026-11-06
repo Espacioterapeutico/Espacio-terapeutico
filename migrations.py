@@ -289,6 +289,40 @@ def m_0006_add_compromiso_completado_sesiones(cursor, db):
         db.commit()
 
 
+
+
+def m_0007_create_solicitudes_fuera_horario(cursor, db):
+    """Crea la tabla solicitudes_fuera_horario para citas solicitadas fuera de jornada."""
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS solicitudes_fuera_horario (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            psicologo_id INTEGER NOT NULL,
+            paciente_id INTEGER,
+            nombres TEXT NOT NULL,
+            apellidos TEXT,
+            cedula TEXT,
+            telefono TEXT NOT NULL,
+            email TEXT,
+            tipo_consulta TEXT NOT NULL,
+            fecha TEXT NOT NULL,
+            hora_inicio TEXT NOT NULL,
+            hora_fin TEXT NOT NULL,
+            duracion_minutos INTEGER DEFAULT 50,
+            monto REAL NOT NULL DEFAULT 0.0,
+            moneda TEXT NOT NULL DEFAULT 'USD',
+            estado TEXT NOT NULL DEFAULT 'Pendiente',
+            motivo_rechazo TEXT,
+            agenda_id INTEGER,
+            creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+            respondido_en DATETIME,
+            FOREIGN KEY (psicologo_id) REFERENCES usuarios(id),
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
+            FOREIGN KEY (agenda_id) REFERENCES agenda_finanzas(id)
+        )
+    """)
+    db.commit()
+
+
 # LISTA MAESTRA DE MIGRACIONES EN ORDEN CRONOLÓGICO
 MIGRATIONS = [
     ("0001_heal_slugs_and_times", "Cura de slugs huérfanos y normalización de horarios 24h", m_0001_heal_slugs_and_times),
@@ -297,6 +331,7 @@ MIGRATIONS = [
     ("0004_propagate_all_psychologist_rules", "Propagación retroactiva de reglas a todas las citas activas", m_0004_propagate_all_psychologist_rules),
     ("0005_assign_profile_ids_to_schedules", "Asignación de IDs únicos e inconmutables por psicólogo para perfiles de horarios", m_0005_assign_profile_ids_to_schedules),
     ("0006_add_compromiso_completado_sesiones", "Añadir columna compromiso_completado a sesiones", m_0006_add_compromiso_completado_sesiones),
+    ("0007_create_solicitudes_fuera_horario", "Creación de tabla solicitudes_fuera_horario", m_0007_create_solicitudes_fuera_horario),
 ]
 
 

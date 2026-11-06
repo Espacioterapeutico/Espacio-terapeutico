@@ -1463,6 +1463,11 @@ function switchView(viewId, fromPopState = false) {
     }
 
     activeView = viewId;
+    if (viewId === 'agenda' || viewId === 'dashboard') {
+        if (typeof checkPendingSolicitudesFuera === 'function') {
+            checkPendingSolicitudesFuera();
+        }
+    }
 
     if (!fromPopState) {
         try {
@@ -12059,7 +12064,10 @@ async function handleSaveAvailability(e) {
                 limite_auto_cancelacion_tipo: limite_cancelacion_tipo,
                 limite_auto_cancelacion_valor: limite_cancelacion_valor,
                 politica_cancelacion_tipo,
-                politica_cancelacion_valor
+                politica_cancelacion_valor,
+                fuera_jornada_activo,
+                fuera_jornada_advertencia,
+                fuera_jornada_perfiles
             })
         });
         
@@ -14337,6 +14345,10 @@ async function loadMessageTemplates() {
         const cum = document.getElementById('template-cumpleanos');
         const her = document.getElementById('template-herramientas');
         const piz = document.getElementById('template-pizarra');
+        const fjAcep = document.getElementById('template-fuera-jornada-aceptada');
+        const fjDecl = document.getElementById('template-fuera-jornada-declinada');
+        if (fjAcep) fjAcep.value = data.msg_fuera_jornada_aceptada || "Hola {nombre}, he revisado y aceptado tu solicitud de consulta fuera de la jornada para el *{fecha}* a las *{hora}* ({modalidad}). Monto: *{monto} {moneda}*. ¡Nos vemos!";
+        if (fjDecl) fjDecl.value = data.msg_fuera_jornada_declinada || "Hola {nombre}, lamentablemente no me es posible atender tu solicitud de cita fuera de jornada para el *{fecha}* a las *{hora}*. Te invito a agendar en mis horarios regulares disponibles en:\n{link_agendar}";
         const swReag = document.getElementById('auto-reagendamiento-switch');
         const swCum = document.getElementById('auto-cumpleanos-switch');
         const horaCum = document.getElementById('template-hora-cumpleanos');
@@ -14400,6 +14412,8 @@ async function handleSaveMessageTemplates(e) {
     const horaCumpleanos = document.getElementById('template-hora-cumpleanos')?.value || '09:00';
     const msgHerramientas = document.getElementById('template-herramientas')?.value || '';
     const msgPizarra = document.getElementById('template-pizarra')?.value || '';
+    const msgFueraAceptada = document.getElementById('template-fuera-jornada-aceptada')?.value || '';
+    const msgFueraDeclinada = document.getElementById('template-fuera-jornada-declinada')?.value || '';
     const autoReagActivo = document.getElementById('auto-reagendamiento-switch')?.checked ? '1' : '0';
     const autoCumActivo = document.getElementById('auto-cumpleanos-switch')?.checked ? '1' : '0';
     
@@ -14420,6 +14434,8 @@ async function handleSaveMessageTemplates(e) {
                 hora_cumpleanos: horaCumpleanos,
                 msg_herramientas: msgHerramientas,
                 msg_pizarra: msgPizarra,
+                msg_fuera_jornada_aceptada: msgFueraAceptada,
+                msg_fuera_jornada_declinada: msgFueraDeclinada,
                 auto_reagendamiento_activo: autoReagActivo,
                 auto_cumpleanos_activo: autoCumActivo
             })
@@ -18577,44 +18593,65 @@ async function checkFastBookingQuery() {
                 }
             }
             
-            // Cargar modalidades del terapeuta asignado para auto-agenda rápida preservando selección actual
+                        // Cargar datos de terapeuta (foto, fuera de jornada) y modalidades
+            let currentTherapistPublicData = window.currentTherapistPublicData || null;
+            try {
+                if (!currentTherapistPublicData) {
+                    const pRes = await fetch(`/api/public/therapist/${encodeURIComponent(fastBookingTherapistId)}`);
+                    if (pRes.ok) {
+                        currentTherapistPublicData = await pRes.json();
+                        window.currentTherapistPublicData = currentTherapistPublicData;
+                    }
+                }
+            } catch (e) {
+                console.error("Error al obtener perfil público del terapeuta:", e);
+            }
+
+            if (currentTherapistPublicData) {
+                const fullname = currentTherapistPublicData.nombre_completo || `Psic. ${currentTherapistPublicData.nombres} ${currentTherapistPublicData.apellidos}`;
+                const displayTitle = fullname.startsWith('Psic.') ? fullname : `Psic. ${fullname}`;
+                if (titleEl) titleEl.textContent = displayTitle;
+                const fueraName = document.getElementById('fast-fuera-therapist-name');
+                if (fueraName) fueraName.textContent = displayTitle;
+
+                if (currentTherapistPublicData.foto) {
+                    const av1 = document.getElementById('fast-booking-avatar');
+                    const av2 = document.getElementById('fast-fuera-avatar');
+                    if (av1) av1.src = currentTherapistPublicData.foto;
+                    if (av2) av2.src = currentTherapistPublicData.foto;
+                }
+
+                // Control de visualización de sesión fuera de jornada
+                const fueraCard = document.getElementById('fast-fuera-jornada-card');
+                if (fueraCard) {
+                    if (currentTherapistPublicData.fuera_jornada_activo) {
+                        fueraCard.classList.remove('hide');
+                        const advText = document.getElementById('fast-fuera-advertencia-text');
+                        if (advText && currentTherapistPublicData.fuera_jornada_advertencia) {
+                            advText.textContent = currentTherapistPublicData.fuera_jornada_advertencia;
+                        }
+                    } else {
+                        fueraCard.classList.add('hide');
+                    }
+                }
+            }
+
+            // Cargar modalidades y generar botones interactivos
             try {
                 const mRes = await fetch(`/api/psychologists/${fastBookingTherapistId}/modalities`);
                 if (mRes.ok) {
                     const modalities = await mRes.json();
-                    const selectElement = document.getElementById('fast-modalidad');
-                    if (selectElement) {
-                        const currentSelectedVal = selectElement.value;
-                        selectElement.innerHTML = '';
-                        modalities.forEach(m => {
-                            const opt = document.createElement('option');
-                            const val = typeof m === 'object' ? (m.modalidad || m.nombre) : m;
-                            const label = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
-                            const desc = typeof m === 'object' ? (m.descripcion || '') : '';
-                            const profId = typeof m === 'object' ? (m.id || m.profile_id || '') : '';
-                            opt.value = val;
-                            opt.textContent = label;
-                            opt.dataset.desc = desc;
-                            if (profId) opt.dataset.profileId = profId;
-                            selectElement.appendChild(opt);
-                        });
-                        if (currentSelectedVal && Array.from(selectElement.options).some(o => o.value.toLowerCase() === currentSelectedVal.toLowerCase())) {
-                            for (let opt of selectElement.options) {
-                                if (opt.value.toLowerCase() === currentSelectedVal.toLowerCase()) {
-                                    selectElement.value = opt.value;
-                                    break;
-                                }
-                            }
-                        }
-                        if (typeof updateFastModalityDescription === 'function') {
-                            updateFastModalityDescription();
-                        }
+                    window.fastBookingModalities = modalities;
+                    if (typeof renderFastModalityButtons === 'function') {
+                        renderFastModalityButtons(modalities);
+                    }
+                    if (typeof renderFastFueraModalityButtons === 'function') {
+                        renderFastFueraModalityButtons(modalities, currentTherapistPublicData);
                     }
                 }
             } catch (e) {
                 console.error("Error al obtener modalidades para auto-agenda:", e);
             }
-            
             initFastTimeZoneSelector(); 
             renderFastCalendar();
             return true;
@@ -37001,3 +37038,699 @@ async function submitAdjustPrepayBalance() {
     }
 }
 window.submitAdjustPrepayBalance = submitAdjustPrepayBalance;
+
+
+// ==============================================================================
+// FUNCIONES DE APOYO: AUTO-AGENDAMIENTO Y ATENCIÓN FUERA DE JORNADA
+// ==============================================================================
+
+window.fueraJornadaConfig = window.fueraJornadaConfig || { activo: false, advertencia: '', perfiles: [] };
+
+function toggleFueraJornadaOptions() {
+    const chk = document.getElementById('avail-fuera-jornada-activo');
+    const body = document.getElementById('avail-fuera-jornada-body');
+    if (!chk || !body) return;
+    if (chk.checked) {
+        body.style.opacity = '1';
+        body.style.pointerEvents = 'auto';
+    } else {
+        body.style.opacity = '0.5';
+        body.style.pointerEvents = 'none';
+    }
+}
+window.toggleFueraJornadaOptions = toggleFueraJornadaOptions;
+
+function populateFueraJornadaProfileSelector(perfiles) {
+    const sel = document.getElementById('avail-fuera-perfil-select');
+    if (!sel) return;
+    sel.innerHTML = '';
+    
+    if (!perfiles || perfiles.length === 0) {
+        sel.innerHTML = '<option value="Online">Online</option><option value="Presencial">Presencial</option>';
+        return;
+    }
+
+    perfiles.forEach(p => {
+        const nom = p.nombre || p.modalidad;
+        if (nom) {
+            const opt = document.createElement('option');
+            opt.value = nom;
+            opt.textContent = nom;
+            sel.appendChild(opt);
+        }
+    });
+}
+window.populateFueraJornadaProfileSelector = populateFueraJornadaProfileSelector;
+
+function renderFueraJornadaProfilesList() {
+    const container = document.getElementById('avail-fuera-profiles-container');
+    const noProfiles = document.getElementById('avail-fuera-no-profiles');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const perfiles = window.fueraJornadaConfig.perfiles || [];
+
+    if (perfiles.length === 0) {
+        if (noProfiles) noProfiles.classList.remove('hide');
+        return;
+    }
+    if (noProfiles) noProfiles.classList.add('hide');
+
+    perfiles.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.className = 'avail-fuera-profile-row';
+        row.setAttribute('data-nombre', p.nombre || p.modalidad);
+        row.style.background = '#ffffff';
+        row.style.border = '1.5px solid var(--border-color, #e2e8f0)';
+        row.style.borderRadius = '8px';
+        row.style.padding = '0.65rem 0.85rem';
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.justifyContent = 'space-between';
+        row.style.gap = '0.75rem';
+        row.style.flexWrap = 'wrap';
+
+        row.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 700; color: var(--primary-color, #702e5e); font-size: 0.92rem;">
+                    🌐 ${p.nombre || p.modalidad}
+                </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Tarifa:</label>
+                <input type="number" step="0.5" min="0" class="form-control fuera-costo-input" value="${p.costo !== undefined ? p.costo : 35}" style="width: 90px; padding: 0.35rem 0.5rem; font-size: 0.85rem; border-radius: 6px; border: 1.5px solid var(--border-color);" onchange="updateFueraProfileCost(${idx}, this.value)">
+                <select class="form-control fuera-moneda-select" style="width: 80px; padding: 0.35rem 0.5rem; font-size: 0.85rem; border-radius: 6px; border: 1.5px solid var(--border-color);" onchange="updateFueraProfileCurrency(${idx}, this.value)">
+                    <option value="USD" ${p.moneda === 'USD' ? 'selected' : ''}>USD</option>
+                    <option value="EUR" ${p.moneda === 'EUR' ? 'selected' : ''}>EUR</option>
+                    <option value="BS" ${p.moneda === 'BS' ? 'selected' : ''}>Bs</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFueraJornadaProfileRow(${idx})" style="padding: 0.35rem 0.6rem; border-radius: 6px; border: none; background: #fee2e2; color: #991b1b; cursor: pointer;" title="Eliminar perfil de fuera de jornada">
+                    🗑️
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+}
+window.renderFueraJornadaProfilesList = renderFueraJornadaProfilesList;
+
+function addFueraJornadaProfileRow() {
+    const sel = document.getElementById('avail-fuera-perfil-select');
+    const inputCosto = document.getElementById('avail-fuera-perfil-costo');
+    const selMoneda = document.getElementById('avail-fuera-perfil-moneda');
+    if (!sel) return;
+
+    const nom = sel.value;
+    const costo = parseFloat(inputCosto?.value || 35);
+    const moneda = selMoneda?.value || 'USD';
+
+    if (!nom) {
+        alert("Por favor selecciona un perfil.");
+        return;
+    }
+
+    if (!window.fueraJornadaConfig.perfiles) window.fueraJornadaConfig.perfiles = [];
+    const exists = window.fueraJornadaConfig.perfiles.some(p => (p.nombre || p.modalidad) === nom);
+    if (exists) {
+        alert(`El perfil "${nom}" ya está agregado a Fuera de Jornada.`);
+        return;
+    }
+
+    window.fueraJornadaConfig.perfiles.push({
+        nombre: nom,
+        modalidad: nom,
+        costo: costo,
+        moneda: moneda
+    });
+
+    renderFueraJornadaProfilesList();
+}
+window.addFueraJornadaProfileRow = addFueraJornadaProfileRow;
+
+function removeFueraJornadaProfileRow(idx) {
+    if (!window.fueraJornadaConfig.perfiles) return;
+    window.fueraJornadaConfig.perfiles.splice(idx, 1);
+    renderFueraJornadaProfilesList();
+}
+window.removeFueraJornadaProfileRow = removeFueraJornadaProfileRow;
+
+function updateFueraProfileCost(idx, val) {
+    if (window.fueraJornadaConfig.perfiles && window.fueraJornadaConfig.perfiles[idx]) {
+        window.fueraJornadaConfig.perfiles[idx].costo = parseFloat(val || 0);
+    }
+}
+window.updateFueraProfileCost = updateFueraProfileCost;
+
+function updateFueraProfileCurrency(idx, val) {
+    if (window.fueraJornadaConfig.perfiles && window.fueraJornadaConfig.perfiles[idx]) {
+        window.fueraJornadaConfig.perfiles[idx].moneda = val;
+    }
+}
+window.updateFueraProfileCurrency = updateFueraProfileCurrency;
+
+// --- BOTONES DE MODALIDAD EN AUTO-AGENDAMIENTO RÁPIDO ---
+function renderFastModalityButtons(modalities) {
+    const container = document.getElementById('fast-modalidad-buttons-container');
+    const inputVal = document.getElementById('fast-modalidad');
+    const inputProf = document.getElementById('fast-modalidad-profile-id');
+    if (!container) return;
+
+    container.innerHTML = '';
+    if (!modalities || modalities.length === 0) {
+        modalities = [
+            { nombre: 'Online', modalidad: 'Online', descripcion: 'Consultas a través de WhatsApp y Google Meet videollamadas', id: 'default_online' },
+            { nombre: 'Presencial', modalidad: 'Presencial', descripcion: 'Consultas presenciales en consultorio físico', id: 'default_presencial' }
+        ];
+    }
+
+    let currentVal = inputVal ? inputVal.value : '';
+    let currentProfId = inputProf ? inputProf.value : '';
+
+    const exists = modalities.some(m => {
+        const val = typeof m === 'object' ? (m.modalidad || m.nombre) : m;
+        return val.toLowerCase() === (currentVal || '').toLowerCase();
+    });
+    if (!exists && modalities.length > 0) {
+        const first = modalities[0];
+        currentVal = typeof first === 'object' ? (first.modalidad || first.nombre) : first;
+        currentProfId = typeof first === 'object' ? (first.id || first.profile_id || '') : '';
+        if (inputVal) inputVal.value = currentVal;
+        if (inputProf) inputProf.value = currentProfId;
+    }
+
+    modalities.forEach(m => {
+        const val = typeof m === 'object' ? (m.modalidad || m.nombre) : m;
+        const label = typeof m === 'object' ? (m.nombre || m.modalidad) : m;
+        const desc = typeof m === 'object' ? (m.descripcion || '') : '';
+        const profId = typeof m === 'object' ? (m.id || m.profile_id || '') : '';
+        const isActive = val.toLowerCase() === currentVal.toLowerCase();
+
+        let icon = '💬';
+        const vLower = val.toLowerCase();
+        if (vLower.includes('online')) icon = '🌐';
+        else if (vLower.includes('presencial')) icon = '🏢';
+        else if (vLower.includes('domicilio')) icon = '🚗';
+        else if (vLower.includes('evaluacion') || vLower.includes('evaluación')) icon = '📋';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `fast-modalidad-btn ${isActive ? 'active' : ''}`;
+        btn.dataset.val = val;
+        btn.dataset.profId = profId;
+        btn.dataset.desc = desc;
+        btn.dataset.label = label;
+        btn.style.padding = '0.65rem 1rem';
+        btn.style.borderRadius = '8px';
+        btn.style.fontWeight = '700';
+        btn.style.fontSize = '0.88rem';
+        btn.style.cursor = 'pointer';
+        btn.style.transition = 'all 0.2s';
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '6px';
+        btn.style.flex = '1 1 calc(50% - 0.5rem)';
+        btn.style.justifyContent = 'center';
+
+        if (isActive) {
+            btn.style.background = 'var(--primary-color, #702e5e)';
+            btn.style.color = '#ffffff';
+            btn.style.border = '2px solid var(--primary-color, #702e5e)';
+            btn.style.boxShadow = '0 4px 10px rgba(112,46,94,0.28)';
+        } else {
+            btn.style.background = '#ffffff';
+            btn.style.color = 'var(--text-dark, #1e293b)';
+            btn.style.border = '1.5px solid var(--border-color, #cbd5e1)';
+            btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)';
+        }
+
+        btn.innerHTML = `<span>${icon}</span> <span>${label}</span>`;
+        btn.onclick = () => selectFastModality(val, profId, desc, label);
+        container.appendChild(btn);
+    });
+
+    updateFastModalityDescriptionText(currentVal);
+}
+window.renderFastModalityButtons = renderFastModalityButtons;
+
+function selectFastModality(val, profId, desc, label) {
+    const inputVal = document.getElementById('fast-modalidad');
+    const inputProf = document.getElementById('fast-modalidad-profile-id');
+    if (inputVal) inputVal.value = val;
+    if (inputProf) inputProf.value = profId || '';
+
+    document.querySelectorAll('.fast-modalidad-btn').forEach(btn => {
+        const isAct = btn.dataset.val.toLowerCase() === val.toLowerCase();
+        btn.classList.toggle('active', isAct);
+        if (isAct) {
+            btn.style.background = 'var(--primary-color, #702e5e)';
+            btn.style.color = '#ffffff';
+            btn.style.border = '2px solid var(--primary-color, #702e5e)';
+            btn.style.boxShadow = '0 4px 10px rgba(112,46,94,0.28)';
+        } else {
+            btn.style.background = '#ffffff';
+            btn.style.color = 'var(--text-dark, #1e293b)';
+            btn.style.border = '1.5px solid var(--border-color, #cbd5e1)';
+            btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)';
+        }
+    });
+
+    updateFastModalityDescriptionText(val);
+
+    const reqHora = document.getElementById('fast-req-hora');
+    if (reqHora) reqHora.value = '';
+    const details = document.getElementById('fast-patient-details');
+    if (details) details.classList.add('hide');
+    const hoursCont = document.getElementById('fast-hours-container');
+    if (hoursCont) hoursCont.classList.add('hide');
+
+    if (typeof renderFastCalendar === 'function') {
+        renderFastCalendar();
+    }
+}
+window.selectFastModality = selectFastModality;
+
+function updateFastModalityDescriptionText(val) {
+    const descBox = document.getElementById('fast-modalidad-desc-box');
+    const descTitle = document.getElementById('fast-modalidad-desc-title');
+    const descText = document.getElementById('fast-modalidad-desc-text');
+    if (!descBox) return;
+
+    let desc = '';
+    let label = val;
+    if (window.fastBookingModalities) {
+        const match = window.fastBookingModalities.find(m => {
+            const mVal = typeof m === 'object' ? (m.modalidad || m.nombre) : m;
+            return mVal.toLowerCase() === (val || '').toLowerCase();
+        });
+        if (match && typeof match === 'object') {
+            desc = match.descripcion || '';
+            label = match.nombre || match.modalidad || val;
+        }
+    }
+
+    if (desc && desc.trim()) {
+        descBox.classList.remove('hide');
+        if (descTitle) descTitle.textContent = label;
+        if (descText) descText.textContent = desc.trim();
+    } else {
+        descBox.classList.add('hide');
+    }
+}
+
+// --- NAVEGACIÓN Y VISTAS DE AUTO-AGENDAMIENTO ---
+function switchFastBookingView(view) {
+    const regularView = document.getElementById('fast-view-regular');
+    const fueraView = document.getElementById('fast-view-fuera-jornada');
+    if (!regularView || !fueraView) return;
+
+    if (view === 'fuera_jornada') {
+        regularView.classList.add('hide');
+        fueraView.classList.remove('hide');
+        const durNota = document.getElementById('fast-fuera-duracion-nota');
+        const dur = (window.currentTherapistPublicData && window.currentTherapistPublicData.duracion_default) || 50;
+        if (durNota) durNota.textContent = `⏱️ Duración estimada: ${dur} minutos.`;
+    } else {
+        fueraView.classList.add('hide');
+        regularView.classList.remove('hide');
+    }
+}
+window.switchFastBookingView = switchFastBookingView;
+
+function renderFastFueraModalityButtons(modalities, therapistData) {
+    const container = document.getElementById('fast-fuera-modality-buttons');
+    const inputVal = document.getElementById('fast-fuera-modalidad');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const allowedPerfiles = (therapistData && therapistData.fuera_jornada_perfiles && therapistData.fuera_jornada_perfiles.length > 0)
+        ? therapistData.fuera_jornada_perfiles
+        : (modalities || []).map(m => ({
+            nombre: typeof m === 'object' ? (m.nombre || m.modalidad) : m,
+            modalidad: typeof m === 'object' ? (m.modalidad || m.nombre) : m,
+            costo: 35.0,
+            moneda: 'USD'
+        }));
+
+    if (allowedPerfiles.length === 0) {
+        container.innerHTML = '<span class="text-secondary text-sm">No hay modalidades habilitadas para fuera de jornada.</span>';
+        return;
+    }
+
+    let selectedVal = inputVal ? inputVal.value : '';
+    if (!selectedVal || !allowedPerfiles.some(p => (p.nombre || p.modalidad) === selectedVal)) {
+        selectedVal = allowedPerfiles[0].nombre || allowedPerfiles[0].modalidad;
+        if (inputVal) inputVal.value = selectedVal;
+    }
+
+    allowedPerfiles.forEach(p => {
+        const nom = p.nombre || p.modalidad;
+        const costo = p.costo !== undefined ? p.costo : 35;
+        const moneda = p.moneda || 'USD';
+        const isActive = nom === selectedVal;
+
+        let icon = '🌐';
+        if (nom.toLowerCase().includes('presencial')) icon = '🏢';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `fast-fuera-mod-btn ${isActive ? 'active' : ''}`;
+        btn.dataset.val = nom;
+        btn.style.padding = '0.65rem 1rem';
+        btn.style.borderRadius = '8px';
+        btn.style.fontWeight = '700';
+        btn.style.fontSize = '0.85rem';
+        btn.style.cursor = 'pointer';
+        btn.style.transition = 'all 0.2s';
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '6px';
+        btn.style.flex = '1 1 calc(50% - 0.5rem)';
+        btn.style.justifyContent = 'space-between';
+
+        if (isActive) {
+            btn.style.background = '#b45309';
+            btn.style.color = '#ffffff';
+            btn.style.border = '2px solid #b45309';
+            btn.style.boxShadow = '0 4px 10px rgba(180,83,9,0.25)';
+        } else {
+            btn.style.background = '#ffffff';
+            btn.style.color = '#1e293b';
+            btn.style.border = '1.5px solid var(--border-color, #cbd5e1)';
+            btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)';
+        }
+
+        btn.innerHTML = `<span>${icon} ${nom}</span> <span style="font-size: 0.8rem; opacity: 0.95; background: ${isActive ? 'rgba(255,255,255,0.25)' : '#fef3c7'}; color: ${isActive ? 'white' : '#92400e'}; padding: 2px 6px; border-radius: 4px;">${costo} ${moneda}</span>`;
+        btn.onclick = () => selectFastFueraModality(nom);
+        container.appendChild(btn);
+    });
+}
+window.renderFastFueraModalityButtons = renderFastFueraModalityButtons;
+
+function selectFastFueraModality(val) {
+    const input = document.getElementById('fast-fuera-modalidad');
+    if (input) input.value = val;
+    document.querySelectorAll('.fast-fuera-mod-btn').forEach(btn => {
+        const isAct = btn.dataset.val === val;
+        btn.classList.toggle('active', isAct);
+        if (isAct) {
+            btn.style.background = '#b45309';
+            btn.style.color = '#ffffff';
+            btn.style.border = '2px solid #b45309';
+            btn.style.boxShadow = '0 4px 10px rgba(180,83,9,0.25)';
+        } else {
+            btn.style.background = '#ffffff';
+            btn.style.color = '#1e293b';
+            btn.style.border = '1.5px solid var(--border-color, #cbd5e1)';
+            btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)';
+        }
+    });
+}
+window.selectFastFueraModality = selectFastFueraModality;
+
+function updateFueraDurationPreview() {
+    const hora = document.getElementById('fast-fuera-hora')?.value;
+    const durNota = document.getElementById('fast-fuera-duracion-nota');
+    const dur = (window.currentTherapistPublicData && window.currentTherapistPublicData.duracion_default) || 50;
+    if (!hora || !durNota) return;
+
+    try {
+        const parts = hora.split(':').map(Number);
+        const h = parts[0];
+        const m = parts[1];
+        const d = new Date();
+        d.setHours(h, m + dur, 0, 0);
+        const endH = String(d.getHours()).padStart(2, '0');
+        const endM = String(d.getMinutes()).padStart(2, '0');
+        durNota.innerHTML = `⏱️ Horario estimado: <strong>${hora} a ${endH}:${endM}</strong> (${dur} minutos).`;
+    } catch (e) {
+        durNota.textContent = `⏱️ Duración estimada: ${dur} minutos.`;
+    }
+}
+window.updateFueraDurationPreview = updateFueraDurationPreview;
+
+async function checkAndAutofillFueraPatient() {
+    const cedula = document.getElementById('fast-fuera-cedula')?.value.trim();
+    if (!cedula) return;
+    try {
+        const res = await fetch('/api/public/find-patient-by-cedula', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cedula })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.found) {
+                const nom = document.getElementById('fast-fuera-nombres');
+                const ape = document.getElementById('fast-fuera-apellidos');
+                const tel = document.getElementById('fast-fuera-telefono');
+                const em = document.getElementById('fast-fuera-email');
+                if (nom && !nom.value) nom.value = data.nombres || '';
+                if (ape && !ape.value) ape.value = data.apellidos || '';
+                if (tel && !tel.value) tel.value = data.telefono || '';
+                if (em && !em.value) em.value = data.email || '';
+            }
+        }
+    } catch (e) {}
+}
+window.checkAndAutofillFueraPatient = checkAndAutofillFueraPatient;
+
+async function submitFastFueraJornada(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById('btn-submit-fast-fuera');
+    const statusMsg = document.getElementById('fast-booking-status-msg');
+    if (statusMsg) statusMsg.classList.add('hide');
+
+    const modalidad = document.getElementById('fast-fuera-modalidad')?.value;
+    const fecha = document.getElementById('fast-fuera-fecha')?.value;
+    const hora = document.getElementById('fast-fuera-hora')?.value;
+    const cedula = document.getElementById('fast-fuera-cedula')?.value.trim();
+    const nombres = document.getElementById('fast-fuera-nombres')?.value.trim();
+    const apellidos = document.getElementById('fast-fuera-apellidos')?.value.trim();
+    const telefono = document.getElementById('fast-fuera-telefono')?.value.trim();
+    const email = document.getElementById('fast-fuera-email')?.value.trim();
+
+    if (!modalidad || !fecha || !hora || !cedula || !nombres || !telefono) {
+        alert("Por favor completa todos los campos requeridos.");
+        return;
+    }
+
+    try {
+        if (btn) { btn.disabled = true; btn.textContent = "Enviando solicitud..."; }
+        const slug = window.fastBookingTherapistSlug || fastBookingTherapistId;
+        const res = await fetch(`/api/public/solicitar-fuera-horario/${encodeURIComponent(slug)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                modalidad,
+                fecha,
+                hora_inicio: hora,
+                cedula,
+                nombres,
+                apellidos,
+                telefono,
+                email
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert(`¡Solicitud enviada con éxito!
+
+Tu solicitud de consulta (${modalidad}) para el ${data.fecha} a las ${data.hora_inicio} ha sido enviada al especialista.
+Recibirás respuesta en tu WhatsApp o teléfono.`);
+            switchFastBookingView('regular');
+            closeFastBookingScreen();
+        } else {
+            alert(data.error || "Ocurrió un error al enviar tu solicitud.");
+        }
+    } catch (err) {
+        console.error("Error al enviar solicitud fuera de jornada:", err);
+        alert("Error de conexión al enviar la solicitud.");
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "Solicitar Cita Fuera de Jornada"; }
+    }
+}
+window.submitFastFueraJornada = submitFastFueraJornada;
+
+// --- GESTIÓN DE SOLICITUDES FUERA DE JORNADA EN LA AGENDA (PSICÓLOGO) ---
+async function checkPendingSolicitudesFuera() {
+    try {
+        const res = await fetch('/api/admin/solicitudes-fuera-horario');
+        if (!res.ok) return;
+        const data = await res.json();
+        const badge = document.getElementById('badge-solicitudes-fuera');
+        const btn = document.getElementById('btn-open-solicitudes-fuera');
+        const total = data.total_pendientes || 0;
+        if (badge) {
+            badge.textContent = total;
+            badge.style.display = total > 0 ? 'inline-block' : 'none';
+        }
+        if (btn) {
+            if (total > 0) {
+                btn.style.borderColor = '#f59e0b';
+                btn.style.color = '#b45309';
+                btn.style.background = '#fffbeb';
+            } else {
+                btn.style.borderColor = '#cbd5e1';
+                btn.style.color = '#64748b';
+                btn.style.background = '#f8fafc';
+            }
+        }
+    } catch (e) {
+        console.error("Error al consultar solicitudes fuera de jornada:", e);
+    }
+}
+window.checkPendingSolicitudesFuera = checkPendingSolicitudesFuera;
+
+async function openSolicitudesFueraModal() {
+    const modal = document.getElementById('modal-solicitudes-fuera-horario');
+    if (!modal) return;
+    modal.classList.remove('hide');
+
+    const loading = document.getElementById('solicitudes-fuera-loading');
+    const empty = document.getElementById('solicitudes-fuera-empty');
+    const list = document.getElementById('solicitudes-fuera-list');
+
+    if (loading) loading.classList.remove('hide');
+    if (empty) empty.classList.add('hide');
+    if (list) list.innerHTML = '';
+
+    try {
+        const res = await fetch('/api/admin/solicitudes-fuera-horario');
+        const data = await res.json();
+        if (loading) loading.classList.add('hide');
+
+        const solicitudes = data.solicitudes || [];
+        if (solicitudes.length === 0) {
+            if (empty) empty.classList.remove('hide');
+            return;
+        }
+
+        solicitudes.forEach(s => {
+            const card = document.createElement('div');
+            card.style.background = '#ffffff';
+            card.style.border = s.estado === 'Pendiente' ? '1.5px solid #f59e0b' : '1px solid #e2e8f0';
+            card.style.borderRadius = '12px';
+            card.style.padding = '1.15rem';
+            card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.03)';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.gap = '0.75rem';
+
+            const isPendiente = s.estado === 'Pendiente';
+            const estadoBadge = isPendiente
+                ? `<span style="background: #fef3c7; color: #92400e; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px;">⏳ Pendiente</span>`
+                : (s.estado === 'Aceptada'
+                    ? `<span style="background: #d1fae5; color: #065f46; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px;">✓ Aceptada</span>`
+                    : `<span style="background: #fee2e2; color: #991b1b; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px;">✕ Declinada</span>`);
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <strong style="font-size: 1.05rem; color: var(--text-dark);">${s.nombres} ${s.apellidos || ''}</strong>
+                            ${estadoBadge}
+                        </div>
+                        <span style="font-size: 0.82rem; color: var(--text-secondary); display: block; margin-top: 2px;">
+                            🪪 C.I.: ${s.cedula || 'N/A'} · 📱 Tel: <a href="tel:${s.telefono}" style="color: var(--primary-color);">${s.telefono}</a>
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 1.1rem; font-weight: 800; color: #047857;">${s.monto} ${s.moneda}</span>
+                        <span style="display: block; font-size: 0.78rem; color: #64748b;">${s.tipo_consulta}</span>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.65rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; font-size: 0.85rem;">
+                    <span>📅 <strong>Fecha:</strong> ${s.fecha}</span>
+                    <span>⏰ <strong>Horario:</strong> ${s.hora_inicio} - ${s.hora_fin} (${s.duracion_minutos || 50} min)</span>
+                </div>
+
+                ${s.motivo_rechazo ? `<div style="font-size: 0.82rem; color: #b91c1c; background: #fef2f2; padding: 0.5rem; border-radius: 6px;"><strong>Motivo rechazo:</strong> ${s.motivo_rechazo}</div>` : ''}
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                    ${isPendiente ? `
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="responderSolicitudFuera(${s.id}, 'declinar')" style="font-weight: 700; border-radius: 6px; padding: 0.45rem 0.85rem;">
+                            ✕ Declinar
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success" onclick="responderSolicitudFuera(${s.id}, 'aceptar')" style="font-weight: 700; border-radius: 6px; padding: 0.45rem 1.15rem; background: #059669; border-color: #059669; color: white;">
+                            ✓ Aceptar Solicitud
+                        </button>
+                    ` : `
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="contactarPacienteWhatsApp('${s.telefono}', '${s.nombres}')" style="font-weight: 600; font-size: 0.8rem; border-radius: 6px;">
+                            💬 Mensaje WhatsApp
+                        </button>
+                    `}
+                </div>
+            `;
+            list.appendChild(card);
+        });
+
+    } catch (e) {
+        console.error("Error al cargar solicitudes fuera de jornada:", e);
+        if (loading) loading.innerHTML = '<span class="text-danger">Error al cargar solicitudes.</span>';
+    }
+}
+window.openSolicitudesFueraModal = openSolicitudesFueraModal;
+
+async function responderSolicitudFuera(reqId, accion) {
+    let motivo = '';
+    if (accion === 'declinar') {
+        motivo = prompt("Indica el motivo de rechazo (opcional, se incluirá en el mensaje al paciente):", "");
+        if (motivo === null) return;
+    } else {
+        if (!confirm("¿Deseas aceptar esta solicitud? Se creará la cita en tu agenda y se notificará al paciente.")) {
+            return;
+        }
+    }
+
+    try {
+        const res = await fetch(`/api/admin/solicitudes-fuera-horario/${reqId}/responder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion, motivo })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(accion === 'aceptar' ? "¡Solicitud aceptada! Cita agregada a tu agenda." : "Solicitud declinada.");
+            if (data.wa_url) {
+                if (!data.has_fcm || !data.wa_enviado_auto) {
+                    if (confirm("El paciente no tiene app/push activo. ¿Deseas abrir WhatsApp para enviarle la plantilla de respuesta ahora?")) {
+                        window.open(data.wa_url, '_blank');
+                    }
+                }
+            }
+            openSolicitudesFueraModal();
+            checkPendingSolicitudesFuera();
+            if (typeof fetchEvents === 'function') fetchEvents();
+        } else {
+            alert(data.error || "Ocurrió un error al responder la solicitud.");
+        }
+    } catch (e) {
+        console.error("Error al responder solicitud fuera de jornada:", e);
+        alert("Error de conexión al responder la solicitud.");
+    }
+}
+window.responderSolicitudFuera = responderSolicitudFuera;
+
+function contactarPacienteWhatsApp(telefono, nombres) {
+    if (!telefono) {
+        alert("El paciente no tiene teléfono registrado.");
+        return;
+    }
+    let clean = String(telefono).replace(/\D/g, '');
+    if (clean.startsWith('04')) clean = '58' + clean.slice(1);
+    else if (clean.startsWith('4')) clean = '58' + clean;
+    const msg = encodeURIComponent(`Hola ${nombres}, te contacto de mi consultorio.`);
+    window.open(`https://wa.me/${clean}?text=${msg}`, '_blank');
+}
+window.contactarPacienteWhatsApp = contactarPacienteWhatsApp;
+
+// Hook para verificar solicitudes pendientes cuando se inicializa la agenda
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        if (typeof checkPendingSolicitudesFuera === 'function') {
+            checkPendingSolicitudesFuera();
+        }
+    }, 1500);
+});
