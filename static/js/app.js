@@ -7202,6 +7202,10 @@ async function openRegisterSessionFromEvent(eventId) {
         if (e.monto > 0) {
             document.getElementById('s-monto').value = Number(e.monto).toFixed(2);
         }
+        if (e.moneda) {
+            const mSelect = document.getElementById('s-moneda');
+            if (mSelect) mSelect.value = e.moneda;
+        }
         document.getElementById('s-tipo-liq').value = 'Dejar pendiente';
         toggleSessionFinanceInputs('Dejar pendiente');
         
@@ -12758,10 +12762,11 @@ async function checkPrepaymentsAndDebtsForSession(patientId) {
         const resPatient = await fetch(`/api/patients/${patientId}`);
         if (resPatient.ok) {
             const patient = await resPatient.json();
-            if (montoInput && (patient.costo_personalizado !== null && patient.costo_personalizado !== undefined)) {
+            const hasAgendaId = document.getElementById('s-agenda-id')?.value;
+            if (!hasAgendaId && montoInput && (patient.costo_personalizado !== null && patient.costo_personalizado !== undefined)) {
                 montoInput.value = Number(patient.costo_personalizado).toFixed(2);
             }
-            if (monedaSelect && patient.moneda_personalizada) {
+            if (!hasAgendaId && monedaSelect && patient.moneda_personalizada) {
                 monedaSelect.value = patient.moneda_personalizada;
             }
         }
