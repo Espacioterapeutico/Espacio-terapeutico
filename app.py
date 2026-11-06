@@ -818,6 +818,36 @@ def ensure_critical_migrations(cursor):
     except Exception as _ex4:
         pass
 
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS solicitudes_fuera_horario (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                psicologo_id INTEGER NOT NULL,
+                paciente_id INTEGER,
+                nombres TEXT NOT NULL,
+                apellidos TEXT,
+                cedula TEXT,
+                telefono TEXT NOT NULL,
+                email TEXT,
+                tipo_consulta TEXT NOT NULL,
+                fecha TEXT NOT NULL,
+                hora_inicio TEXT NOT NULL,
+                hora_fin TEXT NOT NULL,
+                duracion_minutos INTEGER DEFAULT 50,
+                monto REAL NOT NULL DEFAULT 0.0,
+                moneda TEXT NOT NULL DEFAULT 'USD',
+                estado TEXT DEFAULT 'Pendiente',
+                motivo_rechazo TEXT,
+                agenda_id INTEGER,
+                creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+                respondido_en DATETIME
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_solicitudes_fuera_psicologo ON solicitudes_fuera_horario(psicologo_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_solicitudes_fuera_fecha ON solicitudes_fuera_horario(fecha)")
+    except Exception as _ex5:
+        pass
+
 # Ejecutar migración al inicio para servidores WSGI (PythonAnywhere, Gunicorn)
 try:
     with sqlite3.connect(DATABASE, timeout=30.0) as _db_init:

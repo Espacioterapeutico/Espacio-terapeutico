@@ -37977,7 +37977,22 @@ async function submitFastFueraJornada(e) {
 
     try {
         if (btn) { btn.disabled = true; btn.textContent = "Enviando solicitud..."; }
-        const slug = window.fastBookingTherapistSlug || fastBookingTherapistId;
+        let slug = window.fastBookingTherapistSlug || fastBookingTherapistId;
+        if (!slug) {
+            const path = window.location.pathname;
+            if (path.startsWith('/agendar/')) {
+                slug = path.replace('/agendar/', '').trim();
+            } else if (path.startsWith('/psic.')) {
+                slug = path.replace('/psic.', '').trim();
+            } else if (path.startsWith('/psicologo/')) {
+                slug = path.replace('/psicologo/', '').trim();
+            }
+        }
+        if (!slug) {
+            alert("No se pudo identificar el especialista para enviar la solicitud.");
+            return;
+        }
+
         const res = await fetch(`/api/public/solicitar-fuera-horario/${encodeURIComponent(slug)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -37993,8 +38008,14 @@ async function submitFastFueraJornada(e) {
             })
         });
 
-        const data = await res.json();
-        if (res.ok) {
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (jsonErr) {
+            console.error("Respuesta no es JSON:", jsonErr);
+        }
+
+        if (res.ok && data.success) {
             alert(`¡Solicitud enviada con éxito!
 
 Tu solicitud de consulta (${modalidad}) para el ${data.fecha} a las ${data.hora_inicio} ha sido enviada al especialista.
@@ -38002,11 +38023,11 @@ Recibirás respuesta en tu WhatsApp o teléfono.`);
             switchFastBookingView('regular');
             closeFastBookingScreen();
         } else {
-            alert(data.error || "Ocurrió un error al enviar tu solicitud.");
+            alert(data.error || `Ocurrió un error al procesar la solicitud (${res.status}). Por favor intenta nuevamente.`);
         }
     } catch (err) {
         console.error("Error al enviar solicitud fuera de jornada:", err);
-        alert("Error de conexión al enviar la solicitud.");
+        alert(err.message ? `Error: ${err.message}` : "Error de conexión al enviar la solicitud.");
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = "Solicitar Cita Fuera de Jornada"; }
     }

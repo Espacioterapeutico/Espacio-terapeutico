@@ -3018,237 +3018,274 @@ def fast_booking_check_cedula():
 # GESTIÓN DE ATENCIÓN FUERA DE LA JORNADA
 # ==============================================================================
 
+def ensure_solicitudes_fuera_horario_table(cursor):
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS solicitudes_fuera_horario (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                psicologo_id INTEGER NOT NULL,
+                paciente_id INTEGER,
+                nombres TEXT NOT NULL,
+                apellidos TEXT,
+                cedula TEXT,
+                telefono TEXT NOT NULL,
+                email TEXT,
+                tipo_consulta TEXT NOT NULL,
+                fecha TEXT NOT NULL,
+                hora_inicio TEXT NOT NULL,
+                hora_fin TEXT NOT NULL,
+                duracion_minutos INTEGER DEFAULT 50,
+                monto REAL NOT NULL DEFAULT 0.0,
+                moneda TEXT NOT NULL DEFAULT 'USD',
+                estado TEXT DEFAULT 'Pendiente',
+                motivo_rechazo TEXT,
+                agenda_id INTEGER,
+                creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+                respondido_en DATETIME
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_solicitudes_fuera_psicologo ON solicitudes_fuera_horario(psicologo_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_solicitudes_fuera_fecha ON solicitudes_fuera_horario(fecha)")
+    except Exception as e:
+        print("[FUERA_HORARIO] Error al asegurar tabla solicitudes_fuera_horario:", e)
+
 @agenda_bp.route('/api/public/solicitar-fuera-horario/<path:slug>', methods=['POST'])
 def solicitar_fuera_horario(slug):
     """Permite al consultante solicitar una cita fuera del horario habitual."""
     db = get_db()
     cursor = db.cursor()
-    from app import get_psychologist_by_id_or_slug
-    import re
-    from datetime import datetime, timedelta
-    
-    clean_slug = str(slug).strip()
-    for prefix in ['psicologo/', 'psic/', 'psic.', 'agendar/', 'registro/']:
-        if clean_slug.lower().startswith(prefix):
-            clean_slug = clean_slug[len(prefix):]
-            
-    psych = get_psychologist_by_id_or_slug(cursor, clean_slug)
-    if not psych:
-        psych = get_psychologist_by_id_or_slug(cursor, slug)
-    if not psych:
-        return jsonify({'error': 'Especialista no encontrado.'}), 404
-        
-    psicologo_id = int(psych['id'])
-    
-    # Verificar si el psicólogo tiene activa la función de fuera de jornada
-    cfg_visual = {}
+    ensure_solicitudes_fuera_horario_table(cursor)
     try:
-        if psych['configuracion_horarios_visual']:
-            cfg_visual = json.loads(psych['configuracion_horarios_visual'])
-    except Exception:
-        cfg_visual = {}
+        from app import get_psychologist_by_id_or_slug
+        import re
+        from datetime import datetime, timedelta
         
-    if not cfg_visual.get('fuera_jornada_activo'):
-        return jsonify({'error': 'El psicólogo no tiene habilitada la recepción de solicitudes fuera de jornada.'}), 400
-
-    data = request.json or {}
-    fecha = (data.get('fecha') or '').strip()
-    hora_inicio = (data.get('hora_inicio') or data.get('hora') or '').strip()
-    tipo_consulta = (data.get('tipo_consulta') or data.get('modalidad') or 'Online').strip()
-    cedula = (data.get('cedula') or '').strip()
-    nombres = (data.get('nombres') or '').strip()
-    apellidos = (data.get('apellidos') or '').strip()
-    telefono = (data.get('telefono') or '').strip()
-    email = (data.get('email') or '').strip()
-    
-    if not fecha or not hora_inicio or not cedula or not nombres or not telefono:
-        return jsonify({'error': 'Todos los campos requeridos deben ser completados.'}), 400
-
-    # Normalizar fecha y hora inicio
-    fecha_norm = normalize_date_str(fecha)
-    hora_inicio_norm = normalize_time_str(hora_inicio)
-    
-    # Determinar duración de la sesión según perfil o global
-    perfiles = cfg_visual.get('perfiles', [])
-    duracion = int(cfg_visual.get('duracion', 50))
-    for p in perfiles:
-        if (p.get('nombre') == tipo_consulta or p.get('modalidad') == tipo_consulta) and p.get('duracion'):
-            try:
-                duracion = int(p['duracion'])
-                break
-            except Exception:
-                pass
+        clean_slug = str(slug).strip()
+        for prefix in ['psicologo/', 'psic/', 'psic.', 'agendar/', 'registro/']:
+            if clean_slug.lower().startswith(prefix):
+                clean_slug = clean_slug[len(prefix):]
                 
-    # Calcular hora fin
-    try:
-        t_start = datetime.strptime(hora_inicio_norm, "%H:%M")
-        t_end = t_start + timedelta(minutes=duracion)
-        hora_fin_norm = t_end.strftime("%H:%M")
-    except Exception:
-        hora_fin_norm = hora_inicio_norm
+        psych = get_psychologist_by_id_or_slug(cursor, clean_slug)
+        if not psych:
+            psych = get_psychologist_by_id_or_slug(cursor, slug)
+        if not psych:
+            return jsonify({'error': 'Especialista no encontrado.'}), 404
+            
+        psicologo_id = int(psych['id'])
         
-    # Obtener tarifa especial definida para este perfil en fuera_jornada_perfiles
-    fuera_perfiles = cfg_visual.get('fuera_jornada_perfiles', [])
-    monto = 0.0
-    moneda = 'USD'
-    profile_found = False
-    for fp in fuera_perfiles:
-        if fp.get('nombre') == tipo_consulta or fp.get('modalidad') == tipo_consulta:
-            monto = float(fp.get('costo') or 0.0)
-            moneda = fp.get('moneda') or 'USD'
-            profile_found = True
-            break
-            
-    if not profile_found and fuera_perfiles:
-        return jsonify({'error': f'La modalidad "{tipo_consulta}" no está habilitada para citas fuera de jornada.'}), 400
-    elif not profile_found:
-        monto, moneda = get_appointment_fee(cursor, 0, psicologo_id, tipo_consulta)
-
-    # Validar contra Franjas Bloqueadas Fijas Fuera de Jornada (ej. trabajo en colegio)
-    fuera_bloqueos = cfg_visual.get('fuera_jornada_bloqueos', [])
-    if fuera_bloqueos:
+        # Verificar si el psicólogo tiene activa la función de fuera de jornada
+        cfg_visual = {}
         try:
-            req_d_obj = datetime.strptime(fecha_norm, "%Y-%m-%d")
-            # 0=Domingo, 1=Lunes, ..., 6=Sábado
-            req_dow = (req_d_obj.weekday() + 1) % 7
-            req_s = datetime.strptime(hora_inicio_norm, "%H:%M")
-            req_e = datetime.strptime(hora_fin_norm, "%H:%M")
-            
-            for b in fuera_bloqueos:
-                b_dias = [int(x) for x in b.get('dias', [])]
-                if req_dow in b_dias:
-                    b_ini_str = normalize_time_str(b.get('hora_inicio', '00:00'))
-                    b_fin_str = normalize_time_str(b.get('hora_fin', '23:59'))
-                    b_s = datetime.strptime(b_ini_str, "%H:%M")
-                    b_e = datetime.strptime(b_fin_str, "%H:%M")
-                    if max(req_s, b_s) < min(req_e, b_e):
-                        motivo = b.get('motivo') or 'Compromiso laboral / Espacio bloqueado'
-                        return jsonify({'error': f'El especialista no puede atender en esa franja ({motivo}). Por favor selecciona otra hora o fecha.'}), 400
+            if psych['configuracion_horarios_visual']:
+                cfg_visual = json.loads(psych['configuracion_horarios_visual'])
         except Exception:
-            pass
-
-    # Validar contra Bloqueos Específicos de Agenda (vacaciones, ausencias puntuales)
-    try:
-        cursor.execute("""
-            SELECT motivo, hora_inicio, hora_fin, todo_el_dia 
-            FROM bloqueos_agenda_especificos
-            WHERE psicologo_id = ? 
-              AND (fecha = ? OR (? BETWEEN fecha AND COALESCE(fecha_fin, fecha)))
-        """, (psicologo_id, fecha_norm, fecha_norm))
-        esp_bloqueos = cursor.fetchall()
-        for eb in esp_bloqueos:
-            if eb['todo_el_dia']:
-                motivo = eb['motivo'] or 'Día no laborable'
-                return jsonify({'error': f'El especialista no tiene disponibilidad en esta fecha ({motivo}).'}), 400
-            if eb['hora_inicio'] and eb['hora_fin']:
-                eb_s = datetime.strptime(normalize_time_str(eb['hora_inicio']), "%H:%M")
-                eb_e = datetime.strptime(normalize_time_str(eb['hora_fin']), "%H:%M")
+            cfg_visual = {}
+            
+        if not cfg_visual.get('fuera_jornada_activo'):
+            return jsonify({'error': 'El psicólogo no tiene habilitada la recepción de solicitudes fuera de jornada.'}), 400
+    
+        data = request.json or {}
+        fecha = (data.get('fecha') or '').strip()
+        hora_inicio = (data.get('hora_inicio') or data.get('hora') or '').strip()
+        tipo_consulta = (data.get('tipo_consulta') or data.get('modalidad') or 'Online').strip()
+        cedula = (data.get('cedula') or '').strip()
+        nombres = (data.get('nombres') or '').strip()
+        apellidos = (data.get('apellidos') or '').strip()
+        telefono = (data.get('telefono') or '').strip()
+        email = (data.get('email') or '').strip()
+        
+        if not fecha or not hora_inicio or not cedula or not nombres or not telefono:
+            return jsonify({'error': 'Todos los campos requeridos deben ser completados.'}), 400
+    
+        # Normalizar fecha y hora inicio
+        fecha_norm = normalize_date_str(fecha)
+        hora_inicio_norm = normalize_time_str(hora_inicio)
+        
+        # Determinar duración de la sesión según perfil o global
+        perfiles = cfg_visual.get('perfiles', [])
+        duracion = int(cfg_visual.get('duracion', 50))
+        for p in perfiles:
+            if (p.get('nombre') == tipo_consulta or p.get('modalidad') == tipo_consulta) and p.get('duracion'):
+                try:
+                    duracion = int(p['duracion'])
+                    break
+                except Exception:
+                    pass
+                    
+        # Calcular hora fin
+        try:
+            t_start = datetime.strptime(hora_inicio_norm, "%H:%M")
+            t_end = t_start + timedelta(minutes=duracion)
+            hora_fin_norm = t_end.strftime("%H:%M")
+        except Exception:
+            hora_fin_norm = hora_inicio_norm
+            
+        # Obtener tarifa especial definida para este perfil en fuera_jornada_perfiles
+        fuera_perfiles = cfg_visual.get('fuera_jornada_perfiles', [])
+        monto = 0.0
+        moneda = 'USD'
+        profile_found = False
+        for fp in fuera_perfiles:
+            if fp.get('nombre') == tipo_consulta or fp.get('modalidad') == tipo_consulta:
+                monto = float(fp.get('costo') or 0.0)
+                moneda = fp.get('moneda') or 'USD'
+                profile_found = True
+                break
+                
+        if not profile_found and fuera_perfiles:
+            return jsonify({'error': f'La modalidad "{tipo_consulta}" no está habilitada para citas fuera de jornada.'}), 400
+        elif not profile_found:
+            monto, moneda = get_appointment_fee(cursor, 0, psicologo_id, tipo_consulta)
+    
+        # Validar contra Franjas Bloqueadas Fijas Fuera de Jornada (ej. trabajo en colegio)
+        fuera_bloqueos = cfg_visual.get('fuera_jornada_bloqueos', [])
+        if fuera_bloqueos:
+            try:
+                req_d_obj = datetime.strptime(fecha_norm, "%Y-%m-%d")
+                # 0=Domingo, 1=Lunes, ..., 6=Sábado
+                req_dow = (req_d_obj.weekday() + 1) % 7
                 req_s = datetime.strptime(hora_inicio_norm, "%H:%M")
                 req_e = datetime.strptime(hora_fin_norm, "%H:%M")
-                if max(req_s, eb_s) < min(req_e, eb_e):
-                    motivo = eb['motivo'] or 'Compromiso agendado'
-                    return jsonify({'error': f'El especialista tiene un bloqueo en ese horario ({motivo}). Por favor selecciona otra hora.'}), 400
-    except Exception:
-        pass
-
-    # Validar que no choque con citas existentes en agenda_finanzas
-    cursor.execute("""
-        SELECT a.id, a.hora, a.tipo_consulta 
-        FROM agenda_finanzas a
-        WHERE a.creado_por_user_id = ? AND a.fecha = ?
-    """, (psicologo_id, fecha_norm))
-    existing_citas = cursor.fetchall()
+                
+                for b in fuera_bloqueos:
+                    b_dias = [int(x) for x in b.get('dias', [])]
+                    if req_dow in b_dias:
+                        b_ini_str = normalize_time_str(b.get('hora_inicio', '00:00'))
+                        b_fin_str = normalize_time_str(b.get('hora_fin', '23:59'))
+                        b_s = datetime.strptime(b_ini_str, "%H:%M")
+                        b_e = datetime.strptime(b_fin_str, "%H:%M")
+                        if max(req_s, b_s) < min(req_e, b_e):
+                            motivo = b.get('motivo') or 'Compromiso laboral / Espacio bloqueado'
+                            return jsonify({'error': f'El especialista no puede atender en esa franja ({motivo}). Por favor selecciona otra hora o fecha.'}), 400
+            except Exception:
+                pass
     
-    for c in existing_citas:
-        c_hora_str = normalize_time_str(c['hora'])
+        # Validar contra Bloqueos Específicos de Agenda (vacaciones, ausencias puntuales)
         try:
-            c_start = datetime.strptime(c_hora_str, "%H:%M")
-            c_end = c_start + timedelta(minutes=duracion)
-            req_start = datetime.strptime(hora_inicio_norm, "%H:%M")
-            req_end = datetime.strptime(hora_fin_norm, "%H:%M")
-            if max(req_start, c_start) < min(req_end, c_end):
-                return jsonify({'error': 'El especialista ya tiene un compromiso agendado en ese rango de horario. Por favor selecciona otra hora.'}), 400
+            cursor.execute("""
+                SELECT motivo, hora_inicio, hora_fin, todo_el_dia 
+                FROM bloqueos_agenda_especificos
+                WHERE psicologo_id = ? 
+                  AND (fecha = ? OR (? BETWEEN fecha AND COALESCE(fecha_fin, fecha)))
+            """, (psicologo_id, fecha_norm, fecha_norm))
+            esp_bloqueos = cursor.fetchall()
+            for eb in esp_bloqueos:
+                if eb['todo_el_dia']:
+                    motivo = eb['motivo'] or 'Día no laborable'
+                    return jsonify({'error': f'El especialista no tiene disponibilidad en esta fecha ({motivo}).'}), 400
+                if eb['hora_inicio'] and eb['hora_fin']:
+                    eb_s = datetime.strptime(normalize_time_str(eb['hora_inicio']), "%H:%M")
+                    eb_e = datetime.strptime(normalize_time_str(eb['hora_fin']), "%H:%M")
+                    req_s = datetime.strptime(hora_inicio_norm, "%H:%M")
+                    req_e = datetime.strptime(hora_fin_norm, "%H:%M")
+                    if max(req_s, eb_s) < min(req_e, eb_e):
+                        motivo = eb['motivo'] or 'Compromiso agendado'
+                        return jsonify({'error': f'El especialista tiene un bloqueo en ese horario ({motivo}). Por favor selecciona otra hora.'}), 400
         except Exception:
             pass
-
-    # Validar que no choque con otra solicitud ya aprobada en solicitudes_fuera_horario
-    cursor.execute("""
-        SELECT id, hora_inicio, hora_fin 
-        FROM solicitudes_fuera_horario
-        WHERE psicologo_id = ? AND fecha = ? AND estado IN ('Pendiente', 'Aceptada')
-    """, (psicologo_id, fecha_norm))
-    existing_reqs = cursor.fetchall()
-    for er in existing_reqs:
-        try:
-            er_start = datetime.strptime(normalize_time_str(er['hora_inicio']), "%H:%M")
-            er_end = datetime.strptime(normalize_time_str(er['hora_fin']), "%H:%M")
-            req_start = datetime.strptime(hora_inicio_norm, "%H:%M")
-            req_end = datetime.strptime(hora_fin_norm, "%H:%M")
-            if max(req_start, er_start) < min(req_end, er_end):
-                return jsonify({'error': 'Ya existe una solicitud pendiente o confirmada para ese rango de horario. Por favor selecciona otra hora.'}), 400
-        except Exception:
-            pass
-
-    # Buscar o registrar paciente
-    clean_cedula = cedula.strip()
-    digits_cedula = re.sub(r'\D', '', clean_cedula)
-    cursor.execute("""
-        SELECT id FROM pacientes 
-        WHERE ((LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
-           OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', ''))))
-           AND (psicologo_id = ? OR psicologo_id IS NULL)
-        LIMIT 1
-    """, (digits_cedula, digits_cedula, clean_cedula, psicologo_id))
-    p_row = cursor.fetchone()
-    if p_row:
-        paciente_id = p_row['id']
-    else:
+    
+        # Validar que no choque con citas existentes en agenda_finanzas
         cursor.execute("""
-            INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (nombres, apellidos, cedula, telefono, email, psicologo_id))
-        paciente_id = cursor.lastrowid
-        db.commit()
-
-    # Insertar en solicitudes_fuera_horario
-    cursor.execute("""
-        INSERT INTO solicitudes_fuera_horario (
-            psicologo_id, paciente_id, nombres, apellidos, cedula, telefono, email,
-            tipo_consulta, fecha, hora_inicio, hora_fin, duracion_minutos,
-            monto, moneda, estado
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente')
-    """, (
-        psicologo_id, paciente_id, nombres, apellidos, cedula, telefono, email,
-        tipo_consulta, fecha_norm, hora_inicio_norm, hora_fin_norm, duracion,
-        monto, moneda
-    ))
-    solicitud_id = cursor.lastrowid
-
-    # Notificación interna al psicólogo
-    try:
-        cursor.execute("""
-            INSERT INTO notificaciones (usuario_id, titulo, mensaje, fecha, leida)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP, 0)
-        """, (
-            psicologo_id,
-            "Nueva Solicitud Fuera de Jornada",
-            f"{nombres} {apellidos} ha solicitado consulta ({tipo_consulta}) para el {fecha_norm} de {hora_inicio_norm} a {hora_fin_norm}."
-        ))
-    except Exception:
-        pass
+            SELECT a.id, a.hora, a.tipo_consulta 
+            FROM agenda_finanzas a
+            WHERE a.creado_por_user_id = ? AND a.fecha = ?
+        """, (psicologo_id, fecha_norm))
+        existing_citas = cursor.fetchall()
         
-    db.commit()
+        for c in existing_citas:
+            c_hora_str = normalize_time_str(c['hora'])
+            try:
+                c_start = datetime.strptime(c_hora_str, "%H:%M")
+                c_end = c_start + timedelta(minutes=duracion)
+                req_start = datetime.strptime(hora_inicio_norm, "%H:%M")
+                req_end = datetime.strptime(hora_fin_norm, "%H:%M")
+                if max(req_start, c_start) < min(req_end, c_end):
+                    return jsonify({'error': 'El especialista ya tiene un compromiso agendado en ese rango de horario. Por favor selecciona otra hora.'}), 400
+            except Exception:
+                pass
     
-    return jsonify({
-        'success': True,
-        'solicitud_id': solicitud_id,
-        'mensaje': 'Tu solicitud ha sido enviada al especialista. Te responderá a la brevedad vía WhatsApp o llamada.',
-        'fecha': fecha_norm,
-        'hora_inicio': hora_inicio_norm,
-        'hora_fin': hora_fin_norm,
-        'monto': monto,
-        'moneda': moneda
-    })
+        # Validar que no choque con otra solicitud ya aprobada en solicitudes_fuera_horario
+        cursor.execute("""
+            SELECT id, hora_inicio, hora_fin 
+            FROM solicitudes_fuera_horario
+            WHERE psicologo_id = ? AND fecha = ? AND estado IN ('Pendiente', 'Aceptada')
+        """, (psicologo_id, fecha_norm))
+        existing_reqs = cursor.fetchall()
+        for er in existing_reqs:
+            try:
+                er_start = datetime.strptime(normalize_time_str(er['hora_inicio']), "%H:%M")
+                er_end = datetime.strptime(normalize_time_str(er['hora_fin']), "%H:%M")
+                req_start = datetime.strptime(hora_inicio_norm, "%H:%M")
+                req_end = datetime.strptime(hora_fin_norm, "%H:%M")
+                if max(req_start, er_start) < min(req_end, er_end):
+                    return jsonify({'error': 'Ya existe una solicitud pendiente o confirmada para ese rango de horario. Por favor selecciona otra hora.'}), 400
+            except Exception:
+                pass
+    
+        # Buscar o registrar paciente
+        clean_cedula = cedula.strip()
+        digits_cedula = re.sub(r'\D', '', clean_cedula)
+        cursor.execute("""
+            SELECT id FROM pacientes 
+            WHERE ((LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
+               OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', ''))))
+               AND (psicologo_id = ? OR psicologo_id IS NULL)
+            LIMIT 1
+        """, (digits_cedula, digits_cedula, clean_cedula, psicologo_id))
+        p_row = cursor.fetchone()
+        if p_row:
+            paciente_id = p_row['id']
+        else:
+            cursor.execute("""
+                INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (nombres, apellidos, cedula, telefono, email, psicologo_id))
+            paciente_id = cursor.lastrowid
+            db.commit()
+    
+        # Insertar en solicitudes_fuera_horario
+        cursor.execute("""
+            INSERT INTO solicitudes_fuera_horario (
+                psicologo_id, paciente_id, nombres, apellidos, cedula, telefono, email,
+                tipo_consulta, fecha, hora_inicio, hora_fin, duracion_minutos,
+                monto, moneda, estado
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente')
+        """, (
+            psicologo_id, paciente_id, nombres, apellidos, cedula, telefono, email,
+            tipo_consulta, fecha_norm, hora_inicio_norm, hora_fin_norm, duracion,
+            monto, moneda
+        ))
+        solicitud_id = cursor.lastrowid
+    
+        # Notificación interna al psicólogo
+        try:
+            cursor.execute("""
+                INSERT INTO notificaciones (usuario_id, titulo, mensaje, fecha, leida)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, 0)
+            """, (
+                psicologo_id,
+                "Nueva Solicitud Fuera de Jornada",
+                f"{nombres} {apellidos} ha solicitado consulta ({tipo_consulta}) para el {fecha_norm} de {hora_inicio_norm} a {hora_fin_norm}."
+            ))
+        except Exception:
+            pass
+            
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'solicitud_id': solicitud_id,
+            'mensaje': 'Tu solicitud ha sido enviada al especialista. Te responderá a la brevedad vía WhatsApp o llamada.',
+            'fecha': fecha_norm,
+            'hora_inicio': hora_inicio_norm,
+            'hora_fin': hora_fin_norm,
+            'monto': monto,
+            'moneda': moneda
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Error interno al procesar la solicitud: {str(e)}'}), 500
 
 
 @agenda_bp.route('/api/admin/solicitudes-fuera-horario', methods=['GET'])
@@ -3257,6 +3294,7 @@ def admin_get_solicitudes_fuera_horario():
     """Retorna las solicitudes fuera de jornada del psicólogo logueado."""
     db = get_db()
     cursor = db.cursor()
+    ensure_solicitudes_fuera_horario_table(cursor)
     user_id = session.get('user_id')
     
     cursor.execute("""
@@ -3288,6 +3326,7 @@ def admin_responder_solicitud_fuera_horario(req_id):
     """Acepta o declina una solicitud fuera de jornada y genera el mensaje de WhatsApp/Push."""
     db = get_db()
     cursor = db.cursor()
+    ensure_solicitudes_fuera_horario_table(cursor)
     user_id = session.get('user_id')
     import re
     import urllib.parse
