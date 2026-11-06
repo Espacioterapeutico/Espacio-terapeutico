@@ -5213,9 +5213,14 @@
                                                             <strong style="font-size: 1rem; color: var(--text-dark); display: block;">Habilitar solicitudes fuera de jornada</strong>
                                                             <span style="font-size: 0.85rem; color: var(--text-secondary);">Si está activo, los pacientes verán la opción de solicitar citas fuera de tu horario habitual.</span>
                                                         </div>
-                                                        <label class="switch" style="position: relative; display: inline-block; width: 48px; height: 26px; margin: 0;">
-                                                            <input type="checkbox" id="avail-fuera-jornada-activo" onchange="toggleFueraJornadaOptions()">
-                                                            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 26px;"></span>
+                                                        <label style="display: inline-flex; align-items: center; gap: 0.75rem; cursor: pointer; user-select: none;">
+                                                            <span id="avail-fuera-status-lbl" style="font-size: 0.85rem; font-weight: 700; color: #64748b;">Desactivado</span>
+                                                            <div style="position: relative; width: 50px; height: 28px;">
+                                                                <input type="checkbox" id="avail-fuera-jornada-activo" onchange="toggleFueraJornadaOptions()" style="opacity: 0; width: 0; height: 0; position: absolute; margin: 0; pointer-events: none;">
+                                                                <span id="avail-fuera-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 28px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                                                                    <span id="avail-fuera-knob" style="position: absolute; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.25);"></span>
+                                                                </span>
+                                                            </div>
                                                         </label>
                                                     </div>
                                                 </div>

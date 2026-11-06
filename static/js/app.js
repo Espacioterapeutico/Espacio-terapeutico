@@ -37142,13 +37142,41 @@ window.fueraJornadaConfig = window.fueraJornadaConfig || { activo: false, advert
 function toggleFueraJornadaOptions() {
     const chk = document.getElementById('avail-fuera-jornada-activo');
     const body = document.getElementById('avail-fuera-jornada-body');
-    if (!chk || !body) return;
+    const slider = document.getElementById('avail-fuera-slider');
+    const knob = document.getElementById('avail-fuera-knob');
+    const lbl = document.getElementById('avail-fuera-status-lbl');
+    if (!chk) return;
+
     if (chk.checked) {
-        body.style.opacity = '1';
-        body.style.pointerEvents = 'auto';
+        if (slider) {
+            slider.style.backgroundColor = 'var(--primary-color, #702e5e)';
+        }
+        if (knob) {
+            knob.style.transform = 'translateX(22px)';
+        }
+        if (lbl) {
+            lbl.textContent = 'Activado';
+            lbl.style.color = 'var(--primary-color, #702e5e)';
+        }
+        if (body) {
+            body.style.opacity = '1';
+            body.style.pointerEvents = 'auto';
+        }
     } else {
-        body.style.opacity = '0.5';
-        body.style.pointerEvents = 'none';
+        if (slider) {
+            slider.style.backgroundColor = '#cbd5e1';
+        }
+        if (knob) {
+            knob.style.transform = 'translateX(0px)';
+        }
+        if (lbl) {
+            lbl.textContent = 'Desactivado';
+            lbl.style.color = '#64748b';
+        }
+        if (body) {
+            body.style.opacity = '0.45';
+            body.style.pointerEvents = 'none';
+        }
     }
 }
 window.toggleFueraJornadaOptions = toggleFueraJornadaOptions;
