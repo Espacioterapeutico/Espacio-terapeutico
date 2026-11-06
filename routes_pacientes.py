@@ -1149,16 +1149,54 @@ def patient_appointments():
     patient_id = session['patient_id']
     db = get_db()
     cursor = db.cursor()
+
+    # 1. Citas regulares de agenda_finanzas
     cursor.execute("""
         SELECT af.id, af.fecha, af.hora, af.tipo_consulta, af.estado_pago, af.referencia,
-               (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as evolucionada
+               (CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END) as evolucionada,
+               'regular' as origen,
+               '' as estado_solicitud
         FROM agenda_finanzas af
         LEFT JOIN sesiones s ON af.id = s.agenda_id
         WHERE af.paciente_id = ?
         ORDER BY af.fecha DESC, af.hora DESC
     """, (patient_id,))
-    rows = cursor.fetchall()
-    return jsonify([dict(r) for r in rows])
+    regular_rows = [dict(r) for r in cursor.fetchall()]
+
+    # 2. Solicitudes fuera de jornada / personalizadas del paciente
+    cursor.execute("SELECT cedula, email FROM pacientes WHERE id = ?", (patient_id,))
+    p_info = cursor.fetchone()
+    p_ced = (p_info['cedula'] if p_info and p_info['cedula'] else '').strip()
+    p_em = (p_info['email'] if p_info and p_info['email'] else '').strip()
+
+    fuera_rows = []
+    try:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='solicitudes_fuera_horario'")
+        if cursor.fetchone():
+            cursor.execute("""
+                SELECT id, fecha, hora_inicio as hora, tipo_consulta, monto, moneda,
+                       estado as estado_solicitud,
+                       'solicitud_fuera' as origen,
+                       0 as evolucionada,
+                       CASE 
+                           WHEN estado = 'Pendiente' THEN 'Pendiente de Aprobación'
+                           WHEN estado = 'Aceptada' THEN 'Aceptada'
+                           WHEN estado = 'Declinada' THEN 'No Disponible'
+                           ELSE estado 
+                       END as estado_pago,
+                       ('Solicitud personalizada (' || monto || ' ' || moneda || ')') as referencia
+                FROM solicitudes_fuera_horario
+                WHERE (paciente_id = ? OR (cedula = ? AND ? != '') OR (email = ? AND ? != ''))
+                  AND estado IN ('Pendiente', 'Declinada')
+                ORDER BY fecha DESC, hora_inicio DESC
+            """, (patient_id, p_ced, p_ced, p_em, p_em))
+            fuera_rows = [dict(r) for r in cursor.fetchall()]
+    except Exception as _fe:
+        print("[FUERA_APPT] Error consultando solicitudes_fuera_horario:", _fe)
+
+    all_appointments = fuera_rows + regular_rows
+    all_appointments.sort(key=lambda x: (x.get('fecha') or '', x.get('hora') or ''), reverse=True)
+    return jsonify(all_appointments)
 
 
 
@@ -2233,6 +2271,34 @@ def get_patient_portal_data_dict(patient_id):
         'deudas_detalle': deudas_detalle
     }
 
+    fuera_activo = False
+    fuera_adv = ""
+    fuera_perfiles = []
+    if psicologo_id and u_row and u_row[0]:
+        try:
+            fuera_activo = bool(config.get('fuera_jornada_activo'))
+            fuera_adv = config.get('fuera_jornada_advertencia', '')
+            fuera_perfiles = config.get('fuera_jornada_perfiles', [])
+        except:
+            pass
+
+    solicitudes_pendientes = []
+    try:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='solicitudes_fuera_horario'")
+        if cursor.fetchone():
+            p_ced = (p_dict.get('cedula') or '').strip()
+            p_em = (p_dict.get('email') or '').strip()
+            cursor.execute("""
+                SELECT id, fecha, hora_inicio as hora, tipo_consulta, monto, moneda, estado, duracion_minutos
+                FROM solicitudes_fuera_horario
+                WHERE (paciente_id = ? OR (cedula = ? AND ? != '') OR (email = ? AND ? != ''))
+                  AND estado = 'Pendiente'
+                ORDER BY fecha ASC, hora_inicio ASC
+            """, (patient_id, p_ced, p_ced, p_em, p_em))
+            solicitudes_pendientes = [dict(r) for r in cursor.fetchall()]
+    except Exception as _fe:
+        print("[PORTAL] Error consultando solicitudes pendientes:", _fe)
+
     return {
         'perfil': p_dict,
         'modalidades': modalidades,
@@ -2241,6 +2307,10 @@ def get_patient_portal_data_dict(patient_id):
         'terminos_texto': terms,
         'terminos_requeridos': (p_dict.get('terminos_aceptados') != 1),
         'proximas_citas': proximas_citas,
+        'solicitudes_pendientes': solicitudes_pendientes,
+        'fuera_jornada_activo': fuera_activo,
+        'fuera_jornada_advertencia': fuera_adv,
+        'fuera_jornada_perfiles': fuera_perfiles,
         'compartido': compartido,
         'finanzas': finanzas
     }

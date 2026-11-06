@@ -3257,20 +3257,32 @@ def solicitar_fuera_horario(slug):
         ))
         solicitud_id = cursor.lastrowid
     
-        # Notificación interna al psicólogo
+        # 1. Notificación en campana para el psicólogo
         try:
             cursor.execute("""
-                INSERT INTO notificaciones (usuario_id, titulo, mensaje, fecha, leida)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP, 0)
+                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                VALUES (?, 'solicitud_fuera', ?, ?, CURRENT_TIMESTAMP, 0, 'agenda')
             """, (
                 psicologo_id,
-                "Nueva Solicitud Fuera de Jornada",
-                f"{nombres} {apellidos} ha solicitado consulta ({tipo_consulta}) para el {fecha_norm} de {hora_inicio_norm} a {hora_fin_norm}."
+                "✨ Solicitud de Consulta Personalizada",
+                f"{nombres} {apellidos} ha solicitado consulta ({tipo_consulta}) para el {fecha_norm} a las {hora_inicio_norm}."
             ))
-        except Exception:
-            pass
-            
+        except Exception as _ne:
+            print("[NOTIF] Error guardando notificacion de fuera de jornada:", _ne)
+
         db.commit()
+
+        # 2. Notificación WebPush en segundo plano para el psicólogo
+        try:
+            from app import send_webpush_notification
+            send_webpush_notification(
+                user_id=psicologo_id,
+                title="✨ Solicitud de Consulta Personalizada",
+                body=f"{nombres} {apellidos} ha solicitado consulta ({tipo_consulta}) para el {fecha_norm} a las {hora_inicio_norm}.",
+                url="/?view=agenda"
+            )
+        except Exception as _wp_ex:
+            print("[WEBPUSH] Error enviando WebPush de solicitud fuera de jornada:", _wp_ex)
         
         return jsonify({
             'success': True,
@@ -3407,6 +3419,18 @@ def admin_responder_solicitud_fuera_horario(req_id):
         )
         
         wa_text = raw_tmpl.replace('{nombre}', sol.get('nombres', '')).replace('{fecha}', sol.get('fecha', '')).replace('{hora}', sol.get('hora_inicio', '')).replace('{modalidad}', sol.get('tipo_consulta', '')).replace('{monto}', str(sol.get('monto', '0'))).replace('{moneda}', sol.get('moneda', 'USD')).replace('{psicologo}', psicologo_nombre)
+
+        if paciente_id:
+            try:
+                from app import notify_patient
+                notify_patient(
+                    paciente_id,
+                    "¡Solicitud de Consulta Aceptada!",
+                    f"Tu cita personalizada ({sol['tipo_consulta']}) para el {sol['fecha']} a las {sol['hora_inicio']} ha sido confirmada por {psicologo_nombre}.",
+                    link="/#citas"
+                )
+            except Exception as _pne:
+                print("[NOTIF_PACIENTE] Error:", _pne)
 
         if tokens_fcm:
             try:

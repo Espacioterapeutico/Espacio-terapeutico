@@ -2846,6 +2846,9 @@
 
                     <!-- Bloque 1: Próximas Consultas & Evoluciones Pendientes -->
                     <div id="dash-content-proximas" class="dash-tab-content">
+                        <!-- BANNER SOLICITUDES FUERA DE JORNADA PENDIENTES -->
+                        <div id="dashboard-solicitudes-fuera-card" class="hide" style="margin-bottom: 0.85rem;"></div>
+
                         <div class="dashboard-split-grid">
                             <!-- Consultas Próximas (Sesión Activa/Próxima y evolución anterior) -->
                             <div class="dashboard-block card" style="padding: 0.75rem 0.85rem !important; margin-bottom: 0.75rem !important; border-radius: 10px;">
@@ -7282,6 +7285,19 @@
                                     <button type="submit" id="pat-submit-req-btn" class="btn btn-primary btn-block" style="width: 100%; margin-top: 1rem;" disabled>Agendar Consulta</button>
                                 </form>
                                 <div id="pat-req-status-msg" class="status-msg hide mt-2"></div>
+
+                                <!-- Solicitar Consulta Personalizada / Fuera de Jornada (Consultante) -->
+                                <div id="pat-fuera-jornada-card" class="hide" style="margin-top: 1.5rem; border: 1.5px dashed #f59e0b; border-radius: 12px; background: #fffdf5; padding: 1.15rem; text-align: center;">
+                                    <div style="font-size: 0.92rem; font-weight: 700; color: #92400e; margin-bottom: 0.35rem;">
+                                        ✨ ¿Deseas agendar en un espacio personalizado?
+                                    </div>
+                                    <p id="pat-fuera-advertencia-text" style="font-size: 0.82rem; color: #78350f; margin: 0 0 0.75rem 0; line-height: 1.4;">
+                                        Ten en cuenta que los horarios personalizados tienen un costo mayor al horario ofertado.
+                                    </p>
+                                    <button type="button" class="btn" onclick="openPatientFueraJornadaModal()" style="background: #eab308; background-image: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; font-weight: 700; border-radius: 10px; padding: 0.55rem 1.25rem; border: none; font-size: 0.88rem; cursor: pointer; box-shadow: 0 2px 8px rgba(217,119,6,0.25);">
+                                        ✨ Solicitar Espacio Personalizado
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

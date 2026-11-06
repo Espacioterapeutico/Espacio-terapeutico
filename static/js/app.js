@@ -4461,9 +4461,67 @@ async function loadPatientPortalData(patientId) {
             }
         }
         
+        const fueraCard = document.getElementById('pat-fuera-jornada-card');
+        const fueraAdv = document.getElementById('pat-fuera-advertencia-text');
+        if (fueraCard) {
+            const isFueraActive = !!data.fuera_jornada_activo;
+            if (isFueraActive) {
+                fueraCard.classList.remove('hide');
+                if (fueraAdv && data.fuera_jornada_advertencia) {
+                    fueraAdv.textContent = data.fuera_jornada_advertencia;
+                }
+            } else {
+                fueraCard.classList.add('hide');
+            }
+        }
+
         const container = document.getElementById('pat-next-sessions-container');
         if (container) {
             container.innerHTML = '';
+
+            // Mostrar tarjeta de consulta personalizada pendiente si existe
+            if (data.solicitudes_pendientes && data.solicitudes_pendientes.length > 0) {
+                data.solicitudes_pendientes.forEach(sol => {
+                    const solBox = document.createElement('div');
+                    solBox.className = 'next-session-info-box';
+                    solBox.style.background = 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)';
+                    solBox.style.padding = '1.25rem 1.5rem';
+                    solBox.style.borderRadius = 'var(--radius-md)';
+                    solBox.style.borderLeft = '5px solid #f59e0b';
+                    solBox.style.marginBottom = '1rem';
+                    solBox.style.boxShadow = '0 2px 8px rgba(245,158,11,0.1)';
+
+                    let dateFormatted = sol.fecha;
+                    try {
+                        const parts = sol.fecha.split('-');
+                        if (parts.length === 3) {
+                            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                            dateFormatted = d.toLocaleDateString('es-ES', options);
+                            dateFormatted = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+                        }
+                    } catch(e){}
+
+                    solBox.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <span style="font-weight: 800; color: #92400e; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 6px;">
+                                ✨ Solicitud en Horario Personalizado
+                            </span>
+                            <span style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #fde68a;">
+                                ⏳ Esperando Confirmación del Especialista
+                            </span>
+                        </div>
+                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1.05rem; font-weight: 700; color: var(--text-dark);">
+                            ${dateFormatted} a las ${format12h(sol.hora)}
+                        </h4>
+                        <p style="margin: 0; font-size: 0.85rem; color: #78350f; line-height: 1.4;">
+                            Modalidad: <strong>${sol.tipo_consulta}</strong> · Tarifa: <strong>${sol.monto} ${sol.moneda}</strong>.<br>
+                            Tu terapeuta revisará esta solicitud y te contactará a la brevedad vía WhatsApp o teléfono.
+                        </p>
+                    `;
+                    container.appendChild(solBox);
+                });
+            }
             
             if (data.proximas_citas && data.proximas_citas.length > 0) {
                 data.proximas_citas.forEach(cita => {
@@ -7985,6 +8043,9 @@ async function loadDashboardStats() {
 }
 
 async function loadAgendaCompact() {
+    if (typeof loadDashboardSolicitudesFuera === 'function') {
+        loadDashboardSolicitudesFuera();
+    }
     const listContainer = document.getElementById('pending-evolutions-list');
     const nextConsultation = document.getElementById('next-consultation-content');
     if (!listContainer || !nextConsultation) return;
@@ -16940,20 +17001,37 @@ async function loadPatientAppointmentsList() {
             
             let estadoCita = 'Agendada';
             let badgeCitaClass = 'badge-info';
+            let badgePagoClass = 'badge-secondary';
             
-            if (e.evolucionada === 1) {
+            if (e.origen === 'solicitud_fuera') {
+                if (e.estado_solicitud === 'Pendiente') {
+                    estadoCita = '⏳ Esperando Confirmación';
+                    badgeCitaClass = 'badge-warning';
+                    badgePagoClass = 'badge-secondary';
+                } else if (e.estado_solicitud === 'Declinada') {
+                    estadoCita = 'No Disponible';
+                    badgeCitaClass = 'badge-danger';
+                    badgePagoClass = 'badge-secondary';
+                } else {
+                    estadoCita = e.estado_solicitud || 'Personalizada';
+                    badgeCitaClass = 'badge-info';
+                    badgePagoClass = 'badge-secondary';
+                }
+            } else if (e.evolucionada === 1) {
                 estadoCita = 'Realizada';
                 badgeCitaClass = 'badge-success';
+                badgePagoClass = (e.estado_pago === 'Paga' || e.estado_pago === 'Prepagada') ? 'badge-success' : 'badge-danger';
             } else if (e.estado_pago === 'Cancelada' || e.estado_pago === 'Cancelada con aviso') {
                 estadoCita = 'Cancelada';
                 badgeCitaClass = 'badge-danger';
+                badgePagoClass = 'badge-secondary';
             } else if (e.estado_pago === 'Reprogramada') {
                 estadoCita = 'Reprogramada';
                 badgeCitaClass = 'badge-warning';
+                badgePagoClass = 'badge-secondary';
+            } else {
+                badgePagoClass = (e.estado_pago === 'Paga' || e.estado_pago === 'Prepagada') ? 'badge-success' : 'badge-danger';
             }
-            
-            const badgePagoClass = (e.estado_pago === 'Paga' || e.estado_pago === 'Prepagada') ? 'badge-success' : 
-                                   ((e.estado_pago === 'Cancelada' || e.estado_pago === 'Cancelada con aviso' || e.estado_pago === 'Reprogramada') ? 'badge-secondary' : 'badge-danger');
             
             tr.innerHTML = `
                 <td><strong>${e.fecha} ${format12h(e.hora)}</strong></td>
@@ -38207,6 +38285,121 @@ function contactarPacienteWhatsApp(telefono, nombres) {
     window.open(`https://wa.me/${clean}?text=${msg}`, '_blank');
 }
 window.contactarPacienteWhatsApp = contactarPacienteWhatsApp;
+
+// --- DASHBOARD DE PSICÓLOGO: CARGA DE SOLICITUDES FUERA DE JORNADA PENDIENTES ---
+async function loadDashboardSolicitudesFuera() {
+    const card = document.getElementById('dashboard-solicitudes-fuera-card');
+    if (!card) return;
+
+    try {
+        const res = await fetch('/api/admin/solicitudes-fuera-horario?_t=' + Date.now());
+        if (!res.ok) return;
+        const data = await res.json();
+        const pending = (data.solicitudes || []).filter(s => s.estado === 'Pendiente');
+
+        if (pending.length === 0) {
+            card.innerHTML = '';
+            card.classList.add('hide');
+            return;
+        }
+
+        card.classList.remove('hide');
+        card.innerHTML = `
+            <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #f59e0b; border-radius: 12px; padding: 1rem 1.15rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.25rem;">✨</span>
+                        <strong style="font-size: 0.95rem; color: #92400e;">Solicitud de Consulta en Horario Personalizado</strong>
+                    </div>
+                    <span style="background: #f59e0b; color: white; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">
+                        ${pending.length} Pendiente${pending.length > 1 ? 's' : ''}
+                    </span>
+                </div>
+                ${pending.map(s => `
+                    <div style="background: white; border: 1px solid #fde68a; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                            <div>
+                                <strong style="font-size: 1rem; color: var(--text-dark);">${s.nombres} ${s.apellidos || ''}</strong>
+                                <span style="font-size: 0.82rem; color: var(--text-secondary); display: block; margin-top: 2px;">
+                                    🪪 C.I.: ${s.cedula || 'N/A'} · 📱 Tel: <a href="tel:${s.telefono}" style="color: var(--primary-color); font-weight: 600;">${s.telefono}</a>
+                                </span>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-size: 1.05rem; font-weight: 800; color: #059669;">${s.monto} ${s.moneda}</span>
+                                <span style="display: block; font-size: 0.78rem; color: #64748b; font-weight: 600;">Modalidad ${s.tipo_consulta}</span>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.5rem 0.75rem; margin: 0.6rem 0; font-size: 0.84rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                            <span>🗓️ <strong>Fecha solicitada:</strong> ${s.fecha}</span>
+                            <span>⏰ <strong>Horario:</strong> ${format12h(s.hora_inicio)} a ${format12h(s.hora_fin)} (${s.duracion_minutos || 60} min)</span>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 0.6rem; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="responderSolicitudFueraFromDash(${s.id}, 'declinar')" style="font-weight: 700; border-radius: 6px; padding: 0.45rem 0.95rem; background: white; border: 1.5px solid #fca5a5; color: #dc2626; cursor: pointer;">
+                                ✕ Rechazar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-success" onclick="responderSolicitudFueraFromDash(${s.id}, 'aceptar')" style="font-weight: 700; border-radius: 6px; padding: 0.45rem 1.25rem; background: #059669; border: none; color: white; cursor: pointer; box-shadow: 0 2px 6px rgba(5,150,105,0.25);">
+                                ✓ Aceptar Consulta
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (e) {
+        console.error("Error al cargar solicitudes fuera en dashboard:", e);
+    }
+}
+window.loadDashboardSolicitudesFuera = loadDashboardSolicitudesFuera;
+
+async function responderSolicitudFueraFromDash(reqId, accion) {
+    await responderSolicitudFuera(reqId, accion);
+    loadDashboardSolicitudesFuera();
+    if (typeof loadAgendaCompact === 'function') loadAgendaCompact();
+    if (typeof loadDashboardStats === 'function') loadDashboardStats();
+}
+window.responderSolicitudFueraFromDash = responderSolicitudFueraFromDash;
+
+function openPatientFueraJornadaModal() {
+    const prof = window.patientProfile || {};
+    const fastScreen = document.getElementById('fast-booking-screen');
+    if (!fastScreen) return;
+
+    // Precargar datos del paciente logueado
+    const cedInput = document.getElementById('fast-fuera-cedula');
+    const nomInput = document.getElementById('fast-fuera-nombres');
+    const apeInput = document.getElementById('fast-fuera-apellidos');
+    const telInput = document.getElementById('fast-fuera-telefono');
+    const emInput = document.getElementById('fast-fuera-email');
+
+    if (cedInput && prof.cedula) cedInput.value = prof.cedula;
+    if (nomInput && prof.nombres) {
+        nomInput.value = prof.nombres;
+        nomInput.readOnly = true;
+        nomInput.style.backgroundColor = '#f8fafc';
+    }
+    if (apeInput && prof.apellidos) {
+        apeInput.value = prof.apellidos;
+        apeInput.readOnly = true;
+        apeInput.style.backgroundColor = '#f8fafc';
+    }
+    if (telInput && prof.telefono) telInput.value = prof.telefono;
+    if (emInput && prof.email) emInput.value = prof.email;
+
+    // Configurar terapeuta asignado
+    const psicId = prof.psicologo_id || window.currentPatientPsicologoId || 1;
+    window.fastBookingTherapistId = psicId;
+
+    if (prof.psicologo_asignado_slug) {
+        window.fastBookingTherapistSlug = prof.psicologo_asignado_slug;
+    }
+
+    // Cambiar a vista fuera de jornada y mostrar pantalla
+    switchFastBookingView('fuera_jornada');
+    fastScreen.classList.remove('hide');
+    fastScreen.style.display = 'flex';
+}
+window.openPatientFueraJornadaModal = openPatientFueraJornadaModal;
+
 
 // Hook para verificar solicitudes pendientes cuando se inicializa la agenda
 document.addEventListener('DOMContentLoaded', () => {
