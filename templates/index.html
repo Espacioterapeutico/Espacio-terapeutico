@@ -2002,7 +2002,7 @@
                         </label>
                         <div class="form-group mb-2">
                             <label for="fast-fuera-cedula" style="font-size: 0.82rem; font-weight: 600;">Cédula de Identidad *</label>
-                            <input type="text" id="fast-fuera-cedula" required placeholder="Tu número de cédula" onblur="checkAndAutofillFueraPatient()">
+                            <input type="text" id="fast-fuera-cedula" required placeholder="Tu número de cédula" oninput="onFastFueraCedulaInput()" onblur="checkAndAutofillFueraPatient()">
                         </div>
                         <div class="form-group mb-2">
                             <label for="fast-fuera-nombres" style="font-size: 0.82rem; font-weight: 600;">Nombres *</label>
@@ -5273,12 +5273,12 @@
                                             <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.5rem;">
                                                 <!-- Interruptor Maestro -->
                                                 <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-                                                        <div>
+                                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; flex-wrap: wrap;">
+                                                        <div style="flex: 1; min-width: 250px;">
                                                             <strong style="font-size: 1rem; color: var(--text-dark); display: block;">Habilitar solicitudes fuera de jornada</strong>
                                                             <span style="font-size: 0.85rem; color: var(--text-secondary);">Si está activo, los pacientes verán la opción de solicitar citas fuera de tu horario habitual.</span>
                                                         </div>
-                                                        <label style="display: inline-flex; align-items: center; gap: 0.75rem; cursor: pointer; user-select: none;">
+                                                        <label style="display: inline-flex; align-items: center; gap: 0.75rem; cursor: pointer; user-select: none; flex-shrink: 0;">
                                                             <span id="avail-fuera-status-lbl" style="font-size: 0.85rem; font-weight: 700; color: #64748b;">Desactivado</span>
                                                             <div style="position: relative; width: 50px; height: 28px;">
                                                                 <input type="checkbox" id="avail-fuera-jornada-activo" onchange="toggleFueraJornadaOptions()" style="opacity: 0; width: 0; height: 0; position: absolute; margin: 0; pointer-events: none;">

@@ -11546,11 +11546,16 @@ async function loadAdminAvailability() {
             }
         }
 
-        document.getElementById('avail-duracion').value = data.duracion || 60;
-        document.getElementById('avail-receso').value = data.receso || 15;
-        document.getElementById('avail-antelacion').value = data.antelacion !== undefined ? data.antelacion : 24;
-        document.getElementById('avail-tiempo-confirmacion').value = data.alerta_confirmacion !== undefined ? data.alerta_confirmacion : 24;
-        document.getElementById('avail-tiempo-cierre').value = data.alerta_cierre !== undefined ? data.alerta_cierre : 2;
+        const elDur = document.getElementById('avail-duracion');
+        if (elDur) elDur.value = data.duracion || 60;
+        const elRec = document.getElementById('avail-receso');
+        if (elRec) elRec.value = data.receso || 15;
+        const elAnt = document.getElementById('avail-antelacion');
+        if (elAnt) elAnt.value = data.antelacion !== undefined ? data.antelacion : 24;
+        const elConf = document.getElementById('avail-tiempo-confirmacion');
+        if (elConf) elConf.value = data.alerta_confirmacion !== undefined ? data.alerta_confirmacion : 24;
+        const elCie = document.getElementById('avail-tiempo-cierre');
+        if (elCie) elCie.value = data.alerta_cierre !== undefined ? data.alerta_cierre : 2;
         
         // Confirmación personalizada
         const confTipo = data.alerta_confirmacion_tipo || 'previo';
@@ -37867,31 +37872,81 @@ function updateFueraDurationPreview() {
 }
 window.updateFueraDurationPreview = updateFueraDurationPreview;
 
-async function checkAndAutofillFueraPatient() {
-    const cedula = document.getElementById('fast-fuera-cedula')?.value.trim();
-    if (!cedula) return;
+let fueraCedulaDebounceTimer = null;
+
+async function checkAndAutofillFueraPatient(cedulaParam) {
+    const cedula = cedulaParam || document.getElementById('fast-fuera-cedula')?.value.trim();
+    if (!cedula || cedula.length < 5) return;
     try {
-        const res = await fetch('/api/public/find-patient-by-cedula', {
+        const res = await fetch('/api/fast-booking/check-cedula', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ cedula })
         });
         if (res.ok) {
             const data = await res.json();
+            const nom = document.getElementById('fast-fuera-nombres');
+            const ape = document.getElementById('fast-fuera-apellidos');
+            const tel = document.getElementById('fast-fuera-telefono');
+            const em = document.getElementById('fast-fuera-email');
+            const cedLabel = document.querySelector('label[for="fast-fuera-cedula"]');
+            let badge = document.getElementById('fast-fuera-patient-verified-badge');
+
             if (data.found) {
-                const nom = document.getElementById('fast-fuera-nombres');
-                const ape = document.getElementById('fast-fuera-apellidos');
-                const tel = document.getElementById('fast-fuera-telefono');
-                const em = document.getElementById('fast-fuera-email');
-                if (nom && !nom.value) nom.value = data.nombres || '';
-                if (ape && !ape.value) ape.value = data.apellidos || '';
-                if (tel && !tel.value) tel.value = data.telefono || '';
-                if (em && !em.value) em.value = data.email || '';
+                if (nom) {
+                    nom.value = data.nombres || '';
+                    nom.readOnly = true;
+                    nom.style.backgroundColor = '#f8fafc';
+                }
+                if (ape) {
+                    ape.value = data.apellidos || '';
+                    ape.readOnly = true;
+                    ape.style.backgroundColor = '#f8fafc';
+                }
+                if (tel) {
+                    tel.value = data.telefono || '';
+                    tel.placeholder = data.telefono ? data.telefono : "Ej: +584123456789";
+                }
+                if (em) {
+                    em.value = data.email || '';
+                }
+
+                if (!badge && cedLabel) {
+                    badge = document.createElement('span');
+                    badge.id = 'fast-fuera-patient-verified-badge';
+                    badge.style.cssText = 'font-size: 0.74rem; background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 6px; font-weight: 700; margin-left: 6px; border: 1px solid #bae6fd;';
+                    badge.textContent = '✓ Consultante Registrado';
+                    cedLabel.appendChild(badge);
+                }
+            } else {
+                if (badge) badge.remove();
+                if (nom) { nom.readOnly = false; nom.style.backgroundColor = ''; }
+                if (ape) { ape.readOnly = false; ape.style.backgroundColor = ''; }
             }
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error("Error al autocompletar paciente fuera de jornada:", e);
+    }
 }
 window.checkAndAutofillFueraPatient = checkAndAutofillFueraPatient;
+
+function onFastFueraCedulaInput() {
+    clearTimeout(fueraCedulaDebounceTimer);
+    const cedula = document.getElementById('fast-fuera-cedula')?.value.trim();
+    if (!cedula || cedula.length < 5) {
+        const badge = document.getElementById('fast-fuera-patient-verified-badge');
+        if (badge) badge.remove();
+        const nom = document.getElementById('fast-fuera-nombres');
+        const ape = document.getElementById('fast-fuera-apellidos');
+        if (nom) { nom.readOnly = false; nom.style.backgroundColor = ''; }
+        if (ape) { ape.readOnly = false; ape.style.backgroundColor = ''; }
+        return;
+    }
+    fueraCedulaDebounceTimer = setTimeout(() => {
+        checkAndAutofillFueraPatient(cedula);
+    }, 400);
+}
+window.onFastFueraCedulaInput = onFastFueraCedulaInput;
 
 async function submitFastFueraJornada(e) {
     if (e) e.preventDefault();
