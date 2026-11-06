@@ -10120,6 +10120,12 @@ function switchHorariosMode(mode) {
         if (typeof renderFueraJornadaProfilesList === 'function') {
             renderFueraJornadaProfilesList();
         }
+        if (typeof renderFueraJornadaBloqueosList === 'function') {
+            renderFueraJornadaBloqueosList();
+        }
+        if (typeof renderFueraJornadaBloqueosList === 'function') {
+            renderFueraJornadaBloqueosList();
+        }
     } else {
         panelConfig.classList.remove('hide');
         if (btnConfig) {
@@ -11605,10 +11611,13 @@ async function loadAdminAvailability() {
         const fAdv = data.fuera_jornada_advertencia || '';
         const fPerfiles = Array.isArray(data.fuera_jornada_perfiles) ? data.fuera_jornada_perfiles : [];
 
+        const fBloqueos = Array.isArray(data.fuera_jornada_bloqueos) ? data.fuera_jornada_bloqueos : [];
+
         window.fueraJornadaConfig = {
             activo: fActivo,
             advertencia: fAdv,
-            perfiles: fPerfiles
+            perfiles: fPerfiles,
+            bloqueos: fBloqueos
         };
 
         const chkFuera = document.getElementById('avail-fuera-jornada-activo');
@@ -11622,6 +11631,9 @@ async function loadAdminAvailability() {
         }
         if (typeof renderFueraJornadaProfilesList === 'function') {
             renderFueraJornadaProfilesList();
+        }
+        if (typeof renderFueraJornadaBloqueosList === 'function') {
+            renderFueraJornadaBloqueosList();
         }
         if (typeof toggleFueraJornadaOptions === 'function') {
             toggleFueraJornadaOptions();
@@ -12030,6 +12042,7 @@ async function handleSaveAvailability(e) {
     const fuera_jornada_activo = document.getElementById('avail-fuera-jornada-activo')?.checked ? 1 : 0;
     const fuera_jornada_advertencia = document.getElementById('avail-fuera-jornada-advertencia')?.value || '';
     const fuera_jornada_perfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) ? window.fueraJornadaConfig.perfiles : [];
+    const fuera_jornada_bloqueos = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.bloqueos)) ? window.fueraJornadaConfig.bloqueos : [];
 
     const profileCards = document.querySelectorAll('.avail-profile-card');
     const perfiles = [];
@@ -12114,7 +12127,8 @@ async function handleSaveAvailability(e) {
                 politica_cancelacion_valor,
                 fuera_jornada_activo,
                 fuera_jornada_advertencia,
-                fuera_jornada_perfiles
+                fuera_jornada_perfiles,
+                fuera_jornada_bloqueos
             })
         });
         
@@ -37121,7 +37135,7 @@ window.submitAdjustPrepayBalance = submitAdjustPrepayBalance;
 // FUNCIONES DE APOYO: AUTO-AGENDAMIENTO Y ATENCIÓN FUERA DE JORNADA
 // ==============================================================================
 
-window.fueraJornadaConfig = window.fueraJornadaConfig || { activo: false, advertencia: '', perfiles: [] };
+window.fueraJornadaConfig = window.fueraJornadaConfig || { activo: false, advertencia: '', perfiles: [], bloqueos: [] };
 
 function toggleFueraJornadaOptions() {
     const chk = document.getElementById('avail-fuera-jornada-activo');
@@ -37264,6 +37278,118 @@ function updateFueraProfileCurrency(idx, val) {
     }
 }
 window.updateFueraProfileCurrency = updateFueraProfileCurrency;
+
+// --- GESTIÓN DE FRANJAS BLOQUEADAS FIJAS FUERA DE JORNADA ---
+function setFueraBloqueoDaysPreset(preset) {
+    const checks = document.querySelectorAll('.fuera-bloqueo-dia');
+    checks.forEach(chk => {
+        const val = parseInt(chk.value);
+        if (preset === 'l-v') {
+            chk.checked = (val >= 1 && val <= 5);
+        } else if (preset === 'all') {
+            chk.checked = true;
+        } else if (preset === 'none') {
+            chk.checked = false;
+        }
+    });
+}
+window.setFueraBloqueoDaysPreset = setFueraBloqueoDaysPreset;
+
+function renderFueraJornadaBloqueosList() {
+    const container = document.getElementById('avail-fuera-bloqueos-container');
+    const noBloqueos = document.getElementById('avail-fuera-no-bloqueos');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const bloqueos = (window.fueraJornadaConfig && window.fueraJornadaConfig.bloqueos) || [];
+
+    if (bloqueos.length === 0) {
+        if (noBloqueos) noBloqueos.classList.remove('hide');
+        return;
+    }
+    if (noBloqueos) noBloqueos.classList.add('hide');
+
+    const dayLabels = { 0: 'Dom', 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb' };
+
+    bloqueos.forEach((b, idx) => {
+        const row = document.createElement('div');
+        row.style.background = '#ffffff';
+        row.style.border = '1.5px solid #fca5a5';
+        row.style.borderRadius = '8px';
+        row.style.padding = '0.65rem 0.85rem';
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.justifyContent = 'space-between';
+        row.style.gap = '0.75rem';
+        row.style.flexWrap = 'wrap';
+
+        const diasStr = (b.dias || []).map(d => dayLabels[d] || d).join(', ');
+        const motivoStr = b.motivo ? ` — <strong style="color: #991b1b;">${b.motivo}</strong>` : '';
+
+        row.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="background: #fee2e2; color: #991b1b; font-weight: 700; font-size: 0.75rem; padding: 2px 7px; border-radius: 4px;">
+                    🚫 Bloqueado
+                </span>
+                <span style="font-weight: 700; color: #1e293b; font-size: 0.88rem;">
+                    ${diasStr} (${b.hora_inicio} a ${b.hora_fin})${motivoStr}
+                </span>
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFueraJornadaBloqueoRow(${idx})" style="padding: 0.35rem 0.6rem; border-radius: 6px; border: none; background: #fee2e2; color: #991b1b; cursor: pointer;" title="Eliminar bloqueo">
+                    🗑️
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+}
+window.renderFueraJornadaBloqueosList = renderFueraJornadaBloqueosList;
+
+function addFueraJornadaBloqueoRow() {
+    const checks = document.querySelectorAll('.fuera-bloqueo-dia:checked');
+    const ini = document.getElementById('avail-fuera-bloqueo-inicio')?.value;
+    const fin = document.getElementById('avail-fuera-bloqueo-fin')?.value;
+    const motivo = document.getElementById('avail-fuera-bloqueo-motivo')?.value.trim() || '';
+
+    if (checks.length === 0) {
+        alert("Por favor selecciona al menos un día de la semana para bloquear.");
+        return;
+    }
+    if (!ini || !fin) {
+        alert("Por favor indica la hora de inicio y fin del bloqueo.");
+        return;
+    }
+    if (ini >= fin) {
+        alert("La hora de inicio debe ser anterior a la hora de fin.");
+        return;
+    }
+
+    const dias = Array.from(checks).map(c => parseInt(c.value));
+
+    if (!window.fueraJornadaConfig.bloqueos) window.fueraJornadaConfig.bloqueos = [];
+
+    window.fueraJornadaConfig.bloqueos.push({
+        id: 'b_' + Date.now(),
+        dias: dias,
+        hora_inicio: ini,
+        hora_fin: fin,
+        motivo: motivo
+    });
+
+    renderFueraJornadaBloqueosList();
+
+    const motEl = document.getElementById('avail-fuera-bloqueo-motivo');
+    if (motEl) motEl.value = '';
+}
+window.addFueraJornadaBloqueoRow = addFueraJornadaBloqueoRow;
+
+function removeFueraJornadaBloqueoRow(idx) {
+    if (!window.fueraJornadaConfig.bloqueos) return;
+    window.fueraJornadaConfig.bloqueos.splice(idx, 1);
+    renderFueraJornadaBloqueosList();
+}
+window.removeFueraJornadaBloqueoRow = removeFueraJornadaBloqueoRow;
 
 // --- BOTONES DE MODALIDAD EN AUTO-AGENDAMIENTO RÁPIDO ---
 function renderFastModalityButtons(modalities) {
@@ -37524,11 +37650,59 @@ function selectFastFueraModality(val) {
 }
 window.selectFastFueraModality = selectFastFueraModality;
 
+function checkFueraSlotBlocked(fecha, hora, dur) {
+    if (!fecha || !hora) return null;
+    const bloqueos = (window.currentTherapistPublicData && window.currentTherapistPublicData.fuera_jornada_bloqueos) || [];
+    if (!bloqueos || bloqueos.length === 0) return null;
+
+    try {
+        const partsF = fecha.split('-').map(Number);
+        const dObj = new Date(partsF[0], partsF[1] - 1, partsF[2]);
+        const dow = dObj.getDay(); // 0=Dom, 1=Lun, ..., 6=Sab
+
+        const partsH = hora.split(':').map(Number);
+        const reqStartMin = partsH[0] * 60 + partsH[1];
+        const reqEndMin = reqStartMin + (dur || 50);
+
+        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+        for (const b of bloqueos) {
+            const bDias = (b.dias || []).map(Number);
+            if (bDias.includes(dow)) {
+                const bIniParts = (b.hora_inicio || '00:00').split(':').map(Number);
+                const bFinParts = (b.hora_fin || '23:59').split(':').map(Number);
+                const bStartMin = bIniParts[0] * 60 + bIniParts[1];
+                const bEndMin = bFinParts[0] * 60 + bFinParts[1];
+
+                if (Math.max(reqStartMin, bStartMin) < Math.min(reqEndMin, bEndMin)) {
+                    const diasTexto = bDias.map(d => dayNames[d]).join(', ');
+                    return {
+                        motivo: b.motivo || 'Horario bloqueado por compromisos del especialista',
+                        rango: `${b.hora_inicio} a ${b.hora_fin}`,
+                        dias: diasTexto
+                    };
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Error al validar bloqueos de fuera de jornada:", e);
+    }
+    return null;
+}
+window.checkFueraSlotBlocked = checkFueraSlotBlocked;
+
 function updateFueraDurationPreview() {
+    const fecha = document.getElementById('fast-fuera-fecha')?.value;
     const hora = document.getElementById('fast-fuera-hora')?.value;
     const durNota = document.getElementById('fast-fuera-duracion-nota');
+    const warningBox = document.getElementById('fast-fuera-bloqueo-warning');
+    const submitBtn = document.getElementById('btn-submit-fast-fuera');
     const dur = (window.currentTherapistPublicData && window.currentTherapistPublicData.duracion_default) || 50;
-    if (!hora || !durNota) return;
+
+    if (warningBox) warningBox.style.display = 'none';
+    if (submitBtn) submitBtn.disabled = false;
+
+    if (!hora) return;
 
     try {
         const parts = hora.split(':').map(Number);
@@ -37538,9 +37712,22 @@ function updateFueraDurationPreview() {
         d.setHours(h, m + dur, 0, 0);
         const endH = String(d.getHours()).padStart(2, '0');
         const endM = String(d.getMinutes()).padStart(2, '0');
-        durNota.innerHTML = `⏱️ Horario estimado: <strong>${hora} a ${endH}:${endM}</strong> (${dur} minutos).`;
+        if (durNota) {
+            durNota.innerHTML = `⏱️ Horario estimado: <strong>${hora} a ${endH}:${endM}</strong> (${dur} minutos).`;
+        }
     } catch (e) {
-        durNota.textContent = `⏱️ Duración estimada: ${dur} minutos.`;
+        if (durNota) durNota.textContent = `⏱️ Duración estimada: ${dur} minutos.`;
+    }
+
+    if (fecha && hora) {
+        const blockedInfo = checkFueraSlotBlocked(fecha, hora, dur);
+        if (blockedInfo) {
+            if (warningBox) {
+                warningBox.style.display = 'block';
+                warningBox.innerHTML = `🚫 <strong>Horario no disponible:</strong> El especialista no atiende los ${blockedInfo.dias} entre las ${blockedInfo.rango} (${blockedInfo.motivo}). Por favor selecciona otra hora o fecha.`;
+            }
+            if (submitBtn) submitBtn.disabled = true;
+        }
     }
 }
 window.updateFueraDurationPreview = updateFueraDurationPreview;
@@ -37588,6 +37775,13 @@ async function submitFastFueraJornada(e) {
 
     if (!modalidad || !fecha || !hora || !cedula || !nombres || !telefono) {
         alert("Por favor completa todos los campos requeridos.");
+        return;
+    }
+
+    const dur = (window.currentTherapistPublicData && window.currentTherapistPublicData.duracion_default) || 50;
+    const blockedCheck = typeof checkFueraSlotBlocked === 'function' ? checkFueraSlotBlocked(fecha, hora, dur) : null;
+    if (blockedCheck) {
+        alert(`No es posible solicitar este horario: el especialista no atiende los ${blockedCheck.dias} de ${blockedCheck.rango} (${blockedCheck.motivo}). Por favor elige otra hora.`);
         return;
     }
 

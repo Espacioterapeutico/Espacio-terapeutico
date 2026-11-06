@@ -3044,6 +3044,53 @@ def solicitar_fuera_horario(slug):
     elif not profile_found:
         monto, moneda = get_appointment_fee(cursor, 0, psicologo_id, tipo_consulta)
 
+    # Validar contra Franjas Bloqueadas Fijas Fuera de Jornada (ej. trabajo en colegio)
+    fuera_bloqueos = cfg_visual.get('fuera_jornada_bloqueos', [])
+    if fuera_bloqueos:
+        try:
+            req_d_obj = datetime.strptime(fecha_norm, "%Y-%m-%d")
+            # 0=Domingo, 1=Lunes, ..., 6=Sábado
+            req_dow = (req_d_obj.weekday() + 1) % 7
+            req_s = datetime.strptime(hora_inicio_norm, "%H:%M")
+            req_e = datetime.strptime(hora_fin_norm, "%H:%M")
+            
+            for b in fuera_bloqueos:
+                b_dias = [int(x) for x in b.get('dias', [])]
+                if req_dow in b_dias:
+                    b_ini_str = normalize_time_str(b.get('hora_inicio', '00:00'))
+                    b_fin_str = normalize_time_str(b.get('hora_fin', '23:59'))
+                    b_s = datetime.strptime(b_ini_str, "%H:%M")
+                    b_e = datetime.strptime(b_fin_str, "%H:%M")
+                    if max(req_s, b_s) < min(req_e, b_e):
+                        motivo = b.get('motivo') or 'Compromiso laboral / Espacio bloqueado'
+                        return jsonify({'error': f'El especialista no puede atender en esa franja ({motivo}). Por favor selecciona otra hora o fecha.'}), 400
+        except Exception:
+            pass
+
+    # Validar contra Bloqueos Específicos de Agenda (vacaciones, ausencias puntuales)
+    try:
+        cursor.execute("""
+            SELECT motivo, hora_inicio, hora_fin, todo_el_dia 
+            FROM bloqueos_agenda_especificos
+            WHERE psicologo_id = ? 
+              AND (fecha = ? OR (? BETWEEN fecha AND COALESCE(fecha_fin, fecha)))
+        """, (psicologo_id, fecha_norm, fecha_norm))
+        esp_bloqueos = cursor.fetchall()
+        for eb in esp_bloqueos:
+            if eb['todo_el_dia']:
+                motivo = eb['motivo'] or 'Día no laborable'
+                return jsonify({'error': f'El especialista no tiene disponibilidad en esta fecha ({motivo}).'}), 400
+            if eb['hora_inicio'] and eb['hora_fin']:
+                eb_s = datetime.strptime(normalize_time_str(eb['hora_inicio']), "%H:%M")
+                eb_e = datetime.strptime(normalize_time_str(eb['hora_fin']), "%H:%M")
+                req_s = datetime.strptime(hora_inicio_norm, "%H:%M")
+                req_e = datetime.strptime(hora_fin_norm, "%H:%M")
+                if max(req_s, eb_s) < min(req_e, eb_e):
+                    motivo = eb['motivo'] or 'Compromiso agendado'
+                    return jsonify({'error': f'El especialista tiene un bloqueo en ese horario ({motivo}). Por favor selecciona otra hora.'}), 400
+    except Exception:
+        pass
+
     # Validar que no choque con citas existentes en agenda_finanzas
     cursor.execute("""
         SELECT a.id, a.hora, a.tipo_consulta 

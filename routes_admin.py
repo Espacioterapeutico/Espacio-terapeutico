@@ -3098,6 +3098,7 @@ def serialize_public_therapist_dict(psych):
         fuera_jornada_activo = bool(cfg_vis.get('fuera_jornada_activo', False))
         fuera_jornada_advertencia = cfg_vis.get('fuera_jornada_advertencia', '')
         fuera_jornada_perfiles = cfg_vis.get('fuera_jornada_perfiles', [])
+        fuera_jornada_bloqueos = cfg_vis.get('fuera_jornada_bloqueos', [])
         duracion_default = int(cfg_vis.get('duracion', 50))
     except Exception:
         pass
@@ -3128,6 +3129,7 @@ def serialize_public_therapist_dict(psych):
         'fuera_jornada_activo': fuera_jornada_activo,
         'fuera_jornada_advertencia': fuera_jornada_advertencia,
         'fuera_jornada_perfiles': fuera_jornada_perfiles,
+        'fuera_jornada_bloqueos': fuera_jornada_bloqueos,
         'duracion_default': duracion_default
     }
 

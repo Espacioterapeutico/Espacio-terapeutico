@@ -1962,6 +1962,9 @@
                         <p id="fast-fuera-duracion-nota" style="margin-top: 0.4rem; font-size: 0.78rem; color: #64748b; font-weight: 600;">
                             ⏱️ Duración estimada: 50 minutos.
                         </p>
+                        <div id="fast-fuera-bloqueo-warning" style="display: none; margin-top: 0.65rem; background: #fef2f2; border: 1.5px solid #f87171; border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #991b1b; line-height: 1.45;">
+                            <!-- Dinámico -->
+                        </div>
                     </div>
 
                     <!-- 3. Datos del Paciente -->
@@ -5271,6 +5274,82 @@
                                                         </div>
                                                         <div id="avail-fuera-no-profiles" class="text-secondary text-sm" style="text-align: center; padding: 1rem; border: 1px dashed var(--border-color); border-radius: 8px;">
                                                             No has agregado ningún perfil todavía. Agrega al menos uno arriba.
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Franjas Bloqueadas / No Disponibles Fuera de Jornada -->
+                                                    <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                                        <div style="margin-bottom: 0.85rem;">
+                                                            <strong style="font-size: 0.95rem; color: #b91c1c; display: flex; align-items: center; gap: 0.4rem;">
+                                                                <span>🚫</span> Espacios y Horarios Bloqueados (No Disponibles)
+                                                            </strong>
+                                                            <span style="font-size: 0.83rem; color: var(--text-secondary); display: block; margin-top: 0.2rem;">
+                                                                Bloquea franjas donde NUNCA puedes atender solicitudes personalizadas (ejemplo: si de lunes a viernes trabajas en un colegio o tienes otros compromisos). El paciente no podrá solicitar citas en estos horarios.
+                                                            </span>
+                                                        </div>
+
+                                                        <!-- Creador de Regla de Bloqueo -->
+                                                        <div style="background: #fff5f5; border: 1.5px dashed #fca5a5; border-radius: 10px; padding: 0.95rem; margin-bottom: 1rem;">
+                                                            <div style="margin-bottom: 0.75rem;">
+                                                                <label style="font-size: 0.8rem; font-weight: 700; color: #7f1d1d; display: block; margin-bottom: 0.35rem;">
+                                                                    Días de la Semana:
+                                                                </label>
+                                                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
+                                                                        <input type="checkbox" class="fuera-bloqueo-dia" value="1" checked> Lun
+                                                                    </label>
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
+                                                                        <input type="checkbox" class="fuera-bloqueo-dia" value="2" checked> Mar
+                                                                    </label>
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
+                                                                        <input type="checkbox" class="fuera-bloqueo-dia" value="3" checked> Mié
+                                                                    </label>
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
+                                                                        <input type="checkbox" class="fuera-bloqueo-dia" value="4" checked> Jue
+                                                                    </label>
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
+                                                                        <input type="checkbox" class="fuera-bloqueo-dia" value="5" checked> Vie
+                                                                    </label>
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
+                                                                        <input type="checkbox" class="fuera-bloqueo-dia" value="6"> Sáb
+                                                                    </label>
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
+                                                                        <input type="checkbox" class="fuera-bloqueo-dia" value="0"> Dom
+                                                                    </label>
+                                                                    <div style="margin-left: auto; display: flex; gap: 0.35rem;">
+                                                                        <button type="button" class="btn btn-xs" onclick="setFueraBloqueoDaysPreset('l-v')" style="background: white; border: 1px solid #cbd5e1; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px;">Lun a Vie</button>
+                                                                        <button type="button" class="btn btn-xs" onclick="setFueraBloqueoDaysPreset('all')" style="background: white; border: 1px solid #cbd5e1; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px;">Todos</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end;">
+                                                                <div style="flex: 1; min-width: 110px;">
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; color: #7f1d1d; display: block; margin-bottom: 0.2rem;">Hora Inicio</label>
+                                                                    <input type="time" id="avail-fuera-bloqueo-inicio" value="07:00" class="form-control" style="width: 100%; padding: 0.45rem; font-size: 0.85rem; border-radius: 6px; border: 1.5px solid #fca5a5;">
+                                                                </div>
+                                                                <div style="flex: 1; min-width: 110px;">
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; color: #7f1d1d; display: block; margin-bottom: 0.2rem;">Hora Fin</label>
+                                                                    <input type="time" id="avail-fuera-bloqueo-fin" value="12:00" class="form-control" style="width: 100%; padding: 0.45rem; font-size: 0.85rem; border-radius: 6px; border: 1.5px solid #fca5a5;">
+                                                                </div>
+                                                                <div style="flex: 2; min-width: 160px;">
+                                                                    <label style="font-size: 0.78rem; font-weight: 600; color: #7f1d1d; display: block; margin-bottom: 0.2rem;">Motivo / Referencia</label>
+                                                                    <input type="text" id="avail-fuera-bloqueo-motivo" placeholder="Ej: Trabajo en el colegio" class="form-control" style="width: 100%; padding: 0.45rem; font-size: 0.85rem; border-radius: 6px; border: 1.5px solid #fca5a5;">
+                                                                </div>
+                                                                <div>
+                                                                    <button type="button" class="btn btn-sm" onclick="addFueraJornadaBloqueoRow()" style="background: #dc2626; color: white; font-weight: 700; border: none; border-radius: 6px; padding: 0.5rem 0.95rem; cursor: pointer; box-shadow: 0 2px 6px rgba(220,38,38,0.25);">
+                                                                        + Bloquear Espacio
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Listado de Bloqueos Activos -->
+                                                        <div id="avail-fuera-bloqueos-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                                            <!-- Filas dinámicas -->
+                                                        </div>
+                                                        <div id="avail-fuera-no-bloqueos" class="text-secondary text-sm" style="text-align: center; padding: 0.85rem; border: 1px dashed var(--border-color); border-radius: 8px;">
+                                                            No tienes espacios bloqueados fijos. Cualquier horario fuera de jornada podrá ser solicitado para tu revisión.
                                                         </div>
                                                     </div>
                                                 </div>
