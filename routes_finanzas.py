@@ -549,6 +549,81 @@ def get_patients_rates_list():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@finanzas_bp.route('/api/finance/prepaid-consultations', methods=['GET'])
+@login_required
+def get_prepaid_consultations():
+    """Retorna la lista de pacientes con consultas prepagadas disponibles y sus registros asociados."""
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        psic_id = get_psicologo_id_filter()
+
+        if psic_id is not None and psic_id != -1:
+            cursor.execute("""
+                SELECT af.id, af.paciente_id, af.fecha, af.tipo_consulta, af.monto, af.moneda,
+                       af.cantidad_sesiones, af.metodo_pago, af.referencia, af.fecha_pago,
+                       p.nombres, p.apellidos, p.cedula, p.telefono, p.pais
+                FROM agenda_finanzas af
+                JOIN pacientes p ON af.paciente_id = p.id
+                WHERE p.psicologo_id = ?
+                  AND af.estado_pago = 'Prepagada'
+                  AND af.control_uso = 'No consumida'
+                  AND COALESCE(af.cantidad_sesiones, 0) > 0
+                ORDER BY p.apellidos ASC, p.nombres ASC, af.fecha DESC
+            """, (psic_id,))
+        else:
+            cursor.execute("""
+                SELECT af.id, af.paciente_id, af.fecha, af.tipo_consulta, af.monto, af.moneda,
+                       af.cantidad_sesiones, af.metodo_pago, af.referencia, af.fecha_pago,
+                       p.nombres, p.apellidos, p.cedula, p.telefono, p.pais
+                FROM agenda_finanzas af
+                JOIN pacientes p ON af.paciente_id = p.id
+                WHERE af.estado_pago = 'Prepagada'
+                  AND af.control_uso = 'No consumida'
+                  AND COALESCE(af.cantidad_sesiones, 0) > 0
+                ORDER BY p.apellidos ASC, p.nombres ASC, af.fecha DESC
+            """)
+        
+        rows = [dict(r) for r in cursor.fetchall()]
+        
+        patients_map = {}
+        total_sesiones_global = 0
+        for r in rows:
+            pid = r['paciente_id']
+            cant = int(r['cantidad_sesiones'] or 0)
+            total_sesiones_global += cant
+            if pid not in patients_map:
+                patients_map[pid] = {
+                    'paciente_id': pid,
+                    'nombres': r['nombres'] or '',
+                    'apellidos': r['apellidos'] or '',
+                    'cedula': r['cedula'] or '',
+                    'telefono': r['telefono'] or '',
+                    'pais': r['pais'] or '',
+                    'total_disponibles': 0,
+                    'paquetes': []
+                }
+            patients_map[pid]['total_disponibles'] += cant
+            patients_map[pid]['paquetes'].append({
+                'id': r['id'],
+                'fecha': r['fecha'],
+                'tipo_consulta': r['tipo_consulta'],
+                'cantidad_sesiones': cant,
+                'monto': r['monto'],
+                'moneda': r['moneda'],
+                'metodo_pago': r['metodo_pago'],
+                'referencia': r['referencia'],
+                'fecha_pago': r['fecha_pago']
+            })
+
+        return jsonify({
+            'total_sesiones': total_sesiones_global,
+            'total_pacientes': len(patients_map),
+            'pacientes': list(patients_map.values())
+        })
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener consultas prepagadas: {str(e)}'}), 500
+
 @finanzas_bp.route('/api/admin/payments/notified', methods=['GET'])
 @login_required
 def get_admin_notified_payments():

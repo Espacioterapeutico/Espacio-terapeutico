@@ -7905,6 +7905,8 @@ async function loadDashboardStats() {
         if (totPat) totPat.textContent = data.stats.total_pacientes || 0;
         const paidSess = document.getElementById('stat-paid-sessions');
         if (paidSess) paidSess.textContent = data.stats.total_pagas || 0;
+        const tabPrepayBadge = document.getElementById('fin-prepagadas-badge');
+        if (tabPrepayBadge) tabPrepayBadge.textContent = data.stats.total_pagas || 0;
         const pendSess = document.getElementById('stat-pending-sessions');
         if (pendSess) pendSess.textContent = data.stats.total_pendientes || 0;
         
@@ -14944,7 +14946,7 @@ function exportFinanceCSV() {
 
 // --- Navegación de Sub-Pestañas en Módulos ---
 function switchFinanceTab(tabId) {
-    const ids = ['ingresos', 'verificaciones', 'cobros', 'honorarios'];
+    const ids = ['ingresos', 'verificaciones', 'cobros', 'honorarios', 'prepagadas'];
     ids.forEach(id => {
         const card = document.getElementById(`fin-card-${id}`);
         const tabBtn = document.getElementById(`fin-tab-${id}`);
@@ -14966,6 +14968,8 @@ function switchFinanceTab(tabId) {
         loadNotifiedPayments();
     } else if (tabId === 'honorarios') {
         loadPatientRatesTable();
+    } else if (tabId === 'prepagadas') {
+        loadPrepaidConsultationsTable();
     } else {
         loadFinanceData();
     }
@@ -36820,3 +36824,180 @@ window.initAppTheme = initAppTheme;
 window.syncThemeCardsUI = syncThemeCardsUI;
 
 
+
+// --- MÓDULO DE CONSULTAS PREPAGADAS (FINANZAS) ---
+
+async function loadPrepaidConsultationsTable() {
+    const tbody = document.getElementById('prepagadas-table-body');
+    const badge = document.getElementById('prepagadas-total-badge');
+    const tabBadge = document.getElementById('fin-prepagadas-badge');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-secondary" style="padding: 1.5rem;">Cargando consultas prepagadas...</td></tr>';
+
+    try {
+        const res = await fetch('/api/finance/prepaid-consultations');
+        if (!res.ok) throw new Error("Error al obtener consultas prepagadas");
+        const data = await res.json();
+
+        if (badge) badge.textContent = `${data.total_sesiones || 0} sesiones`;
+        if (tabBadge) tabBadge.textContent = data.total_sesiones || 0;
+
+        const patients = data.pacientes || [];
+        if (patients.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-secondary" style="padding: 2rem;">No hay consultas prepagadas activas por consumir.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = patients.map(p => {
+            const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Sin Nombre';
+            const escapedName = fullName.replace(/'/g, "\\'");
+            const idInfo = p.cedula ? `<span class="text-secondary" style="font-size:0.8rem;">(#${p.cedula})</span>` : '';
+            const phoneInfo = p.telefono ? `<span class="text-secondary" style="font-size:0.78rem; display:block;">📞 ${p.telefono}</span>` : '';
+
+            // Paquetes
+            const pkgsHtml = (p.paquetes || []).map(pkg => {
+                const f = pkg.fecha || '';
+                const tipo = pkg.tipo_consulta || 'Prepago';
+                const monto = pkg.monto > 0 ? `${pkg.monto} ${pkg.moneda || 'USD'}` : '0 USD';
+                const ref = pkg.referencia ? ` · Ref: ${pkg.referencia}` : '';
+                const cant = pkg.cantidad_sesiones || 1;
+                return `<div style="font-size:0.8rem; margin-bottom:0.2rem; color:var(--text-dark);">
+                    <strong>${f}</strong>: ${tipo} (${monto}) — <strong>${cant} ses. remanentes</strong>${ref}
+                </div>`;
+            }).join('');
+
+            const waBtn = p.telefono ? `<a href="${getWhatsAppLink(p.telefono, `Hola ${p.nombres}, te saludamos de Espacio Terapéutico para informarte que cuentas con ${p.total_disponibles} consulta(s) prepagada(s) disponible(s).`)}" target="_blank" class="btn btn-sm" style="background:#25D366; color:white; border:none; font-size:0.75rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.2rem;" title="Enviar recordatorio de saldo por WhatsApp">💬 WhatsApp</a>` : '';
+
+            return `
+                <tr class="prepagada-row">
+                    <td style="padding: 0.75rem;">
+                        <strong>${fullName}</strong> ${idInfo}
+                        ${phoneInfo}
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center;">
+                        <span style="background: #d1fae5; color: #065f46; font-size: 1.05rem; font-weight: 800; padding: 0.25rem 0.85rem; border-radius: 14px; display: inline-block;">
+                            ${p.total_disponibles}
+                        </span>
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        ${pkgsHtml || '<span class="text-secondary">Sin detalle registrado</span>'}
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center;">
+                        <div style="display:flex; gap:0.4rem; justify-content:center; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-sm btn-primary" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" onclick="openAdjustPrepayModal(${p.paciente_id}, '${escapedName}', ${p.total_disponibles})">
+                                ✏️ Ajustar Saldo
+                            </button>
+                            ${waBtn}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error("Error al cargar prepagadas:", err);
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger" style="padding: 1.5rem;">Error al cargar consultas prepagadas.</td></tr>';
+    }
+}
+window.loadPrepaidConsultationsTable = loadPrepaidConsultationsTable;
+
+function filterPrepagadasTable() {
+    const term = (document.getElementById('prepagadas-search')?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#prepagadas-table-body .prepagada-row');
+    rows.forEach(r => {
+        if (!term) {
+            r.style.display = '';
+        } else {
+            const text = r.textContent.toLowerCase();
+            r.style.display = text.includes(term) ? '' : 'none';
+        }
+    });
+}
+window.filterPrepagadasTable = filterPrepagadasTable;
+
+function openAdjustPrepayModal(patientId, patientName, currentCount) {
+    const idInput = document.getElementById('adjust-prepay-patient-id');
+    const nameEl = document.getElementById('adjust-prepay-patient-name');
+    const curCountEl = document.getElementById('adjust-prepay-current-count');
+    const newCountInput = document.getElementById('adjust-prepay-new-count');
+    const errBox = document.getElementById('adjust-prepay-error');
+
+    if (idInput) idInput.value = patientId;
+    if (nameEl) nameEl.textContent = patientName || 'Consultante';
+    if (curCountEl) curCountEl.textContent = `${currentCount || 0} consulta(s)`;
+    if (newCountInput) newCountInput.value = currentCount || 0;
+    if (errBox) {
+        errBox.textContent = '';
+        errBox.classList.add('hide');
+    }
+
+    openModal('adjust-prepay-modal');
+}
+window.openAdjustPrepayModal = openAdjustPrepayModal;
+
+function closeAdjustPrepayModal() {
+    closeModal('adjust-prepay-modal');
+}
+window.closeAdjustPrepayModal = closeAdjustPrepayModal;
+
+async function submitAdjustPrepayBalance() {
+    const idInput = document.getElementById('adjust-prepay-patient-id');
+    const newCountInput = document.getElementById('adjust-prepay-new-count');
+    const errBox = document.getElementById('adjust-prepay-error');
+    const btn = document.getElementById('btn-save-adjust-prepay');
+
+    const patientId = idInput?.value;
+    const newCountVal = newCountInput?.value;
+
+    if (!patientId) return;
+    const newCount = parseInt(newCountVal, 10);
+    if (isNaN(newCount) || newCount < 0) {
+        if (errBox) {
+            errBox.textContent = 'Por favor ingresa un número entero válido (mayor o igual a 0).';
+            errBox.classList.remove('hide');
+        }
+        return;
+    }
+
+    if (errBox) errBox.classList.add('hide');
+    const origBtnHtml = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Guardando...';
+    }
+
+    try {
+        const res = await fetch(`/api/patients/${patientId}/adjust-prepay-balance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cantidad_disponible: newCount })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al actualizar saldo prepagado');
+
+        closeAdjustPrepayModal();
+        if (typeof showToast === 'function') {
+            showToast('Saldo prepagado ajustado con éxito', 'success');
+        } else if (typeof showNotification === 'function') {
+            showNotification('Saldo prepagado ajustado con éxito', 'success');
+        }
+
+        // Recargar tabla de prepagadas y stats de dashboard
+        loadPrepaidConsultationsTable();
+        if (typeof loadDashboardStats === 'function') {
+            loadDashboardStats();
+        }
+    } catch (err) {
+        console.error("Error al ajustar saldo prepagado:", err);
+        if (errBox) {
+            errBox.textContent = err.message || 'Error al guardar el ajuste.';
+            errBox.classList.remove('hide');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origBtnHtml;
+        }
+    }
+}
+window.submitAdjustPrepayBalance = submitAdjustPrepayBalance;

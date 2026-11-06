@@ -2607,7 +2607,7 @@
                                 <h3 id="stat-total-patients" class="stat-number">0</h3>
                             </div>
                         </div>
-                        <div class="stat-card" style="cursor: pointer;" onclick="switchView('finance'); switchFinanceTab('balances');" title="Consultas prepagadas sin consumir">
+                        <div class="stat-card" style="cursor: pointer;" onclick="switchView('finance'); switchFinanceTab('prepagadas');" title="Ver Consultas Prepagadas y Saldos a Favor">
                             <div class="stat-icon-wrapper green">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="10" x2="12" y2="20"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
                             </div>
@@ -2937,11 +2937,17 @@
                             <span id="fin-verificaciones-badge" class="badge bg-danger hide" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; color: white; border-radius: 50%; font-weight: bold;">0</span>
                         </button>
 
-                        <!-- Fila 3: Cuentas por Cobrar / Exportar CSV -->
+                        <!-- Fila 3: Cuentas por Cobrar / Consultas Prepagadas -->
                         <button type="button" id="fin-tab-cobros" class="btn btn-sm btn-secondary fin-grid-btn" onclick="switchFinanceTab('cobros')">
                             Cuentas por Cobrar
                         </button>
-                        <button type="button" id="fin-btn-exportar-csv" class="btn btn-sm fin-grid-btn fin-btn-action-export" onclick="exportFinanceCSV()">
+                        <button type="button" id="fin-tab-prepagadas" class="btn btn-sm btn-secondary fin-grid-btn" onclick="switchFinanceTab('prepagadas')">
+                            <span>Consultas Prepagadas</span>
+                            <span id="fin-prepagadas-badge" class="badge" style="background:#10b981; font-size: 0.72rem; padding: 0.15rem 0.45rem; color: white; border-radius: 10px; font-weight: bold; margin-left: 0.35rem;">0</span>
+                        </button>
+
+                        <!-- Fila 4: Exportar CSV -->
+                        <button type="button" id="fin-btn-exportar-csv" class="btn btn-sm fin-grid-btn fin-btn-action-export" onclick="exportFinanceCSV()" style="grid-column: span 2;">
                             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             Exportar CSV
                         </button>
@@ -3051,6 +3057,44 @@
                                     </table>
                                 </div>
                                 <div id="patient-rates-status" class="status-msg hide mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pestaña Consultas Prepagadas (Saldos a favor y ajuste manual) -->
+                    <div id="fin-card-prepagadas" class="finance-tab-content hide">
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                                <div>
+                                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>Consultas Prepagadas (Saldos a Favor)</span>
+                                        <span id="prepagadas-total-badge" class="badge" style="background:#10b981; color:white; font-size: 0.85rem; padding: 0.2rem 0.65rem; border-radius: 12px; font-weight: 700;">0 sesiones</span>
+                                    </h3>
+                                    <p class="text-secondary" style="margin: 0.25rem 0 0 0; font-size: 0.82rem;">Listado de consultantes con consultas prepagadas pendientes por consumir. Puedes ajustar manualmente el saldo si hubo algún error en el desconteo.</p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button type="button" class="btn btn-sm btn-outline" onclick="loadPrepaidConsultationsTable()" title="Recargar lista">↔️ Actualizar</button>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 1rem;">
+                                <div class="mb-3" style="max-width: 450px;">
+                                    <input type="text" id="prepagadas-search" placeholder="🔍 Buscar consultante por nombre, apellido o cédula..." oninput="filterPrepagadasTable()" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border-color); font-size: 0.88rem; background: var(--bg-light); color: var(--text-dark);">
+                                </div>
+                                <div class="table-container" style="overflow-x: auto;">
+                                    <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                                        <thead>
+                                            <tr>
+                                                <th style="padding: 0.65rem 0.75rem; text-align: left;">Consultante</th>
+                                                <th style="padding: 0.65rem 0.75rem; text-align: center;">Consultas Disponibles</th>
+                                                <th style="padding: 0.65rem 0.75rem; text-align: left;">Detalles del Paquete / Pago</th>
+                                                <th style="padding: 0.65rem 0.75rem; text-align: center;">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="prepagadas-table-body">
+                                            <tr><td colspan="4" class="text-center text-secondary">Cargando consultas prepagadas...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -9452,6 +9496,43 @@
                     <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                     Confirmar Pago
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajuste Manual de Consultas Prepagadas -->
+    <div id="adjust-prepay-modal" class="modal hide" role="dialog" aria-modal="true" aria-labelledby="adjust-prepay-title">
+        <div class="modal-content" style="max-width: 460px;">
+            <div class="modal-header">
+                <h3 id="adjust-prepay-title">
+                    ✏️ Ajustar Saldo Prepagado
+                </h3>
+                <button class="btn-close-modal" onclick="closeAdjustPrepayModal()" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="adjust-prepay-patient-id">
+                <div class="mb-3">
+                    <label style="font-weight: 700; font-size: 0.85rem; color: var(--text-muted);">Consultante</label>
+                    <div id="adjust-prepay-patient-name" style="font-size: 1.05rem; font-weight: 700; color: var(--text-dark); margin-top: 0.2rem;"></div>
+                </div>
+
+                <div class="mb-3 p-3" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-sm);">
+                    <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Saldo registrado actualmente:</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #065f46;" id="adjust-prepay-current-count">0 consultas</div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="adjust-prepay-new-count" style="font-weight: 700; color: var(--primary-color);">Nueva cantidad de consultas disponibles *</label>
+                    <input type="number" id="adjust-prepay-new-count" min="0" max="100" class="form-control" style="width: 100%; font-size: 1.1rem; font-weight: 700; padding: 0.6rem 0.8rem;" required>
+                    <small class="text-secondary" style="font-size: 0.78rem; display: block; margin-top: 0.35rem;">Si una sesión no se descontó o se descontó de más, coloca aquí el número exacto que debe tener el consultante.</small>
+                </div>
+
+                <div id="adjust-prepay-error" class="alert alert-danger hide" style="font-size: 0.82rem; padding: 0.5rem 0.75rem; margin-bottom: 1rem;"></div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAdjustPrepayModal()">Cancelar</button>
+                    <button type="button" id="btn-save-adjust-prepay" class="btn btn-primary" onclick="submitAdjustPrepayBalance()">💾 Guardar Ajuste</button>
+                </div>
             </div>
         </div>
     </div>
