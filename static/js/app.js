@@ -7916,24 +7916,52 @@ async function loadDashboardStats() {
             };
             let totalMonth = 0;
             const detailParts = [];
+            const fullDetailParts = [];
+
+            const formatShortMod = (name) => {
+                if (!name) return '';
+                const clean = name.replace(/^Horario\s+/i, '').trim();
+                const lower = clean.toLowerCase();
+                if (lower.startsWith('on')) return 'online';
+                if (lower.startsWith('pres')) return 'pres.';
+                if (lower.includes('psicom')) return 'psicom.';
+                if (lower.includes('evalua')) return 'eval.';
+                if (lower.includes('uptaeb') && lower.includes('on')) return 'upt. on.';
+                if (lower.includes('uptaeb')) return 'uptaeb';
+                if (clean.length > 8) return clean.substring(0, 7) + '.';
+                return clean.toLowerCase();
+            };
+
             Object.keys(mods).forEach(modName => {
                 const count = mods[modName] || 0;
                 totalMonth += count;
-                const cleanName = modName.replace(/^Horario\s+/i, '').trim();
-                const shortLabel = cleanName.toLowerCase().startsWith('on') ? 'online' 
-                    : (cleanName.toLowerCase().startsWith('pres') ? 'pres.' : cleanName.toLowerCase());
-                detailParts.push(`${count} ${shortLabel}`);
+                if (count > 0) {
+                    const shortLabel = formatShortMod(modName);
+                    detailParts.push(`${count} ${shortLabel}`);
+                    fullDetailParts.push(`${count} ${modName.replace(/^Horario\s+/i, '').trim()}`);
+                }
             });
+
+            const displayText = detailParts.length > 0 ? detailParts.join(' · ') : '0 consultas';
+            const tooltipText = fullDetailParts.length > 0 ? fullDetailParts.join(' · ') : 'Sin consultas registradas este mes';
             
             const totalEl = document.getElementById('stat-month-total');
             const subEl = document.getElementById('stat-month-modalities-sub');
             if (totalEl && subEl) {
                 totalEl.textContent = totalMonth;
-                subEl.textContent = detailParts.join(' · ') || '0 citas';
+                subEl.textContent = displayText;
+                subEl.title = tooltipText;
+                subEl.style.whiteSpace = 'normal';
+                subEl.style.display = '-webkit-box';
+                subEl.style.webkitLineClamp = '2';
+                subEl.style.webkitBoxOrient = 'vertical';
+                subEl.style.overflow = 'hidden';
+                subEl.style.wordBreak = 'break-word';
+                subEl.style.lineHeight = '1.2';
             } else {
                 container.innerHTML = `
                     <h3 id="stat-month-total" class="stat-number">${totalMonth}</h3>
-                    <span id="stat-month-modalities-sub" style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; line-height: 1.1; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${detailParts.join(' · ') || '0 citas'}</span>
+                    <span id="stat-month-modalities-sub" title="${tooltipText}" style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; line-height: 1.2; margin-top: 0.15rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;">${displayText}</span>
                 `;
             }
         }

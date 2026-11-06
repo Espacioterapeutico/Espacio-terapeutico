@@ -956,6 +956,7 @@ h1, h2, h3, h4, h5, h6 {
     gap: 1.25rem;
     min-width: 0;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .stat-icon-wrapper {
@@ -965,6 +966,7 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .stat-icon-wrapper svg {
@@ -980,6 +982,9 @@ h1, h2, h3, h4, h5, h6 {
 .stat-content {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    flex: 1;
 }
 
 .stat-label {
