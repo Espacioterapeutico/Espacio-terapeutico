@@ -18749,6 +18749,53 @@ async function checkFastBookingQuery() {
             }
             initFastTimeZoneSelector(); 
             renderFastCalendar();
+
+            // Detectar si el paciente llega redirigido para reprogramar una cita previa
+            if (urlParams && urlParams.has('reprogramar')) {
+                const reprogToken = urlParams.get('reprogramar');
+                const reprogInput = document.getElementById('fast-reprogramar-token');
+                if (reprogInput) reprogInput.value = reprogToken;
+
+                try {
+                    const rInfoRes = await fetch(`/api/cita/reprogramar-info/${encodeURIComponent(reprogToken)}`);
+                    if (rInfoRes.ok) {
+                        const rInfo = await rInfoRes.json();
+                        if (rInfo && rInfo.success) {
+                            if (rInfo.cedula) {
+                                const cedEl = document.getElementById('fast-cedula');
+                                if (cedEl) {
+                                    cedEl.value = rInfo.cedula;
+                                    if (typeof onFastCedulaInput === 'function') onFastCedulaInput();
+                                }
+                            }
+                            if (rInfo.nombres) {
+                                const nEl = document.getElementById('fast-nombres');
+                                if (nEl) nEl.value = rInfo.nombres;
+                            }
+                            if (rInfo.apellidos) {
+                                const aEl = document.getElementById('fast-apellidos');
+                                if (aEl) aEl.value = rInfo.apellidos;
+                            }
+                            if (rInfo.telefono) {
+                                const tEl = document.getElementById('fast-telefono');
+                                if (tEl) tEl.value = rInfo.telefono;
+                            }
+                            if (rInfo.email) {
+                                const eEl = document.getElementById('fast-email');
+                                if (eEl) eEl.value = rInfo.email;
+                            }
+                            const reprogBanner = document.getElementById('fast-reprogramar-banner');
+                            if (reprogBanner) {
+                                reprogBanner.classList.remove('hide');
+                                reprogBanner.innerHTML = `<span>🔄</span> Reprogramando tu cita previa del <strong>${rInfo.fecha}</strong> a las <strong>${rInfo.hora}</strong>. Selecciona tu nuevo día y hora:`;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error cargando info previa de reprogramación:", e);
+                }
+            }
+
             return true;
         } finally {
             isCheckingFastBooking = false;
@@ -19085,7 +19132,8 @@ async function submitFastBooking(e) {
                 nombres,
                 apellidos,
                 telefono,
-                email
+                email,
+                reprogramar_token: document.getElementById('fast-reprogramar-token')?.value || (new URLSearchParams(window.location.search).get('reprogramar') || '')
             })
         });
         

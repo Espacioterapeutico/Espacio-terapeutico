@@ -2041,13 +2041,63 @@ def fast_booking_book():
             except Exception:
                 pass
 
-        # Enviar notificación al psicólogo en SQLite
+        # Detectar si esta cita corresponde a una reprogramación previa
+        reprogramar_token = data.get('reprogramar_token')
+        old_appt = None
+        if reprogramar_token:
+            cursor.execute("SELECT id, fecha, hora, tipo_consulta, referencia FROM agenda_finanzas WHERE token_confirmacion = ?", (reprogramar_token,))
+            old_appt = cursor.fetchone()
+
+        if not old_appt and patient_id:
+            cursor.execute("""
+                SELECT id, fecha, hora, tipo_consulta, referencia
+                FROM agenda_finanzas
+                WHERE paciente_id = ? AND estado_pago = 'Reprogramada' AND id != ?
+                ORDER BY id DESC LIMIT 1
+            """, (patient_id, agenda_id))
+            old_appt = cursor.fetchone()
+
         from datetime import datetime
         fecha_notif = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        if old_appt:
+            old_appt_dict = dict(old_appt) if hasattr(old_appt, 'keys') else dict(zip([c[0] for c in cursor.description], old_appt))
+            old_fecha = old_appt_dict.get('fecha')
+            old_hora = old_appt_dict.get('hora')
+            old_id = old_appt_dict.get('id')
+
+            try:
+                cursor.execute("""
+                    UPDATE agenda_finanzas 
+                    SET referencia = CASE 
+                        WHEN referencia IS NULL OR referencia = '' THEN ?
+                        ELSE referencia || ' | ' || ?
+                    END
+                    WHERE id = ?
+                """, (f"Reprogramada a nueva cita #{agenda_id} ({fecha} {hora})", f"Reprogramada a nueva cita #{agenda_id} ({fecha} {hora})", old_id))
+            except Exception as _e_upd:
+                print("Error actualizando referencia de cita previa:", _e_upd)
+
+            try:
+                cursor.execute("""
+                    INSERT INTO historial_reprogramaciones (
+                        paciente_id, agenda_id, fecha_anterior, hora_anterior,
+                        fecha_nueva, hora_nueva, modificado_por, motivo, fecha_registro
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'Paciente', ?, ?)
+                """, (patient_id, agenda_id, old_fecha, old_hora, fecha, hora, 'Reprogramada desde portal de confirmación', fecha_notif))
+            except Exception as _e_hist:
+                print("Error registrando historial_reprogramaciones:", _e_hist)
+
+            notif_titulo = '🔄 Cita Reprogramada'
+            notif_mensaje = f"{pac_nombre} ha reprogramado la consulta del día {old_fecha} a las {old_hora}, para el día {fecha} a las {hora}."
+        else:
+            notif_titulo = 'Nueva Cita Agendada (Rápida)'
+            notif_mensaje = f"{pac_nombre} ha auto-agendado una consulta para el {fecha} a las {hora}."
+
         cursor.execute("""
             INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
             VALUES (?, ?, ?, ?, ?, 0, ?)
-        """, (psicologo_id, 'cita', 'Nueva Cita Agendada (Rápida)', f"{pac_nombre} ha auto-agendado una consulta para el {fecha} a las {hora}.", fecha_notif, 'agenda'))
+        """, (psicologo_id, 'cita', notif_titulo, notif_mensaje, fecha_notif, 'agenda'))
         
         db.commit()
 
@@ -2112,8 +2162,8 @@ def fast_booking_book():
             from app import send_webpush_notification
             send_webpush_notification(
                 user_id=psicologo_id,
-                title="Nueva Cita Auto-Agendada",
-                body=f"{pac_nombre} ha reservado una consulta para el {fecha} a las {hora}.",
+                title=notif_titulo,
+                body=notif_mensaje,
                 url="/?view=agenda"
             )
         except Exception as wp_ex:
@@ -2271,6 +2321,33 @@ def delete_admin_consultation_history_event(event_id):
 
 
 # --- RUTAS PÚBLICAS PARA CONFIRMACIÓN POR ENLACE ---
+
+@agenda_bp.route('/api/cita/reprogramar-info/<token>', methods=['GET'])
+def get_reprogramar_info(token):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT af.id, af.fecha, af.hora, af.tipo_consulta, p.cedula, p.nombres, p.apellidos, p.telefono, p.email
+        FROM agenda_finanzas af
+        JOIN pacientes p ON af.paciente_id = p.id
+        WHERE af.token_confirmacion = ?
+    """, (token,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Cita no encontrada'}), 404
+    r_dict = dict(row) if hasattr(row, 'keys') else dict(zip([col[0] for col in cursor.description], row))
+    return jsonify({
+        'success': True,
+        'fecha': r_dict.get('fecha'),
+        'hora': r_dict.get('hora'),
+        'modalidad': r_dict.get('tipo_consulta'),
+        'cedula': r_dict.get('cedula'),
+        'nombres': r_dict.get('nombres'),
+        'apellidos': r_dict.get('apellidos'),
+        'telefono': r_dict.get('telefono'),
+        'email': r_dict.get('email')
+    })
+
 
 @agenda_bp.route('/cita/confirmar/<token>', methods=['GET'])
 def vista_confirmar_cita(token):
@@ -2827,34 +2904,17 @@ def accion_cita_publica():
         except Exception as _e_clog:
             print("Error registrando citas_canceladas_log reprogramacion:", _e_clog)
 
-        # Notificar reprogramación al psicólogo
-        try:
-            cursor.execute("""
-                INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
-                VALUES (?, 'cita', '🔄 Solicitud de Reprogramación', ?, ?, 0, 'agenda')
-            """, (psych_id, f"{pat_full_name} solicitó reprogramar su cita del {cita['fecha']} a las {cita['hora']}.", now_str))
-        except Exception as _ne:
-            print("Error notificando reprogramacion publica:", _ne)
-
+        # No se envía notificación prematura de 'solicitó reprogramar'.
+        # La notificación formal se despachará cuando el paciente concrete su nuevo horario en la agenda.
         db.commit()
 
-        try:
-            from app import send_webpush_notification
-            send_webpush_notification(
-                user_id=psych_id,
-                title="🔄 Solicitud de Reprogramación",
-                body=f"{pat_full_name} solicitó reprogramar su cita del {cita['fecha']} a las {cita['hora']}.",
-                url="/?view=agenda"
-            )
-        except Exception as _wp_ex:
-            print("Error enviando WebPush de reprogramacion publica:", _wp_ex)
-
+        reprog_target_url = f"{fast_booking_url}?reprogramar={token}" if token else fast_booking_url
         response_data = {
             'success': True,
             'reprogramada': True,
-            'titulo': 'Solicitud de Reprogramación',
-            'mensaje': 'Has solicitado reprogramar tu cita. Serás redirigido a la agenda para seleccionar tu nuevo horario.',
-            'fast_booking_url': fast_booking_url
+            'titulo': 'Reprogramar Cita',
+            'mensaje': 'Serás redirigido a la agenda para seleccionar tu nuevo horario.',
+            'fast_booking_url': reprog_target_url
         }
         
     db.commit()
