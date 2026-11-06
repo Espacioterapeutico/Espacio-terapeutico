@@ -1842,15 +1842,15 @@
                     </div>
 
                     <!-- BOTÓN/LINK: ¿QUIERES AGENDAR UNA SESIÓN FUERA DE LA JORNADA? (Debajo del calendario) -->
-                    <div id="fast-fuera-jornada-card" class="hide" style="margin-bottom: 1.25rem; background: #fffbeb; border: 1.5px dashed #f59e0b; border-radius: 10px; padding: 0.75rem 1rem; text-align: center;">
-                        <p style="margin: 0 0 0.35rem 0; font-size: 0.88rem; font-weight: 700; color: #92400e;">
-                            ¿Quieres agendar una sesión fuera de la jornada?
+                    <div id="fast-fuera-jornada-card" style="margin-top: 1rem; margin-bottom: 1.25rem; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px dashed #f59e0b; border-radius: 12px; padding: 0.9rem 1.15rem; text-align: center; box-shadow: 0 2px 6px rgba(245,158,11,0.08);">
+                        <p style="margin: 0 0 0.3rem 0; font-size: 0.92rem; font-weight: 700; color: #92400e; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                            <span>✨</span> ¿Deseas agendar en un espacio personalizado?
                         </p>
-                        <p style="margin: 0 0 0.5rem 0; font-size: 0.78rem; color: #b45309;">
-                            Solicita un horario especial directamente al psicólogo para su aprobación.
+                        <p id="fast-fuera-advertencia-text" style="margin: 0 0 0.65rem 0; font-size: 0.8rem; color: #b45309; line-height: 1.4;">
+                            Solicita una consulta fuera de la jornada habitual directamente con el terapeuta.
                         </p>
-                        <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="btn btn-sm" style="background: #f59e0b; color: white; font-weight: 700; border-radius: 6px; border: none; padding: 0.45rem 0.95rem; font-size: 0.82rem; cursor: pointer; box-shadow: 0 2px 6px rgba(245,158,11,0.25);">
-                            📅 Solicitar cita fuera de jornada
+                        <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="btn btn-sm" style="background: #f59e0b; color: white; font-weight: 700; border-radius: 8px; border: none; padding: 0.5rem 1.15rem; font-size: 0.84rem; cursor: pointer; box-shadow: 0 2px 8px rgba(245,158,11,0.3); transition: transform 0.15s ease;">
+                            ✨ Solicitar Espacio Personalizado
                         </button>
                     </div>
 
@@ -1912,8 +1912,9 @@
                     </div>
                     <h2 id="fast-fuera-therapist-name" style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.15rem 0;">Psicólogo</h2>
                     <h1 style="font-size: 1.35rem; font-family: var(--font-title); font-weight: 800; color: #b45309; margin: 0 0 0.35rem 0;">
-                        Solicitud Fuera de Jornada
+                        Espacio Personalizado
                     </h1>
+                    <span style="font-size: 0.8rem; font-weight: 600; color: #92400e; background: #fef3c7; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-bottom: 0.35rem;">Atención Fuera de la Jornada Habitual</span>
                 </div>
 
                 <!-- Advertencia Personalizable -->

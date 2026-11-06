@@ -18603,6 +18603,8 @@ async function checkFastBookingQuery() {
                 if (pRes.ok) {
                     const pData = await pRes.json();
                     if (pData && (pData.nombre_completo || pData.nombres)) {
+                        currentTherapistPublicData = pData;
+                        window.currentTherapistPublicData = pData;
                         if (titleEl) {
                             const fullname = pData.nombre_completo || `Psic. ${pData.nombres} ${pData.apellidos}`;
                             titleEl.textContent = fullname.startsWith('Psic.') ? fullname : `Psic. ${fullname}`;
@@ -18668,17 +18670,24 @@ async function checkFastBookingQuery() {
                     if (av2) av2.src = currentTherapistPublicData.foto;
                 }
 
-                // Control de visualización de sesión fuera de jornada
+                // Control de visualización de sesión fuera de jornada / espacio personalizado
                 const fueraCard = document.getElementById('fast-fuera-jornada-card');
                 if (fueraCard) {
-                    if (currentTherapistPublicData.fuera_jornada_activo) {
+                    const isExplicitlyDisabled = currentTherapistPublicData && (
+                        currentTherapistPublicData.fuera_jornada_activo === 0 || 
+                        currentTherapistPublicData.fuera_jornada_activo === false || 
+                        currentTherapistPublicData.fuera_jornada_activo === '0'
+                    );
+                    if (isExplicitlyDisabled) {
+                        fueraCard.classList.add('hide');
+                        fueraCard.style.display = 'none';
+                    } else {
                         fueraCard.classList.remove('hide');
+                        fueraCard.style.display = 'block';
                         const advText = document.getElementById('fast-fuera-advertencia-text');
-                        if (advText && currentTherapistPublicData.fuera_jornada_advertencia) {
+                        if (advText && currentTherapistPublicData && currentTherapistPublicData.fuera_jornada_advertencia) {
                             advText.textContent = currentTherapistPublicData.fuera_jornada_advertencia;
                         }
-                    } else {
-                        fueraCard.classList.add('hide');
                     }
                 }
             }
@@ -18721,13 +18730,17 @@ function updateFastModalityDescription() {
     const descTitle = document.getElementById('fast-modalidad-desc-title');
     const descText = document.getElementById('fast-modalidad-desc-text');
     if (!select) return;
-    const selectedOption = select.options[select.selectedIndex];
-    if (selectedOption && selectedOption.dataset.desc && selectedOption.dataset.desc.trim()) {
-        if (descBox) descBox.classList.remove('hide');
-        if (descTitle) descTitle.textContent = selectedOption.textContent;
-        if (descText) descText.textContent = selectedOption.dataset.desc.trim();
-    } else {
-        if (descBox) descBox.classList.add('hide');
+    if (select.options && select.selectedIndex >= 0) {
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption && selectedOption.dataset.desc && selectedOption.dataset.desc.trim()) {
+            if (descBox) descBox.classList.remove('hide');
+            if (descTitle) descTitle.textContent = selectedOption.textContent;
+            if (descText) descText.textContent = selectedOption.dataset.desc.trim();
+            return;
+        }
+    }
+    if (typeof updateFastModalityDescriptionText === 'function') {
+        updateFastModalityDescriptionText(select.value);
     }
 }
 window.updateFastModalityDescription = updateFastModalityDescription;
@@ -18766,9 +18779,11 @@ async function renderFastCalendar() {
     grid.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 1rem;"><span class="text-secondary text-sm">Cargando disponibilidad...</span></div>';
     
     const fastModEl = document.getElementById('fast-modalidad');
-    const selectedOpt = fastModEl ? fastModEl.options[fastModEl.selectedIndex] : null;
-    const modality = (selectedOpt && selectedOpt.dataset.profileId) ? selectedOpt.dataset.profileId : (fastModEl ? fastModEl.value : 'all');
-    const profIdParam = (selectedOpt && selectedOpt.dataset.profileId) ? `&profile_id=${encodeURIComponent(selectedOpt.dataset.profileId)}` : '';
+    const fastProfEl = document.getElementById('fast-modalidad-profile-id');
+    const selectedOpt = (fastModEl && fastModEl.options && fastModEl.selectedIndex >= 0) ? fastModEl.options[fastModEl.selectedIndex] : null;
+    const profileId = (fastProfEl && fastProfEl.value) ? fastProfEl.value : ((selectedOpt && selectedOpt.dataset.profileId) ? selectedOpt.dataset.profileId : '');
+    const modality = (fastModEl ? fastModEl.value : '') || profileId || 'all';
+    const profIdParam = profileId ? `&profile_id=${encodeURIComponent(profileId)}` : ((selectedOpt && selectedOpt.dataset.profileId) ? `&profile_id=${encodeURIComponent(selectedOpt.dataset.profileId)}` : '');
     
     let availableDates = [];
     try {
@@ -18884,9 +18899,11 @@ async function fetchFastAvailableHours(dateStr) {
     
     try {
         const fastModEl = document.getElementById('fast-modalidad');
-        const selectedOpt = fastModEl ? fastModEl.options[fastModEl.selectedIndex] : null;
-        const modality = (selectedOpt && selectedOpt.dataset.profileId) ? selectedOpt.dataset.profileId : (fastModEl ? fastModEl.value : 'all');
-        const profIdParam = (selectedOpt && selectedOpt.dataset.profileId) ? `&profile_id=${encodeURIComponent(selectedOpt.dataset.profileId)}` : '';
+        const fastProfEl = document.getElementById('fast-modalidad-profile-id');
+        const selectedOpt = (fastModEl && fastModEl.options && fastModEl.selectedIndex >= 0) ? fastModEl.options[fastModEl.selectedIndex] : null;
+        const profileId = (fastProfEl && fastProfEl.value) ? fastProfEl.value : ((selectedOpt && selectedOpt.dataset.profileId) ? selectedOpt.dataset.profileId : '');
+        const modality = (fastModEl ? fastModEl.value : '') || profileId || 'all';
+        const profIdParam = profileId ? `&profile_id=${encodeURIComponent(profileId)}` : ((selectedOpt && selectedOpt.dataset.profileId) ? `&profile_id=${encodeURIComponent(selectedOpt.dataset.profileId)}` : '');
         const res = await fetch(`/api/patient/available-slots?date=${dateStr}&modalidad=${encodeURIComponent(modality)}${profIdParam}&psicologo_id=${fastBookingTherapistId}`);
         const data = await res.json();
         
@@ -18948,11 +18965,17 @@ async function fetchFastAvailableHours(dateStr) {
                     // Asegurar que la modalidad en el selector permanezca consistente y no se resetee
                     const fastModSelect = document.getElementById('fast-modalidad');
                     if (fastModSelect && slot.modalidad) {
-                        for (let opt of fastModSelect.options) {
-                            if (opt.value.toLowerCase() === slot.modalidad.toLowerCase()) {
-                                fastModSelect.value = opt.value;
-                                break;
+                        if (typeof selectFastModality === 'function') {
+                            selectFastModality(slot.modalidad, slot.profile_id || '', '', slot.modalidad);
+                        } else if (fastModSelect.options) {
+                            for (let opt of fastModSelect.options) {
+                                if (opt.value.toLowerCase() === slot.modalidad.toLowerCase()) {
+                                    fastModSelect.value = opt.value;
+                                    break;
+                                }
                             }
+                        } else {
+                            fastModSelect.value = slot.modalidad;
                         }
                         if (typeof updateFastModalityDescription === 'function') {
                             updateFastModalityDescription();
@@ -18984,9 +19007,10 @@ async function submitFastBooking(e) {
     const fecha = document.getElementById('fast-req-fecha').value;
     const hora = document.getElementById('fast-req-hora').value;
     const fastModEl = document.getElementById('fast-modalidad');
-    const selectedOpt = fastModEl ? fastModEl.options[fastModEl.selectedIndex] : null;
+    const fastProfEl = document.getElementById('fast-modalidad-profile-id');
+    const selectedOpt = (fastModEl && fastModEl.options && fastModEl.selectedIndex >= 0) ? fastModEl.options[fastModEl.selectedIndex] : null;
     const modalidad = fastModEl ? fastModEl.value : 'Online';
-    const profileId = selectedOpt ? (selectedOpt.dataset.profileId || '') : '';
+    const profileId = (fastProfEl && fastProfEl.value) ? fastProfEl.value : (selectedOpt ? (selectedOpt.dataset.profileId || '') : '');
     const cedula = document.getElementById('fast-cedula').value.trim();
     const nombres = document.getElementById('fast-nombres').value.trim();
     const apellidos = document.getElementById('fast-apellidos').value.trim();
@@ -28820,22 +28844,28 @@ async function loadDedicatedTherapistProfile(slug) {
 
             await checkFastBookingQuery();
 
-            if (selectEl && preferredModality) {
-                const prefLower = String(preferredModality).toLowerCase();
-                let matchedOpt = null;
-                for (let opt of selectEl.options) {
-                    const valLow = (opt.value || '').toLowerCase();
-                    const txtLow = (opt.textContent || '').toLowerCase();
-                    if (valLow === prefLower || valLow.includes(prefLower) || txtLow.includes(prefLower)) {
-                        matchedOpt = opt.value;
-                        break;
+            if (preferredModality) {
+                if (typeof selectFastModality === 'function') {
+                    selectFastModality(preferredModality, '', '', preferredModality);
+                } else if (selectEl && selectEl.options) {
+                    const prefLower = String(preferredModality).toLowerCase();
+                    let matchedOpt = null;
+                    for (let opt of selectEl.options) {
+                        const valLow = (opt.value || '').toLowerCase();
+                        const txtLow = (opt.textContent || '').toLowerCase();
+                        if (valLow === prefLower || valLow.includes(prefLower) || txtLow.includes(prefLower)) {
+                            matchedOpt = opt.value;
+                            break;
+                        }
                     }
-                }
-                if (matchedOpt && selectEl.value !== matchedOpt) {
-                    selectEl.value = matchedOpt;
-                    if (typeof onFastModalityChange === 'function') {
-                        onFastModalityChange();
+                    if (matchedOpt && selectEl.value !== matchedOpt) {
+                        selectEl.value = matchedOpt;
+                        if (typeof onFastModalityChange === 'function') {
+                            onFastModalityChange();
+                        }
                     }
+                } else if (selectEl) {
+                    selectEl.value = preferredModality;
                 }
             }
         };
