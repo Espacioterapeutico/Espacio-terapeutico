@@ -38135,3 +38135,182 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 1500);
 });
+
+
+// ==========================================
+// SELECTOR DE HORA DESLIZANTE (WHEEL TIME PICKER)
+// ==========================================
+let _wheelSelectedHour = 8;
+let _wheelSelectedMinute = 0;
+let _wheelSelectedPeriod = 'AM';
+let _wheelInitialized = false;
+
+function initFueraTimeWheel() {
+    const hCol = document.getElementById('fast-wheel-hours');
+    const mCol = document.getElementById('fast-wheel-minutes');
+    const pCol = document.getElementById('fast-wheel-period');
+    if (!hCol || !mCol || !pCol) return;
+
+    hCol.innerHTML = '';
+    mCol.innerHTML = '';
+    pCol.innerHTML = '';
+
+    // Horas 1 a 12
+    for (let h = 1; h <= 12; h++) {
+        const item = document.createElement('div');
+        item.style.height = '40px';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.justifyContent = 'center';
+        item.style.fontSize = '1.15rem';
+        item.style.fontWeight = '700';
+        item.style.color = '#334155';
+        item.style.cursor = 'pointer';
+        item.style.scrollSnapAlign = 'center';
+        item.style.userSelect = 'none';
+        item.textContent = String(h).padStart(2, '0');
+        item.onclick = () => scrollWheelTo(hCol, h - 1);
+        hCol.appendChild(item);
+    }
+
+    // Minutos cada 5 min (00, 05, 10 ... 55)
+    for (let m = 0; m < 60; m += 5) {
+        const item = document.createElement('div');
+        item.style.height = '40px';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.justifyContent = 'center';
+        item.style.fontSize = '1.15rem';
+        item.style.fontWeight = '700';
+        item.style.color = '#334155';
+        item.style.cursor = 'pointer';
+        item.style.scrollSnapAlign = 'center';
+        item.style.userSelect = 'none';
+        item.textContent = String(m).padStart(2, '0');
+        item.onclick = () => scrollWheelTo(mCol, m / 5);
+        mCol.appendChild(item);
+    }
+
+    // Período AM / PM
+    ['AM', 'PM'].forEach((p, idx) => {
+        const item = document.createElement('div');
+        item.style.height = '40px';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.justifyContent = 'center';
+        item.style.fontSize = '1.1rem';
+        item.style.fontWeight = '700';
+        item.style.color = '#334155';
+        item.style.cursor = 'pointer';
+        item.style.scrollSnapAlign = 'center';
+        item.style.userSelect = 'none';
+        item.textContent = p;
+        item.onclick = () => scrollWheelTo(pCol, idx);
+        pCol.appendChild(item);
+    });
+
+    let hTimer, mTimer, pTimer;
+    hCol.addEventListener('scroll', () => {
+        clearTimeout(hTimer);
+        hTimer = setTimeout(() => {
+            const idx = Math.min(11, Math.max(0, Math.round(hCol.scrollTop / 40)));
+            _wheelSelectedHour = idx + 1;
+            updateWheelPreview();
+        }, 60);
+    });
+
+    mCol.addEventListener('scroll', () => {
+        clearTimeout(mTimer);
+        mTimer = setTimeout(() => {
+            const idx = Math.min(11, Math.max(0, Math.round(mCol.scrollTop / 40)));
+            _wheelSelectedMinute = idx * 5;
+            updateWheelPreview();
+        }, 60);
+    });
+
+    pCol.addEventListener('scroll', () => {
+        clearTimeout(pTimer);
+        pTimer = setTimeout(() => {
+            const idx = Math.min(1, Math.max(0, Math.round(pCol.scrollTop / 40)));
+            _wheelSelectedPeriod = idx === 0 ? 'AM' : 'PM';
+            updateWheelPreview();
+        }, 60);
+    });
+
+    _wheelInitialized = true;
+}
+
+function scrollWheelTo(col, idx) {
+    if (!col) return;
+    col.scrollTo({ top: idx * 40, behavior: 'smooth' });
+}
+
+function updateWheelPreview() {
+    const prev = document.getElementById('fast-wheel-preview');
+    if (!prev) return;
+    const hStr = String(_wheelSelectedHour).padStart(2, '0');
+    const mStr = String(_wheelSelectedMinute).padStart(2, '0');
+    prev.textContent = `${hStr}:${mStr} ${_wheelSelectedPeriod}`;
+}
+
+function openFueraTimePickerModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const modal = document.getElementById('fast-time-wheel-modal');
+    if (!modal) return;
+
+    if (!_wheelInitialized) {
+        initFueraTimeWheel();
+    }
+
+    // Leer valor actual de fast-fuera-hora si existe
+    const currVal = document.getElementById('fast-fuera-hora')?.value || '08:00';
+    if (currVal && currVal.includes(':')) {
+        const parts = currVal.split(':');
+        let h24 = parseInt(parts[0]);
+        let m = parseInt(parts[1]);
+        _wheelSelectedPeriod = h24 >= 12 ? 'PM' : 'AM';
+        _wheelSelectedHour = h24 % 12 === 0 ? 12 : h24 % 12;
+        _wheelSelectedMinute = Math.round(m / 5) * 5;
+        if (_wheelSelectedMinute >= 60) _wheelSelectedMinute = 55;
+    }
+
+    modal.classList.remove('hide');
+    modal.style.display = 'flex';
+    updateWheelPreview();
+
+    setTimeout(() => {
+        const hCol = document.getElementById('fast-wheel-hours');
+        const mCol = document.getElementById('fast-wheel-minutes');
+        const pCol = document.getElementById('fast-wheel-period');
+        if (hCol) hCol.scrollTop = (_wheelSelectedHour - 1) * 40;
+        if (mCol) mCol.scrollTop = (_wheelSelectedMinute / 5) * 40;
+        if (pCol) pCol.scrollTop = (_wheelSelectedPeriod === 'AM' ? 0 : 1) * 40;
+    }, 50);
+}
+window.openFueraTimePickerModal = openFueraTimePickerModal;
+
+function closeFueraTimePickerModal() {
+    const modal = document.getElementById('fast-time-wheel-modal');
+    if (modal) {
+        modal.classList.add('hide');
+        modal.style.display = 'none';
+    }
+}
+window.closeFueraTimePickerModal = closeFueraTimePickerModal;
+
+function confirmFueraTimePicker() {
+    let h24 = _wheelSelectedHour;
+    if (_wheelSelectedPeriod === 'PM' && h24 < 12) h24 += 12;
+    if (_wheelSelectedPeriod === 'AM' && h24 === 12) h24 = 0;
+
+    const timeStr = `${String(h24).padStart(2, '0')}:${String(_wheelSelectedMinute).padStart(2, '0')}`;
+    const horaInput = document.getElementById('fast-fuera-hora');
+    if (horaInput) {
+        horaInput.value = timeStr;
+        if (typeof updateFueraDurationPreview === 'function') {
+            updateFueraDurationPreview();
+        }
+    }
+    closeFueraTimePickerModal();
+}
+window.confirmFueraTimePicker = confirmFueraTimePicker;
