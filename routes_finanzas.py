@@ -341,14 +341,14 @@ def get_monthly_balance():
         total_pacientes = cursor.fetchone()[0] or 0
         
         cursor.execute("""
-            SELECT SUM(af.cantidad_sesiones) 
+            SELECT COALESCE(SUM(CASE WHEN af.cantidad_sesiones IS NULL THEN 1 ELSE af.cantidad_sesiones END), 0)
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
-            WHERE af.estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
-              AND af.monto > 0
-              AND COALESCE(NULLIF(af.fecha_pago, ''), NULLIF(af.fecha_liquidacion, ''), af.fecha) LIKE ?
-              AND p.psicologo_id = ?
-        """, (date_prefix, psic_id))
+            WHERE p.psicologo_id = ?
+              AND af.estado_pago IN ('Prepagada', 'Paga')
+              AND af.control_uso = 'No consumida'
+              AND COALESCE(af.cantidad_sesiones, 1) > 0
+        """, (psic_id,))
         total_pagas = cursor.fetchone()[0] or 0
         
         cursor.execute("""
@@ -426,12 +426,12 @@ def get_monthly_balance():
         total_pacientes = cursor.fetchone()[0] or 0
         
         cursor.execute("""
-            SELECT SUM(cantidad_sesiones) 
+            SELECT COALESCE(SUM(CASE WHEN cantidad_sesiones IS NULL THEN 1 ELSE cantidad_sesiones END), 0)
             FROM agenda_finanzas 
-            WHERE estado_pago IN ('Paga', 'Prepagada', 'Cancelada sin aviso - Paga') 
-              AND monto > 0
-              AND COALESCE(NULLIF(fecha_pago, ''), NULLIF(fecha_liquidacion, ''), fecha) LIKE ?
-        """, (date_prefix,))
+            WHERE estado_pago IN ('Prepagada', 'Paga')
+              AND control_uso = 'No consumida'
+              AND COALESCE(cantidad_sesiones, 1) > 0
+        """)
         total_pagas = cursor.fetchone()[0] or 0
         
         cursor.execute("SELECT SUM(cantidad_sesiones) FROM agenda_finanzas WHERE estado_pago IN ('Pendiente', 'Cancelada sin aviso') AND COALESCE(monto, 0) > 0")
