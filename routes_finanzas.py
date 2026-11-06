@@ -341,13 +341,13 @@ def get_monthly_balance():
         total_pacientes = cursor.fetchone()[0] or 0
         
         cursor.execute("""
-            SELECT COALESCE(SUM(CASE WHEN af.cantidad_sesiones IS NULL THEN 1 ELSE af.cantidad_sesiones END), 0)
+            SELECT COALESCE(SUM(af.cantidad_sesiones), 0)
             FROM agenda_finanzas af
             JOIN pacientes p ON af.paciente_id = p.id
             WHERE p.psicologo_id = ?
-              AND af.estado_pago IN ('Prepagada', 'Paga')
+              AND af.estado_pago = 'Prepagada'
               AND af.control_uso = 'No consumida'
-              AND COALESCE(af.cantidad_sesiones, 1) > 0
+              AND COALESCE(af.cantidad_sesiones, 0) > 0
         """, (psic_id,))
         total_pagas = cursor.fetchone()[0] or 0
         
@@ -426,11 +426,11 @@ def get_monthly_balance():
         total_pacientes = cursor.fetchone()[0] or 0
         
         cursor.execute("""
-            SELECT COALESCE(SUM(CASE WHEN cantidad_sesiones IS NULL THEN 1 ELSE cantidad_sesiones END), 0)
+            SELECT COALESCE(SUM(cantidad_sesiones), 0)
             FROM agenda_finanzas 
-            WHERE estado_pago IN ('Prepagada', 'Paga')
+            WHERE estado_pago = 'Prepagada'
               AND control_uso = 'No consumida'
-              AND COALESCE(cantidad_sesiones, 1) > 0
+              AND COALESCE(cantidad_sesiones, 0) > 0
         """)
         total_pagas = cursor.fetchone()[0] or 0
         
