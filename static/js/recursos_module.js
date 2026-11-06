@@ -1396,6 +1396,135 @@
     window.addObjetivoItem = addObjetivoItem;
 
     // --- F. SOBRE-PENSAMIENTO (EMBUDO DE 4 FASES) ---
+    
+    function parseMicroAcciones(c) {
+        if (Array.isArray(c.micro_acciones) && c.micro_acciones.length > 0) {
+            return c.micro_acciones;
+        }
+        const raw = (c.accion_concreta_semana || '').trim();
+        if (!raw) {
+            return [{ text: '', done: false }];
+        }
+        let items = [];
+        if (/(?:^|\s+)\d+[\)\.]\s*/.test(raw)) {
+            const parts = raw.split(/(?:^|\s+)\d+[\)\.]\s*/).filter(p => p.trim());
+            items = parts.map(p => ({ text: p.trim(), done: false }));
+        } else if (raw.includes('\n')) {
+            items = raw.split('\n').filter(p => p.trim()).map(p => ({ text: p.trim(), done: false }));
+        } else {
+            items = [{ text: raw, done: false }];
+        }
+        return items.length > 0 ? items : [{ text: '', done: false }];
+    }
+
+    function renderMicroAccionesChecklistHTML(c) {
+        const items = parseMicroAcciones(c);
+        let completedCount = 0;
+        const rowsHtml = items.map((it, idx) => {
+            const done = !!it.done;
+            if (done) completedCount++;
+            return `
+            <div class="sp-check-item" style="display: flex; align-items: center; gap: 0.65rem; background: ${done ? '#f5f3ff' : '#ffffff'}; border: 1.5px solid ${done ? '#c084fc' : '#e2e8f0'}; border-radius: 8px; padding: 0.45rem 0.65rem; transition: all 0.2s;">
+                <input type="checkbox" class="sp-item-done" ${done ? 'checked' : ''} onchange="toggleMicroAccionDone(this)" style="width: 18px; height: 18px; cursor: pointer; accent-color: #9333ea;">
+                <input type="text" class="sp-item-text" value="${escapeHtml(it.text || '')}" oninput="triggerRecursoAutoSave()" placeholder="Escribe tu micro-acción..." style="flex: 1; border: none; background: transparent; font-size: 0.88rem; font-weight: ${done ? '600' : '700'}; color: ${done ? '#7e22ce' : '#1e293b'}; text-decoration: ${done ? 'line-through' : 'none'}; outline: none;">
+                <button type="button" onclick="removeMicroAccionItem(this)" style="background: transparent; border: none; color: #94a3b8; font-size: 1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px;" title="Eliminar tarea">✕</button>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="card" style="background: #ffffff; border: 2px solid #9333ea; border-radius: 12px; padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+                <label style="font-weight: 800; font-size: 0.88rem; color: #7e22ce; margin: 0;">
+                    4. Micro-acción Concreta para esta Semana (Checklist):
+                </label>
+                <span id="sp-checklist-counter" style="font-size: 0.76rem; font-weight: 700; color: #6b21a8; background: #f3e8ff; padding: 2px 8px; border-radius: 12px;">
+                    ${completedCount} de ${items.length} completadas
+                </span>
+            </div>
+            <p style="margin: 0 0 0.65rem 0; font-size: 0.76rem; color: #64748b;">
+                Define 1 acción específica con lo que tienes hoy, que no resolverá todo, pero cortará la parálisis.
+            </p>
+
+            <div id="sp-checklist-items" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+                ${rowsHtml}
+            </div>
+
+            <button type="button" onclick="addMicroAccionItem()" class="btn btn-sm" style="background: #faf5ff; color: #7e22ce; border: 1.5px dashed #c084fc; font-weight: 700; font-size: 0.82rem; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                <span>+</span> Agregar otra micro-acción
+            </button>
+        </div>`;
+    }
+
+    function toggleMicroAccionDone(chk) {
+        const row = chk.closest('.sp-check-item');
+        if (!row) return;
+        const txtInput = row.querySelector('.sp-item-text');
+        const isDone = chk.checked;
+        
+        if (isDone) {
+            row.style.background = '#f5f3ff';
+            row.style.borderColor = '#c084fc';
+            if (txtInput) {
+                txtInput.style.textDecoration = 'line-through';
+                txtInput.style.color = '#7e22ce';
+                txtInput.style.fontWeight = '600';
+            }
+        } else {
+            row.style.background = '#ffffff';
+            row.style.borderColor = '#e2e8f0';
+            if (txtInput) {
+                txtInput.style.textDecoration = 'none';
+                txtInput.style.color = '#1e293b';
+                txtInput.style.fontWeight = '700';
+            }
+        }
+        updateMicroAccionesCounter();
+        if (typeof triggerRecursoAutoSave === 'function') triggerRecursoAutoSave();
+        if (typeof triggerAutoSave === 'function') triggerAutoSave();
+    }
+    window.toggleMicroAccionDone = toggleMicroAccionDone;
+
+    function addMicroAccionItem() {
+        const list = document.getElementById('sp-checklist-items');
+        if (!list) return;
+
+        const row = document.createElement('div');
+        row.className = 'sp-check-item';
+        row.style.cssText = 'display: flex; align-items: center; gap: 0.65rem; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.45rem 0.65rem; transition: all 0.2s;';
+        row.innerHTML = `
+            <input type="checkbox" class="sp-item-done" onchange="toggleMicroAccionDone(this)" style="width: 18px; height: 18px; cursor: pointer; accent-color: #9333ea;">
+            <input type="text" class="sp-item-text" oninput="if(typeof triggerRecursoAutoSave === 'function') triggerRecursoAutoSave(); if(typeof triggerAutoSave === 'function') triggerAutoSave();" placeholder="Escribe tu micro-acción..." style="flex: 1; border: none; background: transparent; font-size: 0.88rem; font-weight: 700; color: #1e293b; outline: none;">
+            <button type="button" onclick="removeMicroAccionItem(this)" style="background: transparent; border: none; color: #94a3b8; font-size: 1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px;" title="Eliminar tarea">✕</button>
+        `;
+        list.appendChild(row);
+        const newInp = row.querySelector('.sp-item-text');
+        if (newInp) newInp.focus();
+        updateMicroAccionesCounter();
+        if (typeof triggerRecursoAutoSave === 'function') triggerRecursoAutoSave();
+        if (typeof triggerAutoSave === 'function') triggerAutoSave();
+    }
+    window.addMicroAccionItem = addMicroAccionItem;
+
+    function removeMicroAccionItem(btn) {
+        const row = btn.closest('.sp-check-item');
+        if (row) {
+            row.remove();
+            updateMicroAccionesCounter();
+            if (typeof triggerRecursoAutoSave === 'function') triggerRecursoAutoSave();
+            if (typeof triggerAutoSave === 'function') triggerAutoSave();
+        }
+    }
+    window.removeMicroAccionItem = removeMicroAccionItem;
+
+    function updateMicroAccionesCounter() {
+        const counter = document.getElementById('sp-checklist-counter');
+        if (!counter) return;
+        const items = document.querySelectorAll('#sp-checklist-items .sp-check-item');
+        const done = document.querySelectorAll('#sp-checklist-items .sp-item-done:checked');
+        counter.textContent = `${done.length} de ${items.length} completadas`;
+    }
+    window.updateMicroAccionesCounter = updateMicroAccionesCounter;
+
     function getSobrepensamientoHTML(c) {
         return `
         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -1430,14 +1559,8 @@
                 <textarea id="sp-ventajas" rows="2" oninput="triggerRecursoAutoSave()" placeholder="Lo que sí tengo hoy..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; font-family: inherit;">${escapeHtml(c.ventajas_recursos || '')}</textarea>
             </div>
 
-            <!-- FASE 4 -->
-            <div class="card" style="background: #ffffff; border: 2px solid #9333ea; border-radius: 12px; padding: 1rem;">
-                <label style="font-weight: 800; font-size: 0.88rem; color: #7e22ce; display: block; margin-bottom: 0.3rem;">
-                    4. Micro-acción Concreta para esta Semana:
-                </label>
-                <p style="margin: 0 0 0.45rem 0; font-size: 0.76rem; color: #64748b;">Define 1 acción específica con lo que tienes hoy, que no resolverá todo, pero cortará la parálisis.</p>
-                <input type="text" id="sp-accion-semana" value="${escapeHtml(c.accion_concreta_semana || '')}" oninput="triggerRecursoAutoSave()" placeholder="¿Qué vas a hacer hoy o esta semana?..." style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.92rem; font-weight: 700;">
-            </div>
+            <!-- FASE 4: CHECKLIST DE MICRO-ACCIONES -->
+            ${renderMicroAccionesChecklistHTML(c)}
         </div>`;
     }
 
@@ -1576,11 +1699,23 @@
                 };
             }
             case 'sobrepensamiento': {
+                const microAcciones = [];
+                const checkRows = document.querySelectorAll('#sp-checklist-items .sp-check-item');
+                checkRows.forEach(r => {
+                    const txt = (r.querySelector('.sp-item-text')?.value || '').trim();
+                    const isDone = r.querySelector('.sp-item-done')?.checked || false;
+                    if (txt) {
+                        microAcciones.push({ text: txt, done: isDone });
+                    }
+                });
+                const summaryText = microAcciones.map((it, idx) => `${idx + 1}) ${it.text}`).join(' ');
+
                 return {
                     situaciones_cabeza: document.getElementById('sp-situaciones')?.value || '',
                     limitaciones: document.getElementById('sp-limitaciones')?.value || '',
                     ventajas_recursos: document.getElementById('sp-ventajas')?.value || '',
-                    accion_concreta_semana: document.getElementById('sp-accion-semana')?.value || ''
+                    micro_acciones: microAcciones,
+                    accion_concreta_semana: summaryText || document.getElementById('sp-accion-semana')?.value || ''
                 };
             }
             case 'areas_de_vida': {
