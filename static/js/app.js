@@ -12043,7 +12043,28 @@ async function handleSaveAvailability(e) {
     // Configuración Fuera de Jornada
     const fuera_jornada_activo = document.getElementById('avail-fuera-jornada-activo')?.checked ? 1 : 0;
     const fuera_jornada_advertencia = document.getElementById('avail-fuera-jornada-advertencia')?.value || '';
-    const fuera_jornada_perfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) ? window.fueraJornadaConfig.perfiles : [];
+    let fuera_jornada_perfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) ? [...window.fueraJornadaConfig.perfiles] : [];
+    
+    // Auto-agregar perfil del selector si la lista de perfiles está vacía pero hay una opción seleccionada
+    if (fuera_jornada_perfiles.length === 0) {
+        const selProf = document.getElementById('avail-fuera-perfil-select');
+        const costProf = document.getElementById('avail-fuera-perfil-costo');
+        const monProf = document.getElementById('avail-fuera-perfil-moneda');
+        if (selProf && selProf.value) {
+            fuera_jornada_perfiles.push({
+                nombre: selProf.value,
+                modalidad: selProf.value,
+                costo: parseFloat(costProf?.value || 35),
+                moneda: monProf?.value || 'USD'
+            });
+            if (window.fueraJornadaConfig) {
+                window.fueraJornadaConfig.perfiles = fuera_jornada_perfiles;
+            }
+            if (typeof renderFueraJornadaProfilesList === 'function') {
+                renderFueraJornadaProfilesList();
+            }
+        }
+    }
     const fuera_jornada_bloqueos = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.bloqueos)) ? window.fueraJornadaConfig.bloqueos : [];
 
     const profileCards = document.querySelectorAll('.avail-profile-card');
@@ -12142,6 +12163,8 @@ async function handleSaveAvailability(e) {
             statusMsg.classList.remove('hide');
             
             _psychologistProfilesCache = null;
+            window.currentTherapistPublicData = null;
+            window.fastBookingModalities = null;
             if (typeof loadModalityDropdownOptions === 'function') loadModalityDropdownOptions();
             loadAdminAvailability();
         } else {
@@ -18591,6 +18614,7 @@ async function checkFastBookingQuery() {
     
     if (paramVal) {
         isCheckingFastBooking = true;
+        let currentTherapistPublicData = window.currentTherapistPublicData || null;
         try {
             fastBookingTherapistId = paramVal;
             
@@ -18658,8 +18682,7 @@ async function checkFastBookingQuery() {
                 }
             }
             
-                        // Cargar datos de terapeuta (foto, fuera de jornada) y modalidades
-            let currentTherapistPublicData = window.currentTherapistPublicData || null;
+            // Asegurar datos frescos de terapeuta (foto, fuera de jornada) y modalidades
             try {
                 if (!currentTherapistPublicData) {
                     const pRes = await fetch(`/api/public/therapist/${encodeURIComponent(fastBookingTherapistId)}`);
@@ -37580,8 +37603,20 @@ function switchFastBookingView(view) {
         regularView.classList.add('hide');
         fueraView.classList.remove('hide');
         const durNota = document.getElementById('fast-fuera-duracion-nota');
-        const dur = (window.currentTherapistPublicData && window.currentTherapistPublicData.duracion_default) || 50;
+        const tData = window.currentTherapistPublicData || null;
+        const dur = (tData && tData.duracion_default) || 50;
         if (durNota) durNota.textContent = `⏱️ Duración estimada: ${dur} minutos.`;
+
+        // Sincronizar advertencia personalizada configurada por el psicólogo
+        const advText = document.getElementById('fast-fuera-advertencia-text');
+        if (advText && tData && tData.fuera_jornada_advertencia) {
+            advText.textContent = tData.fuera_jornada_advertencia;
+        }
+
+        // Re-renderizar perfiles permitidos para fuera de jornada
+        if (typeof renderFastFueraModalityButtons === 'function') {
+            renderFastFueraModalityButtons(window.fastBookingModalities || [], tData);
+        }
     } else {
         fueraView.classList.add('hide');
         regularView.classList.remove('hide');
@@ -37595,8 +37630,9 @@ function renderFastFueraModalityButtons(modalities, therapistData) {
     if (!container) return;
     container.innerHTML = '';
 
-    const allowedPerfiles = (therapistData && therapistData.fuera_jornada_perfiles && therapistData.fuera_jornada_perfiles.length > 0)
-        ? therapistData.fuera_jornada_perfiles
+    const tData = therapistData || window.currentTherapistPublicData || null;
+    const allowedPerfiles = (tData && Array.isArray(tData.fuera_jornada_perfiles) && tData.fuera_jornada_perfiles.length > 0)
+        ? tData.fuera_jornada_perfiles
         : (modalities || []).map(m => ({
             nombre: typeof m === 'object' ? (m.nombre || m.modalidad) : m,
             modalidad: typeof m === 'object' ? (m.modalidad || m.nombre) : m,

@@ -1754,6 +1754,35 @@
         </div>
     </div>
 
+        <style>
+        .fast-discreet-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.45rem 1.15rem;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 500;
+            line-height: 1.4;
+            color: #475569;
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
+            outline: none;
+            user-select: none;
+        }
+        .fast-discreet-btn:hover {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+            text-decoration: none;
+        }
+    </style>
     <!-- VISTA EXCLUSIVA: AUTO-AGENDA RÁPIDA (PÚBLICA) -->
     <div id="fast-booking-screen" class="auth-screen hide" style="background-color: var(--bg-light); display: flex; align-items: center; justify-content: center; padding: 1rem; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 99999; overflow-y: auto;">
         <div class="auth-card" style="max-width: 550px; width: 100%; max-height: 95vh; overflow-y: auto; padding: 1.75rem; position: relative; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);">
@@ -1841,16 +1870,10 @@
                         </div>
                     </div>
 
-                    <!-- BOTÓN/LINK: ¿QUIERES AGENDAR UNA SESIÓN FUERA DE LA JORNADA? (Debajo del calendario) -->
-                    <div id="fast-fuera-jornada-card" style="margin-top: 1rem; margin-bottom: 1.25rem; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px dashed #f59e0b; border-radius: 12px; padding: 0.9rem 1.15rem; text-align: center; box-shadow: 0 2px 6px rgba(245,158,11,0.08);">
-                        <p style="margin: 0 0 0.3rem 0; font-size: 0.92rem; font-weight: 700; color: #92400e; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                            <span>✨</span> ¿Deseas agendar en un espacio personalizado?
-                        </p>
-                        <p id="fast-fuera-advertencia-text" style="margin: 0 0 0.65rem 0; font-size: 0.8rem; color: #b45309; line-height: 1.4;">
-                            Solicita una consulta fuera de la jornada habitual directamente con el terapeuta.
-                        </p>
-                        <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="btn btn-sm" style="background: #f59e0b; color: white; font-weight: 700; border-radius: 8px; border: none; padding: 0.5rem 1.15rem; font-size: 0.84rem; cursor: pointer; box-shadow: 0 2px 8px rgba(245,158,11,0.3); transition: transform 0.15s ease;">
-                            ✨ Solicitar Espacio Personalizado
+                    <!-- BOTÓN DISCRETO / SUTIL: SOLICITAR SESIÓN EN HORARIO PERSONALIZADO -->
+                    <div id="fast-fuera-jornada-card" style="margin-top: 0.85rem; margin-bottom: 0.75rem; text-align: center;">
+                        <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="fast-discreet-btn">
+                            <span>🗓️</span> Solicitar sesión en horario personalizado
                         </button>
                     </div>
 
@@ -1902,8 +1925,8 @@
 
             <!-- VISTA 2: FORMULARIO SOLICITUD FUERA DE JORNADA -->
             <div id="fast-view-fuera-jornada" class="hide">
-                <button type="button" onclick="switchFastBookingView('regular')" class="btn btn-secondary text-xs" style="margin-bottom: 1rem; display: inline-flex; align-items: center; gap: 4px; border: 1.5px solid var(--border-color); background: transparent; padding: 0.35rem 0.7rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                    ← Volver a horarios regulares
+                <button type="button" onclick="switchFastBookingView('regular')" class="fast-discreet-btn" style="margin-bottom: 1rem;">
+                    <span>←</span> Volver a horarios regulares
                 </button>
 
                 <div class="auth-header" style="margin-bottom: 1.15rem; text-align: center;">
@@ -2002,7 +2025,9 @@
             <div id="fast-booking-status-msg" class="status-msg hide mt-3"></div>
             
             <div style="text-align: center; margin-top: 1.25rem;">
-                <a href="#" onclick="closeFastBookingScreen(event)" style="font-size: 0.78rem; color: var(--text-secondary); text-decoration: none;">✕ Volver al Perfil del Psicólogo / Portal</a>
+                <a href="#" onclick="closeFastBookingScreen(event)" class="fast-discreet-btn">
+                    <span>✕</span> Volver al Perfil del Psicólogo / Portal
+                </a>
             </div>
         </div>
     </div>
