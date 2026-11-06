@@ -11626,8 +11626,9 @@ async function loadAdminAvailability() {
         const advFuera = document.getElementById('avail-fuera-jornada-advertencia');
         if (advFuera) advFuera.value = fAdv;
 
+        const availPerfiles = (data && Array.isArray(data.perfiles)) ? data.perfiles : [];
         if (typeof populateFueraJornadaProfileSelector === 'function') {
-            populateFueraJornadaProfileSelector(perfiles);
+            populateFueraJornadaProfileSelector(availPerfiles);
         }
         if (typeof renderFueraJornadaProfilesList === 'function') {
             renderFueraJornadaProfilesList();
@@ -11758,7 +11759,8 @@ async function loadAdminAvailability() {
             listContainer.appendChild(addProfileBtn);
         }
     } catch (err) {
-        listContainer.innerHTML = '<span class="text-secondary text-sm" style="color:red;">Error al cargar disponibilidad.</span>';
+        console.error("Error en loadAdminAvailability:", err);
+        listContainer.innerHTML = '<span class="text-secondary text-sm" style="color:red;">Error al cargar disponibilidad: ' + (err.message || '') + '</span>';
     }
 }
 
