@@ -2020,11 +2020,39 @@
                             <label for="fast-fuera-email" style="font-size: 0.82rem; font-weight: 600;">Correo Electrónico *</label>
                             <input type="email" id="fast-fuera-email" required placeholder="ejemplo@correo.com">
                         </div>
+                        <div id="fast-fuera-inline-error" class="hide" style="margin-top: 0.75rem; background: #fef2f2; border: 1.5px solid #f87171; border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.84rem; color: #991b1b; text-align: left; line-height: 1.45;">
+                        </div>
                         <button type="submit" id="btn-submit-fast-fuera" class="btn btn-block" style="width: 100%; margin-top: 0.75rem; background: #b45309; color: white; font-weight: 700; padding: 0.75rem; font-size: 1rem; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(180,83,9,0.25);">
                             Solicitar Cita Fuera de Jornada
                         </button>
                     </div>
                 </form>
+            </div>
+
+            <!-- VISTA 3: ÉXITO SOLICITUD EN ESPACIO PERSONALIZADO (EN PANTALLA) -->
+            <div id="fast-view-fuera-success" class="hide" style="text-align: center; padding: 1.25rem 0.5rem;">
+                <div style="width: 68px; height: 68px; background: #ecfdf5; color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.1rem; margin: 0 auto 1.15rem auto; border: 2.5px solid #a7f3d0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.18);">
+                    ✓
+                </div>
+                <h2 style="font-family: var(--font-title, 'Outfit', sans-serif); font-size: 1.35rem; font-weight: 800; color: #065f46; margin: 0 0 0.45rem 0;">
+                    ¡Tu solicitud ha sido procesada con éxito!
+                </h2>
+                <p style="font-size: 0.88rem; color: #374151; line-height: 1.5; margin: 0 0 1.25rem 0;">
+                    Hemos recibido tu solicitud de consulta personalizada. El especialista la revisará y recibirás respuesta en tu WhatsApp o teléfono.
+                </p>
+
+                <!-- Resumen de la Solicitud -->
+                <div id="fast-fuera-success-details" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1.35rem; text-align: left; font-size: 0.86rem; color: #334155; line-height: 1.6;">
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                    <button type="button" onclick="closeFastBookingScreen()" class="btn btn-primary" style="width: 100%; padding: 0.7rem 1rem; border-radius: 8px; font-weight: 700;">
+                        Entendido / Volver al Portal
+                    </button>
+                    <button type="button" onclick="switchFastBookingView('regular')" class="fast-discreet-btn" style="width: 100%; padding: 0.55rem 1rem;">
+                        <span>←</span> Ver Horarios Regulares
+                    </button>
+                </div>
             </div>
 
             <div id="fast-booking-status-msg" class="status-msg hide mt-3"></div>
@@ -7286,16 +7314,10 @@
                                 </form>
                                 <div id="pat-req-status-msg" class="status-msg hide mt-2"></div>
 
-                                <!-- Solicitar Consulta Personalizada / Fuera de Jornada (Consultante) -->
-                                <div id="pat-fuera-jornada-card" class="hide" style="margin-top: 1.5rem; border: 1.5px dashed #f59e0b; border-radius: 12px; background: #fffdf5; padding: 1.15rem; text-align: center;">
-                                    <div style="font-size: 0.92rem; font-weight: 700; color: #92400e; margin-bottom: 0.35rem;">
-                                        ✨ ¿Deseas agendar en un espacio personalizado?
-                                    </div>
-                                    <p id="pat-fuera-advertencia-text" style="font-size: 0.82rem; color: #78350f; margin: 0 0 0.75rem 0; line-height: 1.4;">
-                                        Ten en cuenta que los horarios personalizados tienen un costo mayor al horario ofertado.
-                                    </p>
-                                    <button type="button" class="btn" onclick="openPatientFueraJornadaModal()" style="background: #eab308; background-image: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; font-weight: 700; border-radius: 10px; padding: 0.55rem 1.25rem; border: none; font-size: 0.88rem; cursor: pointer; box-shadow: 0 2px 8px rgba(217,119,6,0.25);">
-                                        ✨ Solicitar Espacio Personalizado
+                                <!-- Solicitar Consulta Personalizada / Fuera de Jornada (Consultante - Botón Disimulado) -->
+                                <div id="pat-fuera-jornada-card" class="hide" style="text-align: center; margin-top: 1.25rem;">
+                                    <button type="button" onclick="openPatientFueraJornadaModal()" class="fast-discreet-btn" style="color: #d97706; border-color: #fde68a;">
+                                        <span>✨</span> Solicitar espacio personalizado
                                     </button>
                                 </div>
                             </div>

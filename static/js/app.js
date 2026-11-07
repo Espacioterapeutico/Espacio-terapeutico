@@ -4322,6 +4322,12 @@ async function loadPatientPortalData(patientId) {
             if (data.perfil.psicologo_id) {
                 window.currentPatientPsicologoId = data.perfil.psicologo_id;
             }
+            if (!window.currentTherapistPublicData) {
+                window.currentTherapistPublicData = {};
+            }
+            window.currentTherapistPublicData.fuera_jornada_activo = data.fuera_jornada_activo;
+            window.currentTherapistPublicData.fuera_jornada_advertencia = data.fuera_jornada_advertencia;
+            window.currentTherapistPublicData.fuera_jornada_perfiles = data.fuera_jornada_perfiles || [];
             const patientFullName = `${data.perfil.nombres} ${data.perfil.apellidos}`;
             document.getElementById('pat-welcome-title').textContent = `Hola, ${data.perfil.nombres} 👋`;
             
@@ -4662,13 +4668,15 @@ async function loadPatientPortalData(patientId) {
                     box.appendChild(actionsDiv);
                     container.appendChild(box);
                 });
-            } else {
-                container.innerHTML = `
-                    <div class="next-session-info-box" style="background: var(--bg-light); padding: 1.5rem; border-radius: var(--radius-md); border-left: 5px solid var(--text-muted);">
-                        <h4 class="mb-2">No tienes citas agendadas</h4>
-                        <p class="text-secondary">Si lo deseas, puedes agendar una cita a continuación.</p>
-                    </div>
+            } else if (!data.solicitudes_pendientes || data.solicitudes_pendientes.length === 0) {
+                const emptyBox = document.createElement('div');
+                emptyBox.className = 'next-session-info-box';
+                emptyBox.style = 'background: var(--bg-light); padding: 1.5rem; border-radius: var(--radius-md); border-left: 5px solid var(--text-muted);';
+                emptyBox.innerHTML = `
+                    <h4 class="mb-2">No tienes citas agendadas</h4>
+                    <p class="text-secondary">Si lo deseas, puedes agendar una cita a continuación.</p>
                 `;
+                container.appendChild(emptyBox);
             }
         }
         
@@ -12114,27 +12122,6 @@ async function handleSaveAvailability(e) {
     const fuera_jornada_activo = document.getElementById('avail-fuera-jornada-activo')?.checked ? 1 : 0;
     const fuera_jornada_advertencia = document.getElementById('avail-fuera-jornada-advertencia')?.value || '';
     let fuera_jornada_perfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) ? [...window.fueraJornadaConfig.perfiles] : [];
-    
-    // Auto-agregar perfil del selector si la lista de perfiles está vacía pero hay una opción seleccionada
-    if (fuera_jornada_perfiles.length === 0) {
-        const selProf = document.getElementById('avail-fuera-perfil-select');
-        const costProf = document.getElementById('avail-fuera-perfil-costo');
-        const monProf = document.getElementById('avail-fuera-perfil-moneda');
-        if (selProf && selProf.value) {
-            fuera_jornada_perfiles.push({
-                nombre: selProf.value,
-                modalidad: selProf.value,
-                costo: parseFloat(costProf?.value || 35),
-                moneda: monProf?.value || 'USD'
-            });
-            if (window.fueraJornadaConfig) {
-                window.fueraJornadaConfig.perfiles = fuera_jornada_perfiles;
-            }
-            if (typeof renderFueraJornadaProfilesList === 'function') {
-                renderFueraJornadaProfilesList();
-            }
-        }
-    }
     const fuera_jornada_bloqueos = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.bloqueos)) ? window.fueraJornadaConfig.bloqueos : [];
 
     const profileCards = document.querySelectorAll('.avail-profile-card');
@@ -37735,11 +37722,17 @@ function updateFastModalityDescriptionText(val) {
 function switchFastBookingView(view) {
     const regularView = document.getElementById('fast-view-regular');
     const fueraView = document.getElementById('fast-view-fuera-jornada');
+    const successView = document.getElementById('fast-view-fuera-success');
     if (!regularView || !fueraView) return;
+
+    if (successView) successView.classList.add('hide');
 
     if (view === 'fuera_jornada') {
         regularView.classList.add('hide');
         fueraView.classList.remove('hide');
+        const errBox = document.getElementById('fast-fuera-inline-error');
+        if (errBox) { errBox.classList.add('hide'); errBox.textContent = ''; }
+
         const durNota = document.getElementById('fast-fuera-duracion-nota');
         const tData = window.currentTherapistPublicData || null;
         const dur = (tData && tData.duracion_default) || 50;
@@ -38029,8 +38022,18 @@ window.onFastFueraCedulaInput = onFastFueraCedulaInput;
 async function submitFastFueraJornada(e) {
     if (e) e.preventDefault();
     const btn = document.getElementById('btn-submit-fast-fuera');
-    const statusMsg = document.getElementById('fast-booking-status-msg');
-    if (statusMsg) statusMsg.classList.add('hide');
+    const errBox = document.getElementById('fast-fuera-inline-error');
+    if (errBox) { errBox.classList.add('hide'); errBox.textContent = ''; }
+
+    const setInlineError = (msg) => {
+        if (errBox) {
+            errBox.textContent = msg;
+            errBox.classList.remove('hide');
+            errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            console.error(msg);
+        }
+    };
 
     const modalidad = document.getElementById('fast-fuera-modalidad')?.value;
     const fecha = document.getElementById('fast-fuera-fecha')?.value;
@@ -38042,14 +38045,14 @@ async function submitFastFueraJornada(e) {
     const email = document.getElementById('fast-fuera-email')?.value.trim();
 
     if (!modalidad || !fecha || !hora || !cedula || !nombres || !telefono) {
-        alert("Por favor completa todos los campos requeridos.");
+        setInlineError("Por favor completa todos los campos requeridos (modalidad, fecha, hora, cédula, nombres y teléfono).");
         return;
     }
 
     const dur = (window.currentTherapistPublicData && window.currentTherapistPublicData.duracion_default) || 50;
     const blockedCheck = typeof checkFueraSlotBlocked === 'function' ? checkFueraSlotBlocked(fecha, hora, dur) : null;
     if (blockedCheck) {
-        alert(`No es posible solicitar este horario: el especialista no atiende los ${blockedCheck.dias} de ${blockedCheck.rango} (${blockedCheck.motivo}). Por favor elige otra hora.`);
+        setInlineError(`No es posible solicitar este horario: el especialista no atiende los ${blockedCheck.dias} de ${blockedCheck.rango} (${blockedCheck.motivo}). Por favor selecciona otra hora.`);
         return;
     }
 
@@ -38067,7 +38070,7 @@ async function submitFastFueraJornada(e) {
             }
         }
         if (!slug) {
-            alert("No se pudo identificar el especialista para enviar la solicitud.");
+            setInlineError("No se pudo identificar el especialista asignado para procesar la solicitud.");
             return;
         }
 
@@ -38094,18 +38097,52 @@ async function submitFastFueraJornada(e) {
         }
 
         if (res.ok && data.success) {
-            alert(`¡Solicitud enviada con éxito!
+            const fueraView = document.getElementById('fast-view-fuera-jornada');
+            const successView = document.getElementById('fast-view-fuera-success');
+            const detailsBox = document.getElementById('fast-fuera-success-details');
 
-Tu solicitud de consulta (${modalidad}) para el ${data.fecha} a las ${data.hora_inicio} ha sido enviada al especialista.
-Recibirás respuesta en tu WhatsApp o teléfono.`);
-            switchFastBookingView('regular');
-            closeFastBookingScreen();
+            if (fueraView && successView) {
+                fueraView.classList.add('hide');
+                successView.classList.remove('hide');
+
+                if (detailsBox) {
+                    const horaDisplay = typeof format12h === 'function' ? format12h(data.hora_inicio || hora) : (data.hora_inicio || hora);
+                    detailsBox.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: #64748b;">Consultante:</span>
+                            <strong style="color: #0f172a;">${nombres} ${apellidos}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: #64748b;">Modalidad:</span>
+                            <strong style="color: #0f172a;">${modalidad}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: #64748b;">Fecha Solicitada:</span>
+                            <strong style="color: #0f172a;">${data.fecha || fecha}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: #64748b;">Hora Solicitada:</span>
+                            <strong style="color: #0f172a;">${horaDisplay}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding-top: 0.35rem; border-top: 1px dashed #cbd5e1; margin-top: 0.35rem;">
+                            <span style="color: #64748b;">Tarifa de la sesión:</span>
+                            <strong style="color: #059669; font-size: 0.95rem;">${data.monto || ''} ${data.moneda || 'USD'}</strong>
+                        </div>
+                    `;
+                }
+            }
+
+            // Si está en portal de paciente, recargar datos para que se vea reflejada la solicitud pendiente
+            const patId = sessionStorage.getItem('patient_id');
+            if (patId && typeof loadPatientPortalData === 'function') {
+                loadPatientPortalData(patId);
+            }
         } else {
-            alert(data.error || `Ocurrió un error al procesar la solicitud (${res.status}). Por favor intenta nuevamente.`);
+            setInlineError(data.error || `Ocurrió un error al procesar la solicitud (${res.status}). Por favor intenta nuevamente.`);
         }
     } catch (err) {
         console.error("Error al enviar solicitud fuera de jornada:", err);
-        alert(err.message ? `Error: ${err.message}` : "Error de conexión al enviar la solicitud.");
+        setInlineError(err.message ? `Error: ${err.message}` : "Error de conexión al enviar la solicitud.");
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = "Solicitar Cita Fuera de Jornada"; }
     }
@@ -38305,44 +38342,30 @@ async function loadDashboardSolicitudesFuera() {
 
         card.classList.remove('hide');
         card.innerHTML = `
-            <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #f59e0b; border-radius: 12px; padding: 1rem 1.15rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.25rem;">✨</span>
-                        <strong style="font-size: 0.95rem; color: #92400e;">Solicitud de Consulta en Horario Personalizado</strong>
-                    </div>
-                    <span style="background: #f59e0b; color: white; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">
-                        ${pending.length} Pendiente${pending.length > 1 ? 's' : ''}
-                    </span>
+            <div style="background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 10px; padding: 0.6rem 0.85rem; margin-bottom: 0.85rem; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.08);">
+                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    ${pending.map(s => {
+                        const horaFmt = typeof format12h === 'function' ? format12h(s.hora_inicio) : s.hora_inicio;
+                        return `
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: white; border: 1px solid #fde68a; border-radius: 8px; padding: 0.45rem 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.88rem;">
+                                <span style="color: #d97706; font-size: 1rem;">✨</span>
+                                <strong style="color: #0f172a; font-weight: 700;">${s.nombres} ${s.apellidos || ''}</strong>
+                                <span style="color: #475569;">· 🗓️ ${s.fecha} (${horaFmt})</span>
+                                <span style="color: #059669; font-weight: 700;">· ${s.monto} ${s.moneda} (${s.tipo_consulta})</span>
+                                ${s.telefono ? `<a href="https://wa.me/${s.telefono.replace(/\D/g, '')}" target="_blank" style="color: #25D366; text-decoration: none; font-size: 0.8rem; font-weight: 600;" title="Abrir WhatsApp">💬 WA</a>` : ''}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <button type="button" class="btn btn-sm btn-success" onclick="responderSolicitudFueraFromDash(${s.id}, 'aceptar')" style="font-weight: 700; border-radius: 6px; padding: 0.3rem 0.75rem; background: #059669; border: none; color: white; cursor: pointer; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(5,150,105,0.25);">
+                                    ✓ Aceptar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="responderSolicitudFueraFromDash(${s.id}, 'declinar')" style="font-weight: 600; border-radius: 6px; padding: 0.3rem 0.65rem; background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; cursor: pointer; font-size: 0.8rem;">
+                                    ✕ Rechazar
+                                </button>
+                            </div>
+                        </div>
+                    `}).join('')}
                 </div>
-                ${pending.map(s => `
-                    <div style="background: white; border: 1px solid #fde68a; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-                            <div>
-                                <strong style="font-size: 1rem; color: var(--text-dark);">${s.nombres} ${s.apellidos || ''}</strong>
-                                <span style="font-size: 0.82rem; color: var(--text-secondary); display: block; margin-top: 2px;">
-                                    🪪 C.I.: ${s.cedula || 'N/A'} · 📱 Tel: <a href="tel:${s.telefono}" style="color: var(--primary-color); font-weight: 600;">${s.telefono}</a>
-                                </span>
-                            </div>
-                            <div style="text-align: right;">
-                                <span style="font-size: 1.05rem; font-weight: 800; color: #059669;">${s.monto} ${s.moneda}</span>
-                                <span style="display: block; font-size: 0.78rem; color: #64748b; font-weight: 600;">Modalidad ${s.tipo_consulta}</span>
-                            </div>
-                        </div>
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.5rem 0.75rem; margin: 0.6rem 0; font-size: 0.84rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                            <span>🗓️ <strong>Fecha solicitada:</strong> ${s.fecha}</span>
-                            <span>⏰ <strong>Horario:</strong> ${format12h(s.hora_inicio)} a ${format12h(s.hora_fin)} (${s.duracion_minutos || 60} min)</span>
-                        </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 0.6rem; flex-wrap: wrap;">
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="responderSolicitudFueraFromDash(${s.id}, 'declinar')" style="font-weight: 700; border-radius: 6px; padding: 0.45rem 0.95rem; background: white; border: 1.5px solid #fca5a5; color: #dc2626; cursor: pointer;">
-                                ✕ Rechazar
-                            </button>
-                            <button type="button" class="btn btn-sm btn-success" onclick="responderSolicitudFueraFromDash(${s.id}, 'aceptar')" style="font-weight: 700; border-radius: 6px; padding: 0.45rem 1.25rem; background: #059669; border: none; color: white; cursor: pointer; box-shadow: 0 2px 6px rgba(5,150,105,0.25);">
-                                ✓ Aceptar Consulta
-                            </button>
-                        </div>
-                    </div>
-                `).join('')}
             </div>
         `;
     } catch (e) {
@@ -38359,7 +38382,7 @@ async function responderSolicitudFueraFromDash(reqId, accion) {
 }
 window.responderSolicitudFueraFromDash = responderSolicitudFueraFromDash;
 
-function openPatientFueraJornadaModal() {
+async function openPatientFueraJornadaModal() {
     const prof = window.patientProfile || {};
     const fastScreen = document.getElementById('fast-booking-screen');
     if (!fastScreen) return;
@@ -38392,6 +38415,17 @@ function openPatientFueraJornadaModal() {
     if (prof.psicologo_asignado_slug) {
         window.fastBookingTherapistSlug = prof.psicologo_asignado_slug;
     }
+
+    try {
+        if (!window.currentTherapistPublicData || !window.currentTherapistPublicData.fuera_jornada_perfiles || window.currentTherapistPublicData.fuera_jornada_perfiles.length === 0) {
+            const targetSlug = prof.psicologo_asignado_slug || psicId;
+            const res = await fetch(`/api/public/therapist/${encodeURIComponent(targetSlug)}`);
+            if (res.ok) {
+                const tData = await res.json();
+                window.currentTherapistPublicData = tData;
+            }
+        }
+    } catch (e) {}
 
     // Cambiar a vista fuera de jornada y mostrar pantalla
     switchFastBookingView('fuera_jornada');

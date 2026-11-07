@@ -1412,6 +1412,12 @@ def update_agenda_event_status(event_id):
     is_confirming = (confirmada == 1 or estado == 'Confirmada')
     is_cancelling = bool(target_cancellation)
 
+    if is_cancelling:
+        try:
+            cursor.execute("UPDATE solicitudes_fuera_horario SET estado = 'Cancelada' WHERE agenda_id = ?", (event_id,))
+        except Exception:
+            pass
+
     # Enviar mensaje de WhatsApp si corresponde
     try:
         from routes_notificaciones import make_wa_http_request, format_whatsapp_message
@@ -1591,6 +1597,10 @@ def delete_agenda_event(event_id):
 
     cursor.execute("DELETE FROM sesiones WHERE agenda_id = ?", (event_id,))
     cursor.execute("DELETE FROM agenda_finanzas WHERE id = ?", (event_id,))
+    try:
+        cursor.execute("UPDATE solicitudes_fuera_horario SET estado = 'Cancelada' WHERE agenda_id = ?", (event_id,))
+    except Exception:
+        pass
     db.commit()
 
     # Notificar al consultante en su portal (campanita y push)
@@ -2780,6 +2790,10 @@ def accion_cita_publica():
                     pat_full_name, cita['fecha'], cita['hora'], cita['tipo_consulta'],
                     'Cancelada por consultante fuera de tiempo'
                 ))
+                try:
+                    cursor.execute("UPDATE solicitudes_fuera_horario SET estado = 'Cancelada' WHERE agenda_id = ?", (appt_id,))
+                except Exception:
+                    pass
             except Exception as _e_clog:
                 print("Error registrando citas_canceladas_log:", _e_clog)
 
@@ -3184,11 +3198,12 @@ def solicitar_fuera_horario(slug):
         except Exception:
             pass
     
-        # Validar que no choque con citas existentes en agenda_finanzas
+        # Validar que no choque con citas activas en agenda_finanzas
         cursor.execute("""
             SELECT a.id, a.hora, a.tipo_consulta 
             FROM agenda_finanzas a
             WHERE a.creado_por_user_id = ? AND a.fecha = ?
+              AND (a.estado_pago IS NULL OR (a.estado_pago NOT LIKE 'Cancelada%' AND a.estado_pago != 'Reprogramada'))
         """, (psicologo_id, fecha_norm))
         existing_citas = cursor.fetchall()
         
@@ -3204,20 +3219,39 @@ def solicitar_fuera_horario(slug):
             except Exception:
                 pass
     
-        # Validar que no choque con otra solicitud ya aprobada en solicitudes_fuera_horario
+        # Validar que no choque con otra solicitud activa en solicitudes_fuera_horario
         cursor.execute("""
-            SELECT id, hora_inicio, hora_fin 
-            FROM solicitudes_fuera_horario
-            WHERE psicologo_id = ? AND fecha = ? AND estado IN ('Pendiente', 'Aceptada')
+            SELECT sf.id, sf.hora_inicio, sf.hora_fin, sf.estado, sf.agenda_id, sf.paciente_id, sf.cedula,
+                   af.id as af_id, af.estado_pago as af_estado_pago
+            FROM solicitudes_fuera_horario sf
+            LEFT JOIN agenda_finanzas af ON sf.agenda_id = af.id
+            WHERE sf.psicologo_id = ? AND sf.fecha = ? AND sf.estado IN ('Pendiente', 'Aceptada')
         """, (psicologo_id, fecha_norm))
         existing_reqs = cursor.fetchall()
         for er in existing_reqs:
+            # Si estaba Aceptada pero la cita en agenda_finanzas ya no existe o fue cancelada, actualizar estado y no bloquear
+            if er['estado'] == 'Aceptada':
+                if not er['agenda_id'] or not er['af_id'] or (er['af_estado_pago'] and ('cancelad' in str(er['af_estado_pago']).lower() or str(er['af_estado_pago']) == 'Reprogramada')):
+                    try:
+                        cursor.execute("UPDATE solicitudes_fuera_horario SET estado = 'Cancelada' WHERE id = ?", (er['id'],))
+                        db.commit()
+                    except Exception:
+                        pass
+                    continue
+
             try:
                 er_start = datetime.strptime(normalize_time_str(er['hora_inicio']), "%H:%M")
                 er_end = datetime.strptime(normalize_time_str(er['hora_fin']), "%H:%M")
                 req_start = datetime.strptime(hora_inicio_norm, "%H:%M")
                 req_end = datetime.strptime(hora_fin_norm, "%H:%M")
                 if max(req_start, er_start) < min(req_end, er_end):
+                    # Si es una solicitud Pendiente previa del mismo paciente (misma cédula), se sustituye limpiamente
+                    er_ced = re.sub(r'\D', '', str(er.get('cedula') or ''))
+                    cur_ced = re.sub(r'\D', '', str(cedula or ''))
+                    if er['estado'] == 'Pendiente' and er_ced and cur_ced and er_ced == cur_ced:
+                        cursor.execute("UPDATE solicitudes_fuera_horario SET estado = 'Cancelada' WHERE id = ?", (er['id'],))
+                        db.commit()
+                        continue
                     return jsonify({'error': 'Ya existe una solicitud pendiente o confirmada para ese rango de horario. Por favor selecciona otra hora.'}), 400
             except Exception:
                 pass
@@ -3384,11 +3418,18 @@ def admin_responder_solicitud_fuera_horario(req_id):
     wa_text = ""
 
     if accion == 'aceptar':
+        import secrets
+        from datetime import datetime, timedelta
+        
+        token_conf = secrets.token_urlsafe(16)
+        is_same_day = (sol['fecha'] == datetime.now().strftime("%Y-%m-%d"))
+        confirmada_val = 1 if is_same_day else 0
+
         cursor.execute("""
             INSERT INTO agenda_finanzas (
                 paciente_id, fecha, hora, tipo_consulta, monto, moneda,
-                estado_pago, control_uso, creado_por_user_id, confirmada, referencia
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Pendiente', 'No consumida', ?, 1, ?)
+                estado_pago, control_uso, creado_por_user_id, confirmada, token_confirmacion, referencia
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, ?, ?, ?)
         """, (
             paciente_id,
             sol['fecha'],
@@ -3397,6 +3438,8 @@ def admin_responder_solicitud_fuera_horario(req_id):
             sol['monto'],
             sol['moneda'],
             user_id,
+            confirmada_val,
+            token_conf,
             f"Solicitud fuera de jornada aprobada #SFH-{sol['id']}"
         ))
         agenda_id = cursor.lastrowid
@@ -3406,6 +3449,46 @@ def admin_responder_solicitud_fuera_horario(req_id):
             SET estado = 'Aceptada', agenda_id = ?, respondido_en = CURRENT_TIMESTAMP
             WHERE id = ?
         """, (agenda_id, req_id))
+        db.commit()
+
+        # Sincronización en Google Calendar
+        try:
+            from routes_admin import get_calendar_service
+            service = get_calendar_service(user_id, db=db)
+            if service:
+                dur_m = sol.get('duracion_minutos') or 60
+                st_obj = datetime.strptime(sol['hora_inicio'], "%H:%M")
+                en_obj = st_obj + timedelta(minutes=dur_m)
+                start_dt = f"{sol['fecha']}T{sol['hora_inicio']}:00-04:00"
+                end_dt = f"{sol['fecha']}T{en_obj.strftime('%H:%M')}:00-04:00"
+                summary_text = f"🟠 Consulta {sol['tipo_consulta']} (Personalizada) - {sol.get('nombres','')} {sol.get('apellidos','')}".strip()
+                event_body = {
+                    'summary': summary_text,
+                    'colorId': '6',
+                    'description': f"Modalidad: {sol['tipo_consulta']}\nPsicólogo: {psicologo_nombre}\nTarifa especial fuera de jornada: {sol['monto']} {sol['moneda']}",
+                    'start': {'dateTime': start_dt, 'timeZone': 'America/Caracas'},
+                    'end': {'dateTime': end_dt, 'timeZone': 'America/Caracas'},
+                    'guestsCanInviteOthers': False
+                }
+                if sol.get('email'):
+                    event_body['attendees'] = [{'email': sol['email'], 'displayName': f"{sol.get('nombres','')} {sol.get('apellidos','')}".strip()}]
+                g_event = service.events().insert(calendarId='primary', body=event_body, sendUpdates='all').execute()
+                if g_event and g_event.get('id'):
+                    cursor.execute("UPDATE agenda_finanzas SET google_event_id = ? WHERE id = ?", (g_event.get('id'), agenda_id))
+                    db.commit()
+        except Exception as _gerr:
+            print("Error sincronizando solicitud fuera de jornada a Google Calendar:", _gerr)
+
+        # Despachar notificación automática inmediata por WhatsApp si aplica
+        try:
+            from routes_notificaciones import send_booking_notification_wa
+            send_booking_notification_wa(agenda_id, user_id)
+        except Exception as _wa_err:
+            print("[WA-BOOKING] Error despachando notificacion fuera de jornada:", _wa_err)
+
+        from routes_notificaciones import get_public_base_url
+        domain_host = get_public_base_url()
+        link_confirmacion = f"{domain_host}/cita/confirmar/{token_conf}"
         
         psic_key = f"msg_fuera_jornada_aceptada_{user_id}"
         cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (psic_key,))
@@ -3415,10 +3498,12 @@ def admin_responder_solicitud_fuera_horario(req_id):
             cfg_r = cursor.fetchone()
             
         raw_tmpl = (cfg_r['valor'] if cfg_r and cfg_r['valor'] else "") or (
-            "Hola {nombre}, he revisado y aceptado tu solicitud de consulta fuera de la jornada para el *{fecha}* a las *{hora}* ({modalidad}). Monto: *{monto} {moneda}*. ¡Nos vemos!"
+            "Hola {nombre}, he revisado y aceptado tu solicitud de consulta personalizada para el *{fecha}* a las *{hora}* ({modalidad}). Monto: *{monto} {moneda}*.\n\nPuedes confirmar tu asistencia ingresando en este enlace:\n{link_confirmacion}\n\n¡Nos vemos pronto!"
         )
         
-        wa_text = raw_tmpl.replace('{nombre}', sol.get('nombres', '')).replace('{fecha}', sol.get('fecha', '')).replace('{hora}', sol.get('hora_inicio', '')).replace('{modalidad}', sol.get('tipo_consulta', '')).replace('{monto}', str(sol.get('monto', '0'))).replace('{moneda}', sol.get('moneda', 'USD')).replace('{psicologo}', psicologo_nombre)
+        wa_text = raw_tmpl.replace('{nombre}', sol.get('nombres', '')).replace('{fecha}', sol.get('fecha', '')).replace('{hora}', sol.get('hora_inicio', '')).replace('{modalidad}', sol.get('tipo_consulta', '')).replace('{monto}', str(sol.get('monto', '0'))).replace('{moneda}', sol.get('moneda', 'USD')).replace('{psicologo}', psicologo_nombre).replace('{link_confirmacion}', link_confirmacion)
+        if '{link_confirmacion}' not in raw_tmpl and confirmada_val == 0:
+            wa_text += f"\n\nPuedes confirmar tu asistencia aquí:\n{link_confirmacion}"
 
         if paciente_id:
             try:
