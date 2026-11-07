@@ -5357,7 +5357,7 @@
                                                                     <p style="font-size: 0.8rem; color: #78350f; margin: 0.2rem 0 0.5rem 0; line-height: 1.4;">
                                                                         Suma automáticamente un monto extra al costo acordado con cada paciente (o a la tarifa base si es nuevo consultante).
                                                                     </p>
-                                                                    <div id="avail-fuera-recargo-inputs" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem;">
+                                                                    <div id="avail-fuera-recargo-inputs" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem; flex-wrap: wrap;">
                                                                         <span style="font-size: 0.82rem; font-weight: 700; color: #92400e;">Monto a recargar: +</span>
                                                                         <input type="number" step="0.5" min="0" id="avail-fuera-recargo-monto" value="5.0" style="width: 85px; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1.5px solid #d97706; font-size: 0.88rem; font-weight: 700; text-align: center;">
                                                                         <select id="avail-fuera-recargo-moneda" style="padding: 0.35rem 0.5rem; border-radius: 6px; border: 1.5px solid #d97706; font-size: 0.85rem; font-weight: 700;">
@@ -5365,6 +5365,16 @@
                                                                             <option value="EUR">EUR (€)</option>
                                                                             <option value="VES">VES (Bs.)</option>
                                                                         </select>
+                                                                    </div>
+
+                                                                    <!-- Modalidades habilitadas para este recargo -->
+                                                                    <div id="avail-fuera-recargo-modalidades-box" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed #fde68a;">
+                                                                        <span style="font-size: 0.82rem; font-weight: 700; color: #92400e; display: block; margin-bottom: 0.4rem;">
+                                                                            Modalidades de consulta habilitadas con este recargo:
+                                                                        </span>
+                                                                        <div id="avail-fuera-recargo-modalidades-list" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                                                            <!-- Dinámico: Checkboxes de modalidades -->
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </label>
@@ -5384,8 +5394,8 @@
                                                         </div>
                                                     </div>
 
-                                                    <!-- Perfiles de Horario Permitidos Fuera de Jornada -->
-                                                    <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                                    <!-- Perfiles de Horario Permitidos Fuera de Jornada (Tarifa Fija) -->
+                                                    <div id="avail-fuera-perfiles-fijo-card" style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
                                                             <div>
                                                                 <strong style="font-size: 0.95rem; color: var(--text-dark); display: block;">Perfiles Permitidos y Tarifas Especiales</strong>

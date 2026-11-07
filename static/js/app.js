@@ -12154,7 +12154,21 @@ async function handleSaveAvailability(e) {
     const fuera_jornada_tipo_cobro = document.getElementById('avail-fuera-tipo-fijo')?.checked ? 'fijo' : 'recargo';
     const fuera_jornada_recargo_monto = parseFloat(document.getElementById('avail-fuera-recargo-monto')?.value) || 5.0;
     const fuera_jornada_recargo_moneda = document.getElementById('avail-fuera-recargo-moneda')?.value || 'USD';
-    let fuera_jornada_perfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) ? [...window.fueraJornadaConfig.perfiles] : [];
+    let fuera_jornada_perfiles = [];
+    if (fuera_jornada_tipo_cobro === 'recargo') {
+        const chks = document.querySelectorAll('.fuera-recargo-mod-chk:checked');
+        if (chks.length > 0) {
+            chks.forEach(chk => {
+                fuera_jornada_perfiles.push({ nombre: chk.value, modalidad: chk.value });
+            });
+        } else if (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles) && window.fueraJornadaConfig.perfiles.length > 0) {
+            fuera_jornada_perfiles = [...window.fueraJornadaConfig.perfiles];
+        } else {
+            fuera_jornada_perfiles = [{ nombre: 'Online', modalidad: 'Online' }];
+        }
+    } else {
+        fuera_jornada_perfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) ? [...window.fueraJornadaConfig.perfiles] : [];
+    }
     const fuera_jornada_bloqueos = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.bloqueos)) ? window.fueraJornadaConfig.bloqueos : [];
 
     const profileCards = document.querySelectorAll('.avail-profile-card');
@@ -37384,6 +37398,8 @@ function toggleFueraTipoCobroUI() {
     const recCard = document.getElementById('avail-fuera-tipo-recargo-card');
     const fijoCard = document.getElementById('avail-fuera-tipo-fijo-card');
     const recInputs = document.getElementById('avail-fuera-recargo-inputs');
+    const recModsBox = document.getElementById('avail-fuera-recargo-modalidades-box');
+    const fijoProfilesCard = document.getElementById('avail-fuera-perfiles-fijo-card');
     
     if (isRecargo) {
         if (recCard) {
@@ -37395,6 +37411,8 @@ function toggleFueraTipoCobroUI() {
             fijoCard.style.background = 'white';
         }
         if (recInputs) recInputs.style.display = 'flex';
+        if (recModsBox) recModsBox.style.display = 'block';
+        if (fijoProfilesCard) fijoProfilesCard.style.display = 'none';
     } else {
         if (recCard) {
             recCard.style.borderColor = 'var(--border-color)';
@@ -37405,9 +37423,48 @@ function toggleFueraTipoCobroUI() {
             fijoCard.style.background = '#f5f3ff';
         }
         if (recInputs) recInputs.style.display = 'none';
+        if (recModsBox) recModsBox.style.display = 'none';
+        if (fijoProfilesCard) fijoProfilesCard.style.display = 'block';
     }
 }
 window.toggleFueraTipoCobroUI = toggleFueraTipoCobroUI;
+
+function renderFueraRecargoModalidadesList(availPerfiles) {
+    const container = document.getElementById('avail-fuera-recargo-modalidades-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const perfiles = availPerfiles || (window._lastAvailabilityData && window._lastAvailabilityData.perfiles) || [];
+    const savedPerfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) 
+        ? window.fueraJornadaConfig.perfiles 
+        : [];
+
+    const uniqueMods = [];
+    if (perfiles.length > 0) {
+        perfiles.forEach(p => {
+            const nom = p.nombre || p.modalidad;
+            if (nom && !uniqueMods.includes(nom)) uniqueMods.push(nom);
+        });
+    } else {
+        uniqueMods.push('Online', 'Presencial');
+    }
+
+    uniqueMods.forEach(mod => {
+        const isChecked = savedPerfiles.length === 0 || savedPerfiles.some(sp => (sp.nombre === mod || sp.modalidad === mod));
+        const lbl = document.createElement('label');
+        lbl.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; font-size: 0.84rem; font-weight: 600; background: white; border: 1.5px solid #fde68a; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: #92400e; box-shadow: 0 1px 2px rgba(0,0,0,0.03);';
+        
+        let icon = '🌐';
+        if (mod.toLowerCase().includes('presencial')) icon = '🏢';
+
+        lbl.innerHTML = `
+            <input type="checkbox" class="fuera-recargo-mod-chk" value="${mod}" ${isChecked ? 'checked' : ''} style="cursor: pointer;">
+            <span>${icon} ${mod}</span>
+        `;
+        container.appendChild(lbl);
+    });
+}
+window.renderFueraRecargoModalidadesList = renderFueraRecargoModalidadesList;
 
 
 function populateFueraJornadaProfileSelector(perfiles) {
@@ -37429,6 +37486,7 @@ function populateFueraJornadaProfileSelector(perfiles) {
             sel.appendChild(opt);
         }
     });
+    renderFueraRecargoModalidadesList(perfiles);
 }
 window.populateFueraJornadaProfileSelector = populateFueraJornadaProfileSelector;
 
@@ -38557,19 +38615,26 @@ async function loadDashboardSolicitudesFuera() {
                     ${pending.map(s => {
                         const horaFmt = typeof format12h === 'function' ? format12h(s.hora_inicio) : s.hora_inicio;
                         return `
-                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: white; border: 1px solid #fde68a; border-radius: 8px; padding: 0.45rem 0.75rem;">
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.88rem;">
-                                <span style="color: #d97706; font-size: 1rem;">✨</span>
-                                <strong style="color: #0f172a; font-weight: 700;">${s.nombres} ${s.apellidos || ''}</strong>
-                                <span style="color: #475569;">· 🗓️ ${s.fecha} (${horaFmt})</span>
-                                <span style="color: #059669; font-weight: 700;">· ${s.monto} ${s.moneda} (${s.tipo_consulta})</span>
-                                ${s.telefono ? `<a href="https://wa.me/${s.telefono.replace(/\D/g, '')}" target="_blank" style="color: #25D366; text-decoration: none; font-size: 0.8rem; font-weight: 600;" title="Abrir WhatsApp">💬 WA</a>` : ''}
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <button type="button" class="btn btn-sm btn-success" onclick="responderSolicitudFueraFromDash(${s.id}, 'aceptar')" style="font-weight: 700; border-radius: 6px; padding: 0.3rem 0.75rem; background: #059669; border: none; color: white; cursor: pointer; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(5,150,105,0.25);">
+                        <div style="display: flex; flex-direction: column; gap: 0.35rem; background: white; border: 1px solid #fde68a; border-radius: 8px; padding: 0.45rem 0.65rem;">
+                            <!-- Línea 1: Nombre y Apellido (+ monto) a la izquierda, Botón Aceptar a la derecha -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <span style="color: #d97706; font-size: 0.95rem; flex-shrink: 0;">✨</span>
+                                    <strong style="color: #0f172a; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.nombres} ${s.apellidos || ''}</strong>
+                                    <span style="color: #059669; font-weight: 700; font-size: 0.82rem; flex-shrink: 0;">· ${s.monto} ${s.moneda}</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-success" onclick="responderSolicitudFueraFromDash(${s.id}, 'aceptar')" style="font-weight: 700; border-radius: 6px; padding: 0.25rem 0.75rem; background: #059669; border: none; color: white; cursor: pointer; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(5,150,105,0.25); flex-shrink: 0;">
                                     ✓ Aceptar
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="responderSolicitudFueraFromDash(${s.id}, 'declinar')" style="font-weight: 600; border-radius: 6px; padding: 0.3rem 0.65rem; background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; cursor: pointer; font-size: 0.8rem;">
+                            </div>
+                            <!-- Línea 2: Fecha y Hora (+ modalidad / WA) a la izquierda, Botón Rechazar a la derecha -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #475569; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <span style="flex-shrink: 0;">🗓️ ${s.fecha} (${horaFmt})</span>
+                                    <span style="color: #64748b; font-size: 0.78rem; flex-shrink: 0;">· ${s.tipo_consulta}</span>
+                                    ${s.telefono ? `<a href="https://wa.me/${s.telefono.replace(/\D/g, '')}" target="_blank" style="color: #25D366; text-decoration: none; font-size: 0.78rem; font-weight: 700; flex-shrink: 0;" title="Abrir WhatsApp">💬 WA</a>` : ''}
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="responderSolicitudFueraFromDash(${s.id}, 'declinar')" style="font-weight: 600; border-radius: 6px; padding: 0.25rem 0.65rem; background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; cursor: pointer; font-size: 0.8rem; flex-shrink: 0;">
                                     ✕ Rechazar
                                 </button>
                             </div>
