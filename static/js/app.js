@@ -3791,6 +3791,8 @@ async function fetchAvailableHours(dateStr) {
     
     hoursGrid.innerHTML = '<span class="text-secondary text-sm">Consultando horarios...</span>';
     hoursContainer.classList.remove('hide');
+    const rightPlFetch = document.getElementById('fast-right-placeholder');
+    if (rightPlFetch) rightPlFetch.classList.add('hide');
     hoursTitle.textContent = `Horas disponibles para el día ${dateStr.split('-').reverse().join('/')}:`;
     
     try {
@@ -18980,6 +18982,8 @@ function onFastModalityChange() {
     if (details) details.classList.add('hide');
     const hoursCont = document.getElementById('fast-hours-container');
     if (hoursCont) hoursCont.classList.add('hide');
+    const rightPl = document.getElementById('fast-right-placeholder');
+    if (rightPl) rightPl.classList.remove('hide');
     renderFastCalendar();
 }
 window.onFastModalityChange = onFastModalityChange;
@@ -18993,6 +18997,10 @@ function changeFastBookingMonth(dir) {
         fastBookingMonth = 0;
         fastBookingYear++;
     }
+    const rightPlMonth = document.getElementById('fast-right-placeholder');
+    if (rightPlMonth) rightPlMonth.classList.remove('hide');
+    const hoursContMonth = document.getElementById('fast-hours-container');
+    if (hoursContMonth) hoursContMonth.classList.add('hide');
     initFastTimeZoneSelector(); renderFastCalendar();
 }
 
@@ -35594,6 +35602,8 @@ window.resetFastBookingForm = function() {
     
     document.getElementById('fast-hours-container').classList.add('hide');
     document.getElementById('fast-patient-details').classList.add('hide');
+    const rightPlReset = document.getElementById('fast-right-placeholder');
+    if (rightPlReset) rightPlReset.classList.remove('hide');
     
     // Clear selections by simulating what changeFastBookingMonth(0) does but keeping current month
     fastSelectedDate = null;
