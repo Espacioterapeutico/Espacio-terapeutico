@@ -2157,27 +2157,15 @@
                             <input type="hidden" id="fast-req-fecha" required>
                             <input type="hidden" id="fast-req-hora" required>
 
-                            <!-- Placeholder guía cuando aún no se ha seleccionado fecha/hora -->
-                            <div id="fast-right-placeholder" class="fast-right-placeholder">
-                                <div style="text-align: center; padding: 2.75rem 1.25rem; background: rgba(112, 46, 94, 0.03); border: 2px dashed #cbd5e1; border-radius: 16px;">
-                                    <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">👈 🗓️</span>
-                                    <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.25rem 0;">Selecciona una hora</h4>
-                                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0; line-height: 1.45;">Elige un día y horario en el calendario para ingresar tus datos y confirmar tu cita.</p>
-                                </div>
-                            </div>
-
-                            <!-- 4. DATOS DEL PACIENTE (Se abre automáticamente al elegir hora) -->
-                            <div id="fast-patient-details" class="hide" style="border: 1.5px solid var(--border-color); border-radius: 12px; padding: 0.9rem; background: var(--card-bg, #ffffff);">
+                            <!-- 3. DATOS PARA AGENDAR (Siempre visible) -->
+                            <div id="fast-patient-details" style="border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1rem 1.15rem; background: var(--card-bg, #ffffff);">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                    <h4 style="font-size: 0.86rem; font-weight: 700; color: var(--text-dark); margin: 0;">
-                                        4. Datos para confirmar:
+                                    <h4 style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark); margin: 0;">
+                                        3. Datos para agendar:
                                     </h4>
-                                    <button type="button" onclick="backToFastHours()" class="btn btn-xs btn-secondary" style="font-size: 0.72rem; padding: 2px 7px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; color: #475569;">
-                                        ↩ Cambiar hora
-                                    </button>
                                 </div>
-                                <div id="fast-selected-slot-pill" style="margin-bottom: 0.65rem; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; padding: 0.35rem 0.6rem; border-radius: 6px; font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-                                    <span>🕒</span> <span id="fast-selected-slot-text"></span>
+                                <div id="fast-selected-slot-pill" style="margin-bottom: 0.75rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; color: #64748b; padding: 0.45rem 0.65rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                                    <span>🕒</span> <span id="fast-selected-slot-text">Selecciona una fecha y hora</span>
                                 </div>
                                 <div class="form-group mb-2">
                                     <label for="fast-cedula" style="font-size: 0.78rem; font-weight: 600;">Cédula de Identidad *</label>
@@ -2200,7 +2188,7 @@
                                     <input type="email" id="fast-email" required placeholder="ejemplo@correo.com" style="font-size: 0.82rem; padding: 0.4rem 0.6rem; border: 1.5px solid var(--border-color); border-radius: 6px; width: 100%;">
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-block" style="width: 100%; margin-top: 0.5rem; font-weight: 700; padding: 0.6rem; font-size: 0.95rem; border-radius: 8px;">
-                                    Confirmar Cita
+                                    Agendar Cita
                                 </button>
                             </div>
                         </div>

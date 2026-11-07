@@ -18978,8 +18978,7 @@ function onFastModalityChange() {
     updateFastModalityDescription();
     const reqHora = document.getElementById('fast-req-hora');
     if (reqHora) reqHora.value = '';
-    const details = document.getElementById('fast-patient-details');
-    if (details) details.classList.add('hide');
+    updateFastSelectedSlotPill('Selecciona una fecha y hora', false);
     const hoursCont = document.getElementById('fast-hours-container');
     if (hoursCont) hoursCont.classList.add('hide');
     const rightPl = document.getElementById('fast-right-placeholder');
@@ -19108,16 +19107,36 @@ async function renderFastCalendar() {
     }
 }
 
+function updateFastSelectedSlotPill(text, isSelected) {
+    const pill = document.getElementById('fast-selected-slot-pill');
+    const pillTxt = document.getElementById('fast-selected-slot-text');
+    if (!pill || !pillTxt) return;
+    
+    if (isSelected) {
+        pill.style.background = '#ecfdf5';
+        pill.style.border = '1.5px solid #a7f3d0';
+        pill.style.color = '#047857';
+        pill.style.fontWeight = '700';
+        pillTxt.textContent = text;
+    } else {
+        pill.style.background = '#f8fafc';
+        pill.style.border = '1.5px dashed #cbd5e1';
+        pill.style.color = '#64748b';
+        pill.style.fontWeight = '600';
+        pillTxt.textContent = text || 'Selecciona una fecha y hora';
+    }
+}
+window.updateFastSelectedSlotPill = updateFastSelectedSlotPill;
+
 async function fetchFastAvailableHours(dateStr) {
     const hoursGrid = document.getElementById('fast-hours-grid');
     const hoursContainer = document.getElementById('fast-hours-container');
     const hoursTitle = document.getElementById('fast-hours-title');
     
-    // En la columna 3, mostrar placeholder y ocultar formulario hasta que se seleccione una hora
-    const rightPlInit = document.getElementById('fast-right-placeholder');
-    if (rightPlInit) rightPlInit.classList.remove('hide');
-    const detailsInit = document.getElementById('fast-patient-details');
-    if (detailsInit) detailsInit.classList.add('hide');
+    // El formulario siempre está visible; se reinicia el badge si se cambia de fecha
+    const reqHora = document.getElementById('fast-req-hora');
+    if (reqHora) reqHora.value = '';
+    updateFastSelectedSlotPill('Selecciona una hora para el ' + dateStr.split('-').reverse().join('/'), false);
     
     // Formatear la fecha para feedback visual
     try {
@@ -19223,25 +19242,16 @@ async function fetchFastAvailableHours(dateStr) {
                         }
                     }
                     
-                    // Mantener las horas visibles en la columna central y abrir el formulario en la columna derecha
+                    // Mantener las horas visibles en la columna central y actualizar el badge en la columna 3
                     const hoursCont = document.getElementById('fast-hours-container');
                     if (hoursCont) hoursCont.classList.remove('hide');
                     
-                    const rightPl = document.getElementById('fast-right-placeholder');
-                    if (rightPl) rightPl.classList.add('hide');
+                    const hLabel = slot.displayFull || slot.valHour || '';
+                    updateFastSelectedSlotPill(`${slot.valFecha} · ${hLabel}`, true);
                     
-                    const details = document.getElementById('fast-patient-details');
-                    if (details) {
-                        details.classList.remove('hide');
-                        if (window.innerWidth <= 850) {
-                            details.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    }
-                    
-                    const pillTxt = document.getElementById('fast-selected-slot-text');
-                    if (pillTxt) {
-                        const hLabel = slot.displayFull || slot.valHour || '';
-                        pillTxt.textContent = `${slot.valFecha} · ${hLabel}`;
+                    if (window.innerWidth <= 850) {
+                        const details = document.getElementById('fast-patient-details');
+                        if (details) details.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 };
                 hoursGrid.appendChild(btn);
@@ -19257,8 +19267,6 @@ async function fetchFastAvailableHours(dateStr) {
 let isSubmittingFastBooking = false;
 
 function backToFastHours() {
-    const details = document.getElementById('fast-patient-details');
-    const rightPl = document.getElementById('fast-right-placeholder');
     const reqHora = document.getElementById('fast-req-hora');
     if (reqHora) reqHora.value = '';
     
@@ -19267,8 +19275,7 @@ function backToFastHours() {
         b.style.color = '#047857';
     });
     
-    if (details) details.classList.add('hide');
-    if (rightPl) rightPl.classList.remove('hide');
+    updateFastSelectedSlotPill('Selecciona una fecha y hora', false);
     
     const hoursCont = document.getElementById('fast-hours-container');
     if (hoursCont) {
@@ -19303,8 +19310,26 @@ async function submitFastBooking(e) {
     const emailEl = document.getElementById('fast-email');
     const email = emailEl ? emailEl.value.trim() : '';
     
-    if (!fecha || !hora || !cedula || !nombres || !apellidos || !telefono || !email) {
-        alert("Por favor completa todos los datos requeridos (incluyendo correo).");
+    if (!fecha || !hora) {
+        alert("Por favor selecciona una fecha y hora disponible en el calendario.");
+        const pill = document.getElementById('fast-selected-slot-pill');
+        if (pill) {
+            pill.style.border = '1.5px solid #ef4444';
+            pill.style.background = '#fef2f2';
+            pill.style.color = '#b91c1c';
+            setTimeout(() => {
+                if (!document.getElementById('fast-req-hora').value) {
+                    pill.style.border = '1.5px dashed #cbd5e1';
+                    pill.style.background = '#f8fafc';
+                    pill.style.color = '#64748b';
+                }
+            }, 3000);
+        }
+        return;
+    }
+    
+    if (!cedula || !nombres || !apellidos || !telefono || !email) {
+        alert("Por favor completa tus datos personales (cédula, nombres, apellidos, teléfono y correo).");
         return;
     }
     
@@ -19402,7 +19427,7 @@ async function submitFastBooking(e) {
         statusMsg.classList.remove('hide');
     } finally {
         isSubmittingFastBooking = false;
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Confirmar & Agendar Cita"; }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Agendar Cita"; }
     }
 }
 
@@ -37878,8 +37903,7 @@ function selectFastModality(val, profId, desc, label) {
 
     const reqHora = document.getElementById('fast-req-hora');
     if (reqHora) reqHora.value = '';
-    const details = document.getElementById('fast-patient-details');
-    if (details) details.classList.add('hide');
+    updateFastSelectedSlotPill('Selecciona una fecha y hora', false);
     const hoursCont = document.getElementById('fast-hours-container');
     if (hoursCont) hoursCont.classList.add('hide');
 
