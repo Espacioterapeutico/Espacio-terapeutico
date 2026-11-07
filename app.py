@@ -636,6 +636,10 @@ def send_webpush_notification(user_id=None, patient_id=None, title="Mi Consultor
         except Exception as vapid_err:
             print("Error al disparar VAPID en send_webpush_notification:", vapid_err)
 
+def send_push_notification_to_patient(patient_id, title="Mi Consultorio", body="Tienes una nueva notificación.", url="/"):
+    """Alias compatible para despachar notificaciones Push (FCM + WebPush) al consultante."""
+    return send_webpush_notification(patient_id=patient_id, title=title, body=body, url=url)
+
 def patient_has_active_app(patient_id, db=None):
     """
     Verifica si un paciente tiene la aplicacion instalada y activa

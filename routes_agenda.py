@@ -3491,6 +3491,33 @@ def admin_responder_solicitud_fuera_horario(req_id):
     link_agendar = f"{request.host_url.rstrip('/')}/agendar/{psic_slug}"
 
     paciente_id = sol.get('paciente_id')
+    if not paciente_id:
+        ced = (sol.get('cedula') or '').strip()
+        em = (sol.get('email') or '').strip()
+        if ced:
+            digits_ced = re.sub(r'\D', '', ced)
+            cursor.execute('''
+                SELECT id FROM pacientes 
+                WHERE (cedula = ? 
+                   OR LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ?
+                   OR LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', '')))
+                  AND (psicologo_id = ? OR psicologo_id IS NULL)
+                LIMIT 1
+            ''', (ced, digits_ced, ced, user_id))
+            p_found = cursor.fetchone()
+            if p_found:
+                paciente_id = p_found['id']
+        if not paciente_id and em:
+            cursor.execute("SELECT id FROM pacientes WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND (psicologo_id = ? OR psicologo_id IS NULL) LIMIT 1", (em, user_id))
+            p_found = cursor.fetchone()
+            if p_found:
+                paciente_id = p_found['id']
+        if paciente_id:
+            try:
+                cursor.execute("UPDATE solicitudes_fuera_horario SET paciente_id = ? WHERE id = ?", (paciente_id, req_id))
+                db.commit()
+            except Exception:
+                pass
     pac_telefono = sol.get('telefono', '').strip()
     clean_phone = re.sub(r'\D', '', pac_telefono)
     if clean_phone and not clean_phone.startswith(('58', '57', '1', '34', '54', '56', '51', '52', '593')):
@@ -3600,18 +3627,20 @@ def admin_responder_solicitud_fuera_horario(req_id):
                     paciente_id,
                     "¡Solicitud de Consulta Aceptada!",
                     f"Tu cita personalizada ({sol['tipo_consulta']}) para el {sol['fecha']} a las {sol['hora_inicio']} ha sido confirmada por {psicologo_nombre}.",
-                    link="/#citas"
+                    link="/#citas",
+                    icon="📅",
+                    tipo="solicitud_aceptada"
                 )
             except Exception as _pne:
                 print("[NOTIF_PACIENTE] Error:", _pne)
 
-        if tokens_fcm:
             try:
-                from app import send_push_notification_to_patient
-                send_push_notification_to_patient(
-                    paciente_id,
-                    "¡Solicitud Fuera de Jornada Aceptada!",
-                    f"Tu cita para el {sol['fecha']} a las {sol['hora_inicio']} ha sido aceptada por {psicologo_nombre}."
+                from app import send_webpush_notification
+                send_webpush_notification(
+                    patient_id=paciente_id,
+                    title="¡Solicitud Fuera de Jornada Aceptada!",
+                    body=f"Tu cita para el {sol['fecha']} a las {sol['hora_inicio']} ha sido aceptada por {psicologo_nombre}.",
+                    url="/#citas"
                 )
             except Exception as _pe:
                 print(f"[PUSH] Error al enviar push de aceptación: {_pe}")
@@ -3636,13 +3665,28 @@ def admin_responder_solicitud_fuera_horario(req_id):
         
         wa_text = raw_tmpl.replace('{nombre}', sol.get('nombres', '')).replace('{fecha}', sol.get('fecha', '')).replace('{hora}', sol.get('hora_inicio', '')).replace('{motivo}', motivo or '').replace('{psicologo}', psicologo_nombre).replace('{link_agendar}', link_agendar)
 
-        if tokens_fcm:
+        if paciente_id:
+            motivo_detalle = f" Motivo: {motivo}" if motivo else ""
             try:
-                from app import send_push_notification_to_patient
-                send_push_notification_to_patient(
+                from app import notify_patient
+                notify_patient(
                     paciente_id,
                     "Solicitud Fuera de Jornada",
-                    f"Tu solicitud para el {sol['fecha']} a las {sol['hora_inicio']} no pudo ser aceptada."
+                    f"Tu solicitud de consulta para el {sol['fecha']} a las {sol['hora_inicio']} no pudo ser aceptada por {psicologo_nombre}.{motivo_detalle}",
+                    link="/#agenda",
+                    icon="❌",
+                    tipo="solicitud_declinada"
+                )
+            except Exception as _pne:
+                print("[NOTIF_PACIENTE] Error al notificar rechazo en campanita:", _pne)
+
+            try:
+                from app import send_webpush_notification
+                send_webpush_notification(
+                    patient_id=paciente_id,
+                    title="Solicitud Fuera de Jornada",
+                    body=f"Tu solicitud para el {sol['fecha']} a las {sol['hora_inicio']} no pudo ser aceptada por {psicologo_nombre}.{motivo_detalle}",
+                    url="/#agenda"
                 )
             except Exception as _pe:
                 print(f"[PUSH] Error al enviar push de rechazo: {_pe}")
