@@ -184,7 +184,7 @@ def convert_time_vet_to_tz(fecha_str, hora_str, target_tz_str):
 def get_appointment_fee(cursor, patient_id, psicologo_id=None, modalidad=None):
     """Calcula la tarifa (monto y moneda) para una consulta."""
     monto = 0.0
-    moneda = '$'
+    moneda = 'USD'
     if patient_id:
         cursor.execute("SELECT costo_personalizado, moneda_personalizada FROM pacientes WHERE id = ?", (patient_id,))
         row = cursor.fetchone()
@@ -193,6 +193,24 @@ def get_appointment_fee(cursor, patient_id, psicologo_id=None, modalidad=None):
                 monto = float(row['costo_personalizado'])
             if row['moneda_personalizada']:
                 moneda = row['moneda_personalizada']
+    if (monto == 0.0 or not moneda or moneda == '$') and psicologo_id:
+        try:
+            cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+            u_r = cursor.fetchone()
+            if u_r and u_r['configuracion_horarios_visual']:
+                import json
+                vis = json.loads(u_r['configuracion_horarios_visual'])
+                for p in vis.get('perfiles', []):
+                    if modalidad and (p.get('nombre') == modalidad or p.get('modalidad') == modalidad):
+                        if p.get('costo') is not None and float(p.get('costo')) > 0:
+                            monto = float(p.get('costo'))
+                            moneda = p.get('moneda') or moneda
+                            break
+        except Exception:
+            pass
+    if monto == 0.0:
+        monto = 35.0
+        moneda = 'USD'
     return monto, moneda
 
 def get_db():
@@ -3004,11 +3022,12 @@ def fast_booking_check_cedula():
     db = get_db()
     cursor = db.cursor()
     import re
+    import json
     clean_cedula = cedula.strip()
     digits_cedula = re.sub(r'\D', '', clean_cedula)
     
     cursor.execute('''
-        SELECT nombres, apellidos, telefono, email 
+        SELECT id, nombres, apellidos, telefono, email, costo_personalizado, moneda_personalizada 
         FROM pacientes 
         WHERE (LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '') 
            OR (LOWER(REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, '.', ''), '-', ''), ' ', '')))
@@ -3017,15 +3036,77 @@ def fast_booking_check_cedula():
     ''', (digits_cedula, digits_cedula, clean_cedula, clean_cedula.lower()))
     
     row = cursor.fetchone()
+    
+    psicologo_id = data.get('psicologo_id')
+    slug = data.get('slug')
+    modalidad = data.get('modalidad', 'Online')
+
+    if not psicologo_id and slug:
+        from app import get_psychologist_by_id_or_slug
+        psych = get_psychologist_by_id_or_slug(cursor, slug)
+        if psych:
+            psicologo_id = psych['id']
+            
+    # Leer configuración de fuera de jornada del psicólogo
+    tipo_cobro = 'recargo'
+    recargo_monto = 5.0
+    recargo_moneda = 'USD'
+    fuera_perfiles = []
+    
+    if psicologo_id:
+        try:
+            cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psicologo_id,))
+            u_r = cursor.fetchone()
+            if u_r and u_r['configuracion_horarios_visual']:
+                cfg_v = json.loads(u_r['configuracion_horarios_visual'])
+                tipo_cobro = cfg_v.get('fuera_jornada_tipo_cobro', 'recargo')
+                recargo_monto = float(cfg_v.get('fuera_jornada_recargo_monto', 5.0))
+                recargo_moneda = cfg_v.get('fuera_jornada_recargo_moneda', 'USD')
+                fuera_perfiles = cfg_v.get('fuera_jornada_perfiles', [])
+        except Exception:
+            pass
+
+    paciente_id = row['id'] if row else 0
+    base_fee, moneda = get_appointment_fee(cursor, paciente_id, psicologo_id, modalidad)
+    
+    if tipo_cobro == 'recargo':
+        total_fee = base_fee + recargo_monto
+        res_payload = {
+            'tipo_cobro': 'recargo',
+            'base_fee': base_fee,
+            'recargo_monto': recargo_monto,
+            'total_fee': total_fee,
+            'moneda': moneda or recargo_moneda
+        }
+    else:
+        # Fijo
+        fixed_fee = base_fee
+        for fp in fuera_perfiles:
+            if fp.get('nombre') == modalidad or fp.get('modalidad') == modalidad:
+                fixed_fee = float(fp.get('costo') or fixed_fee)
+                moneda = fp.get('moneda') or moneda
+                break
+        res_payload = {
+            'tipo_cobro': 'fijo',
+            'base_fee': fixed_fee,
+            'total_fee': fixed_fee,
+            'moneda': moneda
+        }
+
     if row:
-        return jsonify({
+        res_payload.update({
             'found': True,
             'nombres': row['nombres'],
             'apellidos': row['apellidos'],
             'telefono': row['telefono'],
             'email': row['email']
         })
-    return jsonify({'found': False})
+    else:
+        res_payload.update({
+            'found': False
+        })
+        
+    return jsonify(res_payload)
 
 
 # ==============================================================================
@@ -3134,22 +3215,7 @@ def solicitar_fuera_horario(slug):
         except Exception:
             hora_fin_norm = hora_inicio_norm
             
-        # Obtener tarifa especial definida para este perfil en fuera_jornada_perfiles
-        fuera_perfiles = cfg_visual.get('fuera_jornada_perfiles', [])
-        monto = 0.0
-        moneda = 'USD'
-        profile_found = False
-        for fp in fuera_perfiles:
-            if fp.get('nombre') == tipo_consulta or fp.get('modalidad') == tipo_consulta:
-                monto = float(fp.get('costo') or 0.0)
-                moneda = fp.get('moneda') or 'USD'
-                profile_found = True
-                break
-                
-        if not profile_found and fuera_perfiles:
-            return jsonify({'error': f'La modalidad "{tipo_consulta}" no está habilitada para citas fuera de jornada.'}), 400
-        elif not profile_found:
-            monto, moneda = get_appointment_fee(cursor, 0, psicologo_id, tipo_consulta)
+        # La tarifa final se calculará después de identificar al paciente según el tipo de cobro configurado (recargo o fijo)
     
         # Validar contra Franjas Bloqueadas Fijas Fuera de Jornada (ej. trabajo en colegio)
         fuera_bloqueos = cfg_visual.get('fuera_jornada_bloqueos', [])
@@ -3277,6 +3343,33 @@ def solicitar_fuera_horario(slug):
             paciente_id = cursor.lastrowid
             db.commit()
     
+        # Calcular tarifa de la solicitud según el tipo de cobro configurado (recargo o fijo)
+        tipo_cobro = cfg_visual.get('fuera_jornada_tipo_cobro', 'recargo')
+        recargo_monto = float(cfg_visual.get('fuera_jornada_recargo_monto', 5.0))
+        recargo_moneda = cfg_visual.get('fuera_jornada_recargo_moneda', 'USD')
+        fuera_perfiles = cfg_visual.get('fuera_jornada_perfiles', [])
+
+        if tipo_cobro == 'recargo':
+            base_fee, base_moneda = get_appointment_fee(cursor, paciente_id, psicologo_id, tipo_consulta)
+            monto = base_fee + recargo_monto
+            moneda = base_moneda or recargo_moneda
+        else:
+            monto = 0.0
+            moneda = 'USD'
+            profile_found = False
+            for fp in fuera_perfiles:
+                if fp.get('nombre') == tipo_consulta or fp.get('modalidad') == tipo_consulta:
+                    monto = float(fp.get('costo') or 0.0)
+                    moneda = fp.get('moneda') or 'USD'
+                    profile_found = True
+                    break
+            if not profile_found and fuera_perfiles:
+                return jsonify({'error': f'La modalidad "{tipo_consulta}" no está habilitada para citas fuera de jornada.'}), 400
+            elif not profile_found:
+                base_fee, base_moneda = get_appointment_fee(cursor, paciente_id, psicologo_id, tipo_consulta)
+                monto = base_fee
+                moneda = base_moneda
+
         # Insertar en solicitudes_fuera_horario
         cursor.execute("""
             INSERT INTO solicitudes_fuera_horario (

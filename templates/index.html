@@ -1967,6 +1967,9 @@
                         <div id="fast-fuera-modality-buttons" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                             <!-- Botones generados dinámicamente -->
                         </div>
+                        <div id="fast-fuera-surcharge-info" class="hide" style="margin-top: 0.55rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: #fffbeb; border: 1.5px solid #fde68a; font-size: 0.82rem; color: #92400e; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                            <span>⚡</span> <span id="fast-fuera-surcharge-text">Se sumará un recargo a la tarifa de tu consulta.</span>
+                        </div>
                         <input type="hidden" id="fast-fuera-modalidad" required>
                     </div>
 
@@ -2003,6 +2006,7 @@
                         <div class="form-group mb-2">
                             <label for="fast-fuera-cedula" style="font-size: 0.82rem; font-weight: 600;">Cédula de Identidad *</label>
                             <input type="text" id="fast-fuera-cedula" required placeholder="Tu número de cédula" oninput="onFastFueraCedulaInput()" onblur="checkAndAutofillFueraPatient()">
+                            <div id="fast-fuera-tarifa-breakdown" class="hide" style="margin-top: 0.45rem; padding: 0.55rem 0.75rem; border-radius: 8px; font-size: 0.83rem; font-weight: 600; line-height: 1.4;"></div>
                         </div>
                         <div class="form-group mb-2">
                             <label for="fast-fuera-nombres" style="font-size: 0.82rem; font-weight: 600;">Nombres *</label>
@@ -5331,6 +5335,53 @@
                                                             Mensaje que verá el consultante antes de solicitar su cita (notificando el costo diferenciado y condiciones de aprobación):
                                                         </p>
                                                         <textarea id="avail-fuera-jornada-advertencia" rows="3" class="form-control" style="width: 100%; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 0.65rem; font-family: inherit; font-size: 0.88rem; background-color: var(--card-bg); color: var(--text-dark);" placeholder="Las sesiones fuera del horario habitual tienen una tarifa especial y están sujetas a aprobación según la disponibilidad del terapeuta."></textarea>
+                                                    </div>
+
+                                                    <!-- Modalidad de Cobro para Horarios Personalizados -->
+                                                    <div style="background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                                        <label style="font-size: 0.95rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.35rem;">
+                                                            💰 Modalidad de Cobro para Horarios Personalizados
+                                                        </label>
+                                                        <p class="text-secondary" style="font-size: 0.83rem; margin: 0 0 0.85rem 0;">
+                                                            Define cómo se calculará el costo de las citas que los pacientes soliciten fuera de tu jornada:
+                                                        </p>
+
+                                                        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                                                            <!-- Opción 1: Recargo adicional -->
+                                                            <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem; border-radius: 10px; border: 1.5px solid #fde68a; cursor: pointer; background: #fffbeb;" id="avail-fuera-tipo-recargo-card">
+                                                                <input type="radio" name="avail-fuera-tipo-cobro" id="avail-fuera-tipo-recargo" value="recargo" checked onchange="toggleFueraTipoCobroUI()" style="margin-top: 3px;">
+                                                                <div style="flex: 1;">
+                                                                    <div style="font-weight: 700; color: #92400e; font-size: 0.92rem;">
+                                                                        ⚡ Recargo adicional sobre tarifa habitual (Recomendado)
+                                                                    </div>
+                                                                    <p style="font-size: 0.8rem; color: #78350f; margin: 0.2rem 0 0.5rem 0; line-height: 1.4;">
+                                                                        Suma automáticamente un monto extra al costo acordado con cada paciente (o a la tarifa base si es nuevo consultante).
+                                                                    </p>
+                                                                    <div id="avail-fuera-recargo-inputs" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem;">
+                                                                        <span style="font-size: 0.82rem; font-weight: 700; color: #92400e;">Monto a recargar: +</span>
+                                                                        <input type="number" step="0.5" min="0" id="avail-fuera-recargo-monto" value="5.0" style="width: 85px; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1.5px solid #d97706; font-size: 0.88rem; font-weight: 700; text-align: center;">
+                                                                        <select id="avail-fuera-recargo-moneda" style="padding: 0.35rem 0.5rem; border-radius: 6px; border: 1.5px solid #d97706; font-size: 0.85rem; font-weight: 700;">
+                                                                            <option value="USD">USD ($)</option>
+                                                                            <option value="EUR">EUR (€)</option>
+                                                                            <option value="VES">VES (Bs.)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                            </label>
+
+                                                            <!-- Opción 2: Tarifa fija única -->
+                                                            <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem; border-radius: 10px; border: 1.5px solid var(--border-color); cursor: pointer;" id="avail-fuera-tipo-fijo-card">
+                                                                <input type="radio" name="avail-fuera-tipo-cobro" id="avail-fuera-tipo-fijo" value="fijo" onchange="toggleFueraTipoCobroUI()" style="margin-top: 3px;">
+                                                                <div style="flex: 1;">
+                                                                    <div style="font-weight: 700; color: var(--text-dark); font-size: 0.92rem;">
+                                                                        🏷️ Tarifa fija por modalidad
+                                                                    </div>
+                                                                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0.2rem 0 0 0; line-height: 1.4;">
+                                                                        Cobra una tarifa plana fija específica para cada modalidad, sin importar el costo individual del consultante.
+                                                                    </p>
+                                                                </div>
+                                                            </label>
+                                                        </div>
                                                     </div>
 
                                                     <!-- Perfiles de Horario Permitidos Fuera de Jornada -->

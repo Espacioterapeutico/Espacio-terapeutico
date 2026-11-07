@@ -11695,16 +11695,38 @@ async function loadAdminAvailability() {
         // Configuración Fuera de Jornada
         const fActivo = !!data.fuera_jornada_activo;
         const fAdv = data.fuera_jornada_advertencia || '';
+        const fTipoCobro = data.fuera_jornada_tipo_cobro || 'recargo';
+        const fRecargoMonto = (data.fuera_jornada_recargo_monto !== undefined && data.fuera_jornada_recargo_monto !== null) ? data.fuera_jornada_recargo_monto : 5.0;
+        const fRecargoMoneda = data.fuera_jornada_recargo_moneda || 'USD';
         const fPerfiles = Array.isArray(data.fuera_jornada_perfiles) ? data.fuera_jornada_perfiles : [];
-
         const fBloqueos = Array.isArray(data.fuera_jornada_bloqueos) ? data.fuera_jornada_bloqueos : [];
 
         window.fueraJornadaConfig = {
             activo: fActivo,
             advertencia: fAdv,
+            tipo_cobro: fTipoCobro,
+            recargo_monto: fRecargoMonto,
+            recargo_moneda: fRecargoMoneda,
             perfiles: fPerfiles,
             bloqueos: fBloqueos
         };
+
+        const rRecargo = document.getElementById('avail-fuera-tipo-recargo');
+        const rFijo = document.getElementById('avail-fuera-tipo-fijo');
+        if (rRecargo && rFijo) {
+            if (fTipoCobro === 'fijo') {
+                rFijo.checked = true;
+            } else {
+                rRecargo.checked = true;
+            }
+        }
+        const elRecMonto = document.getElementById('avail-fuera-recargo-monto');
+        if (elRecMonto) elRecMonto.value = fRecargoMonto;
+        const elRecMoneda = document.getElementById('avail-fuera-recargo-moneda');
+        if (elRecMoneda) elRecMoneda.value = fRecargoMoneda;
+        if (typeof toggleFueraTipoCobroUI === 'function') {
+            toggleFueraTipoCobroUI();
+        }
 
         const chkFuera = document.getElementById('avail-fuera-jornada-activo');
         if (chkFuera) chkFuera.checked = fActivo;
@@ -12129,6 +12151,9 @@ async function handleSaveAvailability(e) {
     // Configuración Fuera de Jornada
     const fuera_jornada_activo = document.getElementById('avail-fuera-jornada-activo')?.checked ? 1 : 0;
     const fuera_jornada_advertencia = document.getElementById('avail-fuera-jornada-advertencia')?.value || '';
+    const fuera_jornada_tipo_cobro = document.getElementById('avail-fuera-tipo-fijo')?.checked ? 'fijo' : 'recargo';
+    const fuera_jornada_recargo_monto = parseFloat(document.getElementById('avail-fuera-recargo-monto')?.value) || 5.0;
+    const fuera_jornada_recargo_moneda = document.getElementById('avail-fuera-recargo-moneda')?.value || 'USD';
     let fuera_jornada_perfiles = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.perfiles)) ? [...window.fueraJornadaConfig.perfiles] : [];
     const fuera_jornada_bloqueos = (window.fueraJornadaConfig && Array.isArray(window.fueraJornadaConfig.bloqueos)) ? window.fueraJornadaConfig.bloqueos : [];
 
@@ -12215,6 +12240,9 @@ async function handleSaveAvailability(e) {
                 politica_cancelacion_valor,
                 fuera_jornada_activo,
                 fuera_jornada_advertencia,
+                fuera_jornada_tipo_cobro,
+                fuera_jornada_recargo_monto,
+                fuera_jornada_recargo_moneda,
                 fuera_jornada_perfiles,
                 fuera_jornada_bloqueos
             })
@@ -37351,6 +37379,37 @@ function toggleFueraJornadaOptions() {
 }
 window.toggleFueraJornadaOptions = toggleFueraJornadaOptions;
 
+function toggleFueraTipoCobroUI() {
+    const isRecargo = document.getElementById('avail-fuera-tipo-recargo')?.checked;
+    const recCard = document.getElementById('avail-fuera-tipo-recargo-card');
+    const fijoCard = document.getElementById('avail-fuera-tipo-fijo-card');
+    const recInputs = document.getElementById('avail-fuera-recargo-inputs');
+    
+    if (isRecargo) {
+        if (recCard) {
+            recCard.style.borderColor = '#fde68a';
+            recCard.style.background = '#fffbeb';
+        }
+        if (fijoCard) {
+            fijoCard.style.borderColor = 'var(--border-color)';
+            fijoCard.style.background = 'white';
+        }
+        if (recInputs) recInputs.style.display = 'flex';
+    } else {
+        if (recCard) {
+            recCard.style.borderColor = 'var(--border-color)';
+            recCard.style.background = 'white';
+        }
+        if (fijoCard) {
+            fijoCard.style.borderColor = '#818cf8';
+            fijoCard.style.background = '#f5f3ff';
+        }
+        if (recInputs) recInputs.style.display = 'none';
+    }
+}
+window.toggleFueraTipoCobroUI = toggleFueraTipoCobroUI;
+
+
 function populateFueraJornadaProfileSelector(perfiles) {
     const sel = document.getElementById('avail-fuera-perfil-select');
     if (!sel) return;
@@ -37818,6 +37877,21 @@ function renderFastFueraModalityButtons(modalities, therapistData) {
         if (inputVal) inputVal.value = selectedVal;
     }
 
+    const tipoCobro = (tData && tData.fuera_jornada_tipo_cobro) || 'recargo';
+    const recargoMonto = (tData && tData.fuera_jornada_recargo_monto !== undefined) ? tData.fuera_jornada_recargo_monto : 5.0;
+    const recargoMoneda = (tData && tData.fuera_jornada_recargo_moneda) || 'USD';
+
+    const surchargeInfo = document.getElementById('fast-fuera-surcharge-info');
+    const surchargeText = document.getElementById('fast-fuera-surcharge-text');
+    if (surchargeInfo && surchargeText) {
+        if (tipoCobro === 'recargo') {
+            surchargeText.textContent = `Se sumará un recargo de +${recargoMonto} ${recargoMoneda} a la tarifa habitual de tu consulta.`;
+            surchargeInfo.classList.remove('hide');
+        } else {
+            surchargeInfo.classList.add('hide');
+        }
+    }
+
     allowedPerfiles.forEach(p => {
         const nom = p.nombre || p.modalidad;
         const costo = p.costo !== undefined ? p.costo : 35;
@@ -37826,6 +37900,10 @@ function renderFastFueraModalityButtons(modalities, therapistData) {
 
         let icon = '🌐';
         if (nom.toLowerCase().includes('presencial')) icon = '🏢';
+
+        const badgeLabel = (tipoCobro === 'recargo') 
+            ? `+${recargoMonto} ${recargoMoneda}`
+            : `${costo} ${moneda}`;
 
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -37855,7 +37933,7 @@ function renderFastFueraModalityButtons(modalities, therapistData) {
             btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)';
         }
 
-        btn.innerHTML = `<span>${icon} ${nom}</span> <span style="font-size: 0.8rem; opacity: 0.95; background: ${isActive ? 'rgba(255,255,255,0.25)' : '#fef3c7'}; color: ${isActive ? 'white' : '#92400e'}; padding: 2px 6px; border-radius: 4px;">${costo} ${moneda}</span>`;
+        btn.innerHTML = `<span>${icon} ${nom}</span> <span style="font-size: 0.8rem; opacity: 0.95; background: ${isActive ? 'rgba(255,255,255,0.25)' : '#fef3c7'}; color: ${isActive ? 'white' : '#92400e'}; padding: 2px 6px; border-radius: 4px;">${badgeLabel}</span>`;
         btn.onclick = () => selectFastFueraModality(nom);
         container.appendChild(btn);
     });
@@ -37868,18 +37946,32 @@ function selectFastFueraModality(val) {
     document.querySelectorAll('.fast-fuera-mod-btn').forEach(btn => {
         const isAct = btn.dataset.val === val;
         btn.classList.toggle('active', isAct);
+        const badge = btn.querySelector('span:last-child');
         if (isAct) {
             btn.style.background = '#b45309';
             btn.style.color = '#ffffff';
             btn.style.border = '2px solid #b45309';
             btn.style.boxShadow = '0 4px 10px rgba(180,83,9,0.25)';
+            if (badge) {
+                badge.style.background = 'rgba(255,255,255,0.25)';
+                badge.style.color = '#ffffff';
+            }
         } else {
             btn.style.background = '#ffffff';
             btn.style.color = '#1e293b';
             btn.style.border = '1.5px solid var(--border-color, #cbd5e1)';
             btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)';
+            if (badge) {
+                badge.style.background = '#fef3c7';
+                badge.style.color = '#92400e';
+            }
         }
     });
+    if (typeof updateFueraDurationPreview === 'function') updateFueraDurationPreview();
+    const currCedula = document.getElementById('fast-fuera-cedula')?.value.trim();
+    if (currCedula && currCedula.length >= 5 && typeof checkAndAutofillFueraPatient === 'function') {
+        checkAndAutofillFueraPatient(currCedula);
+    }
 }
 window.selectFastFueraModality = selectFastFueraModality;
 
@@ -37971,10 +38063,21 @@ async function checkAndAutofillFueraPatient(cedulaParam) {
     const cedula = cedulaParam || document.getElementById('fast-fuera-cedula')?.value.trim();
     if (!cedula || cedula.length < 5) return;
     try {
+        const modalidad = document.getElementById('fast-fuera-modalidad')?.value || 'Online';
+        const tData = window.currentTherapistPublicData || {};
+        const psicologo_id = tData.id || tData.psicologo_id || window.currentPatientPsicologoId || null;
+        let slug = (window.fastBookingTherapistSlug || window.currentTherapistSlug || window.therapistSlug || '');
+        if (!slug) {
+            const p = window.location.pathname;
+            if (p.startsWith('/agendar/')) slug = p.replace('/agendar/', '');
+            else if (p.startsWith('/psic.')) slug = p.replace('/psic.', '');
+            else if (p.startsWith('/psicologo/')) slug = p.replace('/psicologo/', '');
+        }
+
         const res = await fetch('/api/fast-booking/check-cedula', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cedula })
+            body: JSON.stringify({ cedula, modalidad, psicologo_id, slug })
         });
         if (res.ok) {
             const data = await res.json();
@@ -37984,6 +38087,7 @@ async function checkAndAutofillFueraPatient(cedulaParam) {
             const em = document.getElementById('fast-fuera-email');
             const cedLabel = document.querySelector('label[for="fast-fuera-cedula"]');
             let badge = document.getElementById('fast-fuera-patient-verified-badge');
+            const breakdownBox = document.getElementById('fast-fuera-tarifa-breakdown');
 
             if (data.found) {
                 if (nom) {
@@ -38011,10 +38115,72 @@ async function checkAndAutofillFueraPatient(cedulaParam) {
                     badge.textContent = '✓ Consultante Registrado';
                     cedLabel.appendChild(badge);
                 }
+
+                if (breakdownBox) {
+                    breakdownBox.classList.remove('hide');
+                    if (data.tipo_cobro === 'recargo') {
+                        breakdownBox.style.background = '#f0fdf4';
+                        breakdownBox.style.border = '1.5px solid #86efac';
+                        breakdownBox.style.color = '#166534';
+                        breakdownBox.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+                                <span>✓ Consultante Registrado</span>
+                                <span style="font-weight: 800; font-size: 0.95rem;">Total: ${data.total_fee} ${data.moneda}</span>
+                            </div>
+                            <div style="font-size: 0.78rem; font-weight: normal; margin-top: 3px; color: #15803d;">
+                                Tarifa habitual (${data.base_fee} ${data.moneda}) + Recargo espacio personalizado (+${data.recargo_monto} ${data.moneda})
+                            </div>
+                        `;
+                    } else {
+                        breakdownBox.style.background = '#f0fdf4';
+                        breakdownBox.style.border = '1.5px solid #86efac';
+                        breakdownBox.style.color = '#166534';
+                        breakdownBox.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+                                <span>✓ Consultante Registrado</span>
+                                <span style="font-weight: 800; font-size: 0.95rem;">Total: ${data.total_fee} ${data.moneda}</span>
+                            </div>
+                            <div style="font-size: 0.78rem; font-weight: normal; margin-top: 3px; color: #15803d;">
+                                Tarifa acordada para ${modalidad}
+                            </div>
+                        `;
+                    }
+                }
             } else {
                 if (badge) badge.remove();
                 if (nom) { nom.readOnly = false; nom.style.backgroundColor = ''; }
                 if (ape) { ape.readOnly = false; ape.style.backgroundColor = ''; }
+
+                if (breakdownBox) {
+                    breakdownBox.classList.remove('hide');
+                    if (data.tipo_cobro === 'recargo') {
+                        breakdownBox.style.background = '#eff6ff';
+                        breakdownBox.style.border = '1.5px solid #bfdbfe';
+                        breakdownBox.style.color = '#1e40af';
+                        breakdownBox.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+                                <span>👋 Nuevo Consultante</span>
+                                <span style="font-weight: 800; font-size: 0.95rem;">Total: ${data.total_fee} ${data.moneda}</span>
+                            </div>
+                            <div style="font-size: 0.78rem; font-weight: normal; margin-top: 3px; color: #1d4ed8;">
+                                Tarifa base (${data.base_fee} ${data.moneda}) + Recargo espacio personalizado (+${data.recargo_monto} ${data.moneda})
+                            </div>
+                        `;
+                    } else {
+                        breakdownBox.style.background = '#eff6ff';
+                        breakdownBox.style.border = '1.5px solid #bfdbfe';
+                        breakdownBox.style.color = '#1e40af';
+                        breakdownBox.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+                                <span>👋 Nuevo Consultante</span>
+                                <span style="font-weight: 800; font-size: 0.95rem;">Total: ${data.total_fee} ${data.moneda}</span>
+                            </div>
+                            <div style="font-size: 0.78rem; font-weight: normal; margin-top: 3px; color: #1d4ed8;">
+                                Tarifa fija para ${modalidad}
+                            </div>
+                        `;
+                    }
+                }
             }
         }
     } catch (e) {
@@ -38029,6 +38195,11 @@ function onFastFueraCedulaInput() {
     if (!cedula || cedula.length < 5) {
         const badge = document.getElementById('fast-fuera-patient-verified-badge');
         if (badge) badge.remove();
+        const breakdownBox = document.getElementById('fast-fuera-tarifa-breakdown');
+        if (breakdownBox) {
+            breakdownBox.classList.add('hide');
+            breakdownBox.innerHTML = '';
+        }
         const nom = document.getElementById('fast-fuera-nombres');
         const ape = document.getElementById('fast-fuera-apellidos');
         if (nom) { nom.readOnly = false; nom.style.backgroundColor = ''; }
@@ -38037,7 +38208,7 @@ function onFastFueraCedulaInput() {
     }
     fueraCedulaDebounceTimer = setTimeout(() => {
         checkAndAutofillFueraPatient(cedula);
-    }, 400);
+    }, 350);
 }
 window.onFastFueraCedulaInput = onFastFueraCedulaInput;
 
@@ -38061,10 +38232,18 @@ async function submitFastFueraJornada(e) {
     const fecha = document.getElementById('fast-fuera-fecha')?.value;
     const hora = document.getElementById('fast-fuera-hora')?.value;
     const cedula = document.getElementById('fast-fuera-cedula')?.value.trim();
-    const nombres = document.getElementById('fast-fuera-nombres')?.value.trim();
-    const apellidos = document.getElementById('fast-fuera-apellidos')?.value.trim();
-    const telefono = document.getElementById('fast-fuera-telefono')?.value.trim();
-    const email = document.getElementById('fast-fuera-email')?.value.trim();
+    let nombres = document.getElementById('fast-fuera-nombres')?.value.trim();
+    let apellidos = document.getElementById('fast-fuera-apellidos')?.value.trim();
+    let telefono = document.getElementById('fast-fuera-telefono')?.value.trim();
+    let email = document.getElementById('fast-fuera-email')?.value.trim();
+
+    if (!nombres && cedula && cedula.length >= 5) {
+        await checkAndAutofillFueraPatient(cedula);
+        nombres = document.getElementById('fast-fuera-nombres')?.value.trim();
+        apellidos = document.getElementById('fast-fuera-apellidos')?.value.trim();
+        telefono = document.getElementById('fast-fuera-telefono')?.value.trim();
+        email = document.getElementById('fast-fuera-email')?.value.trim();
+    }
 
     if (!modalidad || !fecha || !hora || !cedula || !nombres || !telefono) {
         setInlineError("Por favor completa todos los campos requeridos (modalidad, fecha, hora, cédula, nombres y teléfono).");

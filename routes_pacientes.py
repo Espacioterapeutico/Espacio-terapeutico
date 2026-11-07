@@ -2286,16 +2286,29 @@ def get_patient_portal_data_dict(patient_id):
     try:
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='solicitudes_fuera_horario'")
         if cursor.fetchone():
+            import re
             p_ced = (p_dict.get('cedula') or '').strip()
+            digits_ced = re.sub(r'\D', '', p_ced)
             p_em = (p_dict.get('email') or '').strip()
             cursor.execute("""
-                SELECT id, fecha, hora_inicio as hora, tipo_consulta, monto, moneda, estado, duracion_minutos
+                SELECT id, paciente_id, fecha, hora_inicio as hora, tipo_consulta, monto, moneda, estado, duracion_minutos
                 FROM solicitudes_fuera_horario
-                WHERE (paciente_id = ? OR (cedula = ? AND ? != '') OR (email = ? AND ? != ''))
+                WHERE (paciente_id = ? 
+                   OR (cedula = ? AND ? != '')
+                   OR (LOWER(REPLACE(REPLACE(REPLACE(REPLACE(cedula, 'V-', ''), 'E-', ''), '.', ''), ' ', '')) = ? AND ? != '')
+                   OR (LOWER(TRIM(email)) = LOWER(TRIM(?)) AND ? != ''))
                   AND estado = 'Pendiente'
                 ORDER BY fecha ASC, hora_inicio ASC
-            """, (patient_id, p_ced, p_ced, p_em, p_em))
-            solicitudes_pendientes = [dict(r) for r in cursor.fetchall()]
+            """, (patient_id, p_ced, p_ced, digits_ced, digits_ced, p_em, p_em))
+            rows = cursor.fetchall()
+            solicitudes_pendientes = [dict(r) for r in rows]
+            for r in rows:
+                if not r['paciente_id'] or r['paciente_id'] != patient_id:
+                    try:
+                        cursor.execute("UPDATE solicitudes_fuera_horario SET paciente_id = ? WHERE id = ?", (patient_id, r['id']))
+                        db.commit()
+                    except Exception:
+                        pass
     except Exception as _fe:
         print("[PORTAL] Error consultando solicitudes pendientes:", _fe)
 
@@ -2310,6 +2323,9 @@ def get_patient_portal_data_dict(patient_id):
         'solicitudes_pendientes': solicitudes_pendientes,
         'fuera_jornada_activo': fuera_activo,
         'fuera_jornada_advertencia': fuera_adv,
+        'fuera_jornada_tipo_cobro': config.get('fuera_jornada_tipo_cobro', 'recargo') if isinstance(config, dict) else 'recargo',
+        'fuera_jornada_recargo_monto': float(config.get('fuera_jornada_recargo_monto', 5.0)) if isinstance(config, dict) else 5.0,
+        'fuera_jornada_recargo_moneda': config.get('fuera_jornada_recargo_moneda', 'USD') if isinstance(config, dict) else 'USD',
         'fuera_jornada_perfiles': fuera_perfiles,
         'compartido': compartido,
         'finanzas': finanzas

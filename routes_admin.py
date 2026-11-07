@@ -3128,6 +3128,9 @@ def serialize_public_therapist_dict(psych):
         'url_registro': f"/registro/{clean_slug}",
         'fuera_jornada_activo': fuera_jornada_activo,
         'fuera_jornada_advertencia': fuera_jornada_advertencia,
+        'fuera_jornada_tipo_cobro': cfg_vis.get('fuera_jornada_tipo_cobro', 'recargo'),
+        'fuera_jornada_recargo_monto': float(cfg_vis.get('fuera_jornada_recargo_monto', 5.0)),
+        'fuera_jornada_recargo_moneda': cfg_vis.get('fuera_jornada_recargo_moneda', 'USD'),
         'fuera_jornada_perfiles': fuera_jornada_perfiles,
         'fuera_jornada_bloqueos': fuera_jornada_bloqueos,
         'duracion_default': duracion_default
