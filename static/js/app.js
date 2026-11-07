@@ -19217,7 +19217,18 @@ async function fetchFastAvailableHours(dateStr) {
                         }
                     }
                     
-                    document.getElementById('fast-patient-details').classList.remove('hide');
+                    // Se recoge la lista de horas y se abre el formulario de datos
+                    const hoursCont = document.getElementById('fast-hours-container');
+                    if (hoursCont) hoursCont.classList.add('hide');
+                    
+                    const details = document.getElementById('fast-patient-details');
+                    if (details) details.classList.remove('hide');
+                    
+                    const pillTxt = document.getElementById('fast-selected-slot-text');
+                    if (pillTxt) {
+                        const hLabel = slot.hourFormatted || slot.valHour || '';
+                        pillTxt.textContent = `${slot.valFecha} · ${hLabel}`;
+                    }
                 };
                 hoursGrid.appendChild(btn);
             });
@@ -19230,6 +19241,15 @@ async function fetchFastAvailableHours(dateStr) {
 }
 
 let isSubmittingFastBooking = false;
+
+function backToFastHours() {
+    const hoursCont = document.getElementById('fast-hours-container');
+    const details = document.getElementById('fast-patient-details');
+    if (hoursCont) hoursCont.classList.remove('hide');
+    if (details) details.classList.add('hide');
+}
+window.backToFastHours = backToFastHours;
+
 async function submitFastBooking(e) {
     e.preventDefault();
     if (isSubmittingFastBooking) return;

@@ -1850,26 +1850,75 @@
         .fast-booking-card {
             background-color: var(--card-bg, #ffffff);
             width: 100%;
-            max-width: 960px;
+            max-width: 1080px;
             border-radius: 22px;
             box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05);
             border: 1px solid var(--border-color, #e2e8f0);
-            padding: 2.25rem 2.5rem;
+            padding: 2rem 2.25rem;
             position: relative;
             margin: 0.5rem auto 2.5rem auto;
             box-sizing: border-box;
             animation: slideUp 0.3s ease;
         }
 
-        .fast-booking-grid {
+        .fast-booking-layout-3col {
             display: grid;
-            grid-template-columns: 1.08fr 0.92fr;
-            gap: 2rem;
+            grid-template-columns: 280px 360px 1fr;
+            gap: 1.75rem;
             align-items: start;
         }
 
-        .fast-booking-col {
+        .fast-modalidad-btn {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            padding: 0.5rem 0.75rem !important;
+            font-size: 0.82rem !important;
+            justify-content: flex-start !important;
+        }
+
+        .btn-fast-hour {
+            width: 100% !important;
+            padding: 0.55rem 0.85rem !important;
+            font-size: 0.84rem !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            border: 1.5px solid #10b981 !important;
+            background-color: #ecfdf5 !important;
+            color: #047857 !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            transition: all 0.2s ease !important;
+        }
+        .btn-fast-hour:hover {
+            background-color: #10b981 !important;
+            color: white !important;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25) !important;
+        }
+
+        .fast-col-profile {
+            border-right: 1.5px solid var(--border-color, #e2e8f0);
+            padding-right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .fast-col-calendar {
+            border-right: 1.5px solid var(--border-color, #e2e8f0);
+            padding-right: 1.5rem;
+        }
+
+        .fast-col-details {
             min-width: 0;
+        }
+
+        .fast-booking-grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.75rem;
+            align-items: start;
         }
 
         .fast-right-placeholder {
@@ -1899,8 +1948,8 @@
             color: var(--text-dark, #1e293b);
         }
 
-        /* En teléfonos y tablets (ancho <= 768px): formato vertical de 1 columna con márgenes móviles */
-        @media (max-width: 768px) {
+        /* En teléfonos y tablets (ancho <= 850px): formato vertical de 1 columna con márgenes móviles */
+        @media (max-width: 850px) {
             .fast-booking-overlay {
                 padding: 1.5rem 0.85rem 3.5rem 0.85rem !important;
                 align-items: flex-start !important;
@@ -1913,9 +1962,31 @@
                 width: 100% !important;
                 box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.3) !important;
             }
-            .fast-booking-grid {
+            .fast-booking-layout-3col {
                 grid-template-columns: 1fr !important;
-                gap: 0.75rem !important;
+                gap: 1.25rem !important;
+            }
+            .fast-col-profile {
+                border-right: none !important;
+                padding-right: 0 !important;
+                border-bottom: 1.5px solid var(--border-color, #e2e8f0);
+                padding-bottom: 1.25rem;
+            }
+            #fast-modalidad-buttons-container {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 0.4rem !important;
+            }
+            .fast-modalidad-btn {
+                justify-content: center !important;
+            }
+            .fast-col-calendar {
+                border-right: none !important;
+                padding-right: 0 !important;
+            }
+            .fast-booking-grid-2col {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
             }
             .fast-right-placeholder {
                 display: none !important;
@@ -1947,153 +2018,167 @@
         <div class="fast-booking-card auth-card">
             <button type="button" onclick="closeFastBookingScreen()" class="fast-booking-close-btn" title="Cerrar">✕</button>
 
-            <!-- VISTA 1: AGENDAMIENTO REGULAR -->
+            <!-- VISTA 1: AGENDAMIENTO REGULAR (LAYOUT DE 3 PANELES ESTILO CALENDLY EN PC) -->
             <div id="fast-view-regular">
-                <div class="auth-header" style="margin-bottom: 1.25rem; text-align: center;">
-                    <div class="logo-circle" style="overflow: hidden; width: 68px; height: 68px; margin: 0 auto 0.6rem auto; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid white;">
-                        <img id="fast-booking-avatar" src="/static/logo.png" style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    <h2 id="fast-booking-therapist-name" style="font-size: 1.15rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.2rem 0;">Cargando terapeuta...</h2>
-                    <h1 style="font-size: 1.45rem; font-family: var(--font-title); font-weight: 800; color: var(--primary-color); margin: 0 0 0.4rem 0;">Agenda tu Consulta</h1>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Selecciona la modalidad de tu preferencia y un día disponible para agendar:</p>
-                </div>
-
                 <input type="hidden" id="fast-reprogramar-token" value="">
                 <div id="fast-reprogramar-banner" class="hide" style="background: #e0f2fe; border: 1.5px solid #7dd3fc; color: #0369a1; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; font-weight: 500;"></div>
 
-                <!-- Selector de Zona Horaria (Compacto) -->
-                <div id="fast-tz-banner" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #38bdf8; padding: 0.75rem 0.95rem; border-radius: 10px; margin-bottom: 1.25rem;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem;">
-                        <span style="font-size: 0.82rem; font-weight: 800; color: #0369a1; display: inline-flex; align-items: center; gap: 6px;">
-                            🌐 Zona Horaria:
-                        </span>
-                    </div>
-                    <select id="fast-tz-select" onchange="onFastTimeZoneChange()" style="width: 100%; background: #ffffff; border: 1.5px solid #0284c7; border-radius: 6px; padding: 0.5rem 0.75rem; font-weight: 700; color: #0369a1; font-size: 0.85rem; cursor: pointer;">
-                        <option value="America/Caracas">🇻🇪 Venezuela (GMT-4 / Hora del Terapeuta)</option>
-                        <option value="America/Bogota">🇨🇴 Colombia (GMT-5)</option>
-                        <option value="America/Lima">🇵🇪 Perú (GMT-5)</option>
-                        <option value="America/Santiago">🇨🇱 Chile (GMT-4)</option>
-                        <option value="America/Argentina/Buenos_Aires">🇦🇷 Argentina (GMT-3)</option>
-                        <option value="America/Mexico_City">🇲🇽 México (GMT-6)</option>
-                        <option value="America/New_York">🇺🇸 EE.UU. Este / Miami (GMT-4)</option>
-                        <option value="America/Chicago">🇺🇸 EE.UU. Centro (GMT-5)</option>
-                        <option value="America/Los_Angeles">🇺🇸 EE.UU. Pacífico (GMT-7)</option>
-                        <option value="Europe/Madrid">🇪🇸 España / Europa (GMT+2)</option>
-                        <option value="Europe/Lisbon">🇵🇹 Portugal (GMT+1)</option>
-                        <option value="America/Santo_Domingo">🇩🇴 Rep. Dominicana (GMT-4)</option>
-                        <option value="America/Guayaquil">🇪🇨 Ecuador (GMT-5)</option>
-                        <option value="America/Panama">🇵🇦 Panamá (GMT-5)</option>
-                        <option value="America/Costa_Rica">🇨🇷 Costa Rica (GMT-6)</option>
-                        <option value="America/Montevideo">🇺🇾 Uruguay (GMT-3)</option>
-                    </select>
-                </div>
-
                 <form id="fast-booking-form" onsubmit="submitFastBooking(event)">
-                    <div class="fast-booking-grid">
-                        <!-- COLUMNA IZQUIERDA: Modalidad + Calendario + Fuera de Jornada -->
-                        <div class="fast-booking-col">
-                            <!-- 1. BOTONES DE MODALIDAD (Reemplaza al desplegable) -->
-                            <div class="form-group mb-3">
-                                <label style="font-size: 0.9rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem;">
+                    <div class="fast-booking-layout-3col">
+                        <!-- PANEL 1 (IZQUIERDA): Especialista, Título, Zona Horaria, Modalidades y Enlaces -->
+                        <div class="fast-col-profile">
+                            <div style="text-align: center; margin-bottom: 0.5rem;">
+                                <div class="logo-circle" style="overflow: hidden; width: 62px; height: 62px; margin: 0 auto 0.45rem auto; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid white;">
+                                    <img id="fast-booking-avatar" src="/static/logo.png" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                <h2 id="fast-booking-therapist-name" style="font-size: 1.05rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.15rem 0;">Cargando terapeuta...</h2>
+                                <h1 style="font-size: 1.3rem; font-family: var(--font-title); font-weight: 800; color: var(--primary-color); margin: 0 0 0.25rem 0;">Agenda tu Consulta</h1>
+                                <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0;">Selecciona modalidad, fecha y hora:</p>
+                            </div>
+
+                            <!-- Selector de Zona Horaria (Compacto) -->
+                            <div id="fast-tz-banner" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #38bdf8; padding: 0.5rem 0.65rem; border-radius: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; margin-bottom: 0.2rem;">
+                                    <span style="font-size: 0.76rem; font-weight: 800; color: #0369a1; display: inline-flex; align-items: center; gap: 4px;">
+                                        🌐 Zona Horaria:
+                                    </span>
+                                </div>
+                                <select id="fast-tz-select" onchange="onFastTimeZoneChange()" style="width: 100%; background: #ffffff; border: 1.5px solid #0284c7; border-radius: 6px; padding: 0.35rem 0.55rem; font-weight: 700; color: #0369a1; font-size: 0.8rem; cursor: pointer;">
+                                    <option value="America/Caracas">🇻🇪 Venezuela (GMT-4 / Hora del Terapeuta)</option>
+                                    <option value="America/Bogota">🇨🇴 Colombia (GMT-5)</option>
+                                    <option value="America/Lima">🇵🇪 Perú (GMT-5)</option>
+                                    <option value="America/Santiago">🇨🇱 Chile (GMT-4)</option>
+                                    <option value="America/Argentina/Buenos_Aires">🇦🇷 Argentina (GMT-3)</option>
+                                    <option value="America/Mexico_City">🇲🇽 México (GMT-6)</option>
+                                    <option value="America/New_York">🇺🇸 EE.UU. Este / Miami (GMT-4)</option>
+                                    <option value="America/Chicago">🇺🇸 EE.UU. Centro (GMT-5)</option>
+                                    <option value="America/Los_Angeles">🇺🇸 EE.UU. Pacífico (GMT-7)</option>
+                                    <option value="Europe/Madrid">🇪🇸 España / Europa (GMT+2)</option>
+                                    <option value="Europe/Lisbon">🇵🇹 Portugal (GMT+1)</option>
+                                    <option value="America/Santo_Domingo">🇩🇴 Rep. Dominicana (GMT-4)</option>
+                                    <option value="America/Guayaquil">🇪🇨 Ecuador (GMT-5)</option>
+                                    <option value="America/Panama">🇵🇦 Panamá (GMT-5)</option>
+                                    <option value="America/Costa_Rica">🇨🇷 Costa Rica (GMT-6)</option>
+                                    <option value="America/Montevideo">🇺🇾 Uruguay (GMT-3)</option>
+                                </select>
+                            </div>
+
+                            <!-- 1. BOTONES DE MODALIDAD -->
+                            <div>
+                                <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.4rem;">
                                     1. Modalidad de Consulta *
                                 </label>
-                                <!-- Grid de botones dinámicos -->
-                                <div id="fast-modalidad-buttons-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <div id="fast-modalidad-buttons-container" style="display: flex; flex-direction: column; gap: 0.35rem;">
                                     <!-- Botones generados dinámicamente -->
                                 </div>
                                 <input type="hidden" id="fast-modalidad" value="Online" required>
                                 <input type="hidden" id="fast-modalidad-profile-id" value="">
 
                                 <!-- Caja de descripción de la modalidad -->
-                                <div id="fast-modalidad-desc-box" class="hide" style="margin-top: 0.65rem; padding: 0.65rem 0.9rem; border-radius: 8px; background: rgba(152,75,128,0.06); border: 1px solid rgba(152,75,128,0.2); font-size: 0.85rem; line-height: 1.45; display: flex; align-items: flex-start; gap: 0.5rem;">
-                                    <span style="font-size: 1rem; line-height: 1;">ℹ️</span>
+                                <div id="fast-modalidad-desc-box" class="hide" style="margin-top: 0.45rem; padding: 0.45rem 0.65rem; border-radius: 8px; background: rgba(152,75,128,0.06); border: 1px solid rgba(152,75,128,0.2); font-size: 0.78rem; line-height: 1.4; display: flex; align-items: flex-start; gap: 0.4rem;">
+                                    <span style="font-size: 0.9rem; line-height: 1;">ℹ️</span>
                                     <div>
-                                        <strong id="fast-modalidad-desc-title" style="color: var(--primary-color); display: block; margin-bottom: 0.15rem;"></strong>
-                                        <span id="fast-modalidad-desc-text" style="color: #475569;"></span>
+                                        <strong id="fast-modalidad-desc-title" style="color: var(--primary-color); display: block; margin-bottom: 0.1rem; font-size: 0.8rem;"></strong>
+                                        <span id="fast-modalidad-desc-text" style="color: #475569; font-size: 0.76rem;"></span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- 2. CALENDARIO INTERACTIVO -->
-                            <div class="form-group mb-3">
-                                <label style="font-size: 0.9rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem;">
-                                    2. Selecciona un día disponible (con círculo verde):
-                                </label>
-                                
-                                <div class="pat-calendar-container" style="border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem; background-color: var(--card-bg);">
-                                    <div class="pat-cal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                                        <button type="button" onclick="changeFastBookingMonth(-1)" class="btn btn-secondary text-xs" style="padding: 0.15rem 0.4rem; background: none; border: 1.5px solid var(--border-color); border-radius: 4px; cursor: pointer;">◀</button>
-                                        <h4 id="fast-cal-month-year" style="margin: 0; font-family: var(--font-title); font-weight: 700;"></h4>
-                                        <button type="button" onclick="changeFastBookingMonth(1)" class="btn btn-secondary text-xs" style="padding: 0.15rem 0.4rem; background: none; border: 1.5px solid var(--border-color); border-radius: 4px; cursor: pointer;">▶</button>
-                                    </div>
-                                    <div class="pat-cal-weekdays" style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.25rem;">
-                                        <div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sa</div><div>Do</div>
-                                    </div>
-                                    <div id="fast-cal-days-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; text-align: center; font-size: 0.8rem;">
-                                        <!-- Dinámico -->
-                                    </div>
+                            <!-- Enlaces al pie del panel izquierdo -->
+                            <div style="margin-top: 0.65rem; display: flex; flex-direction: column; gap: 0.45rem;">
+                                <div id="fast-fuera-jornada-card" style="text-align: center;">
+                                    <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="fast-discreet-btn fast-fuera-trigger-btn" style="width: 100%; justify-content: center; font-size: 0.78rem; padding: 0.45rem 0.65rem;">
+                                        <span>🗓️</span> Solicitar sesión personalizada
+                                    </button>
                                 </div>
-                            </div>
-
-                            <!-- BOTÓN DISCRETO / SUTIL: SOLICITAR SESIÓN EN HORARIO PERSONALIZADO -->
-                            <div id="fast-fuera-jornada-card" style="margin-top: 0.85rem; margin-bottom: 0.75rem; text-align: center;">
-                                <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="fast-discreet-btn fast-fuera-trigger-btn">
-                                    <span>🗓️</span> Solicitar sesión en horario personalizado
-                                </button>
+                                <div style="text-align: center;">
+                                    <a href="#" onclick="closeFastBookingScreen(event)" class="fast-discreet-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.35rem 0.55rem;">
+                                        <span>✕</span> Volver al Portal
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- COLUMNA DERECHA: Horas disponibles + Datos del paciente -->
-                        <div class="fast-booking-col">
-                            <!-- Placeholder informativo cuando aún no se ha seleccionado fecha (Visible en PC) -->
-                            <div id="fast-right-placeholder" class="fast-right-placeholder" style="margin-bottom: 1rem;">
-                                <div style="text-align: center; padding: 2.75rem 1.5rem; background: rgba(112, 46, 94, 0.03); border: 2px dashed #cbd5e1; border-radius: 16px;">
-                                    <span style="font-size: 2.2rem; display: block; margin-bottom: 0.65rem;">👈 🗓️</span>
-                                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.35rem 0;">Selecciona una fecha</h4>
-                                    <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0; line-height: 1.45;">Elige un día disponible en el calendario para ver los horarios y confirmar tu consulta.</p>
+                        <!-- PANEL 2 (CENTRO): Calendario Mensual -->
+                        <div class="fast-col-calendar">
+                            <label style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.45rem;">
+                                2. Selecciona un día disponible:
+                            </label>
+                            
+                            <div class="pat-calendar-container" style="border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 0.65rem; background-color: var(--card-bg);">
+                                <div class="pat-cal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; font-size: 0.85rem;">
+                                    <button type="button" onclick="changeFastBookingMonth(-1)" class="btn btn-secondary text-xs" style="padding: 0.15rem 0.45rem; background: none; border: 1.5px solid var(--border-color); border-radius: 4px; cursor: pointer;">◀</button>
+                                    <h4 id="fast-cal-month-year" style="margin: 0; font-family: var(--font-title); font-weight: 700; font-size: 0.92rem;"></h4>
+                                    <button type="button" onclick="changeFastBookingMonth(1)" class="btn btn-secondary text-xs" style="padding: 0.15rem 0.45rem; background: none; border: 1.5px solid var(--border-color); border-radius: 4px; cursor: pointer;">▶</button>
+                                </div>
+                                <div class="pat-cal-weekdays" style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem;">
+                                    <div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sa</div><div>Do</div>
+                                </div>
+                                <div id="fast-cal-days-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; text-align: center; font-size: 0.8rem;">
+                                    <!-- Dinámico -->
                                 </div>
                             </div>
+                        </div>
 
+                        <!-- PANEL 3 (DERECHA): Horas y Formulario del Paciente (Se abre al escoger hora) -->
+                        <div class="fast-col-details">
                             <!-- Hidden inputs para fecha y hora seleccionada -->
                             <input type="hidden" id="fast-req-fecha" required>
                             <input type="hidden" id="fast-req-hora" required>
 
+                            <!-- Placeholder guía cuando aún no se ha seleccionado fecha -->
+                            <div id="fast-right-placeholder" class="fast-right-placeholder">
+                                <div style="text-align: center; padding: 2.75rem 1.25rem; background: rgba(112, 46, 94, 0.03); border: 2px dashed #cbd5e1; border-radius: 16px;">
+                                    <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">👈 🗓️</span>
+                                    <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.25rem 0;">Selecciona una fecha</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0; line-height: 1.45;">Elige un día disponible en el calendario para ver los horarios y confirmar tu consulta.</p>
+                                </div>
+                            </div>
+
                             <!-- 3. SLOTS DE HORAS DISPONIBLES -->
                             <div id="fast-hours-container" class="hide mb-3">
-                                <label id="fast-hours-title" style="font-size: 0.9rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.5rem;">
+                                <label id="fast-hours-title" style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.45rem;">
                                     3. Selecciona una hora disponible:
                                 </label>
-                                <div id="fast-hours-grid" style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 240px; overflow-y: auto;">
+                                <div id="fast-hours-grid" style="display: flex; flex-direction: column; gap: 0.35rem; max-height: 330px; overflow-y: auto; padding-right: 4px;">
                                     <!-- Dinámico -->
                                 </div>
                             </div>
 
-                            <!-- 4. DATOS DEL PACIENTE -->
-                            <div id="fast-patient-details" class="hide" style="border-top: 1.5px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
-                                <h4 class="mb-2" style="font-size: 0.9rem; font-weight: 700; color: var(--text-dark);">
-                                    4. Introduce tus datos para confirmar:
-                                </h4>
-                                <div class="form-group mb-2">
-                                    <label for="fast-cedula" style="font-size: 0.82rem; font-weight: 600;">Cédula de Identidad *</label>
-                                    <input type="text" id="fast-cedula" required placeholder="Tu número de cédula" onblur="checkAndAutofillFastPatient()">
+                            <!-- 4. DATOS DEL PACIENTE (Se abre automáticamente al elegir hora y recoge las horas) -->
+                            <div id="fast-patient-details" class="hide" style="border: 1.5px solid var(--border-color); border-radius: 12px; padding: 0.9rem; background: #ffffff;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <h4 style="font-size: 0.86rem; font-weight: 700; color: var(--text-dark); margin: 0;">
+                                        4. Datos para confirmar:
+                                    </h4>
+                                    <button type="button" onclick="backToFastHours()" class="btn btn-xs btn-secondary" style="font-size: 0.72rem; padding: 2px 7px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; color: #475569;">
+                                        ↩ Cambiar hora
+                                    </button>
+                                </div>
+                                <div id="fast-selected-slot-pill" style="margin-bottom: 0.65rem; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; padding: 0.35rem 0.6rem; border-radius: 6px; font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                                    <span>🕒</span> <span id="fast-selected-slot-text"></span>
                                 </div>
                                 <div class="form-group mb-2">
-                                    <label for="fast-nombres" style="font-size: 0.82rem; font-weight: 600;">Nombres *</label>
-                                    <input type="text" id="fast-nombres" required placeholder="Tus nombres">
+                                    <label for="fast-cedula" style="font-size: 0.78rem; font-weight: 600;">Cédula de Identidad *</label>
+                                    <input type="text" id="fast-cedula" required placeholder="Tu número de cédula" onblur="checkAndAutofillFastPatient()" style="font-size: 0.82rem; padding: 0.4rem 0.6rem; border: 1.5px solid var(--border-color); border-radius: 6px; width: 100%;">
                                 </div>
                                 <div class="form-group mb-2">
-                                    <label for="fast-apellidos" style="font-size: 0.82rem; font-weight: 600;">Apellidos *</label>
-                                    <input type="text" id="fast-apellidos" required placeholder="Tus apellidos">
+                                    <label for="fast-nombres" style="font-size: 0.78rem; font-weight: 600;">Nombres *</label>
+                                    <input type="text" id="fast-nombres" required placeholder="Tus nombres" style="font-size: 0.82rem; padding: 0.4rem 0.6rem; border: 1.5px solid var(--border-color); border-radius: 6px; width: 100%;">
                                 </div>
                                 <div class="form-group mb-2">
-                                    <label for="fast-telefono" style="font-size: 0.82rem; font-weight: 600;">Teléfono (WhatsApp) *</label>
-                                    <input type="text" id="fast-telefono" required placeholder="Ej: +584123456789">
+                                    <label for="fast-apellidos" style="font-size: 0.78rem; font-weight: 600;">Apellidos *</label>
+                                    <input type="text" id="fast-apellidos" required placeholder="Tus apellidos" style="font-size: 0.82rem; padding: 0.4rem 0.6rem; border: 1.5px solid var(--border-color); border-radius: 6px; width: 100%;">
                                 </div>
                                 <div class="form-group mb-2">
-                                    <label for="fast-email" style="font-size: 0.82rem; font-weight: 600;">Correo Electrónico *</label>
-                                    <input type="email" id="fast-email" required placeholder="ejemplo@correo.com">
+                                    <label for="fast-telefono" style="font-size: 0.78rem; font-weight: 600;">Teléfono (WhatsApp) *</label>
+                                    <input type="text" id="fast-telefono" required placeholder="Ej: +584123456789" style="font-size: 0.82rem; padding: 0.4rem 0.6rem; border: 1.5px solid var(--border-color); border-radius: 6px; width: 100%;">
                                 </div>
-                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; margin-top: 0.75rem; font-weight: 700; padding: 0.75rem; font-size: 1rem; border-radius: 8px;">
+                                <div class="form-group mb-2">
+                                    <label for="fast-email" style="font-size: 0.78rem; font-weight: 600;">Correo Electrónico *</label>
+                                    <input type="email" id="fast-email" required placeholder="ejemplo@correo.com" style="font-size: 0.82rem; padding: 0.4rem 0.6rem; border: 1.5px solid var(--border-color); border-radius: 6px; width: 100%;">
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; margin-top: 0.5rem; font-weight: 700; padding: 0.6rem; font-size: 0.95rem; border-radius: 8px;">
                                     Confirmar Cita
                                 </button>
                             </div>
