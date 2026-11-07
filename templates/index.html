@@ -3075,6 +3075,62 @@
                             </div>
                         </div>
                     </div>
+                    <!-- MODAL PARA RESPONDER SOLICITUD FUERA DE JORNADA (ACEPTAR / DECLINAR CON ESTILO NATIVO) -->
+                    <div id="modal-responder-solicitud-fuera" class="modal hide" onclick="if(event.target === this) closeModal('modal-responder-solicitud-fuera')" style="z-index: 4500; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+                        <div class="modal-content" style="max-width: 500px; width: 92%; border-radius: 16px; padding: 1.5rem; background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.22); border: 1.5px solid var(--border-color); margin: 3rem auto;">
+                            <!-- Header -->
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.15rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.85rem;">
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <div id="modal-resp-icon-box" style="width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem;">
+                                        <!-- Icono dinámico -->
+                                    </div>
+                                    <div>
+                                        <h3 id="modal-resp-title" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a;">
+                                            <!-- Título dinámico -->
+                                        </h3>
+                                        <span id="modal-resp-subtitle" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">
+                                            Solicitud de Consulta en Horario Personalizado
+                                        </span>
+                                    </div>
+                                </div>
+                                <button type="button" class="close" onclick="closeModal('modal-responder-solicitud-fuera')" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</button>
+                            </div>
+
+                            <!-- Resumen de la Cita / Consultante -->
+                            <div id="modal-resp-summary" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.15rem; font-size: 0.88rem; line-height: 1.5;">
+                                <!-- Dinámico -->
+                            </div>
+
+                            <!-- Cuerpo del formulario -->
+                            <form id="form-responder-solicitud-fuera" onsubmit="submitResponderSolicitudFueraModal(event)">
+                                <input type="hidden" id="modal-resp-req-id">
+                                <input type="hidden" id="modal-resp-accion">
+
+                                <!-- Campo motivo (visible solo al declinar) -->
+                                <div id="modal-resp-motivo-group" class="hide" style="margin-bottom: 1.15rem;">
+                                    <label for="modal-resp-motivo" style="display: block; font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+                                        Motivo de rechazo (opcional, se incluirá en el mensaje al consultante):
+                                    </label>
+                                    <textarea id="modal-resp-motivo" rows="3" placeholder="Ej: No tengo disponibilidad en esa franja horaria. Te sugiero revisar mis horarios disponibles en la agenda..." style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem; resize: vertical; outline: none;"></textarea>
+                                </div>
+
+                                <!-- Mensaje de confirmación de aceptación -->
+                                <div id="modal-resp-aceptar-info" class="hide" style="background: #ecfdf5; border: 1.5px solid #86efac; border-radius: 10px; padding: 0.85rem; margin-bottom: 1.15rem; font-size: 0.84rem; color: #166534; line-height: 1.45;">
+                                    <strong>✓ Al aceptar:</strong> Se creará la cita en tu agenda y en Google Calendar. Se notificará inmediatamente al consultante con su enlace de confirmación.
+                                </div>
+
+                                <!-- Botones de Acción -->
+                                <div style="display: flex; justify-content: flex-end; gap: 0.65rem; margin-top: 0.5rem;">
+                                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-responder-solicitud-fuera')" style="font-weight: 600; padding: 0.55rem 1.15rem; border-radius: 8px; font-size: 0.88rem;">
+                                        Cancelar
+                                    </button>
+                                    <button type="submit" id="btn-modal-resp-submit" class="btn" style="font-weight: 700; padding: 0.55rem 1.35rem; border-radius: 8px; font-size: 0.88rem; border: none; cursor: pointer; color: white;">
+                                        <!-- Botón dinámico -->
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- 2. VISTA EXPEDIENTES CLÍNICOS (Evoluciones, Historias y Registro Unificado) -->

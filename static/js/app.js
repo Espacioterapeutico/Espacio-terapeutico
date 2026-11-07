@@ -38457,6 +38457,8 @@ async function openSolicitudesFueraModal() {
         if (loading) loading.classList.add('hide');
 
         const solicitudes = data.solicitudes || [];
+        window._cachedPendingSolicitudesMap = window._cachedPendingSolicitudesMap || {};
+        solicitudes.forEach(s => { window._cachedPendingSolicitudesMap[s.id] = s; });
         if (solicitudes.length === 0) {
             if (empty) empty.classList.remove('hide');
             return;
@@ -38529,45 +38531,162 @@ async function openSolicitudesFueraModal() {
 }
 window.openSolicitudesFueraModal = openSolicitudesFueraModal;
 
-async function responderSolicitudFuera(reqId, accion) {
-    let motivo = '';
-    if (accion === 'declinar') {
-        motivo = prompt("Indica el motivo de rechazo (opcional, se incluirá en el mensaje al paciente):", "");
-        if (motivo === null) return;
+window._cachedPendingSolicitudesMap = window._cachedPendingSolicitudesMap || {};
+
+function responderSolicitudFuera(reqId, accion, solData = null) {
+    const modal = document.getElementById('modal-responder-solicitud-fuera');
+    if (!modal) return;
+
+    const sol = solData || (window._cachedPendingSolicitudesMap && window._cachedPendingSolicitudesMap[reqId]) || {};
+
+    const reqIdInput = document.getElementById('modal-resp-req-id');
+    const accionInput = document.getElementById('modal-resp-accion');
+    const titleEl = document.getElementById('modal-resp-title');
+    const iconBox = document.getElementById('modal-resp-icon-box');
+    const summaryBox = document.getElementById('modal-resp-summary');
+    const motivoGroup = document.getElementById('modal-resp-motivo-group');
+    const motivoInput = document.getElementById('modal-resp-motivo');
+    const aceptarInfo = document.getElementById('modal-resp-aceptar-info');
+    const submitBtn = document.getElementById('btn-modal-resp-submit');
+
+    if (reqIdInput) reqIdInput.value = reqId;
+    if (accionInput) accionInput.value = accion;
+
+    const horaFmt = typeof format12h === 'function' ? format12h(sol.hora_inicio || sol.hora || '') : (sol.hora_inicio || sol.hora || '');
+    const pacNombre = `${sol.nombres || 'Consultante'} ${sol.apellidos || ''}`.trim();
+    const montoStr = sol.monto ? `${sol.monto} ${sol.moneda || 'USD'}` : '';
+    const tipoStr = sol.tipo_consulta || 'Consulta';
+    const cedStr = sol.cedula ? ` · C.I.: ${sol.cedula}` : '';
+
+    if (summaryBox) {
+        summaryBox.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                <div>
+                    <strong style="font-size: 0.95rem; color: #0f172a;">${pacNombre}</strong>
+                    <span style="color: #64748b; font-size: 0.8rem;">${cedStr}</span>
+                </div>
+                <span style="font-weight: 800; color: #059669; font-size: 0.95rem;">${montoStr}</span>
+            </div>
+            <div style="margin-top: 0.45rem; font-size: 0.82rem; color: #475569; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span>🗓️ <strong>${sol.fecha || ''}</strong> a las <strong>${horaFmt}</strong></span>
+                <span>· Modalidad: <strong>${tipoStr}</strong></span>
+            </div>
+        `;
+    }
+
+    if (accion === 'aceptar') {
+        if (titleEl) titleEl.textContent = 'Aceptar Solicitud de Consulta';
+        if (iconBox) {
+            iconBox.style.background = '#ecfdf5';
+            iconBox.style.color = '#059669';
+            iconBox.textContent = '✓';
+        }
+        if (aceptarInfo) aceptarInfo.classList.remove('hide');
+        if (motivoGroup) motivoGroup.classList.add('hide');
+        if (submitBtn) {
+            submitBtn.textContent = '✓ Confirmar y Aceptar';
+            submitBtn.style.background = '#059669';
+            submitBtn.disabled = false;
+        }
     } else {
-        if (!confirm("¿Deseas aceptar esta solicitud? Se creará la cita en tu agenda y se notificará al paciente.")) {
-            return;
+        if (titleEl) titleEl.textContent = 'Declinar Solicitud de Consulta';
+        if (iconBox) {
+            iconBox.style.background = '#fee2e2';
+            iconBox.style.color = '#dc2626';
+            iconBox.textContent = '✕';
+        }
+        if (aceptarInfo) aceptarInfo.classList.add('hide');
+        if (motivoGroup) motivoGroup.classList.remove('hide');
+        if (motivoInput) {
+            motivoInput.value = '';
+            setTimeout(() => motivoInput.focus(), 150);
+        }
+        if (submitBtn) {
+            submitBtn.textContent = '✕ Confirmar Rechazo';
+            submitBtn.style.background = '#dc2626';
+            submitBtn.disabled = false;
         }
     }
 
+    if (typeof openModal === 'function') {
+        openModal('modal-responder-solicitud-fuera');
+    } else {
+        modal.classList.remove('hide');
+    }
+}
+window.responderSolicitudFuera = responderSolicitudFuera;
+
+async function submitResponderSolicitudFueraModal(e) {
+    if (e) e.preventDefault();
+    const reqId = document.getElementById('modal-resp-req-id')?.value;
+    const accion = document.getElementById('modal-resp-accion')?.value;
+    const motivo = document.getElementById('modal-resp-motivo')?.value.trim() || '';
+    const btn = document.getElementById('btn-modal-resp-submit');
+
+    if (!reqId || !accion) return;
+
     try {
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+        }
+
         const res = await fetch(`/api/admin/solicitudes-fuera-horario/${reqId}/responder`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accion, motivo })
         });
         const data = await res.json();
+
         if (res.ok) {
-            alert(accion === 'aceptar' ? "¡Solicitud aceptada! Cita agregada a tu agenda." : "Solicitud declinada.");
-            if (data.wa_url) {
-                if (!data.has_fcm || !data.wa_enviado_auto) {
-                    if (confirm("El paciente no tiene app/push activo. ¿Deseas abrir WhatsApp para enviarle la plantilla de respuesta ahora?")) {
-                        window.open(data.wa_url, '_blank');
+            if (typeof closeModal === 'function') {
+                closeModal('modal-responder-solicitud-fuera');
+            } else {
+                document.getElementById('modal-responder-solicitud-fuera')?.classList.add('hide');
+            }
+
+            if (accion === 'aceptar') {
+                if (data.wa_enviado_auto) {
+                    if (typeof showToast === 'function') {
+                        showToast('✓ Cita aceptada y agregada a tu agenda. Notificación enviada automáticamente por WhatsApp.', 'success');
+                    }
+                } else if (data.has_fcm) {
+                    if (typeof showToast === 'function') {
+                        showToast('✓ Cita aceptada y agregada a tu agenda. Notificación enviada al consultante.', 'success');
+                    }
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast('✓ Cita aceptada y agregada a tu agenda.', 'success');
                     }
                 }
+            } else {
+                if (typeof showToast === 'function') {
+                    showToast('Solicitud declinada con éxito.', 'info');
+                }
             }
-            openSolicitudesFueraModal();
-            checkPendingSolicitudesFuera();
+
+            // Actualizar vista de solicitudes y calendario
+            if (typeof loadDashboardSolicitudesFuera === 'function') loadDashboardSolicitudesFuera();
+            if (typeof checkPendingSolicitudesFuera === 'function') checkPendingSolicitudesFuera();
             if (typeof fetchEvents === 'function') fetchEvents();
+            const modalFull = document.getElementById('modal-solicitudes-fuera-horario');
+            if (modalFull && !modalFull.classList.contains('hide')) {
+                openSolicitudesFueraModal();
+            }
         } else {
-            alert(data.error || "Ocurrió un error al responder la solicitud.");
+            alert(data.error || 'Ocurrió un error al responder la solicitud.');
         }
-    } catch (e) {
-        console.error("Error al responder solicitud fuera de jornada:", e);
-        alert("Error de conexión al responder la solicitud.");
+    } catch (err) {
+        console.error('Error al responder solicitud fuera:', err);
+        alert('Error de conexión al responder la solicitud.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = accion === 'aceptar' ? '✓ Confirmar y Aceptar' : '✕ Confirmar Rechazo';
+        }
     }
 }
-window.responderSolicitudFuera = responderSolicitudFuera;
+window.submitResponderSolicitudFueraModal = submitResponderSolicitudFueraModal;
 
 function contactarPacienteWhatsApp(telefono, nombres) {
     if (!telefono) {
@@ -38594,6 +38713,8 @@ async function loadDashboardSolicitudesFuera() {
         if (!res.ok) return;
         const data = await res.json();
         const pending = (data.solicitudes || []).filter(s => s.estado === 'Pendiente');
+        window._cachedPendingSolicitudesMap = window._cachedPendingSolicitudesMap || {};
+        (data.solicitudes || []).forEach(s => { window._cachedPendingSolicitudesMap[s.id] = s; });
 
         const currentIds = pending.map(s => `${s.id}-${s.fecha}-${s.hora_inicio}`).join(',');
         if (currentIds === _lastDashboardPendingIds && card.dataset.rendered === 'true') {

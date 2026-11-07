@@ -3572,12 +3572,7 @@ def admin_responder_solicitud_fuera_horario(req_id):
         except Exception as _gerr:
             print("Error sincronizando solicitud fuera de jornada a Google Calendar:", _gerr)
 
-        # Despachar notificación automática inmediata por WhatsApp si aplica
-        try:
-            from routes_notificaciones import send_booking_notification_wa
-            send_booking_notification_wa(agenda_id, user_id)
-        except Exception as _wa_err:
-            print("[WA-BOOKING] Error despachando notificacion fuera de jornada:", _wa_err)
+        # La notificación de WhatsApp se despacha abajo con la plantilla dedicada de fuera de jornada (wa_text)
 
         from routes_notificaciones import get_public_base_url
         domain_host = get_public_base_url()
