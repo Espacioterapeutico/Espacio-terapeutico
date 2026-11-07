@@ -19113,6 +19113,12 @@ async function fetchFastAvailableHours(dateStr) {
     const hoursContainer = document.getElementById('fast-hours-container');
     const hoursTitle = document.getElementById('fast-hours-title');
     
+    // En la columna 3, mostrar placeholder y ocultar formulario hasta que se seleccione una hora
+    const rightPlInit = document.getElementById('fast-right-placeholder');
+    if (rightPlInit) rightPlInit.classList.remove('hide');
+    const detailsInit = document.getElementById('fast-patient-details');
+    if (detailsInit) detailsInit.classList.add('hide');
+    
     // Formatear la fecha para feedback visual
     try {
         const parts = dateStr.split('-');
@@ -19217,16 +19223,24 @@ async function fetchFastAvailableHours(dateStr) {
                         }
                     }
                     
-                    // Se recoge la lista de horas y se abre el formulario de datos
+                    // Mantener las horas visibles en la columna central y abrir el formulario en la columna derecha
                     const hoursCont = document.getElementById('fast-hours-container');
-                    if (hoursCont) hoursCont.classList.add('hide');
+                    if (hoursCont) hoursCont.classList.remove('hide');
+                    
+                    const rightPl = document.getElementById('fast-right-placeholder');
+                    if (rightPl) rightPl.classList.add('hide');
                     
                     const details = document.getElementById('fast-patient-details');
-                    if (details) details.classList.remove('hide');
+                    if (details) {
+                        details.classList.remove('hide');
+                        if (window.innerWidth <= 850) {
+                            details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }
                     
                     const pillTxt = document.getElementById('fast-selected-slot-text');
                     if (pillTxt) {
-                        const hLabel = slot.hourFormatted || slot.valHour || '';
+                        const hLabel = slot.displayFull || slot.valHour || '';
                         pillTxt.textContent = `${slot.valFecha} · ${hLabel}`;
                     }
                 };
@@ -19243,10 +19257,26 @@ async function fetchFastAvailableHours(dateStr) {
 let isSubmittingFastBooking = false;
 
 function backToFastHours() {
-    const hoursCont = document.getElementById('fast-hours-container');
     const details = document.getElementById('fast-patient-details');
-    if (hoursCont) hoursCont.classList.remove('hide');
+    const rightPl = document.getElementById('fast-right-placeholder');
+    const reqHora = document.getElementById('fast-req-hora');
+    if (reqHora) reqHora.value = '';
+    
+    document.querySelectorAll('.btn-fast-hour').forEach(b => {
+        b.style.backgroundColor = '#ecfdf5';
+        b.style.color = '#047857';
+    });
+    
     if (details) details.classList.add('hide');
+    if (rightPl) rightPl.classList.remove('hide');
+    
+    const hoursCont = document.getElementById('fast-hours-container');
+    if (hoursCont) {
+        hoursCont.classList.remove('hide');
+        if (window.innerWidth <= 850) {
+            hoursCont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
 }
 window.backToFastHours = backToFastHours;
 
