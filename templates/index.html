@@ -1782,6 +1782,46 @@
             color: #1e293b;
             text-decoration: none;
         }
+        .fast-fuera-trigger-btn {
+            color: #d97706 !important; /* Amarillo / ámbar dorado legible */
+            border-color: #fde68a !important;
+            font-weight: 700 !important;
+            background-color: #ffffff !important;
+        }
+        .fast-fuera-trigger-btn:hover {
+            color: #b45309 !important;
+            border-color: #f59e0b !important;
+            background-color: #fffbeb !important;
+        }
+
+        /* Tarjeta de solicitudes fuera de jornada en el Dashboard: 1 línea en PC, 2 líneas en Móvil */
+        .dash-fuera-card-pc {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            background: white;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 0.45rem 0.75rem;
+        }
+        .dash-fuera-card-mobile {
+            display: none;
+            flex-direction: column;
+            gap: 0.35rem;
+            background: white;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 0.45rem 0.65rem;
+        }
+        @media (max-width: 768px) {
+            .dash-fuera-card-pc {
+                display: none !important;
+            }
+            .dash-fuera-card-mobile {
+                display: flex !important;
+            }
+        }
     </style>
     <!-- VISTA EXCLUSIVA: AUTO-AGENDA RÁPIDA (PÚBLICA) -->
     <div id="fast-booking-screen" class="auth-screen hide" style="background-color: var(--bg-light); display: flex; align-items: center; justify-content: center; padding: 1rem; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 99999; overflow-y: auto;">
@@ -1875,7 +1915,7 @@
 
                     <!-- BOTÓN DISCRETO / SUTIL: SOLICITAR SESIÓN EN HORARIO PERSONALIZADO -->
                     <div id="fast-fuera-jornada-card" style="margin-top: 0.85rem; margin-bottom: 0.75rem; text-align: center;">
-                        <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="fast-discreet-btn">
+                        <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="fast-discreet-btn fast-fuera-trigger-btn">
                             <span>🗓️</span> Solicitar sesión en horario personalizado
                         </button>
                     </div>
@@ -7377,7 +7417,7 @@
 
                                 <!-- Solicitar Consulta Personalizada / Fuera de Jornada (Consultante - Botón Disimulado) -->
                                 <div id="pat-fuera-jornada-card" class="hide" style="text-align: center; margin-top: 1.25rem;">
-                                    <button type="button" onclick="openPatientFueraJornadaModal()" class="fast-discreet-btn" style="color: #d97706; border-color: #fde68a;">
+                                    <button type="button" onclick="openPatientFueraJornadaModal()" class="fast-discreet-btn fast-fuera-trigger-btn">
                                         <span>✨</span> Solicitar espacio personalizado
                                     </button>
                                 </div>

@@ -38615,7 +38615,28 @@ async function loadDashboardSolicitudesFuera() {
                     ${pending.map(s => {
                         const horaFmt = typeof format12h === 'function' ? format12h(s.hora_inicio) : s.hora_inicio;
                         return `
-                        <div style="display: flex; flex-direction: column; gap: 0.35rem; background: white; border: 1px solid #fde68a; border-radius: 8px; padding: 0.45rem 0.65rem;">
+                        <!-- Versión PC: 1 sola línea continua -->
+                        <div class="dash-fuera-card-pc">
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <span style="color: #d97706; font-size: 1rem; flex-shrink: 0;">✨</span>
+                                <strong style="color: #0f172a; font-weight: 700;">${s.nombres} ${s.apellidos || ''}</strong>
+                                <span style="color: #059669; font-weight: 700;">· ${s.monto} ${s.moneda}</span>
+                                <span style="color: #475569;">· 🗓️ ${s.fecha} (${horaFmt})</span>
+                                <span style="color: #64748b;">· ${s.tipo_consulta}</span>
+                                ${s.telefono ? `<a href="https://wa.me/${s.telefono.replace(/\D/g, '')}" target="_blank" style="color: #25D366; text-decoration: none; font-size: 0.8rem; font-weight: 700;" title="Abrir WhatsApp">💬 WA</a>` : ''}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="responderSolicitudFueraFromDash(${s.id}, 'declinar')" style="font-weight: 600; border-radius: 6px; padding: 0.25rem 0.65rem; background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; cursor: pointer; font-size: 0.8rem;">
+                                    ✕ Rechazar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success" onclick="responderSolicitudFueraFromDash(${s.id}, 'aceptar')" style="font-weight: 700; border-radius: 6px; padding: 0.25rem 0.75rem; background: #059669; border: none; color: white; cursor: pointer; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(5,150,105,0.25);">
+                                    ✓ Aceptar Consulta
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Versión Móvil: 2 líneas compactas -->
+                        <div class="dash-fuera-card-mobile">
                             <!-- Línea 1: Nombre y Apellido (+ monto) a la izquierda, Botón Aceptar a la derecha -->
                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
                                 <div style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
