@@ -510,9 +510,21 @@
     async function openAsignarRecursoModal(preselectedTipo) {
         await populateRecursosPatientSelector();
 
-        if (preselectedTipo) {
-            const selectTipo = document.getElementById('asig-rec-tipo');
-            if (selectTipo) selectTipo.value = preselectedTipo;
+        const selectTipo = document.getElementById('asig-rec-tipo');
+        if (selectTipo && window.currentRecursosCatalogo && Array.isArray(window.currentRecursosCatalogo)) {
+            const currentVals = Array.from(selectTipo.options).map(o => o.value);
+            window.currentRecursosCatalogo.forEach(item => {
+                if (!currentVals.includes(item.id)) {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = `${item.icono || '📋'} ${item.titulo}`;
+                    selectTipo.appendChild(opt);
+                }
+            });
+        }
+
+        if (preselectedTipo && selectTipo) {
+            selectTipo.value = preselectedTipo;
         }
 
         // Si ya hay un consultante seleccionado en la pestaña, autoseleccionarlo
