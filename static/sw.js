@@ -117,8 +117,19 @@ self.addEventListener('push', (event) => {
     data: { url: data.url }
   };
 
+  const notifyClients = self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    clientList.forEach((client) => {
+      try {
+        client.postMessage({ type: 'PUSH_RECEIVED', data: data });
+      } catch (err) {}
+    });
+  });
+
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    Promise.all([
+      self.registration.showNotification(data.title, options),
+      notifyClients
+    ])
   );
 });
 

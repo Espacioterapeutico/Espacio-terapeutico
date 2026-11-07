@@ -2730,6 +2730,7 @@ let patientNotificationIntervalId = null;
 function clearAllNotificationIntervals() {
     if (notificationIntervalId) { clearInterval(notificationIntervalId); notificationIntervalId = null; }
     if (patientNotificationIntervalId) { clearInterval(patientNotificationIntervalId); patientNotificationIntervalId = null; }
+    if (window._dashboardSolicitudesIntervalId) { clearInterval(window._dashboardSolicitudesIntervalId); window._dashboardSolicitudesIntervalId = null; }
 }
 
 function getInitials(nombres, apellidos, username) {
@@ -3302,6 +3303,13 @@ function showAppLayout(username, role, activo, bloqueos, userId, avisoPago, prim
     if (typeof checkAndInitClinicaNav === 'function') checkAndInitClinicaNav();
     loadNotifications();
     notificationIntervalId = setInterval(loadNotifications, 30000);
+    if (window._dashboardSolicitudesIntervalId) clearInterval(window._dashboardSolicitudesIntervalId);
+    window._dashboardSolicitudesIntervalId = setInterval(() => {
+        if (typeof activeView !== 'undefined' && activeView === 'dashboard') {
+            if (typeof loadDashboardSolicitudesFuera === 'function') loadDashboardSolicitudesFuera();
+            if (typeof checkPendingSolicitudesFuera === 'function') checkPendingSolicitudesFuera();
+        }
+    }, 10000);
     if (!window._visibilityNotifListenerAttached) {
         window._visibilityNotifListenerAttached = true;
         document.addEventListener('visibilitychange', () => {
@@ -13908,6 +13916,14 @@ async function loadNotifications() {
         if (!res.ok) return;
         const data = await res.json();
         
+        // Actualizar tarjetas en dashboard y botones en tiempo real
+        if (typeof loadDashboardSolicitudesFuera === 'function') {
+            loadDashboardSolicitudesFuera();
+        }
+        if (typeof checkPendingSolicitudesFuera === 'function') {
+            checkPendingSolicitudesFuera();
+        }
+
         // Actualizar contador
         const headerTitle = document.getElementById('notifications-header-title');
         if (data.unread_count > 0) {
@@ -15623,6 +15639,12 @@ async function initFirebaseMessagingFlow(registration, forceRefresh = false) {
             // 3. Actualizar la campanita de notificaciones en tiempo real
             if (typeof loadNotifications === 'function') {
                 loadNotifications();
+            }
+            if (typeof loadDashboardSolicitudesFuera === 'function') {
+                loadDashboardSolicitudesFuera();
+            }
+            if (typeof checkPendingSolicitudesFuera === 'function') {
+                checkPendingSolicitudesFuera();
             }
 
             // 4. Si la pestaña está en segundo plano / minimizada, mostrar alerta nativa en la barra del sistema
@@ -38324,6 +38346,8 @@ function contactarPacienteWhatsApp(telefono, nombres) {
 window.contactarPacienteWhatsApp = contactarPacienteWhatsApp;
 
 // --- DASHBOARD DE PSICÓLOGO: CARGA DE SOLICITUDES FUERA DE JORNADA PENDIENTES ---
+let _lastDashboardPendingIds = '';
+
 async function loadDashboardSolicitudesFuera() {
     const card = document.getElementById('dashboard-solicitudes-fuera-card');
     if (!card) return;
@@ -38333,6 +38357,13 @@ async function loadDashboardSolicitudesFuera() {
         if (!res.ok) return;
         const data = await res.json();
         const pending = (data.solicitudes || []).filter(s => s.estado === 'Pendiente');
+
+        const currentIds = pending.map(s => `${s.id}-${s.fecha}-${s.hora_inicio}`).join(',');
+        if (currentIds === _lastDashboardPendingIds && card.dataset.rendered === 'true') {
+            return; // No hubo cambios, evitar parpadeo o re-render
+        }
+        _lastDashboardPendingIds = currentIds;
+        card.dataset.rendered = 'true';
 
         if (pending.length === 0) {
             card.innerHTML = '';
@@ -38622,3 +38653,17 @@ function confirmFueraTimePicker() {
     closeFueraTimePickerModal();
 }
 window.confirmFueraTimePicker = confirmFueraTimePicker;
+
+// Escucha de mensajes en tiempo real desde el ServiceWorker cuando llega una notificación Push
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'PUSH_RECEIVED') {
+            if (typeof loadNotifications === 'function') loadNotifications();
+            if (typeof loadDashboardSolicitudesFuera === 'function') loadDashboardSolicitudesFuera();
+            if (typeof checkPendingSolicitudesFuera === 'function') checkPendingSolicitudesFuera();
+            if (typeof activeView !== 'undefined' && activeView === 'dashboard' && typeof loadAgendaCompact === 'function') {
+                loadAgendaCompact();
+            }
+        }
+    });
+}
