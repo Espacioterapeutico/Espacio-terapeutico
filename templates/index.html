@@ -1849,36 +1849,23 @@
 
         .fast-booking-card {
             background-color: var(--card-bg, #ffffff);
-            width: 100%;
-            max-width: 1080px;
-            border-radius: 22px;
+            width: 78vw;
+            max-width: 1440px;
+            min-width: 980px;
+            border-radius: 24px;
             box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05);
             border: 1px solid var(--border-color, #e2e8f0);
-            padding: 2rem 2.25rem;
+            padding: 2.25rem 2.5rem;
             position: relative;
-            margin: 0.5rem auto 2.5rem auto;
-            box-sizing: border-box;
-            animation: slideUp 0.3s ease;
-        }
-
-        .fast-booking-card {
-            background-color: var(--card-bg, #ffffff);
-            width: 100%;
-            max-width: 1140px;
-            border-radius: 22px;
-            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05);
-            border: 1px solid var(--border-color, #e2e8f0);
-            padding: 1.75rem 2rem;
-            position: relative;
-            margin: 0.5rem auto 2.5rem auto;
+            margin: 1rem auto 3rem auto;
             box-sizing: border-box;
             animation: slideUp 0.3s ease;
         }
 
         .fast-booking-layout-3col {
             display: grid;
-            grid-template-columns: 260px 380px 1fr;
-            gap: 1.5rem;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
             align-items: start;
         }
 
@@ -1962,6 +1949,21 @@
             color: var(--text-dark, #1e293b);
         }
 
+        @media (max-width: 1080px) {
+            .fast-booking-card {
+                width: 92vw !important;
+                min-width: 0 !important;
+                padding: 1.75rem 1.5rem !important;
+            }
+            .fast-booking-layout-3col {
+                gap: 1.25rem !important;
+            }
+            .fast-col-profile,
+            .fast-col-calendar {
+                padding-right: 1.25rem !important;
+            }
+        }
+
         /* En teléfonos y tablets (ancho <= 850px): formato vertical de 1 columna con márgenes móviles */
         @media (max-width: 850px) {
             .fast-booking-overlay {
@@ -1973,6 +1975,7 @@
                 border-radius: 18px !important;
                 margin: 0.65rem auto 2.5rem auto !important;
                 max-width: 520px !important;
+                min-width: 0 !important;
                 width: 100% !important;
                 box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.3) !important;
             }
