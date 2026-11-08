@@ -287,6 +287,7 @@
         </div>
     </div>
 
+    <script src="/static/js/app_dialogs.js"></script>
     <script>
         const token = window.location.pathname.split('/').pop();
         const isAlreadyConfirmed = {{ 1 if cita.confirmada == 1 else 0 }};
@@ -296,10 +297,10 @@
             if (isAlreadyConfirmed) {
                 promptMsg = 'Tu cita se encuentra confirmada.\n\nRecuerda que si cancelas fuera del tiempo de gracia permitido, la consulta se cobrará igualmente.\n\n¿Estás seguro de que deseas proceder con la cancelación?';
             }
-            if (accion === 'cancelar' && !confirm(promptMsg)) {
+            if (accion === 'cancelar' && !await appConfirm(promptMsg, { title: 'Cancelar sesión', danger: true, okText: 'Sí, cancelar', cancelText: 'Volver' })) {
                 return;
             }
-            if (accion === 'reprogramar' && !confirm('¿Deseas reprogramar esta cita para elegir un nuevo horario?')) {
+            if (accion === 'reprogramar' && !await appConfirm('¿Deseas reprogramar esta cita para elegir un nuevo horario?', { title: 'Reprogramar sesión', okText: 'Sí, reprogramar', cancelText: 'Volver' })) {
                 return;
             }
             

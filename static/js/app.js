@@ -5654,7 +5654,7 @@ async function handlePatientDeleteAccountSubmit(e) {
         return;
     }
 
-    if (!confirm('¿Estás completamente seguro de que deseas eliminar tu cuenta? Esta acción cancelará tu acceso a la aplicación.')) {
+    if (!await appConfirm('¿Estás completamente seguro de que deseas eliminar tu cuenta? Esta acción cancelará tu acceso a la aplicación.')) {
         return;
     }
 
@@ -5672,7 +5672,7 @@ async function handlePatientDeleteAccountSubmit(e) {
         const data = await res.json();
 
         if (res.ok && data.success) {
-            alert(data.message || 'Tu cuenta ha sido eliminada con éxito. Tu expediente ha quedado archivado bajo custodia de tu terapeuta.');
+            await appAlert(data.message || 'Tu cuenta ha sido eliminada con éxito. Tu expediente ha quedado archivado bajo custodia de tu terapeuta.');
             try { sessionStorage.clear(); localStorage.clear(); } catch(e) {}
             window.location.href = '/';
         } else {
@@ -6075,7 +6075,7 @@ async function handlePatientSubmit(e) {
         alert("⚠️ Modo sin conexión activo\n\nNo es posible registrar nuevos consultantes ni modificar historias clínicas sin conexión al servidor central.");
         return;
     }
-    if (!confirm("¿Está seguro de guardar los cambios en esta Historia Clínica?")) {
+    if (!await appConfirm("¿Está seguro de guardar los cambios en esta Historia Clínica?")) {
         return;
     }
     const id = document.getElementById('patient-form-id').value;
@@ -6276,7 +6276,7 @@ async function handleWhatsAppBroadcastSubmit(e) {
     const target = document.getElementById('broadcast-destinatarios').value;
     const message = document.getElementById('broadcast-message').value;
     
-    if (!confirm("¿Está seguro de enviar este mensaje masivo? El envío se hará en segundo plano para evitar bloqueos por SPAM.")) {
+    if (!await appConfirm("¿Está seguro de enviar este mensaje masivo? El envío se hará en segundo plano para evitar bloqueos por SPAM.")) {
         return;
     }
     
@@ -6317,7 +6317,7 @@ async function handleWhatsAppBroadcastSubmit(e) {
 }
 
 async function deletePatient(patientId) {
-    if (!confirm("¿Está seguro de que desea eliminar permanentemente este paciente y toda su información clínica/evoluciones y registros de pago? Esta acción no se puede deshacer.")) return;
+    if (!await appConfirm("¿Está seguro de que desea eliminar permanentemente este paciente y toda su información clínica/evoluciones y registros de pago? Esta acción no se puede deshacer.")) return;
     
     try {
         const res = await fetch(`/api/patients/${patientId}`, { method: 'DELETE' });
@@ -6583,7 +6583,7 @@ async function openSummaryModal(patientId) {
 }
 
 async function promptAdjustPrepayBalance(patientId, currentCount, patientName) {
-    const inputVal = prompt(`Ajustar consultas prepagadas disponibles para ${patientName}:\n\nIngresa el número total de consultas prepagadas disponibles que debe tener el paciente:`, currentCount);
+    const inputVal = await appPrompt(`Ajustar consultas prepagadas disponibles para ${patientName}:\n\nIngresa el número total de consultas prepagadas disponibles que debe tener el paciente:`, currentCount);
     if (inputVal === null) return;
     const newCount = parseInt(inputVal.trim());
     if (isNaN(newCount) || newCount < 0) {
@@ -7069,11 +7069,11 @@ function clearSessionDraft(patientId, formId = '') {
     if (banner) banner.classList.add('hide');
 }
 
-function discardSessionDraft() {
+async function discardSessionDraft() {
     const formId = document.getElementById('session-form-id')?.value || '';
     const patientId = document.getElementById('s-paciente')?.value || '';
     
-    if (confirm("¿Estás seguro de descartar este borrador recuperado? Los campos de notas y tareas se limpiarán.")) {
+    if (await appConfirm("¿Estás seguro de descartar este borrador recuperado? Los campos de notas y tareas se limpiarán.")) {
         clearSessionDraft(patientId, formId);
         
         ['s-resumen', 's-resumen-paciente', 's-tareas', 's-recursos', 's-anotaciones', 's-compromisos', 's-diagnostico-clinico', 's-test-aplicados'].forEach(id => {
@@ -7311,7 +7311,7 @@ async function handleSessionSubmit(e) {
     const id = document.getElementById('session-form-id').value;
     const agendaId = document.getElementById('s-agenda-id').value;
     
-    if (!confirm("¿Está seguro de guardar esta evolución clínica?")) {
+    if (!await appConfirm("¿Está seguro de guardar esta evolución clínica?")) {
         return;
     }
     
@@ -7568,7 +7568,7 @@ async function openEditSessionModal(sessionId) {
 }
 
 async function deleteSession(sessionId) {
-    if (!confirm("¿Está seguro de eliminar esta evolución clínica? Si tiene una cita vinculada, se restaurará a estado 'Agendada' y se revertirán los abonos o descuentos de prepago.")) {
+    if (!await appConfirm("¿Está seguro de eliminar esta evolución clínica? Si tiene una cita vinculada, se restaurará a estado 'Agendada' y se revertirán los abonos o descuentos de prepago.")) {
         return;
     }
     
@@ -7597,7 +7597,7 @@ async function deleteSession(sessionId) {
 async function sendSessionCierreWhatsApp(sessionId, patientName) {
     if (!sessionId) return;
     
-    const confirmSend = confirm(`¿Deseas enviar la Nota Post-sesión con las tareas acordadas a ${patientName || 'el consultante'} por WhatsApp?`);
+    const confirmSend = await appConfirm(`¿Deseas enviar la Nota Post-sesión con las tareas acordadas a ${patientName || 'el consultante'} por WhatsApp?`);
     if (!confirmSend) return;
 
     try {
@@ -7613,7 +7613,7 @@ async function sendSessionCierreWhatsApp(sessionId, patientName) {
         } else {
             const errMsg = data.error || 'El microservicio no pudo enviar el mensaje directamente.';
             if (data.wa_url) {
-                const openWeb = confirm(`${errMsg}\n\n¿Deseas abrir WhatsApp Web / App para enviarlo manualmente con las tareas y texto ya formateado?`);
+                const openWeb = await appConfirm(`${errMsg}\n\n¿Deseas abrir WhatsApp Web / App para enviarlo manualmente con las tareas y texto ya formateado?`);
                 if (openWeb) {
                     window.open(data.wa_url, '_blank');
                 }
@@ -7628,14 +7628,14 @@ async function sendSessionCierreWhatsApp(sessionId, patientName) {
 }
 window.sendSessionCierreWhatsApp = sendSessionCierreWhatsApp;
 
-function handleModalSendSessionCierre() {
+async function handleModalSendSessionCierre() {
     const sessionId = document.getElementById('session-form-id').value;
     const pacSelect = document.getElementById('s-paciente');
     const pacName = pacSelect && pacSelect.selectedIndex >= 0 ? pacSelect.options[pacSelect.selectedIndex].text : '';
     if (sessionId) {
         sendSessionCierreWhatsApp(sessionId, pacName);
     } else {
-        if (confirm('La evolución aún no ha sido guardada en el sistema. ¿Deseas guardarla ahora para registrarla y enviar el resumen de tareas por WhatsApp?')) {
+        if (await appConfirm('La evolución aún no ha sido guardada en el sistema. ¿Deseas guardarla ahora para registrarla y enviar el resumen de tareas por WhatsApp?')) {
             const form = document.getElementById('session-form');
             if (form) {
                 form.requestSubmit();
@@ -8531,7 +8531,7 @@ async function quickMarkApptStatusFromDashboard(citaId, status) {
 window.quickMarkApptStatusFromDashboard = quickMarkApptStatusFromDashboard;
 
 async function deleteAgendaEventFromDashboard(citaId) {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta cita de la agenda?')) return;
+    if (!await appConfirm('¿Estás seguro de que deseas eliminar esta cita de la agenda?')) return;
     try {
         const res = await fetch(`/api/agenda/events/${citaId}`, { method: 'DELETE' });
         if (res.ok) {
@@ -9003,7 +9003,7 @@ async function loadTherapistConsultationHistory() {
 }
 
 async function deleteConsultationFromHistory(eventId) {
-    if (!confirm("¿Estás seguro de que deseas eliminar esta consulta del historial de pruebas? Esta acción borrará el registro y sus datos asociados.")) {
+    if (!await appConfirm("¿Estás seguro de que deseas eliminar esta consulta del historial de pruebas? Esta acción borrará el registro y sus datos asociados.")) {
         return;
     }
     try {
@@ -9158,12 +9158,12 @@ async function renderFullCalendar() {
                 day: 'Día'
             },
             events: allCalendarEvents,
-            eventClick: function(info) {
+            eventClick: async function(info) {
                 if (info.event.extendedProps.isBlock) {
                     const b = info.event.extendedProps.rawBlock;
                     const horStr = b.todo_el_dia ? 'Todo el día' : `${b.hora_inicio} - ${b.hora_fin}`;
-                    if (confirm(`🔒 Evento Personal / Bloqueo\n\nMotivo: ${b.motivo}\nFecha: ${b.fecha}\nHorario: ${horStr}\n\n¿Desea eliminar este bloqueo de la agenda?`)) {
-                        deleteAgendaBlock(b.id);
+                    if (await appConfirm(`🔒 Evento Personal / Bloqueo\n\nMotivo: ${b.motivo}\nFecha: ${b.fecha}\nHorario: ${horStr}\n\n¿Desea eliminar este bloqueo de la agenda?`)) {
+                        deleteAgendaBlock(b.id, true);
                     }
                     return;
                 }
@@ -9893,12 +9893,12 @@ function toggleBlockTimeInputs(isAllDay) {
     }
 }
 
-async function deleteAgendaBlock(blockId) {
+async function deleteAgendaBlock(blockId, skipConfirm = false) {
     if (!navigator.onLine) {
         alert("⚠️ Modo sin conexión activo\n\nNo es posible eliminar eventos o bloqueos de agenda sin conexión a internet.");
         return;
     }
-    if (!confirm('¿Deseas eliminar este evento personal / bloqueo de agenda?')) return;
+    if (!skipConfirm && !await appConfirm('¿Deseas eliminar este evento personal / bloqueo de agenda?')) return;
     try {
         const res = await fetch(`/api/agenda/blocks/${blockId}`, { method: 'DELETE' });
         const data = await res.json();
@@ -10837,9 +10837,9 @@ function renderProfileBlock(container, profileData, availableConsultorios = null
     delProfileBtn.style.flexShrink = '0';
     delProfileBtn.style.cursor = 'pointer';
     delProfileBtn.style.transition = 'all 0.2s';
-    delProfileBtn.onclick = (e) => {
+    delProfileBtn.onclick = async (e) => {
         e.stopPropagation();
-        if (confirm(`¿Eliminar el perfil "${headerTitle.textContent}"?`)) {
+        if (await appConfirm(`¿Eliminar el perfil "${headerTitle.textContent}"?`)) {
             card.remove();
             if (typeof updateCustomModalitiesSummary === 'function') {
                 updateCustomModalitiesSummary();
@@ -12627,7 +12627,7 @@ async function handleRestoreSubmit(e) {
     
     if (!file) return;
     
-    if (!confirm("ADVERTENCIA: Si restauras una copia de seguridad anterior, REEMPLAZARÁS por completo toda la base de datos actual con todos los registros actuales de pacientes, evoluciones y finanzas. ¿Quieres continuar?")) {
+    if (!await appConfirm("ADVERTENCIA: Si restauras una copia de seguridad anterior, REEMPLAZARÁS por completo toda la base de datos actual con todos los registros actuales de pacientes, evoluciones y finanzas. ¿Quieres continuar?")) {
         return;
     }
     
@@ -12647,7 +12647,7 @@ async function handleRestoreSubmit(e) {
             statusMsg.textContent = data.success;
             statusMsg.className = "status-msg text-success";
             statusMsg.classList.remove('hide');
-            alert(data.success);
+            await appAlert(data.success);
             // Recargar app para re-cargar BD
             window.location.reload();
         } else {
@@ -13050,7 +13050,7 @@ function filterSessionsPatientDropdown(query) {
 }
 
 async function deleteFinancePayment(eventId) {
-    if (!confirm("¿Está seguro de que desea eliminar este registro de pago/transacción?")) return;
+    if (!await appConfirm("¿Está seguro de que desea eliminar este registro de pago/transacción?")) return;
     
     try {
         const res = await fetch(`/api/agenda/${eventId}`, { method: 'DELETE' });
@@ -13185,7 +13185,7 @@ async function handleTherapistDeleteAccountSubmit(e) {
         return;
     }
 
-    if (!confirm('⚠️ ÚLTIMA ADVERTENCIA: ¿Confirmas la eliminación definitiva de tu cuenta profesional?')) {
+    if (!await appConfirm('⚠️ ÚLTIMA ADVERTENCIA: ¿Confirmas la eliminación definitiva de tu cuenta profesional?')) {
         return;
     }
 
@@ -13203,7 +13203,7 @@ async function handleTherapistDeleteAccountSubmit(e) {
         const data = await res.json();
 
         if (res.ok && data.success) {
-            alert(data.message || 'Tu cuenta profesional ha sido dada de baja correctamente.');
+            await appAlert(data.message || 'Tu cuenta profesional ha sido dada de baja correctamente.');
             try { sessionStorage.clear(); localStorage.clear(); } catch(e) {}
             window.location.href = '/';
         } else {
@@ -13525,7 +13525,7 @@ async function loadNotifiedPayments() {
         });
 
 async function deleteNotifiedPayment(paymentId) {
-    if (!confirm("¿Estás seguro de eliminar este reporte de pago duplicado/inválido?")) return;
+    if (!await appConfirm("¿Estás seguro de eliminar este reporte de pago duplicado/inválido?")) return;
     try {
         const res = await fetch(`/api/admin/payments/delete/${paymentId}`, { method: 'POST' });
         const data = await res.json();
@@ -13898,12 +13898,12 @@ async function loadPatientPortalTests() {
 async function handlePatientCancelAppointment(apptId, tiempoRestante, limiteCancelacion) {
     let force = false;
     if (tiempoRestante <= limiteCancelacion) {
-        if (!confirm(`Advertencia: Estás cancelando con menos de ${limiteCancelacion} horas de antelación. Esta consulta se cobrará igualmente como cancelada sin aviso. ¿Estás seguro de que deseas proceder?`)) {
+        if (!await appConfirm(`Advertencia: Estás cancelando con menos de ${limiteCancelacion} horas de antelación. Esta consulta se cobrará igualmente como cancelada sin aviso. ¿Estás seguro de que deseas proceder?`)) {
             return;
         }
         force = true;
     } else {
-        if (!confirm('¿Estás seguro de que deseas cancelar tu cita programada?')) {
+        if (!await appConfirm('¿Estás seguro de que deseas cancelar tu cita programada?')) {
             return;
         }
     }
@@ -14716,7 +14716,7 @@ async function handleSaveSMTPSettings(e) {
 }
 
 async function handleSendSMTPTest() {
-    const testEmail = prompt("Ingresa el correo electrónico de destino para enviar la prueba:", "paulomora@gmail.com");
+    const testEmail = await appPrompt("Ingresa el correo electrónico de destino para enviar la prueba:", "paulomora@gmail.com");
     if (!testEmail || !testEmail.includes('@')) return;
     
     const host = document.getElementById('smtp-host').value;
@@ -14968,7 +14968,7 @@ function changeWaQueuePerPage(val) {
 }
 
 async function sendSingleQueueItemNow(itemId, pacienteNombre, tokenType) {
-    if (!confirm(`¿Deseas enviar este mensaje de WhatsApp a ${pacienteNombre} inmediatamente?`)) return;
+    if (!await appConfirm(`¿Deseas enviar este mensaje de WhatsApp a ${pacienteNombre} inmediatamente?`)) return;
     try {
         let url = `/api/whatsapp/send-queue-item-now/${itemId}`;
         if (tokenType) {
@@ -14989,7 +14989,7 @@ async function sendSingleQueueItemNow(itemId, pacienteNombre, tokenType) {
 window.sendSingleQueueItemNow = sendSingleQueueItemNow;
 
 async function handleCancelWaQueueItem(citaId, pacienteNombre, tokenType) {
-    if (!confirm(`¿Estás seguro de que deseas detener manualmente el envío automático de este mensaje para ${pacienteNombre}?`)) {
+    if (!await appConfirm(`¿Estás seguro de que deseas detener manualmente el envío automático de este mensaje para ${pacienteNombre}?`)) {
         return;
     }
     
@@ -17970,7 +17970,7 @@ function triggerSuperadminPasswordReset() {
 window.triggerSuperadminPasswordReset = triggerSuperadminPasswordReset;
 
 async function toggleTherapistDirectorio(userId) {
-    if (!confirm('¿Estás seguro de que deseas cambiar la visibilidad de este psicólogo en el directorio?')) return;
+    if (!await appConfirm('¿Estás seguro de que deseas cambiar la visibilidad de este psicólogo en el directorio?')) return;
     try {
         const res = await fetch(`/api/superadmin/therapists/${userId}/toggle-directorio`, { method: 'POST' });
         const data = await res.json();
@@ -18160,7 +18160,7 @@ async function promptResetTherapistPassword(userId, userName, currentCedula) {
         }
     } else {
         // Fallback si SweetAlert no está cargado
-        const pass = prompt(`Resetear contraseña de ${userName}.\nIngresa la nueva contraseña temporal (o cédula):`, targetCedula);
+        const pass = await appPrompt(`Resetear contraseña de ${userName}.\nIngresa la nueva contraseña temporal (o cédula):`, targetCedula);
         if (!pass) return;
         try {
             const res = await fetch(`/api/superadmin/therapists/${userId}/reset-password`, {
@@ -18295,7 +18295,7 @@ async function saveTherapistProfile(event) {
 window.saveTherapistProfile = saveTherapistProfile;
 
 async function deactivateTherapistSubscription(userId) {
-    if (!confirm("¿Deseas suspender inmediatamente la suscripción de este psicólogo?")) return;
+    if (!await appConfirm("¿Deseas suspender inmediatamente la suscripción de este psicólogo?")) return;
     try {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
@@ -18339,7 +18339,7 @@ async function approveTherapistAccount(userId, userName) {
         });
         if (!result.isConfirmed) return;
     } else {
-        if (!confirm(confirmMsg)) return;
+        if (!await appConfirm(confirmMsg)) return;
     }
 
     try {
@@ -18576,7 +18576,7 @@ async function saveAllTherapistsSettings() {
 }
 
 async function toggleTherapistActive(userId) {
-    if (!confirm("¿Estás seguro de cambiar el estado de acceso de este psicólogo?")) return;
+    if (!await appConfirm("¿Estás seguro de cambiar el estado de acceso de este psicólogo?")) return;
     try {
         const res = await fetch(`/api/superadmin/therapists/${userId}/toggle-active`, { method: 'POST' });
         if (res.ok) {
@@ -19736,7 +19736,7 @@ async function sendSuperadminAnonymousPush(subId, deviceType) {
             didOpen: () => { Swal.showLoading(); }
         });
     } else {
-        const conf = confirm(`¿Enviar notificación de prueba a este dispositivo tester?`);
+        const conf = await appConfirm(`¿Enviar notificación de prueba a este dispositivo tester?`);
         if (!conf) return;
     }
 
@@ -19822,7 +19822,7 @@ async function sendSuperadminPatientPush(patientId, patientName) {
             didOpen: () => { Swal.showLoading(); }
         });
     } else {
-        const conf = confirm(`¿Enviar notificación de prueba al teléfono de ${patientName}?`);
+        const conf = await appConfirm(`¿Enviar notificación de prueba al teléfono de ${patientName}?`);
         if (!conf) return;
     }
 
@@ -19879,9 +19879,9 @@ async function openSuperadminBroadcastPushModal() {
     await ensureSwalLoaded();
 
     if (!window.Swal) {
-        const body = prompt("Escribe el mensaje de la notificación masiva para todos los teléfonos con la app vinculada:", defaultBody);
+        const body = await appPrompt("Escribe el mensaje de la notificación masiva para todos los teléfonos con la app vinculada:", defaultBody);
         if (!body || !body.trim()) return;
-        const conf = confirm(`¿Enviar notificación masiva con el mensaje:\n"${body}"?`);
+        const conf = await appConfirm(`¿Enviar notificación masiva con el mensaje:\n"${body}"?`);
         if (!conf) return;
         try {
             const res = await fetch('/api/superadmin/broadcast-push', {
@@ -20383,7 +20383,7 @@ async function markSupportTicketRead(ticketId) {
 }
 
 async function deleteSupportTicket(ticketId) {
-    if (!confirm('¿Estás seguro de que deseas eliminar este mensaje de soporte?')) return;
+    if (!await appConfirm('¿Estás seguro de que deseas eliminar este mensaje de soporte?')) return;
     try {
         const res = await fetch(`/api/superadmin/support/${ticketId}`, {
             method: 'DELETE'
@@ -21198,7 +21198,7 @@ window.editPatientRates = async function(patientId) {
 };
 
 window.resetTestData = async function() {
-    if (!confirm("¿Está seguro de restablecer todos los datos de pruebas? Esto vaciará permanentemente todas las consultas agendadas, evoluciones y pagos, dejando solo a los pacientes Leo y Eulogio con saldo en cero.")) {
+    if (!await appConfirm("¿Está seguro de restablecer todos los datos de pruebas? Esto vaciará permanentemente todas las consultas agendadas, evoluciones y pagos, dejando solo a los pacientes Leo y Eulogio con saldo en cero.")) {
         return;
     }
     try {
@@ -21208,7 +21208,7 @@ window.resetTestData = async function() {
         });
         const data = await res.json();
         if (res.ok) {
-            alert(data.success);
+            await appAlert(data.success);
             window.location.reload();
         } else {
             alert(data.error || "Error al restablecer los datos de prueba.");
@@ -21357,7 +21357,7 @@ window.enablePatientRateEdit = enablePatientRateEdit;
 window.savePatientRateQuick = savePatientRateQuick;
 
 async function deleteSessionAttachment(sessionId) {
-    if (!confirm("¿Estás seguro de que deseas eliminar permanentemente este archivo adjunto de la evolución?")) return;
+    if (!await appConfirm("¿Estás seguro de que deseas eliminar permanentemente este archivo adjunto de la evolución?")) return;
     try {
         const res = await fetch(`/api/sessions/${sessionId}/remove-attachment`, { method: 'POST' });
         const data = await res.json();
@@ -22178,7 +22178,7 @@ window.skipOnboardingWizard = skipOnboardingWizard;
 
 async function deleteTherapistAccount(userId, therapistName) {
     const confirmMsg = `⚠️ ¿ESTÁS ABSOLUTAMENTE SEGURO de eliminar al psicólogo "${therapistName}"?\n\nEsta acción borrará PERMANENTEMENTE su cuenta, pacientes, historias clínicas, citas y finanzas de la plataforma. Esta acción no se puede deshacer.`;
-    if (!confirm(confirmMsg)) return;
+    if (!await appConfirm(confirmMsg)) return;
 
     try {
         const res = await fetch(`/api/superadmin/therapists/${userId}`, { method: 'DELETE' });
@@ -22559,7 +22559,7 @@ window.requestNewWhatsAppQR = requestNewWhatsAppQR;
 
 
 async function handleLogoutWhatsApp() {
-    if (!confirm('¿Deseas desconectar tu cuenta de WhatsApp Web? Tendrás que escanear el QR nuevamente.')) return;
+    if (!await appConfirm('¿Deseas desconectar tu cuenta de WhatsApp Web? Tendrás que escanear el QR nuevamente.')) return;
     try {
         await fetch('/api/whatsapp/logout', { method: 'POST' });
         alert('Sesión de WhatsApp cerrada.');
@@ -23078,7 +23078,7 @@ window.loadSuperadminSubscriptionPaymentMethods = loadSuperadminSubscriptionPaym
 window.saveSuperadminEmbeddedSubscriptionMethods = saveSuperadminEmbeddedSubscriptionMethods;
 
 async function sendManualWhatsAppReminder(citaId) {
-    if (!confirm('¿Deseas enviar el recordatorio de WhatsApp a este consultante ahora mismo?')) return;
+    if (!await appConfirm('¿Deseas enviar el recordatorio de WhatsApp a este consultante ahora mismo?')) return;
     try {
         const res = await fetch(`/api/whatsapp/send-reminder/${citaId}`, { method: 'POST' });
         const data = await res.json();
@@ -23094,7 +23094,7 @@ async function sendManualWhatsAppReminder(citaId) {
 window.sendManualWhatsAppReminder = sendManualWhatsAppReminder;
 
 async function triggerManualCronReminders() {
-    if (!confirm('¿Deseas procesar y enviar los recordatorios de WhatsApp pendientes ahora?')) return;
+    if (!await appConfirm('¿Deseas procesar y enviar los recordatorios de WhatsApp pendientes ahora?')) return;
     try {
         const res = await fetch('/api/whatsapp/cron-send-reminders?key=espacioterapeutico_cron_2024', { method: 'POST' });
         const data = await res.json();
@@ -26193,7 +26193,7 @@ async function submitAddMedication(e) {
 }
 
 async function deletePatientAdherenceMedication(medId) {
-    if (!confirm('¿Deseas eliminar este medicamento de tus medicamentos registrados?')) return;
+    if (!await appConfirm('¿Deseas eliminar este medicamento de tus medicamentos registrados?')) return;
     const patientId = sessionStorage.getItem('patient_id') || '';
     try {
         const query = patientId ? `?patient_id=${patientId}` : '';
@@ -26951,7 +26951,7 @@ async function submitPatientActivationManageActivity(e) {
 }
 
 async function deletePatientActivationActivity(actId) {
-    if (!confirm('¿Seguro que deseas eliminar esta actividad?')) return;
+    if (!await appConfirm('¿Seguro que deseas eliminar esta actividad?')) return;
     const patientId = sessionStorage.getItem('patient_id') || '';
 
     try {
@@ -27710,7 +27710,7 @@ async function quickMarkApptStatus(apptId, newStatus) {
             return false;
         }
     }
-    if (!confirm(`¿Deseas cambiar el estado de esta cita a "${newStatus}"?`)) return false;
+    if (!await appConfirm(`¿Deseas cambiar el estado de esta cita a "${newStatus}"?`)) return false;
 
     try {
         const payload = {
@@ -32027,8 +32027,8 @@ function copyTestLink(url) {
         } else {
             alert("📋 Enlace de evaluación copiado al portapapeles:\n" + url);
         }
-    }).catch(() => {
-        prompt("Copia el siguiente enlace:", url);
+    }).catch(async () => {
+        await appPrompt("Copia el siguiente enlace:", url);
     });
 }
 
@@ -32037,7 +32037,7 @@ function openTestPresencialWindow(url) {
 }
 
 async function deleteTestAssignment(id) {
-    if (!confirm("¿Está seguro de eliminar esta asignación de test?")) return;
+    if (!await appConfirm("¿Está seguro de eliminar esta asignación de test?")) return;
 
     try {
         const resp = await fetch(`/api/tests/asignacion/${id}`, { method: 'DELETE' });
@@ -32851,8 +32851,8 @@ function copyTestLink(linkUrl) {
         } else {
             alert("📋 Enlace de evaluación copiado al portapapeles:\n" + finalUrl);
         }
-    }).catch(err => {
-        prompt("Copia el siguiente enlace:", finalUrl);
+    }).catch(async err => {
+        await appPrompt("Copia el siguiente enlace:", finalUrl);
     });
 }
 
@@ -33233,7 +33233,7 @@ async function loadAllAppliedTestsHistory() {
 }
 
 async function deleteTestAssignment(assignmentId) {
-    if (!confirm("¿Está seguro de que desea eliminar esta asignación de test?")) return;
+    if (!await appConfirm("¿Está seguro de que desea eliminar esta asignación de test?")) return;
 
     try {
         const res = await fetch(`/api/tests/asignacion/${assignmentId}`, { method: 'DELETE' });
@@ -33867,7 +33867,7 @@ async function guardarAjustesClinica() {
 }
 
 async function removerMiembroClinicaPrompt(targetUserId, nombreTerapeuta) {
-    if (!confirm(`¿Estás seguro de que deseas desvincular a "${nombreTerapeuta}" de tu equipo de trabajo?`)) return;
+    if (!await appConfirm(`¿Estás seguro de que deseas desvincular a "${nombreTerapeuta}" de tu equipo de trabajo?`)) return;
 
     try {
         const res = await fetch(`/api/clinica/miembro/${targetUserId}/remover`, {
@@ -33887,7 +33887,7 @@ async function removerMiembroClinicaPrompt(targetUserId, nombreTerapeuta) {
 }
 
 async function invitarMiembroClinicaPrompt() {
-    const busqueda = prompt("Ingrese la Cédula (ej: V-12345678) o el ID de Psicólogo del terapeuta que desea invitar a su equipo:");
+    const busqueda = await appPrompt("Ingrese la Cédula (ej: V-12345678) o el ID de Psicólogo del terapeuta que desea invitar a su equipo:");
     if (!busqueda || !busqueda.trim()) return;
 
     try {
@@ -33929,7 +33929,7 @@ async function responderSolicitudEquipo(solicitudId, accion) {
 }
 
 async function salirClinicaPrompt() {
-    if (!confirm("¿Estás seguro de que deseas desvincularte de esta clínica? Tu perfil volverá a ser de Psicólogo Independiente.")) return;
+    if (!await appConfirm("¿Estás seguro de que deseas desvincularte de esta clínica? Tu perfil volverá a ser de Psicólogo Independiente.")) return;
 
     try {
         const res = await fetch('/api/clinica/salir', { method: 'POST' });
@@ -33947,7 +33947,7 @@ async function salirClinicaPrompt() {
 }
 
 async function eliminarClinicaPrompt() {
-    if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar y disolver esta clínica? Esta acción desvinculará a todos los miembros de tu equipo y restaurará tu perfil a Psicólogo Independiente.")) return;
+    if (!await appConfirm("⚠️ ¿Estás seguro de que deseas eliminar y disolver esta clínica? Esta acción desvinculará a todos los miembros de tu equipo y restaurará tu perfil a Psicólogo Independiente.")) return;
 
     try {
         const res = await fetch('/api/clinica/eliminar', { method: 'POST' });
@@ -34829,13 +34829,13 @@ function copyClinicCodeToClipboard(code) {
     }
     navigator.clipboard.writeText(code).then(() => {
         alert("📋 Código de clínica copiado al portapapeles: " + code);
-    }).catch(() => {
-        prompt("Copia este código de clínica:", code);
+    }).catch(async () => {
+        await appPrompt("Copia este código de clínica:", code);
     });
 }
 
 async function agregarConsultorioFisicoPrompt() {
-    const nombre = prompt("Ingresa el nombre del nuevo consultorio presencial (Ej: Consultorio 3, Sala B):");
+    const nombre = await appPrompt("Ingresa el nombre del nuevo consultorio presencial (Ej: Consultorio 3, Sala B):");
     if (!nombre || !nombre.trim()) return;
     try {
         const res = await fetch('/api/clinica/espacios-fisicos/agregar', {
@@ -34857,7 +34857,7 @@ async function agregarConsultorioFisicoPrompt() {
 }
 
 async function renombrarConsultorioFisicoPrompt(nombreAnterior) {
-    const nombreNuevo = prompt(`Ingresa el nuevo nombre para "${nombreAnterior}":`, nombreAnterior);
+    const nombreNuevo = await appPrompt(`Ingresa el nuevo nombre para "${nombreAnterior}":`, nombreAnterior);
     if (!nombreNuevo || !nombreNuevo.trim() || nombreNuevo.trim() === nombreAnterior) return;
     try {
         const res = await fetch('/api/clinica/espacios-fisicos/renombrar', {
@@ -34879,7 +34879,7 @@ async function renombrarConsultorioFisicoPrompt(nombreAnterior) {
 }
 
 async function eliminarConsultorioFisicoPrompt(nombre) {
-    if (!confirm(`¿Seguro que deseas eliminar el consultorio "${nombre}" de la clínica?`)) return;
+    if (!await appConfirm(`¿Seguro que deseas eliminar el consultorio "${nombre}" de la clínica?`)) return;
     try {
         const res = await fetch('/api/clinica/espacios-fisicos/eliminar', {
             method: 'POST',
@@ -35146,7 +35146,7 @@ window.abrirModalSuscripcionPersonalPrompt = abrirModalSuscripcionPersonalPrompt
 
 // Exportar globalmente
 async function editarCostoPacienteClinica(patientId, currentCosto, currentMoneda) {
-    const inputCosto = prompt(`Ingresa el nuevo costo de consulta para este paciente (Moneda: ${currentMoneda}):`, currentCosto);
+    const inputCosto = await appPrompt(`Ingresa el nuevo costo de consulta para este paciente (Moneda: ${currentMoneda}):`, currentCosto);
     if (inputCosto === null) return;
 
     const numCosto = parseFloat(inputCosto);
@@ -35324,7 +35324,7 @@ async function enviarWhatsAppDirectoHerramienta(patientId, toolKey) {
                 await navigator.clipboard.writeText(data.link);
                 alert(`🔗 Enlace directo de 1 solo uso generado y copiado al portapapeles:\n${data.link}`);
             } else {
-                prompt("Copia el siguiente enlace directo para el paciente:", data.link);
+                await appPrompt("Copia el siguiente enlace directo para el paciente:", data.link);
             }
         }
     } catch (err) {
@@ -35514,10 +35514,10 @@ async function copyToolDirectLink(link) {
             await navigator.clipboard.writeText(link);
             alert("🔑 ¡Link Rápido (Token sin inicio de sesión) copiado al portapapeles con éxito!\n\n" + link);
         } else {
-            prompt("Copia el siguiente enlace directo de 1 solo uso para el paciente:", link);
+            await appPrompt("Copia el siguiente enlace directo de 1 solo uso para el paciente:", link);
         }
     } catch (err) {
-        prompt("Copia el siguiente enlace directo de 1 solo uso para el paciente:", link);
+        await appPrompt("Copia el siguiente enlace directo de 1 solo uso para el paciente:", link);
     }
 }
 
@@ -35918,8 +35918,8 @@ function submitMeditacionCreate(e) {
     });
 }
 
-function deleteMeditacion(id) {
-    if(!confirm("¿Seguro que deseas eliminar esta meditación? Se borrará también de los consultantes asignados.")) return;
+async function deleteMeditacion(id) {
+    if(!await appConfirm("¿Seguro que deseas eliminar esta meditación? Se borrará también de los consultantes asignados.")) return;
     
     fetch(`/api/meditaciones/${id}`, {method: 'DELETE'})
         .then(res => res.json())
@@ -36145,7 +36145,7 @@ async function submitMeditacionAssign(e) {
 }
 
 async function unassignMeditacion(asignacionId) {
-    if(!confirm("¿Seguro que deseas eliminar esta asignación de meditación?")) return;
+    if(!await appConfirm("¿Seguro que deseas eliminar esta asignación de meditación?")) return;
     try {
         const res = await fetch(`/api/pacientes/meditaciones/${asignacionId}`, {method: 'DELETE'});
         if (!res.ok) {
@@ -36367,7 +36367,7 @@ async function submitCogFolderCreate(e) {
 }
 
 async function deleteCogFolder(folderId) {
-    if (!confirm("¿Seguro que deseas eliminar esta carpeta? Se eliminarán todas las fichas y ejercicios contenidos en ella.")) return;
+    if (!await appConfirm("¿Seguro que deseas eliminar esta carpeta? Se eliminarán todas las fichas y ejercicios contenidos en ella.")) return;
     try {
         const res = await fetch(`/api/estimulacion/carpetas/${folderId}`, { method: 'DELETE' });
         const data = await res.json();
@@ -36523,7 +36523,7 @@ async function submitCogExerciseCreate(e) {
 }
 
 async function deleteCogExercise(exId) {
-    if (!confirm("¿Seguro que deseas eliminar esta ficha?")) return;
+    if (!await appConfirm("¿Seguro que deseas eliminar esta ficha?")) return;
     try {
         const res = await fetch(`/api/estimulacion/ejercicios/${exId}`, { method: 'DELETE' });
         const data = await res.json();
@@ -36910,7 +36910,7 @@ async function sendCognitiveExerciseNow(patientId, patientName) {
         return;
     }
     const nameStr = patientName ? ` a ${patientName}` : '';
-    if (!confirm(`¿Deseas enviar inmediatamente por WhatsApp la ficha correspondiente de estimulación cognitiva${nameStr}?`)) {
+    if (!await appConfirm(`¿Deseas enviar inmediatamente por WhatsApp la ficha correspondiente de estimulación cognitiva${nameStr}?`)) {
         return;
     }
 

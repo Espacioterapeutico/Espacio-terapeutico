@@ -1584,7 +1584,7 @@ async function loadAllAppliedTestsHistory() {
 }
 
 async function deleteTestAssignment(assignmentId) {
-    if (!confirm("¿Está seguro de que desea eliminar esta asignación de test?")) return;
+    if (!await appConfirm("¿Está seguro de que desea eliminar esta asignación de test?")) return;
 
     try {
         const res = await fetch(`/api/tests/asignacion/${assignmentId}`, { method: 'DELETE' });

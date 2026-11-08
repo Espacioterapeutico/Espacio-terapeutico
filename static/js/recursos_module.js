@@ -1945,7 +1945,7 @@
                 alert(`📋 ¡Enlace copiado al portapapeles!\n\n${link}`);
             }
         } catch (copyErr) {
-            prompt("Copia el siguiente enlace interactivo de la pizarra para compartirlo:", link);
+            await appPrompt("Copia el siguiente enlace interactivo de la pizarra para compartirlo:", link);
         }
     }
     window.copyRecursoDirectLinkById = copyRecursoDirectLinkById;
@@ -1985,14 +1985,14 @@
                 alert(`✅ Pizarra enviada exitosamente por WhatsApp a ${pacNombre}.`);
             } else {
                 const errMsg = data.error || 'No se pudo enviar el mensaje por WhatsApp.';
-                const fallback = confirm(`⚠️ El bot de WhatsApp no pudo entregar el mensaje:\n${errMsg}\n\n¿Deseas abrir WhatsApp Web en tu navegador para enviarlo manualmente?`);
+                const fallback = await appConfirm(`⚠️ El bot de WhatsApp no pudo entregar el mensaje:\n${errMsg}\n\n¿Deseas abrir WhatsApp Web en tu navegador para enviarlo manualmente?`);
                 if (fallback && r && r.wa_url) {
                     window.open(r.wa_url, '_blank');
                 }
             }
         } catch (err) {
             console.error('Error enviando recurso por WhatsApp:', err);
-            const fallback = confirm(`⚠️ Error de conexión con el bot de WhatsApp.\n\n¿Deseas abrir WhatsApp Web en tu navegador para enviarlo manualmente?`);
+            const fallback = await appConfirm(`⚠️ Error de conexión con el bot de WhatsApp.\n\n¿Deseas abrir WhatsApp Web en tu navegador para enviarlo manualmente?`);
             if (fallback && r && r.wa_url) {
                 window.open(r.wa_url, '_blank');
             }
@@ -2070,7 +2070,7 @@
     window.closeRecursoPizarra = closeRecursoPizarra;
 
     async function deleteRecursoPizarra(recursoId) {
-        if (!confirm("¿Estás seguro de que deseas eliminar esta pizarra de recurso?")) return;
+        if (!await appConfirm("¿Estás seguro de que deseas eliminar esta pizarra de recurso?")) return;
         try {
             const res = await fetch(`/api/recursos/pizarra/${recursoId}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Error al eliminar');
