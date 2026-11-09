@@ -2094,8 +2094,7 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
-
-})();
+    window.escapeHtml = escapeHtml;
 
 
     // --- G. MIS ÁREAS DE VIDA (MAPA MENTAL CON NUBES) ---
@@ -2259,3 +2258,5 @@
         }
     }
     window.switchAdvViewMode = switchAdvViewMode;
+
+})();

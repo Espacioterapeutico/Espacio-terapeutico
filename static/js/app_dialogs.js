@@ -27,6 +27,17 @@
     window.nativeConfirm = nativeConfirm;
     window.nativePrompt = nativePrompt;
 
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+    window.escapeHtml = escapeHtml;
+
     const supportsDialog = typeof HTMLDialogElement === 'function' &&
         typeof HTMLDialogElement.prototype.showModal === 'function';
 
