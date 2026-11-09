@@ -1138,7 +1138,13 @@ def _execute_whatsapp_reminders_inner(db=None):
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
-        WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 0 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.confirmacion_enviada_wa, 0) = 0 AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
+        WHERE (af.fecha >= ? AND af.fecha <= ?) 
+          AND COALESCE(af.confirmada, 0) = 0 
+          AND COALESCE(af.estado_pago, '') NOT LIKE 'Cancelada%'
+          AND (af.referencia IS NULL OR (af.referencia NOT LIKE '%Cancelada%' AND af.referencia NOT LIKE '%cancelad%'))
+          AND af.id NOT IN (SELECT agenda_id FROM citas_canceladas_log WHERE agenda_id IS NOT NULL)
+          AND COALESCE(af.confirmacion_enviada_wa, 0) = 0 
+          AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
     """, (today_str, future_3days_str))
     citas_confirmar = cursor.fetchall()
     print(f"[CRON-WA] Citas pendientes de confirmación encontradas: {len(citas_confirmar)} (rango {today_str} a {future_3days_str})", flush=True)
@@ -1196,6 +1202,13 @@ def _execute_whatsapp_reminders_inner(db=None):
                 print(f"[CRON-WA]   Saltando {pat_name}: aún no cumple momento de disparo ({trigger_dt})", flush=True)
                 continue
             
+            # Re-verificar que la cita no haya sido cancelada entretanto
+            cursor.execute("SELECT estado_pago, confirmada FROM agenda_finanzas WHERE id = ?", (cita['id'],))
+            _st_check = cursor.fetchone()
+            if not _st_check or 'cancelad' in str(_st_check[0] or '').lower():
+                print(f"[CRON-WA]   Saltando {pat_name}: cita {cita['id']} cancelada recientemente", flush=True)
+                continue
+
             print(f"[CRON-WA]   >>> ENVIANDO confirmación a {pat_name} ({phone})...", flush=True)
             psicologo_data = {'nombres': cita.get('psic_nombres'), 'apellidos': cita.get('psic_apellidos')}
             
@@ -1268,7 +1281,13 @@ def _execute_whatsapp_reminders_inner(db=None):
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         LEFT JOIN usuarios u ON (p.psicologo_id = u.id OR (p.psicologo_id IS NULL AND u.id = 1))
-        WHERE (af.fecha >= ? AND af.fecha <= ?) AND COALESCE(af.confirmada, 0) = 1 AND COALESCE(af.estado_pago, '') != 'Cancelada' AND COALESCE(af.recordatorio_enviado_wa, 0) = 0 AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
+        WHERE (af.fecha >= ? AND af.fecha <= ?) 
+          AND COALESCE(af.confirmada, 0) = 1 
+          AND COALESCE(af.estado_pago, '') NOT LIKE 'Cancelada%'
+          AND (af.referencia IS NULL OR (af.referencia NOT LIKE '%Cancelada%' AND af.referencia NOT LIKE '%cancelad%'))
+          AND af.id NOT IN (SELECT agenda_id FROM citas_canceladas_log WHERE agenda_id IS NOT NULL)
+          AND COALESCE(af.recordatorio_enviado_wa, 0) = 0 
+          AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
     """, (today_str, future_3days_str))
     citas_recordar = cursor.fetchall()
 
@@ -1311,6 +1330,12 @@ def _execute_whatsapp_reminders_inner(db=None):
             should_send_reminder = (now_naive >= trigger_dt) and (cita_dt > now_naive)
 
             if not should_send_reminder:
+                continue
+
+            cursor.execute("SELECT estado_pago, confirmada FROM agenda_finanzas WHERE id = ?", (cita['id'],))
+            _st_check2 = cursor.fetchone()
+            if not _st_check2 or 'cancelad' in str(_st_check2[0] or '').lower():
+                print(f"[CRON-WA]   Saltando {pat_name}: cita {cita['id']} cancelada recientemente", flush=True)
                 continue
 
             psicologo_data = {'nombres': cita.get('psic_nombres'), 'apellidos': cita.get('psic_apellidos')}
@@ -1445,7 +1470,7 @@ def _execute_whatsapp_reminders_inner(db=None):
             JOIN sesiones s ON s.agenda_id = af.id
             WHERE af.fecha = ? 
               AND COALESCE(af.confirmada, 0) = 1
-              AND COALESCE(af.estado_pago, '') != 'Cancelada'
+              AND COALESCE(af.estado_pago, '') NOT LIKE 'Cancelada%'
               AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
               AND COALESCE(af.cierre_enviado_wa, 0) = 0
         """, (today_str,))
@@ -1970,7 +1995,7 @@ def whatsapp_diagnostico():
         FROM agenda_finanzas af
         JOIN pacientes p ON af.paciente_id = p.id
         WHERE af.fecha >= ? AND af.fecha <= ?
-          AND COALESCE(af.estado_pago, '') != 'Cancelada'
+          AND COALESCE(af.estado_pago, '') NOT LIKE 'Cancelada%'
         ORDER BY af.fecha, af.hora
     """, (today_str, future_3days_str))
     rows = cursor.fetchall()
@@ -2852,7 +2877,7 @@ def whatsapp_webhook():
         WHERE af.paciente_id IN ({placeholders}) 
           AND af.fecha >= ? 
           AND COALESCE(af.confirmada, 0) = 0
-          AND COALESCE(af.estado_pago, '') != 'Cancelada'
+          AND COALESCE(af.estado_pago, '') NOT LIKE 'Cancelada%'
         ORDER BY af.fecha ASC, af.hora ASC LIMIT 1
     """, patient_ids + [today_str])
     

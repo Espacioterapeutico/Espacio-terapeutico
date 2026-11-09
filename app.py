@@ -2344,6 +2344,7 @@ def auto_cancel_unconfirmed_sessions(db):
               AND (af.hora != '00:00' AND af.hora != '' AND af.hora IS NOT NULL)
               AND (af.referencia IS NULL OR (af.referencia NOT LIKE '%Cancelada%' AND af.referencia NOT LIKE '%cancelad%'))
               AND af.id NOT IN (SELECT agenda_id FROM citas_canceladas_log WHERE agenda_id IS NOT NULL)
+              AND (COALESCE(af.confirmacion_enviada_wa, 0) = 1 OR p.telefono IS NULL OR TRIM(p.telefono) = '')
               AND af.fecha >= ?
         """, (start_date_str,))
         
