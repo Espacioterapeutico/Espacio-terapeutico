@@ -69,10 +69,13 @@
             subPiz.classList.remove('hide');
             subCat.classList.add('hide');
 
-            // Si hay un paciente previamente seleccionado, recargar sus pizarras
+            // Si hay un paciente previamente seleccionado, recargar sus pizarras;
+            // de lo contrario, cargar de inmediato las pizarras activas recientes (página 1)
             const select = document.getElementById('rec-patient-filter-select');
             if (select && select.value) {
                 onRecursoPatientSelected(select.value);
+            } else {
+                loadActivePizarras(1);
             }
         }
     }
@@ -412,11 +415,7 @@
         if (!container) return;
 
         if (!patientId) {
-            container.innerHTML = `
-            <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
-                <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">📁</span>
-                <p style="margin: 0; font-size: 0.95rem;">Busca y selecciona un consultante para ver sus pizarras interactivas de recursos o crear una nueva.</p>
-            </div>`;
+            await loadActivePizarras(1);
             return;
         }
 
@@ -433,6 +432,169 @@
         }
     }
     window.onRecursoPatientSelected = onRecursoPatientSelected;
+
+    window.currentActivePizarrasPage = 1;
+
+    async function loadActivePizarras(page = 1) {
+        window.currentActivePizarrasPage = page;
+        const container = document.getElementById('rec-patient-pizarras-container');
+        if (!container) return;
+
+        container.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
+            <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem; margin-bottom: 0.75rem;"></div>
+            <p style="margin: 0; font-size: 0.9rem;">Cargando pizarras activas recientes...</p>
+        </div>`;
+
+        try {
+            const res = await fetch(`/api/recursos/activas?page=${page}&limit=5`);
+            if (!res.ok) throw new Error('Error al consultar pizarras');
+            const data = await res.json();
+            renderActivePizarrasFeed(data, container);
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = '<p class="text-danger text-center py-4">Error al cargar las pizarras activas recientes.</p>';
+        }
+    }
+    window.loadActivePizarras = loadActivePizarras;
+
+    function filterByPatientFromPizarraCard(patientId, nombres, cedula) {
+        selectRecursoFilterPatient({
+            id: patientId,
+            nombres: nombres,
+            cedula: cedula
+        });
+    }
+    window.filterByPatientFromPizarraCard = filterByPatientFromPizarraCard;
+
+    function renderActivePizarrasFeed(data, container) {
+        const pizarras = data.pizarras || [];
+        const total = data.total || 0;
+        const page = data.page || 1;
+        const totalPages = data.total_pages || 1;
+
+        if (total === 0) {
+            container.innerHTML = `
+            <div style="text-align: center; padding: 3rem 1.5rem; background: #ffffff; border-radius: 16px; border: 1.5px dashed #cbd5e1; margin-top: 0.5rem;">
+                <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">📋</span>
+                <h4 style="margin: 0 0 0.4rem 0; color: #1e293b; font-weight: 700;">No tienes pizarras activas creadas aún</h4>
+                <p style="margin: 0 0 1.25rem 0; font-size: 0.88rem; color: #64748b; line-height: 1.45;">
+                    Comienza creando una nueva pizarra interactiva de trabajo terapéutico para cualquiera de tus consultantes.
+                </p>
+                <button type="button" class="btn btn-primary" onclick="openAsignarRecursoModal()" style="font-weight: 700; border-radius: 8px; padding: 0.55rem 1.25rem;">
+                    ➕ Crear Nueva Pizarra
+                </button>
+            </div>`;
+            return;
+        }
+
+        let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.55rem;">
+                <span style="font-size: 1.2rem;">⚡</span>
+                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-dark, #0f172a);">
+                    Pizarras Activas Recientes
+                </h3>
+                <span style="background: #f1f5f9; color: #475569; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid #cbd5e1;">
+                    ${total} en total
+                </span>
+            </div>
+            <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">
+                Ordenadas por última actualización (5 por página)
+            </span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+        `;
+
+        pizarras.forEach(r => {
+            const meta = r.meta || {};
+            const icon = meta.icono || '📚';
+            const color = meta.color || '#7e22ce';
+            const colorBg = meta.color_bg || '#f3e8ff';
+            const ultimaEdicion = r.fecha_ultima_edicion ? r.fecha_ultima_edicion.substring(0, 16).replace('T', ' ') : 'Reciente';
+            const editadoPor = r.ultima_edicion_por === 'paciente' ? '👤 Consultante' : '🩺 Terapeuta';
+            const nombrePaciente = `${r.nombres || ''} ${r.apellidos || ''}`.trim() || 'Consultante';
+            const cedulaPaciente = r.cedula || '';
+
+            html += `
+            <div class="card" style="background: #ffffff; border-radius: 14px; border: 1.5px solid #e2e8f0; padding: 1.15rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s;">
+                <div>
+                    <!-- Encabezado de la tarjeta: Icono, Tipo y Consultante -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.65rem; gap: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.6rem; padding: 0.35rem 0.5rem; background: ${colorBg}; border-radius: 10px; line-height: 1;">
+                                ${icon}
+                            </span>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: ${color}; background: ${colorBg}; padding: 0.15rem 0.55rem; border-radius: 10px;">
+                                ${meta.titulo ? meta.titulo.split('(')[0].trim() : 'Recurso'}
+                            </span>
+                        </div>
+                        <button type="button" onclick="filterByPatientFromPizarraCard(${r.paciente_id}, '${escapeHtml(nombrePaciente)}', '${escapeHtml(cedulaPaciente)}')" title="Ver solo pizarras de este consultante" style="background: #fdf4ff; border: 1px solid #f0abfc; color: #702e5e; border-radius: 8px; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; text-align: right; max-width: 175px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-flex; align-items: center; gap: 4px;">
+                            <span>👤</span> <span style="overflow: hidden; text-overflow: ellipsis;">${escapeHtml(nombrePaciente)}</span>
+                        </button>
+                    </div>
+
+                    <!-- Título del Recurso -->
+                    <h4 style="margin: 0 0 0.35rem 0; font-size: 1.02rem; font-weight: 800; color: #0f172a; line-height: 1.35;">
+                        ${escapeHtml(r.titulo)}
+                    </h4>
+
+                    <!-- Metadatos de edición -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.76rem; color: #64748b;">
+                        <span>🕒 ${ultimaEdicion}</span>
+                        <span style="font-weight: 600; color: ${r.ultima_edicion_por === 'paciente' ? '#2563eb' : '#7e22ce'};">
+                            ${editadoPor}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openRecursoPizarra(${r.id})" style="font-weight: 700; font-size: 0.8rem; padding: 0.35rem 0.85rem; border-radius: 6px; background: ${color}; border: none; flex: 1;">
+                        ✏️ Abrir Pizarra
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="exportRecursoWordById(${r.id})" title="Descargar Word (.docx)" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; border-radius: 6px; background: white; border: 1.5px solid #cbd5e1;">
+                        📥
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="copyRecursoDirectLinkById(${r.id})" title="Copiar enlace de la pizarra al portapapeles" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; border-radius: 6px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                        📋
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="shareRecursoWhatsAppById(${r.id})" title="Enviar por WhatsApp" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; border-radius: 6px; background: #dcfce7; color: #16a34a; border: 1px solid #86efac;">
+                        📲
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="deleteRecursoPizarra(${r.id})" title="Eliminar Pizarra" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; border-radius: 6px; background: #fee2e2; color: #dc2626; border: none;">
+                        🗑️
+                    </button>
+                </div>
+            </div>`;
+        });
+
+        html += `</div>`;
+
+        // Barra de Paginación de 5 en 5
+        if (totalPages > 1) {
+            html += `
+            <div style="margin-top: 1.25rem; padding: 0.85rem 1rem; background: #ffffff; border-radius: 12px; border: 1.5px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="font-size: 0.85rem; color: #64748b;">
+                    Mostrando página <strong>${page}</strong> de <strong>${totalPages}</strong> (<strong>${total}</strong> pizarras activas)
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="loadActivePizarras(${page - 1})" ${page <= 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''} style="padding: 0.4rem 0.85rem; font-weight: 700; border-radius: 8px;">
+                        ◀ Anterior
+                    </button>
+                    <span style="font-weight: 700; font-size: 0.85rem; padding: 0.3rem 0.75rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; color: var(--primary-color);">
+                        ${page} / ${totalPages}
+                    </span>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="loadActivePizarras(${page + 1})" ${page >= totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''} style="padding: 0.4rem 0.85rem; font-weight: 700; border-radius: 8px;">
+                        Siguiente ▶
+                    </button>
+                </div>
+            </div>`;
+        }
+
+        container.innerHTML = html;
+    }
 
     function renderPatientPizarrasTable(recursos, container, isPatientPortal) {
         if (!recursos || recursos.length === 0) {
@@ -2077,6 +2239,8 @@
             alert("Pizarra eliminada correctamente.");
             if (window.selectedRecursoPatientId) {
                 onRecursoPatientSelected(window.selectedRecursoPatientId);
+            } else {
+                loadActivePizarras(window.currentActivePizarrasPage || 1);
             }
         } catch (e) {
             alert(e.message);

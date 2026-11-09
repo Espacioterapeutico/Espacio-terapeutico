@@ -320,6 +320,100 @@ def ensure_recursos_tables(cursor):
 # ENDPOINTS DE CATÁLOGO Y ASIGNACIÓN
 # =========================================================================
 
+@recursos_bp.route('/api/recursos/activas', methods=['GET'])
+@login_required
+@psychologist_required
+def get_pizarras_activas():
+    """Retorna todas las pizarras activas del terapeuta ordenadas por fecha_ultima_edicion DESC con paginación de 5 en 5."""
+    user_id = session.get('user_id')
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 5, type=int)
+    if page < 1:
+        page = 1
+    if limit < 1 or limit > 50:
+        limit = 5
+
+    offset = (page - 1) * limit
+
+    db = get_db()
+    cursor = db.cursor()
+    ensure_recursos_tables(cursor)
+
+    cursor.execute("""
+        SELECT COUNT(*) as total
+        FROM paciente_recursos r
+        JOIN pacientes p ON r.paciente_id = p.id
+        WHERE r.psicologo_id = ?
+    """, (user_id,))
+    total_row = cursor.fetchone()
+    total = total_row['total'] if total_row else 0
+
+    cursor.execute("""
+        SELECT r.*, p.nombres, p.apellidos, p.email, p.telefono, p.cedula
+        FROM paciente_recursos r
+        JOIN pacientes p ON r.paciente_id = p.id
+        WHERE r.psicologo_id = ?
+        ORDER BY r.fecha_ultima_edicion DESC
+        LIMIT ? OFFSET ?
+    """, (user_id, limit, offset))
+
+    rows = cursor.fetchall()
+
+    # Plantilla de WhatsApp para recursos / pizarras
+    cursor.execute("SELECT valor FROM configuracion WHERE clave = ?", (f"msg_pizarra_{user_id}",))
+    tmpl_row = cursor.fetchone()
+    if not tmpl_row or not tmpl_row['valor']:
+        cursor.execute("SELECT valor FROM configuracion WHERE clave = 'msg_pizarra'")
+        tmpl_row = cursor.fetchone()
+
+    default_tmpl = (
+        "Hola *{nombre}* 👋\n\n"
+        "Te comparto tu pizarra de trabajo interactivo: *{titulo}*.\n\n"
+        "Puedes abrirla, escribir y reflexionar en ella directamente desde este enlace:\n"
+        "👉 {link}\n\n"
+        "Los cambios que realices se guardan automáticamente en tiempo real. ¡Nos vemos en nuestra próxima sesión!"
+    )
+    raw_tmpl = (tmpl_row['valor'] if tmpl_row and tmpl_row['valor'] else default_tmpl)
+
+    from routes_herramientas import get_public_base_url, clean_phone_number
+    import urllib.parse
+    host_url = get_public_base_url()
+
+    result = []
+    for row in rows:
+        d = dict(row)
+        try:
+            d['contenido'] = json.loads(d['contenido_json'])
+        except Exception:
+            d['contenido'] = {}
+        if not d.get('token_compartido'):
+            d['token_compartido'] = uuid.uuid4().hex
+            cursor.execute("UPDATE paciente_recursos SET token_compartido = ? WHERE id = ?", (d['token_compartido'], d['id']))
+            db.commit()
+        meta = next((r for r in RECURSOS_CATALOGO if r['id'] == d['recurso_tipo']), None)
+        d['meta'] = meta
+
+        direct_link = f"{host_url}/pizarra/compartida/{d['token_compartido']}"
+        first_name = (d.get('nombres') or '').strip().split()[0] if d.get('nombres') else 'Consultante'
+        titulo = d.get('titulo') or (meta['titulo'] if meta and 'titulo' in meta else 'Pizarra de Trabajo')
+        msg_wa = raw_tmpl.replace('{nombre}', first_name).replace('{titulo}', titulo).replace('{link}', direct_link)
+        clean_phone = clean_phone_number(d.get('telefono') or '')
+        d['link_compartido'] = direct_link
+        d['wa_message'] = msg_wa
+        d['wa_url'] = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(msg_wa)}" if clean_phone else f"https://api.whatsapp.com/send?text={urllib.parse.quote(msg_wa)}"
+
+        result.append(d)
+
+    total_pages = (total + limit - 1) // limit if total > 0 else 1
+
+    return jsonify({
+        'pizarras': result,
+        'total': total,
+        'page': page,
+        'limit': limit,
+        'total_pages': total_pages
+    })
+
 @recursos_bp.route('/api/recursos/catalogo', methods=['GET'])
 @login_required
 def get_catalogo():
