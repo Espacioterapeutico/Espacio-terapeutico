@@ -66,6 +66,31 @@ def ensure_sesiones_columns(cursor):
                 if col_name not in cols_s:
                     try: cursor.execute(f"ALTER TABLE sesiones ADD COLUMN {col_name} {col_type}")
                     except Exception: pass
+        cleanup_duplicate_sesiones(cursor)
+    except Exception:
+        pass
+
+def cleanup_duplicate_sesiones(cursor):
+    try:
+        # Eliminar sesiones duplicadas asociadas a la misma cita (agenda_id), conservando la primera
+        cursor.execute('''
+            DELETE FROM sesiones 
+            WHERE id NOT IN (
+                SELECT MIN(id) 
+                FROM sesiones 
+                WHERE agenda_id IS NOT NULL 
+                GROUP BY agenda_id
+            ) AND agenda_id IS NOT NULL
+        ''')
+        # Eliminar sesiones duplicadas idénticas sin cita creadas por doble clic
+        cursor.execute('''
+            DELETE FROM sesiones 
+            WHERE id NOT IN (
+                SELECT MIN(id) 
+                FROM sesiones 
+                GROUP BY paciente_id, fecha, resumen
+            ) AND agenda_id IS NULL AND resumen IS NOT NULL
+        ''')
     except Exception:
         pass
 
@@ -452,8 +477,25 @@ def manage_sessions():
         modalidad = data.get('modalidad', 'Online')
         estado = data.get('estado', 'Realizada')
 
+        # Protección estricta contra envíos concurrentes / doble clic:
+        if agenda_id:
+            cursor.execute("SELECT id FROM sesiones WHERE agenda_id = ?", (agenda_id,))
+            existing_s = cursor.fetchone()
+            if existing_s:
+                return jsonify({'success': 'Evolución clínica ya registrada previamente.', 'session_id': existing_s['id'], 'duplicate_prevented': True}), 200
+
         resumen = encrypt_clinical_text(data.get('resumen'))
         resumen_paciente = encrypt_clinical_text(data.get('resumen_paciente'))
+
+        # Si no tiene agenda_id, verificar si se insertó exactamente lo mismo hace instantes
+        cursor.execute('''
+            SELECT id FROM sesiones 
+            WHERE paciente_id = ? AND fecha = ? AND resumen = ?
+            ORDER BY id DESC LIMIT 1
+        ''', (paciente_id, fecha, resumen))
+        existing_dup = cursor.fetchone()
+        if existing_dup:
+            return jsonify({'success': 'Evolución clínica ya registrada exitosamente.', 'session_id': existing_dup['id'], 'duplicate_prevented': True}), 200
         tareas_asignadas = data.get('tareas_asignadas', '')
         recursos_entregados = data.get('recursos_entregados', '')
         anotaciones_proxima = encrypt_clinical_text(data.get('anotaciones_proxima'))

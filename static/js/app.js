@@ -7308,39 +7308,19 @@ async function openRegisterSessionFromEvent(eventId) {
 
 async function handleSessionSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
-    const id = document.getElementById('session-form-id')?.value || '';
-    const agendaId = document.getElementById('s-agenda-id')?.value || '';
     
-    // Confirmación segura con salvaguarda contra bloqueos
-    let confirmed = true;
-    try {
-        if (typeof appConfirm === 'function') {
-            confirmed = await Promise.race([
-                appConfirm("¿Está seguro de guardar esta evolución clínica?"),
-                new Promise(res => setTimeout(() => res(true), 15000))
-            ]);
-        } else if (typeof window.appConfirm === 'function') {
-            confirmed = await Promise.race([
-                window.appConfirm("¿Está seguro de guardar esta evolución clínica?"),
-                new Promise(res => setTimeout(() => res(true), 15000))
-            ]);
-        } else if (typeof window.confirm === 'function') {
-            confirmed = window.confirm("¿Está seguro de guardar esta evolución clínica?");
-        }
-    } catch (confErr) {
-        console.warn("[SessionSubmit] Error en confirmación modal, fallback nativo:", confErr);
-        try {
-            confirmed = (window.nativeConfirm || window.confirm)("¿Está seguro de guardar esta evolución clínica?");
-        } catch (_) {
-            confirmed = true;
-        }
+    // 1. MUTEX ANTI-DOBLE-ENVÍO: Bloqueo estricto inmediato
+    if (window._isSubmittingSession) {
+        console.warn("[handleSessionSubmit] Envío ya en curso, ignorando clic repetido.");
+        return;
     }
-    if (!confirmed) return;
+    window._isSubmittingSession = true;
 
     // Validación preventiva de consultante
     const pacSelectEl = document.getElementById('s-paciente');
     const pacienteIdVal = pacSelectEl?.value;
     if (!pacienteIdVal) {
+        window._isSubmittingSession = false;
         if (typeof appAlert === 'function') {
             await appAlert("Por favor seleccione un consultante antes de guardar la evolución.", { type: 'warning' });
         } else {
@@ -7349,16 +7329,18 @@ async function handleSessionSubmit(e) {
         return;
     }
 
-    // Feedback visual inmediato en botón de envío
+    // Feedback visual instantáneo: desactivar botón para evitar dobles clics
     const submitBtn = document.getElementById('session-submit-btn');
     const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Registrar Evolución';
     const originalBtnDisabled = submitBtn ? submitBtn.disabled : false;
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando evolución...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
     }
 
     try {
+        const id = document.getElementById('session-form-id')?.value || '';
+        const agendaId = document.getElementById('s-agenda-id')?.value || '';
         let recursosValue = document.getElementById('s-recursos')?.value || '';
         const fileInput = document.getElementById('s-recursos-file');
         
@@ -7497,9 +7479,13 @@ async function handleSessionSubmit(e) {
                 if (typeof loadTherapistTasks === 'function') loadTherapistTasks(false);
 
                 if (!id && newSessionId && hadTasks) {
-                    setTimeout(() => {
-                        sendSessionCierreWhatsApp(newSessionId, pacName);
-                    }, 350);
+                    if (!window._cierreSentSessions) window._cierreSentSessions = new Set();
+                    if (!window._cierreSentSessions.has(newSessionId)) {
+                        window._cierreSentSessions.add(newSessionId);
+                        setTimeout(() => {
+                            sendSessionCierreWhatsApp(newSessionId, pacName);
+                        }, 400);
+                    }
                 }
             } else {
                 if (data.offline || res.status === 503) {
@@ -7518,6 +7504,7 @@ async function handleSessionSubmit(e) {
             saveEvolutionOffline(payload, id, method, url);
         }
     } finally {
+        window._isSubmittingSession = false;
         if (submitBtn) {
             submitBtn.disabled = originalBtnDisabled;
             submitBtn.innerHTML = originalBtnHtml;
@@ -7663,17 +7650,19 @@ async function deleteSession(sessionId) {
 
 async function sendSessionCierreWhatsApp(sessionId, patientName) {
     if (!sessionId) return;
-    
-    const confirmSend = await appConfirm(`¿Deseas enviar la Nota Post-sesión con las tareas acordadas a ${patientName || 'el consultante'} por WhatsApp?`);
-    if (!confirmSend) return;
+    if (window._isSendingWhatsAppCierre) return;
+    window._isSendingWhatsAppCierre = true;
 
     try {
+        const confirmSend = await appConfirm(`¿Deseas enviar la Nota Post-sesión con las tareas acordadas a ${patientName || 'el consultante'} por WhatsApp?`);
+        if (!confirmSend) return;
+
         const res = await fetch(`/api/sessions/${sessionId}/whatsapp-cierre`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'send' })
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         
         if (res.ok && data.success) {
             alert(data.message || 'Nota post-sesión enviada con éxito.');
@@ -7691,6 +7680,8 @@ async function sendSessionCierreWhatsApp(sessionId, patientName) {
     } catch (err) {
         console.error('Error al enviar mensaje de cierre:', err);
         alert('Error de conexión al enviar la nota por WhatsApp.');
+    } finally {
+        window._isSendingWhatsAppCierre = false;
     }
 }
 window.sendSessionCierreWhatsApp = sendSessionCierreWhatsApp;
