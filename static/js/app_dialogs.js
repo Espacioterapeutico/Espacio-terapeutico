@@ -134,10 +134,35 @@
         return { icon: null, text: t };
     }
 
-    // Cola: un diálogo a la vez, en orden
+    // Cola: un diálogo a la vez, en orden (con salvaguarda de timeout de 30s para no congelar la cola)
     let chain = Promise.resolve();
     function enqueue(fn) {
-        const p = chain.then(() => new Promise(fn));
+        const p = chain.then(() => new Promise((resolve) => {
+            let settled = false;
+            const timer = setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    console.warn('[appDialogs] Diálogo auto-resuelto por inactividad');
+                    resolve(null);
+                }
+            }, 30000);
+            try {
+                fn((val) => {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timer);
+                        resolve(val);
+                    }
+                });
+            } catch (err) {
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timer);
+                    console.error('[appDialogs] Error en ejecutor de diálogo:', err);
+                    resolve(null);
+                }
+            }
+        }));
         chain = p.catch(() => {});
         return p;
     }

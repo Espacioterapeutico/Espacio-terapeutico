@@ -1,8 +1,9 @@
-const CACHE_NAME = 'mi-consultorio-v175';
+const CACHE_NAME = 'mi-consultorio-v176';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/styles.css',
   '/static/js/app.js',
+  '/static/js/app_dialogs.js',
   '/static/js/tests_module.js',
   '/static/logo.png',
   '/static/badge.png',

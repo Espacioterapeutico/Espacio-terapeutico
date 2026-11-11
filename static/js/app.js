@@ -7307,154 +7307,221 @@ async function openRegisterSessionFromEvent(eventId) {
 }
 
 async function handleSessionSubmit(e) {
-    e.preventDefault();
-    const id = document.getElementById('session-form-id').value;
-    const agendaId = document.getElementById('s-agenda-id').value;
+    if (e && e.preventDefault) e.preventDefault();
+    const id = document.getElementById('session-form-id')?.value || '';
+    const agendaId = document.getElementById('s-agenda-id')?.value || '';
     
-    if (!await appConfirm("¿Está seguro de guardar esta evolución clínica?")) {
+    // Confirmación segura con salvaguarda contra bloqueos
+    let confirmed = true;
+    try {
+        if (typeof appConfirm === 'function') {
+            confirmed = await Promise.race([
+                appConfirm("¿Está seguro de guardar esta evolución clínica?"),
+                new Promise(res => setTimeout(() => res(true), 15000))
+            ]);
+        } else if (typeof window.appConfirm === 'function') {
+            confirmed = await Promise.race([
+                window.appConfirm("¿Está seguro de guardar esta evolución clínica?"),
+                new Promise(res => setTimeout(() => res(true), 15000))
+            ]);
+        } else if (typeof window.confirm === 'function') {
+            confirmed = window.confirm("¿Está seguro de guardar esta evolución clínica?");
+        }
+    } catch (confErr) {
+        console.warn("[SessionSubmit] Error en confirmación modal, fallback nativo:", confErr);
+        try {
+            confirmed = (window.nativeConfirm || window.confirm)("¿Está seguro de guardar esta evolución clínica?");
+        } catch (_) {
+            confirmed = true;
+        }
+    }
+    if (!confirmed) return;
+
+    // Validación preventiva de consultante
+    const pacSelectEl = document.getElementById('s-paciente');
+    const pacienteIdVal = pacSelectEl?.value;
+    if (!pacienteIdVal) {
+        if (typeof appAlert === 'function') {
+            await appAlert("Por favor seleccione un consultante antes de guardar la evolución.", { type: 'warning' });
+        } else {
+            alert("Por favor seleccione un consultante antes de guardar la evolución.");
+        }
         return;
     }
-    
-    let recursosValue = document.getElementById('s-recursos').value;
-    const fileInput = document.getElementById('s-recursos-file');
-    
-    if (fileInput && fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const formData = new FormData();
-        formData.append('file', file);
+
+    // Feedback visual inmediato en botón de envío
+    const submitBtn = document.getElementById('session-submit-btn');
+    const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Registrar Evolución';
+    const originalBtnDisabled = submitBtn ? submitBtn.disabled : false;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando evolución...';
+    }
+
+    try {
+        let recursosValue = document.getElementById('s-recursos')?.value || '';
+        const fileInput = document.getElementById('s-recursos-file');
         
-        try {
-            const uploadRes = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-            if (uploadRes.ok) {
-                const uploadData = await uploadRes.json();
-                const fileUrl = `${window.location.origin}/api/upload/${uploadData.filename}`;
-                if (recursosValue.trim() === '') {
-                    recursosValue = `${file.name}: ${fileUrl}`;
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    const fileUrl = `${window.location.origin}/api/upload/${uploadData.filename}`;
+                    if (recursosValue.trim() === '') {
+                        recursosValue = `${file.name}: ${fileUrl}`;
+                    } else {
+                        recursosValue += `\n${file.name}: ${fileUrl}`;
+                    }
                 } else {
-                    recursosValue += `\n${file.name}: ${fileUrl}`;
+                    alert("Error al subir el recurso adjunto.");
+                    return;
                 }
-            } else {
+            } catch (uploadErr) {
+                console.error("Error al subir recurso:", uploadErr);
                 alert("Error al subir el recurso adjunto.");
                 return;
             }
-        } catch (uploadErr) {
-            console.error("Error al subir recurso:", uploadErr);
-            alert("Error al subir el recurso adjunto.");
+        }
+        
+        let examenMentalId = document.getElementById('session-mse-linked-id')?.value || null;
+        if (typeof sessionMseHasData === 'function' && sessionMseHasData()) {
+            try {
+                const pacId = pacienteIdVal;
+                const fecha = document.getElementById('s-fecha')?.value || new Date().toISOString().split('T')[0];
+                const modalidad = document.getElementById('s-modalidad')?.value || 'Online';
+                const msePayload = gatherSessionMsePayload(pacId, fecha, modalidad);
+                
+                let mseRes;
+                if (examenMentalId) {
+                    mseRes = await fetch(`/api/examen-mental/${examenMentalId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(msePayload)
+                    });
+                } else {
+                    mseRes = await fetch('/api/examen-mental', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(msePayload)
+                    });
+                }
+                
+                if (mseRes.ok) {
+                    const mseData = await mseRes.json();
+                    examenMentalId = mseData.id || examenMentalId;
+                }
+            } catch (mseErr) {
+                console.error("Error al guardar examen mental integrado:", mseErr);
+            }
+        }
+
+        const estado = document.getElementById('s-estado')?.value || 'Realizada';
+        const tipoLiqEl = document.getElementById('s-tipo-liq');
+        const montoEl = document.getElementById('s-monto');
+        const monedaEl = document.getElementById('s-moneda');
+        const metodoEl = document.getElementById('s-metodo');
+        const refEl = document.getElementById('s-referencia');
+        const fechaPagoEl = document.getElementById('s-fecha-pago');
+
+        const payload = {
+            paciente_id: pacienteIdVal,
+            agenda_id: agendaId ? parseInt(agendaId) : null,
+            fecha: document.getElementById('s-fecha')?.value || new Date().toISOString().split('T')[0],
+            modalidad: document.getElementById('s-modalidad')?.value || 'Online',
+            estado: estado,
+            resumen: document.getElementById('s-resumen')?.value || '',
+            resumen_paciente: document.getElementById('s-resumen-paciente')?.value || '',
+            tareas_asignadas: document.getElementById('s-tareas')?.value || '',
+            recursos_entregados: recursosValue,
+            anotaciones_proxima: document.getElementById('s-anotaciones')?.value || '',
+            compromisos_psicologo: document.getElementById('s-compromisos')?.value || '',
+            diagnostico: document.getElementById('s-diagnostico-clinico')?.value || '',
+            test_aplicados: document.getElementById('s-test-aplicados')?.value || '',
+            archivo_adjunto: document.getElementById('s-archivo-adjunto')?.value || '',
+            examen_mental_id: examenMentalId ? parseInt(examenMentalId) : null,
+            
+            // Campos financieros
+            tipo_liquidacion: (estado === 'Realizada' || estado === 'Cancelada sin aviso') ? (tipoLiqEl?.value || 'Exonerar') : null,
+            monto: parseFloat(((montoEl?.value) || '0').toString().replace(',', '.')) || 0.0,
+            moneda: monedaEl?.value || 'USD',
+            metodo_pago: metodoEl?.value || '',
+            referencia: refEl?.value || '',
+            fecha_pago: fechaPagoEl?.value || ''
+        };
+        
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/sessions/${id}` : '/api/sessions';
+        
+        if (!navigator.onLine) {
+            saveEvolutionOffline(payload, id, method, url);
             return;
         }
-    }
-    
-    let examenMentalId = document.getElementById('session-mse-linked-id')?.value || null;
-    if (typeof sessionMseHasData === 'function' && sessionMseHasData()) {
+        
         try {
-            const pacId = document.getElementById('s-paciente').value;
-            const fecha = document.getElementById('s-fecha').value;
-            const modalidad = document.getElementById('s-modalidad').value;
-            const msePayload = gatherSessionMsePayload(pacId, fecha, modalidad);
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json().catch(() => ({}));
             
-            let mseRes;
-            if (examenMentalId) {
-                mseRes = await fetch(`/api/examen-mental/${examenMentalId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(msePayload)
-                });
+            if (res.ok) {
+                clearSessionDraft(payload.paciente_id, id);
+                const successMsg = data.success || "Evolución clínica registrada exitosamente.";
+                const newSessionId = data.session_id;
+                const pacName = pacSelectEl && pacSelectEl.selectedIndex >= 0 ? pacSelectEl.options[pacSelectEl.selectedIndex].text : '';
+                const hadTasks = !!(payload.tareas_asignadas && payload.tareas_asignadas.trim());
+
+                closeModal('session-modal');
+                
+                if (typeof appAlert === 'function') {
+                    appAlert(successMsg, { type: 'success' });
+                } else {
+                    alert(successMsg);
+                }
+                
+                // Recargar datos en las distintas vistas
+                if (activeView === 'sessions') loadSessions('');
+                if (activeView === 'agenda') loadAgenda();
+                loadDashboardStats();
+                loadFinanceData();
+                if (activeView === 'dashboard') loadAgendaCompact();
+                if (typeof loadTherapistTasks === 'function') loadTherapistTasks(false);
+
+                if (!id && newSessionId && hadTasks) {
+                    setTimeout(() => {
+                        sendSessionCierreWhatsApp(newSessionId, pacName);
+                    }, 350);
+                }
             } else {
-                mseRes = await fetch('/api/examen-mental', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(msePayload)
-                });
+                if (data.offline || res.status === 503) {
+                    saveEvolutionOffline(payload, id, method, url);
+                    return;
+                }
+                const errorMsg = data.error || "Ocurrió un error al guardar la evolución clínica.";
+                if (typeof appAlert === 'function') {
+                    appAlert(errorMsg, { type: 'danger' });
+                } else {
+                    alert(errorMsg);
+                }
             }
-            
-            if (mseRes.ok) {
-                const mseData = await mseRes.json();
-                examenMentalId = mseData.id || examenMentalId;
-            }
-        } catch (mseErr) {
-            console.error("Error al guardar examen mental integrado:", mseErr);
+        } catch (err) {
+            console.warn("Error de conexión al guardar evolución. Guardando en cola offline:", err);
+            saveEvolutionOffline(payload, id, method, url);
         }
-    }
-
-    const estado = document.getElementById('s-estado').value;
-    const payload = {
-        paciente_id: document.getElementById('s-paciente').value,
-        agenda_id: agendaId ? parseInt(agendaId) : null,
-        fecha: document.getElementById('s-fecha').value,
-        modalidad: document.getElementById('s-modalidad').value,
-        estado: estado,
-        resumen: document.getElementById('s-resumen').value,
-        resumen_paciente: document.getElementById('s-resumen-paciente').value,
-        tareas_asignadas: document.getElementById('s-tareas').value,
-        recursos_entregados: recursosValue,
-        anotaciones_proxima: document.getElementById('s-anotaciones').value,
-        compromisos_psicologo: document.getElementById('s-compromisos').value,
-        diagnostico: document.getElementById('s-diagnostico-clinico').value,
-        test_aplicados: document.getElementById('s-test-aplicados').value,
-        archivo_adjunto: document.getElementById('s-archivo-adjunto').value,
-        examen_mental_id: examenMentalId ? parseInt(examenMentalId) : null,
-        
-        // Campos financieros
-        tipo_liquidacion: (estado === 'Realizada' || estado === 'Cancelada sin aviso') ? document.getElementById('s-tipo-liq').value : null,
-        monto: parseFloat((document.getElementById('s-monto').value || '0').toString().replace(',', '.')) || 0.0,
-        moneda: document.getElementById('s-moneda').value,
-        metodo_pago: document.getElementById('s-metodo').value,
-        referencia: document.getElementById('s-referencia').value,
-        fecha_pago: document.getElementById('s-fecha-pago').value
-    };
-    
-    const method = id ? 'PUT' : 'POST';
-    const url = id ? `/api/sessions/${id}` : '/api/sessions';
-    
-    if (!navigator.onLine) {
-        saveEvolutionOffline(payload, id, method, url);
-        return;
-    }
-    
-    try {
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json().catch(() => ({}));
-        
-        if (res.ok) {
-            clearSessionDraft(payload.paciente_id, id);
-            alert(data.success || "Evolución clínica registrada exitosamente.");
-            const newSessionId = data.session_id;
-            const pacSelect = document.getElementById('s-paciente');
-            const pacName = pacSelect && pacSelect.selectedIndex >= 0 ? pacSelect.options[pacSelect.selectedIndex].text : '';
-            const hadTasks = !!(payload.tareas_asignadas && payload.tareas_asignadas.trim());
-
-            closeModal('session-modal');
-            
-            // Recargar datos en las distintas vistas
-            if (activeView === 'sessions') loadSessions('');
-            if (activeView === 'agenda') loadAgenda();
-            loadDashboardStats();
-            loadFinanceData();
-            if (activeView === 'dashboard') loadAgendaCompact();
-            if (typeof loadTherapistTasks === 'function') loadTherapistTasks(false);
-
-            if (!id && newSessionId && hadTasks) {
-                setTimeout(() => {
-                    sendSessionCierreWhatsApp(newSessionId, pacName);
-                }, 350);
-            }
-        } else {
-            if (data.offline || res.status === 503) {
-                saveEvolutionOffline(payload, id, method, url);
-                return;
-            }
-            alert(data.error || "Ocurrió un error al guardar la evolución clínica.");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = originalBtnDisabled;
+            submitBtn.innerHTML = originalBtnHtml;
         }
-    } catch (err) {
-        console.warn("Error de conexión al guardar evolución. Guardando en cola offline:", err);
-        saveEvolutionOffline(payload, id, method, url);
     }
 }
 

@@ -48,16 +48,24 @@ def ensure_sesiones_columns(cursor):
             for col_name, col_type in [
                 ('estado', "TEXT DEFAULT 'Realizada'"),
                 ('agenda_id', 'INTEGER'),
+                ('modalidad', "TEXT DEFAULT 'Online'"),
+                ('resumen', 'TEXT'),
+                ('resumen_paciente', 'TEXT'),
+                ('tareas_asignadas', 'TEXT'),
+                ('recursos_entregados', 'TEXT'),
+                ('anotaciones_proxima', 'TEXT'),
+                ('compromisos_psicologo', 'TEXT'),
                 ('diagnostico', 'TEXT'),
                 ('test_aplicados', 'TEXT'),
                 ('archivo_adjunto', 'TEXT'),
-                ('resumen_paciente', 'TEXT'),
+                ('notas_supervision', 'TEXT'),
+                ('test_asignacion_id', 'INTEGER'),
                 ('examen_mental_id', 'INTEGER'),
                 ('compromiso_completado', 'INTEGER DEFAULT 0')
             ]:
                 if col_name not in cols_s:
                     try: cursor.execute(f"ALTER TABLE sesiones ADD COLUMN {col_name} {col_type}")
-                    except: pass
+                    except Exception: pass
     except Exception:
         pass
 
@@ -70,6 +78,7 @@ def ensure_sesiones_columns(cursor):
 def get_patient_summary(patient_id):
     db = get_db()
     cursor = db.cursor()
+    ensure_sesiones_columns(cursor)
     psic_id = get_psicologo_id_filter()
     
     if psic_id is not None:
