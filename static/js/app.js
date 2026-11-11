@@ -19098,7 +19098,10 @@ async function renderFastCalendar() {
                 
                 document.getElementById('fast-req-fecha').value = dateStr;
                 document.getElementById('fast-req-hora').value = '';
-                document.getElementById('fast-patient-details').classList.add('hide');
+                if (window.innerWidth <= 850) {
+                    const details = document.getElementById('fast-patient-details');
+                    if (details) details.classList.add('hide');
+                }
                 
                 fetchFastAvailableHours(dateStr);
             };
@@ -19225,20 +19228,24 @@ async function fetchFastAvailableHours(dateStr) {
                     // Asegurar que la modalidad en el selector permanezca consistente y no se resetee
                     const fastModSelect = document.getElementById('fast-modalidad');
                     if (fastModSelect && slot.modalidad) {
-                        if (typeof selectFastModality === 'function') {
-                            selectFastModality(slot.modalidad, slot.profile_id || '', '', slot.modalidad);
-                        } else if (fastModSelect.options) {
-                            for (let opt of fastModSelect.options) {
-                                if (opt.value.toLowerCase() === slot.modalidad.toLowerCase()) {
-                                    fastModSelect.value = opt.value;
-                                    break;
-                                }
+                        fastModSelect.value = slot.modalidad;
+                        document.querySelectorAll('.fast-modalidad-btn').forEach(mBtn => {
+                            const isAct = mBtn.dataset.val && mBtn.dataset.val.toLowerCase() === slot.modalidad.toLowerCase();
+                            mBtn.classList.toggle('active', isAct);
+                            if (isAct) {
+                                mBtn.style.background = 'var(--primary-color, #702e5e)';
+                                mBtn.style.color = '#ffffff';
+                                mBtn.style.border = '2px solid var(--primary-color, #702e5e)';
+                                mBtn.style.boxShadow = '0 4px 10px rgba(112,46,94,0.28)';
+                            } else {
+                                mBtn.style.background = '#ffffff';
+                                mBtn.style.color = 'var(--text-dark, #1e293b)';
+                                mBtn.style.border = '1.5px solid var(--border-color, #cbd5e1)';
+                                mBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)';
                             }
-                        } else {
-                            fastModSelect.value = slot.modalidad;
-                        }
-                        if (typeof updateFastModalityDescription === 'function') {
-                            updateFastModalityDescription();
+                        });
+                        if (typeof updateFastModalityDescriptionText === 'function') {
+                            updateFastModalityDescriptionText(slot.modalidad);
                         }
                     }
                     
@@ -19249,9 +19256,32 @@ async function fetchFastAvailableHours(dateStr) {
                     const hLabel = slot.displayFull || slot.valHour || '';
                     updateFastSelectedSlotPill(`${slot.valFecha} · ${hLabel}`, true);
                     
+                    // MOSTRAR FORMULARIO DE DATOS Y BOTÓN DE AGENDAR
+                    const details = document.getElementById('fast-patient-details');
+                    if (details) {
+                        details.classList.remove('hide');
+                        details.style.display = 'block';
+                    }
+
+                    // Prellenar si el consultante ya está logueado en su portal
+                    try {
+                        const prof = window.patientProfile || {};
+                        const cedEl = document.getElementById('fast-cedula');
+                        if (cedEl && !cedEl.value && prof.cedula) cedEl.value = prof.cedula;
+                        const nomEl = document.getElementById('fast-nombres');
+                        if (nomEl && !nomEl.value && prof.nombres) nomEl.value = prof.nombres;
+                        const apeEl = document.getElementById('fast-apellidos');
+                        if (apeEl && !apeEl.value && prof.apellidos) apeEl.value = prof.apellidos;
+                        const telEl = document.getElementById('fast-telefono');
+                        if (telEl && !telEl.value && prof.telefono) telEl.value = prof.telefono;
+                        const emEl = document.getElementById('fast-email');
+                        if (emEl && !emEl.value && prof.email) emEl.value = prof.email;
+                    } catch (e) {}
+
                     if (window.innerWidth <= 850) {
-                        const details = document.getElementById('fast-patient-details');
-                        if (details) details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        setTimeout(() => {
+                            if (details) details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 120);
                     }
                 };
                 hoursGrid.appendChild(btn);

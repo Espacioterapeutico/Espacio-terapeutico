@@ -1966,6 +1966,12 @@
             }
         }
 
+        @media (min-width: 851px) {
+            #fast-patient-details.hide {
+                display: block !important;
+            }
+        }
+
         /* En teléfonos y tablets (ancho <= 850px): formato vertical de 1 columna con márgenes móviles */
         @media (max-width: 850px) {
             .fast-booking-overlay {
@@ -2138,19 +2144,6 @@
                                 </div>
                             </div>
 
-                            <!-- BOTONES DE ACCIÓN (AL PIE DE LA COLUMNA CENTRAL) -->
-                            <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.45rem;">
-                                <div id="fast-fuera-jornada-card" style="text-align: center;">
-                                    <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="fast-discreet-btn fast-fuera-trigger-btn" style="width: 100%; justify-content: center; font-size: 0.78rem; padding: 0.45rem 0.65rem;">
-                                        <span>🗓️</span> Solicitar sesión en horario personalizado
-                                    </button>
-                                </div>
-                                <div style="text-align: center;">
-                                    <a href="#" onclick="closeFastBookingScreen(event)" class="fast-discreet-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.35rem 0.55rem;">
-                                        <span>✕</span> Volver al Portal
-                                    </a>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- COLUMNA 3 (DERECHA): Placeholder o Formulario de Confirmación -->
@@ -2159,7 +2152,7 @@
                             <input type="hidden" id="fast-req-fecha" required>
                             <input type="hidden" id="fast-req-hora" required>
 
-                            <!-- 3. DATOS PARA AGENDAR (Siempre visible) -->
+                            <!-- 3. DATOS PARA AGENDAR -->
                             <div id="fast-patient-details" style="border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1rem 1.15rem; background: var(--card-bg, #ffffff);">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                     <h4 style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark); margin: 0;">
@@ -2193,6 +2186,20 @@
                                     Agendar Cita
                                 </button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- BOTONES DE ACCIÓN SECUNDARIOS (AL FINAL DE TODO) -->
+                    <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.45rem; max-width: 420px; margin-left: auto; margin-right: auto;">
+                        <div id="fast-fuera-jornada-card" style="text-align: center;">
+                            <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="fast-discreet-btn fast-fuera-trigger-btn" style="width: 100%; justify-content: center; font-size: 0.78rem; padding: 0.45rem 0.65rem;">
+                                <span>🗓️</span> Solicitar sesión en horario personalizado
+                            </button>
+                        </div>
+                        <div style="text-align: center;">
+                            <a href="#" onclick="closeFastBookingScreen(event)" class="fast-discreet-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.35rem 0.55rem;">
+                                <span>✕</span> Volver al Portal
+                            </a>
                         </div>
                     </div>
                 </form>
