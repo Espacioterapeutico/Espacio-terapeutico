@@ -1151,6 +1151,28 @@ def init_db():
     except Exception:
         pass
 
+    # Asegurar usuario de prueba para revisores de Google Play Console
+    try:
+        cursor.execute("SELECT id FROM usuarios WHERE LOWER(username) = 'demo_google'")
+        demo_u = cursor.fetchone()
+        if not demo_u:
+            cursor.execute('''
+                INSERT INTO usuarios (
+                    username, password_hash, nombres, apellidos, activo, role, email,
+                    slug, nomenclatura, fecha_registro, suscripcion_paga
+                ) VALUES (?, ?, ?, ?, 1, 'psicologo', ?, ?, 'Consultor', datetime('now'), 1)
+            ''', (
+                'demo_google',
+                generate_password_hash('DemoPlay2026*'),
+                'Usuario',
+                'Demo',
+                'demo_google@espacioterapeutico.net',
+                'demo.google'
+            ))
+            db.commit()
+    except Exception:
+        pass
+
     # Migración automática de pacientes
     cursor.execute("PRAGMA table_info(pacientes)")
     cols_pac = [row[1] for row in cursor.fetchall()]
