@@ -754,11 +754,16 @@ def update_pizarra(recurso_id):
         WHERE id = ?
     """, (nuevo_titulo, contenido_str, nuevo_estado, editado_por, recurso_id))
 
-    # Guardar en historial de versiones
-    cursor.execute("""
-        INSERT INTO paciente_recursos_historial (recurso_id, contenido_json, editado_por)
-        VALUES (?, ?, ?)
-    """, (recurso_id, contenido_str, editado_por))
+    # Guardar en historial de versiones si se solicita guardar versión o si no existe versión inicial
+    crear_version = bool(data.get('crear_version') or data.get('guardar_version'))
+    cursor.execute("SELECT COUNT(*) FROM paciente_recursos_historial WHERE recurso_id = ?", (recurso_id,))
+    total_h = cursor.fetchone()[0] or 0
+
+    if crear_version or total_h == 0:
+        cursor.execute("""
+            INSERT INTO paciente_recursos_historial (recurso_id, contenido_json, editado_por)
+            VALUES (?, ?, ?)
+        """, (recurso_id, contenido_str, editado_por))
 
     db.commit()
 
@@ -1157,18 +1162,58 @@ def api_update_pizarra_compartida(token):
         WHERE id = ?
     """, (json.dumps(nuevo_contenido, ensure_ascii=False), now_str, recurso_id))
 
-    cursor.execute("""
-        INSERT INTO paciente_recursos_historial (recurso_id, contenido_json, editado_por)
-        VALUES (?, ?, 'paciente')
-    """, (recurso_id, json.dumps(nuevo_contenido, ensure_ascii=False)))
+    # Guardar en historial si el consultante solicita explícitamente guardar versión o si aún no hay historial
+    crear_version = bool(data.get('crear_version') or data.get('guardar_version'))
+    cursor.execute("SELECT COUNT(*) FROM paciente_recursos_historial WHERE recurso_id = ?", (recurso_id,))
+    total_h = cursor.fetchone()[0] or 0
+
+    if crear_version or total_h == 0:
+        cursor.execute("""
+            INSERT INTO paciente_recursos_historial (recurso_id, contenido_json, editado_por)
+            VALUES (?, ?, 'paciente')
+        """, (recurso_id, json.dumps(nuevo_contenido, ensure_ascii=False)))
 
     db.commit()
 
     return jsonify({
         'success': True,
         'fecha_ultima_edicion': now_str,
-        'ultima_edicion_por': 'paciente'
+        'ultima_edicion_por': 'paciente',
+        'version_guardada': crear_version or total_h == 0
     })
+
+
+@recursos_bp.route('/api/recursos/compartido/<token>/historial', methods=['GET'])
+def get_historial_compartido(token):
+    """Retorna las versiones históricas registradas de la pizarra compartida para el consultante."""
+    db = get_db()
+    cursor = db.cursor()
+    ensure_recursos_tables(cursor)
+
+    cursor.execute("SELECT id FROM paciente_recursos WHERE token_compartido = ?", (token,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({'error': 'Pizarra no encontrada.'}), 404
+
+    recurso_id = row['id']
+    cursor.execute("""
+        SELECT h.*
+        FROM paciente_recursos_historial h
+        WHERE h.recurso_id = ?
+        ORDER BY h.fecha_registro DESC
+        LIMIT 50
+    """, (recurso_id,))
+    rows = cursor.fetchall()
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d['contenido'] = json.loads(d['contenido_json'])
+        except Exception:
+            d['contenido'] = {}
+        result.append(d)
+    return jsonify(result)
 
 
 @recursos_bp.route('/pizarra/compartida/<token>/export-word', methods=['GET'])

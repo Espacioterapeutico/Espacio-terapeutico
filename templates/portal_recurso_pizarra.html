@@ -317,7 +317,13 @@
             <strong style="color: var(--primary); font-size: 0.95rem; font-weight: 800;">Espacio Terapéutico</strong>
             <span class="brand-badge">Pizarra Colaborativa</span>
         </div>
-        <div>
+        <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" id="btn-portal-save-version" onclick="savePortalRecursoVersion()" class="btn-word" style="background: var(--primary); color: #ffffff; border: none; font-weight: 800; cursor: pointer;" title="Guardar esta versión en tu historial">
+                💾 <span class="btn-label-desktop">Guardar </span>Versión
+            </button>
+            <button type="button" class="btn-word" onclick="openPortalHistorialModal()" title="Ver versiones guardadas">
+                🕒 <span class="btn-label-desktop">Ver </span>Historial
+            </button>
             <a href="/pizarra/compartida/{{ token }}/export-word" class="btn-word" title="Descargar como documento editable Word (.docx)">
                 📥 <span class="btn-label-desktop">Descargar </span>Word
             </a>
@@ -385,6 +391,22 @@
 
     </main>
     {% endif %}
+
+    <!-- MODAL HISTORIAL DE VERSIONES EN EL PORTAL -->
+    <div id="modal-portal-historial" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem;" onclick="if(event.target === this) closePortalHistorialModal()">
+        <div style="background: #ffffff; border-radius: 18px; max-width: 600px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.25); border: 1.5px solid var(--border);">
+            <div style="padding: 1.15rem 1.35rem; border-bottom: 1.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fdfafc;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;">🕒 Historial de Versiones</h3>
+                    <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #64748b;">Versiones guardadas por ti y por tu terapeuta</p>
+                </div>
+                <button type="button" onclick="closePortalHistorialModal()" style="background: #f1f5f9; border: none; border-radius: 8px; font-weight: 800; padding: 0.35rem 0.65rem; color: #64748b; cursor: pointer;">✕ Cerrar</button>
+            </div>
+            <div id="portal-historial-list" style="flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                <p style="text-align: center; color: #94a3b8; font-size: 0.88rem;">Cargando historial...</p>
+            </div>
+        </div>
+    </div>
 
     <!-- JAVASCRIPT DE INTERACTIVIDAD COLABORATIVA Y AUTOGUARDADO -->
     <script>
@@ -479,12 +501,6 @@
                         </p>
                     </div>
                     <div style="display: flex; gap: 0.4rem; align-items: center;">
-                        <button type="button" class="btn btn-sm" id="btn-portal-adv-mind" onclick="switchPortalAdvMode('mindmap')" style="background: #7e22ce; color: #ffffff; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem; border: none;">
-                            🧠 Vista Mapa
-                        </button>
-                        <button type="button" class="btn btn-sm" id="btn-portal-adv-list" onclick="switchPortalAdvMode('list')" style="background: #ffffff; color: #7e22ce; border: 1.5px solid #d8b4fe; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem;">
-                            📱 Vista Lista
-                        </button>
                         <button type="button" class="btn btn-sm" onclick="window.print()" style="background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem;">
                             🖨️ Imprimir / PDF
                         </button>
@@ -1245,14 +1261,127 @@
                 badge.style.borderColor = '#fde68a';
                 badge.style.color = '#b45309';
                 if (dotEl) dotEl.style.background = '#d97706';
-                textEl.textContent = 'Guardando...';
+                textEl.textContent = 'Sincronizando...';
             } else if (status === 'synced') {
                 badge.style.background = '#dcfce7';
                 badge.style.borderColor = '#bbf7d0';
                 badge.style.color = '#15803d';
                 if (dotEl) dotEl.style.background = '#16a34a';
                 textEl.textContent = 'Sincronizado';
+            } else if (status === 'version_saved') {
+                badge.style.background = '#f3e8ff';
+                badge.style.borderColor = '#d8b4fe';
+                badge.style.color = '#7e22ce';
+                if (dotEl) dotEl.style.background = '#9333ea';
+                textEl.textContent = 'Versión guardada en Historial';
+                setTimeout(() => updateSaveStatusBadge('synced'), 4000);
             }
+        }
+
+        async function savePortalRecursoVersion() {
+            clearTimeout(autoSaveTimer);
+            const btn = document.getElementById('btn-portal-save-version');
+            const originalText = btn ? btn.innerHTML : '💾 Guardar Versión';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Guardando...';
+            }
+
+            const updated = collectCurrentBoardData();
+            try {
+                const res = await fetch(`/api/recursos/compartido/${PUBLIC_TOKEN}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contenido: updated,
+                        crear_version: true
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    lastSyncedTimestamp = data.fecha_ultima_edicion;
+                    boardData = updated;
+                    updateSaveStatusBadge('version_saved');
+                    const syncEl = document.getElementById('last-sync-time');
+                    if (syncEl) syncEl.textContent = `Hoy ${data.fecha_ultima_edicion.substring(11, 16)} (Tú)`;
+                    alert("✓ ¡Versión guardada exitosamente en el historial!");
+                } else {
+                    alert(data.error || "No se pudo guardar la versión.");
+                }
+            } catch (err) {
+                console.error("Error guardando versión:", err);
+                alert("Error de conexión al guardar la versión.");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+        }
+
+        let portalHistorialCache = [];
+        async function openPortalHistorialModal() {
+            const modal = document.getElementById('modal-portal-historial');
+            const list = document.getElementById('portal-historial-list');
+            if (!modal || !list) return;
+
+            modal.style.display = 'flex';
+            list.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 1.5rem 0;">Cargando versiones...</p>';
+
+            try {
+                const res = await fetch(`/api/recursos/compartido/${PUBLIC_TOKEN}/historial`);
+                if (!res.ok) throw new Error("No se pudo cargar el historial.");
+                const data = await res.json();
+                portalHistorialCache = data || [];
+
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: #64748b; padding: 1.5rem 0; font-size: 0.88rem;">No hay versiones guardadas aún. Haz clic en <strong>"Guardar Versión"</strong> para crear un punto de control en tu historial.</p>';
+                    return;
+                }
+
+                let html = '';
+                data.forEach((h, idx) => {
+                    const fecha = (h.fecha_registro || '').substring(0, 19).replace('T', ' ');
+                    const by = h.editado_por === 'paciente' ? '👤 Tú (Consultante)' : '🩺 Terapeuta';
+                    const vNum = data.length - idx;
+                    html += `
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                        <div>
+                            <strong style="color: #1e293b; font-size: 0.88rem;">Versión #${vNum}</strong>
+                            <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">
+                                ${fecha} • Guardada por: <strong>${by}</strong>
+                            </div>
+                        </div>
+                        <button type="button" onclick="restorePortalVersion(${h.id})" style="background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; border-radius: 8px; font-weight: 700; font-size: 0.76rem; padding: 0.35rem 0.65rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                            🔄 Cargar versión
+                        </button>
+                    </div>`;
+                });
+                list.innerHTML = html;
+            } catch (e) {
+                list.innerHTML = `<p style="text-align: center; color: #ef4444; padding: 1.5rem 0;">${e.message}</p>`;
+            }
+        }
+
+        function closePortalHistorialModal() {
+            const modal = document.getElementById('modal-portal-historial');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function restorePortalVersion(historyId) {
+            const item = portalHistorialCache.find(x => x.id === historyId);
+            if (!item) return;
+
+            const by = item.editado_por === 'paciente' ? 'ti' : 'tu terapeuta';
+            const fecha = (item.fecha_registro || '').substring(0, 19).replace('T', ' ');
+            if (!confirm(`¿Deseas cargar la versión guardada el ${fecha} por ${by}? Se actualizarán los campos en pantalla.`)) {
+                return;
+            }
+
+            boardData = item.contenido || {};
+            renderWhiteboard();
+            closePortalHistorialModal();
+            await savePortalRecursoVersion();
         }
 
         function triggerAutoSave() {

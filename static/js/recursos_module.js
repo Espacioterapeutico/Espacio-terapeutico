@@ -1755,11 +1755,32 @@
 
     function forceSaveRecursoPizarra() {
         if (window.recursoAutoSaveTimer) clearTimeout(window.recursoAutoSaveTimer);
-        saveRecursoPizarra(false);
+        saveRecursoPizarra(false, false);
     }
     window.forceSaveRecursoPizarra = forceSaveRecursoPizarra;
 
-    async function saveRecursoPizarra(silent) {
+    async function saveCurrentRecursoVersion() {
+        if (window.recursoAutoSaveTimer) clearTimeout(window.recursoAutoSaveTimer);
+        const btn = document.getElementById('btn-save-recurso-version');
+        const originalHtml = btn ? btn.innerHTML : '💾 Guardar Versión';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        }
+        try {
+            await saveRecursoPizarra(false, true);
+        } catch (err) {
+            console.error("Error al guardar versión:", err);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+    }
+    window.saveCurrentRecursoVersion = saveCurrentRecursoVersion;
+
+    async function saveRecursoPizarra(silent, crearVersion = false) {
         const board = window.activeRecursoPizarra;
         if (!board || !board.id) return;
 
@@ -1770,7 +1791,8 @@
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contenido: payloadContent
+                    contenido: payloadContent,
+                    crear_version: !!crearVersion
                 })
             });
             const data = await res.json();
@@ -1779,13 +1801,20 @@
             board.contenido = payloadContent;
             window.lastSyncedTimestamp = data.fecha_ultima_edicion;
 
-            updateSaveStatusBadge('synced');
+            updateSaveStatusBadge(crearVersion ? 'version_saved' : 'synced');
             if (!silent) {
-                alert("✅ Pizarra guardada correctamente.");
+                const msg = crearVersion ? "✓ Versión guardada exitosamente en el historial." : "✓ Pizarra sincronizada y guardada correctamente.";
+                if (typeof appAlert === 'function') {
+                    appAlert(msg, { type: 'success' });
+                } else {
+                    alert(msg);
+                }
             }
+            return data;
         } catch (e) {
             console.error(e);
             updateSaveStatusBadge('error');
+            throw e;
         }
     }
 
@@ -1917,13 +1946,18 @@
         if (!badge) return;
 
         if (status === 'saving') {
-            badge.textContent = '⏳ Guardando...';
+            badge.textContent = '⏳ Sincronizando...';
             badge.style.color = '#d97706';
             badge.style.background = '#fef3c7';
         } else if (status === 'synced') {
-            badge.textContent = '✓ Guardado y Sincronizado';
+            badge.textContent = '✓ Sincronizado';
             badge.style.color = '#16a34a';
             badge.style.background = '#dcfce7';
+        } else if (status === 'version_saved') {
+            badge.textContent = '✓ Versión guardada en Historial';
+            badge.style.color = '#7e22ce';
+            badge.style.background = '#f3e8ff';
+            setTimeout(() => updateSaveStatusBadge('synced'), 4000);
         } else if (status === 'error') {
             badge.textContent = '⚠️ Error al guardar';
             badge.style.color = '#dc2626';
@@ -2167,6 +2201,7 @@
     }
     window.shareRecursoWhatsAppById = shareRecursoWhatsAppById;
 
+    window._recursoHistorialCache = [];
     async function openRecursoHistorialModal() {
         const board = window.activeRecursoPizarra;
         if (!board || !board.id) return;
@@ -2187,9 +2222,10 @@
             const res = await fetch(`/api/recursos/pizarra/${board.id}/historial`);
             if (!res.ok) throw new Error('Error al cargar historial');
             const data = await res.json();
+            window._recursoHistorialCache = data || [];
 
             if (!data || data.length === 0) {
-                list.innerHTML = '<p class="text-muted text-center py-3">No hay versiones registradas aún.</p>';
+                list.innerHTML = '<p class="text-muted text-center py-3">No hay versiones guardadas aún. Haz clic en <strong>"💾 Guardar Versión"</strong> para crear un punto de control en el historial.</p>';
                 return;
             }
 
@@ -2197,17 +2233,20 @@
             data.forEach((h, idx) => {
                 const fecha = (h.fecha_registro || '').substring(0, 19).replace('T', ' ');
                 const by = h.editado_por === 'paciente' ? '👤 Consultante' : '🩺 Terapeuta';
+                const versionNumber = data.length - idx;
                 html += `
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.65rem 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
                     <div>
-                        <strong style="color: #334155; font-size: 0.85rem;">Versión #${data.length - idx}</strong>
-                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
-                            ${fecha} • Editado por: ${by}
+                        <strong style="color: #1e293b; font-size: 0.9rem;">Versión #${versionNumber}</strong>
+                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
+                            ${fecha} • Guardada por: <strong>${by}</strong>
                         </div>
                     </div>
-                    <span style="font-size: 0.72rem; color: #16a34a; font-weight: 700; background: #dcfce7; padding: 0.15rem 0.45rem; border-radius: 8px;">
-                        ✓ Guardado
-                    </span>
+                    <div style="display: flex; gap: 0.4rem; align-items: center;">
+                        <button type="button" class="btn btn-sm" onclick="restoreRecursoVersion(${h.id})" style="background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; border-radius: 8px; font-weight: 700; font-size: 0.76rem; padding: 0.35rem 0.7rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                            🔄 Cargar versión
+                        </button>
+                    </div>
                 </div>`;
             });
             list.innerHTML = html;
@@ -2216,6 +2255,40 @@
         }
     }
     window.openRecursoHistorialModal = openRecursoHistorialModal;
+
+    async function restoreRecursoVersion(historyId) {
+        const item = (window._recursoHistorialCache || []).find(x => x.id === historyId);
+        if (!item) return;
+
+        const by = item.editado_por === 'paciente' ? 'el consultante' : 'el terapeuta';
+        const fecha = (item.fecha_registro || '').substring(0, 19).replace('T', ' ');
+
+        let confirmed = false;
+        if (typeof appConfirm === 'function') {
+            confirmed = await appConfirm(`¿Deseas restaurar la versión guardada el ${fecha} por ${by}? La pizarra actual se actualizará con ese contenido.`);
+        } else {
+            confirmed = confirm(`¿Deseas restaurar la versión guardada el ${fecha} por ${by}? La pizarra actual se actualizará con ese contenido.`);
+        }
+        if (!confirmed) return;
+
+        if (window.activeRecursoPizarra) {
+            window.activeRecursoPizarra.contenido = item.contenido || {};
+            renderSpecificInteractiveTool(window.activeRecursoPizarra);
+            await saveRecursoPizarra(true, true);
+            if (typeof closeModal === 'function') {
+                closeModal('modal-recurso-historial');
+            } else {
+                const m = document.getElementById('modal-recurso-historial');
+                if (m) m.classList.add('hide');
+            }
+            if (typeof appAlert === 'function') {
+                appAlert("✓ Versión histórica cargada y guardada correctamente.", { type: 'success' });
+            } else {
+                alert("✓ Versión histórica cargada y guardada correctamente.");
+            }
+        }
+    }
+    window.restoreRecursoVersion = restoreRecursoVersion;
 
     function closeRecursoPizarra() {
         stopPizarraLiveSync();
@@ -2338,12 +2411,6 @@
                     </p>
                 </div>
                 <div style="display: flex; gap: 0.4rem; align-items: center;">
-                    <button type="button" class="btn btn-sm" id="btn-adv-mode-mindmap" onclick="switchAdvViewMode('mindmap')" style="background: #7e22ce; color: #ffffff; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem; border: none; box-shadow: 0 2px 8px rgba(126,34,206,0.25);">
-                        🧠 Vista Mapa Mental
-                    </button>
-                    <button type="button" class="btn btn-sm" id="btn-adv-mode-list" onclick="switchAdvViewMode('list')" style="background: #ffffff; color: #7e22ce; border: 1.5px solid #d8b4fe; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem;">
-                        📱 Vista Lista (Móvil)
-                    </button>
                     <button type="button" class="btn btn-sm" onclick="window.print()" style="background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 20px; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem;">
                         🖨️ Imprimir / PDF
                     </button>
