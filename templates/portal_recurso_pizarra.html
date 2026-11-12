@@ -929,15 +929,15 @@
 
         // 5. SEGMENTACIÓN DE OBJETIVOS
         function getSegmentacionObjetivosHTML(c) {
-            const cpItems = (c.corto_plazo && c.corto_plazo.items) ? c.corto_plazo.items : [''];
-            const mpItems = (c.mediano_plazo && c.mediano_plazo.items) ? c.mediano_plazo.items : [''];
-            const lpItems = (c.largo_plazo && c.largo_plazo.items) ? c.largo_plazo.items : [''];
+            const cpItems = (c.corto_plazo && c.corto_plazo.items && c.corto_plazo.items.length) ? c.corto_plazo.items : [''];
+            const mpItems = (c.mediano_plazo && c.mediano_plazo.items && c.mediano_plazo.items.length) ? c.mediano_plazo.items : [''];
+            const lpItems = (c.largo_plazo && c.largo_plazo.items && c.largo_plazo.items.length) ? c.largo_plazo.items : [''];
 
             return `
             <div style="display: flex; flex-direction: column; gap: 1.25rem;">
                 <div style="background: #ffffff; border: 2px solid #702e5e; border-radius: 14px; padding: 1.1rem;">
                     <label style="font-weight: 800; font-size: 0.85rem; color: #702e5e; display: block; margin-bottom: 0.35rem;">🎯 META O DESAFÍO PRINCIPAL:</label>
-                    <input type="text" id="so-meta-principal" value="${escapeHtml(c.meta_principal || '')}" oninput="triggerAutoSave()" placeholder="Ej: Superar el bloqueo para rendir mi examen de grado..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; font-weight: 700;">
+                    <input type="text" id="so-meta-principal" value="${escapeHtml(c.meta_principal || c.meta_global || '')}" oninput="triggerAutoSave()" onkeydown="handleMetaPrincipalKeyDown(event)" placeholder="Ej: Superar el bloqueo para rendir mi examen de grado..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; font-weight: 700;">
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
@@ -980,22 +980,65 @@
 
                 <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 14px; padding: 1.1rem;">
                     <label style="font-weight: 800; font-size: 0.88rem; color: #702e5e; display: block; margin-bottom: 0.35rem;">⚡ Primera Micro-Acción Concreta (Para hacer hoy mismo en menos de 10 min):</label>
-                    <input type="text" id="so-primera-accion" value="${escapeHtml(c.primera_accion_hoy || '')}" oninput="triggerAutoSave()" placeholder="Ej: Abrir el documento y escribir solo el índice..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #f0abfc; font-size: 0.95rem; font-weight: 700;">
+                    <input type="text" id="so-primera-accion" value="${escapeHtml(c.primera_accion_hoy || '')}" oninput="triggerAutoSave()" onkeydown="handlePrimeraAccionKeyDown(event)" placeholder="Ej: Abrir el documento y escribir solo el índice..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #f0abfc; font-size: 0.95rem; font-weight: 700;">
                 </div>
             </div>`;
+        }
+
+        function handleMetaPrincipalKeyDown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                triggerAutoSave();
+                const firstCp = document.querySelector('#so-list-cp .so-input');
+                if (firstCp) {
+                    firstCp.focus();
+                } else {
+                    addSegmentacionRow('cp');
+                }
+            }
+        }
+
+        function handlePrimeraAccionKeyDown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+                triggerAutoSave();
+            }
+        }
+
+        function handleSegmentacionKeyDown(e, cat, currentInput) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addSegmentacionRow(cat, currentInput);
+            } else if (e.key === 'Backspace' && (!currentInput.value || currentInput.value.trim() === '')) {
+                const row = currentInput.closest('.so-row-item');
+                const container = document.getElementById(`so-list-${cat}`);
+                if (container && container.querySelectorAll('.so-row-item').length > 1) {
+                    e.preventDefault();
+                    const prevRow = row.previousElementSibling;
+                    const nextRow = row.nextElementSibling;
+                    row.remove();
+                    triggerAutoSave();
+                    if (prevRow && prevRow.querySelector('.so-input')) {
+                        prevRow.querySelector('.so-input').focus();
+                    } else if (nextRow && nextRow.querySelector('.so-input')) {
+                        nextRow.querySelector('.so-input').focus();
+                    }
+                }
+            }
         }
 
         function renderSegmentacionRows(cat, items) {
             return items.map(txt => `
                 <div class="so-row-item" data-cat="${cat}" style="display: flex; gap: 0.35rem; align-items: center;">
                     <span style="color: #64748b; font-size: 0.8rem;">✓</span>
-                    <input type="text" class="so-input" value="${escapeHtml(txt)}" oninput="triggerAutoSave()" placeholder="Paso específico..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                    <input type="text" class="so-input" value="${escapeHtml(txt)}" oninput="triggerAutoSave()" onkeydown="handleSegmentacionKeyDown(event, '${cat}', this)" placeholder="Paso específico..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
                     <button type="button" onclick="this.closest('.so-row-item').remove(); triggerAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
                 </div>
             `).join('');
         }
 
-        function addSegmentacionRow(cat) {
+        function addSegmentacionRow(cat, afterEl = null) {
             const container = document.getElementById(`so-list-${cat}`);
             if (!container) return;
             const div = document.createElement('div');
@@ -1004,13 +1047,28 @@
             div.style.cssText = 'display: flex; gap: 0.35rem; align-items: center;';
             div.innerHTML = `
                 <span style="color: #64748b; font-size: 0.8rem;">✓</span>
-                <input type="text" class="so-input" value="" oninput="triggerAutoSave()" placeholder="Paso específico..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                <input type="text" class="so-input" value="" oninput="triggerAutoSave()" onkeydown="handleSegmentacionKeyDown(event, '${cat}', this)" placeholder="Paso específico..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
                 <button type="button" onclick="this.closest('.so-row-item').remove(); triggerAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
             `;
-            container.appendChild(div);
-            div.querySelector('input').focus();
+            if (afterEl && afterEl.closest) {
+                const parentRow = afterEl.closest('.so-row-item');
+                if (parentRow && parentRow.nextElementSibling) {
+                    container.insertBefore(div, parentRow.nextElementSibling);
+                } else {
+                    container.appendChild(div);
+                }
+            } else {
+                container.appendChild(div);
+            }
+            const input = div.querySelector('input');
+            if (input) input.focus();
             triggerAutoSave();
         }
+        window.addSegmentacionRow = addSegmentacionRow;
+        window.addObjetivoItem = addSegmentacionRow;
+        window.handleSegmentacionKeyDown = handleSegmentacionKeyDown;
+        window.handleMetaPrincipalKeyDown = handleMetaPrincipalKeyDown;
+        window.handlePrimeraAccionKeyDown = handlePrimeraAccionKeyDown;
 
         // 6. SOBREPENSAMIENTO
         

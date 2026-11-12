@@ -1473,86 +1473,120 @@
 
     // --- E. SEGMENTACIÓN DE OBJETIVOS (CORTO, MEDIANO, LARGO PLAZO) ---
     function getSegmentacionObjetivosHTML(c) {
-        const cpItems = (c.corto_plazo && c.corto_plazo.items) ? c.corto_plazo.items : [''];
-        const mpItems = (c.mediano_plazo && c.mediano_plazo.items) ? c.mediano_plazo.items : [''];
-        const lpItems = (c.largo_plazo && c.largo_plazo.items) ? c.largo_plazo.items : [''];
+        const cpItems = (c.corto_plazo && c.corto_plazo.items && c.corto_plazo.items.length) ? c.corto_plazo.items : [''];
+        const mpItems = (c.mediano_plazo && c.mediano_plazo.items && c.mediano_plazo.items.length) ? c.mediano_plazo.items : [''];
+        const lpItems = (c.largo_plazo && c.largo_plazo.items && c.largo_plazo.items.length) ? c.largo_plazo.items : [''];
 
         return `
         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-            <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 0.85rem 1rem; color: #166534; font-size: 0.85rem; line-height: 1.45;">
-                🎯 <strong>Gradiente de Aproximación:</strong> No intentes resolver todo al mismo tiempo. 
-                Fija una meta mayor y segméntala en micro-pasos alcanzables según los recursos que ya tienes hoy.
-            </div>
-
-            <!-- Meta Global -->
-            <div class="card" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1rem;">
-                <label style="font-weight: 800; font-size: 0.85rem; color: #16a34a; display: block; margin-bottom: 0.35rem;">
-                    Meta Global o Proyecto Vital del Consultante:
-                </label>
-                <input type="text" id="so-meta-global" value="${escapeHtml(c.meta_global || '')}" oninput="triggerRecursoAutoSave()" placeholder="Ej: 'Conseguir empleo estable en mi área profesional'..." style="width: 100%; padding: 0.55rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.92rem; font-weight: 600;">
+            <!-- Meta Principal -->
+            <div style="background: #ffffff; border: 2px solid #702e5e; border-radius: 14px; padding: 1.1rem;">
+                <label style="font-weight: 800; font-size: 0.85rem; color: #702e5e; display: block; margin-bottom: 0.35rem;">🎯 META O DESAFÍO PRINCIPAL:</label>
+                <input type="text" id="so-meta-principal" value="${escapeHtml(c.meta_principal || c.meta_global || '')}" oninput="triggerRecursoAutoSave()" onkeydown="handleSegmentacionMetaKeyDown(event)" placeholder="Ej: Superar el bloqueo para rendir mi examen de grado..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; font-weight: 700;">
             </div>
 
             <!-- 3 Columnas por Etapas -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-                
                 <!-- Corto Plazo -->
-                <div style="background: #ffffff; border: 1.5px solid #22c55e; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                        <strong style="color: #15803d; font-size: 0.9rem;">1. CORTO PLAZO</strong>
-                        <button type="button" class="btn btn-sm" onclick="addObjetivoItem('corto')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #dcfce7; color: #166534; border: none; border-radius: 4px;">+ Añadir</button>
+                <div style="background: #ffffff; border: 1.5px solid #22c55e; border-radius: 12px; padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <strong style="color: #15803d; font-size: 0.88rem;">1. Corto Plazo (Hoy y esta semana)</strong>
+                        <button type="button" class="btn btn-sm" onclick="addObjetivoItem('cp')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #dcfce7; color: #166534; border: none; border-radius: 4px; cursor: pointer;">+ Añadir</button>
                     </div>
-                    <p style="margin: 0 0 0.55rem 0; font-size: 0.75rem; color: #64748b;">¿Qué puedo ejecutar hoy con los recursos que YA tengo? (Ej: actualizar CV, enviar 3 correos).</p>
-                    <div id="so-list-corto" style="display: flex; flex-direction: column; gap: 0.4rem; flex: 1;">
-                        ${renderObjetivoItemList('corto', cpItems)}
+                    <p style="margin: 0 0 0.5rem 0; font-size: 0.73rem; color: #64748b;">Acciones inmediatas con recursos que ya tienes a mano.</p>
+                    <div id="so-list-cp" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        ${renderObjetivoItemList('cp', cpItems)}
                     </div>
                 </div>
 
                 <!-- Mediano Plazo -->
-                <div style="background: #ffffff; border: 1.5px solid #3b82f6; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                        <strong style="color: #1d4ed8; font-size: 0.9rem;">2. MEDIANO PLAZO</strong>
-                        <button type="button" class="btn btn-sm" onclick="addObjetivoItem('mediano')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #dbeafe; color: #1e40af; border: none; border-radius: 4px;">+ Añadir</button>
+                <div style="background: #ffffff; border: 1.5px solid #3b82f6; border-radius: 12px; padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <strong style="color: #1d4ed8; font-size: 0.88rem;">2. Mediano Plazo (Próximas semanas)</strong>
+                        <button type="button" class="btn btn-sm" onclick="addObjetivoItem('mp')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #dbeafe; color: #1e40af; border: none; border-radius: 4px; cursor: pointer;">+ Añadir</button>
                     </div>
-                    <p style="margin: 0 0 0.55rem 0; font-size: 0.75rem; color: #64748b;">¿Qué recursos necesito conseguir y cómo? (Ej: hacer un curso, trabajar la autoconfianza).</p>
-                    <div id="so-list-mediano" style="display: flex; flex-direction: column; gap: 0.4rem; flex: 1;">
-                        ${renderObjetivoItemList('mediano', mpItems)}
+                    <p style="margin: 0 0 0.5rem 0; font-size: 0.73rem; color: #64748b;">Pasos que requieren adquirir algún recurso o apoyo.</p>
+                    <div id="so-list-mp" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        ${renderObjetivoItemList('mp', mpItems)}
                     </div>
                 </div>
 
                 <!-- Largo Plazo -->
-                <div style="background: #ffffff; border: 1.5px solid #9333ea; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                        <strong style="color: #7e22ce; font-size: 0.9rem;">3. LARGO PLAZO</strong>
-                        <button type="button" class="btn btn-sm" onclick="addObjetivoItem('largo')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #f3e8ff; color: #6b21a8; border: none; border-radius: 4px;">+ Añadir</button>
+                <div style="background: #ffffff; border: 1.5px solid #8b5cf6; border-radius: 12px; padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <strong style="color: #6d28d9; font-size: 0.88rem;">3. Largo Plazo (Meta Final)</strong>
+                        <button type="button" class="btn btn-sm" onclick="addObjetivoItem('lp')" style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: #ede9fe; color: #5b21b6; border: none; border-radius: 4px; cursor: pointer;">+ Añadir</button>
                     </div>
-                    <p style="margin: 0 0 0.55rem 0; font-size: 0.75rem; color: #64748b;">¿Qué haré con los recursos consolidados? (Ej: estudiar un posgrado, abrir mi consultora).</p>
-                    <div id="so-list-largo" style="display: flex; flex-direction: column; gap: 0.4rem; flex: 1;">
-                        ${renderObjetivoItemList('largo', lpItems)}
+                    <p style="margin: 0 0 0.5rem 0; font-size: 0.73rem; color: #64748b;">Culminación y consolidación de la meta.</p>
+                    <div id="so-list-lp" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        ${renderObjetivoItemList('lp', lpItems)}
                     </div>
                 </div>
+            </div>
+
+            <!-- Micro Acción Concreta -->
+            <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 14px; padding: 1.1rem;">
+                <label style="font-weight: 800; font-size: 0.88rem; color: #702e5e; display: block; margin-bottom: 0.35rem;">⚡ Primera Micro-Acción Concreta (Para hacer hoy mismo en menos de 10 min):</label>
+                <input type="text" id="so-primera-accion" value="${escapeHtml(c.primera_accion_hoy || '')}" oninput="triggerRecursoAutoSave()" onkeydown="handleSegmentacionPrimeraAccionKeyDown(event)" placeholder="Ej: Abrir el documento y escribir solo el índice..." style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1.5px solid #f0abfc; font-size: 0.95rem; font-weight: 700;">
             </div>
         </div>`;
     }
 
-    function renderObjetivoItemList(stage, items) {
-        let html = '';
-        items.forEach(txt => {
-            html += `
-            <div class="so-item" data-stage="${stage}" style="display: flex; gap: 0.35rem; align-items: center;">
-                <input type="text" class="so-input" value="${escapeHtml(txt)}" oninput="triggerRecursoAutoSave()" placeholder="✓ Acción específica..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
-                <button type="button" onclick="this.closest('.so-item').remove(); triggerRecursoAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
-            </div>`;
-        });
-        return html;
+    function handleSegmentacionMetaKeyDown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            triggerRecursoAutoSave();
+            const firstCp = document.querySelector('#so-list-cp .so-input');
+            if (firstCp) {
+                firstCp.focus();
+            } else {
+                addObjetivoItem('cp');
+            }
+        }
     }
 
-    function addObjetivoItem(stage) {
-        const containerMap = {
-            'corto': 'so-list-corto',
-            'mediano': 'so-list-mediano',
-            'largo': 'so-list-largo'
-        };
-        const container = document.getElementById(containerMap[stage]);
+    function handleSegmentacionPrimeraAccionKeyDown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.target.blur();
+            triggerRecursoAutoSave();
+        }
+    }
+
+    function handleSegmentacionItemKeyDown(e, stage, currentInput) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addObjetivoItem(stage, currentInput);
+        } else if (e.key === 'Backspace' && (!currentInput.value || currentInput.value.trim() === '')) {
+            const row = currentInput.closest('.so-item');
+            const container = document.getElementById(`so-list-${stage}`);
+            if (container && container.querySelectorAll('.so-item').length > 1) {
+                e.preventDefault();
+                const prevRow = row.previousElementSibling;
+                const nextRow = row.nextElementSibling;
+                row.remove();
+                triggerRecursoAutoSave();
+                if (prevRow && prevRow.querySelector('.so-input')) {
+                    prevRow.querySelector('.so-input').focus();
+                } else if (nextRow && nextRow.querySelector('.so-input')) {
+                    nextRow.querySelector('.so-input').focus();
+                }
+            }
+        }
+    }
+
+    function renderObjetivoItemList(stage, items) {
+        return items.map(txt => `
+            <div class="so-item" data-stage="${stage}" style="display: flex; gap: 0.35rem; align-items: center;">
+                <span style="color: #64748b; font-size: 0.8rem;">✓</span>
+                <input type="text" class="so-input" value="${escapeHtml(txt)}" oninput="triggerRecursoAutoSave()" onkeydown="handleSegmentacionItemKeyDown(event, '${stage}', this)" placeholder="Paso específico..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+                <button type="button" onclick="this.closest('.so-item').remove(); triggerRecursoAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
+            </div>
+        `).join('');
+    }
+
+    function addObjetivoItem(stage, afterEl = null) {
+        const container = document.getElementById(`so-list-${stage}`);
         if (!container) return;
 
         const div = document.createElement('div');
@@ -1560,14 +1594,29 @@
         div.dataset.stage = stage;
         div.style.cssText = 'display: flex; gap: 0.35rem; align-items: center;';
         div.innerHTML = `
-            <input type="text" class="so-input" value="" oninput="triggerRecursoAutoSave()" placeholder="✓ Acción específica..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
+            <span style="color: #64748b; font-size: 0.8rem;">✓</span>
+            <input type="text" class="so-input" value="" oninput="triggerRecursoAutoSave()" onkeydown="handleSegmentacionItemKeyDown(event, '${stage}', this)" placeholder="Paso específico..." style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
             <button type="button" onclick="this.closest('.so-item').remove(); triggerRecursoAutoSave();" style="background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer;">✕</button>
         `;
-        container.appendChild(div);
-        div.querySelector('input').focus();
+        if (afterEl && afterEl.closest) {
+            const parentRow = afterEl.closest('.so-item');
+            if (parentRow && parentRow.nextElementSibling) {
+                container.insertBefore(div, parentRow.nextElementSibling);
+            } else {
+                container.appendChild(div);
+            }
+        } else {
+            container.appendChild(div);
+        }
+        const input = div.querySelector('input');
+        if (input) input.focus();
         triggerRecursoAutoSave();
     }
     window.addObjetivoItem = addObjetivoItem;
+    window.addSegmentacionRow = addObjetivoItem;
+    window.handleSegmentacionMetaKeyDown = handleSegmentacionMetaKeyDown;
+    window.handleSegmentacionPrimeraAccionKeyDown = handleSegmentacionPrimeraAccionKeyDown;
+    window.handleSegmentacionItemKeyDown = handleSegmentacionItemKeyDown;
 
     // --- F. SOBRE-PENSAMIENTO (EMBUDO DE 4 FASES) ---
     
@@ -1889,16 +1938,18 @@
             case 'segmentacion_objetivos': {
                 const getItems = (stage) => {
                     const arr = [];
-                    document.querySelectorAll(`.so-item[data-stage="${stage}"] .so-input`).forEach(inp => {
-                        if (inp.value) arr.push(inp.value);
+                    document.querySelectorAll(`#so-list-${stage} .so-input`).forEach(inp => {
+                        arr.push(inp.value);
                     });
                     return arr;
                 };
                 return {
-                    meta_global: document.getElementById('so-meta-global')?.value || '',
-                    corto_plazo: { items: getItems('corto') },
-                    mediano_plazo: { items: getItems('mediano') },
-                    largo_plazo: { items: getItems('largo') }
+                    meta_principal: document.getElementById('so-meta-principal')?.value || document.getElementById('so-meta-global')?.value || '',
+                    meta_global: document.getElementById('so-meta-principal')?.value || document.getElementById('so-meta-global')?.value || '',
+                    primera_accion_hoy: document.getElementById('so-primera-accion')?.value || '',
+                    corto_plazo: { items: getItems('cp') },
+                    mediano_plazo: { items: getItems('mp') },
+                    largo_plazo: { items: getItems('lp') }
                 };
             }
             case 'sobrepensamiento': {
