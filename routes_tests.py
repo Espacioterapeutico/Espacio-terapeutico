@@ -148,6 +148,7 @@ def ensure_tests_tables(db):
     ensure_substance_abuse_tests_definitions(db)
     ensure_social_anxiety_tests_definitions(db)
     ensure_hypersexuality_tests_definitions(db)
+    ensure_ados2_mod4_definition(db)
     ensure_barsit_definition(db)
     sync_existing_completed_tests_to_evoluciones(db)
 
@@ -2620,7 +2621,7 @@ def api_export_test_pdf(assignment_id):
         # Conjunto de tests con baremos psicométricos reconocidos
         tests_with_baremo = {
             'ASRS-ADHD', 'TDAH', 'ADHD', 'ASRS',
-            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'CAT-Q', 'CATQ',
+            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-M4',
             'TCS', 'UGDS-GS', 'UGDS', 'RAADS-R', 'RAADS', 'HOLLAND', 'RIASEC',
             'MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II',
             'MMPI-2', 'MMPI2', 'MMPI', 'ZUNG-SDS', 'HAMILTON-D', 'IDARE-STAI', 'IDARE',
@@ -3776,4 +3777,121 @@ def ensure_hypersexuality_tests_definitions(db):
         ))
 
     db.commit()
+
+
+def ensure_ados2_mod4_definition(db):
+    """
+    Registra y homologa en `tests_definiciones` el Protocolo de Entrevista Semiestructurada
+    y Observación Clínica para Evaluación de TEA en Adultos (Estructura Módulo 4 - ADOS-2).
+    Incluye los 12 ítems de codificación conductual estandarizada:
+    - Dominio A (Afecto Social, A1 a A8)
+    - Dominio B (Conductas Restringidas y Repetitivas, B1 a B4)
+    """
+    import json
+    cursor = db.cursor()
+
+    ados_opciones = [
+        {"val": 0, "text": "0 — Típico / Sin alteración clínica", "txt": "0 — Típico / Sin alteración clínica"},
+        {"val": 1, "text": "1 — Ligeramente atípico / Poco frecuente", "txt": "1 — Ligeramente atípico / Poco frecuente"},
+        {"val": 2, "text": "2 — Claramente atípico / Interfiere en reciprocidad", "txt": "2 — Claramente atípico / Interfiere en reciprocidad"},
+        {"val": 3, "text": "3 — Marcadamente atípico / Grave (convierte a 2 en algoritmo)", "txt": "3 — Marcadamente atípico / Grave (convierte a 2 en algoritmo)"}
+    ]
+
+    ados_items = [
+        {
+            "id": 1, "num": 1, "codigo": "A1", "subescala": "Dominio A: Afecto Social (AS)",
+            "texto": "A1. Regulación del Contacto Visual — Mirada flexible y modulada para iniciar, sostener y regular la interacción social (Evaluar en Bloques 1, 4, 5 y 6).",
+            "txt": "A1. Regulación del Contacto Visual — Mirada flexible y modulada para iniciar, sostener y regular la interacción social."
+        },
+        {
+            "id": 2, "num": 2, "codigo": "A2", "subescala": "Dominio A: Afecto Social (AS)",
+            "texto": "A2. Sonrisa Social Recíproca — Sonrisa espontánea y responsiva en correspondencia socioemocional con el evaluador (Evaluar en Bloques 1 y 3).",
+            "txt": "A2. Sonrisa Social Recíproca — Sonrisa espontánea y responsiva en correspondencia socioemocional con el evaluador."
+        },
+        {
+            "id": 3, "num": 3, "codigo": "A3", "subescala": "Dominio A: Afecto Social (AS)",
+            "texto": "A3. Integración de Gestos Descriptivos e Instrumentales con el Habla — Coordinación natural de gestos descriptivos, convencionales e instrumentales con la expresión verbal (Evaluar en Bloque 6: Tarea de Demostración).",
+            "txt": "A3. Integración de Gestos Descriptivos e Instrumentales con el Habla — Coordinación natural de gestos descriptivos, convencionales e instrumentales con la expresión verbal."
+        },
+        {
+            "id": 4, "num": 4, "codigo": "A4", "subescala": "Dominio A: Afecto Social (AS)",
+            "texto": "A4. Expresión Facial Dirigida al Evaluador — Variedad, congruencia afectiva y dirección comunicativa de las expresiones faciales (Evaluar en Bloques 3 y 6).",
+            "txt": "A4. Expresión Facial Dirigida al Evaluador — Variedad, congruencia afectiva y dirección comunicativa de las expresiones faciales."
+        },
+        {
+            "id": 5, "num": 5, "codigo": "A5", "subescala": "Dominio A: Afecto Social (AS)",
+            "texto": "A5. Disfrute Compartido en la Interacción — Placer genuino y sintonía afectiva compartida durante el intercambio conversacional (Evaluar en Bloques 2 y 3).",
+            "txt": "A5. Disfrute Compartido en la Interacción — Placer genuino y sintonía afectiva compartida durante el intercambio conversacional."
+        },
+        {
+            "id": 6, "num": 6, "codigo": "A6", "subescala": "Dominio A: Afecto Social (AS)",
+            "texto": "A6. Calidad y Reciprocidad de la Conversación (Ida y vuelta) — Flujo bidireccional, elaboración contingente sobre aportes del interlocutor y cesión de turnos (Evaluar en Bloques 1, 2, 4 y 5).",
+            "txt": "A6. Calidad y Reciprocidad de la Conversación (Ida y vuelta) — Flujo bidireccional, elaboración contingente sobre aportes del interlocutor y cesión de turnos."
+        },
+        {
+            "id": 7, "num": 7, "codigo": "A7", "subescala": "Dominio A: Afecto Social (AS)",
+            "texto": "A7. Empatía y Ofertas de Compartir Afecto — Reconocimiento, resonancia afectiva y respuesta empática ante estados emocionales ajenos (Evaluar en Bloques 3 y 4 ante presiones sociales).",
+            "txt": "A7. Empatía y Ofertas de Compartir Afecto — Reconocimiento, resonancia afectiva y respuesta empática ante estados emocionales ajenos."
+        },
+        {
+            "id": 8, "num": 8, "codigo": "A8", "subescala": "Dominio A: Afecto Social (AS)",
+            "texto": "A8. Iniciativa y Cantidad de Comunicación Social Recíproca — Aperturas sociales espontáneas orientadas al vínculo más allá de demandas informativas (Evaluar en Bloques 1 y 4).",
+            "txt": "A8. Iniciativa y Cantidad de Comunicación Social Recíproca — Aperturas sociales espontáneas orientadas al vínculo más allá de demandas informativas."
+        },
+        {
+            "id": 9, "num": 9, "codigo": "B1", "subescala": "Dominio B: Conductas Restringidas y Repetitivas (CRR)",
+            "texto": "B1. Lenguaje Estereotipado, Pedante o Prosodia Inusual — Habla formalizada/enciclopédica, frases idiosincrásicas o alteración en entonación/ritmo (Evaluar en Bloques 2 y 5).",
+            "txt": "B1. Lenguaje Estereotipado, Pedante o Prosodia Inusual — Habla formalizada/enciclopédica, frases idiosincrásicas o alteración en entonación/ritmo."
+        },
+        {
+            "id": 10, "num": 10, "codigo": "B2", "subescala": "Dominio B: Conductas Restringidas y Repetitivas (CRR)",
+            "texto": "B2. Intereses Inusuales o Altamente Circunscritos — Absorción intensa o monólogo persistente en temas específicos que limita la reciprocidad (Evaluar en Bloque 2).",
+            "txt": "B2. Intereses Inusuales o Altamente Circunscritos — Absorción intensa o monólogo persistente en temas específicos que limita la reciprocidad."
+        },
+        {
+            "id": 11, "num": 11, "codigo": "B3", "subescala": "Dominio B: Conductas Restringidas y Repetitivas (CRR)",
+            "texto": "B3. Manierismos Motores o Estereotipias — Movimientos repetitivos o tensión postural inusual de manos, dedos o cuerpo (Observación transversal y Bloque 6).",
+            "txt": "B3. Manierismos Motores o Estereotipias — Movimientos repetitivos o tensión postural inusual de manos, dedos o cuerpo."
+        },
+        {
+            "id": 12, "num": 12, "codigo": "B4", "subescala": "Dominio B: Conductas Restringidas y Repetitivas (CRR)",
+            "texto": "B4. Rigidez Cognitiva / Resistencia ante Cambios o Interrupciones — Inflexibilidad mental, adherencia estricta a secuencias o malestar ante cambios o interrupciones (Evaluar en Bloques 1, 5 y 6).",
+            "txt": "B4. Rigidez Cognitiva / Resistencia ante Cambios o Interrupciones — Inflexibilidad mental, adherencia estricta a secuencias o malestar ante cambios o interrupciones."
+        }
+    ]
+
+    ados_nombre = "ADOS-2 (Módulo 4) — Protocolo de Entrevista Semiestructurada y Observación Clínica para Evaluación de TEA en Adultos"
+    ados_desc = (
+        "Guía de administración conversacional y codificación conductual estandarizada para adolescentes tardíos y adultos con fluidez verbal "
+        "(Estructura Módulo 4). Evalúa Afecto Social (Dominio A: A1-A8) y Conductas Restringidas y Repetitivas (Dominio B: B1-B4) a través de 6 bloques temáticos."
+    )
+    ados_inst = (
+        "EXCLUSIVO PARA EL EVALUADOR CLÍNICO: Mantenga una postura conversacional natural, aplique presiones sociales deliberadas "
+        "(pausas, comentarios personales para evaluar reciprocidad, interrupción suave en tarea de demostración) y codifique cada ítem "
+        "conductual de 0 a 3 (0 = Típico, 1 = Ligeramente atípico, 2 = Claramente atípico, 3 = Marcadamente atípico; en el algoritmo 3 se convierte a 2)."
+    )
+
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'ADOS-2'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'ADOS-2', ados_nombre, 'ADOS-2 (M4)', 'Neurodesarrollo y Neuropsicología',
+            ados_desc, ados_inst,
+            json.dumps(ados_opciones, ensure_ascii=False), json.dumps(ados_items, ensure_ascii=False)
+        ))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
+            WHERE code = 'ADOS-2'
+        """, (
+            ados_nombre, 'ADOS-2 (M4)', 'Neurodesarrollo y Neuropsicología',
+            ados_desc, ados_inst,
+            json.dumps(ados_opciones, ensure_ascii=False), json.dumps(ados_items, ensure_ascii=False)
+        ))
+
+    db.commit()
+
 

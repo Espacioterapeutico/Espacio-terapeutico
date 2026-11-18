@@ -221,17 +221,17 @@ var testsCatalogDatabase = [
     },
     {
         code: 'ADOS-2',
-        name: 'ADOS-2 — Escala de Observación para el Diagnóstico del Autismo',
-        siglas: 'ADOS-2',
+        name: 'ADOS-2 (Módulo 4) — Protocolo de Entrevista Semiestructurada y Observación Clínica para TEA en Adultos',
+        siglas: 'ADOS-2 (M4)',
         cat: 'Neurodesarrollo y Neuropsicología',
-        desc: 'Protocolo estandarizado de observación clínica y algoritmo de afecto social (AS) y conductas repetitivas (CRR).',
-        autor: 'Catherine Lord et al. (2012)',
-        poblacion: 'Niños y Adultos (Módulos T, 1, 2, 3, 4)',
-        validez: 'Sensibilidad 91% | Estándar de Oro Diagnóstico TEA',
-        itemsCount: 14,
-        isPhysical: true,
-        downloadUrl: '/static/test_materials/ados2_protocolo_observacion.pdf',
-        instrucciones: 'Aplicación estructurada presencial por profesional clínico. Requiere materiales específicos según el módulo. Grabar sesión si es posible.'
+        desc: 'Guía de administración conversacional por 6 bloques temáticos (presiones sociales y tarea de demostración) y hoja de codificación conductual estandarizada de 12 ítems: Dominio A (Afecto Social, A1-A8) y Dominio B (Conductas Restringidas y Repetitivas, B1-B4) para diagnóstico de TEA en adolescentes tardíos y adultos con fluidez verbal.',
+        autor: 'Catherine Lord et al. (2012) — Estructura Módulo 4 Adultos',
+        poblacion: 'Adolescentes Tardíos y Adultos con Fluidez Verbal (Módulo 4)',
+        validez: 'Sensibilidad 91% | Corte Espectro Autista ≥ 8 | Corte Autismo ≥ 10',
+        itemsCount: 12,
+        isPhysical: false,
+        downloadUrl: '/static/test_materials/Protocolo_Entrevista_TEA_Adultos_Mod4.pdf',
+        instrucciones: 'EXCLUSIVO PARA EL EVALUADOR CLÍNICO: Aplique la entrevista semiestructurada manteniendo una postura conversacional natural y aplicando presiones sociales deliberadas. Puede descargar e imprimir el protocolo de 4 páginas en PDF para tomar notas en sesión o codificar directamente los 12 ítems conductuales (0 = Típico, 1 = Ligeramente atípico, 2 = Claramente atípico, 3 = Marcadamente atípico; en el algoritmo 3 se convierte a 2).'
     },
 
     // 2. DEPRESIÓN Y ANSIEDAD
@@ -32868,6 +32868,13 @@ function selectTestForApplication(testCode) {
                         <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.7rem 0.85rem; margin-top: 6px;">
                             <h5 style="margin: 0 0 4px 0; font-size: 0.82rem; font-weight: 800; color: #92400e;">📝 Instrucciones de Aplicación</h5>
                             <p style="margin: 0; font-size: 0.78rem; color: #78350f; line-height: 1.4; white-space: pre-line;">${testDataFound.instrucciones}</p>
+                        </div>
+                    ` : ''}
+                    ${testDataFound.downloadUrl ? `
+                        <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+                            <a href="/api/tests/materials/${testDataFound.downloadUrl.replace(/^.*[\\\/]/, '')}" target="_blank" style="background: #1e40af; color: #ffffff; font-size: 0.82rem; font-weight: 800; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(30,64,175,0.2);">
+                                🖨️ Descargar / Imprimir Protocolo PDF Oficial
+                            </a>
                         </div>
                     ` : ''}
                 </div>

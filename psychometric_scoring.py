@@ -1690,6 +1690,10 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     elif code in ('SAST', 'SAST-25', 'SAST25', 'SAST-CARNES', 'ADICCION-SEXUAL'):
         return process_sast_scoring(answers)
 
+    # 40. ADOS-2 Módulo 4 (Evaluación de TEA en Adultos con Fluidez Verbal)
+    elif code in ('ADOS-2', 'ADOS2', 'ADOS-M4', 'ADOS'):
+        return process_ados2_mod4_scoring(answers)
+
     # Fallback genérico
     else:
         try:
@@ -1891,4 +1895,96 @@ def process_sast_scoring(answers):
     }
     
     return total_score, subscales_dict, classification, interp_resumen
+
+
+# =========================================================================
+# 40. ADOS-2 MÓDULO 4 (PROTOCOLO DE ENTREVISTA Y OBSERVACIÓN CLÍNICA TEA ADULTOS)
+# =========================================================================
+def process_ados2_mod4_scoring(answers):
+    """
+    Algoritmo Diagnóstico ADOS-2 Módulo 4 (Adolescentes Tardíos y Adultos con Fluidez Verbal):
+    12 ítems de codificación conductual estandarizada (0 a 3):
+    - Dominio A: Afecto Social (AS) -> Ítems 1 a 8 (A1 a A8)
+    - Dominio B: Conductas Restringidas y Repetitivas (CRR) -> Ítems 9 a 12 (B1 a B4)
+    Regla algorítmica oficial ADOS-2:
+    Las puntuaciones 0, 1 y 2 mantienen su valor nominal; toda puntuación de 3 se convierte a 2.
+    Puntos de corte diagnósticos Módulo 4:
+    - Corte Espectro Autista (TEA): Puntuación Global (AS + CRR) >= 8 pts
+    - Corte Autismo Clínico: Puntuación Global (AS + CRR) >= 10 pts
+    """
+    ans_map = _extract_answer_map(answers)
+
+    def _to_alg(val):
+        try:
+            v = int(val)
+        except Exception:
+            v = 0
+        if v < 0:
+            return 0
+        return 2 if v >= 3 else v
+
+    as_items = [1, 2, 3, 4, 5, 6, 7, 8]
+    crr_items = [9, 10, 11, 12]
+
+    as_alg = sum(_to_alg(ans_map.get(i, 0)) for i in as_items)
+    crr_alg = sum(_to_alg(ans_map.get(i, 0)) for i in crr_items)
+    total_alg = as_alg + crr_alg
+
+    if total_alg >= 10:
+        classification = "Autismo Clínico (ADOS-2 Módulo 4 >= 10 pts)"
+        alerta_global = "severo"
+        crit_global = "Supera el punto de corte diagnóstico de Autismo Clínico en el Módulo 4 (>= 10)"
+    elif total_alg >= 8:
+        classification = "Espectro Autista — TEA (ADOS-2 Módulo 4: 8–9 pts)"
+        alerta_global = "moderado"
+        crit_global = "Supera el punto de corte del Espectro Autista en el Módulo 4 (>= 8)"
+    else:
+        classification = "Fuera del Espectro Autista / No TEA (ADOS-2 Módulo 4 < 8 pts)"
+        alerta_global = "normal"
+        crit_global = "Por debajo del umbral diagnóstico algorítmico (valorar posible camuflaje / Masking si hay clínica)"
+
+    subscales_dict = {
+        "Dominio A — Afecto Social (Comunicación e Interacción Social Recíproca)": {
+            "pd": f"{as_alg} / 16 pts",
+            "baremo": "Referencia Espectro >= 6 | Autismo >= 8",
+            "nivel": "Elevado (Compatible con Autismo)" if as_alg >= 8 else ("Moderado (Rango Espectro)" if as_alg >= 6 else "Dentro de límites típicos"),
+            "criterio": "Evalúa contacto visual (A1), sonrisa recíproca (A2), gestos (A3), expresión facial (A4), disfrute compartido (A5), reciprocidad conversacional (A6), empatía (A7) e iniciativa social (A8).",
+            "alerta": "severo" if as_alg >= 8 else ("moderado" if as_alg >= 6 else "normal")
+        },
+        "Dominio B — Conductas Restringidas y Repetitivas (CRR)": {
+            "pd": f"{crr_alg} / 8 pts",
+            "baremo": "Referencia Espectro >= 1 | Autismo >= 2",
+            "nivel": "Significativo" if crr_alg >= 2 else ("Presente" if crr_alg >= 1 else "Ausente"),
+            "criterio": "Evalúa lenguaje pedante/estereotipado o prosodia inusual (B1), intereses altamente circunscritos (B2), manierismos motores (B3) y rigidez cognitiva ante cambios/interrupciones (B4).",
+            "alerta": "severo" if crr_alg >= 2 else ("moderado" if crr_alg >= 1 else "normal")
+        },
+        "Puntuación Global del Algoritmo ADOS-2 (Módulo 4: AS + CRR)": {
+            "pd": f"{total_alg} / 24 pts",
+            "baremo": "Corte Espectro Autista >= 8 | Corte Autismo >= 10",
+            "nivel": classification,
+            "criterio": crit_global,
+            "alerta": alerta_global
+        }
+    }
+
+    interpretation = (
+        f"SÍNTESIS CLÍNICA Y ALGORÍTMICA ADOS-2 — MÓDULO 4 (ADULTOS CON FLUIDEZ VERBAL):\n"
+        f"• Total Dominio A (Afecto Social, A1–A8): {as_alg} / 16 puntos algorítmicos.\n"
+        f"• Total Dominio B (Conductas Restringidas y Repetitivas, B1–B4): {crr_alg} / 8 puntos algorítmicos.\n"
+        f"• Puntuación Global del Algoritmo (AS + CRR): {total_alg} / 24 puntos.\n"
+        f"• Clasificación Observacional ADOS-2 (Módulo 4): {classification}.\n\n"
+        f"Juicio Clínico e Integración Diagnóstica:\n"
+        + (
+            "La observación conductual estructurada evidencia indicadores clínicos consistentes con el Trastorno del Espectro Autista (TEA) en la adultez, "
+            "destacando particularidades cualitativas en la reciprocidad socioemocional, integración multimodal (mirada-gesto-habla) y patrones de inflexibilidad o intereses circunscritos. "
+            "Se recomienda integrar con historia del neurodesarrollo, escalas psicométricas complementarias (AQ, RAADS-R, CAT-Q) y diagnóstico diferencial."
+            if total_alg >= 8 else
+            "La puntuación algorítmica observada en sesión se ubica por debajo del punto de corte formal del Módulo 4 (< 8 puntos). "
+            "En adultos con alta fluidez verbal, debe valorarse cuidadosamente la presencia de estrategias compensatorias o camuflaje social (Masking / CAT-Q) "
+            "y contrastar con la historia evolutiva del desarrollo antes de descartar neurodivergencia."
+        )
+    )
+
+    return float(total_alg), subscales_dict, classification, interpretation
+
 
