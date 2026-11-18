@@ -2730,6 +2730,16 @@ def accion_cita_publica():
         
         # Solo se cobra si está fuera de tiempo Y el paciente había confirmado la cita previamente
         es_late_charge = fuera_de_tiempo and (cita['confirmada'] == 1)
+        force = data.get('force', False)
+
+        if es_late_charge and not force:
+            from routes_pacientes import get_rule_description
+            desc = get_rule_description(rule_type, rule_value)
+            return jsonify({
+                'requires_confirmation': True,
+                'late_charge': True,
+                'message': f'Estás cancelando fuera del tiempo límite permitido ({desc}). De acuerdo con las normas de atención, esta consulta se cobrará igualmente como sesión cancelada fuera de tiempo. ¿Estás seguro de que deseas proceder con la cancelación?'
+            })
 
         # Actualizar Google Calendar si existe
         google_event_id = cita.get('google_event_id')
@@ -2927,47 +2937,181 @@ def accion_cita_publica():
             }
         
     elif accion == 'reprogramar':
-        cursor.execute("""
-            UPDATE agenda_finanzas 
-            SET estado_pago = 'Reprogramada', confirmada = 0,
-                referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Solicitud de reprogramación por consultante' ELSE referencia || ' | Solicitud de reprogramación por consultante' END
-            WHERE id = ?
-        """, (appt_id,))
-        template = cfg_rows.get(f'msg_reprogramacion_{psych_id}') or cfg_rows.get('msg_reprogramacion')
-        if not template:
-            template = (
+        # 1. Obtener política de cancelación configurada por el psicólogo
+        cursor.execute("SELECT configuracion_horarios_visual FROM usuarios WHERE id = ?", (psych_id,))
+        u_row = cursor.fetchone()
+        rule_type = 'horas'
+        rule_value = 24
+        if u_row and u_row[0]:
+            try:
+                config = json.loads(u_row[0])
+                rule_type = config.get('politica_cancelacion_tipo') or config.get('limite_cancelacion_tipo', 'horas')
+                rule_value = config.get('politica_cancelacion_valor') if config.get('politica_cancelacion_valor') is not None else config.get('limite_cancelacion_valor', 24)
+            except Exception:
+                pass
+                
+        from routes_pacientes import get_deadline_datetime, get_rule_description, create_auto_cancellation_session
+        deadline_dt = get_deadline_datetime(cita['fecha'], cita['hora'], rule_type, rule_value)
+        fuera_de_tiempo = datetime.now() > deadline_dt
+        
+        # Solo se cobra si está fuera de tiempo Y el paciente había confirmado la cita previamente
+        es_late_charge = fuera_de_tiempo and (cita['confirmada'] == 1)
+        force = data.get('force', False)
+        
+        if es_late_charge and not force:
+            desc = get_rule_description(rule_type, rule_value)
+            return jsonify({
+                'requires_confirmation': True,
+                'late_charge': True,
+                'message': f'Estás reprogramando fuera del tiempo límite permitido ({desc}). De acuerdo con las normas de atención, esta sesión se cobrará igualmente como cancelada fuera de tiempo y deberás abonar la nueva cita. ¿Deseas proceder con la reprogramación?'
+            })
+
+        if es_late_charge:
+            # Reprogramación tardía cobrada: Se cobra o se descuenta de prepago si existe
+            if cita['estado_pago'] in ['Paga', 'Prepagada']:
+                cursor.execute("""
+                    UPDATE agenda_finanzas
+                    SET estado_pago = 'Cancelada sin aviso - Paga', confirmada = 0, control_uso = 'Consumida',
+                        fecha_liquidacion = datetime('now', 'localtime'),
+                        referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Reprogramada fuera de tiempo por consultante' ELSE referencia || ' | Reprogramada fuera de tiempo' END
+                    WHERE id = ?
+                """, (appt_id,))
+            else:
+                cursor.execute("""
+                    SELECT id, cantidad_sesiones 
+                    FROM agenda_finanzas 
+                    WHERE paciente_id = ? AND estado_pago = 'Prepagada' AND control_uso = 'No consumida'
+                    ORDER BY fecha ASC, id ASC LIMIT 1
+                """, (cita['paciente_id'],))
+                pkg = cursor.fetchone()
+                if pkg:
+                    pkg_id = pkg['id']
+                    pkg_cant = pkg['cantidad_sesiones']
+                    if pkg_cant > 1:
+                        cursor.execute("UPDATE agenda_finanzas SET cantidad_sesiones = ? WHERE id = ?", (pkg_cant - 1, pkg_id))
+                    else:
+                        cursor.execute("UPDATE agenda_finanzas SET control_uso = 'Consumida' WHERE id = ?", (pkg_id,))
+                        
+                    cursor.execute("""
+                        UPDATE agenda_finanzas
+                        SET estado_pago = 'Cancelada sin aviso - Paga', confirmada = 0, control_uso = 'Consumida', monto = 0.0,
+                            metodo_pago = 'Descontado de Prepago', referencia = 'Prepago | Reprogramada fuera de tiempo',
+                            fecha_liquidacion = datetime('now', 'localtime')
+                        WHERE id = ?
+                    """, (appt_id,))
+                else:
+                    if float(cita.get('monto') or 0.0) == 0.0:
+                        costo_real, moneda_real = get_appointment_fee(cursor, cita['paciente_id'], psych_id, cita['tipo_consulta'])
+                    else:
+                        costo_real, moneda_real = cita['monto'], cita['moneda']
+                    cursor.execute("""
+                        UPDATE agenda_finanzas
+                        SET estado_pago = 'Cancelada sin aviso', confirmada = 0, monto = ?, moneda = ?,
+                            referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Reprogramada fuera de tiempo por consultante' ELSE referencia || ' | Reprogramada fuera de tiempo' END
+                        WHERE id = ?
+                    """, (costo_real, moneda_real, appt_id))
+
+            create_auto_cancellation_session(
+                db, cita['paciente_id'], appt_id, cita['fecha'], cita['tipo_consulta'],
+                'Cancelada sin aviso',
+                f"Consulta reprogramada fuera del límite de tiempo por el consultante ({cita['fecha']} a las {cita['hora']}). Registrada para cobro."
+            )
+
+            try:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO citas_canceladas_log (
+                        agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                        paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    appt_id, token, cita['paciente_id'], psych_id,
+                    pat_full_name, cita['fecha'], cita['hora'], cita['tipo_consulta'],
+                    'Reprogramada por consultante fuera de tiempo'
+                ))
+            except Exception as _e_clog:
+                print("Error registrando citas_canceladas_log reprogramacion tardia:", _e_clog)
+
+            _update_google_calendar_status_bg(appt_id, 'cancelada', motivo='Reprogramada fuera de tiempo por consultante')
+
+            template = cfg_rows.get(f'msg_reprogramacion_tardia_{psych_id}') or cfg_rows.get('msg_reprogramacion_tardia') or (
                 "Hola *{nombre}*, hemos registrado tu solicitud para *reprogramar* tu consulta del *{fecha}* a las *{hora}*. 🔄\n\n"
+                "Ten en cuenta que al realizarse fuera del límite permitido, esta sesión se registró para cobro según las normas de atención.\n"
                 "Por favor selecciona tu nueva fecha y horario disponible aquí:\n{link_agendar}\n\n"
                 "¡Nos vemos pronto!"
             )
-        _update_google_calendar_status_bg(appt_id, 'reprogramada', motivo='Solicitud de reprogramación por consultante')
-        
-        try:
+
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            try:
+                cursor.execute("""
+                    INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, fecha, leida, link)
+                    VALUES (?, 'cita', '⚠️ Cita Reprogramada FUERA DE TIEMPO por Consultante', ?, ?, 0, 'agenda')
+                """, (psych_id, f"{pat_full_name} ha reprogramado su cita del {cita['fecha']} a las {cita['hora']} FUERA DEL LÍMITE DE TIEMPO (Cita Confirmada). Se cobró/descontó como cancelación tardía.", now_str))
+            except Exception as _ne:
+                print("Error notificando reprogramacion tardia:", _ne)
+
+            try:
+                from app import send_webpush_notification
+                send_webpush_notification(
+                    user_id=psych_id,
+                    title="⚠️ Cita Reprogramada FUERA DE TIEMPO",
+                    body=f"{pat_full_name} reprogramó su cita del {cita['fecha']} fuera del límite de tiempo. Registrada para cobro.",
+                    url="/?view=agenda"
+                )
+            except Exception as _wp_ex:
+                print("Error enviando WebPush de reprogramacion tardia:", _wp_ex)
+
+            db.commit()
+
+            response_data = {
+                'success': True,
+                'reprogramada': True,
+                'late_charge': True,
+                'titulo': 'Reprogramar Cita',
+                'mensaje': 'Tu sesión previa fue registrada según las normas de atención al reprogramar fuera del límite. Serás redirigido a la agenda para seleccionar tu nuevo horario.',
+                'fast_booking_url': fast_booking_url
+            }
+
+        else:
             cursor.execute("""
-                INSERT OR REPLACE INTO citas_canceladas_log (
-                    agenda_id, token_confirmacion, paciente_id, psicologo_id,
-                    paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                appt_id, token, cita['paciente_id'], psych_id,
-                pat_full_name, cita['fecha'], cita['hora'], cita['tipo_consulta'],
-                'Solicitud de reprogramación por consultante'
-            ))
-        except Exception as _e_clog:
-            print("Error registrando citas_canceladas_log reprogramacion:", _e_clog)
+                UPDATE agenda_finanzas 
+                SET estado_pago = 'Reprogramada', confirmada = 0,
+                    referencia = CASE WHEN referencia IS NULL OR referencia = '' THEN 'Solicitud de reprogramación por consultante' ELSE referencia || ' | Solicitud de reprogramación por consultante' END
+                WHERE id = ?
+            """, (appt_id,))
+            template = cfg_rows.get(f'msg_reprogramacion_{psych_id}') or cfg_rows.get('msg_reprogramacion')
+            if not template:
+                template = (
+                    "Hola *{nombre}*, hemos registrado tu solicitud para *reprogramar* tu consulta del *{fecha}* a las *{hora}*. 🔄\n\n"
+                    "Por favor selecciona tu nueva fecha y horario disponible aquí:\n{link_agendar}\n\n"
+                    "¡Nos vemos pronto!"
+                )
+            _update_google_calendar_status_bg(appt_id, 'reprogramada', motivo='Solicitud de reprogramación por consultante')
+            
+            try:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO citas_canceladas_log (
+                        agenda_id, token_confirmacion, paciente_id, psicologo_id,
+                        paciente_nombre, fecha_cita, hora_cita, tipo_consulta, motivo_cancelacion
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    appt_id, token, cita['paciente_id'], psych_id,
+                    pat_full_name, cita['fecha'], cita['hora'], cita['tipo_consulta'],
+                    'Solicitud de reprogramación por consultante'
+                ))
+            except Exception as _e_clog:
+                print("Error registrando citas_canceladas_log reprogramacion:", _e_clog)
 
-        # No se envía notificación prematura de 'solicitó reprogramar'.
-        # La notificación formal se despachará cuando el paciente concrete su nuevo horario en la agenda.
-        db.commit()
+            db.commit()
 
-        reprog_target_url = f"{fast_booking_url}?reprogramar={token}" if token else fast_booking_url
-        response_data = {
-            'success': True,
-            'reprogramada': True,
-            'titulo': 'Reprogramar Cita',
-            'mensaje': 'Serás redirigido a la agenda para seleccionar tu nuevo horario.',
-            'fast_booking_url': reprog_target_url
-        }
+            reprog_target_url = f"{fast_booking_url}?reprogramar={token}" if token else fast_booking_url
+            response_data = {
+                'success': True,
+                'reprogramada': True,
+                'late_charge': False,
+                'titulo': 'Reprogramar Cita',
+                'mensaje': 'Serás redirigido a la agenda para seleccionar tu nuevo horario.',
+                'fast_booking_url': reprog_target_url
+            }
         
     db.commit()
     

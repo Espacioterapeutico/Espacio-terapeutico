@@ -21303,7 +21303,7 @@ async function fetchRescheduleAvailableHours(dateStr) {
     }
 }
 
-async function submitRescheduleAppointment() {
+async function submitRescheduleAppointment(force = false) {
     const fecha = document.getElementById('resched-req-fecha').value;
     const hora = document.getElementById('resched-req-hora').value;
     
@@ -21316,9 +21316,22 @@ async function submitRescheduleAppointment() {
         const res = await fetch('/api/patient/reschedule-appointment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ appt_id: rescheduleApptId, fecha, hora })
+            body: JSON.stringify({ appt_id: rescheduleApptId, fecha, hora, force: force })
         });
         const data = await res.json();
+        
+        if (data.requires_confirmation) {
+            const confirmed = await appConfirm(data.message, {
+                title: 'Reprogramar fuera de tiempo',
+                danger: true,
+                okText: 'Sí, continuar y reprogramar',
+                cancelText: 'Volver'
+            });
+            if (confirmed) {
+                return submitRescheduleAppointment(true);
+            }
+            return;
+        }
         
         if (data.error) {
             alert(data.error);

@@ -292,15 +292,15 @@
         const token = window.location.pathname.split('/').pop();
         const isAlreadyConfirmed = {{ 1 if cita.confirmada == 1 else 0 }};
         
-        async function submitAction(accion) {
+        async function submitAction(accion, force = false) {
             let promptMsg = '¿Estás seguro que deseas cancelar tu sesión?';
             if (isAlreadyConfirmed) {
                 promptMsg = 'Tu cita se encuentra confirmada.\n\nRecuerda que si cancelas fuera del tiempo de gracia permitido, la consulta se cobrará igualmente.\n\n¿Estás seguro de que deseas proceder con la cancelación?';
             }
-            if (accion === 'cancelar' && !await appConfirm(promptMsg, { title: 'Cancelar sesión', danger: true, okText: 'Sí, cancelar', cancelText: 'Volver' })) {
+            if (accion === 'cancelar' && !force && !await appConfirm(promptMsg, { title: 'Cancelar sesión', danger: true, okText: 'Sí, cancelar', cancelText: 'Volver' })) {
                 return;
             }
-            if (accion === 'reprogramar' && !await appConfirm('¿Deseas reprogramar esta cita para elegir un nuevo horario?', { title: 'Reprogramar sesión', okText: 'Sí, reprogramar', cancelText: 'Volver' })) {
+            if (accion === 'reprogramar' && !force && !await appConfirm('¿Deseas reprogramar esta cita para elegir un nuevo horario?', { title: 'Reprogramar sesión', okText: 'Sí, reprogramar', cancelText: 'Volver' })) {
                 return;
             }
             
@@ -311,10 +311,25 @@
                 const response = await fetch('/api/cita/accion', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, accion })
+                    body: JSON.stringify({ token, accion, force })
                 });
                 
                 const data = await response.json();
+                
+                if (data.requires_confirmation) {
+                    document.getElementById('loading-view').style.display = 'none';
+                    document.getElementById('action-view').style.display = 'block';
+                    const confirmed = await appConfirm(data.message, {
+                        title: accion === 'reprogramar' ? 'Reprogramación fuera de tiempo' : 'Cancelación fuera de tiempo',
+                        danger: true,
+                        okText: accion === 'reprogramar' ? 'Sí, continuar y reprogramar' : 'Sí, cancelar cita',
+                        cancelText: 'Volver'
+                    });
+                    if (confirmed) {
+                        return submitAction(accion, true);
+                    }
+                    return;
+                }
                 
                 document.getElementById('loading-view').style.display = 'none';
                 document.getElementById('success-view').style.display = 'flex';
@@ -361,14 +376,15 @@
                         }
                         desc.innerHTML = cancelHtml;
                     } else if (accion === 'reprogramar') {
-                        icon.innerText = '🔄';
-                        icon.style.background = 'rgba(23, 162, 184, 0.1)';
-                        title.innerText = 'Redirigiendo...';
-                        desc.innerText = 'Serás redirigido a la agenda para elegir tu nueva fecha.';
+                        const isLate = data.late_charge;
+                        icon.innerText = isLate ? '⚠️' : '🔄';
+                        icon.style.background = isLate ? 'rgba(245, 158, 11, 0.15)' : 'rgba(23, 162, 184, 0.1)';
+                        title.innerText = isLate ? 'Sesión Registrada para Cobro' : 'Redirigiendo...';
+                        desc.innerHTML = `<p style="line-height:1.5; color:${isLate ? '#9a3412' : 'var(--text-muted)'}; margin-bottom:1rem;">${data.mensaje || 'Serás redirigido a la agenda para elegir tu nueva fecha.'}</p>`;
                         if (data.fast_booking_url) {
                             setTimeout(() => {
                                 window.location.href = data.fast_booking_url;
-                            }, 1500);
+                            }, isLate ? 3500 : 1500);
                         }
                     }
                 } else {
