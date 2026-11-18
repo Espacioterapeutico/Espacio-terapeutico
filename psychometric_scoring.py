@@ -1691,7 +1691,7 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
         return process_sast_scoring(answers)
 
     # 40. ADOS-2 Módulo 4 (Evaluación de TEA en Adultos con Fluidez Verbal)
-    elif code in ('ADOS-2', 'ADOS2', 'ADOS-M4', 'ADOS'):
+    elif code in ('ADOS-2-M4', 'ADOS-M4', 'ADOS-2', 'ADOS2', 'ADOS'):
         return process_ados2_mod4_scoring(answers)
 
     # Fallback genérico

@@ -221,6 +221,20 @@ var testsCatalogDatabase = [
     },
     {
         code: 'ADOS-2',
+        name: 'ADOS-2 — Escala de Observación para el Diagnóstico del Autismo',
+        siglas: 'ADOS-2',
+        cat: 'Neurodesarrollo y Neuropsicología',
+        desc: 'Protocolo estandarizado de observación clínica y algoritmo de afecto social (AS) y conductas repetitivas (CRR).',
+        autor: 'Catherine Lord et al. (2012)',
+        poblacion: 'Niños y Adultos (Módulos T, 1, 2, 3, 4)',
+        validez: 'Sensibilidad 91% | Estándar de Oro Diagnóstico TEA',
+        itemsCount: 14,
+        isPhysical: true,
+        downloadUrl: '/static/test_materials/ados2_protocolo_observacion.pdf',
+        instrucciones: 'Aplicación estructurada presencial por profesional clínico. Requiere materiales específicos según el módulo. Grabar sesión si es posible.'
+    },
+    {
+        code: 'ADOS-2-M4',
         name: 'ADOS-2 (Módulo 4) — Protocolo de Entrevista Semiestructurada y Observación Clínica para TEA en Adultos',
         siglas: 'ADOS-2 (M4)',
         cat: 'Neurodesarrollo y Neuropsicología',

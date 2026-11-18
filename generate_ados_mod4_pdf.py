@@ -1102,6 +1102,5 @@ if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
     root_pdf = os.path.join(base_dir, "Protocolo_Entrevista_TEA_Adultos_Mod4.pdf")
     static_mod4_pdf = os.path.join(base_dir, "static", "test_materials", "Protocolo_Entrevista_TEA_Adultos_Mod4.pdf")
-    static_ados2_pdf = os.path.join(base_dir, "static", "test_materials", "ados2_protocolo_observacion.pdf")
-    generate_protocol_pdf([root_pdf, static_mod4_pdf, static_ados2_pdf])
+    generate_protocol_pdf([root_pdf, static_mod4_pdf])
     print("PDF generado exitosamente en:", root_pdf)

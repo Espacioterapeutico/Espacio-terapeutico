@@ -2621,7 +2621,7 @@ def api_export_test_pdf(assignment_id):
         # Conjunto de tests con baremos psicométricos reconocidos
         tests_with_baremo = {
             'ASRS-ADHD', 'TDAH', 'ADHD', 'ASRS',
-            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-M4',
+            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-2-M4', 'ADOS-M4',
             'TCS', 'UGDS-GS', 'UGDS', 'RAADS-R', 'RAADS', 'HOLLAND', 'RIASEC',
             'MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II',
             'MMPI-2', 'MMPI2', 'MMPI', 'ZUNG-SDS', 'HAMILTON-D', 'IDARE-STAI', 'IDARE',
@@ -3871,13 +3871,13 @@ def ensure_ados2_mod4_definition(db):
         "conductual de 0 a 3 (0 = Típico, 1 = Ligeramente atípico, 2 = Claramente atípico, 3 = Marcadamente atípico; en el algoritmo 3 se convierte a 2)."
     )
 
-    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'ADOS-2'")
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'ADOS-2-M4'")
     if not cursor.fetchone():
         cursor.execute("""
             INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            'ADOS-2', ados_nombre, 'ADOS-2 (M4)', 'Neurodesarrollo y Neuropsicología',
+            'ADOS-2-M4', ados_nombre, 'ADOS-2 (M4)', 'Neurodesarrollo y Neuropsicología',
             ados_desc, ados_inst,
             json.dumps(ados_opciones, ensure_ascii=False), json.dumps(ados_items, ensure_ascii=False)
         ))
@@ -3885,7 +3885,7 @@ def ensure_ados2_mod4_definition(db):
         cursor.execute("""
             UPDATE tests_definiciones
             SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?
-            WHERE code = 'ADOS-2'
+            WHERE code = 'ADOS-2-M4'
         """, (
             ados_nombre, 'ADOS-2 (M4)', 'Neurodesarrollo y Neuropsicología',
             ados_desc, ados_inst,
