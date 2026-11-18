@@ -181,6 +181,26 @@ def convert_time_vet_to_tz(fecha_str, hora_str, target_tz_str):
     except Exception:
         return normalize_time_str(hora_str)
 
+def convert_time_tz_to_vet(fecha_str, hora_str, source_tz_str):
+    """
+    Convierte una fecha y hora seleccionada en la zona horaria del paciente (source_tz_str)
+    a la zona horaria de Venezuela (America/Caracas, GMT-4).
+    Retorna (fecha_vet_str, hora_vet_str).
+    """
+    norm_f = normalize_date_str(fecha_str) if fecha_str else datetime.now().strftime("%Y-%m-%d")
+    norm_h = normalize_time_str(hora_str) if hora_str else "00:00"
+    if not source_tz_str or source_tz_str == 'America/Caracas':
+        return norm_f, norm_h
+    try:
+        import zoneinfo
+        tz_source = zoneinfo.ZoneInfo(source_tz_str)
+        tz_vet = zoneinfo.ZoneInfo("America/Caracas")
+        dt_source = datetime.strptime(f"{norm_f} {norm_h}", "%Y-%m-%d %H:%M").replace(tzinfo=tz_source)
+        dt_vet = dt_source.astimezone(tz_vet)
+        return dt_vet.strftime("%Y-%m-%d"), dt_vet.strftime("%H:%M")
+    except Exception:
+        return norm_f, norm_h
+
 def get_appointment_fee(cursor, patient_id, psicologo_id=None, modalidad=None):
     """Calcula la tarifa (monto y moneda) para una consulta."""
     monto = 0.0
@@ -3141,6 +3161,14 @@ def ensure_solicitudes_fuera_horario_table(cursor):
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_solicitudes_fuera_psicologo ON solicitudes_fuera_horario(psicologo_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_solicitudes_fuera_fecha ON solicitudes_fuera_horario(fecha)")
+        cursor.execute("PRAGMA table_info(solicitudes_fuera_horario)")
+        cols_sfh = [r['name'] if isinstance(r, dict) or hasattr(r, 'keys') else r[1] for r in cursor.fetchall()]
+        if 'zona_horaria' not in cols_sfh:
+            cursor.execute("ALTER TABLE solicitudes_fuera_horario ADD COLUMN zona_horaria TEXT DEFAULT 'America/Caracas'")
+        if 'hora_paciente' not in cols_sfh:
+            cursor.execute("ALTER TABLE solicitudes_fuera_horario ADD COLUMN hora_paciente TEXT")
+        if 'fecha_paciente' not in cols_sfh:
+            cursor.execute("ALTER TABLE solicitudes_fuera_horario ADD COLUMN fecha_paciente TEXT")
     except Exception as e:
         print("[FUERA_HORARIO] Error al asegurar tabla solicitudes_fuera_horario:", e)
 
@@ -3182,6 +3210,9 @@ def solicitar_fuera_horario(slug):
         data = request.json or {}
         fecha = (data.get('fecha') or '').strip()
         hora_inicio = (data.get('hora_inicio') or data.get('hora') or '').strip()
+        fecha_paciente_raw = (data.get('fecha_paciente') or '').strip()
+        hora_paciente_raw = (data.get('hora_paciente') or '').strip()
+        zona_horaria = (data.get('zona_horaria') or '').strip() or 'America/Caracas'
         tipo_consulta = (data.get('tipo_consulta') or data.get('modalidad') or 'Online').strip()
         cedula = (data.get('cedula') or '').strip()
         nombres = (data.get('nombres') or '').strip()
@@ -3192,9 +3223,20 @@ def solicitar_fuera_horario(slug):
         if not fecha or not hora_inicio or not cedula or not nombres or not telefono:
             return jsonify({'error': 'Todos los campos requeridos deben ser completados.'}), 400
     
-        # Normalizar fecha y hora inicio
-        fecha_norm = normalize_date_str(fecha)
-        hora_inicio_norm = normalize_time_str(hora_inicio)
+        # Normalizar y asegurar conversión real a hora de Venezuela (America/Caracas, GMT-4)
+        if hora_paciente_raw and zona_horaria and zona_horaria != 'America/Caracas':
+            fecha_paciente_norm = normalize_date_str(fecha_paciente_raw or fecha)
+            hora_paciente_norm = normalize_time_str(hora_paciente_raw)
+            fecha_norm, hora_inicio_norm = convert_time_tz_to_vet(fecha_paciente_norm, hora_paciente_norm, zona_horaria)
+        elif zona_horaria and zona_horaria != 'America/Caracas':
+            fecha_paciente_norm = normalize_date_str(fecha)
+            hora_paciente_norm = normalize_time_str(hora_inicio)
+            fecha_norm, hora_inicio_norm = convert_time_tz_to_vet(fecha_paciente_norm, hora_paciente_norm, zona_horaria)
+        else:
+            fecha_norm = normalize_date_str(fecha)
+            hora_inicio_norm = normalize_time_str(hora_inicio)
+            fecha_paciente_norm = fecha_norm
+            hora_paciente_norm = hora_inicio_norm
         
         # Determinar duración de la sesión según perfil o global
         perfiles = cfg_visual.get('perfiles', [])
@@ -3335,11 +3377,17 @@ def solicitar_fuera_horario(slug):
         p_row = cursor.fetchone()
         if p_row:
             paciente_id = p_row['id']
+            if zona_horaria and zona_horaria != 'America/Caracas':
+                try:
+                    cursor.execute("UPDATE pacientes SET zona_horaria = ? WHERE id = ?", (zona_horaria, paciente_id))
+                    db.commit()
+                except Exception:
+                    pass
         else:
             cursor.execute("""
-                INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (nombres, apellidos, cedula, telefono, email, psicologo_id))
+                INSERT INTO pacientes (nombres, apellidos, cedula, telefono, email, psicologo_id, zona_horaria)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (nombres, apellidos, cedula, telefono, email, psicologo_id, zona_horaria or 'America/Caracas'))
             paciente_id = cursor.lastrowid
             db.commit()
     
@@ -3375,12 +3423,12 @@ def solicitar_fuera_horario(slug):
             INSERT INTO solicitudes_fuera_horario (
                 psicologo_id, paciente_id, nombres, apellidos, cedula, telefono, email,
                 tipo_consulta, fecha, hora_inicio, hora_fin, duracion_minutos,
-                monto, moneda, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente')
+                monto, moneda, estado, zona_horaria, hora_paciente, fecha_paciente
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?, ?, ?)
         """, (
             psicologo_id, paciente_id, nombres, apellidos, cedula, telefono, email,
             tipo_consulta, fecha_norm, hora_inicio_norm, hora_fin_norm, duracion,
-            monto, moneda
+            monto, moneda, zona_horaria, hora_paciente_norm, fecha_paciente_norm
         ))
         solicitud_id = cursor.lastrowid
     
@@ -3545,15 +3593,20 @@ def admin_responder_solicitud_fuera_horario(req_id):
         is_same_day = (sol['fecha'] == datetime.now().strftime("%Y-%m-%d"))
         confirmada_val = 1 if is_same_day else 0
 
+        hora_pac_sol = sol.get('hora_paciente') or sol.get('hora_inicio')
+        if not sol.get('hora_paciente') and sol.get('zona_horaria') and sol.get('zona_horaria') != 'America/Caracas':
+            hora_pac_sol = convert_time_vet_to_tz(sol['fecha'], sol['hora_inicio'], sol['zona_horaria'])
+
         cursor.execute("""
             INSERT INTO agenda_finanzas (
-                paciente_id, fecha, hora, tipo_consulta, monto, moneda,
+                paciente_id, fecha, hora, hora_paciente, tipo_consulta, monto, moneda,
                 estado_pago, control_uso, creado_por_user_id, confirmada, token_confirmacion, referencia
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Agendada', 'No consumida', ?, ?, ?, ?)
         """, (
             paciente_id,
             sol['fecha'],
             sol['hora_inicio'],
+            hora_pac_sol,
             sol['tipo_consulta'],
             sol['monto'],
             sol['moneda'],

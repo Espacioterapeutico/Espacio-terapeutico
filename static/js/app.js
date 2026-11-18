@@ -801,24 +801,56 @@ function downloadFileSilently(url) {
 }
 
 // ==========================================
-// MÓDULO DE DERECCIÓN Y CONVERSIÓN DE ZONA HORARIA
+// MÓDULO DE DETECCIÓN Y CONVERSIÓN DE ZONA HORARIA
 // ==========================================
+const TZ_ALIAS_MAP = {
+    'America/Buenos_Aires': 'America/Argentina/Buenos_Aires',
+    'America/Cordoba': 'America/Argentina/Buenos_Aires',
+    'America/Mendoza': 'America/Argentina/Buenos_Aires',
+    'America/Rosario': 'America/Argentina/Buenos_Aires',
+    'America/Catamarca': 'America/Argentina/Buenos_Aires',
+    'America/Jujuy': 'America/Argentina/Buenos_Aires',
+    'America/Monterrey': 'America/Mexico_City',
+    'America/Cancun': 'America/Mexico_City',
+    'America/Merida': 'America/Mexico_City',
+    'America/Chihuahua': 'America/Mexico_City',
+    'America/Mazatlan': 'America/Mexico_City',
+    'America/Punta_Arenas': 'America/Santiago',
+    'Atlantic/Canary': 'Europe/Madrid',
+    'Europe/Ceuta': 'Europe/Madrid',
+    'Europe/London': 'Europe/Lisbon',
+    'Europe/Porto': 'Europe/Lisbon',
+    'US/Eastern': 'America/New_York',
+    'America/Detroit': 'America/New_York',
+    'America/Indiana/Indianapolis': 'America/New_York',
+    'US/Central': 'America/Chicago',
+    'US/Pacific': 'America/Los_Angeles',
+    'America/Coral_Harbour': 'America/Panama',
+    'America/Cayman': 'America/Panama'
+};
+
+function normalizeTimeZoneAlias(tz) {
+    if (!tz) return 'America/Caracas';
+    if (TZ_ALIAS_MAP[tz]) return TZ_ALIAS_MAP[tz];
+    if (tz.startsWith('America/Argentina/')) return 'America/Argentina/Buenos_Aires';
+    if (tz.startsWith('America/Indiana/') || tz.startsWith('America/Kentucky/')) return 'America/New_York';
+    return tz;
+}
+
 function getPatientUserTimeZone() {
     try {
         const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        return detected || 'Europe/Madrid';
+        return normalizeTimeZoneAlias(detected || 'America/Caracas');
     } catch(e) {
-        return 'Europe/Madrid';
+        return 'America/Caracas';
     }
 }
 
-function initFastTimeZoneSelector() {
-    const sel = document.getElementById('fast-tz-select');
-    if (!sel) return;
-    const userTz = getPatientUserTimeZone();
+function applyTimeZoneToSelectElement(sel, targetTz) {
+    if (!sel || !targetTz) return;
     let matchFound = false;
     for (let i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === userTz) {
+        if (sel.options[i].value === targetTz) {
             sel.selectedIndex = i;
             matchFound = true;
             break;
@@ -826,19 +858,150 @@ function initFastTimeZoneSelector() {
     }
     if (!matchFound) {
         const opt = document.createElement('option');
-        opt.value = userTz;
-        opt.textContent = `Detectada (${userTz})`;
+        opt.value = targetTz;
+        opt.textContent = `🌐 Detectada (${targetTz})`;
         opt.selected = true;
         sel.appendChild(opt);
     }
 }
 
-function onFastTimeZoneChange() {
+function updateTzAutoBadges(isManual) {
+    ['fast-tz-auto-badge', 'fast-fuera-tz-auto-badge'].forEach(id => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        if (isManual) {
+            b.textContent = '✎ Manual';
+            b.style.color = '#0369a1';
+            b.style.background = '#e0f2fe';
+        } else {
+            b.textContent = '✓ Automática';
+            b.style.color = '#0284c7';
+            b.style.background = '#ffffff';
+        }
+    });
+}
+
+function initFastTimeZoneSelector(forceAuto = false) {
+    const targetTz = (!forceAuto && window._fastManualTzValue)
+        ? window._fastManualTzValue
+        : getPatientUserTimeZone();
+    applyTimeZoneToSelectElement(document.getElementById('fast-tz-select'), targetTz);
+    applyTimeZoneToSelectElement(document.getElementById('fast-fuera-tz-select'), targetTz);
+    updateTzAutoBadges(!!window._fastManualTzValue && !forceAuto);
+}
+
+function onFastTimeZoneChange(isManual = true) {
+    const sel = document.getElementById('fast-tz-select');
+    const chosenTz = sel ? sel.value : getPatientUserTimeZone();
+    if (isManual) {
+        window._fastManualTzValue = chosenTz;
+        updateTzAutoBadges(true);
+    }
+    applyTimeZoneToSelectElement(document.getElementById('fast-fuera-tz-select'), chosenTz);
+
     const dateInput = document.getElementById('fast-req-fecha');
     if (dateInput && dateInput.value) {
         fetchFastAvailableHours(dateInput.value);
     }
+    if (typeof updateFueraDurationPreview === 'function') {
+        updateFueraDurationPreview();
+    }
 }
+
+function onFastFueraTimeZoneChange(val) {
+    const chosenTz = val || document.getElementById('fast-fuera-tz-select')?.value || getPatientUserTimeZone();
+    window._fastManualTzValue = chosenTz;
+    updateTzAutoBadges(true);
+    applyTimeZoneToSelectElement(document.getElementById('fast-tz-select'), chosenTz);
+
+    if (typeof updateFueraDurationPreview === 'function') {
+        updateFueraDurationPreview();
+    }
+    const dateInput = document.getElementById('fast-req-fecha');
+    if (dateInput && dateInput.value && typeof fetchFastAvailableHours === 'function') {
+        fetchFastAvailableHours(dateInput.value);
+    }
+}
+window.onFastFueraTimeZoneChange = onFastFueraTimeZoneChange;
+
+function convertTimeFromZoneToVET(fechaStr, horaStr, sourceZone) {
+    if (!fechaStr || !horaStr) {
+        return { dateStr: fechaStr, timeStr: horaStr, displayTime: horaStr, dayOffsetStr: '' };
+    }
+    if (!sourceZone || sourceZone === 'America/Caracas') {
+        return { dateStr: fechaStr, timeStr: horaStr, displayTime: horaStr, dayOffsetStr: '' };
+    }
+    try {
+        const cleanDate = fechaStr.replace(/\//g, '-');
+        const [yStr, mStr, dStr] = cleanDate.split('-');
+        const y = parseInt(yStr.padStart(4, '20'), 10);
+        const m = parseInt(mStr, 10);
+        const d = parseInt(dStr, 10);
+
+        const [hhStr, mmStr] = horaStr.trim().split(':');
+        const hh = parseInt(hhStr, 10);
+        const mm = parseInt(mmStr || '0', 10);
+
+        // Resolver el instante UTC exacto que corresponde a (y-m-d hh:mm) en sourceZone
+        const targetWallUtc = Date.UTC(y, m - 1, d, hh, mm, 0);
+        let utcGuess = targetWallUtc;
+
+        const fmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: sourceZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+
+        for (let pass = 0; pass < 2; pass++) {
+            const parts = fmt.formatToParts(new Date(utcGuess));
+            const pMap = {};
+            parts.forEach(p => { pMap[p.type] = p.value; });
+            const pY = parseInt(pMap.year, 10);
+            const pM = parseInt(pMap.month, 10);
+            const pD = parseInt(pMap.day, 10);
+            let pH = parseInt(pMap.hour, 10);
+            if (pH === 24) pH = 0;
+            const pMin = parseInt(pMap.minute, 10);
+            const wallAtGuess = Date.UTC(pY, pM - 1, pD, pH, pMin, 0);
+            utcGuess += (targetWallUtc - wallAtGuess);
+        }
+
+        const exactDateObj = new Date(utcGuess);
+        const vetTimeStr = exactDateObj.toLocaleTimeString('es-ES', {
+            timeZone: 'America/Caracas',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        const vetDateStr = exactDateObj.toLocaleDateString('sv-SE', {
+            timeZone: 'America/Caracas'
+        });
+
+        const srcIsoDate = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        let dayOffsetStr = '';
+        if (vetDateStr > srcIsoDate) {
+            dayOffsetStr = ' (+1 día en Venezuela)';
+        } else if (vetDateStr < srcIsoDate) {
+            dayOffsetStr = ' (-1 día en Venezuela)';
+        }
+
+        return {
+            dateStr: vetDateStr,
+            timeStr: vetTimeStr,
+            displayTime: `${vetTimeStr}${dayOffsetStr}`,
+            dayOffsetStr: dayOffsetStr
+        };
+    } catch (err) {
+        console.error("Error convirtiendo desde zona paciente a Venezuela:", err);
+        return { dateStr: fechaStr, timeStr: horaStr, displayTime: horaStr, dayOffsetStr: '' };
+    }
+}
+window.convertTimeFromZoneToVET = convertTimeFromZoneToVET;
 
 function convertTimeFromVETToZone(fechaStr, horaStr, targetZone) {
     if (!fechaStr || !horaStr) return { dateStr: fechaStr, timeStr: horaStr, displayTime: horaStr, dayOffsetStr: '' };
@@ -38055,13 +38218,20 @@ function switchFastBookingView(view) {
             advText.textContent = tData.fuera_jornada_advertencia;
         }
 
+        // Sincronizar selector de zona horaria en Espacio Personalizado
+        initFastTimeZoneSelector(false);
+
         // Re-renderizar perfiles permitidos para fuera de jornada
         if (typeof renderFastFueraModalityButtons === 'function') {
             renderFastFueraModalityButtons(window.fastBookingModalities || [], tData);
         }
+        if (typeof updateFueraDurationPreview === 'function') {
+            updateFueraDurationPreview();
+        }
     } else {
         fueraView.classList.add('hide');
         regularView.classList.remove('hide');
+        initFastTimeZoneSelector(false);
     }
 }
 window.switchFastBookingView = switchFastBookingView;
@@ -38253,33 +38423,55 @@ function updateFueraDurationPreview() {
     const warningBox = document.getElementById('fast-fuera-bloqueo-warning');
     const submitBtn = document.getElementById('btn-submit-fast-fuera');
     const dur = (window.currentTherapistPublicData && window.currentTherapistPublicData.duracion_default) || 50;
+    const sourceTz = document.getElementById('fast-fuera-tz-select')?.value || document.getElementById('fast-tz-select')?.value || getPatientUserTimeZone();
 
     if (warningBox) warningBox.style.display = 'none';
     if (submitBtn) submitBtn.disabled = false;
 
     if (!hora) return;
 
+    const refFecha = fecha || new Date().toISOString().slice(0, 10);
+    const vetConv = convertTimeFromZoneToVET(refFecha, hora, sourceTz);
+    const vetFecha = vetConv.dateStr || refFecha;
+    const vetHora = vetConv.timeStr || hora;
+
     try {
-        const parts = hora.split(':').map(Number);
-        const h = parts[0];
-        const m = parts[1];
-        const d = new Date();
-        d.setHours(h, m + dur, 0, 0);
-        const endH = String(d.getHours()).padStart(2, '0');
-        const endM = String(d.getMinutes()).padStart(2, '0');
+        const calcEnd = (hStr) => {
+            const [hh, mm] = hStr.split(':').map(Number);
+            const d = new Date();
+            d.setHours(hh, mm + dur, 0, 0);
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        };
+        const endLocal = calcEnd(hora);
+        const endVet = calcEnd(vetHora);
+        const fmt12 = (t) => (typeof format12h === 'function' ? format12h(t) : t);
+
         if (durNota) {
-            durNota.innerHTML = `⏱️ Horario estimado: <strong>${hora} a ${endH}:${endM}</strong> (${dur} minutos).`;
+            if (!sourceTz || sourceTz === 'America/Caracas') {
+                durNota.innerHTML = `⏱️ Horario estimado (Venezuela): <strong>${fmt12(hora)} a ${fmt12(endLocal)}</strong> (${dur} minutos).`;
+            } else {
+                durNota.innerHTML = `
+                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 0.45rem 0.65rem; color: #0369a1; line-height: 1.45;">
+                        <div>🕒 <strong>Tu hora (${sourceTz}):</strong> ${fmt12(hora)} a ${fmt12(endLocal)} (${dur} min)</div>
+                        <div>🇻🇪 <strong>Equivale en Venezuela (Terapeuta):</strong> ${fmt12(vetHora)} a ${fmt12(endVet)}${vetConv.dayOffsetStr || ''}</div>
+                    </div>
+                `;
+            }
         }
     } catch (e) {
         if (durNota) durNota.textContent = `⏱️ Duración estimada: ${dur} minutos.`;
     }
 
     if (fecha && hora) {
-        const blockedInfo = checkFueraSlotBlocked(fecha, hora, dur);
+        const blockedInfo = checkFueraSlotBlocked(vetFecha, vetHora, dur);
         if (blockedInfo) {
+            const fmt12 = (t) => (typeof format12h === 'function' ? format12h(t) : t);
+            const tzNote = (sourceTz && sourceTz !== 'America/Caracas')
+                ? ` (tu hora seleccionada ${fmt12(hora)} equivale a las <strong>${fmt12(vetHora)} en Venezuela</strong>)`
+                : '';
             if (warningBox) {
                 warningBox.style.display = 'block';
-                warningBox.innerHTML = `🚫 <strong>Horario no disponible:</strong> El especialista no atiende los ${blockedInfo.dias} entre las ${blockedInfo.rango} (${blockedInfo.motivo}). Por favor selecciona otra hora o fecha.`;
+                warningBox.innerHTML = `🚫 <strong>Horario no disponible:</strong> El especialista no atiende los ${blockedInfo.dias} entre las ${blockedInfo.rango} hora Venezuela (${blockedInfo.motivo})${tzNote}. Por favor selecciona otra hora o fecha.`;
             }
             if (submitBtn) submitBtn.disabled = true;
         }
@@ -38480,10 +38672,19 @@ async function submitFastFueraJornada(e) {
         return;
     }
 
+    const sourceTz = document.getElementById('fast-fuera-tz-select')?.value || document.getElementById('fast-tz-select')?.value || getPatientUserTimeZone();
+    const vetConv = convertTimeFromZoneToVET(fecha, hora, sourceTz);
+    const vetFecha = vetConv.dateStr || fecha;
+    const vetHora = vetConv.timeStr || hora;
+
     const dur = (window.currentTherapistPublicData && window.currentTherapistPublicData.duracion_default) || 50;
-    const blockedCheck = typeof checkFueraSlotBlocked === 'function' ? checkFueraSlotBlocked(fecha, hora, dur) : null;
+    const blockedCheck = typeof checkFueraSlotBlocked === 'function' ? checkFueraSlotBlocked(vetFecha, vetHora, dur) : null;
     if (blockedCheck) {
-        setInlineError(`No es posible solicitar este horario: el especialista no atiende los ${blockedCheck.dias} de ${blockedCheck.rango} (${blockedCheck.motivo}). Por favor selecciona otra hora.`);
+        const fmt12 = (t) => (typeof format12h === 'function' ? format12h(t) : t);
+        const tzExplain = (sourceTz && sourceTz !== 'America/Caracas')
+            ? ` (las ${fmt12(hora)} de tu zona horaria equivalen a las ${fmt12(vetHora)} en Venezuela)`
+            : '';
+        setInlineError(`No es posible solicitar este horario: el especialista no atiende los ${blockedCheck.dias} de ${blockedCheck.rango} hora Venezuela (${blockedCheck.motivo})${tzExplain}. Por favor selecciona otra hora.`);
         return;
     }
 
@@ -38510,8 +38711,11 @@ async function submitFastFueraJornada(e) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 modalidad,
-                fecha,
-                hora_inicio: hora,
+                fecha: vetFecha,
+                hora_inicio: vetHora,
+                fecha_paciente: fecha,
+                hora_paciente: hora,
+                zona_horaria: sourceTz,
                 cedula,
                 nombres,
                 apellidos,
@@ -38537,7 +38741,30 @@ async function submitFastFueraJornada(e) {
                 successView.classList.remove('hide');
 
                 if (detailsBox) {
-                    const horaDisplay = typeof format12h === 'function' ? format12h(data.hora_inicio || hora) : (data.hora_inicio || hora);
+                    const fmt12 = (t) => (typeof format12h === 'function' ? format12h(t) : t);
+                    const horaVetDisplay = fmt12(data.hora_inicio || vetHora);
+                    const horaLocalDisplay = fmt12(hora);
+                    const tzRowHtml = (sourceTz && sourceTz !== 'America/Caracas')
+                        ? `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: #64748b;">Tu Hora Local (${sourceTz}):</span>
+                            <strong style="color: #0284c7;">${horaLocalDisplay} (${fecha})</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: #64748b;">Hora Terapeuta (Venezuela):</span>
+                            <strong style="color: #0f172a;">${horaVetDisplay} (${data.fecha || vetFecha})</strong>
+                        </div>
+                        `
+                        : `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: #64748b;">Fecha Solicitada:</span>
+                            <strong style="color: #0f172a;">${data.fecha || vetFecha}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: #64748b;">Hora Solicitada (Venezuela):</span>
+                            <strong style="color: #0f172a;">${horaVetDisplay}</strong>
+                        </div>
+                        `;
                     detailsBox.innerHTML = `
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
                             <span style="color: #64748b;">Consultante:</span>
@@ -38547,14 +38774,7 @@ async function submitFastFueraJornada(e) {
                             <span style="color: #64748b;">Modalidad:</span>
                             <strong style="color: #0f172a;">${modalidad}</strong>
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                            <span style="color: #64748b;">Fecha Solicitada:</span>
-                            <strong style="color: #0f172a;">${data.fecha || fecha}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                            <span style="color: #64748b;">Hora Solicitada:</span>
-                            <strong style="color: #0f172a;">${horaDisplay}</strong>
-                        </div>
+                        ${tzRowHtml}
                         <div style="display: flex; justify-content: space-between; padding-top: 0.35rem; border-top: 1px dashed #cbd5e1; margin-top: 0.35rem;">
                             <span style="color: #64748b;">Tarifa de la sesión:</span>
                             <strong style="color: #059669; font-size: 0.95rem;">${data.monto || ''} ${data.moneda || 'USD'}</strong>

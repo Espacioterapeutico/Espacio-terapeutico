@@ -2069,8 +2069,11 @@
                                     <span style="font-size: 0.76rem; font-weight: 800; color: #0369a1; display: inline-flex; align-items: center; gap: 4px;">
                                         🌐 Zona Horaria:
                                     </span>
+                                    <span id="fast-tz-auto-badge" style="font-size: 0.68rem; font-weight: 700; color: #0284c7; background: #ffffff; padding: 1px 6px; border-radius: 999px; border: 1px solid #bae6fd;">
+                                        ✓ Automática
+                                    </span>
                                 </div>
-                                <select id="fast-tz-select" onchange="onFastTimeZoneChange()" style="width: 100%; background: #ffffff; border: 1.5px solid #0284c7; border-radius: 6px; padding: 0.35rem 0.55rem; font-weight: 700; color: #0369a1; font-size: 0.8rem; cursor: pointer;">
+                                <select id="fast-tz-select" onchange="onFastTimeZoneChange(true)" style="width: 100%; background: #ffffff; border: 1.5px solid #0284c7; border-radius: 6px; padding: 0.35rem 0.55rem; font-weight: 700; color: #0369a1; font-size: 0.8rem; cursor: pointer;">
                                     <option value="America/Caracas">🇻🇪 Venezuela (GMT-4 / Hora del Terapeuta)</option>
                                     <option value="America/Bogota">🇨🇴 Colombia (GMT-5)</option>
                                     <option value="America/Lima">🇵🇪 Perú (GMT-5)</option>
@@ -2239,8 +2242,38 @@
 
                 <form id="fast-fuera-form" onsubmit="submitFastFueraJornada(event)">
                     <div class="fast-booking-grid">
-                        <!-- COLUMNA IZQUIERDA: Tipo de Consulta + Fecha y Hora -->
+                        <!-- COLUMNA IZQUIERDA: Zona Horaria + Tipo de Consulta + Fecha y Hora -->
                         <div class="fast-booking-col">
+                            <!-- Selector de Zona Horaria en Espacio Personalizado (Sincronizado y Autodetectado) -->
+                            <div id="fast-fuera-tz-banner" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #38bdf8; padding: 0.5rem 0.65rem; border-radius: 8px; margin-bottom: 0.85rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; margin-bottom: 0.2rem;">
+                                    <span style="font-size: 0.76rem; font-weight: 800; color: #0369a1; display: inline-flex; align-items: center; gap: 4px;">
+                                        🌐 Zona Horaria:
+                                    </span>
+                                    <span id="fast-fuera-tz-auto-badge" style="font-size: 0.68rem; font-weight: 700; color: #0284c7; background: #ffffff; padding: 1px 6px; border-radius: 999px; border: 1px solid #bae6fd;">
+                                        ✓ Automática
+                                    </span>
+                                </div>
+                                <select id="fast-fuera-tz-select" onchange="onFastFueraTimeZoneChange(this.value)" style="width: 100%; background: #ffffff; border: 1.5px solid #0284c7; border-radius: 6px; padding: 0.35rem 0.55rem; font-weight: 700; color: #0369a1; font-size: 0.8rem; cursor: pointer;">
+                                    <option value="America/Caracas">🇻🇪 Venezuela (GMT-4 / Hora del Terapeuta)</option>
+                                    <option value="America/Bogota">🇨🇴 Colombia (GMT-5)</option>
+                                    <option value="America/Lima">🇵🇪 Perú (GMT-5)</option>
+                                    <option value="America/Santiago">🇨🇱 Chile (GMT-4)</option>
+                                    <option value="America/Argentina/Buenos_Aires">🇦🇷 Argentina (GMT-3)</option>
+                                    <option value="America/Mexico_City">🇲🇽 México (GMT-6)</option>
+                                    <option value="America/New_York">🇺🇸 EE.UU. Este / Miami (GMT-4)</option>
+                                    <option value="America/Chicago">🇺🇸 EE.UU. Centro (GMT-5)</option>
+                                    <option value="America/Los_Angeles">🇺🇸 EE.UU. Pacífico (GMT-7)</option>
+                                    <option value="Europe/Madrid">🇪🇸 España / Europa (GMT+2)</option>
+                                    <option value="Europe/Lisbon">🇵🇹 Portugal (GMT+1)</option>
+                                    <option value="America/Santo_Domingo">🇩🇴 Rep. Dominicana (GMT-4)</option>
+                                    <option value="America/Guayaquil">🇪🇨 Ecuador (GMT-5)</option>
+                                    <option value="America/Panama">🇵🇦 Panamá (GMT-5)</option>
+                                    <option value="America/Costa_Rica">🇨🇷 Costa Rica (GMT-6)</option>
+                                    <option value="America/Montevideo">🇺🇾 Uruguay (GMT-3)</option>
+                                </select>
+                            </div>
+
                             <!-- 1. Perfil / Modalidad Fuera de Horario -->
                             <div class="form-group mb-3">
                                 <label style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 0.45rem;">
