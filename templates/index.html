@@ -1796,6 +1796,19 @@
             border-color: #94a3b8 !important;
             background-color: #f8fafc !important;
         }
+        .fast-fuera-text-link {
+            color: #d97706 !important;
+            font-weight: 700 !important;
+            text-decoration: underline !important;
+            text-underline-offset: 3px;
+            cursor: pointer;
+            transition: color 0.15s ease, text-decoration-color 0.15s ease;
+            display: inline;
+        }
+        .fast-fuera-text-link:hover {
+            color: #b45309 !important;
+            text-decoration-color: #b45309 !important;
+        }
 
         /* Tarjeta de solicitudes fuera de jornada en el Dashboard: 1 línea en PC, 2 líneas en Móvil */
         .dash-fuera-card-pc {
@@ -2194,10 +2207,13 @@
 
                     <!-- BOTONES DE ACCIÓN SECUNDARIOS (AL FINAL DE TODO) -->
                     <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.45rem; max-width: 420px; margin-left: auto; margin-right: auto;">
-                        <div id="fast-fuera-jornada-card" style="text-align: center;">
-                            <button type="button" onclick="switchFastBookingView('fuera_jornada')" class="fast-discreet-btn fast-fuera-trigger-btn" style="width: 100%; justify-content: center; font-size: 0.78rem; padding: 0.45rem 0.65rem;">
-                                <span>🗓️</span> Solicitar sesión en horario personalizado
-                            </button>
+                        <div id="fast-fuera-jornada-card" style="text-align: center; padding: 0.35rem 0.5rem; margin-bottom: 0.15rem;">
+                            <p style="font-size: 0.82rem; color: #64748b; margin: 0; line-height: 1.5;">
+                                ¿No encuentras un horario para ti? 
+                                <a href="javascript:void(0)" onclick="switchFastBookingView('fuera_jornada')" class="fast-fuera-text-link">
+                                    Solicita un horario personalizado
+                                </a>
+                            </p>
                         </div>
                         <div style="text-align: center;">
                             <a href="#" onclick="closeFastBookingScreen(event)" class="fast-discreet-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.35rem 0.55rem;">
@@ -2345,7 +2361,7 @@
                                 <div id="fast-fuera-inline-error" class="hide" style="margin-top: 0.75rem; background: #fef2f2; border: 1.5px solid #f87171; border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.84rem; color: #991b1b; text-align: left; line-height: 1.45;">
                                 </div>
                                 <button type="submit" id="btn-submit-fast-fuera" class="btn btn-block" style="width: 100%; margin-top: 0.75rem; background: #b45309; color: white; font-weight: 700; padding: 0.75rem; font-size: 1rem; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(180,83,9,0.25);">
-                                    Solicitar Cita Fuera de Jornada
+                                    Solicitar Horario Personalizado
                                 </button>
                             </div>
                         </div>
@@ -7747,11 +7763,14 @@
                                 </form>
                                 <div id="pat-req-status-msg" class="status-msg hide mt-2"></div>
 
-                                <!-- Solicitar Consulta Personalizada / Fuera de Jornada (Consultante - Botón Disimulado) -->
-                                <div id="pat-fuera-jornada-card" class="hide" style="text-align: center; margin-top: 1.25rem;">
-                                    <button type="button" onclick="openPatientFueraJornadaModal()" class="fast-discreet-btn fast-fuera-trigger-btn">
-                                        <span>✨</span> Solicitar espacio personalizado
-                                    </button>
+                                <!-- Solicitar Consulta Personalizada / Fuera de Jornada (Consultante) -->
+                                <div id="pat-fuera-jornada-card" class="hide" style="text-align: center; margin-top: 1.25rem; padding: 0.35rem 0.5rem;">
+                                    <p style="font-size: 0.85rem; color: var(--text-secondary, #64748b); margin: 0; line-height: 1.5;">
+                                        ¿No encuentras un horario para ti? 
+                                        <a href="javascript:void(0)" onclick="openPatientFueraJornadaModal()" class="fast-fuera-text-link">
+                                            Solicita un horario personalizado
+                                        </a>
+                                    </p>
                                 </div>
                             </div>
                         </div>
