@@ -2160,6 +2160,16 @@
                                 </div>
                             </div>
 
+                            <!-- ¿No encuentras un horario para ti? (Debajo del calendario y de las horas) -->
+                            <div id="fast-fuera-jornada-card" style="text-align: center; padding: 0.65rem 0.5rem 0.25rem 0.5rem; margin-top: 0.5rem;">
+                                <p style="font-size: 0.82rem; color: #64748b; margin: 0; line-height: 1.5;">
+                                    ¿No encuentras un horario para ti? 
+                                    <a href="javascript:void(0)" onclick="switchFastBookingView('fuera_jornada')" class="fast-fuera-text-link">
+                                        Solicita un horario personalizado
+                                    </a>
+                                </p>
+                            </div>
+
                         </div>
 
                         <!-- COLUMNA 3 (DERECHA): Placeholder o Formulario de Confirmación -->
@@ -2207,14 +2217,6 @@
 
                     <!-- BOTONES DE ACCIÓN SECUNDARIOS (AL FINAL DE TODO) -->
                     <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.45rem; max-width: 420px; margin-left: auto; margin-right: auto;">
-                        <div id="fast-fuera-jornada-card" style="text-align: center; padding: 0.35rem 0.5rem; margin-bottom: 0.15rem;">
-                            <p style="font-size: 0.82rem; color: #64748b; margin: 0; line-height: 1.5;">
-                                ¿No encuentras un horario para ti? 
-                                <a href="javascript:void(0)" onclick="switchFastBookingView('fuera_jornada')" class="fast-fuera-text-link">
-                                    Solicita un horario personalizado
-                                </a>
-                            </p>
-                        </div>
                         <div style="text-align: center;">
                             <a href="#" onclick="closeFastBookingScreen(event)" class="fast-discreet-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.35rem 0.55rem;">
                                 <span>✕</span> Volver al Portal
@@ -7754,6 +7756,16 @@
                                             <!-- Botones de hora dinámicos -->
                                         </div>
                                     </div>
+
+                                    <!-- Solicitar Consulta Personalizada / Fuera de Jornada (Consultante) -->
+                                    <div id="pat-fuera-jornada-card" class="hide" style="text-align: center; margin-bottom: 1.25rem; padding: 0.35rem 0.5rem;">
+                                        <p style="font-size: 0.85rem; color: var(--text-secondary, #64748b); margin: 0; line-height: 1.5;">
+                                            ¿No encuentras un horario para ti? 
+                                            <a href="javascript:void(0)" onclick="openPatientFueraJornadaModal()" class="fast-fuera-text-link">
+                                                Solicita un horario personalizado
+                                            </a>
+                                        </p>
+                                    </div>
                                     
                                     <div class="form-group">
                                         <label for="pat-req-nota">Nota o Motivo (opcional)</label>
@@ -7762,16 +7774,6 @@
                                     <button type="submit" id="pat-submit-req-btn" class="btn btn-primary btn-block" style="width: 100%; margin-top: 1rem;" disabled>Agendar Consulta</button>
                                 </form>
                                 <div id="pat-req-status-msg" class="status-msg hide mt-2"></div>
-
-                                <!-- Solicitar Consulta Personalizada / Fuera de Jornada (Consultante) -->
-                                <div id="pat-fuera-jornada-card" class="hide" style="text-align: center; margin-top: 1.25rem; padding: 0.35rem 0.5rem;">
-                                    <p style="font-size: 0.85rem; color: var(--text-secondary, #64748b); margin: 0; line-height: 1.5;">
-                                        ¿No encuentras un horario para ti? 
-                                        <a href="javascript:void(0)" onclick="openPatientFueraJornadaModal()" class="fast-fuera-text-link">
-                                            Solicita un horario personalizado
-                                        </a>
-                                    </p>
-                                </div>
                             </div>
                         </div>
                     </div>
