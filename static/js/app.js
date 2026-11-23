@@ -31744,61 +31744,15 @@ function renderPublicTestItems(testDef) {
         return trimmedTxt || strVal;
     };
 
-    // Detección: si algún ítem de la página tiene sus propias opciones personalizadas (ej. BDI-II, HAMILTON-D)
-    const hasCustomOptions = pageItems.some(item => Boolean(item.opciones && Array.isArray(item.opciones) && item.opciones.length > 0));
+    const safeEscape = (s) => (s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') : '');
 
-    if (hasCustomOptions) {
-        // Renderizado en tarjetas individuales descriptivas (para BDI-II, etc.)
-        html += `<div style="display: flex; flex-direction: column; gap: 1.25rem;">`;
-        pageItems.forEach((item, index) => {
-            const itemNum = item.num || item.id || (startIdx + index + 1);
-            const rawTitle = (item.texto || item.txt || item.titulo || item.text || item.enunciado || item.pregunta || item.pregunta_texto || '').trim();
-            let itemTitle = rawTitle;
-            if (rawTitle) {
-                if (!/^(?:P\d+|\d+)[\.\-\)]\s*/i.test(rawTitle)) {
-                    itemTitle = `<strong>${itemNum}.</strong> ${rawTitle}`;
-                }
-            } else {
-                itemTitle = `Pregunta ${itemNum}`;
-            }
+    // Clasificación de los ítems de esta página según su tipología
+    const matrixItems = pageItems.filter(item => item.tipo !== 'textarea' && item.tipo !== 'texto' && (!item.opciones || !item.opciones.length));
+    const customOptionItems = pageItems.filter(item => item.tipo !== 'textarea' && item.tipo !== 'texto' && item.opciones && Array.isArray(item.opciones) && item.opciones.length > 0);
+    const textareaItems = pageItems.filter(item => item.tipo === 'textarea' || item.tipo === 'texto');
 
-            const selectedVal = currentPublicTestAnswers[itemNum];
-            const isAnswered = selectedVal !== undefined;
-            const cardBorder = isAnswered ? '#a855f7' : '#e2e8f0';
-            const cardBg = isAnswered ? '#fdf4ff' : '#ffffff';
-            const sectionBadge = item.sec || item.seccion || item.categoria;
-
-            html += `
-                <div id="test-item-card-${itemNum}" style="background: ${cardBg}; border: 1.5px solid ${cardBorder}; border-radius: 12px; padding: 1.25rem; transition: all 0.2s ease;">
-                    <!-- Ocultar subescala/dimensión al consultante para evitar sesgo de respuesta -->
-                    <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                        <span style="line-height: 1.45;">${itemTitle}</span>
-                        ${isAnswered ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap;">✓ Respondida</span>' : ''}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">`;
-                    
-            item.opciones.forEach((op, opIdx) => {
-                let opVal = opIdx;
-                let opTxt = String(op);
-                if (typeof op === 'object' && op !== null) {
-                    opVal = (op.val !== undefined) ? op.val : (op.valor !== undefined ? op.valor : opIdx);
-                    opTxt = op.text || op.txt || op.texto || op.label || op.titulo || op.nombre || String(opVal);
-                }
-                const isChecked = (selectedVal !== undefined && String(selectedVal) === String(opVal));
-                const checked = isChecked ? 'checked' : '';
-                const optBg = isChecked ? '#fdf4ff' : '#f8fafc';
-                const optBorder = isChecked ? '#702e5e' : '#cbd5e1';
-                html += `
-                    <label style="display: flex; align-items: flex-start; gap: 10px; background: ${optBg}; border: 1.5px solid ${optBorder}; padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
-                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="margin-top: 3px; accent-color: #702e5e; transform: scale(1.15);">
-                        <span style="font-size: 0.92rem; color: #334155; line-height: 1.45; font-weight: ${isChecked ? '700' : '500'};">${opTxt}</span>
-                    </label>`;
-            });
-            html += `</div></div>`;
-        });
-        html += `</div>`;
-    } else {
-        // MODO MATRIZ / REJILLA PSICOMÉTRICA (Para escalas Likert y Dicotómicas uniformes)
+    // 1. RENDERIZADO DE MATRIZ PSICOMÉTRICA (Para escalas uniformes como Likert o Dicotómicas)
+    if (matrixItems.length > 0) {
         const escala = testDef.escala_opciones || [];
         const parsedOptions = escala.map((op, opIdx) => {
             let opVal = opIdx;
@@ -31848,32 +31802,14 @@ function renderPublicTestItems(testDef) {
                     z-index: 10;
                 }
                 .test-matrix-table tbody tr {
-                    border-bottom: 1px solid #e2e8f0;
-                    transition: background 0.15s ease;
+                    transition: background-color 0.15s ease;
                 }
-                .test-matrix-table tbody tr:hover td {
-                    background-color: #f1f5f9;
-                }
-                .test-matrix-table tbody tr.is-answered:hover td {
-                    background-color: #fae8ff;
-                }
-                .test-matrix-table .matrix-opt-cell:hover {
-                    background-color: #ede9fe !important;
-                }
-                @media (max-width: 768px) {
-                    .matrix-scroll-hint {
-                        display: inline-block !important;
-                    }
+                .test-matrix-table tbody tr:hover {
+                    background-color: #faf5ff !important;
                 }
             </style>
-
             <div class="test-matrix-wrap">
-                <div style="background: #fdf4ff; border-bottom: 1.5px solid #f0abfc; padding: 0.65rem 1.25rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.82rem; color: #702e5e;">
-                    <span>👉 <strong>Haga clic en la opción que mejor describa su respuesta</strong> para cada ítem.</span>
-                    <span class="matrix-scroll-hint" style="display: none; font-size: 0.76rem; color: #9333ea; font-weight: 700;">⇄ Deslice horizontalmente si no ve todas las columnas</span>
-                </div>
-
-                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <div style="overflow-x: auto;">
                     <table class="test-matrix-table">
                         <thead>
                             <tr>
@@ -31895,7 +31831,7 @@ function renderPublicTestItems(testDef) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${pageItems.map((item, index) => {
+                            ${matrixItems.map((item, index) => {
                                 const itemNum = item.num || item.id || (startIdx + index + 1);
                                 const rawTitle = (item.texto || item.txt || item.titulo || item.text || item.enunciado || item.pregunta || item.pregunta_texto || '').trim();
                                 const cleanTitle = rawTitle.replace(/^(?:P\d+|\d+)[\.\-\)]\s*/i, '');
@@ -31903,7 +31839,6 @@ function renderPublicTestItems(testDef) {
                                 const isAnswered = selectedVal !== undefined;
                                 const isEven = index % 2 === 0;
                                 const rowBg = isAnswered ? '#fdf4ff' : (isEven ? '#ffffff' : '#f8fafc');
-                                const sectionBadge = item.sec || item.seccion || item.categoria;
 
                                 return `
                                     <tr id="test-item-row-${itemNum}" class="test-matrix-row ${isAnswered ? 'is-answered' : ''}" style="background: ${rowBg};">
@@ -31911,7 +31846,6 @@ function renderPublicTestItems(testDef) {
                                             ${itemNum} ${isAnswered ? '<span style="color:#10b981; font-size:0.85rem;" title="Respondido">✓</span>' : ''}
                                         </td>
                                         <td style="padding: 12px 14px; font-size: 0.92rem; color: #1e293b; line-height: 1.45; vertical-align: middle; border-bottom: 1px solid #e2e8f0;">
-                                            <!-- Ocultar subescala/dimensión al consultante para evitar sesgo de respuesta -->
                                             <div style="font-weight: 500;">${cleanTitle}</div>
                                         </td>
                                         ${parsedOptions.map(op => {
@@ -31948,6 +31882,99 @@ function renderPublicTestItems(testDef) {
         `;
     }
 
+    // 2. RENDERIZADO EN TARJETAS INDIVIDUALES (Para ítems con opciones heterogéneas ej. BDI-II, HAMILTON-D)
+    if (customOptionItems.length > 0) {
+        html += `<div style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: ${matrixItems.length > 0 ? '1.25rem' : '0'};">`;
+        customOptionItems.forEach((item, index) => {
+            const itemNum = item.num || item.id || (startIdx + index + 1);
+            const rawTitle = (item.texto || item.txt || item.titulo || item.text || item.enunciado || item.pregunta || item.pregunta_texto || '').trim();
+            let itemTitle = rawTitle;
+            if (rawTitle) {
+                if (!/^(?:P\d+|\d+)[\.\-\)]\s*/i.test(rawTitle)) {
+                    itemTitle = `<strong>${itemNum}.</strong> ${rawTitle}`;
+                }
+            } else {
+                itemTitle = `Pregunta ${itemNum}`;
+            }
+
+            const selectedVal = currentPublicTestAnswers[itemNum];
+            const isAnswered = selectedVal !== undefined;
+            const cardBorder = isAnswered ? '#a855f7' : '#e2e8f0';
+            const cardBg = isAnswered ? '#fdf4ff' : '#ffffff';
+
+            html += `
+                <div id="test-item-card-${itemNum}" style="background: ${cardBg}; border: 1.5px solid ${cardBorder}; border-radius: 12px; padding: 1.25rem; transition: all 0.2s ease;">
+                    <div style="font-weight: 700; font-size: 1.02rem; color: #0f172a; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <span style="line-height: 1.45;">${itemTitle}</span>
+                        ${isAnswered ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap;">✓ Respondida</span>' : ''}
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">`;
+                    
+            item.opciones.forEach((op, opIdx) => {
+                let opVal = opIdx;
+                let opTxt = String(op);
+                if (typeof op === 'object' && op !== null) {
+                    opVal = (op.val !== undefined) ? op.val : (op.valor !== undefined ? op.valor : opIdx);
+                    opTxt = op.text || op.txt || op.texto || op.label || op.titulo || op.nombre || String(opVal);
+                }
+                const isChecked = (selectedVal !== undefined && String(selectedVal) === String(opVal));
+                const checked = isChecked ? 'checked' : '';
+                const optBg = isChecked ? '#fdf4ff' : '#f8fafc';
+                const optBorder = isChecked ? '#702e5e' : '#cbd5e1';
+                html += `
+                    <label style="display: flex; align-items: flex-start; gap: 10px; background: ${optBg}; border: 1.5px solid ${optBorder}; padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
+                        <input type="radio" name="item_${itemNum}" value="${opVal}" ${checked} onchange="selectPublicTestAnswer(${itemNum}, ${opVal})" style="margin-top: 3px; accent-color: #702e5e; transform: scale(1.15);">
+                        <span style="font-size: 0.92rem; color: #334155; line-height: 1.45; font-weight: ${isChecked ? '700' : '500'};">${opTxt}</span>
+                    </label>`;
+            });
+            html += `</div></div>`;
+        });
+        html += `</div>`;
+    }
+
+    // 3. RENDERIZADO DE PREGUNTAS ABIERTAS (TEXTAREA / OBSERVACIONES CUALITATIVAS)
+    if (textareaItems.length > 0) {
+        html += `
+            <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: ${matrixItems.length > 0 || customOptionItems.length > 0 ? '1.5rem' : '0'};">
+                <div style="background: #fdf4ff; border-left: 4px solid #702e5e; padding: 12px 16px; border-radius: 8px;">
+                    <strong style="color: #702e5e; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+                        <span>✍️</span> Preguntas Clínicas Cualitativas de Desarrollo (Opcionales / Descriptivas)
+                    </strong>
+                    <p style="margin: 4px 0 0 0; font-size: 0.88rem; color: #4a044e; line-height: 1.5;">
+                        Responda con sus propias palabras aportando detalles o anécdotas que recuerde. Puede explayarse con total libertad.
+                    </p>
+                </div>
+        `;
+        textareaItems.forEach((item, index) => {
+            const itemNum = item.num || item.id || (startIdx + index + 1);
+            const rawTitle = (item.titulo || item.texto || item.txt || item.text || item.enunciado || '').trim();
+            const itemTitle = rawTitle || `Pregunta Abierta ${itemNum}`;
+            const userText = currentPublicTestAnswers[itemNum] || '';
+            const isAnswered = String(userText).trim().length > 0;
+            const cardBorder = isAnswered ? '#a855f7' : '#cbd5e1';
+            const cardBg = isAnswered ? '#fdf4ff' : '#ffffff';
+            const isRequired = item.requerido !== false && item.required !== false;
+
+            html += `
+                <div id="test-item-card-${itemNum}" style="background: ${cardBg}; border: 1.5px solid ${cardBorder}; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); transition: all 0.2s ease;">
+                    <div style="font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <span style="line-height: 1.45;">
+                            ${itemTitle} ${isRequired ? '<span style="color:#ef4444;" title="Obligatorio">*</span>' : '<span style="font-size: 0.78rem; color:#64748b; font-weight: 500;">(Respuesta descriptiva)</span>'}
+                        </span>
+                        <span id="test-item-answered-${itemNum}" style="display: ${isAnswered ? 'inline-block' : 'none'}; font-size: 0.75rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap;">✓ Respondida</span>
+                    </div>
+                    <div style="margin-top: 0.6rem;">
+                        <textarea id="test-item-textarea-${itemNum}"
+                                  rows="4"
+                                  placeholder="Escriba aquí sus observaciones, anécdotas o detalles con total tranquilidad..."
+                                  oninput="recordPublicTestTextAnswer(${itemNum}, this.value)"
+                                  style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0.85rem; font-family: inherit; font-size: 0.92rem; line-height: 1.5; color: #1e293b; resize: vertical; box-sizing: border-box; background: #ffffff;">${safeEscape(userText)}</textarea>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    }
     // Controles inferiores de navegación (si es paginado)
     if (isPaginated) {
         html += `
@@ -32036,6 +32063,29 @@ function selectPublicTestAnswer(itemNum, value) {
     autoSavePublicTestProgress(false);
 }
 
+function recordPublicTestTextAnswer(itemNum, value) {
+    if (value && String(value).trim().length > 0) {
+        currentPublicTestAnswers[itemNum] = String(value).trim();
+    } else {
+        delete currentPublicTestAnswers[itemNum];
+    }
+    const card = document.getElementById(`test-item-card-${itemNum}`);
+    const badge = document.getElementById(`test-item-answered-${itemNum}`);
+    const isAnswered = currentPublicTestAnswers[itemNum] !== undefined;
+    if (card) {
+        card.style.borderColor = isAnswered ? '#a855f7' : '#cbd5e1';
+        card.style.backgroundColor = isAnswered ? '#fdf4ff' : '#ffffff';
+    }
+    if (badge) {
+        badge.style.display = isAnswered ? 'inline-block' : 'none';
+    }
+    updatePublicTestProgressBar();
+    if (window.publicTestAutoSaveTimer) clearTimeout(window.publicTestAutoSaveTimer);
+    window.publicTestAutoSaveTimer = setTimeout(() => {
+        autoSavePublicTestProgress(false);
+    }, 1500);
+}
+
 function updatePublicTestProgressBar() {
     if (!currentPublicTestDefinition) return;
     const totalItems = (currentPublicTestDefinition.items || []).length;
@@ -32052,21 +32102,32 @@ function updatePublicTestProgressBar() {
 async function submitPublicTestResponse() {
     if (!currentPublicTestDefinition || !currentPublicTestToken) return;
 
-    const totalItems = (currentPublicTestDefinition.items || []).length;
-    const answeredCount = Object.keys(currentPublicTestAnswers).length;
+    const allItems = currentPublicTestDefinition.items || [];
+    const requiredItems = allItems.filter(it => it.requerido !== false && it.required !== false);
+    const totalRequired = requiredItems.length;
 
-    if (answeredCount < totalItems) {
-        const allItems = currentPublicTestDefinition.items || [];
-        let firstUnansweredIdx = -1;
-        let firstUnansweredNum = null;
-        for (let idx = 0; idx < allItems.length; idx++) {
-            const num = allItems[idx].num || allItems[idx].id || (idx + 1);
-            if (currentPublicTestAnswers[num] === undefined) {
+    let firstUnansweredIdx = -1;
+    let firstUnansweredNum = null;
+    let requiredAnsweredCount = 0;
+
+    for (let idx = 0; idx < allItems.length; idx++) {
+        const it = allItems[idx];
+        const isRequired = it.requerido !== false && it.required !== false;
+        const num = it.num || it.id || (idx + 1);
+        const ans = currentPublicTestAnswers[num];
+        const isAns = ans !== undefined && ans !== null && String(ans).trim() !== '';
+
+        if (isRequired) {
+            if (isAns) {
+                requiredAnsweredCount++;
+            } else if (firstUnansweredIdx === -1) {
                 firstUnansweredIdx = idx;
                 firstUnansweredNum = num;
-                break;
             }
         }
+    }
+
+    if (requiredAnsweredCount < totalRequired) {
         const isPaginated = allItems.length > 15;
         if (firstUnansweredIdx !== -1 && isPaginated) {
             const targetPage = Math.floor(firstUnansweredIdx / (currentPublicTestPageSize || 20));
@@ -32085,7 +32146,7 @@ async function submitPublicTestResponse() {
                 }
             }, 150);
         }
-        alert(`Por favor responda todas las preguntas antes de enviar (${answeredCount} de ${totalItems} completadas). Le hemos ubicado en la primera pregunta pendiente.`);
+        alert(`Por favor responda todas las preguntas obligatorias antes de enviar (${requiredAnsweredCount} de ${totalRequired} requeridas completadas). Le hemos ubicado en la primera pregunta pendiente.`);
         return;
     }
 
@@ -32414,27 +32475,86 @@ function openTestDetailModal(testData) {
     let answersTableHtml = '';
     const answers = testData.respuestas || {};
     if (Object.keys(answers).length > 0) {
+        const itemsList = testData.items || [];
+        const itemsMap = {};
+        itemsList.forEach((it, idx) => {
+            const num = it.num || it.id || (idx + 1);
+            itemsMap[String(num)] = it;
+        });
+
+        const escala = testData.escala_opciones || [];
+        const escalaMap = {};
+        escala.forEach((op, opIdx) => {
+            let val = opIdx;
+            let txt = String(op);
+            if (typeof op === 'object' && op !== null) {
+                val = (op.val !== undefined) ? op.val : (op.valor !== undefined ? op.valor : opIdx);
+                txt = op.text || op.txt || op.texto || op.label || op.titulo || op.nombre || String(val);
+            }
+            escalaMap[String(val)] = txt;
+        });
+
         answersTableHtml = `
-            <div style="margin-top: 1rem;">
-                <strong style="color: #0f172a; font-size: 0.95rem; display: block; margin-bottom: 0.5rem;">Ficha de Respuestas del Consultante:</strong>
-                <div style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.5rem;">
-                    <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
+            <div style="margin-top: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                    <strong style="color: #0f172a; font-size: 0.98rem; display: flex; align-items: center; gap: 6px;">
+                        <span>📋</span> Respuestas Detalladas del Paciente / Informante:
+                    </strong>
+                    <span style="font-size: 0.8rem; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-weight: 700;">
+                        ${Object.keys(answers).length} ítems registrados
+                    </span>
+                </div>
+                <div style="max-height: 380px; overflow-y: auto; border: 1.5px solid #cbd5e1; border-radius: 12px; background: #ffffff;">
+                    <table style="width: 100%; font-size: 0.86rem; border-collapse: collapse;">
                         <thead>
-                            <tr style="background: #f1f5f9; color: #334155; text-align: left;">
-                                <th style="padding: 6px 10px;">Ítem</th>
-                                <th style="padding: 6px 10px;">Opción / Puntaje Seleccionado</th>
+                            <tr style="background: linear-gradient(135deg, #702e5e 0%, #541d45 100%); color: #ffffff; text-align: left;">
+                                <th style="padding: 8px 12px; width: 60px; text-align: center;">N°</th>
+                                <th style="padding: 8px 12px;">Enunciado / Pregunta</th>
+                                <th style="padding: 8px 12px; min-width: 180px;">Respuesta Registrada</th>
                             </tr>
                         </thead>
                         <tbody>
         `;
-        for (let [qNum, qVal] of Object.entries(answers)) {
+        const sortedKeys = Object.keys(answers).sort((a, b) => {
+            const na = parseInt(a), nb = parseInt(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return String(a).localeCompare(String(b));
+        });
+
+        sortedKeys.forEach((qNum, rowIdx) => {
+            const qVal = answers[qNum];
+            const itemObj = itemsMap[String(qNum)] || {};
+            const qText = itemObj.texto || itemObj.txt || itemObj.titulo || itemObj.pregunta || `Ítem ${qNum}`;
+            let humanAns = String(qVal);
+
+            if (itemObj.opciones && Array.isArray(itemObj.opciones)) {
+                const matchedOp = itemObj.opciones.find(o => {
+                    const oval = (typeof o === 'object' && o !== null) ? ((o.val !== undefined) ? o.val : o.valor) : o;
+                    return String(oval) === String(qVal);
+                });
+                if (matchedOp) {
+                    humanAns = (typeof matchedOp === 'object') ? (matchedOp.text || matchedOp.txt || matchedOp.texto || humanAns) : String(matchedOp);
+                }
+            } else if (escalaMap[String(qVal)]) {
+                humanAns = escalaMap[String(qVal)];
+            }
+
+            const isTextarea = itemObj.tipo === 'textarea' || itemObj.tipo === 'texto' || String(qVal).length > 35;
+            const rowBg = rowIdx % 2 === 0 ? '#ffffff' : '#f8fafc';
+
             answersTableHtml += `
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding: 6px 10px; font-weight: 700; color: #702e5e;">Ítem ${qNum}</td>
-                    <td style="padding: 6px 10px; color: #0f172a; font-weight: 700;">${qVal}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9; background: ${rowBg};">
+                    <td style="padding: 10px 12px; text-align: center; font-weight: 800; color: #702e5e; vertical-align: top;">${qNum}</td>
+                    <td style="padding: 10px 12px; color: #1e293b; line-height: 1.45; vertical-align: top;">${qText}</td>
+                    <td style="padding: 10px 12px; vertical-align: top;">
+                        ${isTextarea 
+                            ? `<div style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 8px; padding: 8px 10px; color: #4a044e; font-weight: 600; line-height: 1.45; white-space: pre-wrap;">${humanAns}</div>`
+                            : `<span style="display: inline-block; background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-weight: 700; padding: 3px 8px; border-radius: 6px;">${humanAns}</span>`
+                        }
+                    </td>
                 </tr>
             `;
-        }
+        });
         answersTableHtml += `</tbody></table></div></div>`;
     }
 

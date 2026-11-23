@@ -401,6 +401,118 @@ def process_aq_scoring(answers):
 
 
 # =========================================================================
+# 4.1 AQ RETROSPECTIVO INFORMANTES (PADRES / CUIDADORES)
+# =========================================================================
+def process_aq_retro_scoring(answers):
+    """
+    AQ - Versión Retrospectiva para Informantes (Padres / Cuidadores) (Baron-Cohen et al., 2001)
+    50 ítems tipo Likert (1 a 4) + 5 preguntas clínicas cualitativas abiertas (51 a 55 / A a E).
+    5 subescalas de 10 ítems cada una.
+    Puntuación Total de 0 a 50 puntos.
+    Puntos de corte clínicos:
+      0 - 21: Rango promedio neurotípico
+      22 - 25: Rasgos leves / Fenotipo Ampliado del Autismo (BAP)
+      26 - 31: Puntuación clínica significativa en infancia/adolescencia
+      32 - 50: Punto de corte clínico estándar TEA (Baron-Cohen et al.)
+    """
+    ans_map = _extract_answer_map(answers)
+    agree_items = {2, 4, 5, 6, 7, 9, 12, 13, 16, 18, 19, 20, 21, 22, 23, 26, 32, 34, 38, 40, 41, 42, 44, 45, 48}
+    disagree_items = {1, 3, 8, 10, 11, 14, 15, 17, 24, 25, 27, 28, 29, 30, 31, 33, 35, 36, 37, 39, 43, 46, 47, 49, 50}
+    
+    subscales_map = {
+        "Habilidades Sociales": [1, 11, 13, 15, 22, 36, 44, 45, 47, 48],
+        "Cambio de Atención (Flexibilidad)": [2, 4, 10, 16, 25, 32, 34, 37, 43, 46],
+        "Atención al Detalle": [5, 6, 9, 12, 19, 23, 28, 29, 30, 49],
+        "Comunicación Pragmática": [7, 17, 18, 26, 27, 31, 33, 35, 38, 39],
+        "Imaginación y Empatía": [3, 8, 14, 20, 21, 24, 40, 41, 42, 50]
+    }
+    
+    scored_items = {}
+    for i in range(1, 51):
+        resp = ans_map.get(i, 0)
+        try:
+            resp_int = int(resp)
+        except (ValueError, TypeError):
+            resp_int = 0
+            
+        if i in agree_items:
+            scored_items[i] = 1 if resp_int in (1, 2) else 0
+        elif i in disagree_items:
+            scored_items[i] = 1 if resp_int in (3, 4) else 0
+        else:
+            scored_items[i] = 0
+            
+    total_score = sum(scored_items.values())
+    
+    subscales_dict = {}
+    for sub_name, item_list in subscales_map.items():
+        sub_score = sum(scored_items.get(it, 0) for it in item_list)
+        subscales_dict[sub_name] = {
+            "pd": f"{sub_score} / 10",
+            "baremo": "Corte sugerido >= 6",
+            "nivel": "Elevado" if sub_score >= 6 else ("Moderado" if sub_score >= 4 else "Bajo"),
+            "criterio": "Rasgos característicos presentes en infancia/adolescencia" if sub_score >= 6 else "Parámetros habituales",
+            "alerta": "severo" if sub_score >= 6 else ("moderado" if sub_score >= 4 else "normal")
+        }
+        
+    if total_score >= 32:
+        classification = "Elevada Concordancia con Espectro Autista Retrospectivo (AQ >= 32)"
+        alerta = "severo"
+        crit = "Punto de corte clínico estándar alcanzado (79.3% sensibilidad en TEA)"
+    elif total_score >= 26:
+        classification = "Indicadores Clínicos Significativos en Infancia/Adolescencia (AQ 26-31)"
+        alerta = "moderado"
+        crit = "Presencia de rasgos considerables que justifican profundización diagnóstica"
+    elif total_score >= 22:
+        classification = "Rasgos Autistas Leves / Fenotipo Ampliado (BAP) (AQ 22-25)"
+        alerta = "moderado"
+        crit = "Rasgos limítrofes o sutiles en el desarrollo temprano"
+    else:
+        classification = "Rango Promedio Neurotípico Retrospectivo (AQ < 22)"
+        alerta = "normal"
+        crit = "Sin indicadores significativos de TEA según el reporte de informantes"
+        
+    subscales_dict["Cociente de Espectro Autista Retrospectivo (Total AQ)"] = {
+        "pd": f"{total_score} / 50",
+        "baremo": "Corte Clínico Oficial >= 32 pts (Baron-Cohen)",
+        "nivel": classification,
+        "criterio": crit,
+        "alerta": alerta
+    }
+
+    # Respuestas cualitativas abiertas (51-55)
+    open_questions_labels = {
+        51: "A. Hitos del Neurodesarrollo y Primeros Años (0-4 años)",
+        52: "B. Estilo de Juego e Imaginación (4-10 años)",
+        53: "C. Reactividad y Sensibilidad Sensorial",
+        54: "D. Intereses Especiales y Pasiones Absorbentes",
+        55: "E. Adaptación Escolar, Socialización y Manejo del Estrés"
+    }
+    raw_dict = answers if isinstance(answers, dict) else {}
+    open_texts = []
+    for q_num, q_label in open_questions_labels.items():
+        ans_val = raw_dict.get(q_num) or raw_dict.get(str(q_num))
+        if ans_val and str(ans_val).strip():
+            open_texts.append(f"• {q_label}:\n  \"{str(ans_val).strip()}\"")
+            
+    qual_section = ""
+    if open_texts:
+        qual_section = "\n\nRespuestas Cualitativas de los Informantes (Padres / Cuidadores):\n" + "\n\n".join(open_texts)
+    
+    interpretation = (
+        f"INFORME DEL COCIENTE DE ESPECTRO AUTISTA - VERSIÓN RETROSPECTIVA INFORMANTES (AQ):\n"
+        f"• Puntuación Total Directa: {total_score} / 50 puntos.\n"
+        f"• Clasificación Clínica según Baremo: {classification}.\n"
+        f"• Punto de Corte Clínico Oficial: 32 puntos (Baron-Cohen et al.). Rango 0-21 Neurotípico, 22-25 Fenotipo Ampliado (BAP), 26-31 Rasgos Significativos, >=32 Punto de Corte TEA.\n\n"
+        f"Desglose de Subescalas (0 a 10 puntos cada una):\n"
+        + "\n".join([f"  - {k}: {v['pd']} ({v['nivel']})" for k, v in subscales_dict.items() if k != "Cociente de Espectro Autista Retrospectivo (Total AQ)"])
+        + f"\n\nConclusión Psicométrica Retrospectiva: {'El reporte retrospectivo de los padres/cuidadores sobre la infancia y adolescencia refleja una presencia muy alta de rasgos compatibles con el fenotipo del espectro autista. Se recomienda contrastar con la anamnesis del desarrollo (ADI-R / entrevista retrospectiva) y la valoración clínica directa del consultante.' if total_score >= 32 else ('Se observan rasgos significativos en la historia evolutiva temprana que merecen correlación clínica detallada.' if total_score >= 26 else 'El reporte de los informantes se ubica dentro de la variabilidad típica del neurodesarrollo.')}"
+        + qual_section
+    )
+    return float(total_score), subscales_dict, classification, interpretation
+
+
+# =========================================================================
 # 5. CAT-Q (CAMOUFLAGING AUTISTIC TRAITS QUESTIONNAIRE)
 # =========================================================================
 def process_catq_scoring(answers):
@@ -1527,6 +1639,10 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     # 4. AQ
     elif code in ('AQ', 'AQ-50', 'COCIENTE-AUTISTA'):
         return process_aq_scoring(answers)
+        
+    # 4.1 AQ RETROSPECTIVO INFORMANTES
+    elif code in ('AQ-RETRO', 'AQ_RETRO', 'AQ-INFORMANTES', 'AQ-PADRES'):
+        return process_aq_retro_scoring(answers)
         
     # 5. CAT-Q
     elif code in ('CAT-Q', 'CATQ'):

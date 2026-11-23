@@ -149,6 +149,7 @@ def ensure_tests_tables(db):
     ensure_social_anxiety_tests_definitions(db)
     ensure_hypersexuality_tests_definitions(db)
     ensure_ados2_mod4_definition(db)
+    ensure_aq_retro_definition(db)
     ensure_barsit_definition(db)
     sync_existing_completed_tests_to_evoluciones(db)
 
@@ -2334,7 +2335,8 @@ def api_get_tests_historial():
             SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
                    COALESCE(td.nombre, a.test_code) as test_nombre,
                    COALESCE(td.siglas, a.test_code) as test_siglas,
-                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
+                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria,
+                   td.items_json, td.escala_opciones_json
             FROM test_asignaciones a
             JOIN pacientes p ON a.patient_id = p.id
             LEFT JOIN tests_definiciones td ON a.test_code = td.code
@@ -2346,7 +2348,8 @@ def api_get_tests_historial():
             SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos,
                    COALESCE(td.nombre, a.test_code) as test_nombre,
                    COALESCE(td.siglas, a.test_code) as test_siglas,
-                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
+                   COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria,
+                   td.items_json, td.escala_opciones_json
             FROM test_asignaciones a
             JOIN pacientes p ON a.patient_id = p.id
             LEFT JOIN tests_definiciones td ON a.test_code = td.code
@@ -2371,6 +2374,12 @@ def api_get_tests_historial():
         if item.get('subescalas_json'):
             try: item['subescalas'] = json.loads(item['subescalas_json'])
             except: item['subescalas'] = {}
+        if item.get('items_json'):
+            try: item['items'] = json.loads(item['items_json'])
+            except: item['items'] = []
+        if item.get('escala_opciones_json'):
+            try: item['escala_opciones'] = json.loads(item['escala_opciones_json'])
+            except: item['escala_opciones'] = []
         data_list.append(item)
     return jsonify({'asignaciones': data_list, 'tests': data_list, 'success': True})
 
@@ -2390,7 +2399,8 @@ def api_get_tests_paciente(patient_id):
         SELECT a.*,
                COALESCE(td.nombre, a.test_code) as test_nombre,
                COALESCE(td.siglas, a.test_code) as test_siglas,
-               COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria
+               COALESCE(td.categoria, 'Evaluación Clínica') as test_categoria,
+               td.items_json, td.escala_opciones_json
         FROM test_asignaciones a
         JOIN pacientes p ON a.patient_id = p.id
         LEFT JOIN tests_definiciones td ON a.test_code = td.code
@@ -2411,6 +2421,12 @@ def api_get_tests_paciente(patient_id):
         if item.get('subescalas_json'):
             try: item['subescalas'] = json.loads(item['subescalas_json'])
             except: item['subescalas'] = {}
+        if item.get('items_json'):
+            try: item['items'] = json.loads(item['items_json'])
+            except: item['items'] = []
+        if item.get('escala_opciones_json'):
+            try: item['escala_opciones'] = json.loads(item['escala_opciones_json'])
+            except: item['escala_opciones'] = []
         data_list.append(item)
     return jsonify({'asignaciones': data_list, 'tests': data_list, 'success': True})
 
@@ -2552,6 +2568,7 @@ def api_export_test_pdf(assignment_id):
                 SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
                        p.genero as patient_genero, p.edad as patient_edad,
                        td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
+                       td.items_json, td.escala_opciones_json,
                        u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.estudios as psicologo_titulo
                 FROM test_asignaciones a
                 LEFT JOIN pacientes p ON a.patient_id = p.id
@@ -2565,6 +2582,7 @@ def api_export_test_pdf(assignment_id):
                 SELECT a.*, p.nombres as patient_nombres, p.apellidos as patient_apellidos, p.cedula as patient_cedula,
                        p.genero as patient_genero, p.edad as patient_edad,
                        td.nombre as test_nombre, td.siglas as test_siglas, td.categoria as test_categoria,
+                       td.items_json, td.escala_opciones_json,
                        u.nombres as psicologo_nombres, u.apellidos as psicologo_apellidos, u.estudios as psicologo_titulo
                 FROM test_asignaciones a
                 LEFT JOIN pacientes p ON a.patient_id = p.id
@@ -2621,7 +2639,7 @@ def api_export_test_pdf(assignment_id):
         # Conjunto de tests con baremos psicométricos reconocidos
         tests_with_baremo = {
             'ASRS-ADHD', 'TDAH', 'ADHD', 'ASRS',
-            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-2-M4', 'ADOS-M4',
+            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'AQ-RETRO', 'AQ-INFORMANTES', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-2-M4', 'ADOS-M4',
             'TCS', 'UGDS-GS', 'UGDS', 'RAADS-R', 'RAADS', 'HOLLAND', 'RIASEC',
             'MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II',
             'MMPI-2', 'MMPI2', 'MMPI', 'ZUNG-SDS', 'HAMILTON-D', 'IDARE-STAI', 'IDARE',
@@ -2802,6 +2820,96 @@ def api_export_test_pdf(assignment_id):
             score_html = f'<div class="score">{score_display}</div>'
             badge_html = f'<div class="badge">{data.get("clasificacion_resultado") or "Completado"}</div>'
 
+        # Construcción del Registro Completo de Ítems y Respuestas del Paciente / Informante
+        items_respuestas_html = ""
+        items_def = []
+        if data.get('items_json'):
+            try:
+                items_def = json.loads(data['items_json']) if isinstance(data['items_json'], str) else data['items_json']
+            except Exception:
+                items_def = []
+
+        escala_def = []
+        if data.get('escala_opciones_json'):
+            try:
+                escala_def = json.loads(data['escala_opciones_json']) if isinstance(data['escala_opciones_json'], str) else data['escala_opciones_json']
+            except Exception:
+                escala_def = []
+
+        escala_map = {}
+        for op_idx, op in enumerate(escala_def):
+            val = op_idx
+            txt = str(op)
+            if isinstance(op, dict):
+                val = op.get('val', op.get('valor', op_idx))
+                txt = op.get('text') or op.get('txt') or op.get('texto') or op.get('label') or op.get('titulo') or str(val)
+            escala_map[str(val)] = txt
+
+        items_map = {}
+        for idx, it in enumerate(items_def):
+            num = it.get('num', it.get('id', idx + 1))
+            items_map[str(num)] = it
+
+        if respuestas and (items_map or len(respuestas) > 0):
+            def _sort_key(k):
+                try:
+                    return (0, int(k))
+                except (ValueError, TypeError):
+                    return (1, str(k))
+
+            sorted_keys = sorted(respuestas.keys(), key=_sort_key)
+            rows_html = []
+            for q_num in sorted_keys:
+                q_val = respuestas[q_num]
+                it_info = items_map.get(str(q_num), {})
+                q_text = it_info.get('texto') or it_info.get('txt') or it_info.get('titulo') or it_info.get('enunciado') or f"Ítem {q_num}"
+
+                ans_str = str(q_val)
+                if it_info.get('opciones') and isinstance(it_info['opciones'], list):
+                    for o in it_info['opciones']:
+                        o_val = o.get('val', o.get('valor')) if isinstance(o, dict) else o
+                        if str(o_val) == str(q_val):
+                            ans_str = o.get('text') or o.get('txt') or o.get('texto') or str(o_val) if isinstance(o, dict) else str(o)
+                            break
+                elif str(q_val) in escala_map:
+                    ans_str = escala_map[str(q_val)]
+
+                is_open_text = it_info.get('tipo') in ('textarea', 'texto') or len(str(q_val)) > 35
+
+                if is_open_text:
+                    resp_badge = f'<div style="background:#fdf4ff; border:1px solid #f0abfc; padding:8px 10px; border-radius:6px; color:#4a044e; font-weight:600; line-height:1.45; white-space:pre-wrap;">{ans_str}</div>'
+                else:
+                    resp_badge = f'<span style="display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-weight:bold; padding:3px 8px; border-radius:4px; font-size:12px;">{ans_str}</span>'
+
+                rows_html.append(f"""
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 7px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #702e5e; vertical-align: top;">{q_num}</td>
+                        <td style="padding: 7px 10px; border: 1px solid #cbd5e1; color: #1e293b; line-height: 1.4; vertical-align: top;">{q_text}</td>
+                        <td style="padding: 7px 10px; border: 1px solid #cbd5e1; vertical-align: top;">{resp_badge}</td>
+                    </tr>
+                """)
+
+            items_respuestas_html = f"""
+            <div class="section" style="page-break-before: auto; margin-top: 25px;">
+                <div class="section-title">Registro Detallado de Ítems y Respuestas del Consultante</div>
+                <div style="font-size: 11.5px; color: #64748b; margin-bottom: 8px;">
+                    A continuación se desglosa cada ítem de la evaluación con la alternativa u observación marcada por el consultante o informante:
+                </div>
+                <table style="width:100%; border-collapse:collapse; margin-top:6px; font-size:12px;">
+                    <thead>
+                        <tr style="background:#702e5e; color:#ffffff;">
+                            <th style="padding:8px 6px; border:1px solid #541d45; text-align:center; width:45px;">N°</th>
+                            <th style="padding:8px 10px; border:1px solid #541d45; text-align:left;">Ítem / Pregunta</th>
+                            <th style="padding:8px 10px; border:1px solid #541d45; text-align:left; width:220px;">Respuesta Registrada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {"".join(rows_html)}
+                    </tbody>
+                </table>
+            </div>
+            """
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -2865,6 +2973,8 @@ def api_export_test_pdf(assignment_id):
             </div>
 
             {f'<div class="section"><div class="section-title">Observaciones del Terapeuta</div><div>{data.get("notas_terapeuta")}</div></div>' if data.get('notas_terapeuta') else ''}
+
+            {items_respuestas_html}
 
             <div class="footer">
                 Documento confidencial emitido por {psic_nombre} a través de la plataforma Espacio Terapéutico.<br>
@@ -3895,3 +4005,554 @@ def ensure_ados2_mod4_definition(db):
     db.commit()
 
 
+
+
+def ensure_aq_retro_definition(db):
+    """
+    Registra y homologa en `tests_definiciones` el Cociente de Espectro Autista - Versión Retrospectiva
+    para Informantes (Padres / Cuidadores) (Baron-Cohen et al., 2001).
+    Contiene 50 afirmaciones Likert (1-4) de conducta en la infancia/adolescencia y 5 preguntas clínicas abiertas (A a E / 51-55).
+    """
+    import json
+    cursor = db.cursor()
+
+    aq_opciones = [
+        {
+                "val": 1,
+                "text": "Totalmente de acuerdo (TA)",
+                "txt": "Totalmente de acuerdo (TA)",
+                "valor": 1
+        },
+        {
+                "val": 2,
+                "text": "Parcialmente de acuerdo (PA)",
+                "txt": "Parcialmente de acuerdo (PA)",
+                "valor": 2
+        },
+        {
+                "val": 3,
+                "text": "Parcialmente en desacuerdo (PD)",
+                "txt": "Parcialmente en desacuerdo (PD)",
+                "valor": 3
+        },
+        {
+                "val": 4,
+                "text": "Totalmente en desacuerdo (TD)",
+                "txt": "Totalmente en desacuerdo (TD)",
+                "valor": 4
+        }
+]
+
+    aq_items = [
+        {
+                "id": 1,
+                "num": 1,
+                "texto": "Prefería hacer cosas o jugar con otros niños antes que hacerlo solo/ a.",
+                "txt": "Prefería hacer cosas o jugar con otros niños antes que hacerlo solo/ a.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 2,
+                "num": 2,
+                "texto": "Tendía a realizar las cosas de una misma manera una y otra vez (le gustaban mucho las rutinas repetitivas).",
+                "txt": "Tendía a realizar las cosas de una misma manera una y otra vez (le gustaban mucho las rutinas repetitivas).",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 3,
+                "num": 3,
+                "texto": "Si intentaba imaginar algo, le resultaba muy fácil formarse una imagen mental en su cabeza.",
+                "txt": "Si intentaba imaginar algo, le resultaba muy fácil formarse una imagen mental en su cabeza.",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 4,
+                "num": 4,
+                "texto": "Con frecuencia se concentraba tanto en una sola actividad o interés que se aislaba del entorno y parecía no escuchar a los demás.",
+                "txt": "Con frecuencia se concentraba tanto en una sola actividad o interés que se aislaba del entorno y parecía no escuchar a los demás.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 5,
+                "num": 5,
+                "texto": "Solía notar ruidos leves o sonidos de fondo que otras personas de la casa no percibían.",
+                "txt": "Solía notar ruidos leves o sonidos de fondo que otras personas de la casa no percibían.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 6,
+                "num": 6,
+                "texto": "Solía prestar mucha atención a los números de matrículas de autos, números de teléfono, fechas o tipos de información similar.",
+                "txt": "Solía prestar mucha atención a los números de matrículas de autos, números de teléfono, fechas o tipos de información similar.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 7,
+                "num": 7,
+                "texto": "A menudo otras personas o familiares comentaban que lo que decía resultaba poco educado o fuera de lugar, aunque él/ ella no lo hiciera con mala intención.",
+                "txt": "A menudo otras personas o familiares comentaban que lo que decía resultaba poco educado o fuera de lugar, aunque él/ ella no lo hiciera con mala intención.",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 8,
+                "num": 8,
+                "texto": "Cuando leía un cuento o veía una película, podía imaginarse fácilmente cómo se sentían o qué aspecto tenían los personajes.",
+                "txt": "Cuando leía un cuento o veía una película, podía imaginarse fácilmente cómo se sentían o qué aspecto tenían los personajes.",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 9,
+                "num": 9,
+                "texto": "Le fascinaban las fechas, los calendarios o datos muy específicos.",
+                "txt": "Le fascinaban las fechas, los calendarios o datos muy específicos.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 10,
+                "num": 10,
+                "texto": "En un grupo social o reunión familiar, era capaz de seguir fácilmente las conversaciones de varias personas al mismo tiempo.",
+                "txt": "En un grupo social o reunión familiar, era capaz de seguir fácilmente las conversaciones de varias personas al mismo tiempo.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 11,
+                "num": 11,
+                "texto": "Le resultaban fáciles las situaciones sociales nuevas y hacer nuevos amigos en la escuela o el barrio.",
+                "txt": "Le resultaban fáciles las situaciones sociales nuevas y hacer nuevos amigos en la escuela o el barrio.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 12,
+                "num": 12,
+                "texto": "Tendía a fijarse en detalles minuciosos de objetos, ropa o imágenes que a los demás les pasaban desapercibidos.",
+                "txt": "Tendía a fijarse en detalles minuciosos de objetos, ropa o imágenes que a los demás les pasaban desapercibidos.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 13,
+                "num": 13,
+                "texto": "Prefería ir a una biblioteca o quedarse en su cuarto leyendo/investigando antes que ir a una fiesta de cumpleaños infantil.",
+                "txt": "Prefería ir a una biblioteca o quedarse en su cuarto leyendo/investigando antes que ir a una fiesta de cumpleaños infantil.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 14,
+                "num": 14,
+                "texto": "Inventar juegos de fantasía o historias imaginarias con otros niños le resultaba fácil y natural.",
+                "txt": "Inventar juegos de fantasía o historias imaginarias con otros niños le resultaba fácil y natural.",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 15,
+                "num": 15,
+                "texto": "Se sentía atraído/ a e interesado/ a de forma espontánea por otros niños y buscaba interactuar con ellos.",
+                "txt": "Se sentía atraído/ a e interesado/ a de forma espontánea por otros niños y buscaba interactuar con ellos.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 16,
+                "num": 16,
+                "texto": "Solía tener intereses o pasiones muy intensas y profundas, y se molestaba mucho si no se le permitía dedicarse a ellas.",
+                "txt": "Solía tener intereses o pasiones muy intensas y profundas, y se molestaba mucho si no se le permitía dedicarse a ellas.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 17,
+                "num": 17,
+                "texto": "Disfrutaba de las charlas casuales o 'charlas superficiales' (charla social de cortesía) con otras personas.",
+                "txt": "Disfrutaba de las charlas casuales o 'charlas superficiales' (charla social de cortesía) con otras personas.",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 18,
+                "num": 18,
+                "texto": "Cuando hablaba, no siempre resultaba fácil para los demás intercalar una palabra o cambiar de tema de conversación.",
+                "txt": "Cuando hablaba, no siempre resultaba fácil para los demás intercalar una palabra o cambiar de tema de conversación.",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 19,
+                "num": 19,
+                "texto": "Le fascinaban los números, patrones matemáticos, horarios de trenes/ rutas o listas ordenadas.",
+                "txt": "Le fascinaban los números, patrones matemáticos, horarios de trenes/ rutas o listas ordenadas.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 20,
+                "num": 20,
+                "texto": "Cuando veía una película o escuchaba un relato, le costaba comprender las verdaderas intenciones o motivos de los personajes.",
+                "txt": "Cuando veía una película o escuchaba un relato, le costaba comprender las verdaderas intenciones o motivos de los personajes.",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 21,
+                "num": 21,
+                "texto": "No disfrutaba especialmente con libros o juegos de ficción y fantasía; prefería los hechos reales y datos concretos.",
+                "txt": "No disfrutaba especialmente con libros o juegos de ficción y fantasía; prefería los hechos reales y datos concretos.",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 22,
+                "num": 22,
+                "texto": "Le resultaba difícil hacer amigos nuevos o mantener las amistades a lo largo del tiempo.",
+                "txt": "Le resultaba difícil hacer amigos nuevos o mantener las amistades a lo largo del tiempo.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 23,
+                "num": 23,
+                "texto": "Notaba continuamente patrones o regularidades en las cosas que le rodeaban (formas, colores, números, secuencias).",
+                "txt": "Notaba continuamente patrones o regularidades en las cosas que le rodeaban (formas, colores, números, secuencias).",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 24,
+                "num": 24,
+                "texto": "Prefería ir al teatro o a eventos culturales antes que a museos de ciencia, tecnología o historia natural.",
+                "txt": "Prefería ir al teatro o a eventos culturales antes que a museos de ciencia, tecnología o historia natural.",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 25,
+                "num": 25,
+                "texto": "No se alteraba ni se angustiaba si su rutina diaria cambiaba repentinamente sin previo aviso.",
+                "txt": "No se alteraba ni se angustiaba si su rutina diaria cambiaba repentinamente sin previo aviso.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 26,
+                "num": 26,
+                "texto": "A menudo no sabía cómo iniciar, mantener o continuar una conversación fluida con sus compañeros de clase.",
+                "txt": "A menudo no sabía cómo iniciar, mantener o continuar una conversación fluida con sus compañeros de clase.",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 27,
+                "num": 27,
+                "texto": "Le resultaba fácil 'leer entre líneas' cuando alguien le hablaba (entender bromas, ironías, metáforas o sarcasmos).",
+                "txt": "Le resultaba fácil 'leer entre líneas' cuando alguien le hablaba (entender bromas, ironías, metáforas o sarcasmos).",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 28,
+                "num": 28,
+                "texto": "Solía concentrarse más en el panorama general de una imagen o situación que en los detalles pequeños.",
+                "txt": "Solía concentrarse más en el panorama general de una imagen o situación que en los detalles pequeños.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 29,
+                "num": 29,
+                "texto": "No era especialmente bueno/ a recordando fechas de cumpleaños o listas de números telefónicos.",
+                "txt": "No era especialmente bueno/ a recordando fechas de cumpleaños o listas de números telefónicos.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 30,
+                "num": 30,
+                "texto": "Solía captar rápidamente si alguno de sus compañeros o familiares estaba aburrido o incómodo con lo que él/ ella decía.",
+                "txt": "Solía captar rápidamente si alguno de sus compañeros o familiares estaba aburrido o incómodo con lo que él/ ella decía.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 31,
+                "num": 31,
+                "texto": "Le resultaba fácil realizar más de una actividad a la vez (por ejemplo, escuchar una instrucción mientras hacía otra tarea).",
+                "txt": "Le resultaba fácil realizar más de una actividad a la vez (por ejemplo, escuchar una instrucción mientras hacía otra tarea).",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 32,
+                "num": 32,
+                "texto": "Cuando hablaba por teléfono, no estaba seguro/ a de cuándo era su turno de hablar o cuándo la otra persona quería terminar.",
+                "txt": "Cuando hablaba por teléfono, no estaba seguro/ a de cuándo era su turno de hablar o cuándo la otra persona quería terminar.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 33,
+                "num": 33,
+                "texto": "Disfrutaba haciendo cosas espontáneas e imprevistas sobre la marcha.",
+                "txt": "Disfrutaba haciendo cosas espontáneas e imprevistas sobre la marcha.",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 34,
+                "num": 34,
+                "texto": "A menudo era el/ la último/ a en captar el sentido de un chiste, chiste de doble sentido o broma entre compañeros.",
+                "txt": "A menudo era el/ la último/ a en captar el sentido de un chiste, chiste de doble sentido o broma entre compañeros.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 35,
+                "num": 35,
+                "texto": "Le resultaba muy fácil interpretar lo que otra persona sentía o pensaba con solo mirarle la cara o expresión.",
+                "txt": "Le resultaba muy fácil interpretar lo que otra persona sentía o pensaba con solo mirarle la cara o expresión.",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 36,
+                "num": 36,
+                "texto": "Si había una interrupción en lo que estaba haciendo, podía volver a su tarea anterior rápidamente y sin frustración.",
+                "txt": "Si había una interrupción en lo que estaba haciendo, podía volver a su tarea anterior rápidamente y sin frustración.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 37,
+                "num": 37,
+                "texto": "Se le daba bien mantener una conversación social relajada y bidireccional con sus pares.",
+                "txt": "Se le daba bien mantener una conversación social relajada y bidireccional con sus pares.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 38,
+                "num": 38,
+                "texto": "La gente solía decirle que repetía las mismas cosas o hablaba insistentemente de un mismo tema sin parar.",
+                "txt": "La gente solía decirle que repetía las mismas cosas o hablaba insistentemente de un mismo tema sin parar.",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 39,
+                "num": 39,
+                "texto": "Cuando era pequeño/ a, solía disfrutar mucho jugando con otros niños a juegos que implicaran fingir o hacer como si (juego simbólico: jugar a papás/ mamás, profesiones, etc.).",
+                "txt": "Cuando era pequeño/ a, solía disfrutar mucho jugando con otros niños a juegos que implicaran fingir o hacer como si (juego simbólico: jugar a papás/ mamás, profesiones, etc.).",
+                "subescala": "Comunicación Pragmática",
+                "tipo": "opcion"
+        },
+        {
+                "id": 40,
+                "num": 40,
+                "texto": "Le gustaba recopilar información detallada sobre categorías de cosas (ej. razas de perros, tipos de aviones, minerales, marcas de autos, dinosaurios, etc.).",
+                "txt": "Le gustaba recopilar información detallada sobre categorías de cosas (ej. razas de perros, tipos de aviones, minerales, marcas de autos, dinosaurios, etc.).",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 41,
+                "num": 41,
+                "texto": "Le resultaba difícil imaginarse a sí mismo/ a en el lugar de otra persona (ponerse en los zapatos del otro).",
+                "txt": "Le resultaba difícil imaginarse a sí mismo/ a en el lugar de otra persona (ponerse en los zapatos del otro).",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 42,
+                "num": 42,
+                "texto": "Le gustaba planificar meticulosamente cualquier salida, paseo o actividad en la que fuera a participar.",
+                "txt": "Le gustaba planificar meticulosamente cualquier salida, paseo o actividad en la que fuera a participar.",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 43,
+                "num": 43,
+                "texto": "Disfrutaba mucho asistiendo a eventos sociales animados, fiestas concurridas o reuniones multitudinarias.",
+                "txt": "Disfrutaba mucho asistiendo a eventos sociales animados, fiestas concurridas o reuniones multitudinarias.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 44,
+                "num": 44,
+                "texto": "Le resultaba difícil comprender las intenciones de otras personas o anticipar por qué actuaban de determinada manera.",
+                "txt": "Le resultaba difícil comprender las intenciones de otras personas o anticipar por qué actuaban de determinada manera.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 45,
+                "num": 45,
+                "texto": "Las situaciones nuevas o encontrarse con personas desconocidas le causaban bastante ansiedad o incomodidad.",
+                "txt": "Las situaciones nuevas o encontrarse con personas desconocidas le causaban bastante ansiedad o incomodidad.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 46,
+                "num": 46,
+                "texto": "Disfrutaba conociendo gente nueva y adaptándose a entornos sociales desconocidos.",
+                "txt": "Disfrutaba conociendo gente nueva y adaptándose a entornos sociales desconocidos.",
+                "subescala": "Cambio de Atención (Flexibilidad)",
+                "tipo": "opcion"
+        },
+        {
+                "id": 47,
+                "num": 47,
+                "texto": "Solía ser muy diplomático/ a y cuidadoso/ a para no herir los sentimientos de los demás con sus palabras.",
+                "txt": "Solía ser muy diplomático/ a y cuidadoso/ a para no herir los sentimientos de los demás con sus palabras.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 48,
+                "num": 48,
+                "texto": "Le costaba recordar las fechas de cumpleaños o eventos sociales importantes de familiares o amigos.",
+                "txt": "Le costaba recordar las fechas de cumpleaños o eventos sociales importantes de familiares o amigos.",
+                "subescala": "Habilidades Sociales",
+                "tipo": "opcion"
+        },
+        {
+                "id": 49,
+                "num": 49,
+                "texto": "Le resultaba muy fácil jugar con otros niños a juegos de roles o actuar papeles en obras escolares.",
+                "txt": "Le resultaba muy fácil jugar con otros niños a juegos de roles o actuar papeles en obras escolares.",
+                "subescala": "Atención al Detalle",
+                "tipo": "opcion"
+        },
+        {
+                "id": 50,
+                "num": 50,
+                "texto": "Le resultaba muy fácil captar lo que los demás querían decir a través de sus gestos, miradas o lenguaje corporal.",
+                "txt": "Le resultaba muy fácil captar lo que los demás querían decir a través de sus gestos, miradas o lenguaje corporal.",
+                "subescala": "Imaginación y Empatía",
+                "tipo": "opcion"
+        },
+        {
+                "id": 51,
+                "num": 51,
+                "codigo": "A",
+                "titulo": "A. Hitos del Neurodesarrollo y Primeros Años (0 a 4 años)",
+                "texto": "A. Hitos del Neurodesarrollo y Primeros Años (0 a 4 años): ¿Recuerda cómo fue la adquisición del lenguaje (primeras palabras, frases), la respuesta cuando le llamaban por su nombre, el contacto ocular o la sonrisa en los primeros años? ¿Hubo alguna particularidad que le llamara la atención a usted o a los pediatras?",
+                "subescala": "Preguntas Clínicas de Desarrollo Retrospectivo",
+                "tipo": "textarea",
+                "requerido": False
+        },
+        {
+                "id": 52,
+                "num": 52,
+                "codigo": "B",
+                "titulo": "B. Estilo de Juego e Imaginación en la Niñez (4 a 10 años)",
+                "texto": "B. Estilo de Juego e Imaginación en la Niñez (4 a 10 años): ¿Cómo jugaba cuando estaba solo/ a y con otros niños? ¿Solía alinear juguetes, ordenar por colores, clasificar objetos o prefería juegos de ficción compartidos? ¿Le gustaba jugar con otros o prefería observar desde la distancia?",
+                "subescala": "Preguntas Clínicas de Desarrollo Retrospectivo",
+                "tipo": "textarea",
+                "requerido": False
+        },
+        {
+                "id": 53,
+                "num": 53,
+                "codigo": "C",
+                "titulo": "C. Reactividad y Sensibilidad Sensorial",
+                "texto": "C. Reactividad y Sensibilidad Sensorial: En su infancia y adolescencia, ¿mostraba molestias intensas ante ruidos fuertes (licuadoras, truenos, globos), etiquetas de ropa o texturas de telas, cortes de pelo, lavado de dientes o selectividad extrema con ciertos alimentos/ olores?",
+                "subescala": "Preguntas Clínicas de Desarrollo Retrospectivo",
+                "tipo": "textarea",
+                "requerido": False
+        },
+        {
+                "id": 54,
+                "num": 54,
+                "codigo": "D",
+                "titulo": "D. Intereses Especiales y Pasiones Absorbentes",
+                "texto": "D. Intereses Especiales y Pasiones Absorbentes: ¿Tuvo algún tema, área de estudio o afición a la que dedicara horas interminables de forma altamente focalizada (ej. dinosaurios, tecnología, dibujo, mapas, música, colecciones)? ¿Qué ocurría si se le interrumpía?",
+                "subescala": "Preguntas Clínicas de Desarrollo Retrospectivo",
+                "tipo": "textarea",
+                "requerido": False
+        },
+        {
+                "id": 55,
+                "num": 55,
+                "codigo": "E",
+                "titulo": "E. Adaptación Escolar, Socialización y Manejo del Estrés",
+                "texto": "E. Adaptación Escolar, Socialización y Manejo del Estrés: ¿Cómo fue su experiencia en la escuela primaria y secundaria? ¿Tuvo amigos íntimos estables, le costaba integrarse en grupos o sufrió acoso/ bullying escolar? Cuando se sentía sobrecargado/ a o frustrado/ a, ¿cómo reaccionaba (rabietas intensas, llanto, aislamiento total, encierro en su habitación)?",
+                "subescala": "Preguntas Clínicas de Desarrollo Retrospectivo",
+                "tipo": "textarea",
+                "requerido": False
+        }
+]
+
+    aq_nombre = "AQ (Retrospectivo) — Cociente de Espectro Autista para Informantes (Padres / Cuidadores)"
+    aq_siglas = "AQ-Retro"
+    aq_cat = "Neurodesarrollo y Neuropsicología"
+    aq_desc = (
+        "Cuestionario de 50 ítems de reporte retrospectivo para padres o cuidadores sobre la infancia y adolescencia "
+        "del evaluado (0 a 50 puntos, corte TEA >= 32), más 5 preguntas clínicas abiertas de neurodesarrollo temprano."
+    )
+    aq_inst = (
+        "Estimados padres o cuidadores: Este cuestionario forma parte del proceso de evaluación clínica especializada. "
+        "Por favor, responda a cada una de las 50 afirmaciones pensando en cómo era y se comportaba la persona evaluada durante su niñez y adolescencia "
+        "(especialmente entre los 4 y los 16 años). Al finalizar, encontrará 5 preguntas abiertas donde podrá aportar detalles y anécdotas de su desarrollo."
+    )
+
+    aq_reglas = {
+        "tipo_escala": "Likert 1-4",
+        "opciones": {"1": "TA", "2": "PA", "3": "PD", "4": "TD"},
+        "acuerdo_items": [2, 4, 5, 6, 7, 9, 12, 13, 16, 18, 19, 20, 21, 22, 23, 26, 32, 34, 38, 40, 41, 42, 44, 45, 48],
+        "desacuerdo_items": [1, 3, 8, 10, 11, 14, 15, 17, 24, 25, 27, 28, 29, 30, 31, 33, 35, 36, 37, 39, 43, 46, 47, 49, 50],
+        "criterio_puntuacion": "1 punto si acuerdo (TA/PA) en items acuerdo; 1 punto si desacuerdo (TD/PD) en items desacuerdo.",
+        "puntuacion_maxima": 50,
+        "subescalas": {
+            "Habilidades Sociales": [1, 11, 13, 15, 22, 36, 44, 45, 47, 48],
+            "Cambio de Atención (Flexibilidad)": [2, 4, 10, 16, 25, 32, 34, 37, 43, 46],
+            "Atención al Detalle": [5, 6, 9, 12, 19, 23, 28, 29, 30, 49],
+            "Comunicación Pragmática": [7, 17, 18, 26, 27, 31, 33, 35, 38, 39],
+            "Imaginación y Empatía": [3, 8, 14, 20, 21, 24, 40, 41, 42, 50]
+        },
+        "puntos_de_corte": {
+            "neurotipico": "0-21",
+            "fenotipo_ampliado_bap": "22-25",
+            "clinico_significativo": "26-31",
+            "corte_tea": "32-50"
+        },
+        "preguntas_cualitativas_abiertas": [51, 52, 53, 54, 55]
+    }
+
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'AQ-RETRO'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json, reglas_correccion_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'AQ-RETRO', aq_nombre, aq_siglas, aq_cat,
+            aq_desc, aq_inst,
+            json.dumps(aq_opciones, ensure_ascii=False), json.dumps(aq_items, ensure_ascii=False),
+            json.dumps(aq_reglas, ensure_ascii=False)
+        ))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?, reglas_correccion_json = ?
+            WHERE code = 'AQ-RETRO'
+        """, (
+            aq_nombre, aq_siglas, aq_cat,
+            aq_desc, aq_inst,
+            json.dumps(aq_opciones, ensure_ascii=False), json.dumps(aq_items, ensure_ascii=False),
+            json.dumps(aq_reglas, ensure_ascii=False)
+        ))
+
+    db.commit()
