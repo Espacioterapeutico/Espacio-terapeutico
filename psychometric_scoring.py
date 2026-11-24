@@ -1640,8 +1640,8 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     elif code in ('AQ', 'AQ-50', 'COCIENTE-AUTISTA'):
         return process_aq_scoring(answers)
         
-    # 4.1 AQ RETROSPECTIVO INFORMANTES
-    elif code in ('AQ-RETRO', 'AQ_RETRO', 'AQ-INFORMANTES', 'AQ-PADRES'):
+    # 4.1 AQ RETROSPECTIVO INFORMANTES (AQ INVERSO)
+    elif code in ('AQ-RETRO', 'AQ_RETRO', 'AQ-INFORMANTES', 'AQ-PADRES', 'AQ-INVERSO', 'AQ_INVERSO', 'AQ-RETROSPECTIVO'):
         return process_aq_retro_scoring(answers)
         
     # 5. CAT-Q

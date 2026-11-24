@@ -2639,7 +2639,7 @@ def api_export_test_pdf(assignment_id):
         # Conjunto de tests con baremos psicométricos reconocidos
         tests_with_baremo = {
             'ASRS-ADHD', 'TDAH', 'ADHD', 'ASRS',
-            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'AQ-RETRO', 'AQ-INFORMANTES', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-2-M4', 'ADOS-M4',
+            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'AQ-RETRO', 'AQ-INVERSO', 'AQ-INFORMANTES', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-2-M4', 'ADOS-M4',
             'TCS', 'UGDS-GS', 'UGDS', 'RAADS-R', 'RAADS', 'HOLLAND', 'RIASEC',
             'MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II',
             'MMPI-2', 'MMPI2', 'MMPI', 'ZUNG-SDS', 'HAMILTON-D', 'IDARE-STAI', 'IDARE',
@@ -4496,12 +4496,12 @@ def ensure_aq_retro_definition(db):
         }
 ]
 
-    aq_nombre = "AQ (Retrospectivo) — Cociente de Espectro Autista para Informantes (Padres / Cuidadores)"
-    aq_siglas = "AQ-Retro"
+    aq_nombre = "AQ (Retrospectivo / Inverso) — Cociente de Espectro Autista para Informantes (Padres / Cuidadores)"
+    aq_siglas = "AQ-Retro / Inverso"
     aq_cat = "Neurodesarrollo y Neuropsicología"
     aq_desc = (
-        "Cuestionario de 50 ítems de reporte retrospectivo para padres o cuidadores sobre la infancia y adolescencia "
-        "del evaluado (0 a 50 puntos, corte TEA >= 32), más 5 preguntas clínicas abiertas de neurodesarrollo temprano."
+        "Cuestionario retrospectivo (AQ Inverso para Padres/Cuidadores) de 50 ítems sobre conducta en infancia/adolescencia "
+        "(0 a 50 puntos, corte TEA >= 32), más 5 preguntas clínicas abiertas de neurodesarrollo temprano."
     )
     aq_inst = (
         "Estimados padres o cuidadores: Este cuestionario forma parte del proceso de evaluación clínica especializada. "

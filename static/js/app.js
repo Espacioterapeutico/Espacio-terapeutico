@@ -181,6 +181,19 @@ var testsCatalogDatabase = [
         instrucciones: 'El consultante debe leer cada afirmación y seleccionar el grado de acuerdo. Tiempo estimado: 10-15 minutos.'
     },
     { 
+        code: 'AQ-RETRO', 
+        name: 'AQ — Versión Retrospectiva para Informantes (AQ Inverso / Padres y Cuidadores)', 
+        siglas: 'AQ-Retro / Inverso', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
+        desc: 'Cuestionario retrospectivo (AQ Inverso para Padres/Cuidadores) de 50 ítems sobre conducta en infancia/adolescencia más 5 preguntas clínicas abiertas de desarrollo evolutivo.', 
+        autor: 'Simon Baron-Cohen et al. (Adaptación retrospectiva para Padres y Cuidadores)', 
+        poblacion: 'Padres, Madres o Cuidadores de personas evaluadas', 
+        validez: 'Corte clínico oficial: ≥ 32 pts (TEA) | 26-31 pts (Rasgos significativos)', 
+        itemsCount: 55,
+        isPhysical: false,
+        instrucciones: 'Destinado a padres o informantes clave. Responder pensando en cómo era y se comportaba la persona evaluada durante su niñez y adolescencia (entre 4 y 16 años). Incluye 5 preguntas abiertas al final.'
+    },
+    { 
         code: 'RAADS-R', 
         name: 'RAADS-R — Escala Revisada para Diagnóstico de Autismo', 
         siglas: 'RAADS-R', 
@@ -32961,6 +32974,7 @@ function selectTestForApplication(testCode) {
 
     const testNamesMap = {
         'AQ': 'AQ — Cociente de Espectro Autista (50 ítems - Baron-Cohen)',
+        'AQ-RETRO': 'AQ — Versión Retrospectiva / AQ Inverso para Informantes (Padres / Cuidadores) (50 ítems + 5 preguntas abiertas)',
         'RAADS-R': 'RAADS-R — Escala Revisada para Diagnóstico de Autismo y Asperger (80 ítems)',
         'CAT-Q': 'CAT-Q — Cuestionario de Camuflaje de Rasgos Autistas (25 ítems - Hull et al.)',
         'ASRS-ADHD': 'ASRS v1.1 — Inventario de Síntomas de TDAH en Adultos (OMS)',
