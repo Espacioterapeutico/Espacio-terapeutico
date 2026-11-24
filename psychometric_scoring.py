@@ -157,6 +157,326 @@ def process_asrs_adhd_scoring(answers):
 
 
 # =========================================================================
+# 1.1 ASRS v1.1 INFORMANTES / FAMILIARES (TDAH EN EL ADULTO)
+# =========================================================================
+def process_asrs_inf_scoring(answers):
+    """
+    ASRS v1.1 OMS — Versión Informantes / Familiares (Adult ADHD Rating Scale)
+    18 ítems evaluados por un familiar, pareja o conviviente sobre el adulto.
+    Escala Likert: 0=Nunca, 1=Raramente, 2=Algunas veces, 3=A menudo, 4=Muy a menudo.
+    - Parte A (Cribado OMS 6 ítems):
+        * Ítems 1, 2, 3: >= 2 (Algunas veces) = 1 punto positivo
+        * Ítems 4, 5, 6: >= 3 (A menudo) = 1 punto positivo
+        * Umbral Clínico: >= 4/6 indica alta probabilidad observable de TDAH
+    - Desatención: Ítems 1 al 9 (0 a 36 pts)
+    - Hiperactividad / Impulsividad: Ítems 10 al 18 (0 a 36 pts)
+    - Total: 0 a 72 pts
+    """
+    ans_map = _extract_answer_map(answers)
+    inattention_items = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    hyper_items = [10, 11, 12, 13, 14, 15, 16, 17, 18]
+    
+    inattention_score = sum(ans_map.get(i, 0) for i in inattention_items)
+    hyper_score = sum(ans_map.get(i, 0) for i in hyper_items)
+    total_score = inattention_score + hyper_score
+    
+    screener_score = 0
+    for num in [1, 2, 3]:
+        if ans_map.get(num, 0) >= 2:
+            screener_score += 1
+    for num in [4, 5, 6]:
+        if ans_map.get(num, 0) >= 3:
+            screener_score += 1
+
+    screener_pos = screener_score >= 4
+    
+    def get_dim_level(score):
+        if score >= 24:
+            return "Elevado (Clínicamente Significativo)", "severo"
+        elif score >= 17:
+            return "Moderado (Sintomatología Probable)", "moderado"
+        elif score >= 12:
+            return "Leve / Subclínico", "leve"
+        else:
+            return "Normal / No Significativo", "normal"
+            
+    inat_desc, inat_alerta = get_dim_level(inattention_score)
+    hyper_desc, hyper_alerta = get_dim_level(hyper_score)
+    
+    if inattention_score >= 24 and hyper_score >= 24:
+        classification = "TDAH Reportado por Familiar - Presentación Combinada (TDAH-C)"
+        subtipo = "Presentación Combinada (Desatención e Hiperactividad/Impulsividad)"
+        alerta_global = "severo"
+    elif inattention_score >= 24:
+        classification = "TDAH Reportado por Familiar - Predominio Inatento (TDAH-I)"
+        subtipo = "Presentación Predominantemente Inatenta"
+        alerta_global = "severo"
+    elif hyper_score >= 24:
+        classification = "TDAH Reportado por Familiar - Predominio Hiperactivo/Impulsivo (TDAH-HI)"
+        subtipo = "Presentación Predominantemente Hiperactiva/Impulsiva"
+        alerta_global = "severo"
+    elif screener_pos or total_score >= 32:
+        classification = "Sintomatología Observable Sugestiva de TDAH (Cribado Familiar Positivo)"
+        subtipo = "Sintomatología Subclínica o en Rango Límite según Informante"
+        alerta_global = "moderado"
+    else:
+        classification = "Sin indicadores significativos de TDAH según Informante"
+        subtipo = "Dentro de Límites Normales según Informante"
+        alerta_global = "normal"
+        
+    subscales_dict = {
+        "Cribado Rápido OMS (Parte A - Ítems 1-6)": {
+            "pd": f"{screener_score} / 6",
+            "baremo": "Punto de corte clínico >= 4",
+            "nivel": "Positivo para TDAH" if screener_pos else "Negativo",
+            "criterio": "Alta sospecha observable de TDAH según reporte del familiar" if screener_pos else "Baja probabilidad según cribado inicial",
+            "alerta": "severo" if screener_pos else "normal"
+        },
+        "Desatención Observable (Ítems 1 al 9)": {
+            "pd": f"{inattention_score} / 36",
+            "baremo": "Corte >= 24 Elevado (17-23 Moderado, 0-16 Normal)",
+            "nivel": inat_desc,
+            "criterio": "Dificultades notorias en atención y organización en el entorno cotidiano" if inattention_score >= 17 else "Dentro del rango esperado",
+            "alerta": inat_alerta
+        },
+        "Hiperactividad e Impulsividad Observable (Ítems 10 al 18)": {
+            "pd": f"{hyper_score} / 36",
+            "baremo": "Corte >= 24 Elevado (17-23 Moderado, 0-16 Normal)",
+            "nivel": hyper_desc,
+            "criterio": "Inquietud motora, impaciencia y conductas impulsivas observadas" if hyper_score >= 17 else "Dentro del rango esperado",
+            "alerta": hyper_alerta
+        },
+        "Puntuación Total ASRS Informante": {
+            "pd": f"{total_score} / 72",
+            "baremo": "Corte sugerido: >= 40 muy alto, 24-39 moderado",
+            "nivel": "Elevado" if total_score >= 40 else ("Moderado" if total_score >= 24 else "Normal"),
+            "criterio": classification,
+            "alerta": alerta_global
+        }
+    }
+    
+    screener_txt = "POSITIVO (cumple 4 o más criterios sombreados de la OMS)" if screener_pos else "NEGATIVO (no alcanza el umbral de cribado OMS)"
+    interpretation = (
+        f"INFORME PSICOMÉTRICO ASRS v1.1 OMS — REPORTE DE INFORMANTES (TDAH EN EL ADULTO):\n"
+        f"• Clasificación Clínica según Informante: {classification}\n"
+        f"• Subtipo según Criterios DSM-5: {subtipo}\n"
+        f"• Cribado OMS (Ítems 1 al 6): {screener_score}/6 puntos — {screener_txt}.\n"
+        f"• Desatención (Ítems 1-9): {inattention_score}/36 pts ({inat_desc}).\n"
+        f"• Hiperactividad e Impulsividad (Ítems 10-18): {hyper_score}/36 pts ({hyper_desc}).\n"
+        f"• Puntuación Total Directa: {total_score}/72 pts.\n\n"
+        f"Juicio Clínico: "
+        + (f"El familiar o conviviente reporta una frecuencia sustancial de manifestaciones clínicas compatibles con TDAH en la vida cotidiana del adulto. Se recomienda contrastar directamente ítem por ítem con el auto-reporte del consultante para identificar áreas de concordancia y posibles sesgos de subestimación." if screener_pos or total_score >= 28 else "El reporte del informante no evidencia manifestaciones atencionales ni hiperactivas/impulsivas que superen el umbral clínico esperado.")
+    )
+    return float(total_score), subscales_dict, classification, interpretation
+
+
+# =========================================================================
+# 1.2 BAARS-IV INFORMANTES (ESCALA DE BARKLEY DE TDAH EN ADULTOS)
+# =========================================================================
+def process_baars_inf_scoring(answers):
+    """
+    BAARS-IV (Barkley Adult ADHD Rating Scale - IV: Informant Report - Russell A. Barkley)
+    18 ítems directos DSM-5 de funcionamiento actual en adultos calificados por un familiar/pareja.
+    Escala: 1=Nunca o rara vez, 2=A veces, 3=A menudo, 4=Muy a menudo.
+    Puntuación Directa: 18 a 72 puntos.
+    Recuento de síntomas presentes de Barkley/DSM-5:
+      - Respuesta 3 o 4 (A menudo o Muy a menudo) = Síntoma Presente (1 punto síntoma).
+      - Desatención: ítems 1 a 9 (Criterio DSM-5 adulto: >= 5 síntomas).
+      - Hiperactividad: ítems 10 a 14 (5 ítems).
+      - Impulsividad: ítems 15 a 18 (4 ítems).
+      - Hiperactividad/Impulsividad Total: ítems 10 a 18 (Criterio DSM-5 adulto: >= 5 síntomas).
+    """
+    ans_map = _extract_answer_map(answers)
+    
+    inat_items = list(range(1, 10))
+    hyper_items = list(range(10, 15))
+    impuls_items = list(range(15, 19))
+    hi_items = list(range(10, 19))
+    
+    # Puntuaciones directas (sumas 1-4)
+    inat_pd = sum(ans_map.get(i, 1) for i in inat_items)
+    hyper_pd = sum(ans_map.get(i, 1) for i in hyper_items)
+    impuls_pd = sum(ans_map.get(i, 1) for i in impuls_items)
+    hi_pd = hyper_pd + impuls_pd
+    total_pd = inat_pd + hi_pd
+    
+    # Recuento de síntomas (>= 3)
+    inat_symptoms = sum(1 for i in inat_items if ans_map.get(i, 1) >= 3)
+    hyper_symptoms = sum(1 for i in hyper_items if ans_map.get(i, 1) >= 3)
+    impuls_symptoms = sum(1 for i in impuls_items if ans_map.get(i, 1) >= 3)
+    hi_symptoms = hyper_symptoms + impuls_symptoms
+    total_symptoms = inat_symptoms + hi_symptoms
+    
+    criterio_inat = inat_symptoms >= 5
+    criterio_hi = hi_symptoms >= 5
+    
+    if criterio_inat and criterio_hi:
+        classification = "TDAH en Adultos - Presentación Combinada (Criterio DSM-5 / Barkley Superado)"
+        alerta = "severo"
+        diag_crit = "Cumple criterios diagnósticos en ambos dominios (>= 5 síntomas en cada uno)"
+    elif criterio_inat:
+        classification = "TDAH en Adultos - Presentación Predominantemente Inatenta (Criterio DSM-5)"
+        alerta = "severo"
+        diag_crit = "Cumple criterios diagnósticos en Desatención (>= 5 síntomas presentes)"
+    elif criterio_hi:
+        classification = "TDAH en Adultos - Presentación Hiperactiva/Impulsiva (Criterio DSM-5)"
+        alerta = "severo"
+        diag_crit = "Cumple criterios diagnósticos en Hiperactividad/Impulsividad (>= 5 síntomas)"
+    elif total_symptoms >= 4 or total_pd >= 36:
+        classification = "Sintomatología Significativa de TDAH (Rango Subumbral / Zona Límite)"
+        alerta = "moderado"
+        diag_crit = "Presencia de rasgos clínicos notorios sin alcanzar el umbral completo de 5 síntomas"
+    else:
+        classification = "Dentro de Límites Normales para Adultos (Sin sospecha clínica)"
+        alerta = "normal"
+        diag_crit = "Sintomatología dentro del promedio poblacional"
+        
+    subscales_dict = {
+        "Desatención (Ítems 1-9)": {
+            "pd": f"{inat_pd} pts ({inat_symptoms}/9 síntomas)",
+            "baremo": "Corte DSM-5: >= 5 síntomas (>= 27 pts)",
+            "nivel": "Clínico (Cumple criterio)" if criterio_inat else ("Limítrofe" if inat_symptoms >= 3 else "Normal"),
+            "criterio": "Fallas frecuentes en atención sostenida, organización y memoria de trabajo" if criterio_inat else "Parámetros habituales",
+            "alerta": "severo" if criterio_inat else ("moderado" if inat_symptoms >= 3 else "normal")
+        },
+        "Hiperactividad Motora (Ítems 10-14)": {
+            "pd": f"{hyper_pd} pts ({hyper_symptoms}/5 síntomas)",
+            "baremo": "Media adulta: ~7-9 pts",
+            "nivel": "Elevado" if hyper_symptoms >= 3 else "Normal",
+            "criterio": "Inquietud motriz constante reportada por informante",
+            "alerta": "severo" if hyper_symptoms >= 3 else "normal"
+        },
+        "Impulsividad (Ítems 15-18)": {
+            "pd": f"{impuls_pd} pts ({impuls_symptoms}/4 síntomas)",
+            "baremo": "Media adulta: ~6-8 pts",
+            "nivel": "Elevado" if impuls_symptoms >= 3 else "Normal",
+            "criterio": "Interrupción de turnos y respuestas precipitadas",
+            "alerta": "severo" if impuls_symptoms >= 3 else "normal"
+        },
+        "Hiperactividad e Impulsividad Total (Ítems 10-18)": {
+            "pd": f"{hi_pd} pts ({hi_symptoms}/9 síntomas)",
+            "baremo": "Corte DSM-5: >= 5 síntomas (>= 27 pts)",
+            "nivel": "Clínico (Cumple criterio)" if criterio_hi else ("Limítrofe" if hi_symptoms >= 3 else "Normal"),
+            "criterio": "Inquietud, impaciencia y pobre autorregulación conductual" if criterio_hi else "Parámetros habituales",
+            "alerta": "severo" if criterio_hi else ("moderado" if hi_symptoms >= 3 else "normal")
+        },
+        "Total Síntomas Clínicos BAARS-IV (Barkley)": {
+            "pd": f"{total_pd} pts ({total_symptoms}/18 síntomas)",
+            "baremo": "Corte Global: >= 5 síntomas en algún dominio",
+            "nivel": classification,
+            "criterio": diag_crit,
+            "alerta": alerta
+        }
+    }
+    
+    interpretation = (
+        f"INFORME DE EVALUACIÓN BAARS-IV — ESCALA DE BARKLEY PARA INFORMANTES (TDAH EN EL ADULTO):\n"
+        f"• Puntuación Directa Total: {total_pd} / 72 puntos.\n"
+        f"• Recuento Total de Síntomas Presentes (frecuencia 'A menudo' o 'Muy a menudo'): {total_symptoms} / 18 síntomas.\n"
+        f"• Diagnóstico Dimensional según Informante: {classification}.\n"
+        f"• Criterio DSM-5 de Desatención: {inat_symptoms}/9 síntomas presentes ({'CUMPLE UMBRAL' if criterio_inat else 'No cumple umbral'}).\n"
+        f"• Criterio DSM-5 de Hiperactividad/Impulsividad: {hi_symptoms}/9 síntomas presentes ({'CUMPLE UMBRAL' if criterio_hi else 'No cumple umbral'}).\n\n"
+        f"Juicio Clínico según Baremo de Barkley: "
+        + (f"El reporte del informante (familiar o pareja) confirma la presencia de disfunción ejecutiva y síntomas de TDAH clínicamente significativos en la vida adulta, superando el umbral de corte de 5 síntomas estipulado por el DSM-5. Se sugiere contrastar con la historia infantil retrospectiva para corroborar el inicio temprano." if (criterio_inat or criterio_hi) else "El reporte del informante no alcanza el umbral diagnóstico de 5 síntomas activos en el funcionamiento cotidiano adulto.")
+    )
+    return float(total_pd), subscales_dict, classification, interpretation
+
+
+# =========================================================================
+# 1.3 WURS RETROSPECTIVO PARA PADRES (WENDER UTAH RATING SCALE - 25 ÍTEMS)
+# =========================================================================
+def process_wurs_scoring(answers):
+    """
+    WURS (Wender Utah Rating Scale - 25 ítems - Ward, Wender & Reimherr, 1993)
+    Evaluación retrospectiva cumplimentada por los padres sobre la infancia del adulto (6 a 10 años).
+    Escala Likert: 0=Nada/Casi nada, 1=Levemente, 2=Moderadamente, 3=Bastante, 4=Mucho/Severamente.
+    Rango total: 0 a 100 puntos.
+    Puntos de corte validados:
+      < 36 pts: Rango promedio neurotípico en la infancia.
+      36 - 45 pts: Zona intermedia / Sospecha moderada de TDAH infantil.
+      >= 46 pts: Punto de corte clínico oficial (sensibilidad ~86%, especificidad ~96%).
+    """
+    ans_map = _extract_answer_map(answers)
+    total_score = sum(ans_map.get(i, 0) for i in range(1, 26))
+    
+    inat_items = [2, 5, 7, 15, 16, 17, 22]       # 7 ítems (0-28 pts)
+    hyper_items = [1, 4, 13, 14, 21]             # 5 ítems (0-20 pts)
+    emot_items = [3, 8, 9, 11, 12, 18, 19, 20, 24, 25] # 10 ítems (0-40 pts)
+    social_items = [6, 10, 23]                   # 3 ítems (0-12 pts)
+    
+    inat_score = sum(ans_map.get(i, 0) for i in inat_items)
+    hyper_score = sum(ans_map.get(i, 0) for i in hyper_items)
+    emot_score = sum(ans_map.get(i, 0) for i in emot_items)
+    social_score = sum(ans_map.get(i, 0) for i in social_items)
+    
+    if total_score >= 46:
+        classification = "Fuerte Concordancia con Antecedentes Infantiles de TDAH (WURS >= 46)"
+        alerta = "severo"
+        crit = "Punto de corte clínico oficial superado (Sensibilidad ~86%, Especificidad ~96%)"
+    elif total_score >= 36:
+        classification = "Sospecha Moderada de Sintomatología TDAH en la Niñez (36-45 pts)"
+        alerta = "moderado"
+        crit = "Presencia de rasgos infantiles significativos en zona límite diagnóstica"
+    else:
+        classification = "Historial Infantil dentro de Límites Neurotípicos (< 36 pts)"
+        alerta = "normal"
+        crit = "Sin indicadores significativos de TDAH en la etapa de 6 a 10 años"
+        
+    subscales_dict = {
+        "Desatención e Inatención Escolar (7 ítems)": {
+            "pd": f"{inat_score} / 28",
+            "baremo": "Corte sugerido >= 14",
+            "nivel": "Elevado" if inat_score >= 14 else ("Moderado" if inat_score >= 9 else "Normal"),
+            "criterio": "Dificultades notorias de concentración y tareas escolares en primaria" if inat_score >= 14 else "Parámetros habituales",
+            "alerta": "severo" if inat_score >= 14 else ("moderado" if inat_score >= 9 else "normal")
+        },
+        "Hiperactividad, Inquietud e Impulsividad (5 ítems)": {
+            "pd": f"{hyper_score} / 20",
+            "baremo": "Corte sugerido >= 10",
+            "nivel": "Elevado" if hyper_score >= 10 else ("Moderado" if hyper_score >= 6 else "Normal"),
+            "criterio": "Inquietud motriz constante y falta de autocontrol en la niñez" if hyper_score >= 10 else "Parámetros habituales",
+            "alerta": "severo" if hyper_score >= 10 else ("moderado" if hyper_score >= 6 else "normal")
+        },
+        "Desregulación Emocional y Frustración (10 ítems)": {
+            "pd": f"{emot_score} / 40",
+            "baremo": "Corte sugerido >= 18",
+            "nivel": "Elevado" if emot_score >= 18 else ("Moderado" if emot_score >= 11 else "Normal"),
+            "criterio": "Baja tolerancia a la frustración, mal genio y rabietas en la infancia" if emot_score >= 18 else "Parámetros habituales",
+            "alerta": "severo" if emot_score >= 18 else ("moderado" if emot_score >= 11 else "normal")
+        },
+        "Conducta y Adaptación Social (3 ítems)": {
+            "pd": f"{social_score} / 12",
+            "baremo": "Corte sugerido >= 6",
+            "nivel": "Elevado" if social_score >= 6 else "Normal",
+            "criterio": "Conflictos escolares o problemas de integración con pares" if social_score >= 6 else "Parámetros habituales",
+            "alerta": "severo" if social_score >= 6 else "normal"
+        },
+        "Puntuación Global Wender Utah (WURS Total)": {
+            "pd": f"{total_score} / 100",
+            "baremo": "Punto de Corte Oficial >= 46 pts (Ward et al.)",
+            "nivel": classification,
+            "criterio": crit,
+            "alerta": alerta
+        }
+    }
+    
+    interpretation = (
+        f"INFORME RETROSPECTIVO DE TDAH INFANTIL WURS (WENDER UTAH RATING SCALE):\n"
+        f"• Puntuación Total Directa: {total_score} / 100 puntos.\n"
+        f"• Clasificación Clínica según Baremo: {classification}.\n"
+        f"• Punto de Corte Clínico Oficial: 46 puntos (establecido por Ward, Wender y Reimherr).\n\n"
+        f"Desglose de Dimensiones en la Infancia (6 a 10 años):\n"
+        f"  - Desatención e Inatención Escolar: {inat_score}/28 pts ({subscales_dict['Desatención e Inatención Escolar (7 ítems)']['nivel']})\n"
+        f"  - Hiperactividad e Impulsividad: {hyper_score}/20 pts ({subscales_dict['Hiperactividad, Inquietud e Impulsividad (5 ítems)']['nivel']})\n"
+        f"  - Desregulación Emocional: {emot_score}/40 pts ({subscales_dict['Desregulación Emocional y Frustración (10 ítems)']['nivel']})\n"
+        f"  - Conducta y Adaptación Social: {social_score}/12 pts ({subscales_dict['Conducta y Adaptación Social (3 ítems)']['nivel']})\n\n"
+        f"Conclusión Clínica Retrospectiva: "
+        + (f"El reporte de los padres confirma retrospectivamente la presencia de un cuadro infantil plenamente compatible con el Trastorno por Déficit de Atención e Hiperactividad, cumpliendo de forma robusta con el criterio diagnóstico DSM-5 de inicio de síntomas previo a los 12 años." if total_score >= 46 else ("Se reportan algunas dificultades atencionales o conductuales leves en la niñez, pero sin alcanzar el umbral de significación retrospectiva para TDAH infantil." if total_score >= 36 else "El recuerdo parental sitúa el desarrollo del consultante entre los 6 y 10 años dentro de los parámetros neurotípicos."))
+    )
+    return float(total_score), subscales_dict, classification, interpretation
+
+
+# =========================================================================
 # 2. BDI-II (INVENTARIO DE DEPRESIÓN DE BECK - SEGUNDA EDICIÓN)
 # =========================================================================
 def process_bdi2_scoring(answers):
@@ -1616,8 +1936,20 @@ def calculate_test_scoring(test_code, answers, patient_info=None, db=None):
     code = (test_code or '').strip().upper()
     patient_info = patient_info or {}
     
-    # 1. ASRS-ADHD
-    if code in ('ASRS-ADHD', 'TDAH', 'ADHD', 'ASRS') or 'ADHD' in code or 'TDAH' in code:
+    # 1.1 ASRS v1.1 Informantes / Familiares (TDAH Adultos)
+    if code in ('ASRS-INF', 'ASRS_INF', 'ASRS-ADHD-INF', 'ASRS-INFORMANTES', 'ASRS-FAMILIARES', 'ASRS-OBSERVADOR') or ('ASRS' in code and ('INF' in code or 'FAM' in code or 'OBS' in code)):
+        return process_asrs_inf_scoring(answers)
+
+    # 1.2 BAARS-IV Informantes (Barkley Adult ADHD Rating Scale)
+    elif code in ('BAARS-IV-INF', 'BAARS_IV_INF', 'BAARS-INF', 'BAARS_INF', 'BAARS-IV', 'BARKLEY-INF', 'BARKLEY-TDAH-INF', 'BAARS') or 'BAARS' in code:
+        return process_baars_inf_scoring(answers)
+
+    # 1.3 WURS Retrospectivo para Padres (Wender Utah Rating Scale - 25 ítems)
+    elif code in ('WURS-PADRES', 'WURS_PADRES', 'WURS-INF', 'WURS_INF', 'WURS-25', 'WURS') or 'WURS' in code:
+        return process_wurs_scoring(answers)
+
+    # 1. ASRS-ADHD (Autoinforme Adultos)
+    elif code in ('ASRS-ADHD', 'TDAH', 'ADHD', 'ASRS') or 'ADHD' in code or 'TDAH' in code:
         return process_asrs_adhd_scoring(answers)
         
     # 2. BDI-II

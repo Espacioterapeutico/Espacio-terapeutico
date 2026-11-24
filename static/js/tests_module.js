@@ -172,6 +172,46 @@ var testsCatalogDatabase = [
         instrucciones: 'Destinado a padres o informantes clave. Responder pensando en cómo era y se comportaba la persona evaluada durante su niñez y adolescencia (entre 4 y 16 años). Incluye 5 preguntas abiertas al final.'
     },
     { 
+        code: 'ASRS-INF', 
+        name: 'ASRS v1.1 — Versión para Informantes / Familiares (TDAH en Adultos - OMS)', 
+        siglas: 'ASRS-Inf', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
+        desc: 'Escala de 18 ítems para familiares, pareja o convivientes. Evalúa síntomas observables de desatención e hiperactividad/impulsividad en adultos durante los últimos 6 meses.', 
+        autor: 'Organización Mundial de la Salud (OMS / Kessler et al. - Adaptación Informantes)', 
+        poblacion: 'Familiares, parejas o convivientes de personas evaluadas', 
+        validez: 'Cribado OMS Parte A: corte ≥ 4 | Subescalas Desatención e Hiperactividad', 
+        itemsCount: 18,
+        isPhysical: false,
+        instrucciones: 'El familiar o conviviente evalúa la frecuencia de conductas observadas en los últimos 6 meses en escala de 0 (Nunca) a 4 (Muy a menudo).'
+    },
+    { 
+        code: 'BAARS-IV-INF', 
+        name: 'BAARS-IV — Escala Barkley de Evaluación de TDAH para Adultos (Versión Informantes)', 
+        siglas: 'BAARS-IV-Inf', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
+        desc: 'Escala clínica estandarizada del Dr. Russell A. Barkley para informantes/observadores. Evalúa los 18 síntomas DSM-5 con criterio de síntoma presente y umbral diagnóstico (≥ 5 síntomas en adultos).', 
+        autor: 'Russell A. Barkley, Ph.D.', 
+        poblacion: 'Familiares, parejas o amigos cercanos de personas evaluadas', 
+        validez: 'Umbral clínico: ≥ 5 síntomas DSM-5 en Desatención o Hiperactividad/Impulsividad', 
+        itemsCount: 18,
+        isPhysical: false,
+        instrucciones: 'El informante evalúa la frecuencia e intensidad de síntomas en los últimos 6 meses (1=Nunca/casi nunca a 4=Muy a menudo).'
+    },
+    { 
+        code: 'WURS-PADRES', 
+        name: 'WURS — Escala Wender Utah de TDAH Infantil Retrospectivo (Versión para Padres)', 
+        siglas: 'WURS-Padres', 
+        cat: 'Neurodesarrollo y Neuropsicología', 
+        desc: 'Cuestionario retrospectivo validado de 25 ítems para padres o cuidadores. Evalúa conductas de TDAH y desregulación emocional entre los 6 y 10 años (corte clínico oficial ≥ 46 puntos).', 
+        autor: 'Paul H. Wender, M.D. (Ward, Wender & Reimherr, 1993)', 
+        poblacion: 'Padres, Madres o Cuidadores de la infancia', 
+        validez: 'Punto de corte clínico oficial: ≥ 46 pts (Sensibilidad 86%, Especificidad 96%)', 
+        itemsCount: 25,
+        isPhysical: false,
+        instrucciones: 'Los padres o cuidadores responden pensando en cómo era y se comportaba la persona evaluada entre los 6 y 10 años de edad (primaria).'
+    },
+
+    { 
         code: 'RAADS-R', 
         name: 'RAADS-R — Escala Revisada para Diagnóstico de Autismo', 
         siglas: 'RAADS-R', 
@@ -909,6 +949,9 @@ function selectTestForApplication(testCode) {
     const testNamesMap = {
         'AQ': 'AQ — Cociente de Espectro Autista (50 ítems - Baron-Cohen)',
         'AQ-RETRO': 'AQ — Versión Retrospectiva Informantes Padres/Cuidadores (50 ítems + 5 preguntas abiertas)',
+        'ASRS-INF': 'ASRS v1.1 — Versión Informantes / Familiares (18 ítems - OMS)',
+        'BAARS-IV-INF': 'BAARS-IV — Escala Barkley de TDAH para Informantes (18 ítems - Russell Barkley)',
+        'WURS-PADRES': 'WURS — Escala Wender Utah Retrospectiva para Padres (25 ítems - Wender et al.)',
         'RAADS-R': 'RAADS-R — Escala Revisada para Diagnóstico de Autismo y Asperger (80 ítems)',
         'CAT-Q': 'CAT-Q — Cuestionario de Camuflaje de Rasgos Autistas (25 ítems - Hull et al.)',
         'ASRS-ADHD': 'ASRS v1.1 — Inventario de Síntomas de TDAH en Adultos (OMS)',

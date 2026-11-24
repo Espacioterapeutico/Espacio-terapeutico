@@ -150,6 +150,9 @@ def ensure_tests_tables(db):
     ensure_hypersexuality_tests_definitions(db)
     ensure_ados2_mod4_definition(db)
     ensure_aq_retro_definition(db)
+    ensure_asrs_inf_definition(db)
+    ensure_baars_inf_definition(db)
+    ensure_wurs_definition(db)
     ensure_barsit_definition(db)
     sync_existing_completed_tests_to_evoluciones(db)
 
@@ -2639,7 +2642,7 @@ def api_export_test_pdf(assignment_id):
         # Conjunto de tests con baremos psicométricos reconocidos
         tests_with_baremo = {
             'ASRS-ADHD', 'TDAH', 'ADHD', 'ASRS',
-            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'AQ-RETRO', 'AQ-INVERSO', 'AQ-INFORMANTES', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-2-M4', 'ADOS-M4',
+            'BDI-II', 'BDI2', 'BDI', 'BAI', 'AQ', 'AQ-RETRO', 'AQ-INVERSO', 'AQ-INFORMANTES', 'ASRS-INF', 'ASRS-ADHD-INF', 'BAARS-IV-INF', 'BAARS-INF', 'WURS-PADRES', 'WURS-INF', 'WURS-25', 'WURS', 'CAT-Q', 'CATQ', 'ADOS-2', 'ADOS2', 'ADOS-2-M4', 'ADOS-M4',
             'TCS', 'UGDS-GS', 'UGDS', 'RAADS-R', 'RAADS', 'HOLLAND', 'RIASEC',
             'MCMI-II', 'MCMI2', 'MCMI', 'MILLON', 'MILLON-II',
             'MMPI-2', 'MMPI2', 'MMPI', 'ZUNG-SDS', 'HAMILTON-D', 'IDARE-STAI', 'IDARE',
@@ -2649,7 +2652,7 @@ def api_export_test_pdf(assignment_id):
         }
 
         should_recalc = False
-        is_known_baremo = test_code in tests_with_baremo or any(k in test_code for k in ('ADHD', 'TDAH', 'BDI', 'BAI', 'AQ', 'CAT', 'RAADS', 'MILLON', 'MMPI', 'HOLLAND', 'ZUNG', 'HAM', 'LSAS', 'SPIN', 'HBI', 'SAST'))
+        is_known_baremo = test_code in tests_with_baremo or any(k in test_code for k in ('ADHD', 'TDAH', 'BAARS', 'WURS', 'BDI', 'BAI', 'AQ', 'CAT', 'RAADS', 'MILLON', 'MMPI', 'HOLLAND', 'ZUNG', 'HAM', 'LSAS', 'SPIN', 'HBI', 'SAST'))
         if respuestas and is_known_baremo:
             if not subescalas or list(subescalas.keys()) == ['Puntuación Total'] or not data.get('clasificacion_resultado') or data.get('clasificacion_resultado') == 'Completado':
                 should_recalc = True
@@ -4555,4 +4558,229 @@ def ensure_aq_retro_definition(db):
             json.dumps(aq_reglas, ensure_ascii=False)
         ))
 
+    db.commit()
+
+
+def ensure_asrs_inf_definition(db):
+    """
+    Registra y homologa en `tests_definiciones` el ASRS v1.1 para Informantes / Familiares (OMS).
+    18 ítems en 3ra persona evaluados por pareja o familiar del adulto.
+    """
+    import json
+    cursor = db.cursor()
+
+    asrs_opciones = [
+        {"val": 0, "text": "Nunca", "txt": "Nunca", "valor": 0},
+        {"val": 1, "text": "Raramente", "txt": "Raramente", "valor": 1},
+        {"val": 2, "text": "Algunas veces", "txt": "Algunas veces", "valor": 2},
+        {"val": 3, "text": "A menudo", "txt": "A menudo", "valor": 3},
+        {"val": 4, "text": "Muy a menudo", "txt": "Muy a menudo", "valor": 4}
+    ]
+
+    asrs_items = [
+        {"id": 1, "num": 1, "texto": "¿Con qué frecuencia tiene dificultades para finalizar los detalles de un proyecto una vez que las partes desafiantes han concluido?", "txt": "¿Con qué frecuencia tiene dificultades para finalizar los detalles de un proyecto una vez que las partes desafiantes han concluido?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 2, "num": 2, "texto": "¿Con qué frecuencia le resulta difícil ordenar las cosas cuando tiene que realizar una tarea que requiere organización?", "txt": "¿Con qué frecuencia le resulta difícil ordenar las cosas cuando tiene que realizar una tarea que requiere organización?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 3, "num": 3, "texto": "¿Con qué frecuencia tiene problemas para recordar citas u obligaciones cotidianas?", "txt": "¿Con qué frecuencia tiene problemas para recordar citas u obligaciones cotidianas?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 4, "num": 4, "texto": "Cuando tiene una tarea que requiere pensar mucho, ¿con qué frecuencia la evita o posterga empezarla?", "txt": "Cuando tiene una tarea que requiere pensar mucho, ¿con qué frecuencia la evita o posterga empezarla?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 5, "num": 5, "texto": "¿Con qué frecuencia mueve o retuerce las manos o los pies cuando tiene que permanecer sentado/a por mucho tiempo?", "txt": "¿Con qué frecuencia mueve o retuerce las manos o los pies cuando tiene que permanecer sentado/a por mucho tiempo?", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 6, "num": 6, "texto": "¿Con qué frecuencia se siente excesivamente activo/a o impulsado/a a hacer cosas como si tuviera un motor interno?", "txt": "¿Con qué frecuencia se siente excesivamente activo/a o impulsado/a a hacer cosas como si tuviera un motor interno?", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 7, "num": 7, "texto": "¿Con qué frecuencia comete errores por descuido cuando tiene que trabajar en un proyecto aburrido o difícil?", "txt": "¿Con qué frecuencia comete errores por descuido cuando tiene que trabajar en un proyecto aburrido o difícil?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 8, "num": 8, "texto": "¿Con qué frecuencia tiene dificultad para mantener la atención cuando está realizando un trabajo monótono o repetitivo?", "txt": "¿Con qué frecuencia tiene dificultad para mantener la atención cuando está realizando un trabajo monótono o repetitivo?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 9, "num": 9, "texto": "¿Con qué frecuencia tiene dificultades para concentrarse en lo que la gente le dice, incluso cuando le están hablando directamente?", "txt": "¿Con qué frecuencia tiene dificultades para concentrarse en lo que la gente le dice, incluso cuando le están hablando directamente?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 10, "num": 10, "texto": "¿Con qué frecuencia pierde o extravía cosas necesarias en la casa o en el trabajo (llaves, billetera, celular, documentos)?", "txt": "¿Con qué frecuencia pierde o extravía cosas necesarias en la casa o en el trabajo (llaves, billetera, celular, documentos)?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 11, "num": 11, "texto": "¿Con qué frecuencia se distrae con la actividad o el ruido que ocurre a su alrededor?", "txt": "¿Con qué frecuencia se distrae con la actividad o el ruido que ocurre a su alrededor?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 12, "num": 12, "texto": "¿Con qué frecuencia se levanta de su asiento en reuniones o en otras situaciones donde se espera que permanezca sentado/a?", "txt": "¿Con qué frecuencia se levanta de su asiento en reuniones o en otras situaciones donde se espera que permanezca sentado/a?", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 13, "num": 13, "texto": "¿Con qué frecuencia se siente inquieto/a, intranquilo/a o con dificultad para estar en reposo?", "txt": "¿Con qué frecuencia se siente inquieto/a, intranquilo/a o con dificultad para estar en reposo?", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 14, "num": 14, "texto": "¿Con qué frecuencia le cuesta relajarse o desconectar cuando tiene tiempo libre para sí mismo/a?", "txt": "¿Con qué frecuencia le cuesta relajarse o desconectar cuando tiene tiempo libre para sí mismo/a?", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 15, "num": 15, "texto": "¿Con qué frecuencia habla en exceso o de forma atropellada en situaciones sociales?", "txt": "¿Con qué frecuencia habla en exceso o de forma atropellada en situaciones sociales?", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 16, "num": 16, "texto": "Cuando está en una conversación, ¿con qué frecuencia termina las frases de los demás o contesta antes de que terminen la pregunta?", "txt": "Cuando está en una conversación, ¿con qué frecuencia termina las frases de los demás o contesta antes de que terminen la pregunta?", "subescala": "Impulsividad", "tipo": "opcion"},
+        {"id": 17, "num": 17, "texto": "¿Con qué frecuencia tiene dificultades para esperar su turno en situaciones donde se requiere hacer fila o esperar?", "txt": "¿Con qué frecuencia tiene dificultades para esperar su turno en situaciones donde se requiere hacer fila o esperar?", "subescala": "Impulsividad", "tipo": "opcion"},
+        {"id": 18, "num": 18, "texto": "¿Con qué frecuencia interrumpe a los demás cuando están ocupados o se entromete en conversaciones y actividades ajenas?", "txt": "¿Con qué frecuencia interrumpe a los demás cuando están ocupados o se entromete en conversaciones y actividades ajenas?", "subescala": "Impulsividad", "tipo": "opcion"}
+    ]
+
+    asrs_nombre = "ASRS v1.1 (Informantes / Familiares) — Escala de TDAH del Adulto para Observadores"
+    asrs_siglas = "ASRS-Inf"
+    asrs_cat = "Neurodesarrollo y Neuropsicología"
+    asrs_desc = (
+        "Versión para familiares, pareja o convivientes del ASRS v1.1 (OMS). Evalúa 18 síntomas DSM-5 observables "
+        "en los últimos 6 meses en el adulto (Cribado Parte A: corte >= 4, y dimensiones de Desatención e Hiperactividad/Impulsividad)."
+    )
+    asrs_inst = (
+        "Estimado(a) familiar o conviviente: Por favor, responda indicando con qué frecuencia ha observado en la persona evaluada "
+        "las siguientes conductas durante los últimos 6 meses. Responda con base en su convivencia cotidiana."
+    )
+    asrs_reglas = {
+        "tipo_escala": "Likert 0-4",
+        "screener_items": [1, 2, 3, 4, 5, 6],
+        "desatencion_items": [1, 2, 3, 4, 7, 8, 9, 10, 11],
+        "hiperactividad_impulsividad_items": [5, 6, 12, 13, 14, 15, 16, 17, 18],
+        "corte_screener": 4,
+        "puntuacion_maxima": 72
+    }
+
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'ASRS-INF'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json, reglas_correccion_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, ('ASRS-INF', asrs_nombre, asrs_siglas, asrs_cat, asrs_desc, asrs_inst, json.dumps(asrs_opciones, ensure_ascii=False), json.dumps(asrs_items, ensure_ascii=False), json.dumps(asrs_reglas, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?, reglas_correccion_json = ?
+            WHERE code = 'ASRS-INF'
+        """, (asrs_nombre, asrs_siglas, asrs_cat, asrs_desc, asrs_inst, json.dumps(asrs_opciones, ensure_ascii=False), json.dumps(asrs_items, ensure_ascii=False), json.dumps(asrs_reglas, ensure_ascii=False)))
+    db.commit()
+
+
+def ensure_baars_inf_definition(db):
+    """
+    Registra y homologa en `tests_definiciones` la Escala Barkley de Evaluación de TDAH para Informantes (BAARS-IV).
+    18 ítems evaluados en escala Likert 1-4 por observadores (corte de síntoma >= 3; umbral clínico >= 5 síntomas en adultos).
+    """
+    import json
+    cursor = db.cursor()
+
+    baars_opciones = [
+        {"val": 1, "text": "Nunca o casi nunca", "txt": "Nunca o casi nunca", "valor": 1},
+        {"val": 2, "text": "A veces", "txt": "A veces", "valor": 2},
+        {"val": 3, "text": "A menudo", "txt": "A menudo", "valor": 3},
+        {"val": 4, "text": "Muy a menudo", "txt": "Muy a menudo", "valor": 4}
+    ]
+
+    baars_items = [
+        {"id": 1, "num": 1, "texto": "No presta atención suficiente a los detalles o comete errores por descuido en el trabajo u otras actividades.", "txt": "No presta atención suficiente a los detalles o comete errores por descuido en el trabajo u otras actividades.", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 2, "num": 2, "texto": "Tiene dificultades para mantener la atención en tareas laborales o actividades lúdicas.", "txt": "Tiene dificultades para mantener la atención en tareas laborales o actividades lúdicas.", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 3, "num": 3, "texto": "Parece no escuchar cuando se le habla directamente.", "txt": "Parece no escuchar cuando se le habla directamente.", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 4, "num": 4, "texto": "No sigue las instrucciones y no termina las tareas en el hogar o trabajo (no por rebeldía ni incomprensión).", "txt": "No sigue las instrucciones y no termina las tareas en el hogar o trabajo (no por rebeldía ni incomprensión).", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 5, "num": 5, "texto": "Tiene dificultades para organizar tareas, proyectos y actividades cotidianas.", "txt": "Tiene dificultades para organizar tareas, proyectos y actividades cotidianas.", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 6, "num": 6, "texto": "Evita, le disgusta o se resiste a comprometerse en tareas que requieren esfuerzo mental sostenido.", "txt": "Evita, le disgusta o se resiste a comprometerse en tareas que requieren esfuerzo mental sostenido.", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 7, "num": 7, "texto": "Extravía o pierde objetos necesarios para tareas o actividades (celular, llaves, anteojos, billetera, documentos).", "txt": "Extravía o pierde objetos necesarios para tareas o actividades (celular, llaves, anteojos, billetera, documentos).", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 8, "num": 8, "texto": "Se distrae fácilmente con estímulos externos irrelevantes o pensamientos ajenos.", "txt": "Se distrae fácilmente con estímulos externos irrelevantes o pensamientos ajenos.", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 9, "num": 9, "texto": "Es olvidadizo/a en las actividades y compromisos cotidianos (pagar cuentas, acudir a citas, recados).", "txt": "Es olvidadizo/a en las actividades y compromisos cotidianos (pagar cuentas, acudir a citas, recados).", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 10, "num": 10, "texto": "Mueve excesivamente las manos o los pies, o se remueve nervioso/a en su asiento.", "txt": "Mueve excesivamente las manos o los pies, o se remueve nervioso/a en su asiento.", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 11, "num": 11, "texto": "Se levanta en situaciones en las que se espera que permanezca sentado/a.", "txt": "Se levanta en situaciones en las que se espera que permanezca sentado/a.", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 12, "num": 12, "texto": "Se siente inquieto/a por dentro o con una necesidad interna constante de estar en movimiento.", "txt": "Se siente inquieto/a por dentro o con una necesidad interna constante de estar en movimiento.", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 13, "num": 13, "texto": "Tiene dificultades para entretenerse o realizar actividades de ocio tranquilamente.", "txt": "Tiene dificultades para entretenerse o realizar actividades de ocio tranquilamente.", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 14, "num": 14, "texto": "Está permanentemente 'en marcha' o actúa como si estuviese impulsado/a por un motor.", "txt": "Está permanentemente 'en marcha' o actúa como si estuviese impulsado/a por un motor.", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 15, "num": 15, "texto": "Habla de forma excesiva en diversas situaciones.", "txt": "Habla de forma excesiva en diversas situaciones.", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 16, "num": 16, "texto": "Responde impulsivamente antes de que hayan terminado de formularle una pregunta.", "txt": "Responde impulsivamente antes de que hayan terminado de formularle una pregunta.", "subescala": "Impulsividad", "tipo": "opcion"},
+        {"id": 17, "num": 17, "texto": "Tiene dificultades para esperar su turno en filas, conversaciones o actividades.", "txt": "Tiene dificultades para esperar su turno en filas, conversaciones o actividades.", "subescala": "Impulsividad", "tipo": "opcion"},
+        {"id": 18, "num": 18, "texto": "Interrumpe a otros o se entromete en sus actividades o conversaciones ajenas.", "txt": "Interrumpe a otros o se entromete en sus actividades o conversaciones ajenas.", "subescala": "Impulsividad", "tipo": "opcion"}
+    ]
+
+    baars_nombre = "BAARS-IV (Informantes) — Escala Barkley de Evaluación de TDAH para Observadores"
+    baars_siglas = "BAARS-IV-Inf"
+    baars_cat = "Neurodesarrollo y Neuropsicología"
+    baars_desc = (
+        "Escala clínica oficial del Dr. Russell Barkley para observadores/informantes (pareja, padres o amigos cercanos). "
+        "Evalúa los 18 síntomas DSM-5 de Desatención e Hiperactividad/Impulsividad con criterio de síntoma presente (corte >= 5 síntomas en adultos)."
+    )
+    baars_inst = (
+        "Por favor, evalúe el comportamiento de la persona en los últimos 6 meses. Elija la opción que mejor describa la frecuencia "
+        "e intensidad con que observa cada conducta en su vida cotidiana (1=Nunca o casi nunca, 2=A veces, 3=A menudo, 4=Muy a menudo)."
+    )
+    baars_reglas = {
+        "tipo_escala": "Likert 1-4",
+        "umbral_sintoma": 3,
+        "desatencion_items": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "hiperactividad_impulsividad_items": [10, 11, 12, 13, 14, 15, 16, 17, 18],
+        "corte_sintomas_adultos": 5,
+        "puntuacion_maxima": 72
+    }
+
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'BAARS-IV-INF'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json, reglas_correccion_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, ('BAARS-IV-INF', baars_nombre, baars_siglas, baars_cat, baars_desc, baars_inst, json.dumps(baars_opciones, ensure_ascii=False), json.dumps(baars_items, ensure_ascii=False), json.dumps(baars_reglas, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?, reglas_correccion_json = ?
+            WHERE code = 'BAARS-IV-INF'
+        """, (baars_nombre, baars_siglas, baars_cat, baars_desc, baars_inst, json.dumps(baars_opciones, ensure_ascii=False), json.dumps(baars_items, ensure_ascii=False), json.dumps(baars_reglas, ensure_ascii=False)))
+    db.commit()
+
+
+def ensure_wurs_definition(db):
+    """
+    Registra y homologa en `tests_definiciones` la Escala Wender Utah de Evaluación Retrospectiva para Padres (WURS - 25 ítems).
+    Evalúa sintomatología infantil de TDAH entre los 6 y 10 años (Ward, Wender & Reimherr). Corte clínico oficial >= 46 pts.
+    """
+    import json
+    cursor = db.cursor()
+
+    wurs_opciones = [
+        {"val": 0, "text": "Nada o casi nada", "txt": "Nada o casi nada", "valor": 0},
+        {"val": 1, "text": "Ligeramente / Poco", "txt": "Ligeramente / Poco", "valor": 1},
+        {"val": 2, "text": "Moderadamente", "txt": "Moderadamente", "valor": 2},
+        {"val": 3, "text": "Bastante", "txt": "Bastante", "valor": 3},
+        {"val": 4, "text": "Mucho / Muy intensamente", "txt": "Mucho / Muy intensamente", "valor": 4}
+    ]
+
+    wurs_items = [
+        {"id": 1, "num": 1, "texto": "Como niño(a), ¿se mostraba activo/a, en movimiento constante, inquieto/a motrizmente?", "txt": "Como niño(a), ¿se mostraba activo/a, en movimiento constante, inquieto/a motrizmente?", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 2, "num": 2, "texto": "¿Tenía dificultades de atención o concentración; se distraía con facilidad?", "txt": "¿Tenía dificultades de atención o concentración; se distraía con facilidad?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 3, "num": 3, "texto": "¿Se mostraba ansioso/a, preocupado/a o temeroso/a?", "txt": "¿Se mostraba ansioso/a, preocupado/a o temeroso/a?", "subescala": "Desregulación Emocional", "tipo": "opcion"},
+        {"id": 4, "num": 4, "texto": "¿Presentaba dificultades o problemas de conducta en el colegio?", "txt": "¿Presentaba dificultades o problemas de conducta en el colegio?", "subescala": "Conducta y Social", "tipo": "opcion"},
+        {"id": 5, "num": 5, "texto": "¿Era tímido/a o retraído/a en situaciones sociales?", "txt": "¿Era tímido/a o retraído/a en situaciones sociales?", "subescala": "Conducta y Social", "tipo": "opcion"},
+        {"id": 6, "num": 6, "texto": "¿Se mostraba soñador/a, ensimismado/a o 'en las nubes' cuando debía atender?", "txt": "¿Se mostraba soñador/a, ensimismado/a o 'en las nubes' cuando debía atender?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 7, "num": 7, "texto": "¿Era impulsivo/a, actuaba antes de pensar en las consecuencias?", "txt": "¿Era impulsivo/a, actuaba antes de pensar en las consecuencias?", "subescala": "Impulsividad", "tipo": "opcion"},
+        {"id": 8, "num": 8, "texto": "¿Tenía rabietas, berrinches o enfados explosivos?", "txt": "¿Tenía rabietas, berrinches o enfados explosivos?", "subescala": "Desregulación Emocional", "tipo": "opcion"},
+        {"id": 9, "num": 9, "texto": "¿Se desanimaba o deprimía con facilidad ante las dificultades?", "txt": "¿Se desanimaba o deprimía con facilidad ante las dificultades?", "subescala": "Desregulación Emocional", "tipo": "opcion"},
+        {"id": 10, "num": 10, "texto": "¿Cambiaba de estado de ánimo rápidamente (humor inestable / cambiante)?", "txt": "¿Cambiaba de estado de ánimo rápidamente (humor inestable / cambiante)?", "subescala": "Desregulación Emocional", "tipo": "opcion"},
+        {"id": 11, "num": 11, "texto": "¿Se enfadaba fácilmente, tenía mal genio o 'poca mecha'?", "txt": "¿Se enfadaba fácilmente, tenía mal genio o 'poca mecha'?", "subescala": "Desregulación Emocional", "tipo": "opcion"},
+        {"id": 12, "num": 12, "texto": "¿Tenía baja autoestima o se sentía poco valioso/a comparado con otros niños?", "txt": "¿Tenía baja autoestima o se sentía poco valioso/a comparado con otros niños?", "subescala": "Desregulación Emocional", "tipo": "opcion"},
+        {"id": 13, "num": 13, "texto": "¿Tenía poca tolerancia a la frustración; se rendía si algo no le salía a la primera?", "txt": "¿Tenía poca tolerancia a la frustración; se rendía si algo no le salía a la primera?", "subescala": "Desregulación Emocional", "tipo": "opcion"},
+        {"id": 14, "num": 14, "texto": "¿Le costaba estarse sentado/a quieto/a en clases, comidas o ceremonias?", "txt": "¿Le costaba estarse sentado/a quieto/a en clases, comidas o ceremonias?", "subescala": "Hiperactividad", "tipo": "opcion"},
+        {"id": 15, "num": 15, "texto": "¿Tenía dificultades para hacer o conservar amigos debido a su conducta?", "txt": "¿Tenía dificultades para hacer o conservar amigos debido a su conducta?", "subescala": "Conducta y Social", "tipo": "opcion"},
+        {"id": 16, "num": 16, "texto": "¿Tenía problemas de aprendizaje o rendimiento escolar que no reflejaban su verdadera inteligencia?", "txt": "¿Tenía problemas de aprendizaje o rendimiento escolar que no reflejaban su verdadera inteligencia?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 17, "num": 17, "texto": "¿Tenía dificultades con las matemáticas o el cálculo numérico?", "txt": "¿Tenía dificultades con las matemáticas o el cálculo numérico?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 18, "num": 18, "texto": "¿Tenía dificultades en la lectura o comprensión de textos?", "txt": "¿Tenía dificultades en la lectura o comprensión de textos?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 19, "num": 19, "texto": "¿Olvidaba con frecuencia sus tareas, libros o materiales escolares?", "txt": "¿Olvidaba con frecuencia sus tareas, libros o materiales escolares?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 20, "num": 20, "texto": "¿Se mostraba terco/a, obstinado/a o discutidor/a frente a figuras de autoridad?", "txt": "¿Se mostraba terco/a, obstinado/a o discutidor/a frente a figuras de autoridad?", "subescala": "Desregulación Emocional", "tipo": "opcion"},
+        {"id": 21, "num": 21, "texto": "¿Le costaba esperar su turno en juegos, filas o actividades grupales?", "txt": "¿Le costaba esperar su turno en juegos, filas o actividades grupales?", "subescala": "Impulsividad", "tipo": "opcion"},
+        {"id": 22, "num": 22, "texto": "¿Interrumpía constantemente conversaciones o juegos de otros?", "txt": "¿Interrumpía constantemente conversaciones o juegos de otros?", "subescala": "Impulsividad", "tipo": "opcion"},
+        {"id": 23, "num": 23, "texto": "¿Se mostraba desorganizado/a con sus juguetes, habitación y pertenencias?", "txt": "¿Se mostraba desorganizado/a con sus juguetes, habitación y pertenencias?", "subescala": "Desatención", "tipo": "opcion"},
+        {"id": 24, "num": 24, "texto": "¿Buscaba sensaciones intensas o tomaba riesgos físicos sin medir el peligro?", "txt": "¿Buscaba sensaciones intensas o tomaba riesgos físicos sin medir el peligro?", "subescala": "Impulsividad", "tipo": "opcion"},
+        {"id": 25, "num": 25, "texto": "En general, ¿era considerado/a por la familia o profesores como un niño(a) difícil o muy exigente de criar?", "txt": "En general, ¿era considerado/a por la familia o profesores como un niño(a) difícil o muy exigente de criar?", "subescala": "Desregulación Emocional", "tipo": "opcion"}
+    ]
+
+    wurs_nombre = "WURS (Retrospectivo Padres) — Escala Wender Utah de TDAH Infantil (25 Ítems)"
+    wurs_siglas = "WURS-Padres"
+    wurs_cat = "Neurodesarrollo y Neuropsicología"
+    wurs_desc = (
+        "Cuestionario retrospectivo validado (Ward et al., 25 ítems) para padres o cuidadores. Evalúa sintomatología "
+        "de TDAH entre los 6 y 10 años (corte clínico >= 46 puntos). Permite confirmar el criterio DSM-5 de inicio infantil."
+    )
+    wurs_inst = (
+        "Estimados padres o cuidadores: Por favor, califique las siguientes preguntas pensando en cómo se comportaba la persona evaluada "
+        "durante su infancia (específicamente entre los 6 y los 10 años, etapa de primaria)."
+    )
+    wurs_reglas = {
+        "tipo_escala": "Likert 0-4",
+        "corte_clinico": 46,
+        "puntuacion_maxima": 100,
+        "subescalas": {
+            "Desatención": [2, 6, 16, 17, 18, 19, 23],
+            "Hiperactividad e Impulsividad": [1, 7, 14, 21, 22, 24],
+            "Desregulación Emocional": [3, 8, 9, 10, 11, 12, 13, 20, 25],
+            "Conducta y Social": [4, 5, 15]
+        }
+    }
+
+    cursor.execute("SELECT code FROM tests_definiciones WHERE code = 'WURS-PADRES'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO tests_definiciones (code, nombre, siglas, categoria, descripcion, instrucciones, escala_opciones_json, items_json, reglas_correccion_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, ('WURS-PADRES', wurs_nombre, wurs_siglas, wurs_cat, wurs_desc, wurs_inst, json.dumps(wurs_opciones, ensure_ascii=False), json.dumps(wurs_items, ensure_ascii=False), json.dumps(wurs_reglas, ensure_ascii=False)))
+    else:
+        cursor.execute("""
+            UPDATE tests_definiciones
+            SET nombre = ?, siglas = ?, categoria = ?, descripcion = ?, instrucciones = ?, escala_opciones_json = ?, items_json = ?, reglas_correccion_json = ?
+            WHERE code = 'WURS-PADRES'
+        """, (wurs_nombre, wurs_siglas, wurs_cat, wurs_desc, wurs_inst, json.dumps(wurs_opciones, ensure_ascii=False), json.dumps(wurs_items, ensure_ascii=False), json.dumps(wurs_reglas, ensure_ascii=False)))
     db.commit()
